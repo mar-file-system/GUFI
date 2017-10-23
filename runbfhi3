@@ -1,0 +1,7 @@
+rm -rf testhpssdir
+./bfhi /users/ggrider/hpss3/hpssnsobj.db testhpssdir 1 0
+ls -lR testhpssdir
+ ./bfq testhpssdir "" "select name, type, size, inode, xattrs from summary where name like '%juliusw%'" "select name, type, size, inode, blksize, linkname, xattrs from entries" 1 0 0 0 4
+ ./bfq testhpssdir "" "select name, type, size, inode from summary" "select name, type, size, inode, blksize from entries where name like '%f2%'" 1 0 0 0 4
+# find all the xattrs that have test in them *** you must use the or flag to find all the dirs that have test and files/links that have test in the xattrs
+ ./bfq testhpssdir "" "select name, type, size, inode, xattrs from summary where xattrs like '%test%' " "select name, type, size, inode, blksize, linkname, xattrs from entries where xattrs like '%test%' " 1 1 0 0 4

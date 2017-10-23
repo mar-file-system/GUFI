@@ -1,0 +1,5 @@
+rm -rf testhpssdir
+./bfhi /users/ggrider/hpss1/hpssnsobj.db testhpssdir 1 0
+ls -lR testhpssdir
+ ./bfq testhpssdir "" "select name, type, size, inode from summary where name like '%juliusw%'" "select name, type, size, inode, blksize from entries" 1 0 0 0 4
+ ./bfq testhpssdir "" "select name, type, size, inode from summary" "select name, type, size, inode, blksize from entries where name like '%f2%'" 1 0 0 0 4

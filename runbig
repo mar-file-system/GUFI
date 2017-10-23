@@ -1,0 +1,15 @@
+echo "runbig"
+# cc bfi.c -I.. -DBSDXATTRS -L../.libs -l sqlite3 -o bfi
+cc bfi.c -pthread -l sqlite3 -o bfi
+rm -rf /tmp/testdirdup2
+mkdir /tmp/testdirdup2
+mkdir /tmp/testdirdup2/Users
+mkdir /tmp/testdirdup2/Users/ggrider
+#mkdir /tmp/testdirdup2/Users/ggrider/sqlite
+
+# time ./bfi /Users/ggrider/sqlite /tmp/testdirdup2 0 10
+# time ./bfi /Users/ggrider/sqlite /tmp/testdirdup2 0 10
+time ./bfi /Users/ggrider /tmp/testdirdup2 0 20
+
+# time ./bfq /tmp/testdirdup/Users/ggrider/sqlite null "select name,type,uid,gid,size from summary" "select name,type,uid,gid,size from entries where name like '%dumb%'" 0 0 0 8
+time ./bfq /tmp/testdirdup/Users/ggrider null "select name,type,uid,gid,size from summary" "select name,type,uid,gid,size from entries where name like '%dumb%'" 0 0 0 8

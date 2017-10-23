@@ -1,0 +1,50 @@
+struct sum {
+  long long int totfiles;
+  long long int totlinks;
+  long long int minuid;
+  long long int maxuid;
+  long long int mingid;
+  long long int maxgid;
+  long long int minsize;
+  long long int maxsize;
+  long long int totltk;
+  long long int totmtk;
+  long long int totltm;
+  long long int totmtm;
+  long long int totmtg;
+  long long int totmtt;
+  long long int totsize;
+  long long int minctime;
+  long long int maxctime;
+  long long int minmtime;
+  long long int maxmtime;
+  long long int minatime;
+  long long int maxatime;
+  long long int minblocks;
+  long long int maxblocks;
+  long long int totxattr;
+  long long int setit;
+  long long int totsubdirs;
+  long long int maxsubdirfiles;
+  long long int maxsubdirlinks;
+  long long int maxsubdirsize;
+};
+
+struct work {
+char name[MAXPATH];
+char nameto[MAXPATH];
+char sqlsum[MAXSQL];
+char  sqlent[MAXSQL];
+struct stat statuso;
+int printdir;
+int andor;
+int printing;
+int pinode;
+int pinodeplace;
+long long int offset;
+int dodelim;
+char xattr[MAXXATTR];
+};
+
+char xattrdelim[] = "\x1F";
+char fielddelim[] = "\x1E";

@@ -1,0 +1,80 @@
+# run dfw depth first walker on testdir
+echo "---> ./dfw testdir 0 0 (just walk with readdir)"
+./dfw testdir 0 0
+echo "---> ./dfw testdir 1 0 (just walk with stat)"
+./dfw testdir 1 0
+echo "---> ./dfw testdir 1 1 (walk with stat and xattr)"
+./dfw testdir 1 1
+#
+# run bfw breadth first walker on testdir
+echo "---> ./bfw testdir 1 10 (walk with readdir stat and xattr print 10 threads spacedelim noprinting)"
+./bfw testdir 0 0 0
+echo "---> ./bfw testdir 0 10 (walk with readdir stat and xattr print 10 threads spacedelim)"
+./bfw testdir 1 0 0
+#
+# run bfi on testdir and create a gufi in a directory called testdirdup
+echo "---> runbfi testdir in testdirdup out 1 printing on and 5 threads"
+rm -rf testdirdup
+mkdir testdirdup
+./bfi testdir testdirdup 1 5
+ls -ld testdir
+ls -ld testdirdup/testdir
+ls -ld testdir/c
+ls -ld testdirdup/testdir/c
+ls -ld testdir/c/cc
+ls -ld testdirdup/testdir/c/cc
+# mac version
+xattr -l testdir/c/cc
+# linux version
+# attr -l testdir/c/cc
+# mac version
+xattr -l testdirdup/testdir/c/cc
+# linux version
+# attr -l testdirdup/testdir/c/cc
+#
+# run bfq on the gufi tree we just build in testdirdup
+echo "runbfq"
+# ./bfq path "select on tree index"  "select on summary" "select on entries" printdirresults andor printdirsexamined  maxthreads place for pinode"
+# printdirresults prints the directory info if it matches critera
+# andor 0 is and 1 is or - and or between first select and second select
+# printdirsexamined printes each directory that is examined
+# maxthreads
+# place for pinode in output (column)
+#
+echo ">>>>>>>>> summary all entries like dumb printdir and noprintdirexamined"
+./bfq testdirdup/testdir "" "select name,type,uid,gid,size from summary" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 0 0 4 0
+echo ">>>>>>>>> summary like cc entries like dumb printdir or  noprintdirexamined"
+./bfq testdirdup/testdir "" "select name,type,uid,gid,size from summary where name like '%cc%'" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 1 0 4 0
+echo ">>>>>>>>> summary like cc entries like dumb printdir or printdirexamined"
+./bfq testdirdup/testdir "" "select name,type,uid,gid,size from summary where name like '%cc%'" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 1 1 4 0
+echo ">>>>>>>>> no summary entries like dumb noprintdir or noprintdirexamined"
+./bfq testdirdup/testdir "" "" "select name,type,uid,gid,size from entries where name like '%dumb%'"  0 0 0 4 0
+echo ">>>>>>>>> test of printing parent inodes in 4 column"
+./bfq testdirdup/testdir "" "select name,type,inode,uid,gid,size from summary" "select name,type,inode,uid,gid,size from entries"  1 0 0 0 4
+#
+# build a tree index with bfti
+echo "---> run bfti on testdirdup/testdir 0 no print progress 30 threads 1 print summary"
+./bfti testdirdup/testdir  0 30 1
+#
+# run dbdump on the tree index in testdirdup/testdir
+echo "---> dbdump on testdirdup/testdir tree index 0 summary no gory details"
+./dbdump testdirdup/testdir 0
+#
+# now we can query using a tree index to limit what we examine
+echo ">>>>>>>>> test of printing parent inode in 4 column using tree summary max files in dir > 1"
+./bfq testdirdup/testdir "select maxsubdirfiles from treesummary where maxsubdirfiles > 1" "select name,type,inode,uid,gid,size from summary" "select name,type,inode,uid,gid,size from entries"  1 0 0 0 4
+echo ">>>>>>>>> test of printing parent inode in 4 column using tree summary max files in dir > 10"
+./bfq testdirdup/testdir "select maxsubdirfiles from treesummary where maxsubdirfiles > 10" "select name,type,inode,uid,gid,size from summary" "select name,type,inode,uid,gid,size from entries"  1 0 0 0 4
+echo "**** there arent any directories with more files than 10 in this test"
+#
+echo "---> use bfw to create a non printable character dump file of the tree then use bfli to make a gufi from that flat dump file"
+rm dump
+echo "---> ./bfw testdir 0 0 1(walk with readdir stat and xattr print 0 threads nonprintablelims)"
+./bfw testdir 1 0 1 > dump
+ls -l dump
+echo "---> run bfli and have it create a gufi tree (no tree index) in testdirdup1 directory from the flat dump file 0 threads"
+rm -rf testdirdup1
+./bfli dump testdirdup1 1 0
+ls -lR testdirdup1
+echo "---> lets try a query of this gufi tree created from a flat file run bfq on it find the dumb files"
+./bfq testdirdup1/testdir "" "" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 0 0 4 0

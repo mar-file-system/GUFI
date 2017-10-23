@@ -1,0 +1,38 @@
+you might start on your mac, it might build with no changes
+untar and look at BigReadme for what the programs do and what the utilities are
+makejeff is a script that might just build on your mac with no change
+look at that script - it has linux and mac compile lines - the xattrs are different on mac and linux
+hopefully that will just build on your mac and with appropriate mods will just build on linux (it use to build on linux
+on a system with sqlite)  you have to have sqlite3 on your mac, most linux distros have it i think, cadillac did
+i think sqlite3 is the only prereq for most of it
+
+So start with read BigReadme
+and then move on to 
+makejeff
+then to run a test of all those functions build in makejeff
+run
+runjeff
+
+There is a testdirectory in the tar called testdir and that is the model directory
+so the runjeff does stuff like
+do a depth first walk on testdir
+do a breadth first walk on testdir
+create a gufi in a created directory testdirdup  from testdir
+run queries on that gufi
+make a tree index on testdirdup
+run queries on that gufi with a tree index
+run a breadth first walk on testdir and make a flat file with path and attrs delimited
+create a gufi at testdirdup1 that is from that flat delimited file
+do a query on that new gufi (that has no tree index) that you built from a flat file from a bf walk 
+
+There is a bunch of code to make the directories and files in the gufi mimic the input tree permissions/ownership etc.
+I dont think that code has been run much because i always run as me and not root, so that part probably doesnt 
+even work.
+
+questions - fire away on email - dont struggle on anything - i am happy to explain what it does or is suppose to do
+
+the schema needs to be worked on, it needs various things added like record type and maybe record insert time as well as maybe a 
+create time etc.  we can talk about that once you have this version of the code up and working and are started on 
+the rewrite using more modularity/etc.
+
+                                                                                                             

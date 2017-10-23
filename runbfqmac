@@ -1,0 +1,24 @@
+echo "runbfq"
+cc bfq.c -I.. -L../.libs -DBSDXATTRS -l sqlite3 -o bfq
+#cc bfq.c -pthread -l sqlite3 -o bfq
+#
+# ./bfq path reserved "select on summary" "select on entries" printdirresults andor printdirsexamined
+# printdirresults prints the directory info if it matches critera
+# andor 0 is and 1 is or - and or between first select and second select
+# printdirsexamined printes each directory that is examined
+# maxthreads
+#
+echo ">>>>>>>>> summary all entries like dumb printdir and noprintdirexamined"
+./bfq testdirdup1/testdir "" "select name,type,uid,gid,size from summary" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 0 0 4 0
+echo ">>>>>>>>> summary like cc entries like dumb printdir or  noprintdirexamined"
+./bfq testdirdup1/testdir "" "select name,type,uid,gid,size from summary where name like '%cc%'" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 1 0 4 0
+echo ">>>>>>>>> summary like cc entries like dumb printdir or printdirexamined"
+./bfq testdirdup1/testdir "" "select name,type,uid,gid,size from summary where name like '%cc%'" "select name,type,uid,gid,size from entries where name like '%dumb%'" 1 1 1 4 0
+echo ">>>>>>>>> no summary entries like dumb noprintdir or noprintdirexamined"
+./bfq testdirdup1/testdir "" "" "select name,type,uid,gid,size from entries where name like '%dumb%'"  0 0 0 4 0
+echo ">>>>>>>>> test of printing parent inodes in 4 column"
+./bfq testdirdup1/testdir "" "select name,type,inode,uid,gid,size from summary" "select name,type,inode,uid,gid,size from entries"  1 0 0 0 4
+echo ">>>>>>>>> test of printing parent inode in 4 column using tree summary max files in dir > 1"
+./bfq testdirdup1/testdir "select maxsubdirfiles from treesummary where maxsubdirfiles > 1" "select name,type,inode,uid,gid,size from summary" "select name,type,inode,uid,gid,size from entries"  1 0 0 0 4
+echo ">>>>>>>>> test of printing parent inode in 4 column using tree summary max files in dir > 10"
+./bfq testdirdup1/testdir "select maxsubdirfiles from treesummary where maxsubdirfiles > 10" "select name,type,inode,uid,gid,size,linkname,xattrs from summary" "select name,type,inode,uid,gid,size,linkname,xattrs from entries"  1 0 0 0 4

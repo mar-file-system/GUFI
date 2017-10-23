@@ -1,0 +1,9 @@
+echo "runbfw"
+cc bfw.c -DBSDXATTRS -o bfw
+# cc bfw.c -pthread -o bfw
+echo "---> ./bfw testdir 1 10 0 (walk with readdir stat and xattr print 10 threads spacedelims)"
+./bfw testdir 0 0 0
+echo "---> ./bfw testdir 0 10 0(walk with readdir stat and xattr print 10 threads spacedelims)"
+./bfw testdir 1 0 0
+echo "---> ./bfw testdir 0 0 1(walk with readdir stat and xattr print 0 threads nonprintablelims)"
+./bfw testdir 1 0 1

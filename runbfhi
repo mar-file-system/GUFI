@@ -1,0 +1,4 @@
+rm -rf testhpssdir
+./bfhi /users/ggrider/hpss/hpssnsobj.db testhpssdir 1 0
+ls -lR testhpssdir
+ ./bfq testhpssdir "" "select name, type, size, inode from summary where inode = 870" "select name, type, size, inode from entries" 1 0 0 0 4

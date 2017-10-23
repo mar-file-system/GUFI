@@ -1,0 +1,4 @@
+echo "dbdump no entries"
+./dbdump testdirdup1/testdir 0
+echo "dbdump with entries"
+./dbdump testdirdup1/testdir 1

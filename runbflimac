@@ -1,0 +1,10 @@
+cc bfli.c -I.. -L../.libs -l sqlite3 -DBSDXATTRS -o bfli
+rm -rf testdirdup5
+mkdir testdirdup5
+#mkdir testdirdup5/testdirdup1t
+#mkdir testdirdup5/testdirdup1/testdir
+./bfli dump testdirdup5 1 0
+ls -lR testdirdup5/testdir
+cat testdirdup5/testdir/pinode
+echo ""
+./bfq testdirdup5/testdir "" "select name,type,inode,mode,uid,gid,size,blksize,blocks,atime,mtime,ctime,linkname,xattrs from summary" "select name,type,inode,mode,uid,gid,size,blksize,blocks,atime,mtime,ctime,linkname,xattrs from entries"  1 0 0 0 4

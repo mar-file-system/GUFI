@@ -1,0 +1,8 @@
+# cc -DBSDXATTRS dfw.c -o dfw
+cc dfw.c -o dfw
+echo "---> ./dfw testdir 0 0 (just walk with readdir)"
+./dfw testdir 0 0
+echo "---> ./dfw testdir 1 0 (just walk with stat)"
+./dfw testdir 1 0
+echo "---> ./dfw testdir 1 1 (walk with stat and xattr)"
+./dfw testdir 1 1
