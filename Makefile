@@ -56,4 +56,6 @@ clean:
 	rm -f libgufi.a
 	rm -f *.o
 	rm -f *~
-	#  for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
+	@ # for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
+	@ # final "echo" is so sub-shell will return success
+	@ (for F in `ls *.c | sed -e 's/\.c$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
