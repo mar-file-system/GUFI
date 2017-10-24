@@ -1,3 +1,5 @@
+#include <sqlite3.h>
+
 sqlite3 *  opendb(const char *name, char * nameto, struct stat *status, sqlite3 *db, int entriesdb, int createtables)
 {
     char *err_msg = 0;

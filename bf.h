@@ -31,19 +31,19 @@ struct sum {
 };
 
 struct work {
-char name[MAXPATH];
-char nameto[MAXPATH];
-char sqlsum[MAXSQL];
-char  sqlent[MAXSQL];
-struct stat statuso;
-int printdir;
-int andor;
-int printing;
-int pinode;
-int pinodeplace;
-long long int offset;
-int dodelim;
-char xattr[MAXXATTR];
+   char name[MAXPATH];
+   char nameto[MAXPATH];
+   char sqlsum[MAXSQL];
+   char  sqlent[MAXSQL];
+   struct stat statuso;
+   int printdir;
+   int andor;
+   int printing;
+   int pinode;
+   int pinodeplace;
+   long long int offset;
+   int dodelim;
+   char xattr[MAXXATTR];
 };
 
 char xattrdelim[] = "\x1F";

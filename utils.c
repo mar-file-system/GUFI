@@ -98,11 +98,13 @@ int pullxattrs( const char *name, char *bufx) {
     unsigned int ptest;
     bufxp=bufx;
     bzero(buf,sizeof(buf));
+
 #ifdef BSDXATTRS
     buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
 #else
     buflen=listxattr(name,buf,sizeof(buf));
 #endif
+
 #ifdef BSDXATTRS
     buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
 #else
@@ -176,21 +178,21 @@ int zeroit(struct sum *summary)
 int sumit (struct sum *summary,struct stat *status, int xattrs, char * type) {
 
   if (summary->setit == 0) {
-    summary->minuid=status->st_uid;
-    summary->maxuid=status->st_uid;
-    summary->mingid=status->st_gid;
-    summary->maxgid=status->st_gid;
-    summary->minsize=status->st_size;
-    summary->maxsize=status->st_size;;
-    summary->minctime=status->st_ctime;
-    summary->maxctime=status->st_ctime;
-    summary->minmtime=status->st_mtime;
-    summary->maxmtime=status->st_mtime;
-    summary->minatime=status->st_atime;
-    summary->maxatime=status->st_atime;;
-    summary->minblocks=status->st_blocks;
-    summary->maxblocks=status->st_blocks;
-    summary->setit=1;
+    summary->minuid    = status->st_uid;
+    summary->maxuid    = status->st_uid;
+    summary->mingid    = status->st_gid;
+    summary->maxgid    = status->st_gid;
+    summary->minsize   = status->st_size;
+    summary->maxsize   = status->st_size;;
+    summary->minctime  = status->st_ctime;
+    summary->maxctime  = status->st_ctime;
+    summary->minmtime  = status->st_mtime;
+    summary->maxmtime  = status->st_mtime;
+    summary->minatime  = status->st_atime;
+    summary->maxatime  = status->st_atime;;
+    summary->minblocks = status->st_blocks;
+    summary->maxblocks = status->st_blocks;
+    summary->setit     = 1;
   }
   if (!strncmp(type,"f",1)) {
      summary->totfiles++;
@@ -262,6 +264,9 @@ int tsumit (struct sum *sumin,struct sum *smout) {
   return 0;
 }
 
+// given a possibly-multi-level path of directories (final component is
+// also a dir), create the parent dirs all the way down.
+// 
 int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
@@ -281,7 +286,19 @@ int mkpath(char* file_path, mode_t mode) {
   return 0;
 }
 
-int dupdir(const char *name, char *nameto,const struct stat *status,int xattrs, char *xattr)
+// copy directory <name>, with all perms, times, xattrs, etc, to the
+// corresponding spot under <nameto>.
+//
+// <xattr> is a buf holding a sequence of null-terminated strings, such as
+//     would be returned by listxattr() / getxattr()
+//
+// <xattrs> is the number of strings in <xattr>
+//
+int dupdir(const char        *name,
+           char              *nameto,
+           const struct stat *status,
+           int                xattrs,
+           char              *xattr)
 {
     char topath[MAXPATH];
     struct stat teststat;

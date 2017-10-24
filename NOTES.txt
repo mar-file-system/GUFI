@@ -1,0 +1,100 @@
+---------------------------------------------------------------------------
+sqlite3_reset() no longer needed after sqlite3_step() ?
+
+Might save some performance to remove it.
+(e.g. in dfwrplusdb.c)
+See https://sqlite.org/capi3ref.html#sqlite3_step
+[macports gave me sqlite3 v3.20.1]
+
+
+---------------------------------------------------------------------------
+series of developments through app versions
+dfw, dfwrplus, dfwrplusdb, dfwrplusdbthreads, etc.
+
+Are these just intended as artifacts of development, or are they intended
+to allow e.g. timing to see the relative burden from adding new features?
+
+Would we rather have a single executable that could be built, or have
+command-line parms, to exercise these different features in a single app,
+to avoid having to maintain them all in parallel?
+
+
+---------------------------------------------------------------------------
+race condition?
+
+In dfwrplusdbthreads.c, in listdir(), after waiting for runningthreads ==
+0, we aqcuire the lock and set runningthreads = 1.  Could someone else do
+the same thing?
+
+We should really do something like this:
+
+       while (1) {
+         pthread_mutex_lock(&running_mutex);
+         myrunningthreads=runningthreads;
+         if (myrunningthreads == 0 ) {
+               break;
+         }
+         pthread_mutex_unlock(&running_mutex);
+       }
+
+       runningthreads=1;
+       pthread_mutex_unlock(&running_mutex);
+
+[The same issue occurs in two different spots.]
+
+
+---------------------------------------------------------------------------
+more-efficient busy-loop?
+
+In dfwrplusdbthreads.c, in listdir(), we could call sched_yield() when
+myrunningthreads > 0.
+
+[after the unlock, inside the loop, in the example above]
+
+
+---------------------------------------------------------------------------
+As Gary mentioned, we could pull long-lived threads from a pool
+
+... instead of creating a thread for every task.
+
+
+---------------------------------------------------------------------------
+learned something
+
+creating threads as detached makes their termination release resources
+immediately.  Nobody needs to join them.
+
+
+---------------------------------------------------------------------------
+quicker comparison function, for qsort in dfwrplusdbthreadsort.c
+
+// Returns {1,0,-1}, for {>,==,<}
+int no_cond(const void * a, const void * b) {
+   long long int a1 = *(long long int*)a;
+   long long int b1 = *(long long int*)b;
+
+   return ( (a1 > b1) - (a1 < b1) );
+}
+
+
+---------------------------------------------------------------------------
+in bfw.c, faster to just memcpy the entire stat struct?
+
+and use ptrs instead of sprintf()?
+same thing in push() in structq.c
+
+
+---------------------------------------------------------------------------
+in bfw.c, why use locks to assure thread has started?
+
+Q: It's started in detached mode, anyhow.  If the point is to protect
+information that will be copied from global to local by the thread at
+startup, shouldn't that just be encapsulated as arguments?
+
+A: Oh, I see.  In e.g. bfw.c, main copies from the queue-element to local
+<mywork>, then passes that to the thread.  The thread must copy *that* to
+local values before main can reuse <mywork>.
+
+IMPROVEMENT: just pass the queue-element to the thread.  Then main doesn't
+have to wait, and we reduce the amount of copying.  Thread must be sure to
+free the queue-elt.

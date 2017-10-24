@@ -115,40 +115,40 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
             //printf("inwhile d %s %lld %lld\n", name, entry->d_ino, ppin);
             listdir(path, pin, entry, entry->d_ino, 0, 0);
         } else {
-            len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
-            //bzero(lpath,sizeof(lpath));
-            if (entry->d_type == DT_REG) {
-            //if (S_ISREG(st.st_mode)) {
-               sprintf(type,"f");
-            }
-            if (entry->d_type == DT_LNK) {
-            //if (S_ISLNK(st.st_mode)) {
-               sprintf(type,"l");
-               //if (statit) readlink(path,lpath,MAXPATH);
-            }
-            //if (statit+xattrit > 0) {
-              //printf("%lld ", pin);
-              //bzero(type,sizeof(type));
-              //printf("readlink %s %s\n",path,lpath);
-              //printit(path,&st,type,lpath,xattrs,xattr,1,pin);
-            //} else {
-              printf("%s %s %lld %lld\n",type, path, entry->d_ino,pin);
-      zname = sqlite3_mprintf("%q",path);
-      ztype = sqlite3_mprintf("%q",type);
-      sqlite3_bind_text(reso,1,zname,-1,SQLITE_TRANSIENT);
-      sqlite3_bind_text(reso,2,ztype,-1,SQLITE_TRANSIENT);
-      sqlite3_bind_int64(reso,3,entry->d_ino);
-      sqlite3_bind_int64(reso,4,pin);
-      sqlite3_free(zname);
-      sqlite3_free(ztype);
-      rc = sqlite3_step(reso);
-    if (rc != SQLITE_ROW) {
-          //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
-          //return 0;
-    }
-    sqlite3_clear_bindings(reso);
-    sqlite3_reset(reso);
-            //}
+           len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
+           //bzero(lpath,sizeof(lpath));
+           if (entry->d_type == DT_REG) {
+              //if (S_ISREG(st.st_mode)) {
+              sprintf(type,"f");
+           }
+           if (entry->d_type == DT_LNK) {
+              //if (S_ISLNK(st.st_mode)) {
+              sprintf(type,"l");
+              //if (statit) readlink(path,lpath,MAXPATH);
+           }
+           //if (statit+xattrit > 0) {
+           //printf("%lld ", pin);
+           //bzero(type,sizeof(type));
+           //printf("readlink %s %s\n",path,lpath);
+           //printit(path,&st,type,lpath,xattrs,xattr,1,pin);
+           //} else {
+           printf("%s %s %lld %lld\n",type, path, entry->d_ino,pin);
+           zname = sqlite3_mprintf("%q",path);
+           ztype = sqlite3_mprintf("%q",type);
+           sqlite3_bind_text(reso,1,zname,-1,SQLITE_TRANSIENT);
+           sqlite3_bind_text(reso,2,ztype,-1,SQLITE_TRANSIENT);
+           sqlite3_bind_int64(reso,3,entry->d_ino);
+           sqlite3_bind_int64(reso,4,pin);
+           sqlite3_free(zname);
+           sqlite3_free(ztype);
+           rc = sqlite3_step(reso);
+           if (rc != SQLITE_ROW) {
+              //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
+              //return 0;
+           }
+           sqlite3_clear_bindings(reso);
+           sqlite3_reset(reso);
+           //}
         }
     }
     closedir(dir);

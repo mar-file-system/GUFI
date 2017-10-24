@@ -1,13 +1,13 @@
  struct Node
  {
-        char Data[MAXPATH];
-        struct stat status;
-        int pinode;
-        char Datax[MAXXATTR];
+        char         Data[MAXPATH];
+        struct stat  status;
+        int          pinode;
+        char         Datax[MAXXATTR];
         struct Node* next;
  }*rear, *front;
 
- int qent;
+int qent;
 
 void delQueue()
 {
@@ -28,19 +28,20 @@ void push(char *value, struct stat *status, int pinode)
      struct Node *temp;
      temp=(struct Node *)malloc(sizeof(struct Node));
      qent++;
+
      sprintf(temp->Data,"%s",value);
-     temp->status.st_ino=status->st_ino;
-     temp->status.st_mode=status->st_mode;
-     temp->status.st_nlink=status->st_nlink;
-     temp->status.st_uid=status->st_uid;
-     temp->status.st_gid=status->st_gid;
-     temp->status.st_size=status->st_size;
-     temp->status.st_blksize=status->st_blksize;
-     temp->status.st_blocks=status->st_blocks;
-     temp->status.st_atime=status->st_atime;
-     temp->status.st_mtime=status->st_mtime;
-     temp->status.st_ctime=status->st_ctime;
-     temp->pinode=pinode;
+     temp->status.st_ino     = status->st_ino;
+     temp->status.st_mode    = status->st_mode;
+     temp->status.st_nlink   = status->st_nlink;
+     temp->status.st_uid     = status->st_uid;
+     temp->status.st_gid     = status->st_gid;
+     temp->status.st_size    = status->st_size;
+     temp->status.st_blksize = status->st_blksize;
+     temp->status.st_blocks  = status->st_blocks;
+     temp->status.st_atime   = status->st_atime;
+     temp->status.st_mtime   = status->st_mtime;
+     temp->status.st_ctime   = status->st_ctime;
+     temp->pinode            = pinode;
      if (front == NULL)
      {
            front=temp;
