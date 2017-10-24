@@ -85,7 +85,7 @@ same thing in push() in structq.c
 
 
 ---------------------------------------------------------------------------
-in bfw.c, why use locks to assure thread has started?
+in bfw.c, why use locks (i.e. startlock) to assure thread has started?
 
 Q: It's started in detached mode, anyhow.  If the point is to protect
 information that will be copied from global to local by the thread at
