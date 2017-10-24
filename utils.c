@@ -86,6 +86,26 @@ int printitd(const char *name, const struct stat *status, char *type, char *link
   return 0;
 }
 
+
+
+#if __linux__  // GNU/Intel/IBM/etc compilers
+#  include <sys/types.h>
+#  include <attr/xattr.h>
+
+#  define LISTXATTR(PATH, BUF, SIZE)        llistxattr((PATH), (BUF), (SIZE))
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0)
+
+#else  // was: BSDXATTRS  (OSX)
+#  include <sys/xattr.h>
+
+#  define LISTXATTR(PATH, BUF, SIZE)        listxattr((PATH), (BUF), (SIZE), XATTR_NOFOLLOW)
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE), 0, XATTR_NOFOLLOW)
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0, 0)
+#endif
+
+
+
 int pullxattrs( const char *name, char *bufx) {
     char buf[MAXXATTR];
     char bufv[MAXXATTR];
@@ -99,17 +119,8 @@ int pullxattrs( const char *name, char *bufx) {
     bufxp=bufx;
     bzero(buf,sizeof(buf));
 
-#ifdef BSDXATTRS
-    buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
-#else
-    buflen=listxattr(name,buf,sizeof(buf));
-#endif
+    buflen = LISTXATTR(name, buf, sizeof(buf));
 
-#ifdef BSDXATTRS
-    buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
-#else
-    buflen=listxattr(name,buf,sizeof(buf));
-#endif
     xattrs=0;
 
     if (buflen > 0) {
@@ -117,11 +128,9 @@ int pullxattrs( const char *name, char *bufx) {
        key=buf;
        while (buflen > 0) {
          bzero(bufv,sizeof(bufv));
-#ifdef BSDXATTRS
-         bufvlen = getxattr(name, key, bufv, sizeof(bufv),0,XATTR_NOFOLLOW); 
-#else
-         bufvlen = getxattr(name, key, bufv, sizeof(bufv)); 
-#endif
+
+         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv)); 
+
          keylen=strlen(key) + 1;
          //printf("key: %s value: %s len %zd keylen %d\n",key,bufv,bufvlen,keylen);
          sprintf(bufxp,"%s%s",key,xattrdelim); bufxp=bufxp+keylen;
@@ -338,11 +347,9 @@ int dupdir(const char        *name,
         //printf("in dupdir key buf %s",buf); 
         strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1; 
         //printf("val bufv %s\n",bufv); 
-#ifdef BSDXATTRS
-        setxattr(topath, buf, bufv, strlen(bufv), 0,0);
-#else
-        setxattr(topath, buf, bufv, strlen(bufv),0);
-#endif
+
+        SETXATTR(topath, buf, bufv, strlen(bufv));
+
         cnt++;
       }
     }

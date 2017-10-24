@@ -1,18 +1,34 @@
 
-
 LIBFILES = dbutils structq utils
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = bf.h
 
+# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse 
+
+DFW  = dfw dfwrplus dfwrplusdb dfwrplusdbthread dfwrplusdbthreadsort rpluslistdbthreadsort
+BFW  = bfw bfq bfi  bfti bfhi bfri 
+DUMP = dbdump
+
+
+all: all.dfw all.bfw all.tools
+
+all.dfw: $(DFW)
+
+all.bfw: $(BFW)
+
+all.tools: $(UTILS)
+
+
+
 libgufi.a: $(LIB_O) $(LIB_H)
 	ar -r $@ $(LIB_O)
 
 %.o: %.c
-	cc  -DBSDXATTRS -o $@ $< -pthread -l sqlite3
+	cc -o $@ $< -pthread -l sqlite3
 
 %: %.c
-	cc  -DBSDXATTRS -o $@ $< -pthread -l sqlite3
+	cc -o $@ $< -pthread -l sqlite3
 
 # echo "make all"
 # # cc bfq.c -I.. -L../.libs -l sqlite3 -DBSDXATTRS -o bfq
@@ -40,3 +56,4 @@ clean:
 	rm -f libgufi.a
 	rm -f *.o
 	rm -f *~
+	#  for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
