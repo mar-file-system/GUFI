@@ -8,7 +8,7 @@ LIB_H = bf.h
 
 DFW  = dfw dfwrplus dfwrplusdb dfwrplusdbthread dfwrplusdbthreadsort rpluslistdbthreadsort
 BFW  = bfw bfq bfi  bfti bfhi bfri 
-DUMP = dbdump
+TOOLS = dbdump make_testdirs
 
 
 all: all.dfw all.bfw all.tools
@@ -17,7 +17,7 @@ all.dfw: $(DFW)
 
 all.bfw: $(BFW)
 
-all.tools: $(UTILS)
+all.tools: $(TOOLS)
 
 
 
