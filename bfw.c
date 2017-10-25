@@ -22,8 +22,10 @@
 
 volatile int runningthreads = 0;
 pthread_mutex_t running_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 volatile int queuelock = 0;
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 volatile int startlock = 0;
 pthread_mutex_t start_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -61,33 +63,35 @@ static void * listdir(void * passv)
     //sprintf(rmywork.sqlent,"%s",passmywork->sqlent);
     //rmywork.printdir=passmywork->printdir;
     //rmywork.andor=passmywork->andor;
-    printing=passmywork->printing;
-    statuso.st_ino=passmywork->statuso.st_ino;;
-    stato.st_ino=passmywork->statuso.st_ino;;
-    statuso.st_mode=passmywork->statuso.st_mode;
-    stato.st_mode=passmywork->statuso.st_mode;
-    statuso.st_nlink=passmywork->statuso.st_nlink;
-    stato.st_nlink=passmywork->statuso.st_nlink;
-    statuso.st_uid=passmywork->statuso.st_uid;
-    stato.st_uid=passmywork->statuso.st_uid;
-    statuso.st_gid=passmywork->statuso.st_gid;
-    stato.st_gid=passmywork->statuso.st_gid;
-    statuso.st_size=passmywork->statuso.st_size;
-    stato.st_size=passmywork->statuso.st_size;
-    statuso.st_blksize=passmywork->statuso.st_blksize;
-    stato.st_blksize=passmywork->statuso.st_blksize;
-    statuso.st_blocks=passmywork->statuso.st_blocks;
-    stato.st_blocks=passmywork->statuso.st_blocks;
-    statuso.st_atime=passmywork->statuso.st_atime;
-    stato.st_atime=passmywork->statuso.st_atime;
-    statuso.st_mtime=passmywork->statuso.st_mtime;
-    stato.st_mtime=passmywork->statuso.st_mtime;
-    statuso.st_ctime=passmywork->statuso.st_ctime;
-    stato.st_ctime=passmywork->statuso.st_ctime;
-    statussave=&stato;
-    status=&statuso;
-    pinode=passmywork->pinode;
-    ldodelim=passmywork->dodelim;
+    printing           = passmywork->printing;
+    statuso.st_ino     = passmywork->statuso.st_ino;;
+    stato.st_ino       = passmywork->statuso.st_ino;;
+    statuso.st_mode    = passmywork->statuso.st_mode;
+    stato.st_mode      = passmywork->statuso.st_mode;
+    statuso.st_nlink   = passmywork->statuso.st_nlink;
+    stato.st_nlink     = passmywork->statuso.st_nlink;
+    statuso.st_uid     = passmywork->statuso.st_uid;
+    stato.st_uid       = passmywork->statuso.st_uid;
+    statuso.st_gid     = passmywork->statuso.st_gid;
+    stato.st_gid       = passmywork->statuso.st_gid;
+    statuso.st_size    = passmywork->statuso.st_size;
+    stato.st_size      = passmywork->statuso.st_size;
+    statuso.st_blksize = passmywork->statuso.st_blksize;
+    stato.st_blksize   = passmywork->statuso.st_blksize;
+    statuso.st_blocks  = passmywork->statuso.st_blocks;
+    stato.st_blocks    = passmywork->statuso.st_blocks;
+    statuso.st_atime   = passmywork->statuso.st_atime;
+    stato.st_atime     = passmywork->statuso.st_atime;
+    statuso.st_mtime   = passmywork->statuso.st_mtime;
+    stato.st_mtime     = passmywork->statuso.st_mtime;
+    statuso.st_ctime   = passmywork->statuso.st_ctime;
+    stato.st_ctime     = passmywork->statuso.st_ctime;
+
+    statussave         = &stato;
+    status             = &statuso;
+    pinode             = passmywork->pinode;
+    ldodelim           = passmywork->dodelim;
+
     //printf("copying input in listdir\n");
     pthread_mutex_lock(&start_mutex);
     startlock = 0;
@@ -172,9 +176,11 @@ static void * listdir(void * passv)
         }
     } while ((entry = (readdir(dir))));
     closedir(dir);
+
     pthread_mutex_lock(&running_mutex);
     runningthreads--;
     pthread_mutex_unlock(&running_mutex);
+
     return NULL;
 }
  
@@ -251,46 +257,51 @@ int main(int argc, char *argv[])
              startone=0;
          }
          if (startone) {
-         pthread_mutex_lock(&queue_mutex);
-         //printf("about to addrcurrent %d\n",addrqent());
-         sprintf(mywork.name,"%s",addrcurrent());
-         mywork.statuso.st_ino=addrcurrents()->st_ino;;
-         mywork.statuso.st_mode=addrcurrents()->st_mode;
-         mywork.statuso.st_nlink=addrcurrents()->st_nlink;
-         mywork.statuso.st_uid=addrcurrents()->st_uid;
-         mywork.statuso.st_gid=addrcurrents()->st_gid;
-         mywork.statuso.st_size=addrcurrents()->st_size;
-         mywork.statuso.st_blksize=addrcurrents()->st_blksize;
-         mywork.statuso.st_blocks=addrcurrents()->st_blocks;
-         mywork.statuso.st_atime=addrcurrents()->st_atime;
-         mywork.statuso.st_mtime=addrcurrents()->st_mtime;
-         mywork.statuso.st_ctime=addrcurrents()->st_ctime;
-         mywork.pinode=addrcurrentp();
-         pmywork=&mywork;
-         delQueue();
-         //pthread_mutex_unlock(&queue_mutex);
-         pthread_mutex_lock(&running_mutex);
-         runningthreads++;
-         pthread_mutex_unlock(&running_mutex);
-         pthread_mutex_unlock(&queue_mutex);
-         //printf("loop queueing create %s\n",pmywork->name);
-         pthread_mutex_lock(&start_mutex);
-         startlock = 1;
-         pthread_mutex_unlock(&start_mutex);
-rc = pthread_attr_init(&attr);
-//printf("attr_init: %d\n",rc);
-rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-//printf("attr_setdetachedstate: %d\n",rc);
-         //rc = pthread_create(&thread, NULL, listdir, pmywork);     
-         rc = pthread_create(&thread, &attr, listdir, pmywork);
-         //printf("push loop created tid %d queueing create %s\n",thread,pmywork->name);
-         while (startlock) {
-           //printf(".");
-         }
-         //listdir(pmywork);
-         //pthread_mutex_unlock(&running_mutex);
-         //delQueue();
-         //pthread_mutex_unlock(&running_mutex);
+            pthread_mutex_lock(&queue_mutex);
+            //printf("about to addrcurrent %d\n",addrqent());
+            sprintf(mywork.name,"%s", addrcurrent());
+            mywork.statuso.st_ino     = addrcurrents()->st_ino;;
+            mywork.statuso.st_mode    = addrcurrents()->st_mode;
+            mywork.statuso.st_nlink   = addrcurrents()->st_nlink;
+            mywork.statuso.st_uid     = addrcurrents()->st_uid;
+            mywork.statuso.st_gid     = addrcurrents()->st_gid;
+            mywork.statuso.st_size    = addrcurrents()->st_size;
+            mywork.statuso.st_blksize = addrcurrents()->st_blksize;
+            mywork.statuso.st_blocks  = addrcurrents()->st_blocks;
+            mywork.statuso.st_atime   = addrcurrents()->st_atime;
+            mywork.statuso.st_mtime   = addrcurrents()->st_mtime;
+            mywork.statuso.st_ctime   = addrcurrents()->st_ctime;
+            mywork.pinode             = addrcurrentp();
+
+            pmywork = &mywork;
+            delQueue();
+
+            //pthread_mutex_unlock(&queue_mutex);
+            pthread_mutex_lock(&running_mutex);
+            runningthreads++;
+            pthread_mutex_unlock(&running_mutex);
+            pthread_mutex_unlock(&queue_mutex);
+
+            //printf("loop queueing create %s\n",pmywork->name);
+            pthread_mutex_lock(&start_mutex);
+            startlock = 1;
+            pthread_mutex_unlock(&start_mutex);
+
+            rc = pthread_attr_init(&attr);
+            //printf("attr_init: %d\n",rc);
+            rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+            //printf("attr_setdetachedstate: %d\n",rc);
+
+            //rc = pthread_create(&thread, NULL, listdir, pmywork);     
+            rc = pthread_create(&thread, &attr, listdir, pmywork);
+            //printf("push loop created tid %d queueing create %s\n",thread,pmywork->name);
+            while (startlock) {
+               //printf(".");
+            }
+            //listdir(pmywork);
+            //pthread_mutex_unlock(&running_mutex);
+            //delQueue();
+            //pthread_mutex_unlock(&running_mutex);
          }
          //printf("mainloop queue %d threads %d\n",addrqent(),runningthreads);
      }

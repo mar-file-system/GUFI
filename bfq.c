@@ -66,24 +66,28 @@ static void * listdir(void * passv)
     sprintf(rmywork.nameto,"%s",passmywork->nameto);
     sprintf(rmywork.sqlsum,"%s",passmywork->sqlsum);
     sprintf(rmywork.sqlent,"%s",passmywork->sqlent);
-    rmywork.printdir=passmywork->printdir;
-    rmywork.andor=passmywork->andor;
-    rmywork.printing=passmywork->printing;
-    rmywork.pinodeplace=passmywork->pinodeplace;
-    rmywork.statuso.st_ino=passmywork->statuso.st_ino;;
-    stato.st_ino=passmywork->statuso.st_ino;;
-    rmywork.statuso.st_mode=passmywork->statuso.st_mode;
-    rmywork.statuso.st_nlink=passmywork->statuso.st_nlink;
-    rmywork.statuso.st_uid=passmywork->statuso.st_uid;
-    rmywork.statuso.st_gid=passmywork->statuso.st_gid;
-    rmywork.statuso.st_size=passmywork->statuso.st_size;
-    rmywork.statuso.st_blksize=passmywork->statuso.st_blksize;
-    rmywork.statuso.st_blocks=passmywork->statuso.st_blocks;
-    rmywork.statuso.st_atime=passmywork->statuso.st_atime;
-    rmywork.statuso.st_mtime=passmywork->statuso.st_mtime;
-    rmywork.statuso.st_ctime=passmywork->statuso.st_ctime;
-    pinode=passmywork->pinode;
-    mywork=&rmywork; 
+
+    rmywork.printdir       = passmywork->printdir;
+    rmywork.andor          = passmywork->andor;
+    rmywork.printing       = passmywork->printing;
+    rmywork.pinodeplace    = passmywork->pinodeplace;
+
+    stato.st_ino = passmywork->statuso.st_ino;;
+
+    rmywork.statuso.st_ino     = passmywork->statuso.st_ino;;
+    rmywork.statuso.st_mode    = passmywork->statuso.st_mode;
+    rmywork.statuso.st_nlink   = passmywork->statuso.st_nlink;
+    rmywork.statuso.st_uid     = passmywork->statuso.st_uid;
+    rmywork.statuso.st_gid     = passmywork->statuso.st_gid;
+    rmywork.statuso.st_size    = passmywork->statuso.st_size;
+    rmywork.statuso.st_blksize = passmywork->statuso.st_blksize;
+    rmywork.statuso.st_blocks  = passmywork->statuso.st_blocks;
+    rmywork.statuso.st_atime   = passmywork->statuso.st_atime;
+    rmywork.statuso.st_mtime   = passmywork->statuso.st_mtime;
+    rmywork.statuso.st_ctime   = passmywork->statuso.st_ctime;
+
+    pinode = passmywork->pinode;
+    mywork = &rmywork; 
     //printf("copying input in listdir\n");
     pthread_mutex_lock(&start_mutex);
     startlock = 0;
@@ -210,17 +214,20 @@ int main(int argc, char *argv[])
 
      qent=0;
      front=NULL;
+
      sprintf(mywork.name,"%s",argv[1]);
      sprintf(mywork.nameto,"%s",argv[2]);
      sprintf(mywork.sqlsum,"%s",argv[3]);
      sprintf(mywork.sqlent,"%s",argv[4]);
-     mywork.printdir=atoi(argv[5]);
-     mywork.andor=atoi(argv[6]);
-     mywork.printing = atoi(argv[7]);
-     maxthreads = atoi(argv[8]);
-     mywork.pinodeplace=atoi(argv[9]);
+     mywork.printdir    = atoi(argv[5]);
+     mywork.andor       = atoi(argv[6]);
+     mywork.printing    = atoi(argv[7]);
+     maxthreads         = atoi(argv[8]);
+     mywork.pinodeplace = atoi(argv[9]);
+
 //     printf("dirname %s sqltsum %s sqlent %s sqlsum %s printdir %d andor %d printing %d maxthreads %d printparentinodeplace %d\n",mywork.name, mywork.nameto, mywork.sqlent, mywork.sqlsum ,mywork.printdir,mywork.andor,mywork.printing,maxthreads,mywork.pinodeplace);
      mywork.pinode=0;
+
      /* process input directory */
      lstat(mywork.name,&mywork.statuso);
      if (!access(mywork.name, R_OK | X_OK)) {
@@ -262,36 +269,42 @@ int main(int argc, char *argv[])
              startone=0;
          }
          if (startone) {
+
          pthread_mutex_lock(&queue_mutex);
          //printf("about to addrcurrent %d\n",addrqent());
-         sprintf(mywork.name,"%s",addrcurrent());
-         mywork.statuso.st_ino=addrcurrents()->st_ino;;
-         mywork.statuso.st_mode=addrcurrents()->st_mode;
-         mywork.statuso.st_nlink=addrcurrents()->st_nlink;
-         mywork.statuso.st_uid=addrcurrents()->st_uid;
-         mywork.statuso.st_gid=addrcurrents()->st_gid;
-         mywork.statuso.st_size=addrcurrents()->st_size;
-         mywork.statuso.st_blksize=addrcurrents()->st_blksize;
-         mywork.statuso.st_blocks=addrcurrents()->st_blocks;
-         mywork.statuso.st_atime=addrcurrents()->st_atime;
-         mywork.statuso.st_mtime=addrcurrents()->st_mtime;
-         mywork.statuso.st_ctime=addrcurrents()->st_ctime;
-         mywork.pinode=addrcurrentp();
+         sprintf(mywork.name,"%s", addrcurrent());
+         mywork.statuso.st_ino     = addrcurrents()->st_ino;;
+         mywork.statuso.st_mode    = addrcurrents()->st_mode;
+         mywork.statuso.st_nlink   = addrcurrents()->st_nlink;
+         mywork.statuso.st_uid     = addrcurrents()->st_uid;
+         mywork.statuso.st_gid     = addrcurrents()->st_gid;
+         mywork.statuso.st_size    = addrcurrents()->st_size;
+         mywork.statuso.st_blksize = addrcurrents()->st_blksize;
+         mywork.statuso.st_blocks  = addrcurrents()->st_blocks;
+         mywork.statuso.st_atime   = addrcurrents()->st_atime;
+         mywork.statuso.st_mtime   = addrcurrents()->st_mtime;
+         mywork.statuso.st_ctime   = addrcurrents()->st_ctime;
+         mywork.pinode             = addrcurrentp();
+
          pmywork=&mywork;
          delQueue();
+
          //pthread_mutex_unlock(&queue_mutex);
          pthread_mutex_lock(&running_mutex);
          runningthreads++;
          pthread_mutex_unlock(&running_mutex);
+
          pthread_mutex_unlock(&queue_mutex);
          //printf("loop queueing create %s\n",pmywork->name);
+
          pthread_mutex_lock(&start_mutex);
          startlock = 1;
          pthread_mutex_unlock(&start_mutex);
-rc = pthread_attr_init(&attr);
-//printf("attr_init: %d\n",rc);
-rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-//printf("attr_setdetachedstate: %d\n",rc);
+
+         rc = pthread_attr_init(&attr);
+         //printf("attr_init: %d\n",rc);
+         rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+         //printf("attr_setdetachedstate: %d\n",rc);
          //rc = pthread_create(&thread, NULL, listdir, pmywork);     
          rc = pthread_create(&thread, &attr, listdir, pmywork);     
          //printf("loop created tid %d queueing create %s\n",thread,pmywork->name);

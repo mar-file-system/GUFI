@@ -86,6 +86,26 @@ int printitd(const char *name, const struct stat *status, char *type, char *link
   return 0;
 }
 
+
+
+#if __linux__  // GNU/Intel/IBM/etc compilers
+#  include <sys/types.h>
+#  include <attr/xattr.h>
+
+#  define LISTXATTR(PATH, BUF, SIZE)        llistxattr((PATH), (BUF), (SIZE))
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0)
+
+#else  // was: BSDXATTRS  (OSX)
+#  include <sys/xattr.h>
+
+#  define LISTXATTR(PATH, BUF, SIZE)        listxattr((PATH), (BUF), (SIZE), XATTR_NOFOLLOW)
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    getxattr((PATH), (KEY), (BUF), (SIZE), 0, XATTR_NOFOLLOW)
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  setxattr((PATH), (KEY), (VALUE), (SIZE), 0, 0)
+#endif
+
+
+
 int pullxattrs( const char *name, char *bufx) {
     char buf[MAXXATTR];
     char bufv[MAXXATTR];
@@ -98,16 +118,9 @@ int pullxattrs( const char *name, char *bufx) {
     unsigned int ptest;
     bufxp=bufx;
     bzero(buf,sizeof(buf));
-#ifdef BSDXATTRS
-    buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
-#else
-    buflen=listxattr(name,buf,sizeof(buf));
-#endif
-#ifdef BSDXATTRS
-    buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
-#else
-    buflen=listxattr(name,buf,sizeof(buf));
-#endif
+
+    buflen = LISTXATTR(name, buf, sizeof(buf));
+
     xattrs=0;
 
     if (buflen > 0) {
@@ -115,11 +128,9 @@ int pullxattrs( const char *name, char *bufx) {
        key=buf;
        while (buflen > 0) {
          bzero(bufv,sizeof(bufv));
-#ifdef BSDXATTRS
-         bufvlen = getxattr(name, key, bufv, sizeof(bufv),0,XATTR_NOFOLLOW); 
-#else
-         bufvlen = getxattr(name, key, bufv, sizeof(bufv)); 
-#endif
+
+         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv)); 
+
          keylen=strlen(key) + 1;
          //printf("key: %s value: %s len %zd keylen %d\n",key,bufv,bufvlen,keylen);
          sprintf(bufxp,"%s%s",key,xattrdelim); bufxp=bufxp+keylen;
@@ -176,21 +187,21 @@ int zeroit(struct sum *summary)
 int sumit (struct sum *summary,struct stat *status, int xattrs, char * type) {
 
   if (summary->setit == 0) {
-    summary->minuid=status->st_uid;
-    summary->maxuid=status->st_uid;
-    summary->mingid=status->st_gid;
-    summary->maxgid=status->st_gid;
-    summary->minsize=status->st_size;
-    summary->maxsize=status->st_size;;
-    summary->minctime=status->st_ctime;
-    summary->maxctime=status->st_ctime;
-    summary->minmtime=status->st_mtime;
-    summary->maxmtime=status->st_mtime;
-    summary->minatime=status->st_atime;
-    summary->maxatime=status->st_atime;;
-    summary->minblocks=status->st_blocks;
-    summary->maxblocks=status->st_blocks;
-    summary->setit=1;
+    summary->minuid    = status->st_uid;
+    summary->maxuid    = status->st_uid;
+    summary->mingid    = status->st_gid;
+    summary->maxgid    = status->st_gid;
+    summary->minsize   = status->st_size;
+    summary->maxsize   = status->st_size;;
+    summary->minctime  = status->st_ctime;
+    summary->maxctime  = status->st_ctime;
+    summary->minmtime  = status->st_mtime;
+    summary->maxmtime  = status->st_mtime;
+    summary->minatime  = status->st_atime;
+    summary->maxatime  = status->st_atime;;
+    summary->minblocks = status->st_blocks;
+    summary->maxblocks = status->st_blocks;
+    summary->setit     = 1;
   }
   if (!strncmp(type,"f",1)) {
      summary->totfiles++;
@@ -262,6 +273,9 @@ int tsumit (struct sum *sumin,struct sum *smout) {
   return 0;
 }
 
+// given a possibly-multi-level path of directories (final component is
+// also a dir), create the parent dirs all the way down.
+// 
 int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
@@ -281,7 +295,19 @@ int mkpath(char* file_path, mode_t mode) {
   return 0;
 }
 
-int dupdir(const char *name, char *nameto,const struct stat *status,int xattrs, char *xattr)
+// copy directory <name>, with all perms, times, xattrs, etc, to the
+// corresponding spot under <nameto>.
+//
+// <xattr> is a buf holding a sequence of null-terminated strings, such as
+//     would be returned by listxattr() / getxattr()
+//
+// <xattrs> is the number of strings in <xattr>
+//
+int dupdir(const char        *name,
+           char              *nameto,
+           const struct stat *status,
+           int                xattrs,
+           char              *xattr)
 {
     char topath[MAXPATH];
     struct stat teststat;
@@ -321,11 +347,9 @@ int dupdir(const char *name, char *nameto,const struct stat *status,int xattrs, 
         //printf("in dupdir key buf %s",buf); 
         strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1; 
         //printf("val bufv %s\n",bufv); 
-#ifdef BSDXATTRS
-        setxattr(topath, buf, bufv, strlen(bufv), 0,0);
-#else
-        setxattr(topath, buf, bufv, strlen(bufv),0);
-#endif
+
+        SETXATTR(topath, buf, bufv, strlen(bufv));
+
         cnt++;
       }
     }

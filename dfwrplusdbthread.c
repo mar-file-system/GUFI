@@ -26,6 +26,7 @@
  
 volatile int runningthreads = 0;
 pthread_mutex_t running_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 volatile int startlock = 0;
 pthread_mutex_t start_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -135,9 +136,11 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
        pthread_mutex_lock(&running_mutex);
        runningthreads=1;
        pthread_mutex_unlock(&running_mutex);
+
        pthread_mutex_lock(&start_mutex);
        startlock = 1;
        pthread_mutex_unlock(&start_mutex);
+
        rc = pthread_attr_init(&attr);
        rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
        rc = pthread_create(&thread, &attr, insertthread, NULL);
@@ -184,9 +187,11 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
              pthread_mutex_lock(&running_mutex);
              runningthreads=1;
              pthread_mutex_unlock(&running_mutex);
+
              pthread_mutex_lock(&start_mutex);
              startlock = 1;
              pthread_mutex_unlock(&start_mutex);
+
              rc = pthread_attr_init(&attr);
              rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
              rc = pthread_create(&thread, &attr, insertthread, NULL);
@@ -260,9 +265,11 @@ int main(int argc, char *argv[])
        pthread_mutex_lock(&running_mutex);
        runningthreads=1;
        pthread_mutex_unlock(&running_mutex);
+
        pthread_mutex_lock(&start_mutex);
        startlock = 1;
        pthread_mutex_unlock(&start_mutex);
+
        rc = pthread_attr_init(&attr);
        rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
        rc = pthread_create(&thread, &attr, insertthread, NULL);
