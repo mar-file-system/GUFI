@@ -64,6 +64,8 @@ int make_it(const char* dir,
          close(fd);
       }
    }
+
+   return 0;
 }
 
 int main (int argc, char* argv[]) {
@@ -117,41 +119,3 @@ int main (int argc, char* argv[]) {
 
   return 0;
 }
-
-
-#if 0
-
-
-// DIR=$1
-// 
-// # declare -i i j k
-// # i=0
-// # j=0
-// # k=0
-// 
-// M=$(( 1024 * 1024 ))
-// 
-// D_FANOUT=$(( 40 * 1024 ))
-// F_FANOUT=1024
-// 
-// # wide, shallow  directory tree
-// for (( i=0; i<D_FANOUT; ++i )); do
-//     # echo $i
-//     SUB=`printf "%s/sub%04d" $DIR $i`
-//     if [ -d $SUB ]; then
-//         continue
-//     fi
-//     mkdir -p $SUB
-// 
-//     # if (( ! i % 10 )); then
-//     #     echo "creating $D_FANOUT dirs, with $F_FANOUT files per dir.  At dir $SUB"
-//     # fi
-//     echo "creating $F_FANOUT files in dir $SUB [out of $D_FANOUT]"
-//     for (( j=0; j<F_FANOUT; ++j )); do
-//         FILE=`printf "%s/f%04d" $SUB $j`
-//         truncate -s $RANDOM $FILE
-//     done
-// done
-
-
-#endif
