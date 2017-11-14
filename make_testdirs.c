@@ -13,7 +13,7 @@
 //
 // create <n_dirs> directories directly under <dirname>.  Each directory
 // contains <n_files> files.  Each file has a sparse file, with size in the
-// range [0, 64k).
+// range [0, 32).
 //
 // <n_files> and <n_dirs> both default to 1024.
 
@@ -46,12 +46,16 @@ int make_it(const char* dir,
       }
 
       printf("making %u files in subdir %s / %u\n", n_files, subdir_path, n_dirs);
-      if (mkdir(subdir_path, 0777)
-          && (errno != EEXIST)) {
-         fprintf(stderr, "mkdir(%s) failed: %s\n", subdir_path, strerror(errno));
-         exit(-1);
+      if (mkdir(subdir_path, 0777)) {
+          if (errno != EEXIST) {
+             fprintf(stderr, "mkdir(%s) failed: %s\n", subdir_path, strerror(errno));
+             exit(-1);
+          }
+          else {
+             printf("  skipping %s\n", subdir_path);
+             continue;              // restarting? assume directory is already full
+          }
       }
-
 
       char file_path[MAX_PATHNAME];
       int  file;
@@ -69,7 +73,8 @@ int make_it(const char* dir,
             exit(-1);
          }
 
-         int rnd = rand_r(&rand_state) % (32 * 1024); // random [0, 64k)
+         // int rnd = rand_r(&rand_state) % (32 * 1024); // random [0, 64k)
+         int rnd = rand_r(&rand_state) % (32); // random [0, 32)
          ftruncate(fd, rnd);
 
          close(fd);
