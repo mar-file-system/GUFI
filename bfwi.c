@@ -24,16 +24,16 @@ static void * processdir(void * passv)
     struct work qwork;
     DIR *dir;
     struct dirent *entry;
+    char lpatho[MAXPATH];
     int mytid;
+    sqlite3 *db;
+    sqlite3 *db1;
     char *records; 
     struct sum summary;
     sqlite3_stmt *res;   
     sqlite3_stmt *reso;   
     char dbpath[MAXPATH];
-    sqlite3 *db;
-    sqlite3 *db1;
-    struct sum sumin;
-    int recs;
+    int transcnt;
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     mytid=0;
@@ -50,7 +50,21 @@ static void * processdir(void * passv)
       printits(passmywork,mytid);
     }
 
+    if (in.buildindex > 0) {
+       dupdir(passmywork);
+       records=malloc(MAXRECS);
+       bzero(records,MAXRECS);
+       //sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
+       zeroit(&summary);
+       db = opendb(passmywork->name,db1,4,1);
+       res=insertdbprep(db,reso);
+    //printf("inbfilistdir res %d\n",res);
+    startdb(db);
+
+    }
+
     // loop over dirents, if link push it on the queue, if file or link print it, fill up qwork structure for each
+    transcnt = 0;
     do {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
            continue;
@@ -58,24 +72,69 @@ static void * processdir(void * passv)
         sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
         qwork.pinode=passmywork->statuso.st_ino;
         lstat(qwork.name, &qwork.statuso);
-        if (S_ISDIR(qwork.statuso.st_mode)) {
-            if (!access(qwork.name, R_OK | X_OK)) {
+        qwork.xattrs=0;
+        if (in.doxattrs > 0) {
+          qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
+        }
+        if (S_ISDIR(qwork.statuso.st_mode) ) {
+            if (!access(qwork.name, R_OK | X_OK)) 
                 // this is how the parent gets passed on
                 qwork.pinode=passmywork->statuso.st_ino;
                 // this pushes the dir onto queue - pushdir does locking around queue update
                 pushdir(&qwork);
+        } else if (S_ISLNK(qwork.statuso.st_mode) ) {
+            // its a link so get the linkname
+            bzero(lpatho,sizeof(lpatho));
+            readlink(qwork.name,lpatho,MAXPATH);
+            sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+            sprintf(qwork.type,"%s","l");
+            if (in.printing > 0) {
+              printits(&qwork,mytid);
+            }
+            if (in.buildindex > 0) {
+              sumit(&summary,&qwork);
+              insertdbgo(&qwork,db,res);
+              transcnt++;
+              if (transcnt > 100000) {
+                stopdb(db);
+                startdb(db);
+                transcnt=0;
+              }
+            }
+        } else if (S_ISREG(qwork.statuso.st_mode) ) {
+            sprintf(qwork.type,"%s","f");
+            if (in.printing > 0) {
+              printits(&qwork,mytid);
+            }
+            if (in.buildindex > 0) {
+              sumit(&summary,&qwork);
+              insertdbgo(&qwork,db,res);
+              transcnt++;
+              if (transcnt > 100000) {
+                stopdb(db);
+                startdb(db);
+                transcnt=0;
+              }
             }
         }
     } while ((entry = (readdir(dir))));
 
-    zeroit(&sumin);
-    db=opendb(passmywork->name,db1,3,0);
-    querytsdb(passmywork->name,&sumin,db,&recs,0);
-    pthread_mutex_lock(&sum_mutex);
-    tsumit(&sumin,&sumout);
-    pthread_mutex_unlock(&sum_mutex);
-    //printf("after tsumit %s minuid %d maxuid %d maxsize %d totfiles %d totsubdirs %d\n",mywork->name,sumout.minuid,sumout.maxuid,sumout.maxsize,sumout.totfiles,sumout.totsubdirs);
-    closedb(db);
+    // free the queue entry - this has to be here or there will be a leak
+    //free(passmywork->freeme);
+
+    if (in.buildindex > 0) {
+      stopdb(db);
+      insertdbfin(db,res);
+
+      // this i believe has to be after we close off the entries transaction 
+      insertsumdb(db,passmywork,&summary);
+      closedb(db);
+
+      sprintf(dbpath, "%s/%s/db.db", in.nameto,passmywork->name);
+      chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
+      chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
+      free(records);
+    }
 
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
@@ -98,21 +157,41 @@ int processin(int c, char *v[]) {
      // this is not how you should do this, it should be a case statement with edits etc.
      //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
      sprintf(in.name,"%s",v[1]);
-     in.printdir=atoi(v[2]);
+     in.printing = atoi(v[2]);
      in.maxthreads = atoi(v[3]);
-     in.writetsum = atoi(v[4]);
+     in.dodelim=atoi(v[4]);
+     sprintf(in.delim,"%s",v[5]);
+     in.doxattrs=atoi(v[6]);
+     in.printdir=atoi(v[7]);
+     in.buildindex=atoi(v[8]);
+     sprintf(in.nameto,"%s",v[9]);
+     in.outfile=atoi(v[10]);
+     sprintf(in.outfilen,"%s",v[11]);
 
      return 0;
+
 }
 
 int processinit(void * myworkin) {
     
      struct work * mywork = myworkin;
+     int i;
+     char outfn[MAXPATH];
+
+     //open up the output files if needed
+     if (in.outfile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         sprintf(outfn,"%s.%d",in.outfilen,i);
+         gts.outfd[i]=fopen(outfn,"w");
+         i++;
+       }
+     }
 
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
      lstat(in.name,&mywork->statuso);
-    if (!access(in.name, R_OK | X_OK)) {
+     if (!access(in.name, R_OK | X_OK)) {
      } else {
          return 1;
      }
@@ -120,8 +199,14 @@ int processinit(void * myworkin) {
          fprintf(stderr,"not a directory as input\n");
          return 1;
      }
-
+     if (in.doxattrs > 0) {
+       mywork->xattrs=0;
+       mywork->xattrs=pullxattrs(in.name,mywork->xattr);
+     }
+     // set top parent inode to zero
+     mywork->pinode=0;
      pushdir(mywork);
+ 
      return 0;
 }
 
@@ -129,35 +214,16 @@ int processinit(void * myworkin) {
 #include "putils.c"
 
 int processfin() {
-
-     sqlite3 *tdb;
-     sqlite3 *tdb1;
-     if (in.writetsum) {
-       tdb = opendb(in.name,tdb1,3,1);
-       inserttreesumdb(in.name,tdb,&sumout,0,0,0);
-       closedb(tdb);
+     int i;
+  
+     if (in.outfile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         fclose(gts.outfd[i]);
+         i++;
+       }
      }
-
-     printf("totals: \n");
-     printf("totfiles %lld totlinks %lld\n",sumout.totfiles,sumout.totlinks);
-     printf("totsize %lld\n",sumout.totsize);
-     printf("minuid %lld maxuid %lld mingid %lld maxgid %lld\n",sumout.minuid,sumout.maxuid,sumout.mingid,sumout.maxgid);
-     printf("minsize %lld maxsize %lld\n",sumout.minsize,sumout.maxsize);
-     printf("totltk %lld totmtk %lld totltm %lld totmtm %lld totmtg %lld totmtt %lld\n",sumout.totltk,sumout.totmtk,sumout.totltm,sumout.totmtm,sumout.totmtg,sumout.totmtt);
-     printf("minctime %lld maxctime %lld\n",sumout.minctime,sumout.maxctime);
-     printf("minmtime %lld maxmtime %lld\n",sumout.minmtime,sumout.maxmtime);
-     printf("minatime %lld maxatime %lld\n",sumout.minatime,sumout.maxatime);
-     printf("minblocks %lld maxblocks %lld\n",sumout.minblocks,sumout.maxblocks);
-     printf("totxattr %lld\n",sumout.totxattr);
-     printf("mincrtime %lld maxcrtime %lld\n",sumout.mincrtime,sumout.maxcrtime);
-     printf("minossint1 %lld maxossint1 %lld totossint1 %lld\n",sumout.minossint1,sumout.maxossint1,sumout.totossint1);
-     printf("minossint2 %lld maxossint2 %lld totossint2 %lld\n",sumout.minossint2,sumout.maxossint2,sumout.totossint2);
-     printf("minossint3 %lld maxossint3 %lld totossint3 %lld\n",sumout.minossint3,sumout.maxossint3,sumout.totossint3);
-     printf("minossint4 %lld maxossint4 %lld totossint4 %lld\n",sumout.minossint4,sumout.maxossint4,sumout.totossint4);
-     printf("totsubdirs %lld maxsubdirfiles %lld maxsubdirlinks %lld maxsubdirsize %lld\n",sumout.totsubdirs,sumout.maxsubdirfiles,sumout.maxsubdirlinks,sumout.maxsubdirsize);
-
      return 0;
-
 }
 
 int main(int argc, char *argv[])

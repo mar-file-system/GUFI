@@ -13,298 +13,250 @@
 #include <errno.h>
 #include <pthread.h>
 
-#define MAXPATH 1024
-#define MAXXATTR 1024
-#define MAXSQL 1024
 #include "bf.h"
 #include "structq.c"
-#include "dbutils.c"
 #include "utils.c"
+#include "dbutils.c"
 
-volatile int runningthreads = 0;
-pthread_mutex_t running_mutex = PTHREAD_MUTEX_INITIALIZER;
-volatile int queuelock = 0;
-pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-volatile int startlock = 0;
-pthread_mutex_t start_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-//void listdir(const char *name, char *nameto, char *sqlsum, char * sqlent, struct stat *status,int printdir,int andor,int printing,struct work * mywork)
-//void listdir(struct work * mywork)
-static void * listdir(void * passv)
+static void * processdir(void * passv)
 {
-    struct work *passmywork = passv;;
-    struct work *mywork;
+    struct work *passmywork = passv;
+    struct work qwork;
     DIR *dir;
     struct dirent *entry;
-    int len;
-    char path[MAXPATH];
-    char lpath[MAXPATH];
-    char xattr[MAXXATTR];
-    int xattrs = 0;;
-    struct stat statuso;
-    struct stat stato;
+    int mytid;
+    char *records; 
+    sqlite3_stmt *res;   
+    sqlite3_stmt *reso;   
+    char dbpath[MAXPATH];
     sqlite3 *db;
-    sqlite3 *sdb;
-    sqlite3 *tsdb;
     sqlite3 *db1;
-    sqlite3 *db2;
-    sqlite3 *db3;
-    char type[2]; 
     int recs;
-    int issummary;
-    struct work rmywork;
-    long long pinode;
-    long long dpinode;
-    long long fpinode;
-    FILE *pinodefd;
-    char pinodepath[MAXPATH];
-    char treesum[MAXPATH];
-    char treesuml[MAXPATH];
-    struct stat treesums;
 
-    sprintf(rmywork.name,"%s",passmywork->name);
-    sprintf(rmywork.nameto,"%s",passmywork->nameto);
-    sprintf(rmywork.sqlsum,"%s",passmywork->sqlsum);
-    sprintf(rmywork.sqlent,"%s",passmywork->sqlent);
-    rmywork.printdir=passmywork->printdir;
-    rmywork.andor=passmywork->andor;
-    rmywork.printing=passmywork->printing;
-    rmywork.pinodeplace=passmywork->pinodeplace;
-    rmywork.statuso.st_ino=passmywork->statuso.st_ino;;
-    stato.st_ino=passmywork->statuso.st_ino;;
-    rmywork.statuso.st_mode=passmywork->statuso.st_mode;
-    rmywork.statuso.st_nlink=passmywork->statuso.st_nlink;
-    rmywork.statuso.st_uid=passmywork->statuso.st_uid;
-    rmywork.statuso.st_gid=passmywork->statuso.st_gid;
-    rmywork.statuso.st_size=passmywork->statuso.st_size;
-    rmywork.statuso.st_blksize=passmywork->statuso.st_blksize;
-    rmywork.statuso.st_blocks=passmywork->statuso.st_blocks;
-    rmywork.statuso.st_atime=passmywork->statuso.st_atime;
-    rmywork.statuso.st_mtime=passmywork->statuso.st_mtime;
-    rmywork.statuso.st_ctime=passmywork->statuso.st_ctime;
-    pinode=passmywork->pinode;
-    mywork=&rmywork; 
-    //printf("copying input in listdir\n");
-    pthread_mutex_lock(&start_mutex);
-    startlock = 0;
-    pthread_mutex_unlock(&start_mutex);
+    // get thread id so we can get access to thread state we need to keep until the thread ends
+    mytid=0;
+    if (in.outfile > 0) mytid=gettid();
+    if (in.outdb > 0) mytid=gettid();
 
-    //printf("in listdir mywork.sqlent = %s\n",mywork->sqlent);
-    //printf("dir: ");
-    /* this is the sql statement for the treesum db */
-    /* if it exists then run the query if the db exists */
-    /* if it returns a row then go on, if not bail now as nothing below is interesting*/
-    sprintf(type,"%s","d");
-    if (strlen(rmywork.nameto) > 1) {
-      sprintf(treesum,"%s",mywork->name);
-      sprintf(treesuml,"%s/treesummary.db",mywork->name);
-      //printf("checking for treesum %s\n",treesuml);
-      if (lstat(treesuml,&treesums) == 0) {
-        //printf("checking for treesum found %s\n",treesuml);
-        tsdb = opendb(mywork->name,mywork->nameto,&treesums,db3,2,0);
-        recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
-                /* if it fails then this will be set to 1 and will go on */
-        issummary=1;
-        querydb(mywork->name,&mywork->statuso,tsdb,type,lpath,xattrs,xattr,mywork->nameto,&recs,0,issummary,rmywork.pinodeplace,dpinode,1);
-        //printf("-tsum------ recs %d \n",recs);
-        closedb(tsdb);
-        if (recs < 1) {
-          pthread_mutex_lock(&running_mutex);
-          runningthreads--;
-          pthread_mutex_unlock(&running_mutex);
-          return NULL;
-        } 
-      } 
-    } 
-
-    sprintf(type,"%s","d");
-    bzero(lpath,sizeof(lpath));
-    if (!(dir = opendir(mywork->name))) {
-        printf("cant open directory %s\n",mywork->name);
+    // open directory
+    if (!(dir = opendir(passmywork->name)))
         return NULL;
-    } 
-    //if (!(entry = readdir(dir)))
-    //    return;
-    //printf("in listdir printing %d\n",mywork->printing);
-    xattrs=0;
-    if (mywork->printing) {
-      bzero(xattr,sizeof(xattr));
-      xattrs=pullxattrs(mywork->name,xattr);
-      //if (xattrs>0) printf("pullxattr returns %d\n", xattrs);
-      printit(mywork->name,&mywork->statuso,type,lpath,xattrs,xattr,mywork->printing,pinode);
-    }
-    db = opendb(mywork->name,mywork->nameto,&mywork->statuso,db1,1,0);
-    sdb = opendb(mywork->name,mywork->nameto,&mywork->statuso,db2,0,0);
+    if (!(entry = readdir(dir)))
+        return NULL;
+    sprintf(passmywork->type,"%s","d");
+    // print?
+    //if (in.printdir > 0) {
+    //  printits(passmywork,mytid);
+    //}
 
-    sprintf(pinodepath,"%s/pinode",mywork->name);
-    //printf("%s\n",pinodepath);
-    pinodefd=fopen(pinodepath,"r");
-    fscanf(pinodefd,"%lld %lld",&dpinode,&fpinode);
-    //printf("got %lld %lld\n",dpinode,fpinode);
-    fclose(pinodefd);
-
-    /*????? there would obviously be more */
-    recs=1;
-    if (strlen(mywork->sqlsum) > 1) {
-      recs=0;
-      issummary=1;
-      querydb(mywork->name,&mywork->statuso,sdb,type,lpath,xattrs,xattr,mywork->sqlsum,&recs,mywork->printdir,issummary,rmywork.pinodeplace,dpinode,1);
-    }
-    //printf("------- recs %d \n",recs);
-    if (mywork->andor > 0) recs=1;
-    if (strlen(mywork->sqlent) > 1) {
-      if (recs > 0) {
-        issummary=0;
-        //printf("calling querydb printdir %d issummary %d pinodeplace %d pinode %lld\n",mywork->printdir, issummary,rmywork.pinodeplace,fpinode);
-        sprintf(type,"%s","?");
-        querydb(mywork->name,&mywork->statuso,db,type,lpath,xattrs,xattr,mywork->sqlent,&recs,mywork->printdir ,issummary,rmywork.pinodeplace,fpinode,1);
-      }
+    // if we have out db then we have that db open so we just attach the gufi db
+    if (in.outdb > 0) {
+      db=gts.outdbd[mytid];
+      attachdb(passmywork->name,db,"tree");
+    } else {
+      db=opendb(passmywork->name,db1,1,0);
     }
 
-     while ((entry = (readdir(dir)))) {
-     //do {
-        len = snprintf(path, sizeof(path)-1, "%s/%s",mywork->name, entry->d_name);
-        lstat(path, &statuso);
-        //printf("in readdirloop found %s/%s type %d\n",mywork->name,entry->d_name,statuso.st_mode);
-        //if (entry->d_type == DT_DIR) {
-        if (S_ISDIR(statuso.st_mode) ) {
-            //printf("in readdirloop found dir %s/%s\n",mywork->name,entry->d_name);
-            //len = snprintf(path, sizeof(path)-1, "%s/%s",mywork->name, entry->d_name);
-            //path[len] = 0;
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-                continue;
-            /* no need to queue this if we cant read/stat the dir/dirents */
-            //stat(path, &statuso);
-            /*?????? if you thread this you need to mutex around push *****/
-            if (!access(path, R_OK | X_OK)) {
-                //printf("queueing %s inode %lld\n",path,statuso.st_ino);
-                pthread_mutex_lock(&queue_mutex);
-                //printf("tid %u queueing pushing path %s statusino %lld\n",pthread_self(),path,statuso.st_ino);
-                //printf("before calling pthread_create getpid: %d getpthread_self: %lu tid:%lu\n",getpid(), pthread_self(), syscall(SYS_gettid));
-                push(path,&statuso,stato.st_ino);
-                pthread_mutex_unlock(&queue_mutex);
-            }
+    // if and operation and sqltsum is there run a query to see if there is a match
+    recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
+             /* if it fails then this will be set to 1 and will go on */
+    // if this is or as well as no sql to run skip this query
+    if (strlen(in.sqltsum) > 1) {
+      if (in.andor == 0)
+        recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
+      // this is an or or we got a record back go on to summary/entries queries 
+      // if not done with this dir and all dirs below it
+    }
+    // this means that no tree table exists so assume we have to go on
+    if (recs < 0) {
+      recs=1;
+    }
+    // so we have to go on and query summary and entries possibly
+    if (recs > 0) {
+        // go ahead and send the subdirs to the queue since we need to look further down the tree
+        // loop over dirents, if link push it on the queue, if file or link print it, fill up qwork structure for each
+        do {
+           if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+             continue;
+           bzero(&qwork,sizeof(qwork));
+           sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
+           qwork.pinode=passmywork->statuso.st_ino;
+           lstat(qwork.name, &qwork.statuso);
+           if (S_ISDIR(qwork.statuso.st_mode)) {
+              if (!access(qwork.name, R_OK | X_OK)) {
+                // this is how the parent gets passed on
+                qwork.pinode=passmywork->statuso.st_ino;
+                // this pushes the dir onto queue - pushdir does locking around queue update
+                pushdir(&qwork);
+              }
+           }
+        } while ((entry = (readdir(dir))));
+        // run query on summary, print it if printing is needed, if returns none 
+        // and we are doing and, skip querying the entries db
+        if (strlen(in.sqlsum) > 1) {
+          recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
+          recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+        } else {
+          recs=1;
+        }
+        if (in.andor > 0) recs=1; 
+        // if we have recs (or are running an or) query the entries table
+        if (recs > 0) {
+          rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
         }
     }
-    //} while ((entry = (readdir(dir))));
+
+    // if we have an out db we just detach gufi db
+    if (in.outdb > 0) {
+      detachdb(passmywork->name,db,"tree");
+    } else {
+      closedb(db);
+    }
+
+    // free the queue entry - this has to be here or there will be a leak
+    free(passmywork->freeme);
+
+    // close dir
     closedir(dir);
-    closedb(db);
-    closedb(sdb);
-    pthread_mutex_lock(&running_mutex);
-    runningthreads--;
-    pthread_mutex_unlock(&running_mutex);
+
+    // one less thread running
+    decrthread();
+
     return NULL;
 }
- 
-int main(int argc, char *argv[])
-{
-     struct work mywork;
-     struct work *pmywork;
-     pthread_t thread;
-     pthread_attr_t attr;
-     int rc;
-     int startone;
-     int myqent;
-     int myrunningthreads;
-     int maxthreads;
 
-     qent=0;
-     front=NULL;
-     sprintf(mywork.name,"%s",argv[1]);
-     sprintf(mywork.nameto,"%s",argv[2]);
-     sprintf(mywork.sqlsum,"%s",argv[3]);
-     sprintf(mywork.sqlent,"%s",argv[4]);
-     mywork.printdir=atoi(argv[5]);
-     mywork.andor=atoi(argv[6]);
-     mywork.printing = atoi(argv[7]);
-     maxthreads = atoi(argv[8]);
-     mywork.pinodeplace=atoi(argv[9]);
-//     printf("dirname %s sqltsum %s sqlent %s sqlsum %s printdir %d andor %d printing %d maxthreads %d printparentinodeplace %d\n",mywork.name, mywork.nameto, mywork.sqlent, mywork.sqlsum ,mywork.printdir,mywork.andor,mywork.printing,maxthreads,mywork.pinodeplace);
-     mywork.pinode=0;
-     /* process input directory */
-     lstat(mywork.name,&mywork.statuso);
-     if (!access(mywork.name, R_OK | X_OK)) {
-         pmywork=&mywork;
-         //listdir(&mywork);
-         runningthreads++;
-         listdir(pmywork);
+int processin(int c, char *v[]) {
+
+     char outfn[MAXPATH];
+     int i;
+     // this is where we process input variables
+
+     // this is not how you should do this, it should be a case statement with edits etc.
+     //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
+     sprintf(in.name,"%s",v[1]);
+     sprintf(in.sqltsum,"%s",v[2]);
+     sprintf(in.sqlsum,"%s",v[3]);
+     sprintf(in.sqlent,"%s",v[4]);
+     in.printdir=atoi(v[5]);
+     in.andor=atoi(v[6]);
+     in.printing=atoi(v[7]);
+     in.maxthreads = atoi(v[8]);
+     in.outfile=atoi(v[9]);
+     sprintf(in.outfilen,"%s",v[10]);
+     in.dodelim=atoi(v[11]);
+     sprintf(in.delim,"%s",v[12]);
+     in.outdb=atoi(v[13]);
+     sprintf(in.outdbn,"%s",v[14]);
+     sprintf(in.sqlinit,"%s",v[15]);
+     sprintf(in.sqlfin,"%s",v[16]);
+
+     return 0;
+}
+
+int processinit(void * myworkin) {
+    
+     struct work * mywork = myworkin;
+     int i;
+     char outfn[MAXPATH];
+     char outdbn[MAXPATH];
+     sqlite3 *dbo;
+
+     //open up the output files if needed
+     if (in.outfile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         sprintf(outfn,"%s.%d",in.outfilen,i);
+         gts.outfd[i]=fopen(outfn,"w");
+         i++;
+       }
+     }
+     if (in.outdb > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         sprintf(outdbn,"%s.%d",in.outdbn,i);
+         gts.outdbd[i]=opendb(outdbn,dbo,5,0);
+         if (strlen(in.sqlinit) > 1) {
+           rawquerydb(outdbn, 1, gts.outdbd[i], in.sqlinit, 1, 0, in.printdir, i);
+         }
+         i++;
+       }
+     }
+
+
+     //  ******  create and open output db's here
+
+
+     // process input directory and put it on the queue
+     sprintf(mywork->name,"%s",in.name);
+     lstat(in.name,&mywork->statuso);
+    if (!access(in.name, R_OK | X_OK)) {
      } else {
          return 1;
      }
+     if (!S_ISDIR(mywork->statuso.st_mode) ) {
+         fprintf(stderr,"not a directory as input\n");
+         return 1;
+     }
 
-     myqent=0;
-     myrunningthreads=0;
-     while (1) {
-         /*????????? if you thread this you need to clean up this pulling from queue addrcurrents and delQueue */
-         //sleep(1);
-         startone=1;
-         pthread_mutex_lock(&queue_mutex);
-         pthread_mutex_lock(&running_mutex);
-         myqent=addrqent();
-         myrunningthreads=runningthreads;;
-         //printf("topwhile myqent %d myrunningthreads %d\n",myqent,myrunningthreads);
-         pthread_mutex_unlock(&queue_mutex);
-         pthread_mutex_unlock(&running_mutex);
+     pushdir(mywork);
+     return 0;
+}
 
-         if (myrunningthreads == 0) {
-           if (myqent == 0) {
-             //printf("no threads no qent\n");            
-             startone=0;
-             break;
-           }
+/* this needs to be here until we get some function prototypes in bf.h */
+#include "putils.c"
+
+int processfin() {
+int i;
+
+     // close outputfiles
+     if (in.outfile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         fclose(gts.outfd[i]);
+         i++;
+       }
+     }
+
+     // close output dbs here
+     if (in.outdb > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         closedb(gts.outdbd[i]);
+         if (strlen(in.sqlfin) > 1) {
+           rawquerydb("fin", 1, gts.outdbd[i], in.sqlfin, 1, 0, in.printdir, i);
          }
-         if (myrunningthreads > maxthreads) {
-            //printf("threads > %d\n",maxthreads);            
-            startone=0;
-         }
-         if (myqent == 0) {
-             //printf("threads avail qent %d\n",addrqent());            
-             startone=0;
-         }
-         if (startone) {
-         pthread_mutex_lock(&queue_mutex);
-         //printf("about to addrcurrent %d\n",addrqent());
-         sprintf(mywork.name,"%s",addrcurrent());
-         mywork.statuso.st_ino=addrcurrents()->st_ino;;
-         mywork.statuso.st_mode=addrcurrents()->st_mode;
-         mywork.statuso.st_nlink=addrcurrents()->st_nlink;
-         mywork.statuso.st_uid=addrcurrents()->st_uid;
-         mywork.statuso.st_gid=addrcurrents()->st_gid;
-         mywork.statuso.st_size=addrcurrents()->st_size;
-         mywork.statuso.st_blksize=addrcurrents()->st_blksize;
-         mywork.statuso.st_blocks=addrcurrents()->st_blocks;
-         mywork.statuso.st_atime=addrcurrents()->st_atime;
-         mywork.statuso.st_mtime=addrcurrents()->st_mtime;
-         mywork.statuso.st_ctime=addrcurrents()->st_ctime;
-         mywork.pinode=addrcurrentp();
-         pmywork=&mywork;
-         delQueue();
-         //pthread_mutex_unlock(&queue_mutex);
-         pthread_mutex_lock(&running_mutex);
-         runningthreads++;
-         pthread_mutex_unlock(&running_mutex);
-         pthread_mutex_unlock(&queue_mutex);
-         //printf("loop queueing create %s\n",pmywork->name);
-         pthread_mutex_lock(&start_mutex);
-         startlock = 1;
-         pthread_mutex_unlock(&start_mutex);
-rc = pthread_attr_init(&attr);
-//printf("attr_init: %d\n",rc);
-rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-//printf("attr_setdetachedstate: %d\n",rc);
-         //rc = pthread_create(&thread, NULL, listdir, pmywork);     
-         rc = pthread_create(&thread, &attr, listdir, pmywork);     
-         //printf("loop created tid %d queueing create %s\n",thread,pmywork->name);
-         while (startlock) {
-           //printf(".");
-         } 
-         //listdir(pmywork); 
-         //pthread_mutex_unlock(&running_mutex);
-         //delQueue();
-         //pthread_mutex_unlock(&running_mutex);
-         }
-         //printf("mainloop queue %d threads %d\n",addrqent(),runningthreads);
-     }  
-     //} while (addrqent() > 0);
+         i++;
+       }
+     }
+
+     return 0;
+}
+
+int main(int argc, char *argv[])
+{
+     //char nameo[MAXPATH];
+     struct work mywork;
+     int i;
+
+     // process input args, this is not a common routine and will need to be different for each instance of a bf program
+     processin(argc,argv);
+
+     // start threads and loop watching threads needing work and queue size - this always stays in main right here
+     mythpool = thpool_init(in.maxthreads);
+
+     // process initialization, this is work done once the threads are up but not busy yet - this will be different for each instance of a bf program
+     // in this case we are stating the directory passed in and putting that directory on the queue
+     processinit(&mywork);
+
+     // processdirs - if done properly, this routine is common and does not have to be done per instance of a bf program
+     // loops through and processes all directories that enter the queue by farming the work out to the threadpool
+     processdirs();
+
+     // processfin - this is work done after the threads are done working before they are taken down - this will be different for each instance of a bf program
+     processfin();
+
+     // clean up threads and exit
+     thpool_wait(mythpool);
+     thpool_destroy(mythpool);
      return 0;
 }

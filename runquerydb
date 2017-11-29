@@ -1,0 +1,6 @@
+echo "query  dir summary"
+./querydb testdirdup/testdir "select * from summary;" 1 1 1
+echo "query  tree summary"
+./querydb testdirdup/testdir "select * from treesummary;" 1 1 0
+echo "query entries"
+./querydb testdirdup/testdir "select * from entries;" 1 1 0

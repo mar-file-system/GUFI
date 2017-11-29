@@ -1,0 +1,17 @@
+Assimilating Gary's tarball from email 2017-11-26.  Leaving all the
+old stuff in place for now, because I mainly just want to merge
+the 'jti' branch, if git can manage that.
+
+Use ./makeem to build all the currently-used
+executables, which appear to be:
+
+    bfwi
+    bfti
+    bfq
+
+    querydb
+    querydbn
+
+    bfli ?
+    bfmi ?  [mentioned in todo, but not built]
+

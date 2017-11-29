@@ -1,0 +1,10 @@
+#
+#cc -c thpool.c -D_DARWIN_C_SOURCE -o thpool.o
+#cc bfw.c -DBSDXATTRS -DTHPOOL_DEBUG thpool.o -o bfw
+#cc bfw.c -DBSDXATTRS -o bfw
+
+cc bfwi.c -g -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfwi
+cc bfti.c -g -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfti
+cc bfq.c  -g -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfq
+cc querydb.c  -g -I.. -L../.libs -l sqlite3 -o querydb 
+cc querydbn.c -g -I.. -L../.libs -l sqlite3 -o querydbn 

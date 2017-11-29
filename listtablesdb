@@ -1,0 +1,1 @@
+echo ".tables" | ../sqlite3 $1 

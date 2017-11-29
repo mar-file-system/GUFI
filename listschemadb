@@ -1,0 +1,1 @@
+echo ".fullschema" | ../sqlite3 $1

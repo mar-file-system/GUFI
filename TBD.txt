@@ -1,0 +1,25 @@
+-- Gary's TBD
+
+add summarize the directory by user and add user records to bfwi
+add summarize the directory summaries by user and add records to bfti
+
+librarize/makeize/lanlheaderize
+
+fix processin for bfwi
+fix processin for bfti
+fix input processing for querydb
+fix processin for bfq
+fix input for querydb 
+fix input for querydbn
+
+try new persistent version of bfmi (reading from mysql/RH) and creating gufi
+try new persistent version of bfli reading multiple files?
+try an hpss load with persistent version
+
+
+-- Some form of feedback to the user, about ongoing progress
+
+-- ability to restart
+
+-- command-line "help"
+
