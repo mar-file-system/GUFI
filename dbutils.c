@@ -1,3 +1,8 @@
+#include "dbutils.h"
+
+#include <string.h>
+
+
 sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
 {
   char *err_msg = 0;
@@ -91,7 +96,14 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     return db;
 }
 
-int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,int printpath, int printheader, int printing, int ptid)
+int rawquerydb(const char *name,
+               int         isdir,
+               sqlite3    *db,
+               char       *sqlstmt,
+               int         printpath,
+               int         printheader,
+               int         printing,
+               int         ptid)
 {
      sqlite3_stmt    *res;
      int     error = 0;

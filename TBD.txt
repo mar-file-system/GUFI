@@ -19,7 +19,16 @@ try an hpss load with persistent version
 
 -- Some form of feedback to the user, about ongoing progress
 
+
 -- ability to restart
+
 
 -- command-line "help"
 
+
+-- reduce struct copying
+
+ Lots of places (e.g. pushn() in structq.c) where structs are copied into
+ other structs.  Seems like it should be simple to either store the pointer
+ into the destination struct, or just use the source struct directly and
+ eliminate the need for a distinct destination struct.

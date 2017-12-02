@@ -17,9 +17,9 @@
 #define MAXXATTR 1024
 #define MAXSQL 1024
 #include "bf.h"
-#include "structq.c"
-#include "dbutils.c"
-#include "utils.c"
+#include "structq.h"
+#include "dbutils.h"
+#include "utils.h"
 
 int main(int argc, char *argv[])
 {

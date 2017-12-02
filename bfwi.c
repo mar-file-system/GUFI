@@ -14,11 +14,14 @@
 #include <pthread.h>
 
 #include "bf.h"
-#include "structq.c"
-#include "utils.c"
-#include "dbutils.c"
+#include "structq.h"
+#include "utils.h"
+#include "dbutils.h"
+// #include "putils.h"
 
-static void * processdir(void * passv)
+// This becomes an argument to thpool_add_work(), so it must return void,
+// instead of void*.
+static void processdir(void * passv)
 {
     struct work *passmywork = passv;
     struct work qwork;
@@ -41,9 +44,9 @@ static void * processdir(void * passv)
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
-        return NULL;
+        return; // return NULL;
     if (!(entry = readdir(dir)))
-        return NULL;
+        return; // return NULL;
     sprintf(passmywork->type,"%s","d");
     // print?
     if (in.printing > 0 || in.printdir > 0) {
@@ -145,7 +148,7 @@ static void * processdir(void * passv)
     // one less thread running
     decrthread();
 
-    return NULL;
+    /// return NULL;
 }
 
 int processin(int c, char *v[]) {
@@ -191,8 +194,8 @@ int processinit(void * myworkin) {
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
      lstat(in.name,&mywork->statuso);
-     if (!access(in.name, R_OK | X_OK)) {
-     } else {
+     if (access(in.name, R_OK | X_OK)) {
+         perror("couldn't access input dir");
          return 1;
      }
      if (!S_ISDIR(mywork->statuso.st_mode) ) {
@@ -210,8 +213,6 @@ int processinit(void * myworkin) {
      return 0;
 }
 
-/* this needs to be here until we get some function prototypes in bf.h */
-#include "putils.c"
 
 int processfin() {
      int i;
@@ -237,6 +238,10 @@ int main(int argc, char *argv[])
 
      // start threads and loop watching threads needing work and queue size - this always stays in main right here
      mythpool = thpool_init(in.maxthreads);
+     if (thpool_null(mythpool)) {
+        fprintf(stderr, "thpool_init() failed!\n");
+        return -1;
+     }
 
      // process initialization, this is work done once the threads are up but not busy yet - this will be different for each instance of a bf program
      // in this case we are stating the directory passed in and putting that directory on the queue
@@ -244,7 +249,7 @@ int main(int argc, char *argv[])
 
      // processdirs - if done properly, this routine is common and does not have to be done per instance of a bf program
      // loops through and processes all directories that enter the queue by farming the work out to the threadpool
-     processdirs();
+     processdirs(processdir);
 
      // processfin - this is work done after the threads are done working before they are taken down - this will be different for each instance of a bf program
      processfin();

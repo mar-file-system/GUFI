@@ -14,11 +14,13 @@
 #include <pthread.h>
 
 #include "bf.h"
-#include "structq.c"
-#include "utils.c"
-#include "dbutils.c"
+#include "structq.h"
+#include "utils.h"
+#include "dbutils.h"
 
-static void * processdir(void * passv)
+// This becomes an argument to thpool_add_work(), so it must return void,
+// instead of void*.
+static void processdir(void * passv)
 {
     struct work *passmywork = passv;
     struct work qwork;
@@ -41,9 +43,9 @@ static void * processdir(void * passv)
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
-        return NULL;
+        return; // return NULL;
     if (!(entry = readdir(dir)))
-        return NULL;
+        return; // return NULL;
     sprintf(passmywork->type,"%s","d");
     // print?
     if (in.printing > 0 || in.printdir > 0) {
@@ -71,9 +73,8 @@ static void * processdir(void * passv)
     zeroit(&sumin);
     db=opendb(passmywork->name,db1,3,0);
     querytsdb(passmywork->name,&sumin,db,&recs,0);
-    pthread_mutex_lock(&sum_mutex);
     tsumit(&sumin,&sumout);
-    pthread_mutex_unlock(&sum_mutex);
+
     //printf("after tsumit %s minuid %d maxuid %d maxsize %d totfiles %d totsubdirs %d\n",mywork->name,sumout.minuid,sumout.maxuid,sumout.maxsize,sumout.totfiles,sumout.totsubdirs);
     closedb(db);
 
@@ -86,7 +87,7 @@ static void * processdir(void * passv)
     // one less thread running
     decrthread();
 
-    return NULL;
+    // return NULL;
 }
 
 int processin(int c, char *v[]) {
@@ -112,8 +113,8 @@ int processinit(void * myworkin) {
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
      lstat(in.name,&mywork->statuso);
-    if (!access(in.name, R_OK | X_OK)) {
-     } else {
+     if (access(in.name, R_OK | X_OK)) {
+         perror("couldn't access input dir");
          return 1;
      }
      if (!S_ISDIR(mywork->statuso.st_mode) ) {
@@ -125,8 +126,6 @@ int processinit(void * myworkin) {
      return 0;
 }
 
-/* this needs to be here until we get some function prototypes in bf.h */
-#include "putils.c"
 
 int processfin() {
 
@@ -178,7 +177,7 @@ int main(int argc, char *argv[])
 
      // processdirs - if done properly, this routine is common and does not have to be done per instance of a bf program
      // loops through and processes all directories that enter the queue by farming the work out to the threadpool
-     processdirs();
+     processdirs(processdir);
 
      // processfin - this is work done after the threads are done working before they are taken down - this will be different for each instance of a bf program
      processfin();

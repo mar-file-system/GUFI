@@ -14,7 +14,7 @@
 #include <pthread.h>
 
 #include "bf.h"
-#include "dbutils.c"
+#include "dbutils.h"
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +28,6 @@ int main(int argc, char *argv[])
      sqlite3 *db1;
      int recs;
      int printheader=0;
-     struct sum sumout;
      int dirsummary;
 
      sprintf(name,"%s",argv[1]);

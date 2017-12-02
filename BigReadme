@@ -14,6 +14,7 @@ Programs:
 
 dfw - depth first walk - a typical depth first tree walker that uses readdir or readdir+ (getting type from dirent), stat (to get stat info and type (if not readdir+)), and xattr calls, single threaded, recursive depth search, prints output
 parms - path 0/1 (0 use readdir+ 1 use stat) 0/1 (0 dont get xattrs 1 get xattrs)
+
 cc dfw.c -o dfw
 cc bfw.c -DBSDXATTRS -o bfw
 echo "---> ./dfw testdir 0 0 (just walk with readdir)"
