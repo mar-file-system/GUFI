@@ -8,9 +8,12 @@ int processdirs() {
      runningthreads=0;
      while (1) {
         myqent=getqent();
-        if (runningthreads == 0) {
-          if (myqent == 0) {
-            break;
+        if (myqent == 0) {
+          if (runningthreads == 0) {
+               myqent=getqent();
+               if (myqent == 0) {
+                 break;
+               }
           }
         }
         if (runningthreads < in.maxthreads) {
@@ -20,8 +23,9 @@ int processdirs() {
             workp=addrcurrents();
             incrthread();
             // this takes this entry off the queue but does NOT free the buffer, that has to be done in processdir()  free (_.freeme)
-            thpool_add_work(mythpool, (void*)processdir,(void *)workp);
             delQueuenofree();
+            thpool_add_work(mythpool, (void*)processdir,(void *)workp);
+            //delQueuenofree();
             pthread_mutex_unlock(&queue_mutex);
           }
         }

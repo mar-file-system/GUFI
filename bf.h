@@ -111,6 +111,7 @@ int ossint3;
 int ossint4;
 char osstext1[MAXXATTR];
 char osstext2[MAXXATTR];
+char pinodec[128];
 };
 
 char xattrdelim[] = "\x1F";

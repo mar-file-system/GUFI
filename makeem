@@ -2,9 +2,17 @@
 #cc -c thpool.c -D_DARWIN_C_SOURCE -o thpool.o
 #cc bfw.c -DBSDXATTRS -DTHPOOL_DEBUG thpool.o -o bfw
 #cc bfw.c -DBSDXATTRS -o bfw
-
-cc bfwi.c -g -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfwi
-cc bfti.c -g -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfti
-cc bfq.c  -g -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfq
-cc querydb.c  -g -I.. -L../.libs -l sqlite3 -o querydb 
-cc querydbn.c -g -I.. -L../.libs -l sqlite3 -o querydbn 
+#cc bfwi.c -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfwi
+#cc bfr.c -c -I. -o bfr.o
+#cc bfr.o /usr/lib64/libsqlite3.so.0 -o bfr
+cc bfwi.c -I. /usr/lib64/libsqlite3.so.0 -o bfwi
+#cc bfti.c -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfti
+cc bfti.c -I. /usr/lib64/libsqlite3.so.0 -o bfti
+#cc bfq.c -DBSDXATTRS -I.. -L../.libs -l sqlite3 -o bfq
+cc bfq.c -I. /usr/lib64/libsqlite3.so.0 -o bfq
+#cc querydb.c -I.. -L../.libs -l sqlite3 -o querydb 
+cc querydb.c -I. /usr/lib64/libsqlite3.so.0 -o querydb 
+#cc querydbn.c -I.. -L../.libs -l sqlite3 -o querydbn 
+cc querydbn.c -I. /usr/lib64/libsqlite3.so.0 -o querydbn 
+cc bfmi.c -c -I. -I/usr/include/mysql -o bfmi.o
+cc bfmi.o /usr/lib64/libsqlite3.so.0 /usr/lib64/mysql/libmysqlclient.so.16 -o bfmi
