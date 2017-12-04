@@ -10,7 +10,7 @@ sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
   char sqlat[MAXSQL];
 
   sprintf(sqlat,"ATTACH \'%s/db.db\' as %s",name,dbn);
-  sqlite3_exec(db, sqlat,0, 0, &err_msg);
+  rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
   if (rc != SQLITE_OK) {
       fprintf(stderr, "Cannot attach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
       sqlite3_close(db);
@@ -28,7 +28,7 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
   char sqldet[MAXSQL];
 
   sprintf(sqldet,"DETACH %s",dbn);
-  sqlite3_exec(db, sqldet,0, 0, &err_msg);
+  rc=sqlite3_exec(db, sqldet,0, 0, &err_msg);
   if (rc != SQLITE_OK) {
       fprintf(stderr, "Cannot detach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
       sqlite3_close(db);

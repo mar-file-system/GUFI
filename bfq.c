@@ -105,7 +105,8 @@ static void processdir(void * passv)
         if (in.andor > 0) recs=1; 
         // if we have recs (or are running an or) query the entries table
         if (recs > 0) {
-          rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
+          if (strlen(in.sqlent) > 1)
+            rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
         }
     }
 
