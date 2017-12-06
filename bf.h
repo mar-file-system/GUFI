@@ -24,6 +24,10 @@ FILE *outfd[MAXPTHREAD];
 sqlite3 *outdbd[MAXPTHREAD];
 } gts;
 
+struct globalpathstate {
+  char gpath[MAXPATH];
+} gps[MAXPTHREAD];
+
 struct sum {
   long long int totfiles;
   long long int totlinks;

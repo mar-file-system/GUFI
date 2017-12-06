@@ -367,4 +367,24 @@ int gettid() {
     }
     return(myid);
 }
+int shortpath(const char *name, char *nameout) {
+     char prefix[MAXPATH];
+     char *pp;
+     int i;
 
+     i=0;
+     sprintf(prefix,"%s",name);
+     i=strlen(prefix);
+     pp=prefix+i;
+     //printf("cutting name down %s len %d\n",prefix,i);
+     while (i > 0) {
+       if (!strncmp(pp,"/",1)) {
+          bzero(pp,1);
+          break;
+       }
+       pp--;
+       i--;
+     }
+     sprintf(nameout,"%s",prefix);
+     return 0;
+}

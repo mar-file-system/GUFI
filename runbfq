@@ -10,7 +10,9 @@
 #     in.outfile=atoi(v[9]);
 #     sprintf(in.outfilen,"%s",v[10]);
 echo "query to screen"
-./bfq testdirdup/testdir "" "" "select * from entries;" 1 0 1 2 0 outq 0 ',' 0 outdb "" ""
+./bfq testdirdup/testdir "" "" "select path(),* from entries;" 1 0 1 2 0 outq 0 ',' 0 outdb "" ""
+echo "query to screen show date conversion"
+./bfq testdirdup/testdir "" "select path(),name,type,size,datetime(mtime,'unixepoch') from summary;" "select path(),name, type, size, datetime(mtime,'unixepoch') from entries;" 1 0 1 1 0 outq 0 ',' 0 outdb "" ""
 rm outq*
 echo "query to out files"
 ./bfq testdirdup/testdir "" "" "select * from entries;" 1 0 1 2 1 outq 2 ',' 0 outdb "" ""

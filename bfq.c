@@ -13,6 +13,10 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
+
 #include "bf.h"
 #include "structq.c"
 #include "utils.c"
@@ -32,6 +36,7 @@ static void * processdir(void * passv)
     sqlite3 *db;
     sqlite3 *db1;
     int recs;
+    char shortname[MAXPATH];
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     mytid=0;
@@ -57,12 +62,16 @@ static void * processdir(void * passv)
       db=opendb(passmywork->name,db1,1,0);
     }
 
+    // this is needed to add some query functions like path() uidtouser() gidtogroup()
+    addqueryfuncs(db);
+
     // if and operation and sqltsum is there run a query to see if there is a match
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
              /* if it fails then this will be set to 1 and will go on */
     // if this is or as well as no sql to run skip this query
     if (strlen(in.sqltsum) > 1) {
       if (in.andor == 0)
+        
         recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
       // this is an or or we got a record back go on to summary/entries queries 
       // if not done with this dir and all dirs below it
@@ -95,6 +104,10 @@ static void * processdir(void * passv)
         // and we are doing and, skip querying the entries db
         if (strlen(in.sqlsum) > 1) {
           recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
+          // for directories we have to take off after the last slash
+          // and set the path so users can put path() in their queries
+          shortpath(passmywork->name,shortname);
+          sprintf(gps[mytid].gpath,"%s",shortname);
           recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
         } else {
           recs=1;
@@ -103,6 +116,8 @@ static void * processdir(void * passv)
         // if we have recs (or are running an or) query the entries table
         if (recs > 0) {
           if (strlen(in.sqlent) > 1)
+            // set the path so users can put path() in their queries
+            sprintf(gps[mytid].gpath,"%s",passmywork->name);
             rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
         }
     }

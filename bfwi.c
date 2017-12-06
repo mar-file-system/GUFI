@@ -13,6 +13,10 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
+
 #include "bf.h"
 #include "structq.c"
 #include "utils.c"
