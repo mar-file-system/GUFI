@@ -1,0 +1,19 @@
+#     sprintf(in.name,"%s",v[1]);
+#     in.printing = atoi(v[2]);
+#     in.maxthreads = atoi(v[3]);
+#     in.dodelim=atoi(v[4]);
+#     sprintf(in.delim,"%s",v[5]);
+#     in.doxattrs=atoi(v[6]);
+#     in.printdir=atoi(v[7]);
+#     in.buildindex=atoi(v[8]);
+#     sprintf(in.nameto,"%s",v[9]);
+#     in.outfile=atoi(v[10]);
+#     sprintf(in.outfilen,"%s",v[11]);
+#     sprintf(msn.robinin,"%s",v[12]);
+echo "bfmi to screen"
+./bfmi testdir 1 2 0 ',' 1 1 0 testdirrh 0 testout robinhoodin
+rm -rf testdirrh
+echo "bfmi to gufi"
+./bfmi testdir 0 2 0 ',' 1 0 1 testdirrh 0 testout robinhoodin
+echo "bfq on resulting gufi"
+./bfq testdirrh "" "select * from summary;" "select * from entries;" 1 0 1 2 0 outq 0 ',' 0 outdb "" ""
