@@ -1,5 +1,5 @@
-This represents a merge of tarballs that have been passed around in email
-(latest 2017-12-06) with development that has stripped .c files off into a
+This represents the tarballs that have been passed around in email (latest
+2017-12-06), merged with development that has stripped .c files off into a
 library, added a Makefile, and moved C-Thread-Pool (our own fork) into a
 git submodule.
 
