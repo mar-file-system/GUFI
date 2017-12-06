@@ -13,11 +13,15 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
+
 #include "bf.h"
 #include "structq.h"
 #include "utils.h"
 #include "dbutils.h"
-// #include "putils.h"
+
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.

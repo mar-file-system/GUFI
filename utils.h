@@ -51,6 +51,9 @@ int pushdir( void  * qqwork);
 
 int gettid();
 
+int shortpath(const char *name, char *nameout);
+
+
 // NOTE: returns void, not void*, because threadpool threads
 //       do not return values outside the API.
 typedef void(DirFunc)(void*);

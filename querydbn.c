@@ -13,7 +13,13 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
+
 #include "bf.h"
+#include "structq.c"
+#include "utils.c"
 #include "dbutils.c"
 
 int main(int argc, char *argv[])
@@ -51,6 +57,10 @@ int main(int argc, char *argv[])
      printf("processing query name %s  numb dbs %d\n",name, numdbs);
      sprintf(dbname,"%s",name);
      db = opendb(name,db1,5,0);
+     // add query funcs to get path() uidtouser() gidtogroup()
+     addqueryfuncs(db);
+     // just zero out the global path so path() for this query is useless
+     bzero(gps[0].gpath,sizeof(gps[0].gpath));
    
      bzero(sqlu,sizeof(sqlu));
      sprintf(sqlu,"create temp view v%s as ",tabnam);

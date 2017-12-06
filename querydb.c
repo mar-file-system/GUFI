@@ -14,11 +14,15 @@
 #include <pthread.h>
 
 #include "bf.h"
+#include "structq.h"
+#include "utils.h"
 #include "dbutils.h"
+
 
 int main(int argc, char *argv[])
 {
      char name[MAXPATH];
+     char shortname[MAXPATH];
      char dbname[MAXPATH];
      char rsqlstmt[MAXSQL];
      struct stat statuso;
@@ -53,6 +57,15 @@ int main(int argc, char *argv[])
        printf("issue with db name %s\n",dbname);
      } else {
        db = opendb(name,db1,0,0);
+       //add query funcs to get uidtouser() gidtogroup() and path()
+       addqueryfuncs(db);
+       // set the global path so path() is the path passed in
+       if (dirsummary) {
+         shortpath(name,shortname);
+         sprintf(gps[0].gpath,"%s",shortname); 
+       } else {
+         sprintf(gps[0].gpath,"%s",name); 
+       }
 
        recs=rawquerydb(name, dirsummary, db, rsqlstmt, printpath, printheader,1,0);
        if (recs >= 0) {

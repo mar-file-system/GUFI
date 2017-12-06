@@ -12,6 +12,10 @@
 #define MAXPTHREAD 100
 
 
+struct globalpathstate {
+  char gpath[MAXPATH];
+} gps[MAXPTHREAD];
+
 struct sum {
   long long int totfiles;
   long long int totlinks;

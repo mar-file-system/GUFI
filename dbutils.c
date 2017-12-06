@@ -1,6 +1,11 @@
-#include "dbutils.h"
-
 #include <string.h>
+#include <stdlib.h>
+
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
+
+#include "dbutils.h"
 
 
 sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
@@ -113,9 +118,9 @@ int rawquerydb(const char *name,
      int ncols;
      int cnt;
      int onetime;
-     char prefix[MAXPATH];
-     char shortname[MAXPATH];
-     char *pp;
+     //char prefix[MAXPATH];
+     //char shortname[MAXPATH];
+     //char *pp;
      int i;
      FILE * out;
      char  ffielddelim[2];
@@ -132,7 +137,9 @@ int rawquerydb(const char *name,
      if (in.dodelim == 2) {
        sprintf(ffielddelim,"%s",in.delim);
      }
-
+    
+     //shortpath(name,shortname); 
+/*
      sprintf(shortname,"%s",name);
      if (isdir > 0) {
           i=0;
@@ -150,7 +157,7 @@ int rawquerydb(const char *name,
           }
           sprintf(shortname,"%s",prefix);
      }
-     
+*/     
      error = sqlite3_prepare_v2(db, sqlstmt, 1000, &res, &tail);
 
      if (error != SQLITE_OK) {
@@ -168,7 +175,7 @@ int rawquerydb(const char *name,
            ncols=sqlite3_column_count(res);
            while (ncols > 0) {
              if (cnt==0) {
-               if (printpath) fprintf(out,"path/%s",ffielddelim);
+               //if (printpath) fprintf(out,"path/%s",ffielddelim);
              }
              fprintf(out,"%s%s", sqlite3_column_name(res,cnt),ffielddelim);
              //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
@@ -183,7 +190,7 @@ int rawquerydb(const char *name,
        ncols=sqlite3_column_count(res);
        while (ncols > 0) {
          if (cnt==0) {
-           if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
+           //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
          }
          fprintf(out,"%s%s", sqlite3_column_text(res,cnt),ffielddelim);
          ncols--; cnt++;
@@ -521,4 +528,58 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     }
     sqlite3_free(err_msg);
     return 0;
+}
+
+static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    struct passwd *fmypasswd;
+    int fuid;
+    char fname[256];
+    if (argc == 1) {
+        const unsigned char *text = sqlite3_value_text(argv[0]);
+        //printf("uidtouser %d %s\n",argc,text);
+        sprintf(fname,"%s",text);
+        fuid=atoi(fname);
+        fmypasswd = getpwuid(fuid);
+        if (fmypasswd != NULL) {
+          sqlite3_result_text(context, fmypasswd->pw_name, -1, SQLITE_TRANSIENT);
+          return;
+        }
+    }
+    sqlite3_result_null(context);
+}
+
+static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    struct group *fmygroup;
+    int fgid;
+    char fgroup[256];
+    if (argc == 1) {
+        const unsigned char *text = sqlite3_value_text(argv[0]);
+        //printf("gidtouser %d %s\n",argc,text);
+        sprintf(fgroup,"%s",text);
+        fgid=atoi(fgroup);
+        fmygroup = getgrgid(fgid);
+        if (fmygroup != NULL) {
+          sqlite3_result_text(context, fmygroup->gr_name, -1, SQLITE_TRANSIENT);
+          return;
+        }
+    }
+    sqlite3_result_null(context);
+}
+
+static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    int mytid;
+ 
+    mytid=gettid(); 
+    sqlite3_result_text(context, gps[mytid].gpath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
+int addqueryfuncs(sqlite3 *db) {
+       sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
+       sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
+       sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
+       return 0;
 }

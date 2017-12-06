@@ -33,5 +33,6 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
 
-
+int addqueryfuncs(sqlite3 *db);
+ 
 #endif
