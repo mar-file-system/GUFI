@@ -1,17 +1,31 @@
-Assimilating Gary's tarball from email 2017-11-28 (including
-the segfault fix).
+This represents a merge of tarballs that have been passed around in email
+(latest 2017-12-06) with development that has stripped .c files off into a
+library, added a Makefile, and moved C-Thread-Pool (our own fork) into a
+git submodule.
 
-Leaving all the old stuff in place for now, because I mainly just want to
-merge the 'jti' branch, if git can manage that.
 
-Use ./makeem to build all the currently-used
-executables, which appear to be:
+--- build
 
-    bfwi
-    bfti
-    bfq
+  make clean  [optional]
+  make
 
-    querydb
-    querydbn
+The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 
+NOTE: We assume you have sqlite3 and mysql both installed.
+
+
+--- run
+
+The merged code has only been tested for applications bfwi, and bfti.
+
+  bfwi ~jti/Desktop/auto_trash/test    0 16 0 0 1 0 1 .  [ 0 foo.out ]
+  bfti ./Users/jti/Desktop/auto_trash/test 0 16 1
+
+
+--- develop
+
+For ongoing development, we're passing around a git archive tarball, made
+from the "team" branch.  You can make edits in this tarball, and continue
+to pass the tarball around.  I can merge them into the git repo
+(git@git.lanl.gov:campaign/gufi.git)
 
