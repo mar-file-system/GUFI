@@ -55,7 +55,7 @@ endif
 
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
-LIB_H = bf.h
+LIB_H = $(addsuffix .h,$(LIBFILES))
 
 
 # --- library
