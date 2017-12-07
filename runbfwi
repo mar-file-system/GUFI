@@ -1,4 +1,5 @@
-# sprintf(in.name,"%s",v[1]);
+# --- old:
+#     sprintf(in.name,"%s",v[1]);
 #     in.printing = atoi(v[2]);
 #     in.maxthreads = atoi(v[3]);
 #     in.dodelim=atoi(v[4]);
@@ -7,18 +8,47 @@
 #     in.printdir=atoi(v[7]);
 #     in.buildindex=atoi(v[8]);
 #     sprintf(in.nameto,"%s",v[9]);
-rm testout*
+#     in.outfile=atoi(v[10]);
+#     sprintf(in.outfilen,"%s",v[11]);
+
+# --- new:
+# Usage: ./bfwi [options]
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)?
+#   -i <input_dir>  input directory path
+#   -p              print file diagnostics?
+#   -n <threads>    number of threads
+#   -d <delim>      delimiter (one char)
+#   -x              handle xattrs?
+#   -P              print directories?
+#   -b              build index?
+#   -t <name_to>    name to
+#   -o <out_fname>  output file
+
+
+rm -f  testout*
 rm -rf testdirdup
 mkdir testdirdup
+
+
 # run bfwi and send output to screen
+echo
 echo "out to screen"
-./bfwi testdir 1 2 0 ',' 1 1 1 testdirdup 0 testout
+# ./bfwi testdir 1 2 0 ',' 1 1 1 testdirdup 0 testout
+./bfwi -i testdir -p -n 2 -xPb -t testdirdup
+
 ls -l testout*
 rm testout*
 rm -rf testdirdup
+
+
 #run to output files testout.*
+echo
 echo "send to output files"
-./bfwi testdir 1 2 0 ',' 1 1 1 testdirdup 1 testout
+# ./bfwi testdir 1 2 0 ',' 1 1 1 testdirdup 1 testout
+./bfwi -i testdir -p -n 2 -xPb -t testdirdup -o testout
+
 ls -l testout*
 cat testout*
 ls -lR testdirdup

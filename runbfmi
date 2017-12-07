@@ -1,3 +1,4 @@
+# --- old:
 #     sprintf(in.name,"%s",v[1]);
 #     in.printing = atoi(v[2]);
 #     in.maxthreads = atoi(v[3]);
@@ -10,10 +11,39 @@
 #     in.outfile=atoi(v[10]);
 #     sprintf(in.outfilen,"%s",v[11]);
 #     sprintf(msn.robinin,"%s",v[12]);
+
+# --- new:
+# Usage: bfmi [options]
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)?
+#   -i <input_dir>  input directory path
+#   -p              print file diagnostics?
+#   -n <threads>    number of threads
+#   -d <delim>      delimiter (one char)
+#   -x              handle xattrs?
+#   -P              print directories?
+#   -b              build index?
+#   -t <name_to>    name to
+#   -o <out_fname>  output file
+#   -r <robin_in>   ? (see bfmi.c)
+
+
+
+echo
 echo "bfmi to screen"
-./bfmi testdir 1 2 0 ',' 1 1 0 testdirrh 0 testout robinhoodin
 rm -rf testdirrh
+# ./bfmi testdir 1 2 0 ',' 1 1 0 testdirrh 0 testout robinhoodin
+./bfmi -i testdir -p -n 2 -xP -r robinhoodin
+
+echo
 echo "bfmi to gufi"
-./bfmi testdir 0 2 0 ',' 1 0 1 testdirrh 0 testout robinhoodin
+rm -rf testdirrh
+# ./bfmi testdir 0 2 0 ',' 1 0 1 testdirrh 0 testout robinhoodin
+./bfmi -i testdir -n 2 -xb -t testdirrh -r robinhoodin
+
+
+echo
 echo "bfq on resulting gufi"
-./bfq testdirrh "" "select * from summary;" "select * from entries;" 1 0 1 2 0 outq 0 ',' 0 outdb "" ""
+# ./bfq testdirrh "" "select * from summary;" "select * from entries;" 1 0 1 2 0 outq 0 ',' 0 outdb "" ""
+./bfq -i testdirrh -S "select * from summary;" -E "select * from entries;" -Pp -n 2

@@ -83,8 +83,17 @@ struct input {
    char outdbn[MAXPATH];
    char sqlinit[MAXSQL];
    char sqlfin[MAXSQL];
+   char robinin[MAXPATH];
 };
 extern struct input in;
+
+
+// DEBUGGING
+void show_input(struct input* in, int retval);
+
+int processin(int argc, char* argv[], const char* getopt_str);
+
+
 
 struct work {
    char          name[MAXPATH];
