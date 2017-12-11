@@ -1,6 +1,0 @@
-# cc bfw.c -o bfw
-cc bfw.c -pthread -o bfw
-echo "---> ./bfw testdir 1 10 (walk with readdir stat and xattr print 10 threads spacedelim)"
-./bfw testdir 0 0 0
-echo "---> ./bfw testdir 0 10 (walk with readdir stat and xattr print 10 threads spacedelim)"
-./bfw testdir 1 0 0

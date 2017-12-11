@@ -51,8 +51,9 @@ int pushdir( void  * qqwork);
 
 int gettid();
 
-int shortpath(const char *name, char *nameout);
+int shortpath(const char *name, char *nameout, char *endname);
 
+int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode);
 
 // NOTE: returns void, not void*, because threadpool threads
 //       do not return values outside the API.

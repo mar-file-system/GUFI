@@ -1,0 +1,8 @@
+EPATH=..
+#syntax querydb directorycontainingdb sqlstmt printpath printheader dirsummary
+echo "query  dir summary"
+$EPATH/querydb testdirdup/testdir "select * from summary;" 1 1 1
+echo "query  tree summary"
+$EPATH/querydb testdirdup/testdir "select * from treesummary;" 1 1 0
+echo "query entries"
+$EPATH/querydb testdirdup/testdir "select * from entries;" 1 1 0

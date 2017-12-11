@@ -1,4 +1,4 @@
-DFW  = dfw dfwrplus dfwrplusdb dfwrplusdbthread dfwrplusdbthreadsort rpluslistdbthreadsort
+DFW  = dfw
 BFW  = bfwi bfti bfq bfmi.mysql
 
 # TOOLS = querydb querydbn make_testdirs dbdump 
@@ -7,9 +7,6 @@ TOOLS = querydb querydbn make_testdirs
 # # TBD ...
 # cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse 
 
-
-
-
 all: all.bfw all.tools
 
 all.dfw: $(DFW)
@@ -17,8 +14,6 @@ all.dfw: $(DFW)
 all.bfw: $(BFW)
 
 all.tools: $(TOOLS)
-
-
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils

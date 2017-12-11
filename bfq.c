@@ -40,6 +40,7 @@ static void processdir(void * passv)
     sqlite3 *db1;
     int recs;
     char shortname[MAXPATH];
+    char endname[MAXPATH];
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     mytid=0;
@@ -105,23 +106,29 @@ static void processdir(void * passv)
         } while ((entry = (readdir(dir))));
         // run query on summary, print it if printing is needed, if returns none 
         // and we are doing and, skip querying the entries db
+        bzero(endname,sizeof(endname));
+        shortpath(passmywork->name,shortname,endname);
+        sprintf(gps[mytid].gepath,"%s",endname);
         if (strlen(in.sqlsum) > 1) {
           recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
           // for directories we have to take off after the last slash
           // and set the path so users can put path() in their queries
-          shortpath(passmywork->name,shortname);
           sprintf(gps[mytid].gpath,"%s",shortname);
           recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+          //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
         } else {
           recs=1;
         }
         if (in.andor > 0) recs=1; 
         // if we have recs (or are running an or) query the entries table
         if (recs > 0) {
-          if (strlen(in.sqlent) > 1)
+          if (strlen(in.sqlent) > 1) {
             // set the path so users can put path() in their queries
+            //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
             sprintf(gps[mytid].gpath,"%s",passmywork->name);
             rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
+            //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",in.sqlent,passmywork->name,recs,strlen(in.sqlent));
+          }
         }
     }
 
@@ -131,7 +138,6 @@ static void processdir(void * passv)
     } else {
       closedb(db);
     }
-
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
 

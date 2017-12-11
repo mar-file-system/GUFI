@@ -1,0 +1,2 @@
+rm outdb*
+../scripts/userfilespacehogusesummary testdirdup/testdir 2

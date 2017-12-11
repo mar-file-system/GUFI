@@ -1,0 +1,5 @@
+EPATH=..
+echo "query to create db insert recs from entry query into out db user file space hog use user summary"
+rm -f outdb*
+$EPATH/bfq -i $1 -E "insert into sumsum select uidtouser(uid), totfiles, totsize from vsummaryuser;" -n $2 -O outdb -I "create table sumsum (username text, totfiles int64, totsize int64);"
+$EPATH/querydbn outdb "select username, totfiles, totsize from vsumsum group by username;" 0 1 1 $2 sumsum

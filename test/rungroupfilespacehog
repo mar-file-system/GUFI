@@ -1,0 +1,2 @@
+rm outdb*
+../scripts/groupfilespacehog testdirdup/testdir 2

@@ -1,4 +1,0 @@
-rm readdirplus.db
-time ./dfwrplus / > /dev/null
-time ./dfwrplusdbthread / > /dev/null
-time ./dfwrplus / > /dev/null

@@ -1,3 +1,0 @@
-rm testdirdup1/testdir/treesummary.db
-time ./bfti testdirdup1/testdir  0 30 1
-ls -l testdirdup1/testdir/treesummary.db

@@ -1,0 +1,2 @@
+rm outdb*
+../scripts/oldbigfiles testdirdup/testdir 2

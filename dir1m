@@ -1,7 +1,0 @@
-rm -rf /tmp/test1m
-mkdir /tmp/test1m
-mkdir /tmp/test1m/tmp
-mkdir /tmp/test1m/tmp/bigtestdir
-mkdir /tmp/test1m/tmp/bigtestdir/1m
-time ./bfi /tmp/bigtestdir/1m /tmp/test1m 0 10
-ls -l /tmp/test1m/tmp/bigtestdir/1m

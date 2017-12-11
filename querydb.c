@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
 {
      char name[MAXPATH];
      char shortname[MAXPATH];
+     char endname[MAXPATH];
      char dbname[MAXPATH];
      char rsqlstmt[MAXSQL];
      struct stat statuso;
@@ -60,8 +61,11 @@ int main(int argc, char *argv[])
        //add query funcs to get uidtouser() gidtogroup() and path()
        addqueryfuncs(db);
        // set the global path so path() is the path passed in
+       bzero(endname,sizeof(endname));
+       shortpath(name,shortname,endname);
+       //printf("shortpath out shortname %s end name %s\n",shortname, endname);
+       sprintf(gps[0].gepath,"%s",endname); 
        if (dirsummary) {
-         shortpath(name,shortname);
          sprintf(gps[0].gpath,"%s",shortname); 
        } else {
          sprintf(gps[0].gpath,"%s",name); 

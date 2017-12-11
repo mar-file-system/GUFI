@@ -28,8 +28,10 @@ char *vesql = "create view pentries as select entries.*, summary.inode as pinode
 
 char *vssqldir = "create view vsummarydir as select * from summary where rectype=0;";
 char *vssqluser = "create view vsummaryuser as select * from summary where rectype=1;";
+char *vssqlgroup = "create view vsummarygroup as select * from summary where rectype=2;";
 char *vtssqldir = "create view vtsummarydir as select * from treesummary where rectype=0;";
 char *vtssqluser = "create view vtsummaryuser as select * from treesummary where rectype=1;";
+char *vtssqlgroup = "create view vtsummarygroup as select * from treesummary where rectype=2;";
 
 
 
@@ -114,6 +116,7 @@ int processin(int argc, char* argv[], const char* getopt_str) {
      char outfn[MAXPATH];
      int i;
 
+     //bzero(in.sqlent,sizeof(in.sqlent));
      // <in> defaults to all-zeros.
      in.maxthreads = 1;         // don't default to zero threads
 
@@ -200,7 +203,7 @@ int processin(int argc, char* argv[], const char* getopt_str) {
            strncpy(in.sqlfin, optarg, MAXSQL);
            break;
 
-        case 'r':               // SQL clean-up
+        case 'r':               // robinhood mysql input control file
            strncpy(in.robinin, optarg, MAXPATH);
            break;
 

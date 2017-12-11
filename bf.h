@@ -7,13 +7,14 @@
 
 #define MAXPATH 1024
 #define MAXXATTR 1024
-#define MAXSQL 1024
+#define MAXSQL 2048 
 #define MAXRECS 100000
 #define MAXPTHREAD 100
 
 
 struct globalpathstate {
   char gpath[MAXPATH];
+  char gepath[MAXPATH];
 } gps[MAXPTHREAD];
 
 struct sum {
@@ -129,8 +130,10 @@ extern char *vesql;
 
 extern char *vssqldir;
 extern char *vssqluser;
+extern char *vssqlgroup;
 extern char *vtssqldir;
 extern char *vtssqluser;
+extern char *vtssqlgroup;
 
 
 #endif

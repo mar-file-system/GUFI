@@ -10,10 +10,6 @@
 #include <errno.h>
 #include <utime.h> 
 
-#define MAXXATTR 1024
-#define MAXPATH 1024
-#define MAXSQL 1024
-
 #include "bf.h"
 #include "utils.c"
  

@@ -404,7 +404,7 @@ int gettid() {
    return thpool_thread_index(mythpool, pthread_self());
 }
 
-int shortpath(const char *name, char *nameout) {
+int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
      int i;
@@ -417,6 +417,7 @@ int shortpath(const char *name, char *nameout) {
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
           bzero(pp,1);
+          sprintf(endname,"%s",pp+1);
           break;
        }
        pp--;
@@ -459,4 +460,47 @@ int processdirs(DirFunc dir_fn) {
      }
 
      return 0;
+}
+
+int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
+  char buf[MAXXATTR];
+  char bufv[MAXXATTR];
+  char * xattrp;
+  int cnt;
+  if (!printing) return 0;
+  if (!strncmp(type,"l",1)) printf("l ");
+  if (!strncmp(type,"f",1)) printf("f ");
+  if (!strncmp(type,"d",1)) printf("d ");
+  printf("%s ", name);
+  if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
+  printf("%lld ", status->st_ino);
+  printf("%lld ", pinode);
+  printf("%d ",status->st_mode);
+  printf("%d ",status->st_nlink);
+  printf("%d ", status->st_uid);
+  printf("%d ", status->st_gid);
+  printf("%lld ", status->st_size);
+  printf("%d ", status->st_blksize);
+  printf("%lld ", status->st_blocks);
+  printf("%ld ", status->st_atime);
+  printf("%ld ", status->st_mtime);
+  printf("%ld ", status->st_ctime);
+  cnt = 0;
+  xattrp=xattr;
+  if (xattrs > 0) {
+    printf("xattr: %s",xattr);
+/*
+    while (cnt < xattrs) {
+      bzero(buf,sizeof(buf));
+      bzero(bufv,sizeof(bufv));
+      strcpy(buf,xattrp); xattrp=xattrp+strlen(buf)+1;
+      printf("%s",buf);
+      strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1;
+      printf("%s ",bufv);
+      cnt++;
+   }
+*/
+  }
+  printf("\n");
+  return 0;
 }
