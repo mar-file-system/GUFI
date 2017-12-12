@@ -140,6 +140,16 @@ int processin(int         argc,
               int         n_positional,
               const char* positional_args_help_str) {
 
+#define INSTALL_STR(VAR, SOURCE, MAX, OPT_LETTER)                       \
+     do {                                                                 \
+        if (strlen(optarg) >= (MAX)) {                                  \
+           fprintf(stderr, "argument to '-%c' exceeds max allowed (%d)\n", (OPT_LETTER), (MAX)); \
+           retval = -1;                                                 \
+        }                                                               \
+        strncpy((VAR), optarg, (MAX));                                  \
+        (VAR)[(MAX)-1] = 0;                                             \
+     } while (0)
+
      char outfn[MAXPATH];
      int i;
 
@@ -196,44 +206,46 @@ int processin(int         argc,
 
         case 'o':
            in.outfile = 1;
-           strncpy(in.outfilen, optarg, MAXPATH);
+           // strncpy(in.outfilen, optarg, MAXPATH);
+           INSTALL_STR(in.outfilen, optarg, MAXPATH, 'o');
            break;
 
         case 'O':
            in.outdb = 1;
-           strncpy(in.outdbn, optarg, MAXPATH);
+           // strncpy(in.outdbn, optarg, MAXPATH);
+           INSTALL_STR(in.outdbn, optarg, MAXPATH, 'O');
            break;
 
         case 't':
-           strncpy(in.nameto, optarg, MAXPATH);
+           INSTALL_STR(in.nameto, optarg, MAXPATH, 't');
            break;
 
         case 'i':
-           strncpy(in.name, optarg, MAXPATH);
+           INSTALL_STR(in.name, optarg, MAXPATH, 'i');
            break;
 
         case 'I':               // SQL initializations
-           strncpy(in.sqlinit, optarg, MAXSQL);
+           INSTALL_STR(in.sqlinit, optarg, MAXSQL, 'I');
            break;
 
         case 'T':               // SQL for tree-summary
-           strncpy(in.sqltsum, optarg, MAXSQL);
+           INSTALL_STR(in.sqltsum, optarg, MAXSQL, 'T');
            break;
 
         case 'S':               // SQL for summary
-           strncpy(in.sqlsum, optarg, MAXSQL);
+           INSTALL_STR(in.sqlsum, optarg, MAXSQL, 'S');
            break;
 
         case 'E':               // SQL for entries
-           strncpy(in.sqlent, optarg, MAXSQL);
+           INSTALL_STR(in.sqlent, optarg, MAXSQL, 'E');
            break;
 
         case 'F':               // SQL clean-up
-           strncpy(in.sqlfin, optarg, MAXSQL);
+           INSTALL_STR(in.sqlfin, optarg, MAXSQL, 'F');
            break;
 
         case 'r':               // robinhood mysql input control file
-           strncpy(in.robinin, optarg, MAXPATH);
+           INSTALL_STR(in.robinin, optarg, MAXPATH, 'r');
            break;
 
         case 'a':               // and/or
@@ -270,4 +282,7 @@ int processin(int         argc,
         show_input(&in, retval);
 
      return (retval ? retval : optind);
+
+#undef INSTALL_STR
+
 }
