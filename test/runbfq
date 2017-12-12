@@ -1,9 +1,13 @@
+#!/bin/bash -e
+
+# Assumes you 'cd test' before running
 EPATH=..
-# Usage: bfq [options]
+
+
+# Usage: bfq [options] input_dir
 # options:
 #   -h              help
-#   -H              show assigned input values (debugging)?
-#   -i <input_dir>  input directory path
+#   -H              show assigned input values? (debugging)
 #   -T <SQL_tsum>   SQL for tree-summary table
 #   -S <SQL_sum>    SQL for summary table
 #   -E <SQL_ent>    SQL for entries table
@@ -20,16 +24,26 @@ EPATH=..
 
 echo
 echo "query to screen"
-$EPATH/bfq -i testdirdup/testdir -E  "select path(),* from entries;" -Pp -n 2
+$EPATH/bfq \
+    -Pp -n 2 \
+    -E "select path(),* from entries;" \
+    testdirdup/testdir
 
 echo
 echo "query to screen show date conversion"
-$EPATH/bfq -i testdirdup/testdir -S "select path(),name,type,size,datetime(mtime,'unixepoch') from vsummarydir;" -E  "select path(),name, type, size, datetime(mtime,'unixepoch') from entries;" -Pp -n 1
+$EPATH/bfq \
+    -Pp -n 1 \
+    -S "select path(),name,type,size,datetime(mtime,'unixepoch') from vsummarydir;" \
+    -E "select path(),name, type, size, datetime(mtime,'unixepoch') from entries;" \
+    testdirdup/testdir
 
 echo
 echo "query to out files"
 rm -f outq*
-$EPATH/bfq -i testdirdup/testdir -E "select * from entries;" -Pp -n 2 -o outq
+$EPATH/bfq \
+    -Pp -n 2 -o outq \
+    -E "select * from entries;" \
+    testdirdup/testdir
 
 ls -l outq*
 cat outq*
@@ -37,7 +51,11 @@ cat outq*
 echo
 echo "query to screen create db insert recs from entry query into out db"
 rm -f outdb*
-$EPATH/bfq -i testdirdup/testdir -E "insert into sument select uid, type, count(*), sum(size) from entries group by type;" -Pp -n 2 -O outdb -I "create table sument (uid int64, type text, totfiles int64, totsize int64);"
+$EPATH/bfq \
+    -Pp -n 2 -O outdb \
+    -I "create table sument (uid int64, type text, totfiles int64, totsize int64);" \
+    -E "insert into sument select uid, type, count(*), sum(size) from entries group by type;" \
+    testdirdup/testdir
 
 echo
 echo "contents of table 'sument' created in previous step (thread 0)"
@@ -49,7 +67,11 @@ sqlite3 -line outdb.1 'select * from sument;'
 
 echo
 echo "query to screen create db insert recs from summary query into out db"
-$EPATH/bfq -i testdirdup/testdir -S "insert into sumsummary select uid, gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr from vsummarydir;" -Pp -n 2 -O outdb -I "CREATE TABLE sumsummary(uid INT64, gid INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64);"
+$EPATH/bfq \
+    -Pp -n 2 -O outdb \
+    -I "CREATE TABLE sumsummary(uid INT64, gid INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64);" \
+    -S "insert into sumsummary select uid, gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr from vsummarydir;" \
+    testdirdup/testdir
 
 echo
 echo "contents of table 'sumsummary' created in previous step (thread 0)"

@@ -290,33 +290,23 @@ int processfin() {
 }
 
 
-#if 0
-int processin(int c, char *v[]) {
 
-     char outfn[MAXPATH];
-     int i;
-     // this is where we process input variables
+int validate_inputs() {
+   if (in.buildindex && !in.nameto[0]) {
+      fprintf(stderr, "building an index requires a destination dir (see '-t'))\n");
+      return -1;
+   }
+   else if (in.nameto[0]) {
+      in.buildindex = 1; // you're welcome
+   }
 
-     // this is not how you should do this, it should be a case statement with edits etc.
-     //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
-     sprintf(in.name,"%s",v[1]);
-     in.printing = atoi(v[2]);
-     in.maxthreads = atoi(v[3]);
-     in.dodelim=atoi(v[4]);
-     sprintf(in.delim,"%s",v[5]);
-     in.doxattrs=atoi(v[6]);
-     in.printdir=atoi(v[7]);
-     in.buildindex=atoi(v[8]);
-     sprintf(in.nameto,"%s",v[9]);
-     in.outfile=atoi(v[10]);
-     sprintf(in.outfilen,"%s",v[11]);
-     // sprintf(msn.robinin,"%s",v[12]);
-     sprintf(in.robinin,"%s",v[12]);
+   if (! in.robinin[0]) {
+      fprintf(stderr, "-r <rh_fname> is actually required\n");
+      return -1;
+   }
 
-     return 0;
+   return 0;
 }
-#endif
-
 
 int main(int argc, char *argv[])
 {
@@ -328,8 +318,12 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     if (processin(argc, argv, "hHi:pn:d:xPbt:o:r"))
+     int idx = processin(argc, argv, "hHpn:d:xPbt:o:r:", 0, "");
+     if (idx < 0)
          return -1;
+
+     if (validate_inputs())
+        return -1;
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here

@@ -210,44 +210,11 @@ int processfin() {
 }
 
 
-#if 0
-int processin(int c, char *v[]) {
-
-   char outfn[MAXPATH];
-   int i;
-   // this is where we process input variables
-
-   // this is not how you should do this, it should be a case statement with edits etc.
-   //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
-   sprintf(in.name,"%s",v[1]);
-   in.printing = atoi(v[2]);
-   in.maxthreads = atoi(v[3]);
-   in.dodelim=atoi(v[4]);
-   sprintf(in.delim,"%s",v[5]);
-   in.doxattrs=atoi(v[6]);
-   in.printdir=atoi(v[7]);
-   in.buildindex=atoi(v[8]);
-   sprintf(in.nameto,"%s",v[9]);
-   in.outfile=atoi(v[10]);
-   sprintf(in.outfilen,"%s",v[11]);
-
-   return 0;
-}
-#endif
-
 
 int validate_inputs() {
-   if (! in.name[0]) {
-      fprintf(stderr, "must supply source-dir '-i'\n");
-      return -1;
-   }
-   if (! in.nameto[0]) {
-      fprintf(stderr, "must supply destination-dir '-t'\n");
-      return -1;
-   }
-
    return 0;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -259,11 +226,15 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     if (processin(argc, argv, "hHi:pn:d:xPbt:o:"))
+     int idx = processin(argc, argv, "hHpn:d:xPbo:", 2, "input_dir to_dir");
+     if (idx < 0)
         return -1;
+     else {
+        // parse positional args, following the options
+        strncpy(in.name, argv[idx++], MAXPATH);
+        strncpy(in.nameto, argv[idx++], MAXPATH);
+     }
 
-     // option-parsing can't tell that some options are required,
-     // or which combinations of options interact.
      if (validate_inputs())
         return -1;
 

@@ -26,20 +26,20 @@ The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 
 --- run
 
-bfwi - breadth first walk of input tree to list the tree or create a GUFI tree as output
+bfwi - breadth first walk of input tree to list the tree, or create a GUFI index-tree
+
+Usage: bfwi [options] input_dir to_dir
 options:
   -h              help
   -H              show assigned input values (debugging)
-  -i <input_dir>  input directory path
-  -p              print files as they are encountered to stdout 
+  -p              print files as they are encountered
   -n <threads>    number of threads
-  -d <delim>      delimiter (one char) delimits fields
-  -x              pull xattrs from source file system into GUFI
-  -P              print directories as they are encountered to stdout
+  -d <delim>      delimiter (one char)
+  -x              pull xattrs from source file-sys into GUFI
+  -P              print directories as they are encountered
   -b              build GUFI index tree
-  -t <name_to>    GUFI directory path to build under
-  -o <out_fname>  output filename prefix - one file per thread
-                      will be created with thread id as suffix
+  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+
 future options:
   -U              create by user summary per directory
   -G              create by group summary per directory
@@ -59,31 +59,34 @@ end
 close output files if needed
 you can end up with an output file per thread
 
+
+
 bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
+
+Usage: bfmi [options] 
 options:
   -h              help
   -H              show assigned input values (debugging)
-  -i <input_dir>  input directory path  ***** i dont think this is used in bfmi
-  -p              print files as they are encountered to stdout
+  -p              print files as they are encountered
   -n <threads>    number of threads
-  -d <delim>      delimiter (one char) delimits fields
-  -x              pull xattrs from source file system into GUFI
-  -P              print directories as they are encountered to stdout
+  -d <delim>      delimiter (one char)
+  -x              pull xattrs from source file-sys into GUFI
+  -P              print directories as they are encountered
   -b              build GUFI index tree
-  -t <name_to>    GUFI directory path to build under
-  -o <out_fname>  output filename prefix - one file per thread
-                      will be created with thread id as suffix
-  -r <rh_fname>  robinhood mysql control input file
-        robinhoodin mysql input file example
-        /top - top directory pathname - rh doesnt have a name for the root 
-        0x200004284:0x11:0x0 - fid of the root
-        20004284110 -  inode of root
-        16877 - mode of root
-        1500000000  - atime=mtime=ctime of root
-        localhost - host of mysql
-        ggrider - user of mysql
-        ggriderpw1 - password of mysql
-        institutes - name of db of mysql
+  -t <to_dir>     dir where GUFI-tree should be built
+  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+  -r <robin_in>   custom RobinHood parameters
+                     example contents:
+                     /top - top directory pathname - rh doesnt have a name for the root
+                     0x200004284:0x11:0x0 - fid of the root
+                     20004284110 -  inode of root
+                     16877 - mode of root
+                     1500000000  - atime=mtime=ctime of root
+                     localhost - host of mysql
+                     ggrider - user of mysql
+                     ggriderpw1 - password of mysql
+                     institutes - name of db of mysql
+
 future options:
   -U              create by user summary record
   -G              create by group summary record
@@ -108,14 +111,19 @@ close output files if needed
 close mysql connections
 you can end up with an output file per thread
 
+
+
+
 bfti - walks breadth first below the input directory path and summarizes all directories below it into a tree summary table record by reading all the directory summaries in the tree below
+
+Usage: bfti [options] input_dir
 options:
   -h              help
   -H              show assigned input values (debugging)
-  -i <input_dir>  input directory path
   -P              print directories as they are encountered
   -n <threads>    number of threads
   -s              generate tree-summary DB
+
 future options:
   -U              create by user summary record
   -G              create by group summary record
@@ -131,19 +139,31 @@ each thread reads the directory and the  summary table for each the dir
 end
 open/create and write tree summary record into treesummary table that summarizes all the directories below it
 
-bfq - breadth first walk of a GUFI tree doing optionally a tree query, directory query and entries query per directory encountered (obeys posix permisions for access to directory info), allows you to put your own sql statements in for tree, summary, and entries, allows and and/or logic between tree/directory/entry queries, can write its output to stdout, one file per thread, or one database output per thread. SQL init allows you to run an sql statement per thread associated to the output db before starting the walk and an sql statement per thread on the output db after the walk. 
+
+
+
+bfq - breadth first walk of a GUFI tree.  We optionally perform queries
+against the tree-summary, the directory-summary, and/or the directory
+contents tables, per directory encountered (obeys posix permisions for
+access to directory info).  You supply your own sql statements for tree,
+summary, and entries, and select AND/OR logic between tree/directory/entry
+queries.  The traversal can write its output to stdout, one file per
+thread, or one database output per thread. SQL init allows you to run an
+sql statement per thread associated to the output db before starting the
+walk, and an sql statement per thread on the output db after the walk.
+
+Usage: bfq [options] input_dir
 options:
   -h              help
-  -H              show assigned input values (debugging)?
-  -i <input_dir>  input directory path
+  -H              show assigned input values (debugging)
   -T <SQL_tsum>   SQL for tree-summary table
   -S <SQL_sum>    SQL for summary table
   -E <SQL_ent>    SQL for entries table
-  -P              print directories?
-  -a              AND/OR? (SQL query combination)
-  -p              print file diagnostics?
+  -P              print directories as they are encountered
+  -a              AND/OR (SQL query combination)
+  -p              print files as they are encountered
   -n <threads>    number of threads
-  -o <out_fname>  output file
+  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
   -d <delim>      delimiter (one char)
   -O <out_DB>     output DB
   -I <SQL_init>   SQL init
@@ -170,7 +190,10 @@ if fin sql provided run that per thread
 close outputdb
 you can end up with an output file per thread and/or a dbfile per thread
 
-/dfw - depth first walk of tree using readdir, or readdir/stat, or readdir/xattr 
+
+
+
+dfw - depth first walk of tree using readdir, or readdir/stat, or readdir/xattr 
 or readdir/stat/xattr based on passed in flags, just writes output to stdout
 options:
 inputpath 
@@ -180,34 +203,60 @@ xattrflag(0/1)
 Flow:
 single threaded depth first walk, using readdir+, or stat depending on input parms and optionally get xattrs, write output to stdout
 
+
+
 --- scripts
 Some useful scripts
+
 deluidgidsummaryrecs - delete uid and gid summary records in summary tables.
-gengidsummaryavoidentriesscan - generate gid summary records in summary tables using shortcut if all files in directory are in same group
-genuidsummaryavoidentriesscan - generate uid summary records in summary tables using shortcut if all files in directory are in same user
+
+gengidsummaryavoidentriesscan - generate gid summary records in summary
+    tables using shortcut if all files in directory are in same group
+
+genuidsummaryavoidentriesscan - generate uid summary records in summary
+    tables using shortcut if all files in directory are in same user
+
 generategidsummary - generate gid summary records via entries scan
+
 generateuidsummary - generate uid summary records via entries scan
+
 listschemadb - display schema of a gufi db
+
 listtablesdb - display tables in a gufi db
+
 groupfilespacehogusesummary - generate gid summary records via summary and entries
+
 userfilespacehogusesummary - generiate uid summary records via summary and entries
+
 groupfilespacehog - do parallel query to create output dbs and list group file space hogs
+
 userfilespacehog - do parallel query to create output dbs and list user file space hog
+
 oldbigfiles - do parallel query to craete output dbs and list old/big files
+
 
 --- sql info
 whenever you can provide sql statements to programs like bfq and querydb
 the following functions are not normal sql functions but can be used
+
 path() - path you are working in
 epath() - last dirname in the path you are working in
 uidtouser(uid) - converts uid to username - GUFI stores in uid
 gidtogroup(gid) - coinverts gid to groupname - GUFI stores gid
 
-a useful build in sqlite function is
-datetime(mtime,'unixepoch') 
-GUFI stores its date/time in unixepoch form and this will return a human readable date/time - of course there are many formats of date/time output that can be used
+a useful built-in sqlite function is
 
-When providing sql statements to bfq and querydb you can put more than one sql statement in the same string using semicolons at the end of each statement, however the only sql statement that will have output displayed if you have chosen to display output is the last sql statement in the string
+datetime(mtime,'unixepoch') 
+
+GUFI stores its date/time in unixepoch form and this will return a human
+readable date/time - of course there are many formats of date/time output
+that can be used
+
+When providing sql statements to bfq and querydb you can put more than one
+sql statement in the same string using semicolons at the end of each
+statement, however the only sql statement that will have output displayed
+if you have chosen to display output is the last sql statement in the
+string
 
 --- schemas
 
@@ -240,30 +289,43 @@ char *vesql = "create view pentries as select entries.*, summary.inode as pinode
 
 -- this is the directory summary table view for overall directory summary
 char *vssqldir = "create view vsummarydir as select * from summary where rectype=0;";
+
 -- this is the directory summary table view for per user directory summary
 char *vssqluser = "create view vsummaryuser as select * from summary where rectype=1;";
+
 -- this is the directory summary table view for per group directory summary
 char *vssqlgroup = "create view vsummarygroup as select * from summary where rectype=2;";
+
 -- this is the tree summary table view for overall directory summary
 char *vtssqldir = "create view vtsummarydir as select * from treesummary where rectype=0;";
+
 -- this is the tree summary table view for per user directory summary
 char *vtssqluser = "create view vtsummaryuser as select * from treesummary where rectype=1;";
+
 -- this is the tree summary table view for per group directory summary
 char *vtssqlgroup = "create view vtsummarygroup as select * from treesummary where rectype=2;";
 
+
+
 --- tools
+
 make_testdirs
+
 Usage: make_testdirs [ options ] dirname
 options:
   -d <n_dirs>    number of subdirs
   -f <n_files>   number of files per subdir
   -h             help
 
+
+
 querydb - run an sql query against a table in a GUFI db - just point it at the directory containing the db
 querydb directorycontainingGUFIdb
 sqlstmt printpathinoutput(0/1)
 printheaderrow(0/1) 
 dirsummary(0/1)  (if you are querying against a summary table then 1)
+
+
 
 querydbn - run an sql query against an output db from bfq, it an be one per thread, so provide prefix of the dbname, the program will creat a union of the tables from each of the db files and it will get a view name adding a v to the beginning of your table name
 querydbn dbnameprefix 
@@ -273,6 +335,8 @@ printheaderrow(0/1)
 dirsummary(0/1) (if you are querying against a summary table then 1)
 numdbs   (number of db files (threads that created them))
 tablename (table name you are querying - the union'd table per db will be a view with v added to beginning of table name) 
+
+
 
 --- testtools
 
@@ -295,15 +359,8 @@ runoldbigfiles - do parallel query to craete output dbs and list old/big files
 --end of functional suite of tests that work together
 
 --- develop
+
 For ongoing development, we're passing around a git archive tarball, made
 from the "team" branch.  You can make edits in this tarball, and continue
-to pass the tarball around.  I can merge them into the git repo
+to pass the tarball around.  We can then merge them into the git repo
 (git@git.lanl.gov:campaign/gufi.git)
-
-----------------  old stuff after this ------------
-
-
-The merged code has only been tested for applications bfwi, and bfti.
-
-  bfwi ~jti/Desktop/auto_trash/test    0 16 0 0 1 0 1 .  [ 0 foo.out ]
-  bfti ./Users/jti/Desktop/auto_trash/test 0 16 1

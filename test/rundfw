@@ -1,9 +1,13 @@
 EPATH=..
-# cc -DBSDXATTRS dfw.c -o dfw
-#cc dfw.c -o dfw
+
+echo
 echo "---> ./dfw testdir 0 0 (just walk with readdir)"
 $EPATH/dfw testdir 0 0
+
+echo
 echo "---> ./dfw testdir 1 0 (just walk with stat)"
 $EPATH/dfw testdir 1 0
+
+echo
 echo "---> ./dfw testdir 1 1 (walk with stat and xattr)"
 $EPATH/dfw testdir 1 1

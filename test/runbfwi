@@ -1,40 +1,42 @@
+#!/bin/bash -e
+
+# Assumes you 'cd test' before running
 EPATH=..
-# --- new:
-# Usage: ./bfwi [options]
+
+
+
+# Usage: ./bfwi [options] input_dir dest_parent_dir
 # options:
 #   -h              help
-#   -H              show assigned input values (debugging)?
-#   -i <input_dir>  input directory path
+#   -H              show assigned input values? (debugging)
 #   -p              print file diagnostics?
 #   -n <threads>    number of threads
 #   -d <delim>      delimiter (one char)
 #   -x              handle xattrs?
 #   -P              print directories?
 #   -b              build index?
-#   -t <name_to>    name to
 #   -o <out_fname>  output file
 
 
-rm -f  testout*
-rm -rf testdirdup
-mkdir testdirdup
 
 
 # run bfwi and send output to screen
 echo
 echo "out to screen"
-$EPATH/bfwi -i testdir -p -n 2 -xPb -t testdirdup
-
-ls -l testout*
-rm testout*
+rm -f  testout*
 rm -rf testdirdup
+$EPATH/bfwi -p -n 2 -xPb testdir testdirdup
 
 
-#run to output files testout.*
+
+
+# run to output files testout.*
 echo
 echo "send to output files"
-$EPATH/bfwi -i testdir -p -n 2 -xPb -t testdirdup -o testout
+rm -f  testout*
+rm -rf testdirdup
+$EPATH/bfwi -p -n 2 -xPb -o testout testdir testdirdup
 
 ls -l testout*
-cat testout*
+for F in testout*; do echo; echo $F; cat $F; done
 ls -lR testdirdup

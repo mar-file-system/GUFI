@@ -229,43 +229,8 @@ int i;
 }
 
 
-#if 0
-int processin(int c, char *v[]) {
-
-   char outfn[MAXPATH];
-   int i;
-   // this is where we process input variables
-
-   // this is not how you should do this, it should be a case statement with edits etc.
-   //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
-   sprintf(in.name,"%s",v[1]);
-   sprintf(in.sqltsum,"%s",v[2]);
-   sprintf(in.sqlsum,"%s",v[3]);
-   sprintf(in.sqlent,"%s",v[4]);
-   in.printdir=atoi(v[5]);
-   in.andor=atoi(v[6]);
-   in.printing=atoi(v[7]);
-   in.maxthreads = atoi(v[8]);
-   in.outfile=atoi(v[9]);
-   sprintf(in.outfilen,"%s",v[10]);
-   in.dodelim=atoi(v[11]);
-   sprintf(in.delim,"%s",v[12]);
-   in.outdb=atoi(v[13]);
-   sprintf(in.outdbn,"%s",v[14]);
-   sprintf(in.sqlinit,"%s",v[15]);
-   sprintf(in.sqlfin,"%s",v[16]);
-
-   return 0;
-}
-#endif
-
 
 int validate_inputs() {
-   if (! in.name[0]) {
-      fprintf(stderr, "must supply source-dir '-i'\n");
-      return -1;
-   }
-
    return 0;
 }
 
@@ -279,11 +244,14 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     if (processin(argc, argv, "hHi:T:S:E:Papn:o:d:O:I:F:"))
+     int idx = processin(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:", 1, "input_dir");
+     if (idx < 0)
         return -1;
+     else {
+        // parse positional args, following the options
+        strncpy(in.name, argv[idx++], MAXPATH);
+     }
 
-     // option-parsing can't tell that some options are required,
-     // or which combinations of options interact.
      if (validate_inputs())
         return -1;
 

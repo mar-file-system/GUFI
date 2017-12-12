@@ -39,14 +39,16 @@ char *vtssqlgroup = "create view vtsummarygroup as select * from treesummary whe
 
 
 
-void print_help(const char* prog_name, const char* getopt_str) {
+void print_help(const char* prog_name,
+                const char* getopt_str,
+                const char* positional_args_help_str) {
 
    // "hxpPin:d:o:"
    const char* opt = getopt_str;
    if (! opt)
       return;
    
-   printf("Usage: %s [options]\n", prog_name);
+   printf("Usage: %s [options] %s\n", prog_name, positional_args_help_str);
    printf("options:\n");
 
    int ch;
@@ -54,25 +56,37 @@ void print_help(const char* prog_name, const char* getopt_str) {
       switch (ch) {
       case ':': continue;
       case 'h': printf("  -h              help\n"); break;
-      case 'H': printf("  -H              show assigned input values (debugging)?\n"); break;
-      case 'x': printf("  -x              handle xattrs?\n"); break;
-      case 'p': printf("  -p              print file diagnostics?\n"); break;
-      case 'P': printf("  -P              print directories?\n"); break;
-      case 's': printf("  -s              generate tree-summary DB?\n"); break;
-      case 'b': printf("  -b              build index?\n"); break;
-      case 'a': printf("  -a              AND/OR? (SQL query combination)\n"); break;
+      case 'H': printf("  -H              show assigned input values (debugging)\n"); break;
+      case 'x': printf("  -x              pull xattrs from source file-sys into GUFI\n"); break;
+      case 'p': printf("  -p              print files as they are encountered\n"); break;
+      case 'P': printf("  -P              print directories as they are encountered\n"); break;
+      case 's': printf("  -s              generate tree-summary DB\n"); break;
+      case 'b': printf("  -b              build GUFI index tree\n"); break;
+      case 'a': printf("  -a              AND/OR (SQL query combination)\n"); break;
       case 'n': printf("  -n <threads>    number of threads\n"); break;
       case 'd': printf("  -d <delim>      delimiter (one char)\n"); break;
       case 'i': printf("  -i <input_dir>  input directory path\n"); break;
-      case 'o': printf("  -o <out_fname>  output file\n"); break;
+      case 't': printf("  -t <to_dir>     dir where GUFI-tree should be built\n"); break;
+      case 'o': printf("  -o <out_fname>  output file (one-per-thread, with thread-id suffix)\n"); break;
       case 'O': printf("  -O <out_DB>     output DB\n"); break;
-      case 't': printf("  -t <name_to>    name to\n"); break;
       case 'I': printf("  -I <SQL_init>   SQL init\n"); break;
       case 'T': printf("  -T <SQL_tsum>   SQL for tree-summary table\n"); break;
       case 'S': printf("  -S <SQL_sum>    SQL for summary table\n"); break;
       case 'E': printf("  -E <SQL_ent>    SQL for entries table\n"); break;
       case 'F': printf("  -F <SQL_fin>    SQL cleanup\n"); break;
-      case 'r': printf("  -r <robin_in>   ? (see bfmi.c)\n"); break;
+      case 'r':
+         printf("  -r <robin_in>   custom RobinHood parameters\n");
+         printf("                     example contents:\n");
+         printf("                     /top - top directory pathname - rh doesnt have a name for the root\n");
+         printf("                     0x200004284:0x11:0x0 - fid of the root\n");
+         printf("                     20004284110 -  inode of root\n");
+         printf("                     16877 - mode of root\n");
+         printf("                     1500000000  - atime=mtime=ctime of root\n");
+         printf("                     localhost - host of mysql\n");
+         printf("                     ggrider - user of mysql\n");
+         printf("                     ggriderpw1 - password of mysql\n");
+         printf("                     institutes - name of db of mysql\n");
+         break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -109,9 +123,22 @@ void show_input(struct input* in, int retval) {
 }
 
 
-// this is where we process input variables
-// return 0 for success.
-int processin(int argc, char* argv[], const char* getopt_str) {
+// process command-line options
+//
+// <positional_args_help_str> is a string like "<input_dir> <output_dir>"
+//    which is placed after "[options]" in the output produced for the '-h'
+//    option.  In other words, you end up with a picture of the
+//    command-line, for the help text.
+//
+// return: -1 for error.  Otherwise, we return the index of the end of
+//    options in <argv>.  This allows the caller to treat remaining
+//    arguments as required (positional) args.
+//   
+int processin(int         argc,
+              char*       argv[],
+              const char* getopt_str,
+              int         n_positional,
+              const char* positional_args_help_str) {
 
      char outfn[MAXPATH];
      int i;
@@ -122,12 +149,14 @@ int processin(int argc, char* argv[], const char* getopt_str) {
 
      int show = 0;
      int retval = 0;
+     int helped = 0;
      int ch;
      while ( (ch = getopt(argc, argv, getopt_str)) != -1) {
         switch (ch) {
 
         case 'h':               // help
-           print_help(argv[0], getopt_str);
+           print_help(argv[0], getopt_str, positional_args_help_str);
+           helped = 1;
            retval = -1;
            break;
 
@@ -225,9 +254,20 @@ int processin(int argc, char* argv[], const char* getopt_str) {
         };
      }
 
+     // caller requires given number of positional args, after the options.
+     // <optind> is the number of argv[] values that were recognized as options.
+     if ((argc - optind) < n_positional) {
+        if (! helped) {
+           print_help(argv[0], getopt_str, positional_args_help_str);
+           helped = 1;
+        }
+        retval = -1;
+     }
+
+
      // DEBUGGING:
      if (show)
         show_input(&in, retval);
-     
-     return retval;
+
+     return (retval ? retval : optind);
 }

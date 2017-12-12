@@ -14,6 +14,7 @@ add summarize the directory by user and add user records to bfwi
 -- that walks and runs insert from select queries to create by user summary
 -- should consider making a callable utility for this so it could be done from bfwi/bfmi/etc.
 -- the script/query version might be fast enough that this is not needed, need to try to run it at scale
+
 add summarize the directory summaries by user and add records to bfti
 -- this has been done more or less but not to bfwi - it is a query in the scripts dir
 -- that walks and runs insert from select queries to create by group summary

@@ -1,18 +1,27 @@
+#!/bin/bash -e
+
+# Assumes you 'cd test' before running
 EPATH=..
-# Usage: ./bfti [options]
+
+
+
+# Usage: bfti [options] input_dir
 # options:
 #   -h              help
-#   -H              show assigned input values (debugging)?
+#   -H              show assigned input values? (debugging)
 #   -i <input_dir>  input directory path
 #   -P              print directories?
 #   -n <threads>    number of threads
 #   -s              generate tree-summary DB?
 
-
+echo
 echo "tree index to screen"
-$EPATH/bfti -i testdirdup/testdir -P -n 2
+$EPATH/bfti -P -n 2 testdirdup/testdir
 
+echo
 echo "tree index to db"
-$EPATH/bfti -i testdirdup/testdir -P -n 2 -s
+$EPATH/bfti -P -n 2 -s testdirdup/testdir
 
+echo
+echo "querydb show treesummary contents"
 $EPATH/querydb testdirdup/testdir "select * from treesummary;" 1 1 0

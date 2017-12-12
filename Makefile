@@ -1,5 +1,6 @@
-DFW  = dfw
-BFW  = bfwi bfti bfq bfmi.mysql
+DFW       = dfw
+BFW       = bfwi bfti bfq
+BFW_MYSQL = bfmi.mysql
 
 # TOOLS = querydb querydbn make_testdirs dbdump 
 TOOLS = querydb querydbn make_testdirs
@@ -7,13 +8,14 @@ TOOLS = querydb querydbn make_testdirs
 # # TBD ...
 # cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse 
 
-all: all.bfw all.tools
+all: bfw tools
 
-all.dfw: $(DFW)
+bfw:   $(BFW)
+mysql: $(BFW_MYSQL)
+dfw:   $(DFW)
+tools: $(TOOLS)
 
-all.bfw: $(BFW)
 
-all.tools: $(TOOLS)
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
@@ -34,7 +36,7 @@ endif
 INCS :=
 LIBS := -lgufi -pthread
 
-# this is invoked in a recursive build, for bfmi
+# this is invoked in a recursive build, for bfmi.mysql
 # (see target "%.mysql")
 ifeq ($(MYSQL),)
 	INCS +=
@@ -93,6 +95,10 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 
 
 
+# these are trashable files and dirs produced by the test/run* tests
+TEST_PRODUCTS = test/testout.* test/testdirdup test/outdb* test/outq.*
+clean_test:
+	rm -rf $(TEST_PRODUCTS)
 
 clean:
 	rm -f libgufi.a

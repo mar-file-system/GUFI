@@ -92,7 +92,11 @@ extern struct input in;
 // DEBUGGING
 void show_input(struct input* in, int retval);
 
-int processin(int argc, char* argv[], const char* getopt_str);
+int processin(int         argc,
+              char*       argv[],
+              const char* getopt_str,
+              int         n_positional,
+              const char* positional_args_help_str);
 
 
 
