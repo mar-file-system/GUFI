@@ -125,14 +125,14 @@ void show_input(struct input* in, int retval) {
 
 // process command-line options
 //
-// <positional_args_help_str> is a string like "<input_dir> <output_dir>"
+// <positional_args_help_str> is a string like "input_dir to_dir"
 //    which is placed after "[options]" in the output produced for the '-h'
 //    option.  In other words, you end up with a picture of the
 //    command-line, for the help text.
 //
-// return: -1 for error.  Otherwise, we return the index of the end of
-//    options in <argv>.  This allows the caller to treat remaining
-//    arguments as required (positional) args.
+// return: -1 for error.  Otherwise, we return the index of the first
+//    positional argument in <argv>.  This allows the caller to do a custom
+//    parse of the remaining arguments as required (positional) args.
 //   
 int processin(int         argc,
               char*       argv[],
@@ -141,14 +141,15 @@ int processin(int         argc,
               const char* positional_args_help_str) {
 
 #define INSTALL_STR(VAR, SOURCE, MAX, OPT_LETTER)                       \
-     do {                                                                 \
-        if (strlen(optarg) >= (MAX)) {                                  \
-           fprintf(stderr, "argument to '-%c' exceeds max allowed (%d)\n", (OPT_LETTER), (MAX)); \
-           retval = -1;                                                 \
-        }                                                               \
-        strncpy((VAR), optarg, (MAX));                                  \
-        (VAR)[(MAX)-1] = 0;                                             \
-     } while (0)
+   do {                                                                 \
+      if (strlen(optarg) >= (MAX)) {                                    \
+         fprintf(stderr, "argument to '-%c' exceeds max allowed (%d)\n", \
+                 (OPT_LETTER), (MAX));                                  \
+         retval = -1;                                                   \
+      }                                                                 \
+      strncpy((VAR), optarg, (MAX));                                    \
+      (VAR)[(MAX)-1] = 0;                                               \
+   } while (0)
 
      char outfn[MAXPATH];
      int i;
@@ -197,6 +198,11 @@ int processin(int         argc,
 
         case 'n':
            in.maxthreads = atoi(optarg);
+           if ((in.maxthreads <= 0) || (in.maxthreads > MAXTHREAD)) {
+              fprintf(stderr, "argument to '-n' must be in range [1,%d]\n",
+                 MAXTHREAD`);
+              retval = -1;
+           }
            break;
 
         case 'd':
@@ -206,13 +212,11 @@ int processin(int         argc,
 
         case 'o':
            in.outfile = 1;
-           // strncpy(in.outfilen, optarg, MAXPATH);
            INSTALL_STR(in.outfilen, optarg, MAXPATH, 'o');
            break;
 
         case 'O':
            in.outdb = 1;
-           // strncpy(in.outdbn, optarg, MAXPATH);
            INSTALL_STR(in.outdbn, optarg, MAXPATH, 'O');
            break;
 
