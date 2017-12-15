@@ -1,31 +1,94 @@
 #!/bin/bash -e
 
-# Assumes you 'cd test' before running
-EPATH=..
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+BFWI=$DIR/../bfwi
 
 
+# NOTE: The destination GUFI-tree is optional
+#       i.e. You can use bfwi just to do a breadth-first scan of the source-tree.
+#       This might be useful to see the amount of time spent just in reading.
 
-# Usage: ./bfwi [options] input_dir dest_parent_dir
+
+# Usage: bfwi [options] input_dir
 # options:
 #   -h              help
-#   -H              show assigned input values? (debugging)
-#   -p              print file diagnostics?
+#   -H              show assigned input values (debugging)
+#   -p              print file-names
 #   -n <threads>    number of threads
-#   -d <delim>      delimiter (one char)
-#   -x              handle xattrs?
-#   -P              print directories?
-#   -b              build index?
-#   -o <out_fname>  output file
+#   -d <delim>      delimiter (one char)  [use 'x' for 0x1E]
+#   -x              pull xattrs from source file-sys into GUFI
+#   -P              print directories as they are encountered
+#   -b              build GUFI index tree
+#   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+#   -t <to_dir>     dir GUFI-tree should be built
+# 
+# input_dir         walk this tree to produce GUFI-tree
+# 
 
+
+usage() {
+    PROG=$1
+    echo "Usage: $PROG <source_tree> [ <GUFI_tree> ]"
+    exit -1
+}
+
+SOURCE=$1
+GUFI_BASE=$2
+
+if (( $# < 1 || $# > 2 )); then
+    usage $0
+elif [ ! -d $SOURCE ]; then
+    usage $0
+fi
+
+
+# ...........................................................................
+# WARNING!
+#
+#   bfwi builds the GUFI tree as a replication of the entire source-tree
+#   underneath the <to_dir> directory that is provided with '-t' on the
+#   command line.  For example:
+#
+#       source   = /a/b/c
+#       to_dir   = .
+#
+#       actual GUFI-tree = ./a/b/c
+#
+#   We must be very careful during cleanup to avoid e.g. "rm -rf
+#   to_dir" (i.e. the dir that is optionally provided on the
+#   command-line).
+#
+# THEREFORE:
+#
+#   Use "$CLEAN_GUFI", to be safe
+#
+# ...........................................................................
+
+
+# defaults
+DEST=
+CLEAN_GUFI=":"
+
+if [ -n "$GUFI_BASE" ]; then
+    DEST="-b -t $GUFI_BASE"
+    GUFI="$GUFI_BASE/$SOURCE"
+    CLEAN_GUFI="rm -rf $GUFI"
+fi
+
+# echo "clean:  $CLEAN_GUFI"
 
 
 
 # run bfwi and send output to screen
 echo
 echo "out to screen"
-rm -f  testout*
-rm -rf testdirdup
-$EPATH/bfwi -p -n 2 -xPb testdir testdirdup
+
+echo $CLEAN_GUFI
+$CLEAN_GUFI
+
+echo $BFWI -n 2 -xP $DEST $SOURCE
+$BFWI -n 1 -xP $DEST $SOURCE
 
 
 
@@ -33,10 +96,20 @@ $EPATH/bfwi -p -n 2 -xPb testdir testdirdup
 # run to output files testout.*
 echo
 echo "send to output files"
+
+echo $CLEAN_GUFI
+$CLEAN_GUFI
 rm -f  testout*
-rm -rf testdirdup
-$EPATH/bfwi -p -n 2 -xPb -o testout testdir testdirdup
+
+echo $BFWI -n 2 -xP -o testout $DEST $SOURCE
+$BFWI -n 2 -xP -o testout $DEST $SOURCE
 
 ls -l testout*
 for F in testout*; do echo; echo $F; cat $F; done
-ls -lR testdirdup
+
+if [ -n "$GUFI" ]; then
+    ls -lR $GUFI
+else
+    echo
+    echo "No <GUFI_tree> specified.  Skipping display of contents."
+fi

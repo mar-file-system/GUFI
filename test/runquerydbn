@@ -1,8 +1,58 @@
-EPATH=..
-#syntax querydbn dbname sqlstatment printpath printheader dirsummary numdbs tablename
+#!/bin/bash -e
+
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+QUERYDB=$DIR/../querydb
+
+
+usage() {
+    PROG=$1
+    echo "Usage: $PROG <GUFI_tree> <DB_count> <SQL> <tab_name>"
+    exit -1
+}
+
+
+GUFI=$1
+DB_COUNT=$2
+SQL=$3
+TABNAME=$4
+
+if (( $# != 4 )); then
+    usage $0
+elif [ ! -d $GUFI ]; then
+    usage $0
+elif [ ! -e $GUFI/db.db.[0-9]* ]; then
+    echo "$GUFI/db.db.[0-9]* does not exist.  Need the root of a GUFI tree."
+    exit -1
+fi
+
+
+# Usage: querydbn [options] [-s] DB_path DB_count SQL tabname
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -N              print column-names (header) for DB results
+#   -V              print column-values (rows) for DB results
+#   -p              print file-names
+# 
+#   -s              dir-summary (currently-unused internal functionality)
+# 
+# DB_path           path to dir containinng db.db.*
+# DB_count          number of DBs (should match thread-count used in 'bfq')
+# SQL               arbitrary SQL on each DB (unified into single view)
+# table_name        name of view table = 'v<table_name>'
+
+
+
+
+echo
 echo "query on out dbs create union view and query that view on entries subset"
-$EPATH/querydbn outdb "select * from vsument;" 0 1 1 2 sument
+$QUERYDBN -sN outdb $DB_COUNT "select * from vsument;" sument
+
+echo
 echo "query on out dbs create union view and query that view on summaries subset sum/orderby"
-$EPATH/querydbn outdb "select type,uid,sum(totfiles) from vsument group by type;" 0 1 1 2 sument
+$QUERYDBN -sN outdb $DB_COUNT "select type,uid,sum(totfiles) from vsument group by type;" sument
+
+echo
 echo "query on out dbs create union view and query that view on summaries subset"
-$EPATH/querydbn outdb "select * from vsumsummary;" 0 1 1 2 sumsummary
+$QUERYDBN -sN outdb "select * from vsumsummary;" sumsummary

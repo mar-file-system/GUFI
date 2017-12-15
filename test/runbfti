@@ -1,27 +1,68 @@
 #!/bin/bash -e
 
-# Assumes you 'cd test' before running
-EPATH=..
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+BFTI=$DIR/../bfti
+
+
+usage() {
+    PROG=$1
+    echo "Usage: $PROG  <GUFI_tree>"
+    exit -1
+}
+
+
+GUFI=$1
+
+if (( $# != 1 )); then
+    usage $0
+elif [ ! -d $GUFI ]; then
+    usage $0
+elif [ ! -e $GUFI/db.db ]; then
+    echo "$GUFI/db.db does not exist.  Need the root of a GUFI tree."
+    exit -1
+fi
 
 
 
-# Usage: bfti [options] input_dir
+# Usage: bfti [options] GUFI_tree
 # options:
 #   -h              help
-#   -H              show assigned input values? (debugging)
-#   -i <input_dir>  input directory path
-#   -P              print directories?
+#   -H              show assigned input values (debugging)
+#   -P              print directories as they are encountered
 #   -n <threads>    number of threads
-#   -s              generate tree-summary DB?
+#   -s              generate tree-summary table (in top-level DB)
+# 
+# GUFI_tree         path to GUFI tree-dir
+# 
+
+
 
 echo
-echo "tree index to screen"
-$EPATH/bfti -P -n 2 testdirdup/testdir
+echo "-- tree index to screen (no changes to DB)"
+$BFTI -n 2 -P  $GUFI
 
 echo
-echo "tree index to db"
-$EPATH/bfti -P -n 2 -s testdirdup/testdir
+echo "-- tree index to db (initialize and populate summary table)"
+$BFTI -n 2 -Ps $GUFI
 
+
+
+
+# Usage: querydb [options] [-s] DB_path SQL
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -N              print column-names (header) for DB results
+#   -V              print column-values (rows) for DB results
+# 
+#   DB_path         path to dir containinng db.db.*
+#   SQL             arbitrary SQL on DB
+# 
+
+# echo
+# echo "querydb show treesummary contents"
+# `dirname $BFTI`/querydb -NV $GUFI "select * from treesummary;"
 echo
-echo "querydb show treesummary contents"
-$EPATH/querydb testdirdup/testdir "select * from treesummary;" 1 1 0
+echo "-- show treesummary contents"
+sqlite3 -line $GUFI/db.db "select * from treesummary;"

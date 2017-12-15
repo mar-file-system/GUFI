@@ -1,0 +1,30 @@
+#!/bin/bash -e
+
+SCRIPT="$BASH_SOURCE" # Must be at the top
+TEST=`dirname $SCRIPT`
+
+
+# don't risk rf -rf /test/...
+[ -n "$TEST" ] && rm -rf $TEST/copy
+
+
+
+
+# example
+
+$TEST/runbfwi $TEST/testdir  $TEST/copy
+
+$TEST/runbfti $TEST/copy/test/testdir
+
+$TEST/runbfq  $TEST/copy/test/testdir
+
+
+$TEST/runquerydb  $TEST/copy/test/testdir
+
+
+
+# TBD
+
+# runbfmi ...
+
+# runquerydbn ...

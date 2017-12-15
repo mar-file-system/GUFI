@@ -1,8 +1,49 @@
-EPATH=..
-#syntax querydb directorycontainingdb sqlstmt printpath printheader dirsummary
+#!/bin/bash -e
+
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+QUERYDB=$DIR/../querydb
+
+
+usage() {
+    PROG=$1
+    echo "Usage: $PROG <GUFI_tree>"
+    exit -1
+}
+
+
+GUFI=$1
+
+if (( $# != 1 )); then
+    usage $0
+elif [ ! -d $GUFI ]; then
+    usage $0
+elif [ ! -e $GUFI/db.db ]; then
+    echo "$GUFI/db.db does not exist.  Need the root of a GUFI tree."
+    exit -1
+fi
+
+
+# Usage: querydb [options] [-s] DB_path SQL
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -N              print column-names (header) for DB results
+#   -V              print column-values (rows) for DB results
+# 
+# DB_path           path to dir containinng db.db.*
+# SQL               arbitrary SQL on DB
+# 
+
+
+echo
 echo "query  dir summary"
-$EPATH/querydb testdirdup/testdir "select * from summary;" 1 1 1
+$QUERYDB -NV $GUFI "select * from summary;"
+
+echo
 echo "query  tree summary"
-$EPATH/querydb testdirdup/testdir "select * from treesummary;" 1 1 0
+$QUERYDB -NV $GUFI "select * from treesummary;"
+
+echo
 echo "query entries"
-$EPATH/querydb testdirdup/testdir "select * from entries;" 1 1 0
+$QUERYDB -NV $GUFI "select * from entries;"
