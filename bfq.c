@@ -49,11 +49,12 @@ static void processdir(void * passv)
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
-        return; // return NULL;
+       goto out_free; // return NULL;
+
     if (!(entry = readdir(dir)))
-        return; // return NULL;
+       goto out_dir; // return NULL;
+
     sprintf(passmywork->type,"%s","d");
-    // print?
     //if (in.printdir > 0) {
     //  printits(passmywork,mytid);
     //}
@@ -69,16 +70,18 @@ static void processdir(void * passv)
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
     addqueryfuncs(db);
 
-    // if and operation and sqltsum is there run a query to see if there is a match
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
              /* if it fails then this will be set to 1 and will go on */
-    // if this is or as well as no sql to run skip this query
+
+    // if AND operation, and sqltsum is there, run a query to see if there is a match.
+    // if this is OR, as well as no-sql-to-run, skip this query
     if (strlen(in.sqltsum) > 1) {
-      if (in.andor == 0)
-        
-        recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
-      // this is an or or we got a record back go on to summary/entries queries 
-      // if not done with this dir and all dirs below it
+
+       if (in.andor == 0)       // AND
+         recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
+
+      // this is an OR or we got a record back. go on to summary/entries
+      // queries, if not done with this dir and all dirs below it
     }
     // this means that no tree table exists so assume we have to go on
     if (recs < 0) {
@@ -86,8 +89,11 @@ static void processdir(void * passv)
     }
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
-        // go ahead and send the subdirs to the queue since we need to look further down the tree
-        // loop over dirents, if link push it on the queue, if file or link print it, fill up qwork structure for each
+
+        // go ahead and send the subdirs to the queue since we need to look
+        // further down the tree.  loop over dirents, if link push it on the
+        // queue, if file or link print it, fill up qwork structure for
+        // each
         do {
            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
              continue;
@@ -104,9 +110,10 @@ static void processdir(void * passv)
               }
            }
         } while ((entry = (readdir(dir))));
+
         // run query on summary, print it if printing is needed, if returns none 
-        // and we are doing and, skip querying the entries db
-        bzero(endname,sizeof(endname));
+        // and we are doing AND, skip querying the entries db
+        // bzero(endname,sizeof(endname));
         shortpath(passmywork->name,shortname,endname);
         sprintf(gps[mytid].gepath,"%s",endname);
         if (strlen(in.sqlsum) > 1) {
@@ -119,15 +126,18 @@ static void processdir(void * passv)
         } else {
           recs=1;
         }
-        if (in.andor > 0) recs=1; 
-        // if we have recs (or are running an or) query the entries table
+        if (in.andor > 0)
+           recs=1;
+
+        // if we have recs (or are running an OR) query the entries table
         if (recs > 0) {
           if (strlen(in.sqlent) > 1) {
             // set the path so users can put path() in their queries
             //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
             sprintf(gps[mytid].gpath,"%s",passmywork->name);
             rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
-            //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",in.sqlent,passmywork->name,recs,strlen(in.sqlent));
+            //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
+            //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
           }
         }
     }
@@ -138,11 +148,14 @@ static void processdir(void * passv)
     } else {
       closedb(db);
     }
-    // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
 
+ out_dir:
     // close dir
     closedir(dir);
+
+ out_free:
+    // free the queue entry - this has to be here or there will be a leak
+    free(passmywork->freeme);
 
     // one less thread running
     decrthread();
@@ -234,6 +247,11 @@ int validate_inputs() {
    return 0;
 }
 
+void sub_help() {
+   printf("GUFI_tree         find GUFI index-tree here\n");
+   printf("\n");
+}
+
 int main(int argc, char *argv[])
 {
      //char nameo[MAXPATH];
@@ -244,12 +262,18 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = processin(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:", 1, "GUFI_tree");
+     if (in.helped)
+        sub_help();
      if (idx < 0)
         return -1;
      else {
         // parse positional args, following the options
-        strncpy(in.name, argv[idx++], MAXPATH);
+        int retval = 0;
+        INSTALL_STR(in.name, argv[idx++], MAXPATH, "GUFI_tree");
+
+        if (retval)
+           return retval;
      }
 
      if (validate_inputs())

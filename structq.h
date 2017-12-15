@@ -10,6 +10,9 @@ void delQueuenofree();
 
 void pushn(struct work *twork);
 
+struct work* pushn2_part1(struct work *twork);
+void         pushn2_part2(struct work *twork);
+
 void display();
 
 void displaycurrent();

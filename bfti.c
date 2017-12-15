@@ -41,22 +41,25 @@ static void processdir(void * passv)
     struct sum sumin;
     int recs;
 
-    // get thread id so we can get access to thread state we need to keep until the thread ends
+    // get thread id so we can get access to thread state we need to keep
+    // until the thread ends
     mytid=0;
     if (in.outfile > 0) mytid=gettid();
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
-        return; // return NULL;
+       goto out_free; // return NULL;
+
     if (!(entry = readdir(dir)))
-        return; // return NULL;
+       goto out_dir; // return NULL;
+
     sprintf(passmywork->type,"%s","d");
-    // print?
-    if (in.printing > 0 || in.printdir > 0) {
+    if (in.printing || in.printdir) {
       printits(passmywork,mytid);
     }
 
-    // loop over dirents, if link push it on the queue, if file or link print it, fill up qwork structure for each
+    // loop over dirents, if link push it on the queue, if file or link
+    // print it, fill up qwork structure for each
     do {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
            continue;
@@ -74,19 +77,26 @@ static void processdir(void * passv)
         }
     } while ((entry = (readdir(dir))));
 
-    zeroit(&sumin);
-    db=opendb(passmywork->name,db1,3,0);
-    querytsdb(passmywork->name,&sumin,db,&recs,0);
-    tsumit(&sumin,&sumout);
 
-    //printf("after tsumit %s minuid %d maxuid %d maxsize %d totfiles %d totsubdirs %d\n",mywork->name,sumout.minuid,sumout.maxuid,sumout.maxsize,sumout.totfiles,sumout.totsubdirs);
-    closedb(db);
+    if ((db=opendb(passmywork->name,db1,3,0))) {
+       zeroit(&sumin);
+       querytsdb(passmywork->name,&sumin,db,&recs,0);
+       tsumit(&sumin,&sumout);
 
-    // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
+       //printf("after tsumit %s minuid %d maxuid %d maxsize %d totfiles %d totsubdirs %d\n",
+       //       mywork->name,sumout.minuid,sumout.maxuid,sumout.maxsize,
+       //       sumout.totfiles,sumout.totsubdirs);
+       closedb(db);
+    }
 
+
+ out_dir:
     // close dir
     closedir(dir);
+
+ out_free:
+    // free the queue entry - this has to be here or there will be a leak
+    free(passmywork->freeme);
 
     // one less thread running
     decrthread();
@@ -120,9 +130,10 @@ int processfin() {
      sqlite3 *tdb;
      sqlite3 *tdb1;
      if (in.writetsum) {
-       tdb = opendb(in.name,tdb1,3,1);
-       inserttreesumdb(in.name,tdb,&sumout,0,0,0);
-       closedb(tdb);
+        if (! (tdb = opendb(in.name,tdb1,3,1)))
+           return -1;
+        inserttreesumdb(in.name,tdb,&sumout,0,0,0);
+        closedb(tdb);
      }
 
      printf("totals: \n");
@@ -149,7 +160,16 @@ int processfin() {
 
 
 
+void sub_help() {
+   printf("GUFI_tree         path to GUFI tree-dir\n");
+   printf("\n");
+}
+
 int validate_inputs() {
+   // not an error, but you might want to know ...
+   if (! in.writetsum)
+      fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
+
    return 0;
 }
 
@@ -164,12 +184,18 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = processin(argc, argv, "hHPn:s", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_tree");
+     if (in.helped)
+        sub_help();
      if (idx < 0)
         return -1;
      else {
         // parse positional args, following the options
-        strncpy(in.name, argv[idx++], MAXPATH);
+        int retval = 0;
+        INSTALL_STR(in.name, argv[idx++], MAXPATH, "GUFI_tree");
+
+        if (retval)
+           return retval;
      }
 
      // option-parsing can't tell that some options are required,
@@ -188,7 +214,7 @@ int main(int argc, char *argv[])
 
      // process initialization, this is work done once the threads are up
      // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are stating the directory passed in and
+     // program in this case we are statting the directory passed in and
      // putting that directory on the queue
      processinit(&mywork);
 

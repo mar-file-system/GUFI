@@ -26,11 +26,11 @@
 #include <grp.h>
 #include "mysql.h"
 struct mysqlinput {
-   char dbuser[50];
-   char dbpasswd[50];
-   char dbhost[50];
-   char dbdb[50];
-   // char robinin[MAXPATH]; // moved to struct input
+   char  dbuser[50];
+   char  dbpasswd[50];
+   char  dbhost[50];
+   char  dbdb[50];
+   char  robinin[MAXPATH];
    MYSQL mysql[MAXPTHREAD];
 } msn;
 
@@ -221,7 +221,7 @@ int processinit(void * myworkin) {
      }
 
      // read in how we start off the first root query from robinhoodin file
-     robinfd=fopen(in.robinin,"r");
+     robinfd=fopen(msn.robinin,"r");
      fgets(mywork->name, sizeof(mywork->name),robinfd); strtok(mywork->name,"\n");
      fgets(mywork->pinodec, sizeof(mywork->pinodec),robinfd); strtok(mywork->pinodec,"\n");
      fgets(tchar, sizeof(tchar),robinfd); mywork->statuso.st_ino=atoll(tchar);
@@ -300,12 +300,23 @@ int validate_inputs() {
       in.buildindex = 1; // you're welcome
    }
 
-   if (! in.robinin[0]) {
-      fprintf(stderr, "-r <rh_fname> is actually required\n");
-      return -1;
-   }
-
    return 0;
+}
+
+void sub_help() {
+   // printf("GUFI_tree         find GUFI index-tree here\n");
+   printf("robin_in          file containing custom RobinHood parameters\n");
+   printf("                     example contents:\n");
+   printf("                     /path  - top dir-path (RH doesnt have a name for the root)\n");
+   printf("                     0x200004284:0x11:0x0 - fid of the root\n");
+   printf("                     20004284110          - inode of root\n");
+   printf("                     16877                - mode of root\n");
+   printf("                     1500000000           - atime=mtime=ctime of root\n");
+   printf("                     localhost            - host of mysql\n");
+   printf("                     ggrider              - user of mysql\n");
+   printf("                     mypassword           - password for user of mysql\n");
+   printf("                     institutes           - name of db of mysql\n");
+   printf("\n");
 }
 
 int main(int argc, char *argv[])
@@ -318,9 +329,19 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = processin(argc, argv, "hHpn:d:xPbt:o:r:", 0, "");
+     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbt:o:", 1, "robin_in");
+     if (in.helped)
+        sub_help();
      if (idx < 0)
          return -1;
+     else {
+        // parse positional args, following the options
+        int retval = 0;
+        INSTALL_STR(msn.robinin,  argv[idx++], MAXPATH, "robin_in");
+
+        if (retval)
+           return retval;
+     }
 
      if (validate_inputs())
         return -1;

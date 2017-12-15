@@ -8,6 +8,38 @@
 #include "dbutils.h"
 
 
+char *esql = // "DROP TABLE IF EXISTS entries;"
+            "CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+
+char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
+
+char *ssql = "DROP TABLE IF EXISTS summary;"
+             "CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
+
+char *tsql = "DROP TABLE IF EXISTS treesummary;"
+             "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
+
+char *vesql = "DROP VIEW IF EXISTS pentries;"
+              "create view pentries as select entries.*, summary.inode as pinode from entries, summary where rectype=0;";
+
+
+char *vssqldir   = "DROP VIEW IF EXISTS vsummarydir;"
+                   "create view vsummarydir as select * from summary where rectype=0;";
+char *vssqluser  = "DROP VIEW IF EXISTS vsummaryuser;"
+                   "create view vsummaryuser as select * from summary where rectype=1;";
+char *vssqlgroup = "DROP VIEW IF EXISTS vsummarygroup;"
+                   "create view vsummarygroup as select * from summary where rectype=2;";
+
+char *vtssqldir   = "DROP VIEW IF EXISTS vtsummarydir;"
+                    "create view vtsummarydir as select * from treesummary where rectype=0;";
+char *vtssqluser  = "DROP VIEW IF EXISTS vtsummaryuser;"
+                    "create view vtsummaryuser as select * from treesummary where rectype=1;";
+char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
+                    "create view vtsummarygroup as select * from treesummary where rectype=2;";
+
+
+
+
 sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
 {
   char *err_msg = 0;
@@ -44,6 +76,21 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
   return 0;
 }
 
+
+// sqlite3_exec(db, tsql, 0, 0, &err_msg);
+#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)       \
+   do {                                              \
+      rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);   \
+      if (rc != SQLITE_OK ) {                        \
+         printf("%s:%d SQL error -- '%s'\nSQL: %s",  \
+                __FILE__, __LINE__, *(ERRMSG), SQL); \
+         sqlite3_free(*(ERRMSG));                    \
+         sqlite3_close(DB);                          \
+         return NULL;                                \
+      }                                              \
+   } while (0)
+   
+
 sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
 {
     char *err_msg = 0;
@@ -51,148 +98,163 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     int rc;
 
     sprintf(dbn,"%s/db.db", name);
-    if (createtables>0) {
+    if (createtables) {
         if (openwhat != 3)
           sprintf(dbn,"%s/%s/db.db", in.nameto,name);
     }
-
-    if (createtables==0) {
-        if (openwhat == 6)
+    else {
+       if (openwhat == 6)
           sprintf(dbn,"%s/%s/db.db", in.nameto,name);
+       if (openwhat==5)
+          sprintf(dbn,"%s", name);
     }
 
-    if (createtables==0) {
-      if (openwhat==5) {
-        sprintf(dbn,"%s", name);
-      }
-    }
+
+    //    // The current codebase is not intended to handle incremental updates.
+    //    // When initializing a DB, we always expect it not to already exist,
+    //    // and populate from scratch, from the source tree.
+    //    if (createtables) {
+    //       struct stat st;
+    //       if (! lstat(dbn, &st)) {
+    //          fprintf(stderr, "Database: %s already exists\n", dbn);
+    //          return NULL;
+    //       }
+    //    }
 
     rc = sqlite3_open(dbn, &db);
-    //printf("rc from open dbn %d %s err %s\n",rc, dbn,sqlite3_errmsg(db));
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s\n", dbn, sqlite3_errmsg(db));
+        sqlite3_free(err_msg);
         sqlite3_close(db);
         return NULL;
     }
 
     if (createtables) {
-      if (openwhat==1 || openwhat==4)
-         rc = sqlite3_exec(db, esql, 0, 0, &err_msg);
-      if (openwhat==3) {
-         rc = sqlite3_exec(db, tsql, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vtssqldir, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vtssqluser, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vtssqlgroup, 0, 0, &err_msg);
-      }
-      if (openwhat==2 || openwhat==4) {
-         rc = sqlite3_exec(db, ssql, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vssqldir, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vssqluser, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vssqlgroup, 0, 0, &err_msg);
-         rc = sqlite3_exec(db, vesql, 0, 0, &err_msg);
-      }
-      if (rc != SQLITE_OK ) {
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-        return NULL;
-      }
+       if (openwhat==1 || openwhat==4)
+          SQLITE3_EXEC(db, esql, 0, 0, &err_msg);
+
+       if (openwhat==3) {
+          SQLITE3_EXEC(db, tsql, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vtssqldir, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vtssqluser, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vtssqlgroup, 0, 0, &err_msg);
+       }
+       if (openwhat==2 || openwhat==4) {
+          SQLITE3_EXEC(db, ssql, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vssqldir, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vssqluser, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vssqlgroup, 0, 0, &err_msg);
+          SQLITE3_EXEC(db, vesql, 0, 0, &err_msg);
+       }
     }
 
-    sqlite3_free(err_msg);
     //printf("returning from opendb ok\n");
     return db;
 }
 
 int rawquerydb(const char *name,
-               int         isdir,
+               int         isdir,        // (unused)
                sqlite3    *db,
                char       *sqlstmt,
-               int         printpath,
+               int         printpath,    // (unused)
                int         printheader,
-               int         printing,
-               int         ptid)
+               int         printrows,
+               int         ptid)         // pthread-ID
 {
-     sqlite3_stmt    *res;
-     int     error = 0;
-     int     rec_count = 0;
-     const char      *errMSG;
-     const char      *tail;
-     int ncols;
-     int cnt;
-     int lastsql;
-     int onetime;
-     char lsqlstmt[MAXSQL];
-     //char prefix[MAXPATH];
-     //char shortname[MAXPATH];
-     //char *pp;
-     int i;
-     FILE * out;
-     char  ffielddelim[2];
- 
-     out = stdout;
-     if (in.outfile > 0) out = gts.outfd[ptid];
+     sqlite3_stmt *res;
+     int           error     = 0;
+     int           rec_count = 0;
+     const char   *errMSG;
+     const char   *tail;
+     int           ncols;
+     int           cnt;
+     int           lastsql;
+     int           onetime;
+     //char   lsqlstmt[MAXSQL];
+     //char   prefix[MAXPATH];
+     //char   shortname[MAXPATH];
+     //char  *pp;
 
-     if (in.dodelim == 0) {
+     int           i;
+     FILE *        out;
+     char          ffielddelim[2];
+ 
+     if (! sqlstmt) {
+        fprintf(stderr, "SQL was empty\n");
+        return -1;
+     }
+
+     out = stdout;
+     if (in.outfile > 0)
+        out = gts.outfd[ptid];
+
+     if (in.dodelim == 0)
        sprintf(ffielddelim,"|");
-     }
-     if (in.dodelim == 1) {
+     if (in.dodelim == 1)
        sprintf(ffielddelim,"%s",fielddelim);
-     }
-     if (in.dodelim == 2) {
+     if (in.dodelim == 2)
        sprintf(ffielddelim,"%s",in.delim);
-     }
     
-     lastsql=strlen(sqlstmt);
-     sprintf(lsqlstmt,"%s",sqlstmt);
-     while (lastsql > 0) {
-       error = sqlite3_prepare_v2(db, lsqlstmt, MAXSQL, &res, &tail);
+     while (*sqlstmt) {
+       error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
        if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on query: %s name %s errr %s\n",lsqlstmt,name,sqlite3_errmsg(db));
+          fprintf(stderr, "SQL error on query: %s name %s err %s\n",
+                  sqlstmt,name,sqlite3_errmsg(db));
           return -1;
        }
-       //printf("running on %s query %s printpath %d tail %s\n",name,lsqlstmt,printpath,tail);
-       lastsql=strlen(tail);
-       if (lastsql > 0) { 
+
+       //printf("running on %s query %s printpath %d tail %s\n",name,sqlstmt,printpath,tail);
+       if (*tail) { 
          sqlite3_step(res);
          //sqlite3_finalize(res);
          sqlite3_reset(res);
-         sprintf(lsqlstmt,"%s",tail);
        }
+       sqlstmt = (char*)tail;
      }
+
+     // NOTE: if <sqlstmt> actually contained multiple statments, then this
+     //       loop only runs with the final statement.
      onetime=0;
      while (sqlite3_step(res) == SQLITE_ROW) {
-      //printf("looping through rec_count %ds\n",rec_count);
-      if (printing) {
-       if (printheader) {
-         if (onetime == 0) {
+        //printf("looping through rec_count %ds\n",rec_count);
+
+        // maybe print column-names as a header (once)
+        if (printheader) {
+           if (onetime == 0) {
+              cnt=0;
+              ncols=sqlite3_column_count(res);
+              while (ncols > 0) {
+                 if (cnt==0) {
+                    //if (printpath) fprintf(out,"path/%s",ffielddelim);
+                 }
+                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),ffielddelim);
+                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
+                 ncols--;
+                 cnt++;
+              }
+              fprintf(out,"\n");
+              onetime++;
+           }
+        }
+
+        // maybe print result-row values
+        if (printrows) {
+           //if (printpath) printf("%s/", name);
            cnt=0;
            ncols=sqlite3_column_count(res);
            while (ncols > 0) {
-             if (cnt==0) {
-               //if (printpath) fprintf(out,"path/%s",ffielddelim);
-             }
-             fprintf(out,"%s%s", sqlite3_column_name(res,cnt),ffielddelim);
-             //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
-             ncols--; cnt++;
+              if (cnt==0) {
+                 //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
+              }
+              fprintf(out,"%s%s", sqlite3_column_text(res,cnt),ffielddelim);
+              ncols--;
+              cnt++;
            }
            fprintf(out,"\n");
-           onetime++;
-         }
-       }
-       //if (printpath) printf("%s/", name);
-       cnt=0;
-       ncols=sqlite3_column_count(res);
-       while (ncols > 0) {
-         if (cnt==0) {
-           //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
-         }
-         fprintf(out,"%s%s", sqlite3_column_text(res,cnt),ffielddelim);
-         ncols--; cnt++;
-       }
-       fprintf(out,"\n");
-      }
+        }
 
-      rec_count++;
+        // count of rows in query-result
+        rec_count++;
      }
 
     //printf("We received %d records.\n", rec_count);
@@ -201,7 +263,7 @@ int rawquerydb(const char *name,
     return(rec_count);
 }
 
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts)
+int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int ts)
 {
      sqlite3_stmt    *res;
      int     error = 0;
@@ -210,69 +272,76 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts
      char sqlstmt[MAXSQL];
      //struct sum sumin;
 
-     if (!ts) {
-       sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 from summary where rectype=0;;");
+     if (ts) {
+       sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize "
+               "from treesummary where rectype=0;");
      } else {
-       sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize from treesummary where rectype=0;");
+       sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
+               "from summary where rectype=0;;");
      }
+
      error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
-
      if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on query: %s name %s errr %s\n",sqlstmt,name,sqlite3_errmsg(db));
-          return 0;
+          fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
+                  sqlstmt,name,sqlite3_errmsg(db));
+          return -1;
      }
-     sqlite3_step(res);
-     //sumin->totfiles=atoll((const char *)sqlite3_column_text(res, 0));
-     sumin->totfiles=sqlite3_column_int64(res, 0);
-     sumin->totlinks=sqlite3_column_int64(res, 1);
-     sumin->minuid=sqlite3_column_int64(res, 2);
-     sumin->maxuid=sqlite3_column_int64(res, 3);
-     sumin->mingid=sqlite3_column_int64(res, 4);
-     sumin->maxgid=sqlite3_column_int64(res, 5);
-     sumin->minsize=sqlite3_column_int64(res, 6);
-     sumin->maxsize=sqlite3_column_int64(res, 7);
-     sumin->totltk=sqlite3_column_int64(res, 8);
-     sumin->totmtk=sqlite3_column_int64(res, 9);
-     sumin->totltm=sqlite3_column_int64(res, 10);
-     sumin->totmtm=sqlite3_column_int64(res, 11);
-     sumin->totmtg=sqlite3_column_int64(res, 12);
-     sumin->totmtt=sqlite3_column_int64(res, 13);
-     sumin->totsize=sqlite3_column_int64(res,14);
-     sumin->minctime=sqlite3_column_int64(res, 15);
-     sumin->maxctime=sqlite3_column_int64(res, 16);
-     sumin->minmtime=sqlite3_column_int64(res, 17);
-     sumin->maxmtime=sqlite3_column_int64(res, 18);
-     sumin->minatime=sqlite3_column_int64(res, 19);
-     sumin->maxatime=sqlite3_column_int64(res, 20);
-     sumin->minblocks=sqlite3_column_int64(res, 21);
-     sumin->maxblocks=sqlite3_column_int64(res, 22);
-     sumin->totxattr=sqlite3_column_int64(res, 23);
 
-     sumin->mincrtime=sqlite3_column_int64(res, 24);
-     sumin->maxcrtime=sqlite3_column_int64(res, 25);
-     sumin->minossint1=sqlite3_column_int64(res, 26);
-     sumin->maxossint1=sqlite3_column_int64(res, 27);
-     sumin->totossint1=sqlite3_column_int64(res, 28);
-     sumin->minossint2=sqlite3_column_int64(res, 29);
-     sumin->maxossint2=sqlite3_column_int64(res, 30);
-     sumin->totossint2=sqlite3_column_int64(res, 31);
-     sumin->minossint3=sqlite3_column_int64(res, 32);
-     sumin->maxossint3=sqlite3_column_int64(res, 33);
-     sumin->totossint3=sqlite3_column_int64(res, 34);
-     sumin->minossint4=sqlite3_column_int64(res, 35);
-     sumin->maxossint4=sqlite3_column_int64(res, 36);
-     sumin->totossint4=sqlite3_column_int64(res, 37);
+     sqlite3_step(res);
+
+     //sumin->totfiles = atoll((const char *)sqlite3_column_text(res, 0));
+     sumin->totfiles   = sqlite3_column_int64(res, 0);
+     sumin->totlinks   = sqlite3_column_int64(res, 1);
+     sumin->minuid     = sqlite3_column_int64(res, 2);
+     sumin->maxuid     = sqlite3_column_int64(res, 3);
+     sumin->mingid     = sqlite3_column_int64(res, 4);
+     sumin->maxgid     = sqlite3_column_int64(res, 5);
+     sumin->minsize    = sqlite3_column_int64(res, 6);
+     sumin->maxsize    = sqlite3_column_int64(res, 7);
+     sumin->totltk     = sqlite3_column_int64(res, 8);
+     sumin->totmtk     = sqlite3_column_int64(res, 9);
+     sumin->totltm     = sqlite3_column_int64(res, 10);
+     sumin->totmtm     = sqlite3_column_int64(res, 11);
+     sumin->totmtg     = sqlite3_column_int64(res, 12);
+     sumin->totmtt     = sqlite3_column_int64(res, 13);
+     sumin->totsize    = sqlite3_column_int64(res, 14);
+     sumin->minctime   = sqlite3_column_int64(res, 15);
+     sumin->maxctime   = sqlite3_column_int64(res, 16);
+     sumin->minmtime   = sqlite3_column_int64(res, 17);
+     sumin->maxmtime   = sqlite3_column_int64(res, 18);
+     sumin->minatime   = sqlite3_column_int64(res, 19);
+     sumin->maxatime   = sqlite3_column_int64(res, 20);
+     sumin->minblocks  = sqlite3_column_int64(res, 21);
+     sumin->maxblocks  = sqlite3_column_int64(res, 22);
+     sumin->totxattr   = sqlite3_column_int64(res, 23);
+
+     sumin->mincrtime  = sqlite3_column_int64(res, 24);
+     sumin->maxcrtime  = sqlite3_column_int64(res, 25);
+     sumin->minossint1 = sqlite3_column_int64(res, 26);
+     sumin->maxossint1 = sqlite3_column_int64(res, 27);
+     sumin->totossint1 = sqlite3_column_int64(res, 28);
+     sumin->minossint2 = sqlite3_column_int64(res, 29);
+     sumin->maxossint2 = sqlite3_column_int64(res, 30);
+     sumin->totossint2 = sqlite3_column_int64(res, 31);
+     sumin->minossint3 = sqlite3_column_int64(res, 32);
+     sumin->maxossint3 = sqlite3_column_int64(res, 33);
+     sumin->totossint3 = sqlite3_column_int64(res, 34);
+     sumin->minossint4 = sqlite3_column_int64(res, 35);
+     sumin->maxossint4 = sqlite3_column_int64(res, 36);
+     sumin->totossint4 = sqlite3_column_int64(res, 37);
 
      if (ts) {
-       sumin->totsubdirs=sqlite3_column_int64(res, 38);
-       sumin->maxsubdirfiles=sqlite3_column_int64(res,39 );
-       sumin->maxsubdirlinks=sqlite3_column_int64(res,40 );
-       sumin->maxsubdirsize=sqlite3_column_int64(res,41 );
+       sumin->totsubdirs     = sqlite3_column_int64(res,38);
+       sumin->maxsubdirfiles = sqlite3_column_int64(res,39 );
+       sumin->maxsubdirlinks = sqlite3_column_int64(res,40 );
+       sumin->maxsubdirsize  = sqlite3_column_int64(res,41 );
      }
 
-     //printf("tsdb: totfiles %d totlinks %d minuid %d\n",sumin->totfiles,sumin->totlinks,sumin->minuid);
-    sqlite3_finalize(res);
-    return 0;
+     //printf("tsdb: totfiles %d totlinks %d minuid %d\n",
+     //       sumin->totfiles,sumin->totlinks,sumin->minuid);
+     sqlite3_finalize(res);
+
+     return 0;
 }
 
 int startdb(sqlite3 *db)
@@ -316,25 +385,29 @@ int insertdbfin(sqlite3 *db,sqlite3_stmt *res)
 sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
 {
     char *err_msg = 0;
-    char sqlstmt[MAXSQL];
+    // char sqlstmt[MAXSQL];
     int rc;
     const char *tail;
     int error;
     sqlite3_stmt *reso;
 
-    /*******  this is a big dangerous as all the records need to be written to the db and some time for the os to write to disk  ****/
+    /*******  this is a bit dangerous, as all the records need to be written
+              to the db, plus some time for the OS to write to disk ****/
     error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg);
     if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",error,sqlite3_errmsg(db));
+          fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",
+                  error,sqlite3_errmsg(db));
     }
-//"CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlink INT, uid INT, gid INT, size INT, blksize INT, blocks INT, atime INT, mtime INT, ctime INT, linkname text, xattrstext);
-    //sprintf(sqlstmt,"INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs)");
-    sprintf(sqlstmt,"%s",esqli);
-    //printf(" prep INSERT INTO entries VALUES (@name,&type,&inode,&mode,&nlink,&uid,&gid,&size,&blksize,&blocks,&atime,&mtime, &ctime,&linkname,&xattrs)\n");
-    error= sqlite3_prepare_v2(db,  sqlstmt, MAXSQL, &reso, &tail);
+
+    // sprintf(sqlstmt,"%s",esqli);
+    // error= sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &reso, &tail);
+    error= sqlite3_prepare_v2(db, esqli, MAXSQL, &reso, &tail);
+
     //printf("in prep reso %d\n",reso);
     if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on insertdbprep: error %d %s err %s\n",error,sqlstmt,sqlite3_errmsg(db));
+          fprintf(stderr, "SQL error on insertdbprep: error %d %s err %s\n",
+                  // error,sqlstmt,sqlite3_errmsg(db));
+                  error,esqli,sqlite3_errmsg(db));
           return 0;
     }
     return reso;
@@ -486,7 +559,7 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
     rc = sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg);
 
     if (rc != SQLITE_OK ) {
-        fprintf(stderr, "SQL error on insert: %s\n", err_msg);
+        fprintf(stderr, "SQL error on insert (summary): %s\n", err_msg);
         sqlite3_free(err_msg);
         return 1;
     }
@@ -516,7 +589,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 
     rc = sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg);
     if (rc != SQLITE_OK ) {
-        fprintf(stderr, "SQL error on insert: %s\n", err_msg);
+        fprintf(stderr, "SQL error on insert (treesummary): %s\n", err_msg);
         sqlite3_free(err_msg);
         return 1;
     }

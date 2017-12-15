@@ -1,13 +1,13 @@
--- Gary's TBD
+[DONE] update the README
 
-update the README
+[DONE] update the "what is gufi" doc and include it in the package
 
-update the "what is gufi" doc and include it in the package
+[DONE] fix the makefile so that the mysql part isnt part of BFW macro make
+a new one for MYSQL as some people want mysql stuff.
 
-fix the makefile so that the mysql part isnt part of BFW macro make a new one for MYSQL 
-as some people want want mysql stuff - so separate that
-
-we will do the same for if we do a db2 version of this for HPSS, it will need to be a separate makefile macro DB2
+-- we will do the same (i.e. have distinct Makefile targets) if we do a db2
+   version of this for HPSS, it will need to be a separate makefile macro
+   DB2
 
 add summarize the directory by user and add user records to bfwi
 -- this has been done more or less but not to bfwi - it is a query in the scripts dir
@@ -21,40 +21,69 @@ add summarize the directory summaries by user and add records to bfti
 -- should consider making a callable utility for this so it could be done from bfwi/bfmi/etc.
 -- the script/query version might be fast enough that this is not needed, need to try to run it at scale
 
-add by user and by group summaries to tree summary bfti
 
-put on lanl headers on all .c's and ack the threadpool package
+-- add "by user" and "by group" summaries to tree summary in bfti
 
-There are some general edits that can be applied to processin() just editing the form of the input
-like sql input cant be longer than the MAXSQL and stuff like that.
 
-fix validate_inputs() for bfwi
-fix validate_inputs()  for bfti
-fix validate_inputs()  for bfq
-fix input processing for querydb and runquerydb
-fix input processing for querydbn and runquerydbn
-fix processin and validate_inputs()  for bfmi
+[QUESTION] put on lanl headers on all .c's and ack the threadpool package
+[Proposed text is in COPYRIGHT.txt.  But should it say "this file is part
+of GUFI ...", or "This file is part of MarFS ..."?]
 
-clean up error checking and messages
 
-need a large functional testsuite ( this is started in the test dir but
-we need a create tree, bfwi, bfti, bfq, querydb, querydbn, uid and gid summary and query, oldbigfiles )
+[DONE] There are some general edits that can be applied to processin() just
+editing the form of the input like sql input cant be longer than the MAXSQL
+and stuff like that.
 
-consider building a DSL for stringing sql statements/output/result/and.or  together to be run at init/per thread, per thread/dir, and fin/per thread
+[DONE] fix validate_inputs() for bfwi
+[DONE] fix validate_inputs()  for bfti
+[DONE] fix validate_inputs()  for bfq
 
-try new persistent version of bfli reading multiple files?
-add whatever needed to bfmi
-try an hpss load with persistent version bfdi/bfhi that reads from db2 or from db2 dumps
+[DONE] fix input processing for querydb and runquerydb
+[DONE] fix input processing for querydbn and runquerydbn
+[DONE] fix processin and validate_inputs()  for bfmi
 
--- Some form of feedback to the user, about ongoing progress
+
+-- clean up error checking and messages
+
+(a) check return-values for DB operations, and bail out if needed.
+
+[DONE] For example, a user shouldn't run bfwi twice.  The old queries (in
+dbutils.c) included (e.g.) "drop table if exists ...", before the SQL to do
+inserts.  This would wipe the contents of old tables, and install new
+entries from the current walk of the source tree.  Now, we've removed the
+"drop tables", from some of these queries (e.g. create table 'entries'), so
+when run on a DB with existing tables, these inserts will fail.  The result
+is that rerunning bfwi fails with 'table entries already exists'.  On the
+other hand, running bfti twice is only regenerating summary info in the
+GUFI tree, so that is allowed to wipe the original and re-create.
+
+
+-- need a large functional testsuite ( this is started in the test dir but
+   we need a create tree, bfwi, bfti, bfq, querydb, querydbn, uid and gid
+   summary and query, oldbigfiles )
+
+-- consider building a DSL for stringing sql statements/output/result/and.or  together to be run at init/per thread, per thread/dir, and fin/per thread
+
+-- try new persistent version of bfli reading multiple files?
+
+-- add whatever needed to bfmi
+
+-- try an hpss load with persistent version bfdi/bfhi that reads from db2 or from db2 dumps
+
+-- Some form of feedback to the user, about ongoing progress.
+
+[DONE] (a) Use '-P' (to print directory-names).  This lets you see the
+           progress of the search.
+
+(b) assure that probelms that imply failure to do the job correctly will
+    result in abort.
+
 
 -- ability to restart
 
--- command-line "help"
+-- reduce struct copying.  Lots of places (e.g. pushn() in structq.c) where
+   structs are copied into other structs.  Seems like it should be simple
+   to either store the pointer into the destination struct, or just use the
+   source struct directly and eliminate the need for a distinct destination
+   struct.
 
--- reduce struct copying
-
- Lots of places (e.g. pushn() in structq.c) where structs are copied into
- other structs.  Seems like it should be simple to either store the pointer
- into the destination struct, or just use the source struct directly and
- eliminate the need for a distinct destination struct.

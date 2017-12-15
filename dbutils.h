@@ -6,6 +6,23 @@
 
 #include "utils.h"
 
+extern char *esql;
+extern char *esqli;
+
+extern char *ssql;
+extern char *tsql;
+
+extern char *vesql;
+
+extern char *vssqldir;
+extern char *vssqluser;
+extern char *vssqlgroup;
+
+extern char *vtssqldir;
+extern char *vtssqluser;
+extern char *vtssqlgroup;
+
+
 
 sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn);
 
@@ -13,7 +30,8 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn);
 
 sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables);
 
-int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,int printpath, int printheader, int printing, int ptid);
+int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
+               int printpath, int printheader, int printing, int ptid);
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
 

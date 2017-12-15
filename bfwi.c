@@ -42,17 +42,19 @@ static void processdir(void * passv)
     char dbpath[MAXPATH];
     int transcnt;
 
-    // get thread id so we can get access to thread state we need to keep until the thread ends
+    // get thread id so we can get access to thread state we need to keep
+    // until the thread ends
     mytid=0;
     if (in.outfile > 0) mytid=gettid();
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
-        return; // return NULL;
+       goto out_free; // return NULL;
+
     if (!(entry = readdir(dir)))
-        return; // return NULL;
+       goto out_dir; // return NULL;
+
     sprintf(passmywork->type,"%s","d");
-    // print?
     if (in.printing > 0 || in.printdir > 0) {
       printits(passmywork,mytid);
     }
@@ -61,16 +63,16 @@ static void processdir(void * passv)
        dupdir(passmywork);
        records=malloc(MAXRECS);
        bzero(records,MAXRECS);
-       //sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
        zeroit(&summary);
-       db = opendb(passmywork->name,db1,4,1);
+       if (!(db = opendb(passmywork->name,db1,4,1)))
+          goto out_dir;
        res=insertdbprep(db,reso);
-    //printf("inbfilistdir res %d\n",res);
-    startdb(db);
-
+       //printf("inbfilistdir res %d\n",res);
+       startdb(db);
     }
 
-    // loop over dirents, if link push it on the queue, if file or link print it, fill up qwork structure for each
+    // loop over dirents, if link push it on the queue, if file or link
+    // print it, fill up qwork structure for each
     transcnt = 0;
     do {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -126,8 +128,6 @@ static void processdir(void * passv)
         }
     } while ((entry = (readdir(dir))));
 
-    // free the queue entry - this has to be here or there will be a leak
-    //free(passmywork->freeme);
 
     if (in.buildindex > 0) {
       stopdb(db);
@@ -143,11 +143,13 @@ static void processdir(void * passv)
       free(records);
     }
 
-    // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
-
+ out_dir:
     // close dir
     closedir(dir);
+
+ out_free:
+    // free the queue entry - this has to be here or there will be a leak
+    free(passmywork->freeme);
 
     // one less thread running
     decrthread();
@@ -211,10 +213,33 @@ int processfin() {
 
 
 
+// This app allows users to do any of the following: (a) just walk the
+// input tree, (b) like a, but also creating corresponding GUFI-tree
+// directories, (c) like b, but also creating an index.
 int validate_inputs() {
+   if (in.buildindex && !in.nameto[0]) {
+      fprintf(stderr, "Building an index '-b' requires a destination dir '-t'.\n");
+      return -1;
+   }
+   if (in.nameto[0] && ! in.buildindex) {
+      fprintf(stderr, "Destination dir '-t' found.  Assuming implicit '-b'.\n");
+      in.buildindex = 1;        // you're welcome
+   }
+
+   // not errors, but you might want to know ...
+   if (! in.nameto[0])
+      fprintf(stderr, "WARNING: No GUFI-tree specified (-t).  No GUFI-tree will be built.\n");
+   //   else if (! in.buildindex)
+   //      fprintf(stderr, "WARNING: Index-building not requested (-b).  No GUFI index will be built.\n");
+
    return 0;
 }
 
+void sub_help() {
+   printf("input_dir         walk this tree to produce GUFI-tree\n");
+   // printf("GUFI_dir          build GUFI index here (if -b)\n");
+   printf("\n");
+}
 
 int main(int argc, char *argv[])
 {
@@ -226,15 +251,20 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = processin(argc, argv, "hHpn:d:xPbo:", 2, "input_dir to_dir");
+     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:", 1, "input_dir");
+     if (in.helped)
+        sub_help();
      if (idx < 0)
         return -1;
      else {
         // parse positional args, following the options
-        strncpy(in.name, argv[idx++], MAXPATH);
-        strncpy(in.nameto, argv[idx++], MAXPATH);
-     }
+        int retval = 0;
+        INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
+        // INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "to_dir");
 
+        if (retval)
+           return retval;
+     }
      if (validate_inputs())
         return -1;
 

@@ -11,7 +11,7 @@ struct Node
         struct Node* next;
 }*rear, *front;
 
-int qent;
+int qent = 0;
 
 void delQueue()
 {
@@ -62,6 +62,41 @@ void pushn(struct work *twork)
      }
 }
 
+
+// two-phase version only holds the lock during queue-manip
+
+// part1 can be done without the lock.
+// returns the to-be-queued copy of <twork>
+struct work* pushn2_part1(struct work *twork)
+{
+     struct Node *temp;
+     temp=(struct Node *)malloc(sizeof(struct Node));
+     bcopy (twork,&temp->swork,sizeof(struct work));
+     temp->swork.freeme=temp;
+     return &temp->swork;
+}
+
+// caller needs a lock for this part.
+// call with element returned from part1().
+void pushn2_part2(struct work *twork)
+{
+     struct Node* temp = (struct Node*)twork->freeme;
+     qent++;
+     if (front == NULL)
+     {
+           front=temp;
+           front->next=NULL;
+           rear=front;
+     }
+     else
+     {
+           front->next=temp;
+           front=temp;
+           front->next=NULL;
+     }
+}
+
+
 void display()
 {
      struct Node *var=rear;
@@ -84,11 +119,11 @@ void displaycurrent()
      struct Node *var=rear;
      if(var!=NULL)
      {
-                printf("current: \t%s",var->swork.name);
-     printf("\n");
+        printf("current: \t%s",var->swork.name);
+        printf("\n");
      } 
      else
-     printf("\ndisplaycurrentQueue is Empty");
+        printf("\ndisplaycurrentQueue is Empty");
 }
 
 void displayqent()
@@ -105,11 +140,9 @@ struct work * addrcurrents()
 {
      struct Node *var=rear;
      if(var!=NULL)
-     {
            return &var->swork;
-     }
      else
-     printf("\naddrcurrentsQueue is Empty");
+        printf("\naddrcurrentsQueue is Empty");
      return NULL;
 }
 

@@ -64,31 +64,35 @@ int printits(struct work *pwork,int ptid) {
   if (in.dodelim == 2) {
     sprintf(ffielddelim,"%s",in.delim); 
   }
+
   fprintf(out,"%s%s",pwork->name,ffielddelim);
+
   if (!strncmp(pwork->type,"l",1)) fprintf(out,"l%s",ffielddelim);
   if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",ffielddelim);
   if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",ffielddelim);
-  fprintf(out,"%lld%s", pwork->statuso.st_ino,ffielddelim);
-  fprintf(out,"%lld%s", pwork->pinode,ffielddelim);
-  fprintf(out,"%d%s",pwork->statuso.st_mode,ffielddelim);
-  fprintf(out,"%d%s",pwork->statuso.st_nlink,ffielddelim);
-  fprintf(out,"%d%s", pwork->statuso.st_uid,ffielddelim);
-  fprintf(out,"%d%s", pwork->statuso.st_gid,ffielddelim);
-  fprintf(out,"%lld%s", pwork->statuso.st_size,ffielddelim);
-  fprintf(out,"%d%s", pwork->statuso.st_blksize,ffielddelim);
-  fprintf(out,"%lld%s", pwork->statuso.st_blocks,ffielddelim);
-  fprintf(out,"%ld%s", pwork->statuso.st_atime,ffielddelim);
-  fprintf(out,"%ld%s", pwork->statuso.st_mtime,ffielddelim);
-  fprintf(out,"%ld%s", pwork->statuso.st_ctime,ffielddelim);
+
+  fprintf(out, "%lld%s", pwork->statuso.st_ino, ffielddelim);
+  fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_mode, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_nlink, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_uid, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_gid, ffielddelim);
+  fprintf(out, "%lld%s", pwork->statuso.st_size, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_blksize, ffielddelim);
+  fprintf(out, "%lld%s", pwork->statuso.st_blocks, ffielddelim);
+  fprintf(out, "%ld%s",  pwork->statuso.st_atime, ffielddelim);
+  fprintf(out, "%ld%s",  pwork->statuso.st_mtime, ffielddelim);
+  fprintf(out, "%ld%s",  pwork->statuso.st_ctime, ffielddelim);
+
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out,"%s",pwork->linkname);
-    fprintf(out,"%s",ffielddelim);
+    fprintf(out, "%s", pwork->linkname);
+    fprintf(out, "%s", ffielddelim);
   }
   if (pwork->xattrs > 0) {
     //printf("xattr: ");
     fprintf(out,"%s",pwork->xattr);
   }
-  fprintf(out,"%s\n",ffielddelim);
+  fprintf(out,"%s\n", ffielddelim);
   return 0;
 }
 
@@ -268,13 +272,16 @@ int tsumit (struct sum *sumin,struct sum *smout) {
   pthread_mutex_lock(&sum_mutex);
 
   smout->totsubdirs++;
-  if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles=sumin->totfiles;
-  if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks=sumin->totlinks;
-  if (sumin->totsize  > smout->maxsubdirsize) smout->maxsubdirsize=sumin->totsize;
-  smout->totfiles=smout->totfiles+sumin->totfiles;
-  smout->totlinks=smout->totlinks+sumin->totlinks;
-  smout->totsize=smout->totsize+sumin->totsize;
-  /* only set these mins and maxes if there is files in the directory otherwise mins are all zero */
+  if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->totfiles;
+  if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->totlinks;
+  if (sumin->totsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->totsize;
+
+  smout->totfiles += sumin->totfiles;
+  smout->totlinks += sumin->totlinks;
+  smout->totsize  += sumin->totsize;
+
+  /* only set these mins and maxes if there are files in the directory
+     otherwise mins are all zero */
   if (sumin->totfiles > 0) {
     if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid; 
     if (sumin->maxuid > smout->maxuid) smout->maxuid=sumin->maxuid;
@@ -301,18 +308,19 @@ int tsumit (struct sum *sumin,struct sum *smout) {
     if (sumin->minossint4 < smout->minossint4) smout->minossint4=sumin->minossint4;
     if (sumin->maxossint4 > smout->maxossint4) smout->maxossint4=sumin->maxossint4;
   }
-  smout->totltk=smout->totltk+sumin->totltk;
-  smout->totmtk=smout->totmtk+sumin->totmtk;
-  smout->totltm=smout->totltm+sumin->totltm;
-  smout->totmtm=smout->totmtm+sumin->totmtm;
-  smout->totmtg=smout->totmtg+sumin->totmtg;
-  smout->totmtt=smout->totmtt+sumin->totmtt;
-  smout->totsize=smout->totsize+sumin->totsize;
-  smout->totxattr=smout->totxattr+sumin->totxattr;
-  smout->totossint1=smout->totossint1+sumin->totossint1;
-  smout->totossint2=smout->totossint2+sumin->totossint2;
-  smout->totossint3=smout->totossint3+sumin->totossint3;
-  smout->totossint4=smout->totossint4+sumin->totossint4;
+
+  smout->totltk     += sumin->totltk;
+  smout->totmtk     += sumin->totmtk;
+  smout->totltm     += sumin->totltm;
+  smout->totmtm     += sumin->totmtm;
+  smout->totmtg     += sumin->totmtg;
+  smout->totmtt     += sumin->totmtt;
+  smout->totsize    += sumin->totsize;
+  smout->totxattr   += sumin->totxattr;
+  smout->totossint1 += sumin->totossint1;
+  smout->totossint2 += sumin->totossint2;
+  smout->totossint3 += sumin->totossint3;
+  smout->totossint4 += sumin->totossint4;
 
   pthread_mutex_unlock(&sum_mutex);
 
@@ -326,11 +334,11 @@ int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
 
-  sprintf(sp,"%s",file_path);
+  sprintf(sp,"%s", file_path);
   for (p=strchr(file_path+1, '/'); p; p=strchr(p+1, '/')) {
-    //printf("mkpath mkdir file_path %s p %s\n",file_path,p);
+    //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
-    //printf("mkpath mkdir file_path %s\n",file_path);
+    //printf("mkpath mkdir file_path %s\n", file_path);
     if (mkdir(file_path, mode)==-1) {
       if (errno!=EEXIST) { *p='/'; return -1; }
     }
@@ -392,14 +400,26 @@ int getqent() {
 }
 
 int pushdir( void  * qqwork) {
+
+#if 0
   pthread_mutex_lock(&queue_mutex);
   pushn(qqwork);
   pthread_mutex_unlock(&queue_mutex);
+
+#else
+  // probably not much contention for the work-queue lock in most cases,
+  // but this minimizes the time spent holding it.
+  struct work* queued = pushn2_part1((struct work*)qqwork);
+
+  pthread_mutex_lock(&queue_mutex);
+  pushn2_part2(queued);
+  pthread_mutex_unlock(&queue_mutex);
+#endif
+
   return 0;
 }
 
-// look up the thread number from the threadid matching the linux thread id
-// and the threadpool structure
+// get the index of this thread in the threadpool
 int gettid() {
    return thpool_thread_index(mythpool, pthread_self());
 }
@@ -409,6 +429,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      char *pp;
      int i;
 
+     *endname = 0;              // in case there's no '/'
      i=0;
      sprintf(prefix,"%s",name);
      i=strlen(prefix);
@@ -435,7 +456,8 @@ int processdirs(DirFunc dir_fn) {
      int myqent;
      struct work * workp;
 
-     // loop over queue entries and running threads and do all work until running threads zero and queue empty
+     // loop over queue entries and running threads and do all work until
+     // running threads zero and queue empty
      myqent=0;
      runningthreads=0;
      while (1) {
@@ -451,7 +473,10 @@ int processdirs(DirFunc dir_fn) {
             pthread_mutex_lock(&queue_mutex);
             workp=addrcurrents();
             incrthread();
-            // this takes this entry off the queue but does NOT free the buffer, that has to be done in processdir()  free (_.freeme)
+            
+            // this takes this entry off the queue but does NOT free the
+            // buffer, that has to be done in dir_fn(), something like:
+            // "free(((struct work*)workp)->freeme)"
             thpool_add_work(mythpool, dir_fn, (void *)workp);
             delQueuenofree();
             pthread_mutex_unlock(&queue_mutex);

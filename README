@@ -26,7 +26,11 @@ The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 
 --- run
 
+...........................................................................
+
+
 bfwi - breadth first walk of input tree to list the tree, or create a GUFI index-tree
+
 
 Usage: bfwi [options] input_dir to_dir
 options:
@@ -44,6 +48,7 @@ future options:
   -U              create by user summary per directory
   -G              create by group summary per directory
 
+
 Flow:
 input directory is put on a queue
 output file(s) are opened one per thread
@@ -60,36 +65,40 @@ close output files if needed
 you can end up with an output file per thread
 
 
+...........................................................................
 
 bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
 
-Usage: bfmi [options] 
-options:
-  -h              help
-  -H              show assigned input values (debugging)
-  -p              print files as they are encountered
-  -n <threads>    number of threads
-  -d <delim>      delimiter (one char)
-  -x              pull xattrs from source file-sys into GUFI
-  -P              print directories as they are encountered
-  -b              build GUFI index tree
-  -t <to_dir>     dir where GUFI-tree should be built
-  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-  -r <robin_in>   custom RobinHood parameters
-                     example contents:
-                     /top - top directory pathname - rh doesnt have a name for the root
-                     0x200004284:0x11:0x0 - fid of the root
-                     20004284110 -  inode of root
-                     16877 - mode of root
-                     1500000000  - atime=mtime=ctime of root
-                     localhost - host of mysql
-                     ggrider - user of mysql
-                     ggriderpw1 - password of mysql
-                     institutes - name of db of mysql
+# Usage: bfmi [options] robin_in
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -p              print file-names
+#   -n <threads>    number of threads
+#   -d <delim>      delimiter (one char)  [use 'x' for 0x1E]
+#   -x              pull xattrs from source file-sys into GUFI
+#   -P              print directories as they are encountered
+#   -b              build GUFI index tree
+#   -t <to_dir>     dir GUFI-tree should be built
+#   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+# 
+# robin_in          file containing custom RobinHood parameters
+#                      example contents:
+#                      /path  - top dir-path (RH doesnt have a name for the root)
+#                      0x200004284:0x11:0x0 - fid of the root
+#                      20004284110          - inode of root
+#                      16877                - mode of root
+#                      1500000000           - atime=mtime=ctime of root
+#                      localhost            - host of mysql
+#                      ggrider              - user of mysql
+#                      mypassword           - password for user of mysql
+#                      institutes           - name of db of mysql
+# 
+# future options:
+#   -U              create by user summary record
+#   -G              create by group summary record
+# 
 
-future options:
-  -U              create by user summary record
-  -G              create by group summary record
 
 Flow:
 open robinhood input file that has how to communicate with mysql and info
@@ -113,20 +122,25 @@ you can end up with an output file per thread
 
 
 
+...........................................................................
 
 bfti - walks breadth first below the input directory path and summarizes all directories below it into a tree summary table record by reading all the directory summaries in the tree below
 
-Usage: bfti [options] input_dir
-options:
-  -h              help
-  -H              show assigned input values (debugging)
-  -P              print directories as they are encountered
-  -n <threads>    number of threads
-  -s              generate tree-summary DB
+# Usage: bfti [options] GUFI_tree
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -P              print directories as they are encountered
+#   -n <threads>    number of threads
+#   -s              generate tree-summary table (in top-level DB)
+# 
+# GUFI_tree         path to GUFI tree-dir
+# 
+# future options:
+#   -U              create by user summary record
+#   -G              create by group summary record
+# 
 
-future options:
-  -U              create by user summary record
-  -G              create by group summary record
 
 Flow:
 input directory is put on a queue
@@ -141,6 +155,7 @@ open/create and write tree summary record into treesummary table that summarizes
 
 
 
+...........................................................................
 
 bfq - breadth first walk of a GUFI tree.  We optionally perform queries
 against the tree-summary, the directory-summary, and/or the directory
@@ -152,22 +167,26 @@ thread, or one database output per thread. SQL init allows you to run an
 sql statement per thread associated to the output db before starting the
 walk, and an sql statement per thread on the output db after the walk.
 
-Usage: bfq [options] input_dir
-options:
-  -h              help
-  -H              show assigned input values (debugging)
-  -T <SQL_tsum>   SQL for tree-summary table
-  -S <SQL_sum>    SQL for summary table
-  -E <SQL_ent>    SQL for entries table
-  -P              print directories as they are encountered
-  -a              AND/OR (SQL query combination)
-  -p              print files as they are encountered
-  -n <threads>    number of threads
-  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-  -d <delim>      delimiter (one char)
-  -O <out_DB>     output DB
-  -I <SQL_init>   SQL init
-  -F <SQL_fin>    SQL cleanup
+# Usage: bfq [options] GUFI_tree
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -T <SQL_tsum>   SQL for tree-summary table
+#   -S <SQL_sum>    SQL for summary table
+#   -E <SQL_ent>    SQL for entries table
+#   -P              print directories as they are encountered
+#   -a              AND/OR (SQL query combination)
+#   -p              print file-names
+#   -n <threads>    number of threads
+#   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+#   -d <delim>      delimiter (one char)  [use 'x' for 0x1E]
+#   -O <out_DB>     output DB
+#   -I <SQL_init>   SQL init
+#   -F <SQL_fin>    SQL cleanup
+# 
+# GUFI_tree         find GUFI index-tree here
+# 
+
 
 Flow:
 input directory is put on a queue
@@ -192,21 +211,27 @@ you can end up with an output file per thread and/or a dbfile per thread
 
 
 
+...........................................................................
+
 
 dfw - depth first walk of tree using readdir, or readdir/stat, or readdir/xattr 
 or readdir/stat/xattr based on passed in flags, just writes output to stdout
-options:
-inputpath 
-statflag(0/1) 
-xattrflag(0/1)
+
+[Not recently maintained.]
+
+# Usage: dfw inputpath statflag(0/1) xattrflag(0/1)
+
 
 Flow:
 single threaded depth first walk, using readdir+, or stat depending on input parms and optionally get xattrs, write output to stdout
 
 
 
---- scripts
+=== scripts
+
 Some useful scripts
+[Not recently maintained.]
+
 
 deluidgidsummaryrecs - delete uid and gid summary records in summary tables.
 
@@ -235,22 +260,29 @@ userfilespacehog - do parallel query to create output dbs and list user file spa
 oldbigfiles - do parallel query to craete output dbs and list old/big files
 
 
---- sql info
-whenever you can provide sql statements to programs like bfq and querydb
-the following functions are not normal sql functions but can be used
+
+=== sql info
+
+-- whenever you can provide sql statements to programs like bfq and querydb
+   the following functions are not normal sql functions but can be used
 
 path() - path you are working in
+
 epath() - last dirname in the path you are working in
+
 uidtouser(uid) - converts uid to username - GUFI stores in uid
+
 gidtogroup(gid) - coinverts gid to groupname - GUFI stores gid
 
-a useful built-in sqlite function is
+
+
+-- a useful built-in sqlite function is
 
 datetime(mtime,'unixepoch') 
 
-GUFI stores its date/time in unixepoch form and this will return a human
-readable date/time - of course there are many formats of date/time output
-that can be used
+GUFI stores its date/time in unixepoch form and datetime() will return a
+human readable date/time - of course there are many formats of date/time
+output that can be used
 
 When providing sql statements to bfq and querydb you can put more than one
 sql statement in the same string using semicolons at the end of each
@@ -258,15 +290,33 @@ statement, however the only sql statement that will have output displayed
 if you have chosen to display output is the last sql statement in the
 string
 
---- schemas
+
+
+=== schemas
 
 -- This is the schema for the entries table (one per dir) one record for each file/link
-char *esql = "DROP TABLE IF EXISTS entries;"
-   "CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+
+NOTE: We don't yet support incremental additions to a GUFI index tree.
+    Rerunning bfwi on top of an existing tree would not remove entries that
+    had been deleted, etc.  In order to prevent loss of old data by an
+    ill-advised rerun of bfwi, we suppress the table-drop from the
+    following table-create SQL.  The result is that rerunning bfwi on top
+    of an existing tree will exit with an error.
+
+char *esql = // "DROP TABLE IF EXISTS entries;"
+             "CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+
 
 -- This is the schema for the directory/user/group summary records (summary per directory) the ossint* fields are for use by non posix storage systems
+
+NOTE: Tools other than bfwi are reading from entries in DBs in an existing
+    GUFI tree and generating summary data.  Unlike the <esql> query above,
+    performaing these operations against an existing GUFI tree should
+    simply recreate the original summary data.  Therefore, we don't
+    suppress the table-drop, or view-drop.
+
 char *ssql = "DROP TABLE IF EXISTS summary;"
-   "CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
+             "CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
 
 The directory summary table can have several records
 1 rectype=0 is the overall summary for the directory
@@ -274,9 +324,11 @@ N rectype=1 is the summary per user
 M rectype=2 is the summary per group
 there are views below that assist with using this multifunction table
 
+
 -- This is the schema for the tree directory/user/group summary records (summary representing tree below) the ossint* fields are for use by non posix storage systems
+
 char *tsql = "DROP TABLE IF EXISTS treesummary;"
-   "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
+             "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
 
 The tree summary table can have several records
 1 rectype=0 is the overall summary for the directories
@@ -284,26 +336,35 @@ N rectype=1 is the summary per user
 M rectype=2 is the summary per group
 there are views below that assist with using this multifunction table
 
+
 -- this is a vew that gets parent inode for entries table queries.  pinode is NOT on each entries table record because that would be a rename nightmare
-char *vesql = "create view pentries as select entries.*, summary.inode as pinode from entries, summary where rectype=0;";
+
+char *vesql = "DROP VIEW IF EXISTS pentries;"
+              "create view pentries as select entries.*, summary.inode as pinode from entries, summary where rectype=0;";
 
 -- this is the directory summary table view for overall directory summary
-char *vssqldir = "create view vsummarydir as select * from summary where rectype=0;";
+char *vssqldir = "DROP VIEW IF EXISTS vsummarydir;"
+                 "create view vsummarydir as select * from summary where rectype=0;";
 
 -- this is the directory summary table view for per user directory summary
-char *vssqluser = "create view vsummaryuser as select * from summary where rectype=1;";
+char *vssqluser = "DROP VIEW IF EXISTS vsummaryuser;"
+                  "create view vsummaryuser as select * from summary where rectype=1;";
 
 -- this is the directory summary table view for per group directory summary
-char *vssqlgroup = "create view vsummarygroup as select * from summary where rectype=2;";
+char *vssqlgroup = "DROP VIEW IF EXISTS vsummarygroup;"
+                   "create view vsummarygroup as select * from summary where rectype=2;";
 
 -- this is the tree summary table view for overall directory summary
-char *vtssqldir = "create view vtsummarydir as select * from treesummary where rectype=0;";
+char *vtssqldir = "DROP VIEW IF EXISTS vtsummarydir;"
+                  "create view vtsummarydir as select * from treesummary where rectype=0;";
 
 -- this is the tree summary table view for per user directory summary
-char *vtssqluser = "create view vtsummaryuser as select * from treesummary where rectype=1;";
+char *vtssqluser = "DROP VIEW IF EXISTS vtsummaryuser;"
+                   "create view vtsummaryuser as select * from treesummary where rectype=1;";
 
 -- this is the tree summary table view for per group directory summary
-char *vtssqlgroup = "create view vtsummarygroup as select * from treesummary where rectype=2;";
+char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
+                    "create view vtsummarygroup as select * from treesummary where rectype=2;";
 
 
 
@@ -311,30 +372,46 @@ char *vtssqlgroup = "create view vtsummarygroup as select * from treesummary whe
 
 make_testdirs
 
-Usage: make_testdirs [ options ] dirname
-options:
-  -d <n_dirs>    number of subdirs
-  -f <n_files>   number of files per subdir
-  -h             help
+# Usage: make_testdirs [ options ] dirname
+# options:
+#   -d <n_dirs>    number of subdirs
+#   -f <n_files>   number of files per subdir
+#   -h             help
 
 
 
-querydb - run an sql query against a table in a GUFI db - just point it at the directory containing the db
-querydb directorycontainingGUFIdb
-sqlstmt printpathinoutput(0/1)
-printheaderrow(0/1) 
-dirsummary(0/1)  (if you are querying against a summary table then 1)
+querydb - run an sql query against a table in a GUFI db - just point it at
+the directory containing the db
+
+# Usage: querydb [options] [-s] DB_path SQL
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -N              print column-names (header) for DB results
+#   -V              print column-values (rows) for DB results
+# 
+# DB_path           path to dir containinng db.db.*
+# SQL               arbitrary SQL on DB
 
 
 
-querydbn - run an sql query against an output db from bfq, it an be one per thread, so provide prefix of the dbname, the program will creat a union of the tables from each of the db files and it will get a view name adding a v to the beginning of your table name
-querydbn dbnameprefix 
-sqlstatment
-printpathinoutput(0/1) 
-printheaderrow(0/1) 
-dirsummary(0/1) (if you are querying against a summary table then 1)
-numdbs   (number of db files (threads that created them))
-tablename (table name you are querying - the union'd table per db will be a view with v added to beginning of table name) 
+
+querydbn - run an sql query against an output db from bfq, it can be one per thread, so provide prefix of the dbname, the program will creat a union of the tables from each of the db files and it will get a view name adding a v to the beginning of your table name
+
+# Usage: querydbn [options] [-s] DB_path DB_count SQL tabname
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -N              print column-names (header) for DB results
+#   -V              print column-values (rows) for DB results
+#   -p              print file-names
+# 
+#   -s              dir-summary (currently-unused internal functionality)
+# 
+# DB_path           path to dir containinng db.db.*
+# DB_count          number of DBs (should match thread-count used in 'bfq')
+# SQL               arbitrary SQL on each DB (unified into single view)
+# table_name        name of view table = 'v<table_name>'
 
 
 
@@ -348,6 +425,7 @@ runbfti - run bfti and create a tree index at the top of testdirdup
 runbfq - run various queries on testdirdup/testdir gufi tree including output files and output dbs
 runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir  
 runquerydbn - do various queries on outdb.* output dbs using the union capability of querydbn
+
 rundfw - do various walks on the testdir tree
 runlistschemadb - list the schema in a gufi db
 runlisttablesdb - list the tables in a gufi db
@@ -356,7 +434,9 @@ runuserfilespacehogusesummary - generiate uid summary records via summary and en
 rungroupfilespacehog - do parallel query to create output dbs and list group file space hogs
 runuserfilespacehog - do parallel query to create output dbs and list user file space hog
 runoldbigfiles - do parallel query to craete output dbs and list old/big files
+
 --end of functional suite of tests that work together
+
 
 --- develop
 

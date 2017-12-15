@@ -93,10 +93,8 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 %.mysql:
 	$(MAKE) -C . $* MYSQL=1
 
-
-
 # these are trashable files and dirs produced by the test/run* tests
-TEST_PRODUCTS = test/testout.* test/testdirdup test/outdb* test/outq.*
+TEST_PRODUCTS = test/testout.* test/testdirdup test/outdb* test/outq.* test/core.*
 clean_test:
 	rm -rf $(TEST_PRODUCTS)
 

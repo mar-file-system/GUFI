@@ -70,8 +70,10 @@ struct input {
    char sqlsum[MAXSQL];
    char sqlent[MAXSQL];
    int  printdir;
-   int  andor;
    int  printing;
+   int  printheader;
+   int  printrows;
+   int  helped;                 // support parsing of per-app sub-options
    int  dodelim;
    char delim[2];
    int  doxattrs;
@@ -80,24 +82,61 @@ struct input {
    int  writetsum;
    int  outfile;
    char outfilen[MAXPATH];
+   int  andor;
    int  outdb;
    char outdbn[MAXPATH];
    char sqlinit[MAXSQL];
    char sqlfin[MAXSQL];
-   char robinin[MAXPATH];
 };
 extern struct input in;
 
 
+void print_help(const char* prog_name,
+                const char* getopt_str,
+                const char* positional_args_help_str);
+
 // DEBUGGING
 void show_input(struct input* in, int retval);
 
-int processin(int         argc,
-              char*       argv[],
-              const char* getopt_str,
-              int         n_positional,
-              const char* positional_args_help_str);
+int parse_cmd_line(int         argc,
+                   char*       argv[],
+                   const char* getopt_str,
+                   int         n_positional,
+                   const char* positional_args_help_str);
 
+// help for parsing a cmd-line string-argument into a fixed-size array.
+// NOTE: This assumes you have a variable <retval> in scope.
+#define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                         \
+   do {                                                                 \
+      const char* src = (SOURCE); /* might be "argv[idx++]" */          \
+      if (strlen(src) >= (MAX)) {                                    \
+         fprintf(stderr, "argument '%s' exceeds max allowed (%d)\n",    \
+                 (ARG_NAME), (MAX));                                    \
+         retval = -1;                                                   \
+      }                                                                 \
+      strncpy((VAR), (src), (MAX));                                     \
+      (VAR)[(MAX)-1] = 0;                                               \
+   } while (0)
+
+
+#define INSTALL_INT(VAR, SOURCE, MIN, MAX, ARG_NAME)                    \
+   do {                                                                 \
+      (VAR) = atoi(SOURCE); /* might be "argv[idx++]" */                \
+      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
+         fprintf(stderr, "argument '%s' not in range [%d,%d]\n",        \
+                 (ARG_NAME), (MIN), (MAX));                             \
+         retval = -1;                                                   \
+      }                                                                 \
+   } while (0)
+
+
+// TBD: this would replace gotos
+// local impls of processdir() could use this to manage clean-up tasks.
+typedef enum {
+   DO_FREE   = 0x01,
+   CLOSE_DIR = 0x02,
+   CLOSE_DB  = 0x04,
+} CleanUpTasks;
 
 
 struct work {
@@ -123,21 +162,6 @@ struct work {
 
 extern char xattrdelim[];
 extern char fielddelim[];
-
-extern char *esql;
-extern char *esqli;
-
-extern char *ssql;
-extern char *tsql;
-
-extern char *vesql;
-
-extern char *vssqldir;
-extern char *vssqluser;
-extern char *vssqlgroup;
-extern char *vtssqldir;
-extern char *vtssqluser;
-extern char *vtssqlgroup;
 
 
 #endif
