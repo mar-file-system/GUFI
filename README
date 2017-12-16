@@ -15,14 +15,23 @@ The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 /C-Thread-Pool thread pool package
 
 --- build
+
+  # suggested:
   make clean  [optional]
-  make
-  make all (make bf, df, tools, bfm, bfd)
-  make all.df (dfw)
-  make all.bf (bfwi, bfti, bfq)
-  make all.bfm (bfmi (requires for robinhood))
-  make all.bfd (bfdi (requires db2 (for hpss)) 
-  make all.tools (maketestdirs, querydb, querydbn)
+  make        -> libgufi.a, bfwi, bfti, bfq, querydb, querydbn, make_testdirs
+
+  # if desired, do any/all of these:
+  make mysql  -> libgufi.a, bfmi]
+  make dfw    -> dfw
+  make tools  -> querydb, querydbn, make_testdirs
+
+  # for debugging:
+  make clean
+  make [whatever] DEBUG=1
+
+  # to reset the 'test' directory (e.g. after testing):
+  make clean_test
+  
 
 --- run
 
