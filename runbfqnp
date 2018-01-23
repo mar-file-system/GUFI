@@ -1,1 +1,0 @@
-./bfqnp /Users/ggrider/sqlite/sqlite-src-3180000/bigdata/macdb/mac "" "select name,type,inode,mode, nlink, uid,gid,size,blksize,blocks,atime,mtime,ctime,linkname,xattrs from summary" "select name,type,inode,mode, nlink, uid,gid,size,blksize,blocks,atime,mtime,ctime,linkname,xattrs from entries" 1 0 0 0 4 > ../bigdata/flatnopath

@@ -13,19 +13,17 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include <pwd.h>
-#include <grp.h>
-//#include <uuid/uuid.h>
-
 #include "bf.h"
-#include "structq.c"
-#include "utils.c"
-#include "dbutils.c"
+#include "structq.h"
+#include "utils.h"
+#include "dbutils.h"
+
 
 int main(int argc, char *argv[])
 {
      char name[MAXPATH];
      char shortname[MAXPATH];
+     char endname[MAXPATH];
      char dbname[MAXPATH];
      char rsqlstmt[MAXSQL];
      struct stat statuso;
@@ -35,7 +33,6 @@ int main(int argc, char *argv[])
      sqlite3 *db1;
      int recs;
      int printheader=0;
-     struct sum sumout;
      int dirsummary;
 
      sprintf(name,"%s",argv[1]);
@@ -64,8 +61,11 @@ int main(int argc, char *argv[])
        //add query funcs to get uidtouser() gidtogroup() and path()
        addqueryfuncs(db);
        // set the global path so path() is the path passed in
+       bzero(endname,sizeof(endname));
+       shortpath(name,shortname,endname);
+       //printf("shortpath out shortname %s end name %s\n",shortname, endname);
+       sprintf(gps[0].gepath,"%s",endname); 
        if (dirsummary) {
-         shortpath(name,shortname);
          sprintf(gps[0].gpath,"%s",shortname); 
        } else {
          sprintf(gps[0].gpath,"%s",name); 

@@ -1,3 +1,13 @@
+#include <string.h>
+#include <stdlib.h>
+
+#include <pwd.h>
+#include <grp.h>
+#include <uuid/uuid.h>
+
+#include "dbutils.h"
+
+
 sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
 {
   char *err_msg = 0;
@@ -72,11 +82,13 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
          rc = sqlite3_exec(db, tsql, 0, 0, &err_msg);
          rc = sqlite3_exec(db, vtssqldir, 0, 0, &err_msg);
          rc = sqlite3_exec(db, vtssqluser, 0, 0, &err_msg);
+         rc = sqlite3_exec(db, vtssqlgroup, 0, 0, &err_msg);
       }
       if (openwhat==2 || openwhat==4) {
          rc = sqlite3_exec(db, ssql, 0, 0, &err_msg);
          rc = sqlite3_exec(db, vssqldir, 0, 0, &err_msg);
          rc = sqlite3_exec(db, vssqluser, 0, 0, &err_msg);
+         rc = sqlite3_exec(db, vssqlgroup, 0, 0, &err_msg);
          rc = sqlite3_exec(db, vesql, 0, 0, &err_msg);
       }
       if (rc != SQLITE_OK ) {
@@ -91,7 +103,14 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     return db;
 }
 
-int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,int printpath, int printheader, int printing, int ptid)
+int rawquerydb(const char *name,
+               int         isdir,
+               sqlite3    *db,
+               char       *sqlstmt,
+               int         printpath,
+               int         printheader,
+               int         printing,
+               int         ptid)
 {
      sqlite3_stmt    *res;
      int     error = 0;
@@ -100,7 +119,9 @@ int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,int print
      const char      *tail;
      int ncols;
      int cnt;
+     int lastsql;
      int onetime;
+     char lsqlstmt[MAXSQL];
      //char prefix[MAXPATH];
      //char shortname[MAXPATH];
      //char *pp;
@@ -121,36 +142,26 @@ int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,int print
        sprintf(ffielddelim,"%s",in.delim);
      }
     
-     //shortpath(name,shortname); 
-/*
-     sprintf(shortname,"%s",name);
-     if (isdir > 0) {
-          i=0;
-          sprintf(prefix,"%s",name);
-          i=strlen(prefix);
-          pp=prefix+i;
-          //printf("cutting name down %s len %d\n",prefix,i);
-          while (i > 0) {
-            if (!strncmp(pp,"/",1)) {
-               bzero(pp,1);
-               break;
-            }
-            pp--;
-            i--;
-          }
-          sprintf(shortname,"%s",prefix);
-     }
-*/     
-     error = sqlite3_prepare_v2(db, sqlstmt, 1000, &res, &tail);
-
-     if (error != SQLITE_OK) {
-          // should put this into an error we pass back
-          //fprintf(stderr, "SQL error on query: %s name %s errr %s\n",sqlstmt,name,sqlite3_errmsg(db));
+     lastsql=strlen(sqlstmt);
+     sprintf(lsqlstmt,"%s",sqlstmt);
+     while (lastsql > 0) {
+       error = sqlite3_prepare_v2(db, lsqlstmt, MAXSQL, &res, &tail);
+       if (error != SQLITE_OK) {
+          fprintf(stderr, "SQL error on query: %s name %s errr %s\n",lsqlstmt,name,sqlite3_errmsg(db));
           return -1;
+       }
+       //printf("running on %s query %s printpath %d tail %s\n",name,lsqlstmt,printpath,tail);
+       lastsql=strlen(tail);
+       if (lastsql > 0) { 
+         sqlite3_step(res);
+         //sqlite3_finalize(res);
+         sqlite3_reset(res);
+         sprintf(lsqlstmt,"%s",tail);
+       }
      }
-     //printf("running on %s query %s printpath %d\n",name,sqlstmt,printpath);
      onetime=0;
      while (sqlite3_step(res) == SQLITE_ROW) {
+      //printf("looping through rec_count %ds\n",rec_count);
       if (printing) {
        if (printheader) {
          if (onetime == 0) {
@@ -185,8 +196,8 @@ int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,int print
      }
 
     //printf("We received %d records.\n", rec_count);
-
-    sqlite3_finalize(res);
+    sqlite3_reset(res);
+    //sqlite3_finalize(res);
     return(rec_count);
 }
 
@@ -204,7 +215,7 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts
      } else {
        sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize from treesummary where rectype=0;");
      }
-     error = sqlite3_prepare_v2(db, sqlstmt, 1000, &res, &tail);
+     error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
 
      if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on query: %s name %s errr %s\n",sqlstmt,name,sqlite3_errmsg(db));
@@ -560,9 +571,20 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    int mytid;
+ 
+    mytid=gettid(); 
+    sqlite3_result_text(context, gps[mytid].gepath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
+
 int addqueryfuncs(sqlite3 *db) {
        sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
        sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
        sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
+       sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
        return 0;
 }

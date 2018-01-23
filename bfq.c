@@ -18,11 +18,14 @@
 //#include <uuid/uuid.h>
 
 #include "bf.h"
-#include "structq.c"
-#include "utils.c"
-#include "dbutils.c"
+#include "structq.h"
+#include "utils.h"
+#include "dbutils.h"
+// #include "putils.h"
 
-static void * processdir(void * passv)
+// This becomes an argument to thpool_add_work(), so it must return void,
+// instead of void*.
+static void processdir(void * passv)
 {
     struct work *passmywork = passv;
     struct work qwork;
@@ -37,6 +40,7 @@ static void * processdir(void * passv)
     sqlite3 *db1;
     int recs;
     char shortname[MAXPATH];
+    char endname[MAXPATH];
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     mytid=0;
@@ -45,9 +49,9 @@ static void * processdir(void * passv)
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
-        return NULL;
+        return; // return NULL;
     if (!(entry = readdir(dir)))
-        return NULL;
+        return; // return NULL;
     sprintf(passmywork->type,"%s","d");
     // print?
     //if (in.printdir > 0) {
@@ -102,23 +106,29 @@ static void * processdir(void * passv)
         } while ((entry = (readdir(dir))));
         // run query on summary, print it if printing is needed, if returns none 
         // and we are doing and, skip querying the entries db
+        bzero(endname,sizeof(endname));
+        shortpath(passmywork->name,shortname,endname);
+        sprintf(gps[mytid].gepath,"%s",endname);
         if (strlen(in.sqlsum) > 1) {
           recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
           // for directories we have to take off after the last slash
           // and set the path so users can put path() in their queries
-          shortpath(passmywork->name,shortname);
           sprintf(gps[mytid].gpath,"%s",shortname);
           recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+          //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
         } else {
           recs=1;
         }
         if (in.andor > 0) recs=1; 
         // if we have recs (or are running an or) query the entries table
         if (recs > 0) {
-          if (strlen(in.sqlent) > 1)
+          if (strlen(in.sqlent) > 1) {
             // set the path so users can put path() in their queries
+            //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
             sprintf(gps[mytid].gpath,"%s",passmywork->name);
             rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
+            //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",in.sqlent,passmywork->name,recs,strlen(in.sqlent));
+          }
         }
     }
 
@@ -128,7 +138,6 @@ static void * processdir(void * passv)
     } else {
       closedb(db);
     }
-
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
 
@@ -138,36 +147,9 @@ static void * processdir(void * passv)
     // one less thread running
     decrthread();
 
-    return NULL;
+    // return NULL;
 }
 
-int processin(int c, char *v[]) {
-
-     char outfn[MAXPATH];
-     int i;
-     // this is where we process input variables
-
-     // this is not how you should do this, it should be a case statement with edits etc.
-     //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
-     sprintf(in.name,"%s",v[1]);
-     sprintf(in.sqltsum,"%s",v[2]);
-     sprintf(in.sqlsum,"%s",v[3]);
-     sprintf(in.sqlent,"%s",v[4]);
-     in.printdir=atoi(v[5]);
-     in.andor=atoi(v[6]);
-     in.printing=atoi(v[7]);
-     in.maxthreads = atoi(v[8]);
-     in.outfile=atoi(v[9]);
-     sprintf(in.outfilen,"%s",v[10]);
-     in.dodelim=atoi(v[11]);
-     sprintf(in.delim,"%s",v[12]);
-     in.outdb=atoi(v[13]);
-     sprintf(in.outdbn,"%s",v[14]);
-     sprintf(in.sqlinit,"%s",v[15]);
-     sprintf(in.sqlfin,"%s",v[16]);
-
-     return 0;
-}
 
 int processinit(void * myworkin) {
     
@@ -205,8 +187,8 @@ int processinit(void * myworkin) {
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
      lstat(in.name,&mywork->statuso);
-    if (!access(in.name, R_OK | X_OK)) {
-     } else {
+     if (access(in.name, R_OK | X_OK)) {
+         perror("couldn't access input dir");
          return 1;
      }
      if (!S_ISDIR(mywork->statuso.st_mode) ) {
@@ -218,8 +200,6 @@ int processinit(void * myworkin) {
      return 0;
 }
 
-/* this needs to be here until we get some function prototypes in bf.h */
-#include "putils.c"
 
 int processfin() {
 int i;
@@ -248,28 +228,91 @@ int i;
      return 0;
 }
 
+
+#if 0
+int processin(int c, char *v[]) {
+
+   char outfn[MAXPATH];
+   int i;
+   // this is where we process input variables
+
+   // this is not how you should do this, it should be a case statement with edits etc.
+   //printf("in %d 0 %s 1 %s\n",c, v[0],v[1]);
+   sprintf(in.name,"%s",v[1]);
+   sprintf(in.sqltsum,"%s",v[2]);
+   sprintf(in.sqlsum,"%s",v[3]);
+   sprintf(in.sqlent,"%s",v[4]);
+   in.printdir=atoi(v[5]);
+   in.andor=atoi(v[6]);
+   in.printing=atoi(v[7]);
+   in.maxthreads = atoi(v[8]);
+   in.outfile=atoi(v[9]);
+   sprintf(in.outfilen,"%s",v[10]);
+   in.dodelim=atoi(v[11]);
+   sprintf(in.delim,"%s",v[12]);
+   in.outdb=atoi(v[13]);
+   sprintf(in.outdbn,"%s",v[14]);
+   sprintf(in.sqlinit,"%s",v[15]);
+   sprintf(in.sqlfin,"%s",v[16]);
+
+   return 0;
+}
+#endif
+
+
+int validate_inputs() {
+   if (! in.name[0]) {
+      fprintf(stderr, "must supply source-dir '-i'\n");
+      return -1;
+   }
+
+   return 0;
+}
+
 int main(int argc, char *argv[])
 {
      //char nameo[MAXPATH];
      struct work mywork;
      int i;
 
-     // process input args, this is not a common routine and will need to be different for each instance of a bf program
-     processin(argc,argv);
+     // process input args - all programs share the common 'struct input',
+     // but allow different fields to be filled at the command-line.
+     // Callers provide the options-string for get_opt(), which will
+     // control which options are parsed for each program.
+     if (processin(argc, argv, "hHi:T:S:E:Papn:o:d:O:I:F:"))
+        return -1;
 
-     // start threads and loop watching threads needing work and queue size - this always stays in main right here
+     // option-parsing can't tell that some options are required,
+     // or which combinations of options interact.
+     if (validate_inputs())
+        return -1;
+
+
+     // start threads and loop watching threads needing work and queue size
+     // - this always stays in main right here
      mythpool = thpool_init(in.maxthreads);
+     if (thpool_null(mythpool)) {
+        fprintf(stderr, "thpool_init() failed!\n");
+        return -1;
+     }
 
-     // process initialization, this is work done once the threads are up but not busy yet - this will be different for each instance of a bf program
-     // in this case we are stating the directory passed in and putting that directory on the queue
+     // process initialization, this is work done once the threads are up
+     // but not busy yet - this will be different for each instance of a bf
+     // program in this case we are stating the directory passed in and
+     // putting that directory on the queue
      processinit(&mywork);
 
-     // processdirs - if done properly, this routine is common and does not have to be done per instance of a bf program
-     // loops through and processes all directories that enter the queue by farming the work out to the threadpool
-     processdirs();
+     // processdirs - if done properly, this routine is common and does not
+     // have to be done per instance of a bf program loops through and
+     // processes all directories that enter the queue by farming the work
+     // out to the threadpool
+     processdirs(processdir);
 
-     // processfin - this is work done after the threads are done working before they are taken down - this will be different for each instance of a bf program
+     // processfin - this is work done after the threads are done working
+     // before they are taken down - this will be different for each
+     // instance of a bf program
      processfin();
+
 
      // clean up threads and exit
      thpool_wait(mythpool);

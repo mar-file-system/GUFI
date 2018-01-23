@@ -1,0 +1,40 @@
+EPATH=..
+# --- new:
+# Usage: ./bfwi [options]
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)?
+#   -i <input_dir>  input directory path
+#   -p              print file diagnostics?
+#   -n <threads>    number of threads
+#   -d <delim>      delimiter (one char)
+#   -x              handle xattrs?
+#   -P              print directories?
+#   -b              build index?
+#   -t <name_to>    name to
+#   -o <out_fname>  output file
+
+
+rm -f  testout*
+rm -rf testdirdup
+mkdir testdirdup
+
+
+# run bfwi and send output to screen
+echo
+echo "out to screen"
+$EPATH/bfwi -i testdir -p -n 2 -xPb -t testdirdup
+
+ls -l testout*
+rm testout*
+rm -rf testdirdup
+
+
+#run to output files testout.*
+echo
+echo "send to output files"
+$EPATH/bfwi -i testdir -p -n 2 -xPb -t testdirdup -o testout
+
+ls -l testout*
+cat testout*
+ls -lR testdirdup

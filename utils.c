@@ -1,9 +1,59 @@
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>              /* isprint() */
+#include <errno.h>
+
+#include "utils.h"
+#include "structq.h"
+
+
+// --- threading
+threadpool mythpool;
+
+volatile int runningthreads = 0;
+pthread_mutex_t running_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+volatile int queuelock = 0;
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+volatile int sumlock = 0;
+struct sum sumout;
+pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// global variable to hold per thread state
+struct globalthreadstate gts = {0};
+
+
+
+
+
+
+#if __linux__  // GNU/Intel/IBM/etc compilers
+#  include <sys/types.h>
+#  include <attr/xattr.h>
+
+#  define LISTXATTR(PATH, BUF, SIZE)        llistxattr((PATH), (BUF), (SIZE))
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0)
+
+#else  // was: BSDXATTRS  (OSX)
+#  include <sys/xattr.h>
+
+#  define LISTXATTR(PATH, BUF, SIZE)        listxattr((PATH), (BUF), (SIZE), XATTR_NOFOLLOW)
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    getxattr((PATH), (KEY), (BUF), (SIZE), 0, XATTR_NOFOLLOW)
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  setxattr((PATH), (KEY), (VALUE), (SIZE), 0, 0)
+#endif
+
+
+
+
 int printits(struct work *pwork,int ptid) {
   char  ffielddelim[2];
   FILE * out;
 
   out = stdout;
-  if (in.outfile > 0) out = gts.outfd[ptid];
+  if (in.outfile > 0)
+     out = gts.outfd[ptid];
  
   if (in.dodelim == 0) {
     sprintf(ffielddelim," "); 
@@ -42,6 +92,7 @@ int printits(struct work *pwork,int ptid) {
   return 0;
 }
 
+
 int pullxattrs( const char *name, char *bufx) {
     char buf[MAXXATTR];
     char bufv[MAXXATTR];
@@ -54,16 +105,9 @@ int pullxattrs( const char *name, char *bufx) {
     unsigned int ptest;
     bufxp=bufx;
     bzero(buf,sizeof(buf));
-#ifdef BSDXATTRS
-    buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
-#else
-    buflen=listxattr(name,buf,sizeof(buf));
-#endif
-#ifdef BSDXATTRS
-    buflen=listxattr(name,buf,sizeof(buf),XATTR_NOFOLLOW);
-#else
-    buflen=listxattr(name,buf,sizeof(buf));
-#endif
+
+    buflen = LISTXATTR(name, buf, sizeof(buf));
+
     xattrs=0;
 
     if (buflen > 0) {
@@ -71,11 +115,9 @@ int pullxattrs( const char *name, char *bufx) {
        key=buf;
        while (buflen > 0) {
          bzero(bufv,sizeof(bufv));
-#ifdef BSDXATTRS
-         bufvlen = getxattr(name, key, bufv, sizeof(bufv),0,XATTR_NOFOLLOW); 
-#else
-         bufvlen = getxattr(name, key, bufv, sizeof(bufv)); 
-#endif
+
+         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv)); 
+
          keylen=strlen(key) + 1;
          //printf("key: %s value: %s len %zd keylen %d\n",key,bufv,bufvlen,keylen);
          sprintf(bufxp,"%s%s",key,xattrdelim); bufxp=bufxp+keylen;
@@ -223,6 +265,8 @@ int sumit (struct sum *summary,struct work *pwork) {
 
 int tsumit (struct sum *sumin,struct sum *smout) {
 
+  pthread_mutex_lock(&sum_mutex);
+
   smout->totsubdirs++;
   if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles=sumin->totfiles;
   if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks=sumin->totlinks;
@@ -269,9 +313,15 @@ int tsumit (struct sum *sumin,struct sum *smout) {
   smout->totossint2=smout->totossint2+sumin->totossint2;
   smout->totossint3=smout->totossint3+sumin->totossint3;
   smout->totossint4=smout->totossint4+sumin->totossint4;
+
+  pthread_mutex_unlock(&sum_mutex);
+
   return 0;
 }
 
+// given a possibly-multi-level path of directories (final component is
+// also a dir), create the parent dirs all the way down.
+// 
 int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
@@ -348,26 +398,13 @@ int pushdir( void  * qqwork) {
   return 0;
 }
 
+// look up the thread number from the threadid matching the linux thread id
+// and the threadpool structure
 int gettid() {
-
-    // this should be a common routine
-    // look up the thread number from the threadid matching the linux thread id and the threadpool structure
-    pthread_t tid;
-    int id;
-    int myid;
-    tid=pthread_self();
-    id=0;
-    while (id < in.maxthreads) {
-      if (pthread_equal(tid,(pthread_t) mythpool->threads[id]->pthread)) {
-        myid=id;
-        //printf("processdir started self %u table %u  myid = %d\n",(int)pthread_self(),(int)mythpool->threads[myid]->pthread,myid);
-        break;
-      }
-      id++;
-    }
-    return(myid);
+   return thpool_thread_index(mythpool, pthread_self());
 }
-int shortpath(const char *name, char *nameout) {
+
+int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
      int i;
@@ -380,6 +417,7 @@ int shortpath(const char *name, char *nameout) {
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
           bzero(pp,1);
+          sprintf(endname,"%s",pp+1);
           break;
        }
        pp--;
@@ -387,4 +425,82 @@ int shortpath(const char *name, char *nameout) {
      }
      sprintf(nameout,"%s",prefix);
      return 0;
+}
+
+
+// FKA "putils.c"
+
+int processdirs(DirFunc dir_fn) {
+
+     int myqent;
+     struct work * workp;
+
+     // loop over queue entries and running threads and do all work until running threads zero and queue empty
+     myqent=0;
+     runningthreads=0;
+     while (1) {
+        myqent=getqent();
+        if (runningthreads == 0) {
+          if (myqent == 0) {
+            break;
+          }
+        }
+        if (runningthreads < in.maxthreads) {
+          if (myqent > 0) {
+            // we have to lock around all queue ops
+            pthread_mutex_lock(&queue_mutex);
+            workp=addrcurrents();
+            incrthread();
+            // this takes this entry off the queue but does NOT free the buffer, that has to be done in processdir()  free (_.freeme)
+            thpool_add_work(mythpool, dir_fn, (void *)workp);
+            delQueuenofree();
+            pthread_mutex_unlock(&queue_mutex);
+          }
+        }
+     }
+
+     return 0;
+}
+
+int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
+  char buf[MAXXATTR];
+  char bufv[MAXXATTR];
+  char * xattrp;
+  int cnt;
+  if (!printing) return 0;
+  if (!strncmp(type,"l",1)) printf("l ");
+  if (!strncmp(type,"f",1)) printf("f ");
+  if (!strncmp(type,"d",1)) printf("d ");
+  printf("%s ", name);
+  if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
+  printf("%lld ", status->st_ino);
+  printf("%lld ", pinode);
+  printf("%d ",status->st_mode);
+  printf("%d ",status->st_nlink);
+  printf("%d ", status->st_uid);
+  printf("%d ", status->st_gid);
+  printf("%lld ", status->st_size);
+  printf("%d ", status->st_blksize);
+  printf("%lld ", status->st_blocks);
+  printf("%ld ", status->st_atime);
+  printf("%ld ", status->st_mtime);
+  printf("%ld ", status->st_ctime);
+  cnt = 0;
+  xattrp=xattr;
+  if (xattrs > 0) {
+    printf("xattr: %s",xattr);
+/*
+    while (cnt < xattrs) {
+      bzero(buf,sizeof(buf));
+      bzero(bufv,sizeof(bufv));
+      strcpy(buf,xattrp); xattrp=xattrp+strlen(buf)+1;
+      printf("%s",buf);
+      strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1;
+      printf("%s ",bufv);
+      cnt++;
+   }
+*/
+  }
+  printf("\n");
+  return 0;
 }

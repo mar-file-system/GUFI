@@ -1,2 +1,0 @@
-rm -rf /tmp/testdirdup5/tmp/testdirdup2/tmp/bigtestdir/*
-time ./bfli /tmp/testdirdup2/tmp/dump /tmp/testdirdup5 0 20

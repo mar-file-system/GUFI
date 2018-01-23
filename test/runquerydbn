@@ -1,0 +1,8 @@
+EPATH=..
+#syntax querydbn dbname sqlstatment printpath printheader dirsummary numdbs tablename
+echo "query on out dbs create union view and query that view on entries subset"
+$EPATH/querydbn outdb "select * from vsument;" 0 1 1 2 sument
+echo "query on out dbs create union view and query that view on summaries subset sum/orderby"
+$EPATH/querydbn outdb "select type,uid,sum(totfiles) from vsument group by type;" 0 1 1 2 sument
+echo "query on out dbs create union view and query that view on summaries subset"
+$EPATH/querydbn outdb "select * from vsumsummary;" 0 1 1 2 sumsummary

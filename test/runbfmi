@@ -1,0 +1,29 @@
+EPATH=..
+# Usage: bfmi [options]
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)?
+#   -i <input_dir>  input directory path
+#   -p              print file diagnostics?
+#   -n <threads>    number of threads
+#   -d <delim>      delimiter (one char)
+#   -x              handle xattrs?
+#   -P              print directories?
+#   -b              build index?
+#   -t <name_to>    name to
+#   -o <out_fname>  output file
+#   -r <robin_in>   ? (see bfmi.c)
+
+echo
+echo "bfmi to screen"
+rm -rf testdirrh
+$EPATH/bfmi -i testdir -p -n 2 -xP -r robinhoodin
+
+echo
+echo "bfmi to gufi"
+rm -rf testdirrh
+$EPATH/bfmi -i testdir -n 2 -xb -t testdirrh -r robinhoodin
+
+echo
+echo "bfq on resulting gufi"
+$EPATH/bfq -i testdirrh -S "select * from summary;" -E "select * from entries;" -Pp -n 2
