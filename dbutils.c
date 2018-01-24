@@ -13,8 +13,11 @@ sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
   char *err_msg = 0;
   int rc;
   char sqlat[MAXSQL];
+  char *zname;
 
-  sprintf(sqlat,"ATTACH \'%s/db.db\' as %s",name,dbn);
+  zname = sqlite3_mprintf("%q",name);
+  sprintf(sqlat,"ATTACH \'%s/db.db\' as %s",zname,dbn);
+  sqlite3_free(zname);
   rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
   if (rc != SQLITE_OK) {
       fprintf(stderr, "Cannot attach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
@@ -49,6 +52,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     char *err_msg = 0;
     char dbn[MAXPATH];
     int rc;
+    char deb[MAXPATH];
 
     sprintf(dbn,"%s/db.db", name);
     if (createtables>0) {
@@ -70,14 +74,32 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     rc = sqlite3_open(dbn, &db);
     //printf("rc from open dbn %d %s err %s\n",rc, dbn,sqlite3_errmsg(db));
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s\n", dbn, sqlite3_errmsg(db));
+      sleep(2);
+      rc = sqlite3_open(dbn, &db);
+    }
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db),rc);
         sqlite3_close(db);
+printf("trying to open %s\n",dbn);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
         return NULL;
     }
 
     if (createtables) {
       if (openwhat==1 || openwhat==4)
          rc = sqlite3_exec(db, esql, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot create entries: %s %s\n", dbn, sqlite3_errmsg(db));
+        sqlite3_close(db);
+printf("trying %s\n",dbn);
+printf("trying  %s\n",esql);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
+        return NULL;
+    }
       if (openwhat==3) {
          rc = sqlite3_exec(db, tsql, 0, 0, &err_msg);
          rc = sqlite3_exec(db, vtssqldir, 0, 0, &err_msg);
@@ -86,9 +108,49 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
       }
       if (openwhat==2 || openwhat==4) {
          rc = sqlite3_exec(db, ssql, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot create summary: %s %s\n", dbn, sqlite3_errmsg(db));
+        sqlite3_close(db);
+printf("trying %s\n",dbn);
+printf("trying  %s\n",ssql);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
+        return NULL;
+    }
          rc = sqlite3_exec(db, vssqldir, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot create vsssqldir: %s %s\n", dbn, sqlite3_errmsg(db));
+        sqlite3_close(db);
+printf("trying  %s\n",dbn);
+printf("trying  %s\n",vssqldir);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
+        return NULL;
+    }
          rc = sqlite3_exec(db, vssqluser, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot create vsssqluser: %s %s\n", dbn, sqlite3_errmsg(db));
+        sqlite3_close(db);
+printf("trying  %s\n",dbn);
+printf("trying  %s\n",vssqluser);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
+        return NULL;
+    }
          rc = sqlite3_exec(db, vssqlgroup, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot create vsssqlgroup: %s %s\n", dbn, sqlite3_errmsg(db));
+        sqlite3_close(db);
+printf("trying  %s\n",dbn);
+printf("trying  %s\n",vssqlgroup);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
+        return NULL;
+    }
          rc = sqlite3_exec(db, vesql, 0, 0, &err_msg);
       }
       if (rc != SQLITE_OK ) {
@@ -196,8 +258,8 @@ int rawquerydb(const char *name,
      }
 
     //printf("We received %d records.\n", rec_count);
-    sqlite3_reset(res);
-    //sqlite3_finalize(res);
+    //sqlite3_reset(res);
+    sqlite3_finalize(res);
     return(rec_count);
 }
 
@@ -299,7 +361,11 @@ int closedb(sqlite3 *db)
     char *err_msg = 0;
     int rc;
     sqlite3_free(err_msg);
-    sqlite3_close(db);
+    rc = sqlite3_close(db);
+    if (rc != SQLITE_OK) {
+      printf("closedb issue %s\n",sqlite3_errmsg(db));
+      exit(9);
+    }
     return 0;
 }
 
@@ -580,11 +646,36 @@ static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    int fmode;
+    char tmode[64];
+    if (argc == 1) {
+        const unsigned char *text = sqlite3_value_text(argv[0]);
+        sprintf(tmode,"%s",text);
+        fmode=atoi(tmode);
+        sprintf(tmode,"----------");
+        if (fmode &  S_IFDIR) tmode[0] = 'd';
+        if (fmode &  S_IRUSR) tmode[1] = 'r';
+        if (fmode &  S_IWUSR) tmode[2] = 'w';
+        if (fmode &  S_IXUSR) tmode[3] = 'x';
+        if (fmode &  S_IRUSR) tmode[4] = 'r';
+        if (fmode &  S_IWUSR) tmode[5] = 'w';
+        if (fmode &  S_IXUSR) tmode[6] = 'x';
+        if (fmode &  S_IRUSR) tmode[7] = 'r';
+        if (fmode &  S_IWUSR) tmode[8] = 'w';
+        if (fmode &  S_IXUSR) tmode[9] = 'x';
+        sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
+        return;
+    }
+    sqlite3_result_null(context);
+}
 
 int addqueryfuncs(sqlite3 *db) {
        sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
        sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
        sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
        sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
+       sqlite3_create_function(db, "modetotxt", 1, SQLITE_UTF8, NULL, &modetotxt, NULL, NULL);
        return 0;
 }

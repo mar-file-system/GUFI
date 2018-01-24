@@ -47,7 +47,18 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     while ((entry = (readdir(dir)))) {
        int len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
        path[len] = 0;
-       if (statit) lstat(path,&st);
+       if (statit) {
+         lstat(path,&st);
+       } else {
+         st.st_mode=st.st_mode|S_IRUSR|S_IWUSR|S_IXUSR;
+         if (entry->d_type == DT_DIR) {
+           st.st_mode=040755;
+         } else if (entry->d_type == DT_LNK) {
+           st.st_mode=0120755;
+         } else {
+           st.st_mode=0100644;
+         }
+       }
        xattrs=0;
        bzero(xattr, sizeof(xattr));
        if (xattrit) {
