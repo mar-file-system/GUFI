@@ -74,13 +74,18 @@
 # OF SUCH DAMAGE.
 
 
+# Tests include this.  See e.g. test/runbfwi.
 
-EPATH=..
-# cc -DBSDXATTRS dfw.c -o dfw
-#cc dfw.c -o dfw
-echo "---> ./dfw testdir 0 0 (just walk with readdir)"
-$EPATH/dfw testdir 0 0
-echo "---> ./dfw testdir 1 0 (just walk with stat)"
-$EPATH/dfw testdir 1 0
-echo "---> ./dfw testdir 1 1 (walk with stat and xattr)"
-$EPATH/dfw testdir 1 1
+# This gets the name of the script whether it is sourced or called.  Must come first.
+SCRIPT="$BASH_SOURCE"
+
+if [ `uname -s` == Darwin ]; then
+    # OSX has a screwed up readlink.  Don't bother.
+    FULL="$SCRIPT"
+else
+    FULL=`readlink -f $SCRIPT`
+fi
+    
+DIR=`dirname $FULL`
+
+EPATH="$DIR/.."

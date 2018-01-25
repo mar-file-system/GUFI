@@ -122,8 +122,11 @@ sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
   char *err_msg = 0;
   int rc;
   char sqlat[MAXSQL];
+  char *zname;
 
-  sprintf(sqlat,"ATTACH \'%s/db.db\' as %s",name,dbn);
+  zname = sqlite3_mprintf("%q",name);
+  sprintf(sqlat,"ATTACH \'%s/db.db\' as %s",zname,dbn);
+  sqlite3_free(zname);
   rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
   if (rc != SQLITE_OK) {
       fprintf(stderr, "Cannot attach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
@@ -155,16 +158,24 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
 
 
 // sqlite3_exec(db, tsql, 0, 0, &err_msg);
-#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)       \
-   do {                                              \
-      rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);   \
-      if (rc != SQLITE_OK ) {                        \
-         printf("%s:%d SQL error -- '%s'\nSQL: %s",  \
-                __FILE__, __LINE__, *(ERRMSG), SQL); \
-         sqlite3_free(*(ERRMSG));                    \
-         sqlite3_close(DB);                          \
-         return NULL;                                \
-      }                                              \
+#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)              \
+   do {                                                     \
+      rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);          \
+      if (rc != SQLITE_OK ) {                               \
+         printf("%s:%d SQL error [%s]: '%s'\nSQL: %s",      \
+                __FILE__, __LINE__, #SQL, *(ERRMSG), SQL);  \
+         sqlite3_free(*(ERRMSG));                           \
+         sqlite3_close(DB);                                 \
+                                                            \
+         /* Gary debugging */                               \
+         printf("trying  %s\n",dbn);                        \
+         printf("trying  %s\n",vssqldir);                   \
+         sprintf(deb,"ls -l %s/%s",in.nameto,name);         \
+         system(deb);                                       \
+         exit(9);                                           \
+                                                            \
+         return NULL;                                       \
+      }                                                     \
    } while (0)
    
 
@@ -173,6 +184,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     char *err_msg = 0;
     char dbn[MAXPATH];
     int rc;
+    char deb[MAXPATH];
 
     sprintf(dbn,"%s/db.db", name);
     if (createtables) {
@@ -200,9 +212,17 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
 
     rc = sqlite3_open(dbn, &db);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s\n", dbn, sqlite3_errmsg(db));
+       sleep(2);
+       rc = sqlite3_open(dbn, &db);
+    }
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db),rc);
         sqlite3_free(err_msg);
         sqlite3_close(db);
+printf("trying to open %s\n",dbn);
+sprintf(deb,"ls -l %s/%s",in.nameto,name);
+system(deb);
+exit(9);
         return NULL;
     }
 
@@ -267,12 +287,16 @@ int rawquerydb(const char *name,
 
      if (in.dodelim == 0)
        sprintf(ffielddelim,"|");
+
      if (in.dodelim == 1)
        sprintf(ffielddelim,"%s",fielddelim);
+
      if (in.dodelim == 2)
        sprintf(ffielddelim,"%s",in.delim);
-    
+
+
      while (*sqlstmt) {
+       // WARNING: passing length-arg that is longer than SQL text
        error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
        if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on query: %s name %s err %s\n",
@@ -335,8 +359,8 @@ int rawquerydb(const char *name,
      }
 
     //printf("We received %d records.\n", rec_count);
-    sqlite3_reset(res);
-    //sqlite3_finalize(res);
+    // sqlite3_reset(res);
+    sqlite3_finalize(res);
     return(rec_count);
 }
 
@@ -357,6 +381,7 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
                "from summary where rectype=0;;");
      }
 
+     // WARNING: passing length-arg that is longer than SQL text
      error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
      if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
@@ -445,7 +470,11 @@ int closedb(sqlite3 *db)
     char *err_msg = 0;
     int rc;
     sqlite3_free(err_msg);
-    sqlite3_close(db);
+    rc = sqlite3_close(db);
+    if (rc != SQLITE_OK) {
+      printf("closedb issue %s\n",sqlite3_errmsg(db));
+      exit(9);
+    }
     return 0;
 }
 
@@ -476,16 +505,12 @@ sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
                   error,sqlite3_errmsg(db));
     }
 
-    // sprintf(sqlstmt,"%s",esqli);
-    // error= sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &reso, &tail);
+    // WARNING: passing length-arg that is longer than SQL text
     error= sqlite3_prepare_v2(db, esqli, MAXSQL, &reso, &tail);
-
-    //printf("in prep reso %d\n",reso);
     if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on insertdbprep: error %d %s err %s\n",
-                  // error,sqlstmt,sqlite3_errmsg(db));
                   error,esqli,sqlite3_errmsg(db));
-          return 0;
+          return NULL;
     }
     return reso;
 }
@@ -634,13 +659,12 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
     sqlite3_free(zxattr);
 
     rc = sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg);
-
     if (rc != SQLITE_OK ) {
         fprintf(stderr, "SQL error on insert (summary): %s\n", err_msg);
         sqlite3_free(err_msg);
-        return 1;
+        return -1;
     }
-    sqlite3_free(err_msg);
+
     return 0;
 }
 
@@ -668,9 +692,9 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     if (rc != SQLITE_OK ) {
         fprintf(stderr, "SQL error on insert (treesummary): %s\n", err_msg);
         sqlite3_free(err_msg);
-        return 1;
+        return -1;
     }
-    sqlite3_free(err_msg);
+
     return 0;
 }
 
@@ -730,11 +754,36 @@ static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    int fmode;
+    char tmode[64];
+    if (argc == 1) {
+        const unsigned char *text = sqlite3_value_text(argv[0]);
+        sprintf(tmode,"%s",text);
+        fmode=atoi(tmode);
+        sprintf(tmode,"----------");
+        if (fmode &  S_IFDIR) tmode[0] = 'd';
+        if (fmode &  S_IRUSR) tmode[1] = 'r';
+        if (fmode &  S_IWUSR) tmode[2] = 'w';
+        if (fmode &  S_IXUSR) tmode[3] = 'x';
+        if (fmode &  S_IRUSR) tmode[4] = 'r';
+        if (fmode &  S_IWUSR) tmode[5] = 'w';
+        if (fmode &  S_IXUSR) tmode[6] = 'x';
+        if (fmode &  S_IRUSR) tmode[7] = 'r';
+        if (fmode &  S_IWUSR) tmode[8] = 'w';
+        if (fmode &  S_IXUSR) tmode[9] = 'x';
+        sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
+        return;
+    }
+    sqlite3_result_null(context);
+}
 
 int addqueryfuncs(sqlite3 *db) {
        sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
        sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
        sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
        sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
+       sqlite3_create_function(db, "modetotxt", 1, SQLITE_UTF8, NULL, &modetotxt, NULL, NULL);
        return 0;
 }

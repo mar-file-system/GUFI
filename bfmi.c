@@ -370,10 +370,11 @@ int processfin() {
 
 int validate_inputs() {
    if (in.buildindex && !in.nameto[0]) {
-      fprintf(stderr, "building an index requires a destination dir (see '-t'))\n");
+      fprintf(stderr, "building an index '-b' requires a destination dir (see '-t'))\n");
       return -1;
    }
-   else if (in.nameto[0]) {
+   else if (in.nameto[0] && ! in.buildindex) {
+      fprintf(stderr, "Destination dir '-t' found.  Assuming implicit '-b'.\n");
       in.buildindex = 1; // you're welcome
    }
 
@@ -433,12 +434,12 @@ int main(int argc, char *argv[])
 
      // process initialization, this is work done once the threads are up
      // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are stating the directory passed in and
+     // program in this case we are stat'ing the directory passed in and
      // putting that directory on the queue
      processinit(&mywork);
 
      // processdirs - if done properly, this routine is common and does not
-     // have to be done per instance of a bf program loops through and
+     // have to be done per instance of a bf program.  Loops through and
      // processes all directories that enter the queue by farming the work
      // out to the threadpool
      processdirs(processdir);
