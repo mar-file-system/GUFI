@@ -254,19 +254,21 @@ int processinit(void * myworkin) {
 
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
-     lstat(in.name,&mywork->statuso);
+     lstat(in.name, &mywork->statuso);
      if (access(in.name, R_OK | X_OK)) {
-         perror("couldn't access input dir");
+        fprintf(stderr, "couldn't access input dir '%s': %s\n",
+                in.name, strerror(errno));
          return 1;
      }
      if (!S_ISDIR(mywork->statuso.st_mode) ) {
-         fprintf(stderr,"not a directory as input\n");
-         return 1;
+        fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
+        return 1;
      }
      if (in.doxattrs > 0) {
        mywork->xattrs=0;
        mywork->xattrs=pullxattrs(in.name,mywork->xattr);
      }
+
      // set top parent inode to zero
      mywork->pinode=0;
      pushdir(mywork);
