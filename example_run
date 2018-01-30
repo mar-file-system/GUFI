@@ -1,0 +1,39 @@
+#!/bin/bash -e
+
+function run() {
+    echo
+    echo "--- $@"
+    ( exec "$@" 2>&1 )
+}
+
+
+run make clean
+run make
+
+IN=test/in
+OUT=test/out
+
+
+run rm -rf $IN
+run rm -rf $OUT
+
+run make_testdirs -d 128 -f 128 $IN
+
+
+
+# walk input-tree test/in, producing GUFI index tree under test/out/test/in
+# this tree will have file and dir DBs, but no tree-summary
+run bfwi -t test/out -n 2 -P -b  $IN
+
+
+# generate tree-summary, as well
+run bfti -P -n 2 -s  $OUT/$IN
+
+
+# Run some queries in the tree ...
+# NOTE: 
+run bfq -Pp -n 1 \
+    -S "select path(),name,type,size,datetime(mtime,'unixepoch') from vsummarydir;" \
+    -E  "select path(),name, type, size, datetime(mtime,'unixepoch') from entries;" \
+    $OUT/$IN \
+    | more
