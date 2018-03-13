@@ -1,12 +1,95 @@
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+NOTE:
+-----
+
+GUFI uses the C-Thread-Pool library.  The original version, written by
+Johan Hanssen Seferidis, is found at
+https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+released under the MIT License.  LANS, LLC added functionality to the
+original work.  The original work, plus LANS, LLC added functionality is
+found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+License.  The MIT License can be found at
+https://opensource.org/licenses/MIT.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+
+
+
+
+
 --- requirements
+
 sqlite3 for all
-mysql for bfm*
-db2 for bfd*
+mysql   for bfm*
+db2     for bfd*
+
 
 --- builds ok on macos and linux
+
 The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 
+
 --- directory structure
+
 / .c .h makefile, README, Notes, TBD for only the currently supported things
 /misc  all old stuff/unsupported stuff
 /test a test directory with all the current functional tests and a testdir input tree etc.
@@ -14,24 +97,28 @@ The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 /scripts  handy scripts for doing various things
 /C-Thread-Pool thread pool package
 
+
 --- build
 
   # suggested:
-  make clean  [optional]
+  make clean
+
+  # build (into local dir)
   make        -> libgufi.a, bfwi, bfti, bfq, querydb, querydbn, make_testdirs
 
   # if desired, do any/all of these:
-  make mysql  -> libgufi.a, bfmi]
+  make mysql  -> bfmi
   make dfw    -> dfw
   make tools  -> querydb, querydbn, make_testdirs
 
   # for debugging:
   make clean
-  make [whatever] DEBUG=1
+  make <some_target> DEBUG=1
 
   # to reset the 'test' directory (e.g. after testing):
   make clean_test
-  
+
+
 
 --- run
 
@@ -72,6 +159,18 @@ each thread lists the directory readdir/stat and xattr if called for
 end
 close output files if needed
 you can end up with an output file per thread
+
+
+
+Location of GUFI-tree:
+
+    bfwi will re-create the dir-path of <input_dir> underneath <to_dir>.
+    For example, if <input_dir> is /a/b/c and <to_dir> is /q/r/s, the GUFI-tree will
+    is created at /q/r/s/a/b/c.
+
+    This would be the path to provide to other commands that take a
+    GUFI-tree as input.  We have debated whether the GUFI-tree should
+              
 
 
 ...........................................................................
@@ -133,7 +232,9 @@ you can end up with an output file per thread
 
 ...........................................................................
 
-bfti - walks breadth first below the input directory path and summarizes all directories below it into a tree summary table record by reading all the directory summaries in the tree below
+bfti - walks breadth first below the input directory path and summarizes
+    all directories below it into a tree summary table record by reading
+    all the directory summaries in the tree below
 
 # Usage: bfti [options] GUFI_tree
 # options:
@@ -163,18 +264,23 @@ end
 open/create and write tree summary record into treesummary table that summarizes all the directories below it
 
 
+NOTE: The input <GUFI_tree> should've already been created via 'bfwi'.
+    See the note under bfwi, regarding location of created GUFI-trees.
+
 
 ...........................................................................
 
 bfq - breadth first walk of a GUFI tree.  We optionally perform queries
-against the tree-summary, the directory-summary, and/or the directory
-contents tables, per directory encountered (obeys posix permisions for
-access to directory info).  You supply your own sql statements for tree,
-summary, and entries, and select AND/OR logic between tree/directory/entry
-queries.  The traversal can write its output to stdout, one file per
-thread, or one database output per thread. SQL init allows you to run an
-sql statement per thread associated to the output db before starting the
-walk, and an sql statement per thread on the output db after the walk.
+    against the tree-summary, the directory-summary, and/or the directory
+    contents tables, per directory encountered (obeys POSIX permissions for
+    access to directory info).  You supply your own SQL statements for
+    tree, summary, and entries, and select AND/OR logic between
+    tree/directory/entry queries.  The traversal can write its output to
+    stdout, one file per thread, or one database output per thread. SQL
+    init allows you to run an SQL statement per thread associated to the
+    output db before starting the walk, and an SQL statement per thread on
+    the output db after the walk.
+
 
 # Usage: bfq [options] GUFI_tree
 # options:
@@ -201,7 +307,7 @@ Flow:
 input directory is put on a queue
 output file(s) are opened one per thread if needed
 output dbs are opened if needed one per thread
-if init sql provided run once per thread
+if init SQL provided run once per thread
 threads are started
 loop assigning work (directories) from queue to threads
 each thread lists the directory and queries the gufi tables for that directory 
@@ -214,7 +320,7 @@ each thread lists the directory and queries the gufi tables for that directory
   close directory
 end
 close output files if needed
-if fin sql provided run that per thread
+if fin SQL provided run that per thread
 close outputdb
 you can end up with an output file per thread and/or a dbfile per thread
 
@@ -223,8 +329,9 @@ you can end up with an output file per thread and/or a dbfile per thread
 ...........................................................................
 
 
-dfw - depth first walk of tree using readdir, or readdir/stat, or readdir/xattr 
-or readdir/stat/xattr based on passed in flags, just writes output to stdout
+dfw - depth first walk of tree using readdir, or readdir/stat, or
+      readdir/xattr or readdir/stat/xattr based on passed-in flags,
+      just writes output to stdout
 
 [Not recently maintained.]
 
@@ -270,10 +377,10 @@ oldbigfiles - do parallel query to craete output dbs and list old/big files
 
 
 
-=== sql info
+=== SQL info
 
--- whenever you can provide sql statements to programs like bfq and querydb
-   the following functions are not normal sql functions but can be used
+-- whenever you can, provide SQL statements to programs like bfq and querydb.
+   the following functions are not normal SQL functions but can be used
 
 path() - path you are working in
 
@@ -293,10 +400,10 @@ GUFI stores its date/time in unixepoch form and datetime() will return a
 human readable date/time - of course there are many formats of date/time
 output that can be used
 
-When providing sql statements to bfq and querydb you can put more than one
-sql statement in the same string using semicolons at the end of each
-statement, however the only sql statement that will have output displayed
-if you have chosen to display output is the last sql statement in the
+When providing SQL statements to bfq and querydb you can put more than one
+SQL statement in the same string using semicolons at the end of each
+statement, however the only SQL statement that will have output displayed
+if you have chosen to display output is the last SQL statement in the
 string
 
 
@@ -389,8 +496,8 @@ make_testdirs
 
 
 
-querydb - run an sql query against a table in a GUFI db - just point it at
-the directory containing the db
+querydb - run an SQL query against a table in a GUFI db - just point it at
+    the directory containing the db
 
 # Usage: querydb [options] [-s] DB_path SQL
 # options:
@@ -405,7 +512,10 @@ the directory containing the db
 
 
 
-querydbn - run an sql query against an output db from bfq, it can be one per thread, so provide prefix of the dbname, the program will creat a union of the tables from each of the db files and it will get a view name adding a v to the beginning of your table name
+querydbn - run an SQL query against an output db from bfq, it can be one
+    per thread, so provide prefix of the dbname, the program will creat a
+    union of the tables from each of the db files and it will get a view
+    name adding a v to the beginning of your table name
 
 # Usage: querydbn [options] [-s] DB_path DB_count SQL tabname
 # options:
@@ -426,9 +536,13 @@ querydbn - run an sql query against an output db from bfq, it can be one per thr
 
 --- testtools
 
-runbfmi - run bfmi to read from a robinhood mysql db and list and/or create a gufi tree - requires an input file on how to talk to mysql
+runbfmi - run bfmi to read from a robinhood mysql db and list and/or create
+    a gufi tree - requires an input file on how to talk to mysql
 
---The following functional tests all work together, create a gufi index from input testdir into testdirdup and run queries/etc.
+
+-- The following functional tests all work together, create a gufi index
+   from input testdir into testdirdup and run queries/etc.
+
 runbfwi - run bfwi and create gufi testdirdup from input testdir
 runbfti - run bfti and create a tree index at the top of testdirdup
 runbfq - run various queries on testdirdup/testdir gufi tree including output files and output dbs
@@ -444,12 +558,18 @@ rungroupfilespacehog - do parallel query to create output dbs and list group fil
 runuserfilespacehog - do parallel query to create output dbs and list user file space hog
 runoldbigfiles - do parallel query to craete output dbs and list old/big files
 
---end of functional suite of tests that work together
 
 
 --- develop
 
-For ongoing development, we're passing around a git archive tarball, made
-from the "team" branch.  You can make edits in this tarball, and continue
-to pass the tarball around.  We can then merge them into the git repo
-(git@git.lanl.gov:campaign/gufi.git)
+Initial development was done at LANL via an internal git-hosting service.
+As of rev 1.0.0, we are mirroring GUFI to github.  We invite other
+developers to contribute suggestions, new features, bug-reports, bug-fixes,
+feature-requests, etc, through github.  We will attempt to respond to
+requests, but we make no promises about the level of resources that will be
+dedicated to GUFI maintenace.
+
+For conversational interaction, try us at marfs-on-github@lanl.gov.
+
+See other components of MarFS at https://github.com/mar-file-system.
+
