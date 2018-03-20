@@ -31,7 +31,6 @@ run bfti -P -n 2 -s  $OUT/$IN
 
 
 # Run some queries in the tree ...
-# NOTE: 
 run bfq -Pp -n 1 \
     -S "select path(),name,type,size,datetime(mtime,'unixepoch') from vsummarydir;" \
     -E  "select path(),name, type, size, datetime(mtime,'unixepoch') from entries;" \

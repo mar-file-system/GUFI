@@ -122,6 +122,15 @@ The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 
 --- run
 
+  # example_run builds the GUFI software, then generates a dummy
+  # directory-tree in test/in, extracts the corresponding GUFI-tree, and
+  # runs a simple query.
+
+  ./example_run
+
+
+The following are detailed descriptions of the individual tools:
+
 ...........................................................................
 
 
@@ -166,11 +175,12 @@ Location of GUFI-tree:
 
     bfwi will re-create the dir-path of <input_dir> underneath <to_dir>.
     For example, if <input_dir> is /a/b/c and <to_dir> is /q/r/s, the GUFI-tree will
-    is created at /q/r/s/a/b/c.
+    be created at /q/r/s/a/b/c.
 
     This would be the path to provide to other commands that take a
-    GUFI-tree as input.  We have debated whether the GUFI-tree should
-              
+    GUFI-tree as input.  We have debated whether the GUFI-tree should just
+    be build at /q/r/s/c.  That may come in a future release.  We're open
+    to discussion.
 
 
 ...........................................................................
@@ -563,13 +573,13 @@ runoldbigfiles - do parallel query to craete output dbs and list old/big files
 --- develop
 
 Initial development was done at LANL via an internal git-hosting service.
-As of rev 1.0.0, we are mirroring GUFI to github.  We invite other
+As of rev 0.1.0, we are mirroring GUFI to github.  We invite other
 developers to contribute suggestions, new features, bug-reports, bug-fixes,
 feature-requests, etc, through github.  We will attempt to respond to
 requests, but we make no promises about the level of resources that will be
 dedicated to GUFI maintenace.
 
-For conversational interaction, try us at marfs-on-github@lanl.gov.
+For conversation about GUFI, try us at marfs-on-github@lanl.gov.
 
 See other components of MarFS at https://github.com/mar-file-system.
 
