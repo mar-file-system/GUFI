@@ -76,6 +76,32 @@ OF SUCH DAMAGE.
 
 
 
+
+
+--- development
+
+Initial development was done at LANL via an internal git-hosting service.
+As of rev 0.1.0, we are moving GUFI to github.  We invite anyone to
+contribute suggestions, new features, bug-reports, bug-fixes,
+feature-requests, etc, through github:
+
+    https://github.com/mar-file-system/GUFI
+
+We will attempt to respond to requests, but we can't make promises about
+the level of resources that will be dedicated to GUFI maintenace.
+
+All bug-reports, issues, requests, etc, should go through github.
+For other conversation about GUFI (and MarFS), there is:
+
+    marfs-on-github@lanl.gov
+
+See other components of MarFS at:
+
+    https://github.com/mar-file-system.
+
+
+
+
 --- requirements
 
 sqlite3 for all
@@ -83,9 +109,11 @@ mysql   for bfm*
 db2     for bfd*
 
 
---- builds ok on macos and linux
 
-The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
+--- builds ok on OSX and Linux
+
+The build seems to be working on OSX (10.12.6), and Linux (CentOS 7).
+
 
 
 --- directory structure
@@ -98,7 +126,12 @@ The build seems to be working on Linux (CentOS 7) and Darwin (10.12.6).
 /C-Thread-Pool thread pool package
 
 
+
 --- build
+
+  # Only needed once  (C-Thread-Pool is a git submodule)
+  git submodule init
+  git submodule update
 
   # suggested:
   make clean
@@ -567,19 +600,3 @@ runuserfilespacehogusesummary - generiate uid summary records via summary and en
 rungroupfilespacehog - do parallel query to create output dbs and list group file space hogs
 runuserfilespacehog - do parallel query to create output dbs and list user file space hog
 runoldbigfiles - do parallel query to craete output dbs and list old/big files
-
-
-
---- develop
-
-Initial development was done at LANL via an internal git-hosting service.
-As of rev 0.1.0, we are mirroring GUFI to github.  We invite other
-developers to contribute suggestions, new features, bug-reports, bug-fixes,
-feature-requests, etc, through github.  We will attempt to respond to
-requests, but we make no promises about the level of resources that will be
-dedicated to GUFI maintenace.
-
-For conversation about GUFI, try us at marfs-on-github@lanl.gov.
-
-See other components of MarFS at https://github.com/mar-file-system.
-
