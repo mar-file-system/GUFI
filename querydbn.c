@@ -103,7 +103,7 @@ void sub_help() {
    printf("  -s              dir-summary (currently-unused internal functionality)\n");
    // printf("  -N <DB_count>   query DBs written by multiple threads (\n");}
    printf("\n");
-   printf("DB_path           path to dir containinng db.db.*\n");
+   printf("DB_path           path to dir containinng %s.*\n",DBNAME);
    printf("DB_count          number of DBs (should match thread-count used in 'bfq')\n");
    printf("SQL               arbitrary SQL on each DB (unified into single view)\n");
    printf("table_name        name of view table = 'v<table_name>'\n");
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
       sprintf(sqlat,"DETACH %s",dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {
-         fprintf(stderr, "Cannot detach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
+         fprintf(stderr, "Cannot detach database: %s/%s %s\n", name, DBNAME,sqlite3_errmsg(db));
          sqlite3_close(db);
          exit(9);
       }

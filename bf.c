@@ -131,6 +131,9 @@ void print_help(const char* prog_name,
       case 'S': printf("  -S <SQL_sum>    SQL for summary table\n"); break;
       case 'E': printf("  -E <SQL_ent>    SQL for entries table\n"); break;
       case 'F': printf("  -F <SQL_fin>    SQL cleanup\n"); break;
+      case 'r': printf("  -r              insert files and links into db (for bfwreaddirplus2db\n"); break;
+      case 'R': printf("  -R              insert dires into db (for bfwreaddirplus2db\n"); break;
+      case 'D': printf("  -D              dont descend the tree\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -162,6 +165,9 @@ void show_input(struct input* in, int retval) {
    printf("in.sqlsum      = '%s'\n", in->sqlsum);
    printf("in.sqlent      = '%s'\n", in->sqlent);
    printf("in.sqlfin      = '%s'\n", in->sqlfin);
+   printf("in.insertdir   = '%d'\n", in->insertdir);
+   printf("in.insertfl    = '%d'\n", in->insertfl);
+   printf("in.dontdescend = '%d'\n", in->dontdescend);
    printf("\n");
    printf("retval         = %d\n", retval);
    printf("\n");
@@ -192,6 +198,8 @@ int parse_cmd_line(int         argc,
    // <in> defaults to all-zeros.
    in.maxthreads = 1;         // don't default to zero threads
    in.delim[0]   = '|';
+   in.dontdescend = 0;        // default to descend
+   in.buildinindir = 0;       // default to not building db in input dir
 
    int show   = 0;
    int retval = 0;
@@ -295,6 +303,17 @@ int parse_cmd_line(int         argc,
          in.andor = 1;
          break;
 
+      case 'r':               // insert files and links into db for bfwreaddirplus2db 
+         in.insertfl = 1;
+         break;
+
+      case 'R':               // insert dirs into db for bfwreaddirplus2db 
+         in.insertdir = 1;
+         break;
+
+      case 'D':               // default is 0
+         in.dontdescend = 1;
+         break;
 
       case '?':
          // getopt returns '?' when there is a problem.  In this case it

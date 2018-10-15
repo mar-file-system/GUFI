@@ -163,12 +163,33 @@ The build seems to be working on OSX (10.12.6), and Linux (CentOS 7).
 
 
 The following are detailed descriptions of the individual tools:
+bfwreaddirplus2db - breadth first walk of input tree to list the tree, or create an output db of readdirplus
 
 ...........................................................................
 
+Usage: bfwreaddirplus2db [options] input_dir outdb
+options:
+  -h              help
+  -H              show assigned input values (debugging)
+  -p              print files as they are encountered
+  -n <threads>    number of threads
+  -P              print directories as they are encountered
+  -O <outputdb>   write an output db
+
+Flow:
+input directory is put on a queue
+threads are started
+loop assigning work (directories) from queue to threads
+each thread lists the directory readdirplus
+  if directory put it on the queue print to screen write to outdb
+  if link or file print it to screen write to outdb
+  close directory
+end
+close outdb if needed
+
+...........................................................................
 
 bfwi - breadth first walk of input tree to list the tree, or create a GUFI index-tree
-
 
 Usage: bfwi [options] input_dir to_dir
 options:
@@ -181,6 +202,7 @@ options:
   -P              print directories as they are encountered
   -b              build GUFI index tree
   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+  -D              dont descend in the tree (make a single gufi db at one level of the tree
 
 future options:
   -U              create by user summary per directory

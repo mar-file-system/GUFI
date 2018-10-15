@@ -96,7 +96,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 
 void sub_help() {
-   printf("DB_path           path to dir containinng db.db.*\n");
+   printf("DB_path           path to dir containinng %s.*\n",DBNAME);
    printf("SQL               arbitrary SQL on DB\n");
    printf("\n");
 }
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
      }
 
      // assure we have access to the DB
-     sprintf(dbname,"%s/db.db",name);
+     sprintf(dbname,"%s/%s",name,DBNAME);
      rc=lstat(dbname,&statuso);
      if (rc != 0) {
         printf("ERROR:  db %s: %s\n", dbname, strerror(errno));

@@ -84,6 +84,12 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 
+#include "bf.h"
+
+char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
+            "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64);";
+
+char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode);";
 
 char *esql = // "DROP TABLE IF EXISTS entries;"
             "CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
@@ -125,11 +131,11 @@ sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
   char *zname;
 
   zname = sqlite3_mprintf("%q",name);
-  sprintf(sqlat,"ATTACH \'%s/db.db\' as %s",zname,dbn);
+  sprintf(sqlat,"ATTACH \'%s/%s\' as %s",zname,DBNAME,dbn);
   sqlite3_free(zname);
   rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
   if (rc != SQLITE_OK) {
-      fprintf(stderr, "Cannot attach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
+      fprintf(stderr, "Cannot attach database: %s/%s %s\n", name,DBNAME, sqlite3_errmsg(db));
       sqlite3_close(db);
       return NULL;
   }
@@ -147,7 +153,7 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
   sprintf(sqldet,"DETACH %s",dbn);
   rc=sqlite3_exec(db, sqldet,0, 0, &err_msg);
   if (rc != SQLITE_OK) {
-      fprintf(stderr, "Cannot detach database: %s/db.db %s\n", name, sqlite3_errmsg(db));
+      fprintf(stderr, "Cannot detach database: %s/%s %s\n", name,DBNAME, sqlite3_errmsg(db));
       sqlite3_close(db);
       return NULL;
   }
@@ -186,14 +192,16 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     int rc;
     char deb[MAXPATH];
 
-    sprintf(dbn,"%s/db.db", name);
+    sprintf(dbn,"%s/%s", name,DBNAME);
     if (createtables) {
         if (openwhat != 3)
-          sprintf(dbn,"%s/%s/db.db", in.nameto,name);
+          sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
+       if (openwhat==7)
+          sprintf(dbn,"%s", name);
     }
     else {
        if (openwhat == 6)
-          sprintf(dbn,"%s/%s/db.db", in.nameto,name);
+          sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
        if (openwhat==5)
           sprintf(dbn,"%s", name);
     }
@@ -242,6 +250,9 @@ exit(9);
           SQLITE3_EXEC(db, vssqluser, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vssqlgroup, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vesql, 0, 0, &err_msg);
+       }
+       if (openwhat==7) {
+          SQLITE3_EXEC(db, rsql, 0, 0, &err_msg);
        }
     }
 
@@ -515,6 +526,33 @@ sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
     return reso;
 }
 
+sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res)
+{
+    char *err_msg = 0;
+    // char sqlstmt[MAXSQL];
+    int rc;
+    const char *tail;
+    int error;
+    sqlite3_stmt *reso;
+
+    /*******  this is a bit dangerous, as all the records need to be written
+              to the db, plus some time for the OS to write to disk ****/
+    error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg);
+    if (error != SQLITE_OK) {
+          fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",
+                  error,sqlite3_errmsg(db));
+    }
+
+    // WARNING: passing length-arg that is longer than SQL text
+    error= sqlite3_prepare_v2(db, rsqli, MAXSQL, &reso, &tail);
+    if (error != SQLITE_OK) {
+          fprintf(stderr, "SQL error on insertdbprepr: error %d %s err %s\n",
+                  error,rsqli,sqlite3_errmsg(db));
+          return NULL;
+    }
+    return reso;
+}
+
 int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
 {
     char *err_msg = 0;
@@ -596,6 +634,37 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
     error = sqlite3_step(res);
     if (error != SQLITE_ROW) {
           //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
+          //return 0;
+    }
+    sqlite3_clear_bindings(res);
+    sqlite3_reset(res); 
+
+    return 0;
+}
+
+int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
+{
+    char *err_msg = 0;
+    char sqlstmt[MAXSQL];
+    int rc;
+    int error;
+    char *zname;
+    char *ztype;
+    int i;
+
+    zname = sqlite3_mprintf("%q",pwork->name);
+    ztype = sqlite3_mprintf("%q",pwork->type);
+    error=sqlite3_bind_text(res,1,zname,-1,SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) fprintf(stderr, "SQL insertdbgor bind name: %s error %d err %s\n",pwork->name,error,sqlite3_errmsg(db));
+    sqlite3_bind_text(res,2,ztype,-1,SQLITE_TRANSIENT);
+    sqlite3_bind_int64(res,3,pwork->statuso.st_ino);
+    sqlite3_bind_int64(res,4,pwork->pinode);
+
+    sqlite3_free(zname);
+    sqlite3_free(ztype);
+    error = sqlite3_step(res);
+    if (error != SQLITE_ROW) {
+          //fprintf(stderr, "SQL error on insertdbgor: error %d err %s\n",error,sqlite3_errmsg(db));
           //return 0;
     }
     sqlite3_clear_bindings(res);

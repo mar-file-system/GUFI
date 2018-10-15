@@ -87,7 +87,7 @@ OF SUCH DAMAGE.
 #define MAXSQL 2048 
 #define MAXRECS 100000
 #define MAXPTHREAD 100
-
+#define DBNAME "db.db"
 
 struct globalpathstate {
   char gpath[MAXPATH];
@@ -164,6 +164,10 @@ struct input {
    char outdbn[MAXPATH];
    char sqlinit[MAXSQL];
    char sqlfin[MAXSQL];
+   int  insertdir;           // added for bfwreaddirplus2db
+   int  insertfl;            // added for bfwreaddirplus2db
+   int  dontdescend;         // added to allow single level directory operations
+   int  buildinindir;        // added to notice when writing index dbs into the input dir
 };
 extern struct input in;
 

@@ -98,3 +98,26 @@ local values before main can reuse <mywork>.
 IMPROVEMENT: just pass the queue-element to the thread.  Then main doesn't
 have to wait, and we reduce the amount of copying.  Thread must be sure to
 free the queue-elt.
+-----------------------------------------------------------------------
+building bfwreaddirplus2db
+general readdirplus program that reads a dir and writes an sqlite db with
+path, type, inode, pinode
+this can be used to capture a tree (not stat info) to help detect changes
+from period to period about what is in a tree
+added insertfl and insertdirs into the input options so in bfwreaddirplus2db
+you can tell it to write dirs only or files/links only records into the output db
+this is likely to be useful for incrementals where you may not care about files or links
+------------------------------------------------------------------------
+made db.db (the name of the gufi databases in the tree) a define in bf.h
+------------------------------------------------------------------------
+added a dontdescend in the input parms so that bfwi can be told to just make a gufi db
+out of one level and added that to bfwi so it will only do one level of the directory
+changed bfwi so that -D will just do one level gufi db
+------------------------------------------------------------------------
+added input variable buildinindir  to notice when we are building the gufi dbs directly into the input dir
+some people will want to do this and so we wanted to notice that this was being asked for and save
+some work by not recreating the input directory structure into the output since they are they same,
+so bfwi was changed to add a test for this in validate input routine and set this flag if 
+you have asked for this and dupdir is skipped
+------------------------------------------------------------------------
+

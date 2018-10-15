@@ -137,7 +137,9 @@ static void processdir(void * passv)
     }
 
     if (in.buildindex > 0) {
-       dupdir(passmywork);
+       if (in.buildinindir == 0) {
+         dupdir(passmywork);
+       }
        records=malloc(MAXRECS);
        bzero(records,MAXRECS);
        zeroit(&summary);
@@ -167,7 +169,9 @@ static void processdir(void * passv)
                 // this is how the parent gets passed on
                 qwork.pinode=passmywork->statuso.st_ino;
                 // this pushes the dir onto queue - pushdir does locking around queue update
-                pushdir(&qwork);
+                if (in.dontdescend < 1) {
+                  pushdir(&qwork);
+                }
         } else if (S_ISLNK(qwork.statuso.st_mode) ) {
             // its a link so get the linkname
             bzero(lpatho,sizeof(lpatho));
@@ -214,7 +218,7 @@ static void processdir(void * passv)
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
-      sprintf(dbpath, "%s/%s/db.db", in.nameto,passmywork->name);
+      sprintf(dbpath, "%s/%s/DBNAME", in.nameto,passmywork->name);
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
@@ -296,6 +300,10 @@ int processfin() {
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
 int validate_inputs() {
+   char expathin[MAXPATH];
+   char expathout[MAXPATH];
+   char expathtst[MAXPATH];
+
    if (in.buildindex && !in.nameto[0]) {
       fprintf(stderr, "Building an index '-b' requires a destination dir '-t'.\n");
       return -1;
@@ -303,6 +311,16 @@ int validate_inputs() {
    if (in.nameto[0] && ! in.buildindex) {
       fprintf(stderr, "Destination dir '-t' found.  Assuming implicit '-b'.\n");
       in.buildindex = 1;        // you're welcome
+   }
+
+   sprintf(expathtst,"%s/%s",in.nameto,in.name);
+   realpath(expathtst,expathout);
+   //printf("expathtst: %s expathout %s\n",expathtst,expathout);   
+   realpath(in.name,expathin);
+   //printf("in.name: %s expathin %s\n",in.name,expathin); 
+   if (!strcmp(expathin,expathout)) {
+     fprintf(stderr,"You are putting the index dbs in input directory\n");
+     in.buildinindir = 1;
    }
 
    // not errors, but you might want to know ...
@@ -330,7 +348,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:D", 1, "input_dir");
      if (in.helped)
         sub_help();
      if (idx < 0)

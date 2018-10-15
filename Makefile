@@ -1,5 +1,5 @@
 DFW       = dfw
-BFW       = bfwi bfti bfq
+BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 
 # TOOLS = querydb querydbn make_testdirs dbdump 

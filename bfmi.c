@@ -263,7 +263,7 @@ static void processdir(void * passv)
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
-      sprintf(dbpath, "%s/%s/db.db", in.nameto,passmywork->name);
+      sprintf(dbpath, "%s/%s/DBNAME", in.nameto,passmywork->name);
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
