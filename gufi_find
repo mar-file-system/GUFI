@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# gufi_find
+#
+# This script somewhat replicates
+# GNU find and ls using GUFI's bfq
+#
+
+function usage() {
+    echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] GUFI_tree ..."
+    echo
+    echo "  options"
+    echo "    -h | --help        print help message"
+    echo "    --root             top-most directory to search from (default: /)"
+    echo
+    echo "  SELECT columns"
+    echo "    --type"
+    echo "    --[amc]time"
+    echo "    --size"
+    echo "    --uid | --user"
+    echo
+    echo "  WHERE conditions"
+    echo "    --name             filename pattern"
+    # echo "    --type             f or d"
+    echo "    --[amc]time_before seconds since epoch"
+    echo "    --[amc]time_after  seconds since epoch"
+    echo "    --smaller_than     bytes"
+    echo "    --larger_than      bytes"
+    echo "    --uid | --user     uid or user name"
+    echo
+    echo "  GUFI_tree            find GUFI index-tree here"
+}
+
+# default treating options as SELECT options
+mode="SELECT"
+
+# default top-most directory is root
+root="/"
+
+# array of SELECT columns to print
+# name is guaranteed to be one of the columns
+SELECT=("name")
+
+# array of WHERE conditions to combine
+WHERE=()
+
+# Parse command line arguments
+# https://stackoverflow.com/a/14203146
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    --root)
+        root="$2"
+        shift
+        shift
+        continue
+        ;;
+    SELECT|WHERE)
+        mode="$1"
+        shift
+        continue
+        ;;
+esac
+
+case $mode in
+    # SELECT options
+    SELECT)
+        case $key in
+            --[amc]time|--type|--size|--uid)
+                SELECT+=("${key#--}")
+                shift
+                ;;
+            --user)
+                SELECT+=("uid")
+                shift
+                ;;
+            # all other options are considered GUFI tree directories
+            *)
+                POSITIONAL+=("$1") # save it in an array for later
+                shift
+                ;;
+        esac
+        continue
+        ;;
+
+    # WHERE options
+    WHERE)
+        case $key in
+            --name)
+                WHERE+=("name REGEXP '$2'")
+                shift
+                shift
+                ;;
+            # # bfq needs some changing to make type work properly
+            # --type)
+            #    WHERE+=("type REGEXP '$2'")
+            #    shift
+            #    shift
+            #    ;;
+            --[amc]time_before)
+                time_type="${key#--}"
+                time_type="${time_type%_before}"
+                WHERE+=("${time_type} < $2")
+                shift
+                shift
+                ;;
+            --[amc]time_after)
+                time_type="${key#--}"
+                time_type="${time_type%_after}"
+                WHERE+=("${time_type} > $2")
+                shift
+                shift
+                ;;
+            --smaller_than)
+                WHERE+=("size < $2")
+                shift
+                shift
+                ;;
+            --larger_than)
+                WHERE+=("size > $2")
+                shift
+                shift
+                ;;
+            --uid|--user)
+                uid=$(id -u $2)
+                rc=$?
+                if [[ "$rc" -ne "0" ]]
+                then
+                    exit $rc
+                fi
+                WHERE+=("uid == $uid")
+                shift
+                shift
+                ;;
+            # all other options are considered GUFI tree directories
+            *)
+                POSITIONAL+=("$1") # save it in an array for later
+                shift
+                ;;
+        esac
+        continue
+        ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+# make sure at least one GUFI tree is provided
+if [[ "${#POSITIONAL[@]}" -lt "1" ]];
+then
+    usage
+    exit 1
+fi
+
+# combine SELECT columns
+columns="${SELECT[0]}"
+for column in "${SELECT[@]:1}"
+do
+    columns="${columns}, ${column}"
+done
+
+# only combine WHERE conditions if there are any
+conditions=""
+if [[ "${#WHERE[@]}" -gt "0" ]]
+then
+    # combine conditions
+    conditions="WHERE (${WHERE[0]})"
+    for condition in "${WHERE[@]:1}"
+    do
+        conditions="${conditions} AND (${condition})"
+    done
+fi
+
+# run queries
+for pattern in "${POSITIONAL[@]}"
+do
+    # search for patterh starting from root
+    for path in $(find "${root}" -path "${pattern}" -type d 2>/dev/null)
+    do
+        $(dirname ${BASH_SOURCE})/bfq -p -P -d " " -E "SELECT ${columns} FROM entries ${conditions};" "${path}" &
+        # $(dirname ${BASH_SOURCE})/querydb -V "${path}" "SELECT ${columns} FROM entries ${conditions};" &
+    done
+done
+
+wait
