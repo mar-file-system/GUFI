@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -109,9 +109,9 @@ static void processdir(void * passv)
     DIR *dir;
     struct dirent *entry;
     int mytid;
-    char *records; 
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    char *records;
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     sqlite3 *db;
     sqlite3 *db1;
@@ -188,7 +188,7 @@ static void processdir(void * passv)
            }
         } while ((entry = (readdir(dir))));
 
-        // run query on summary, print it if printing is needed, if returns none 
+        // run query on summary, print it if printing is needed, if returns none
         // and we are doing AND, skip querying the entries db
         // bzero(endname,sizeof(endname));
         shortpath(passmywork->name,shortname,endname);
@@ -242,7 +242,7 @@ static void processdir(void * passv)
 
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
      int i;
      char outfn[MAXPATH];

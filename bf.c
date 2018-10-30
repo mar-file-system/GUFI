@@ -102,7 +102,7 @@ void print_help(const char* prog_name,
    const char* opt = getopt_str;
    if (! opt)
       return;
-   
+
    printf("Usage: %s [options] %s\n", prog_name, positional_args_help_str);
    printf("options:\n");
 
@@ -184,7 +184,7 @@ void show_input(struct input* in, int retval) {
 // return: -1 for error.  Otherwise, we return the index of the first
 //    positional argument in <argv>.  This allows the caller to do a custom
 //    parse of the remaining arguments as required (positional) args.
-//   
+//
 int parse_cmd_line(int         argc,
                    char*       argv[],
                    const char* getopt_str,
@@ -303,11 +303,11 @@ int parse_cmd_line(int         argc,
          in.andor = 1;
          break;
 
-      case 'r':               // insert files and links into db for bfwreaddirplus2db 
+      case 'r':               // insert files and links into db for bfwreaddirplus2db
          in.insertfl = 1;
          break;
 
-      case 'R':               // insert dirs into db for bfwreaddirplus2db 
+      case 'R':               // insert dirs into db for bfwreaddirplus2db
          in.insertdir = 1;
          break;
 

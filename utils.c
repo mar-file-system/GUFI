@@ -79,6 +79,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <ctype.h>              /* isprint() */
 #include <errno.h>
+#include <limits.h>
 
 #include "utils.h"
 #include "structq.h"
@@ -131,15 +132,15 @@ int printits(struct work *pwork,int ptid) {
   out = stdout;
   if (in.outfile > 0)
      out = gts.outfd[ptid];
- 
+
   if (in.dodelim == 0) {
-    sprintf(ffielddelim," "); 
+    sprintf(ffielddelim," ");
   }
   if (in.dodelim == 1) {
-    sprintf(ffielddelim,"%s",fielddelim); 
+    sprintf(ffielddelim,"%s",fielddelim);
   }
   if (in.dodelim == 2) {
-    sprintf(ffielddelim,"%s",in.delim); 
+    sprintf(ffielddelim,"%s",in.delim);
   }
 
   fprintf(out,"%s%s",pwork->name,ffielddelim);
@@ -197,14 +198,14 @@ int pullxattrs( const char *name, char *bufx) {
        while (buflen > 0) {
          bzero(bufv,sizeof(bufv));
 
-         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv)); 
+         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv));
 
          keylen=strlen(key) + 1;
          //printf("key: %s value: %s len %zd keylen %d\n",key,bufv,bufvlen,keylen);
          sprintf(bufxp,"%s%s",key,xattrdelim); bufxp=bufxp+keylen;
          ptest = *(bufv);
          if (isprint(ptest)) {
-           sprintf(bufxp,"%s%s",bufv,xattrdelim); 
+           sprintf(bufxp,"%s%s",bufv,xattrdelim);
            bufxp=bufxp+bufvlen+1;
          } else {
            bufxp=bufxp+1;
@@ -218,16 +219,16 @@ int pullxattrs( const char *name, char *bufx) {
     return xattrs;
 }
 
-int zeroit(struct sum *summary) 
+int zeroit(struct sum *summary)
 {
   summary->totfiles=0;
   summary->totlinks=0;
-  summary->minuid=0;
-  summary->maxuid=0;
-  summary->mingid=0;
-  summary->maxgid=0;
-  summary->minsize=0;
-  summary->maxsize=0;
+  summary->minuid=LLONG_MAX;
+  summary->maxuid=LLONG_MIN;
+  summary->mingid=LLONG_MAX;
+  summary->maxgid=LLONG_MIN;
+  summary->minsize=LLONG_MAX;
+  summary->maxsize=LLONG_MIN;
   summary->totltk=0;
   summary->totmtk=0;
   summary->totltm=0;
@@ -235,22 +236,22 @@ int zeroit(struct sum *summary)
   summary->totmtg=0;
   summary->totmtt=0;
   summary->totsize=0;
-  summary->minctime=0;
-  summary->maxctime=0;
-  summary->minmtime=0;
-  summary->maxmtime=0;
-  summary->minatime=0;
-  summary->maxatime=0;
-  summary->minblocks=0;
-  summary->maxblocks=0;
+  summary->minctime=LLONG_MAX;
+  summary->maxctime=LLONG_MIN;
+  summary->minmtime=LLONG_MAX;
+  summary->maxmtime=LLONG_MIN;
+  summary->minatime=LLONG_MAX;
+  summary->maxatime=LLONG_MIN;
+  summary->minblocks=LLONG_MAX;
+  summary->maxblocks=LLONG_MIN;
   summary->setit=0;
   summary->totxattr=0;
   summary->totsubdirs=0;
-  summary->maxsubdirfiles=0;
-  summary->maxsubdirlinks=0;
-  summary->maxsubdirsize=0;
-  summary->mincrtime=0;
-  summary->maxcrtime=0;
+  summary->maxsubdirfiles=LLONG_MIN;
+  summary->maxsubdirlinks=LLONG_MIN;
+  summary->maxsubdirsize=LLONG_MIN;
+  summary->mincrtime=LLONG_MAX;
+  summary->maxcrtime=LLONG_MIN;
   summary->minossint1=0;
   summary->maxossint1=0;
   summary->totossint1=0;
@@ -360,7 +361,7 @@ int tsumit (struct sum *sumin,struct sum *smout) {
   /* only set these mins and maxes if there are files in the directory
      otherwise mins are all zero */
   if (sumin->totfiles > 0) {
-    if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid; 
+    if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid;
     if (sumin->maxuid > smout->maxuid) smout->maxuid=sumin->maxuid;
     if (sumin->mingid < smout->mingid) smout->mingid=sumin->mingid;
     if (sumin->maxgid > smout->maxgid) smout->maxgid=sumin->maxgid;
@@ -406,7 +407,7 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
-// 
+//
 int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
@@ -434,10 +435,10 @@ int dupdir(struct work *pwork)
 {
     char topath[MAXPATH];
     int rc;
-    
+
     sprintf(topath,"%s/%s",in.nameto,pwork->name);
     //printf("mkdir %s\n",topath);
-    // the writer must be able to create the index files into this directory so or in S_IWRITE 
+    // the writer must be able to create the index files into this directory so or in S_IWRITE
     //rc = mkdir(topath,pwork->statuso.st_mode | S_IWRITE);
     rc = mkdir(topath,pwork->statuso.st_mode | S_IRWXU);
     if (rc != 0) {
@@ -453,30 +454,30 @@ int dupdir(struct work *pwork)
     }
     chown(topath, pwork->statuso.st_uid,pwork->statuso.st_gid);
     // we dont need to set xattrs/time on the gufi directory those are in the db
-    // the gufi directory structure is there only to walk, not to provide 
+    // the gufi directory structure is there only to walk, not to provide
     // information, the information is in the db
 
     return 0;
 }
 
 int incrthread() {
-  pthread_mutex_lock(&running_mutex); 
-  runningthreads++; 
+  pthread_mutex_lock(&running_mutex);
+  runningthreads++;
   pthread_mutex_unlock(&running_mutex);
   return 0;
 }
 
 int decrthread() {
-  pthread_mutex_lock(&running_mutex); 
-  runningthreads--; 
+  pthread_mutex_lock(&running_mutex);
+  runningthreads--;
   pthread_mutex_unlock(&running_mutex);
   return 0;
 }
 
 int getqent() {
   int mylqent;
-  pthread_mutex_lock(&queue_mutex); 
-  mylqent=addrqent(); 
+  pthread_mutex_lock(&queue_mutex);
+  mylqent=addrqent();
   pthread_mutex_unlock(&queue_mutex);
   return mylqent;
 }
@@ -555,7 +556,7 @@ int processdirs(DirFunc dir_fn) {
             pthread_mutex_lock(&queue_mutex);
             workp=addrcurrents();
             incrthread();
-            
+
             // this takes this entry off the queue but does NOT free the
             // buffer, that has to be done in dir_fn(), something like:
             // "free(((struct work*)workp)->freeme)"
