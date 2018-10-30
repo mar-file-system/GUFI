@@ -257,7 +257,7 @@ exit(9);
     }
 
     sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL);
-    sqlite3_load_extension(db, "/home/jlee/sqlite3-pcre/pcre.so", NULL, NULL);
+    sqlite3_load_extension(db, "sqlite3-pcre/pcre.so", NULL, NULL);
 
     //printf("returning from opendb ok\n");
     return db;

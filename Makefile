@@ -2,11 +2,11 @@ DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 
-# TOOLS = querydb querydbn make_testdirs dbdump 
-TOOLS = querydb querydbn make_testdirs
+# TOOLS = querydb querydbn make_testdirs dbdump
+TOOLS = querydb querydbn make_testdirs sqlite3-pcre/pcre.so
 
 # # TBD ...
-# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse 
+# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse
 
 all: bfw tools
 
@@ -15,7 +15,8 @@ mysql: $(BFW_MYSQL)
 dfw:   $(DFW)
 tools: $(TOOLS)
 
-
+sqlite3-pcre/pcre.so:
+	$(MAKE) -C sqlite3-pcre
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
@@ -89,7 +90,7 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
 # recursive make of the '%' part
-# recursive make will catch the ifneq ($(MYSQL),) ... above 
+# recursive make will catch the ifneq ($(MYSQL),) ... above
 %.mysql:
 	$(MAKE) -C . $* MYSQL=1
 
