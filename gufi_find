@@ -9,8 +9,12 @@ function usage() {
     echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] GUFI_tree ..."
     echo
     echo "  options"
-    echo "    -h | --help        print help message"
-    echo "    --root             top-most directory to search from (default: /)"
+    echo "    -h | --help          print help message"
+    echo "    --root               top-most directory to search from (default: /)"
+    echo "    --num_results n      first n results"
+    echo "    --largest            top n largest files"
+    echo "    --newest             top n newest files"
+    # echo "    --mostfiles          top n users"
     echo
     echo "  SELECT columns"
     echo "    --type"
@@ -19,15 +23,15 @@ function usage() {
     echo "    --uid | --user"
     echo
     echo "  WHERE conditions"
-    echo "    --name             filename pattern"
-    # echo "    --type             f or d"
-    echo "    --[amc]time_before seconds since epoch"
-    echo "    --[amc]time_after  seconds since epoch"
-    echo "    --smaller_than     bytes"
-    echo "    --larger_than      bytes"
-    echo "    --uid | --user     uid or user name"
+    echo "    --name n             filename pattern"
+    # echo "    --type t             f or d"
+    echo "    --[amc]time_before t seconds since epoch"
+    echo "    --[amc]time_after t  seconds since epoch"
+    echo "    --smaller_than b     bytes"
+    echo "    --larger_than b      bytes"
+    echo "    --uid | --user u     uid or user name"
     echo
-    echo "  GUFI_tree            find GUFI index-tree here"
+    echo "  GUFI_tree              directory containing GUFI index-tree database"
 }
 
 # default treating options as SELECT options
@@ -40,8 +44,15 @@ root="/"
 # name is guaranteed to be one of the columns
 SELECT=("name")
 
+# limit the number of results per database
+# empty results in no limit
+LIMIT=""
+
 # array of WHERE conditions to combine
 WHERE=()
+
+# array of ORDER BY columns
+ORDER=()
 
 # Parse command line arguments
 # https://stackoverflow.com/a/14203146
@@ -61,6 +72,26 @@ case $key in
         shift
         continue
         ;;
+    --num_results)
+        LIMIT="$2"
+        shift
+        shift
+        continue
+        ;;
+    --largest)
+        ORDER+=("size DESC")
+        shift
+        continue
+        ;;
+    --newest)
+        ORDER+=("ctime DESC")
+        shift
+        continue
+        ;;
+    # --mostfiles)
+    #     shift
+    #     continue
+    #     ;;
     SELECT|WHERE)
         mode="$1"
         shift
@@ -176,14 +207,37 @@ then
     done
 fi
 
+# combine output ordering
+ordering=""
+if [[ "${#ORDER[@]}" -gt "0" ]]
+then
+    # combine orderings
+    ordering="ORDER BY ${ORDER[0]}"
+    for order in "${ORDER[@]:1}"
+    do
+        ordering="${ordering}, ${order}"
+    done
+fi
+
+# limit the number of results
+limit=""
+if [[ ! -z "${LIMIT}" ]]
+then
+    limit="LIMIT ${LIMIT}"
+fi
+
+query="SELECT ${columns} FROM entries ${conditions} ${ordering} ${limit};"
+
+echo "${query}"
+
 # run queries
 for pattern in "${POSITIONAL[@]}"
 do
     # search for patterh starting from root
-    for path in $(find "${root}" -path "${pattern}" -type d 2>/dev/null)
+    for path in $(find "${root}" "${pattern}" -path "${pattern}" -type d 2>/dev/null)
     do
-        $(dirname ${BASH_SOURCE})/bfq -p -P -d " " -E "SELECT ${columns} FROM entries ${conditions};" "${path}" &
-        # $(dirname ${BASH_SOURCE})/querydb -V "${path}" "SELECT ${columns} FROM entries ${conditions};" &
+        $(dirname ${BASH_SOURCE})/bfq -p -P -d " " -E "${query}" "${path}" &
+        # $(dirname ${BASH_SOURCE})/querydb -V "${path}" "${query}" &
     done
 done
 
