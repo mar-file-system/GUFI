@@ -5,16 +5,25 @@
 # GNU find and ls using GUFI's bfq
 #
 
+# default top-most directory is the current directory
+root="$(pwd)"
+
 function usage() {
     echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] GUFI_tree ..."
     echo
     echo "  options"
     echo "    -h | --help          print help message"
-    echo "    --root               top-most directory to search from (default: /)"
+    echo "    --root               top-most directory to search from (default: ${root})"
     echo "    --num_results n      first n results"
+    echo "    --smallest           top n smallest files"
     echo "    --largest            top n largest files"
     echo "    --newest             top n newest files"
-    # echo "    --mostfiles          top n users"
+    echo
+    echo "    There should not be more one of these in a single call to $(basename $0)"
+    echo "      --least-space-used top n users of space"
+    echo "      --most-space-used  top n users of space"
+    echo "      --least-files      top n users with most files"
+    echo "      --most-files       top n users with most files"
     echo
     echo "  SELECT columns"
     echo "    --type"
@@ -34,15 +43,13 @@ function usage() {
     echo "  GUFI_tree              directory containing GUFI index-tree database"
 }
 
+at_most_one=0
+
 # default treating options as SELECT options
 mode="SELECT"
 
-# default top-most directory is root
-root="/"
-
 # array of SELECT columns to print
-# name is guaranteed to be one of the columns
-SELECT=("name")
+SELECT=()
 
 # limit the number of results per database
 # empty results in no limit
@@ -53,6 +60,9 @@ WHERE=()
 
 # array of ORDER BY columns
 ORDER=()
+
+# array of GROUP BY columns
+GROUP=()
 
 # Parse command line arguments
 # https://stackoverflow.com/a/14203146
@@ -78,20 +88,53 @@ case $key in
         shift
         continue
         ;;
+    --smallest)
+        ORDER=("${ORDER[@]}" "size ASC")
+        shift
+        continue
+        ;;
     --largest)
-        ORDER+=("size DESC")
+        ORDER=("${ORDER[@]}" "size DESC")
         shift
         continue
         ;;
     --newest)
-        ORDER+=("ctime DESC")
+        ORDER=("${ORDER[@]}" "ctime DESC")
         shift
         continue
         ;;
-    # --mostfiles)
-    #     shift
-    #     continue
-    #     ;;
+    --least-space-used)
+        SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
+        ORDER=("${ORDER[@]}" "total ASC")
+        GROUP=("${WHERE[@]}" "uid")
+        complex=$((complex+1))
+        shift
+        continue
+        ;;
+    --most-space-used)
+        SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
+        ORDER=("${ORDER[@]}" "total DESC")
+        GROUP=("${WHERE[@]}" "uid")
+        at_most_one=$((at_most_one+1))
+        shift
+        continue
+        ;;
+    --least-files)
+        SELECT=("${SELECT[@]}" "uid" "count(*) as total")
+        ORDER=("${ORDER[@]}" "total ASC")
+        GROUP=("${WHERE[@]}" "uid")
+        at_most_one=$((at_most_one+1))
+        shift
+        continue
+        ;;
+    --most-files)
+        SELECT=("${SELECT[@]}" "uid" "count(*) as total")
+        ORDER=("${ORDER[@]}" "total DESC")
+        GROUP=("${WHERE[@]}" "uid")
+        at_most_one=$((at_most_one+1))
+        shift
+        continue
+        ;;
     SELECT|WHERE)
         mode="$1"
         shift
@@ -103,17 +146,17 @@ case $mode in
     # SELECT options
     SELECT)
         case $key in
-            --[amc]time|--type|--size|--uid)
-                SELECT+=("${key#--}")
+            --name|--[amc]time|--type|--size|--uid)
+                SELECT=("${SELECT[@]}" "${key#--}")
                 shift
                 ;;
             --user)
-                SELECT+=("uid")
+                SELECT=("${SELECT[@]}" "uid")
                 shift
                 ;;
             # all other options are considered GUFI tree directories
             *)
-                POSITIONAL+=("$1") # save it in an array for later
+                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
                 shift
                 ;;
         esac
@@ -124,37 +167,37 @@ case $mode in
     WHERE)
         case $key in
             --name)
-                WHERE+=("name REGEXP '$2'")
+                WHERE=("${WHERE[@]}" "name REGEXP '$2'")
                 shift
                 shift
                 ;;
             # # bfq needs some changing to make type work properly
             # --type)
-            #    WHERE+=("type REGEXP '$2'")
+            #    WHERE=("${WHERE[@]}" "type REGEXP '$2'")
             #    shift
             #    shift
             #    ;;
             --[amc]time_before)
                 time_type="${key#--}"
                 time_type="${time_type%_before}"
-                WHERE+=("${time_type} < $2")
+                WHERE=("${WHERE[@]}" "${time_type} < $2")
                 shift
                 shift
                 ;;
             --[amc]time_after)
                 time_type="${key#--}"
                 time_type="${time_type%_after}"
-                WHERE+=("${time_type} > $2")
+                WHERE=("${WHERE[@]}" "${time_type} > $2")
                 shift
                 shift
                 ;;
             --smaller_than)
-                WHERE+=("size < $2")
+                WHERE=("${WHERE[@]}" "size < $2")
                 shift
                 shift
                 ;;
             --larger_than)
-                WHERE+=("size > $2")
+                WHERE=("${WHERE[@]}" "size > $2")
                 shift
                 shift
                 ;;
@@ -165,13 +208,13 @@ case $mode in
                 then
                     exit $rc
                 fi
-                WHERE+=("uid == $uid")
+                WHERE=("${WHERE[@]}" "uid == $uid")
                 shift
                 shift
                 ;;
             # all other options are considered GUFI tree directories
             *)
-                POSITIONAL+=("$1") # save it in an array for later
+                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
                 shift
                 ;;
         esac
@@ -181,19 +224,25 @@ esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
-# make sure at least one GUFI tree is provided
-if [[ "${#POSITIONAL[@]}" -lt "1" ]];
+# make sure at least one GUFI tree is provided and
+# at most 1 of the independent options is selected
+if [[ "${#POSITIONAL[@]}" -lt "1" ]] || [[ "${at_most_one}" -gt "1" ]];
 then
     usage
     exit 1
 fi
 
 # combine SELECT columns
-columns="${SELECT[0]}"
-for column in "${SELECT[@]:1}"
-do
-    columns="${columns}, ${column}"
-done
+columns=""
+if [[ "${#SELECT[@]}" -gt "0" ]]
+then
+    #combine columns
+    columns="${SELECT[0]}"
+    for column in "${SELECT[@]:1}"
+    do
+        columns="${columns}, ${column}"
+    done
+fi
 
 # only combine WHERE conditions if there are any
 conditions=""
@@ -204,6 +253,18 @@ then
     for condition in "${WHERE[@]:1}"
     do
         conditions="${conditions} AND (${condition})"
+    done
+fi
+
+# combine output grouping
+grouping=""
+if [[ "${#GROUP[@]}" -gt "0" ]]
+then
+    # combine groupings
+    grouping="GROUP BY ${GROUP[0]}"
+    for group in "${GROUP[@]:1}"
+    do
+        grouping="${grouping}, ${group}"
     done
 fi
 
@@ -226,9 +287,9 @@ then
     limit="LIMIT ${LIMIT}"
 fi
 
-query="SELECT ${columns} FROM entries ${conditions} ${ordering} ${limit};"
+query="SELECT ${columns} FROM entries ${conditions} ${grouping} ${ordering} ${limit};"
 
-echo "${query}"
+echo ${query}
 
 # run queries
 for pattern in "${POSITIONAL[@]}"
