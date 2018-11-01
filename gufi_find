@@ -202,13 +202,14 @@ case $mode in
                 shift
                 ;;
             --uid|--user)
-                uid=$(id -u $2)
+                uid=$(id -u "$2" 2>/dev/null)
                 rc=$?
+                # ignore errors
                 if [[ "$rc" -ne "0" ]]
                 then
-                    exit $rc
+                    uid="$2"
                 fi
-                WHERE=("${WHERE[@]}" "uid == $uid")
+                WHERE=("${WHERE[@]}" "uid == '$uid'")
                 shift
                 shift
                 ;;
