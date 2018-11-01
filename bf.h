@@ -84,7 +84,7 @@ OF SUCH DAMAGE.
 
 #define MAXPATH 1024
 #define MAXXATTR 1024
-#define MAXSQL 2048 
+#define MAXSQL 2048
 #define MAXRECS 100000
 #define MAXPTHREAD 100
 #define DBNAME "db.db"
@@ -168,6 +168,7 @@ struct input {
    int  insertfl;            // added for bfwreaddirplus2db
    int  dontdescend;         // added to allow single level directory operations
    int  buildinindir;        // added to notice when writing index dbs into the input dir
+   size_t max_level;         // deepest level of recursion allowed
 };
 extern struct input in;
 
@@ -221,6 +222,7 @@ typedef enum {
 
 
 struct work {
+   size_t level;
    char          name[MAXPATH];
    char          type[2];
    char          nameto[MAXPATH];

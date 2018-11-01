@@ -134,6 +134,7 @@ void print_help(const char* prog_name,
       case 'r': printf("  -r              insert files and links into db (for bfwreaddirplus2db\n"); break;
       case 'R': printf("  -R              insert dires into db (for bfwreaddirplus2db\n"); break;
       case 'D': printf("  -D              dont descend the tree\n"); break;
+      case 'l': printf("  -l <max level>  deepest level to go down\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -168,6 +169,7 @@ void show_input(struct input* in, int retval) {
    printf("in.insertdir   = '%d'\n", in->insertdir);
    printf("in.insertfl    = '%d'\n", in->insertfl);
    printf("in.dontdescend = '%d'\n", in->dontdescend);
+   printf("in.max_level    = %d\n",   in->max_level);
    printf("\n");
    printf("retval         = %d\n", retval);
    printf("\n");
@@ -200,6 +202,7 @@ int parse_cmd_line(int         argc,
    in.delim[0]   = '|';
    in.dontdescend = 0;        // default to descend
    in.buildinindir = 0;       // default to not building db in input dir
+   in.max_level = -1;          // default to all the way down
 
    int show   = 0;
    int retval = 0;
@@ -313,6 +316,10 @@ int parse_cmd_line(int         argc,
 
       case 'D':               // default is 0
          in.dontdescend = 1;
+         break;
+
+      case 'l':
+          in.max_level = atoi(optarg); // need better string to int conversion
          break;
 
       case '?':

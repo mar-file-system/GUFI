@@ -118,6 +118,7 @@ static void processdir(void * passv)
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
+    const size_t next_level = passmywork->level + 1;
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     mytid=0;
@@ -166,28 +167,30 @@ static void processdir(void * passv)
     }
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
-
-        // go ahead and send the subdirs to the queue since we need to look
-        // further down the tree.  loop over dirents, if link push it on the
-        // queue, if file or link print it, fill up qwork structure for
-        // each
-        do {
-           if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-             continue;
-           bzero(&qwork,sizeof(qwork));
-           sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
-           qwork.pinode=passmywork->statuso.st_ino;
-           lstat(qwork.name, &qwork.statuso);
-           if (S_ISDIR(qwork.statuso.st_mode)) {
-              if (!access(qwork.name, R_OK | X_OK)) {
-                // this is how the parent gets passed on
+        // only push more levels in if needed
+        if (next_level <= in.max_level) {
+            // go ahead and send the subdirs to the queue since we need to look
+            // further down the tree.  loop over dirents, if link push it on the
+            // queue, if file or link print it, fill up qwork structure for
+            // each
+            do {
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                    continue;
+                bzero(&qwork,sizeof(qwork));
+                sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
                 qwork.pinode=passmywork->statuso.st_ino;
-                // this pushes the dir onto queue - pushdir does locking around queue update
-                pushdir(&qwork);
-              }
-           }
-        } while ((entry = (readdir(dir))));
-
+                qwork.level = next_level;
+                lstat(qwork.name, &qwork.statuso);
+                if (S_ISDIR(qwork.statuso.st_mode)) {
+                    if (!access(qwork.name, R_OK | X_OK)) {
+                        // this is how the parent gets passed on
+                        qwork.pinode=passmywork->statuso.st_ino;
+                        // this pushes the dir onto queue - pushdir does locking around queue update
+                        pushdir(&qwork);
+                    }
+                }
+            } while ((entry = (readdir(dir))));
+        }
         // run query on summary, print it if printing is needed, if returns none
         // and we are doing AND, skip querying the entries db
         // bzero(endname,sizeof(endname));
@@ -273,6 +276,8 @@ int processinit(void * myworkin) {
 
      //  ******  create and open output db's here
 
+     // set the first mywork to be the root node
+     mywork->level = 0;
 
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
@@ -340,7 +345,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:", 1, "GUFI_tree");
+     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:l:", 1, "GUFI_tree");
      if (in.helped)
         sub_help();
      if (idx < 0)
