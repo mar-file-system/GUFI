@@ -152,7 +152,6 @@ void show_input(struct input* in, int retval) {
    printf("in.writetsum   = %d\n",   in->writetsum);
    printf("in.buildindex  = %d\n",   in->buildindex);
    printf("in.maxthreads  = %d\n",   in->maxthreads);
-   printf("in.dodelim     = %d\n",   in->dodelim);
    printf("in.delim       = '%s'\n", in->delim);
    printf("in.name        = '%s'\n", in->name);
    printf("in.outfile     = %d\n",   in->outfile);
@@ -169,7 +168,7 @@ void show_input(struct input* in, int retval) {
    printf("in.insertdir   = '%d'\n", in->insertdir);
    printf("in.insertfl    = '%d'\n", in->insertfl);
    printf("in.dontdescend = '%d'\n", in->dontdescend);
-   printf("in.max_level    = %d\n",   in->max_level);
+   printf("in.max_level    = %d\n",  in->max_level);
    printf("\n");
    printf("retval         = %d\n", retval);
    printf("\n");
@@ -199,10 +198,10 @@ int parse_cmd_line(int         argc,
    //bzero(in.sqlent,sizeof(in.sqlent));
    // <in> defaults to all-zeros.
    in.maxthreads = 1;         // don't default to zero threads
-   in.delim[0]   = '|';
+   in.delim[0] = '|';
    in.dontdescend = 0;        // default to descend
    in.buildinindir = 0;       // default to not building db in input dir
-   in.max_level = -1;          // default to all the way down
+   in.max_level = -1;         // default to all the way down
 
    int show   = 0;
    int retval = 0;
@@ -255,11 +254,9 @@ int parse_cmd_line(int         argc,
 
       case 'd':
          if (optarg[0] == 'x') {
-            in.dodelim = 2;
             in.delim[0] = fielddelim[0];
          }
          else {
-            in.dodelim = 1;
             in.delim[0] = optarg[0];
          }
          break;

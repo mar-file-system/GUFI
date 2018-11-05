@@ -289,7 +289,6 @@ int rawquerydb(const char *name,
 
      int           i;
      FILE *        out;
-     char          ffielddelim[2];
 
      if (! sqlstmt) {
         fprintf(stderr, "SQL was empty\n");
@@ -299,15 +298,6 @@ int rawquerydb(const char *name,
      out = stdout;
      if (in.outfile > 0)
         out = gts.outfd[ptid];
-
-     if (in.dodelim == 0)
-       sprintf(ffielddelim,"|");
-
-     /* if (in.dodelim == 1) */
-     /*   sprintf(ffielddelim,"%s",fielddelim); */
-
-     /* if (in.dodelim == 2) */
-       sprintf(ffielddelim,"%s",in.delim);
 
      while (*sqlstmt) {
        // WARNING: passing length-arg that is longer than SQL text
@@ -351,10 +341,10 @@ int rawquerydb(const char *name,
               cnt=0;
               while (ncols > 0) {
                  if (cnt==0) {
-                    //if (printpath) fprintf(out,"path/%s",ffielddelim);
+                    //if (printpath) fprintf(out,"path/%s",in.delim);
                  }
-                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),ffielddelim);
-                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
+                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),in.delim);
+                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),in.delim);
                  ncols--;
                  cnt++;
               }
@@ -369,13 +359,13 @@ int rawquerydb(const char *name,
            cnt=0;
            while (ncols > 0) {
               if (cnt==0) {
-                 //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
+                 //if (printpath) fprintf(out,"%s/%s",shortname,in.delim);
               }
               if (cnt == name_col) {
-                  fprintf(out,"%s/%s%s", name, sqlite3_column_text(res,cnt),ffielddelim);
+                  fprintf(out,"%s/%s%s", name, sqlite3_column_text(res,cnt),in.delim);
               }
               else {
-                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),ffielddelim);
+                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
               }
               ncols--;
               cnt++;

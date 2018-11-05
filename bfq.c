@@ -296,9 +296,8 @@ int processinit(void * myworkin) {
      return 0;
 }
 
-
 int processfin() {
-int i;
+    int i;
 
      // close outputfiles
      if (in.outfile > 0) {
@@ -322,12 +321,6 @@ int i;
      }
 
      return 0;
-}
-
-
-
-int validate_inputs() {
-   return 0;
 }
 
 void sub_help() {

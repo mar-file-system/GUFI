@@ -305,7 +305,6 @@ for pattern in "${POSITIONAL[@]}"
 do
     patterns+=("-o" "-path" "*${pattern}")
 done
-set -x
 paths=$(find "${root}" "${patterns[@]:1}" 2>/dev/null)
 
 # generate query
