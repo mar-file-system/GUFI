@@ -309,7 +309,6 @@ paths=$(find "${root}" "${patterns[@]:1}" 2>/dev/null)
 
 # generate query
 query="SELECT ${columns} FROM entries ${conditions} ${grouping} ${ordering} ${limit};"
-echo ${query}
 
 # run query
 $(dirname ${BASH_SOURCE})/bfq -p -P -d " " -l "${depth}" -E "${query}" ${paths}

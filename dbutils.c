@@ -362,7 +362,7 @@ int rawquerydb(const char *name,
                  //if (printpath) fprintf(out,"%s/%s",shortname,in.delim);
               }
               if (cnt == name_col) {
-                  fprintf(out,"%s/%s%s", name, sqlite3_column_text(res,cnt),in.delim);
+                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
               }
               else {
                   fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
