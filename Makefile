@@ -51,16 +51,14 @@ else
 endif
 
 
-LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
 
 
 # --- library
 
-libgufi.a: $(LIB_O) $(LIB_H) thpool.o
-	ar -r $@ $(LIB_O) thpool.o
-	ranlib $@
+libgufi.a: $(LIB_O) thpool.o
+	ar -rs $@ $^
 
 # NOTE
 #
@@ -79,7 +77,7 @@ libgufi.a: $(LIB_O) $(LIB_H) thpool.o
 thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
 
-%.o: %.c
+%.o: %.c $(LIB_H)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
 
 
