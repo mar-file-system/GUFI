@@ -337,31 +337,17 @@ void sub_help() {
 
 int main(int argc, char *argv[])
 {
-     //char nameo[MAXPATH];
      struct work mywork;
-     int i;
 
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:l:", 1, "GUFI_tree");
+     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:l:", 1, "GUFI_tree ...");
      if (in.helped)
         sub_help();
      if (idx < 0)
         return -1;
-     else {
-        // parse positional args, following the options
-        int retval = 0;
-        INSTALL_STR(in.name, argv[idx++], MAXPATH, "GUFI_tree");
-
-        if (retval)
-           return retval;
-     }
-
-     if (validate_inputs())
-        return -1;
-
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here
@@ -371,23 +357,31 @@ int main(int argc, char *argv[])
         return -1;
      }
 
-     // process initialization, this is work done once the threads are up
-     // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are stating the directory passed in and
-     // putting that directory on the queue
-     processinit(&mywork);
+     for(; idx < argc; idx++) {
+         // parse positional args, following the options
+         int retval = 0;
+         INSTALL_STR(in.name, argv[idx], MAXPATH, "GUFI_tree");
 
-     // processdirs - if done properly, this routine is common and does not
-     // have to be done per instance of a bf program loops through and
-     // processes all directories that enter the queue by farming the work
-     // out to the threadpool
-     processdirs(processdir);
+         if (retval)
+             return retval;
 
-     // processfin - this is work done after the threads are done working
-     // before they are taken down - this will be different for each
-     // instance of a bf program
-     processfin();
+         // process initialization, this is work done once the threads are up
+         // but not busy yet - this will be different for each instance of a bf
+         // program in this case we are stating the directory passed in and
+         // putting that directory on the queue
+         processinit(&mywork);
 
+         // processdirs - if done properly, this routine is common and does not
+         // have to be done per instance of a bf program loops through and
+         // processes all directories that enter the queue by farming the work
+         // out to the threadpool
+         processdirs(processdir);
+
+         // processfin - this is work done after the threads are done working
+         // before they are taken down - this will be different for each
+         // instance of a bf program
+         processfin();
+     }
 
      // clean up threads and exit
      thpool_wait(mythpool);
