@@ -63,11 +63,11 @@ LIMIT=""
 # array of WHERE conditions to combine
 WHERE=()
 
-# array of ORDER BY columns
-ORDER=()
-
 # array of GROUP BY columns
 GROUP=()
+
+# array of ORDER BY columns
+ORDER=()
 
 # Parse command line arguments
 # https://stackoverflow.com/a/14203146
@@ -116,32 +116,32 @@ case $key in
         ;;
     --least-space-used)
         SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
-        ORDER=("${ORDER[@]}" "total ASC")
         GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total ASC")
         complex=$((complex+1))
         shift
         continue
         ;;
     --most-space-used)
         SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
-        ORDER=("${ORDER[@]}" "total DESC")
         GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total DESC")
         at_most_one=$((at_most_one+1))
         shift
         continue
         ;;
     --least-files)
         SELECT=("${SELECT[@]}" "uid" "count(*) as total")
-        ORDER=("${ORDER[@]}" "total ASC")
         GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total ASC")
         at_most_one=$((at_most_one+1))
         shift
         continue
         ;;
     --most-files)
         SELECT=("${SELECT[@]}" "uid" "count(*) as total")
-        ORDER=("${ORDER[@]}" "total DESC")
         GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total DESC")
         at_most_one=$((at_most_one+1))
         shift
         continue
