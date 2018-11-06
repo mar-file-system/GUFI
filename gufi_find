@@ -27,6 +27,7 @@ function usage() {
     echo "      --most-files       top n users with most files"
     echo
     echo "  SELECT columns"
+    echo "    --all"
     echo "    --type"
     echo "    --[amc]time"
     echo "    --size"
@@ -157,6 +158,10 @@ case $mode in
     # SELECT options
     SELECT)
         case $key in
+            --all)
+                SELECT=("${SELECT[@]}" "*")
+                shift
+                ;;
             --name|--[amc]time|--type|--size|--uid)
                 SELECT=("${SELECT[@]}" "${key#--}")
                 shift
