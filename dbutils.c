@@ -218,7 +218,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     //       }
     //    }
 
-    rc = sqlite3_open(dbn, &db);
+    rc = sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL);
     if (rc != SQLITE_OK) {
        sleep(2);
        rc = sqlite3_open(dbn, &db);

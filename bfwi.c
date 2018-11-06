@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -112,10 +112,10 @@ static void processdir(void * passv)
     int mytid;
     sqlite3 *db;
     sqlite3 *db1;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
 
@@ -165,7 +165,7 @@ static void processdir(void * passv)
           qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {
-            if (!access(qwork.name, R_OK | X_OK)) 
+            if (!access(qwork.name, R_OK | X_OK))
                 // this is how the parent gets passed on
                 qwork.pinode=passmywork->statuso.st_ino;
                 // this pushes the dir onto queue - pushdir does locking around queue update
@@ -214,7 +214,7 @@ static void processdir(void * passv)
       stopdb(db);
       insertdbfin(db,res);
 
-      // this i believe has to be after we close off the entries transaction 
+      // this i believe has to be after we close off the entries transaction
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
@@ -241,7 +241,7 @@ static void processdir(void * passv)
 
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
      int i;
      char outfn[MAXPATH];
@@ -276,14 +276,14 @@ int processinit(void * myworkin) {
      // set top parent inode to zero
      mywork->pinode=0;
      pushdir(mywork);
- 
+
      return 0;
 }
 
 
 int processfin() {
      int i;
-  
+
      if (in.outfile > 0) {
        i=0;
        while (i < in.maxthreads) {
@@ -315,9 +315,9 @@ int validate_inputs() {
 
    sprintf(expathtst,"%s/%s",in.nameto,in.name);
    realpath(expathtst,expathout);
-   //printf("expathtst: %s expathout %s\n",expathtst,expathout);   
+   //printf("expathtst: %s expathout %s\n",expathtst,expathout);
    realpath(in.name,expathin);
-   //printf("in.name: %s expathin %s\n",in.name,expathin); 
+   //printf("in.name: %s expathin %s\n",in.name,expathin);
    if (!strcmp(expathin,expathout)) {
      fprintf(stderr,"You are putting the index dbs in input directory\n");
      in.buildinindir = 1;
