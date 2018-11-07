@@ -86,6 +86,19 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "C-Thread-Pool/thpool.h"
 
+/* this block is for the triell */
+#define CHAR_SIZE 24
+struct Trie
+{
+    int isLeaf;    // 1 when node is a leaf node
+    struct Trie* character[CHAR_SIZE];
+};
+struct Trie* getNewTrieNode();
+void insertll(struct Trie* *head, char* str);
+int searchll(struct Trie* head, char* str);
+int haveChildren(struct Trie* curr);
+int deletionll(struct Trie* *curr, char* str);
+
 extern threadpool mythpool;
 
 // global variable to hold per thread state goes here
@@ -97,11 +110,7 @@ extern struct globalthreadstate gts;
 
 extern struct sum sumout;
 
-
-
-
 int printits(struct work *pwork,int ptid);
-
 
 int pullxattrs( const char *name, char *bufx);
 

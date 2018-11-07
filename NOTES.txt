@@ -120,4 +120,10 @@ some work by not recreating the input directory structure into the output since 
 so bfwi was changed to add a test for this in validate input routine and set this flag if 
 you have asked for this and dupdir is skipped
 ------------------------------------------------------------------------
-
+added flags to bfwreaddirplus2db -Y defauilt suspect field to on for directories, -Z default suspect field to on for file and link
+suspect field in the database output is for flaging entries with if suspect or not based on some fact about the entry
+added flag -W inputsuspect file, which would contain a list of suspect inodes for dirs and files used to determine if an entry
+in the output database is suspect
+added flag -g to allow you to control stride size if you want to stripe inodes into output dbs
+Added flag -A to allow you to control suspect method 0 none, 1 file with suspect fld, 2 file with suspect fl and stat dirs, and 3 stat fld 
+Added flag -c to allow you to input a number of seconds since epoch for suspect comparison 

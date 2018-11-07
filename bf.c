@@ -110,30 +110,36 @@ void print_help(const char* prog_name,
    while ((ch = *opt++)) {
       switch (ch) {
       case ':': continue;
-      case 'h': printf("  -h              help\n"); break;
-      case 'H': printf("  -H              show assigned input values (debugging)\n"); break;
-      case 'x': printf("  -x              pull xattrs from source file-sys into GUFI\n"); break;
-      case 'p': printf("  -p              print file-names\n"); break;
-      case 'P': printf("  -P              print directories as they are encountered\n"); break;
-      case 'N': printf("  -N              print column-names (header) for DB results\n"); break;
-      case 'V': printf("  -V              print column-values (rows) for DB results\n"); break;
-      case 's': printf("  -s              generate tree-summary table (in top-level DB)\n"); break;
-      case 'b': printf("  -b              build GUFI index tree\n"); break;
-      case 'a': printf("  -a              AND/OR (SQL query combination)\n"); break;
-      case 'n': printf("  -n <threads>    number of threads\n"); break;
-      case 'd': printf("  -d <delim>      delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]); break;
-      case 'i': printf("  -i <input_dir>  input directory path\n"); break;
-      case 't': printf("  -t <to_dir>     build GUFI-tree (under) here\n"); break;
-      case 'o': printf("  -o <out_fname>  output file (one-per-thread, with thread-id suffix)\n"); break;
-      case 'O': printf("  -O <out_DB>     output DB\n"); break;
-      case 'I': printf("  -I <SQL_init>   SQL init\n"); break;
-      case 'T': printf("  -T <SQL_tsum>   SQL for tree-summary table\n"); break;
-      case 'S': printf("  -S <SQL_sum>    SQL for summary table\n"); break;
-      case 'E': printf("  -E <SQL_ent>    SQL for entries table\n"); break;
-      case 'F': printf("  -F <SQL_fin>    SQL cleanup\n"); break;
-      case 'r': printf("  -r              insert files and links into db (for bfwreaddirplus2db\n"); break;
-      case 'R': printf("  -R              insert dires into db (for bfwreaddirplus2db\n"); break;
-      case 'D': printf("  -D              dont descend the tree\n"); break;
+      case 'h': printf("  -h                 help\n"); break;
+      case 'H': printf("  -H                 show assigned input values (debugging)\n"); break;
+      case 'x': printf("  -x                 pull xattrs from source file-sys into GUFI\n"); break;
+      case 'p': printf("  -p                 print file-names\n"); break;
+      case 'P': printf("  -P                 print directories as they are encountered\n"); break;
+      case 'N': printf("  -N                 print column-names (header) for DB results\n"); break;
+      case 'V': printf("  -V                 print column-values (rows) for DB results\n"); break;
+      case 's': printf("  -s                 generate tree-summary table (in top-level DB)\n"); break;
+      case 'b': printf("  -b                 build GUFI index tree\n"); break;
+      case 'a': printf("  -a                 AND/OR (SQL query combination)\n"); break;
+      case 'n': printf("  -n <threads>       number of threads\n"); break;
+      case 'd': printf("  -d <delim>         delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]); break;
+      case 'i': printf("  -i <input_dir>     input directory path\n"); break;
+      case 't': printf("  -t <to_dir>        build GUFI-tree (under) here\n"); break;
+      case 'o': printf("  -o <out_fname>     output file (one-per-thread, with thread-id suffix)\n"); break;
+      case 'O': printf("  -O <out_DB>        output DB\n"); break;
+      case 'I': printf("  -I <SQL_init>      SQL init\n"); break;
+      case 'T': printf("  -T <SQL_tsum>      SQL for tree-summary table\n"); break;
+      case 'S': printf("  -S <SQL_sum>       SQL for summary table\n"); break;
+      case 'E': printf("  -E <SQL_ent>       SQL for entries table\n"); break;
+      case 'F': printf("  -F <SQL_fin>       SQL cleanup\n"); break;
+      case 'r': printf("  -r                 insert files and links into db (for bfwreaddirplus2db\n"); break;
+      case 'R': printf("  -R                 insert dires into db (for bfwreaddirplus2db\n"); break;
+      case 'D': printf("  -D                 dont descend the tree\n"); break;
+      case 'Y': printf("  -Y                 default to all directories suspect\n"); break;
+      case 'Z': printf("  -Z                 default to all files/links suspect\n"); break;
+      case 'W': printf("  -W <INSUSPECT>     suspect input file\n"); break;
+      case 'A': printf("  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
+      case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
+      case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -168,6 +174,13 @@ void show_input(struct input* in, int retval) {
    printf("in.insertdir   = '%d'\n", in->insertdir);
    printf("in.insertfl    = '%d'\n", in->insertfl);
    printf("in.dontdescend = '%d'\n", in->dontdescend);
+   printf("in.suspectd    = '%d'\n", in->suspectd);
+   printf("in.suspectfl   = '%d'\n", in->suspectfl);
+   printf("in.insuspect   = '%s'\n", in->insuspect);
+   printf("in.suspectfile = '%d'\n", in->suspectfile);
+   printf("in.suspectmethod = '%d'\n", in->suspectmethod);
+   printf("in.suspecttime = '%d'\n", in->suspecttime);
+   printf("in.stride = '%d'\n", in->stride);
    printf("\n");
    printf("retval         = %d\n", retval);
    printf("\n");
@@ -196,10 +209,15 @@ int parse_cmd_line(int         argc,
 
    //bzero(in.sqlent,sizeof(in.sqlent));
    // <in> defaults to all-zeros.
-   in.maxthreads = 1;         // don't default to zero threads
-   in.delim[0]   = '|';
-   in.dontdescend = 0;        // default to descend
+   in.maxthreads   = 1;         // don't default to zero threads
+   in.delim[0]     = '|';
+   in.dontdescend  = 0;        // default to descend
    in.buildinindir = 0;       // default to not building db in input dir
+   in.suspectd     = 0;
+   in.suspectfl    = 0;
+   in.suspectfile  = 0;
+   in.suspectmethod = 0;
+   in.stride       = 0;       // default striping of inodes
 
    int show   = 0;
    int retval = 0;
@@ -248,6 +266,10 @@ int parse_cmd_line(int         argc,
 
       case 'n':
          INSTALL_INT(in.maxthreads, optarg, 1, MAXPTHREAD, "-n");
+         break;
+
+      case 'g':
+         INSTALL_INT(in.stride, optarg, 1, MAXSTRIDE, "-g");
          break;
 
       case 'd':
@@ -313,6 +335,27 @@ int parse_cmd_line(int         argc,
 
       case 'D':               // default is 0
          in.dontdescend = 1;
+         break;
+
+      case 'Y':               // default is 0
+         in.suspectd = 1;
+         break;
+
+      case 'Z':               // default is 0
+         in.suspectfl = 1;
+         break;
+
+      case 'W':               // SQL clean-up
+         INSTALL_STR(in.insuspect, optarg, MAXPATH, "-W");
+         in.suspectfile = 1;
+         break;
+
+      case 'A':
+         INSTALL_INT(in.suspectmethod, optarg, 1, 4, "-A");
+         break;
+
+      case 'c':
+         INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
          break;
 
       case '?':

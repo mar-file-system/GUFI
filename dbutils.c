@@ -87,9 +87,9 @@ OF SUCH DAMAGE.
 #include "bf.h"
 
 char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
-            "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64);";
+            "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
 
-char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode);";
+char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode,@suspect);";
 
 char *esql = // "DROP TABLE IF EXISTS entries;"
             "CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
@@ -659,6 +659,7 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_bind_text(res,2,ztype,-1,SQLITE_TRANSIENT);
     sqlite3_bind_int64(res,3,pwork->statuso.st_ino);
     sqlite3_bind_int64(res,4,pwork->pinode);
+    sqlite3_bind_int64(res,5,pwork->suspect);
 
     sqlite3_free(zname);
     sqlite3_free(ztype);

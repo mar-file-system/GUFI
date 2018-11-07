@@ -87,6 +87,7 @@ OF SUCH DAMAGE.
 #define MAXSQL 2048 
 #define MAXRECS 100000
 #define MAXPTHREAD 100
+#define MAXSTRIDE 1000000000   // maximum records per stripe
 #define DBNAME "db.db"
 
 struct globalpathstate {
@@ -168,6 +169,13 @@ struct input {
    int  insertfl;            // added for bfwreaddirplus2db
    int  dontdescend;         // added to allow single level directory operations
    int  buildinindir;        // added to notice when writing index dbs into the input dir
+   int  suspectd;            // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
+   int  suspectfl;           // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
+   char insuspect[MAXPATH];  // added for bfwreaddirplus2db input path for suspects file
+   int  suspectfile;         // added for bfwreaddirplus2db flag for if we are processing suspects file
+   int  suspectmethod;       // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use 
+   int  stride;              // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
+   int  suspecttime;          // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
 };
 extern struct input in;
 
@@ -210,7 +218,6 @@ int parse_cmd_line(int         argc,
       }                                                                 \
    } while (0)
 
-
 // TBD: this would replace gotos
 // local impls of processdir() could use this to manage clean-up tasks.
 typedef enum {
@@ -239,6 +246,7 @@ struct work {
    char          osstext1[MAXXATTR];
    char          osstext2[MAXXATTR];
    char          pinodec[128];
+   int           suspect;  // added for bfwreaddirplus2db for suspect
 };
 
 extern char xattrdelim[];
