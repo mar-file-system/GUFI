@@ -9,7 +9,7 @@
 root="$(pwd)"
 
 function usage() {
-    echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] GUFI_tree ..."
+    echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] [GROUPBY [conditions]] GUFI_tree ..."
     echo
     echo "  options"
     echo "    -h | --help          print help message"
@@ -147,7 +147,7 @@ case $key in
         shift
         continue
         ;;
-    SELECT|WHERE)
+    SELECT|WHERE|GROUPBY)
         mode="$1"
         shift
         continue
@@ -237,6 +237,26 @@ case $mode in
         esac
         continue
         ;;
+
+    # GROUP BY options
+    GROUPBY)
+        case $key in
+            --name|--[amc]time|--type|--size|--uid)
+                GROUP=("${GROUP[@]}" "${key#--}")
+                shift
+                ;;
+            --user)
+                GROUP=("${GROUP[@]}" "uid")
+                shift
+                ;;
+            # all other options are considered GUFI tree directories
+            *)
+                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
+                shift
+                ;;
+        esac
+        continue
+        ;;
 esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
@@ -314,6 +334,8 @@ paths=$(find "${root}" "${patterns[@]:1}" 2>/dev/null)
 
 # generate query
 query="SELECT ${columns} FROM entries ${conditions} ${grouping} ${ordering} ${limit};"
+
+echo ${query}
 
 # run query
 $(dirname ${BASH_SOURCE})/bfq -p -P -d " " -l "${depth}" -E "${query}" ${paths}
