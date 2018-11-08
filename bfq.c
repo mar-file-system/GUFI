@@ -75,6 +75,10 @@ OF SUCH DAMAGE.
 
 
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -144,6 +148,16 @@ static void processdir(void * passv)
     } else {
       db=opendb(passmywork->name,db1,1,0);
     }
+
+    /* // attach in-memory result aggregation database */
+    /* { */
+    /*     static const char sqlstmt[MAXSQL] = "ATTACH 'file:aggregate?mode=memory&cache=shared' AS aggregate;"; */
+    /*     if (sqlite3_exec(db, sqlstmt,0, 0, NULL) != SQLITE_OK) { */
+    /*         fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db)); */
+    /*         sqlite3_close(db); */
+    /*         return; */
+    /*     } */
+    /* } */
 
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
     addqueryfuncs(db);
@@ -221,6 +235,16 @@ static void processdir(void * passv)
           }
         }
     }
+
+    /* // detach in-memory result aggregation database */
+    /* { */
+    /*     static const char sqlstmt[MAXSQL] = "DETACH aggregate;"; */
+    /*     if (sqlite3_exec(db, sqlstmt,0, 0, NULL) != SQLITE_OK) { */
+    /*         fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db)); */
+    /*         sqlite3_close(db); */
+    /*         return; */
+    /*     } */
+    /* } */
 
     // if we have an out db we just detach gufi db
     if (in.outdb > 0) {
@@ -342,6 +366,41 @@ int main(int argc, char *argv[])
      if (idx < 0)
         return -1;
 
+     size_t len = strlen(in.sqlent) + 1;
+     char orig_sqlent[MAXSQL];
+     memcpy(orig_sqlent, in.sqlent, len);
+
+     {
+         // find FROM clause
+         char *from = strstr(orig_sqlent, "FROM");
+         if (!from) {
+             printf("Could not locate FROM clause\n");
+             return -1;
+         }
+         snprintf(in.sqlent, len, "SELECT * %s", from);
+
+         const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
+         char *after_from = NULL;
+         for(size_t i = 0; (i < sizeof(clauses)) && !after_from; i++) {
+             after_from = strstr(orig_sqlent, clauses[i]);
+         }
+         if (!after_from) {
+             printf("No clauses found after from\n");
+             return -1;
+         }
+
+         *from = 0;
+
+         {
+             char buf1[MAXSQL];
+             snprintf(buf1, MAXSQL, "%s", orig_sqlent);
+             char buf2[MAXSQL];
+             snprintf(buf2, MAXSQL, "%s", after_from);
+
+             snprintf(orig_sqlent, MAXSQL, "%s FROM aggregate %s", buf1, buf2);
+         }
+     }
+
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here
      mythpool = thpool_init(in.maxthreads);
@@ -349,6 +408,26 @@ int main(int argc, char *argv[])
         fprintf(stderr, "thpool_init() failed!\n");
         return -1;
      }
+
+     sqlite3 *aggregate = NULL;
+     if (sqlite3_open_v2("file:aggregate?mode=memory&cache=shared", &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+         fprintf(stderr, "failed to open result aggregation database");
+         return -1;
+     }
+
+     char *err_msg = NULL;
+     if (sqlite3_exec(aggregate, "DROP TABLE IF EXISTS aggregate; CREATE TABLE aggregate(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);", NULL, NULL, &err_msg)) {
+         fprintf(stderr, "failed to create result aggregation table: %s\n", err_msg);
+         sqlite3_free(err_msg);
+         sqlite3_close(aggregate);
+
+         // clean up threads and exit
+         thpool_wait(mythpool);
+         thpool_destroy(mythpool);
+         return -1;
+     }
+
+     sqlite3_free(err_msg);
 
      for(; idx < argc; idx++) {
          // parse positional args, following the options
@@ -375,6 +454,82 @@ int main(int argc, char *argv[])
          // instance of a bf program
          processfin();
      }
+
+     int printpath = 1;
+     int printheader = 0;
+     int printrows = in.printing;
+
+     sqlite3_stmt *res;
+     int error = sqlite3_prepare_v2(aggregate, orig_sqlent, MAXSQL, &res, NULL);
+
+     int rec_count = 0;
+     int onetime = 0;
+     while (sqlite3_step(res) == SQLITE_ROW) {
+         /* int ncols = sqlite3_column_count(res); */
+
+         /* for(int i = 0; i < ncols; i++) { */
+         /*     fprintf(stdout,"%s%s", sqlite3_column_text(res, i),in.delim); */
+         /* } */
+         /* fprintf(stdstdout,"\n"); */
+
+         //printf("looping through rec_count %ds\n",rec_count);
+
+         // find the column whose name is "name"
+         int name_col = -1; // default to -1 if not found
+         int ncols=sqlite3_column_count(res);
+         for(int cnt = 0; cnt < ncols; cnt++) {
+             const char *col_name = sqlite3_column_name(res, cnt);
+             if ((strlen(col_name) == 4) &&
+                 (strncmp(col_name, "name", 4) == 0)) {
+                 name_col = cnt;
+                 break;
+             }
+         }
+
+        // maybe print column-names as a header (once)
+        if (printheader) {
+           if (onetime == 0) {
+              int cnt=0;
+              while (ncols > 0) {
+                 if (cnt==0) {
+                    //if (printpath) fprintf(stdout,"path/%s",in.delim);
+                 }
+                 fprintf(stdout,"%s%s", sqlite3_column_name(res,cnt),in.delim);
+                 //fprintf(stdout,"%s%s", sqlite3_column_decltype(res,cnt),in.delim);
+                 ncols--;
+                 cnt++;
+              }
+              fprintf(stdout,"\n");
+              onetime++;
+           }
+        }
+
+        // maybe print result-row values
+        if (printrows) {
+           //if (printpath) printf("%s/", name);
+           int cnt=0;
+           while (ncols > 0) {
+              if (cnt==0) {
+                 //if (printpath) fprintf(stdout,"%s/%s",shortname,in.delim);
+              }
+              if (cnt == name_col) {
+                  fprintf(stdout,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+              }
+              else {
+                  fprintf(stdout,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+              }
+              ncols--;
+              cnt++;
+           }
+           fprintf(stdout,"\n");
+        }
+
+        // count of rows in query-result
+        rec_count++;
+
+     }
+
+     sqlite3_close(aggregate);
 
      // clean up threads and exit
      thpool_wait(mythpool);
