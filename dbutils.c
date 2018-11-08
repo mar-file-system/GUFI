@@ -140,7 +140,7 @@ sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
       return NULL;
   }
   sqlite3_free(err_msg);
- 
+
   return 0;
 }
 
@@ -158,7 +158,7 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
       return NULL;
   }
   sqlite3_free(err_msg);
- 
+
   return 0;
 }
 
@@ -183,7 +183,7 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
          return NULL;                                       \
       }                                                     \
    } while (0)
-   
+
 
 sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
 {
@@ -218,7 +218,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     //       }
     //    }
 
-    rc = sqlite3_open(dbn, &db);
+    rc = sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL);
     if (rc != SQLITE_OK) {
        sleep(2);
        rc = sqlite3_open(dbn, &db);
@@ -256,6 +256,9 @@ exit(9);
        }
     }
 
+    sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL);
+    sqlite3_load_extension(db, "sqlite3-pcre/pcre.so", NULL, NULL);
+
     //printf("returning from opendb ok\n");
     return db;
 }
@@ -282,11 +285,11 @@ int rawquerydb(const char *name,
      //char   prefix[MAXPATH];
      //char   shortname[MAXPATH];
      //char  *pp;
+     int name_col; // index of column whose name is "name"
 
      int           i;
      FILE *        out;
-     char          ffielddelim[2];
- 
+
      if (! sqlstmt) {
         fprintf(stderr, "SQL was empty\n");
         return -1;
@@ -295,16 +298,6 @@ int rawquerydb(const char *name,
      out = stdout;
      if (in.outfile > 0)
         out = gts.outfd[ptid];
-
-     if (in.dodelim == 0)
-       sprintf(ffielddelim,"|");
-
-     if (in.dodelim == 1)
-       sprintf(ffielddelim,"%s",fielddelim);
-
-     if (in.dodelim == 2)
-       sprintf(ffielddelim,"%s",in.delim);
-
 
      while (*sqlstmt) {
        // WARNING: passing length-arg that is longer than SQL text
@@ -316,7 +309,7 @@ int rawquerydb(const char *name,
        }
 
        //printf("running on %s query %s printpath %d tail %s\n",name,sqlstmt,printpath,tail);
-       if (*tail) { 
+       if (*tail) {
          sqlite3_step(res);
          //sqlite3_finalize(res);
          sqlite3_reset(res);
@@ -328,19 +321,30 @@ int rawquerydb(const char *name,
      //       loop only runs with the final statement.
      onetime=0;
      while (sqlite3_step(res) == SQLITE_ROW) {
-        //printf("looping through rec_count %ds\n",rec_count);
+         //printf("looping through rec_count %ds\n",rec_count);
+
+         // find the column whose name is "name"
+         name_col = -1; // default to -1 if not found
+         ncols=sqlite3_column_count(res);
+         for(cnt = 0; cnt < ncols; cnt++) {
+             const char *col_name = sqlite3_column_name(res, cnt);
+             if ((strlen(col_name) == 4) &&
+                 (strncmp(col_name, "name", 4) == 0)) {
+                 name_col = cnt;
+                 break;
+             }
+         }
 
         // maybe print column-names as a header (once)
         if (printheader) {
            if (onetime == 0) {
               cnt=0;
-              ncols=sqlite3_column_count(res);
               while (ncols > 0) {
                  if (cnt==0) {
-                    //if (printpath) fprintf(out,"path/%s",ffielddelim);
+                    //if (printpath) fprintf(out,"path/%s",in.delim);
                  }
-                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),ffielddelim);
-                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
+                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),in.delim);
+                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),in.delim);
                  ncols--;
                  cnt++;
               }
@@ -353,12 +357,16 @@ int rawquerydb(const char *name,
         if (printrows) {
            //if (printpath) printf("%s/", name);
            cnt=0;
-           ncols=sqlite3_column_count(res);
            while (ncols > 0) {
               if (cnt==0) {
-                 //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
+                 //if (printpath) fprintf(out,"%s/%s",shortname,in.delim);
               }
-              fprintf(out,"%s%s", sqlite3_column_text(res,cnt),ffielddelim);
+              if (cnt == name_col) {
+                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+              }
+              else {
+                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+              }
               ncols--;
               cnt++;
            }
@@ -493,7 +501,7 @@ int insertdbfin(sqlite3 *db,sqlite3_stmt *res)
 {
     char *err_msg = 0;
     int rc;
-    
+
     sqlite3_finalize(res);
 
     return 0;
@@ -584,7 +592,7 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
     while (len > 0) {
        if (!memcmp(shortname,"/",1)) {
           found=cnt;
-       } 
+       }
        cnt++;
        len--;
        shortname++;
@@ -601,9 +609,9 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
     zxattr = sqlite3_mprintf("%q",pwork->xattr);
     zosstext1 = sqlite3_mprintf("%q",pwork->osstext1);
     zosstext2 = sqlite3_mprintf("%q",pwork->osstext2);
-    error=sqlite3_bind_text(res,1,zname,-1,SQLITE_TRANSIENT);
+    error=sqlite3_bind_text(res,1,zname,-1,SQLITE_STATIC);
     if (error != SQLITE_OK) fprintf(stderr, "SQL insertdbgo bind name: %s error %d err %s\n",pwork->name,error,sqlite3_errmsg(db));
-    sqlite3_bind_text(res,2,ztype,-1,SQLITE_TRANSIENT);
+    sqlite3_bind_text(res,2,ztype,-1,SQLITE_STATIC);
     sqlite3_bind_int64(res,3,pwork->statuso.st_ino);
     sqlite3_bind_int64(res,4,pwork->statuso.st_mode);
     sqlite3_bind_int64(res,5,pwork->statuso.st_nlink);
@@ -615,16 +623,16 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
     sqlite3_bind_int64(res,11,pwork->statuso.st_atime);
     sqlite3_bind_int64(res,12,pwork->statuso.st_mtime);
     sqlite3_bind_int64(res,13,pwork->statuso.st_ctime);
-    sqlite3_bind_text(res,14,zlinkname,-1,SQLITE_TRANSIENT);
-    error=sqlite3_bind_text(res,15,zxattr,-1,SQLITE_TRANSIENT);
+    sqlite3_bind_text(res,14,zlinkname,-1,SQLITE_STATIC);
+    error=sqlite3_bind_text(res,15,zxattr,-1,SQLITE_STATIC);
     if (error != SQLITE_OK) printf("insertdbgo bind xattr: error %d %s %s %s %s\n",error,pwork->name,pwork->type,pwork->xattr,sqlite3_errmsg(db));
     sqlite3_bind_int64(res,16,pwork->crtime);
     sqlite3_bind_int64(res,17,pwork->ossint1);
     sqlite3_bind_int64(res,18,pwork->ossint2);
     sqlite3_bind_int64(res,19,pwork->ossint3);
     sqlite3_bind_int64(res,20,pwork->ossint4);
-    error=sqlite3_bind_text(res,21,zosstext1,-1,SQLITE_TRANSIENT);
-    error=sqlite3_bind_text(res,22,zosstext1,-1,SQLITE_TRANSIENT);
+    error=sqlite3_bind_text(res,21,zosstext1,-1,SQLITE_STATIC);
+    error=sqlite3_bind_text(res,22,zosstext1,-1,SQLITE_STATIC);
     sqlite3_free(zname);
     sqlite3_free(ztype);
     sqlite3_free(zlinkname);
@@ -637,7 +645,7 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
           //return 0;
     }
     sqlite3_clear_bindings(res);
-    sqlite3_reset(res); 
+    sqlite3_reset(res);
 
     return 0;
 }
@@ -669,7 +677,7 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
           //return 0;
     }
     sqlite3_clear_bindings(res);
-    sqlite3_reset(res); 
+    sqlite3_reset(res);
 
     return 0;
 }
@@ -693,7 +701,7 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     while (i < strlen(pwork->name)) {
       if (!strncmp(pwork->name+i,"/",1)) depth++;
       i++;
-    } 
+    }
     //printf("dbutil insertsum name %s depth %d\n",pwork->name,depth);
     shortname=pwork->name;
     len=strlen(pwork->name);
@@ -702,7 +710,7 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     while (len > 0) {
        if (!memcmp(shortname,"/",1)) {
           found=cnt;
-       } 
+       }
        cnt++;
        len--;
        shortname++;
@@ -754,7 +762,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     while (i < strlen(name)) {
       if (!strncmp(name+i,"/",1)) depth++;
       i++;
-    } 
+    }
     sprintf(sqlstmt,"INSERT INTO treesummary VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
        su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
 
@@ -809,8 +817,8 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int mytid;
- 
-    mytid=gettid(); 
+
+    mytid=gettid();
     sqlite3_result_text(context, gps[mytid].gpath, -1, SQLITE_TRANSIENT);
     return;
 }
@@ -818,8 +826,8 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int mytid;
- 
-    mytid=gettid(); 
+
+    mytid=gettid();
     sqlite3_result_text(context, gps[mytid].gepath, -1, SQLITE_TRANSIENT);
     return;
 }

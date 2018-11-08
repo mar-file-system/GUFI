@@ -102,7 +102,7 @@ void print_help(const char* prog_name,
    const char* opt = getopt_str;
    if (! opt)
       return;
-   
+
    printf("Usage: %s [options] %s\n", prog_name, positional_args_help_str);
    printf("options:\n");
 
@@ -140,6 +140,7 @@ void print_help(const char* prog_name,
       case 'A': printf("  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
+      case 'l': printf("  -l <max level>  deepest level to go down\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -157,7 +158,6 @@ void show_input(struct input* in, int retval) {
    printf("in.writetsum   = %d\n",   in->writetsum);
    printf("in.buildindex  = %d\n",   in->buildindex);
    printf("in.maxthreads  = %d\n",   in->maxthreads);
-   printf("in.dodelim     = %d\n",   in->dodelim);
    printf("in.delim       = '%s'\n", in->delim);
    printf("in.name        = '%s'\n", in->name);
    printf("in.outfile     = %d\n",   in->outfile);
@@ -181,6 +181,7 @@ void show_input(struct input* in, int retval) {
    printf("in.suspectmethod = '%d'\n", in->suspectmethod);
    printf("in.suspecttime = '%d'\n", in->suspecttime);
    printf("in.stride = '%d'\n", in->stride);
+   printf("in.max_level    = %d\n",  in->max_level);
    printf("\n");
    printf("retval         = %d\n", retval);
    printf("\n");
@@ -197,7 +198,7 @@ void show_input(struct input* in, int retval) {
 // return: -1 for error.  Otherwise, we return the index of the first
 //    positional argument in <argv>.  This allows the caller to do a custom
 //    parse of the remaining arguments as required (positional) args.
-//   
+//
 int parse_cmd_line(int         argc,
                    char*       argv[],
                    const char* getopt_str,
@@ -209,15 +210,16 @@ int parse_cmd_line(int         argc,
 
    //bzero(in.sqlent,sizeof(in.sqlent));
    // <in> defaults to all-zeros.
-   in.maxthreads   = 1;         // don't default to zero threads
-   in.delim[0]     = '|';
-   in.dontdescend  = 0;        // default to descend
-   in.buildinindir = 0;       // default to not building db in input dir
-   in.suspectd     = 0;
-   in.suspectfl    = 0;
-   in.suspectfile  = 0;
+   in.maxthreads    = 1;       // don't default to zero threads
+   in.delim[0]      = '|';
+   in.dontdescend   = 0;       // default to descend
+   in.buildinindir  = 0;       // default to not building db in input dir
+   in.suspectd      = 0;
+   in.suspectfl     = 0;
+   in.suspectfile   = 0;
    in.suspectmethod = 0;
-   in.stride       = 0;       // default striping of inodes
+   in.stride        = 0;       // default striping of inodes
+   in.max_level     = -1;      // default to all the way down
 
    int show   = 0;
    int retval = 0;
@@ -274,11 +276,9 @@ int parse_cmd_line(int         argc,
 
       case 'd':
          if (optarg[0] == 'x') {
-            in.dodelim = 2;
             in.delim[0] = fielddelim[0];
          }
          else {
-            in.dodelim = 1;
             in.delim[0] = optarg[0];
          }
          break;
@@ -325,11 +325,11 @@ int parse_cmd_line(int         argc,
          in.andor = 1;
          break;
 
-      case 'r':               // insert files and links into db for bfwreaddirplus2db 
+      case 'r':               // insert files and links into db for bfwreaddirplus2db
          in.insertfl = 1;
          break;
 
-      case 'R':               // insert dirs into db for bfwreaddirplus2db 
+      case 'R':               // insert dirs into db for bfwreaddirplus2db
          in.insertdir = 1;
          break;
 
@@ -356,6 +356,9 @@ int parse_cmd_line(int         argc,
 
       case 'c':
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
+
+      case 'l':
+         in.max_level = atoi(optarg); // need better string to int conversion
          break;
 
       case '?':

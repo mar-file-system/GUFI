@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+# gufi_find
+#
+# This script somewhat replicates
+# GNU find and ls using GUFI's bfq
+#
+
+# default top-most directory is the current directory
+root="$(pwd)"
+
+function usage() {
+    echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] [GROUPBY [conditions]] GUFI_tree ..."
+    echo
+    echo "  options"
+    echo "    -h | --help          print help message"
+    echo "    --root               top-most directory to search from (default: ${root})"
+    echo "    --depth d            the number of levels to search"
+    echo "    --num_results n      first n results"
+    echo "    --smallest           top n smallest files"
+    echo "    --largest            top n largest files"
+    echo "    --newest             top n newest files"
+    echo
+    echo "    There should not be more one of these in a single call to $(basename $0)"
+    echo "      --least-space-used top n users of space"
+    echo "      --most-space-used  top n users of space"
+    echo "      --least-files      top n users with most files"
+    echo "      --most-files       top n users with most files"
+    echo
+    echo "  SELECT columns"
+    echo "    --all"
+    echo "    --type"
+    echo "    --[amc]time"
+    echo "    --size"
+    echo "    --uid | --user"
+    echo
+    echo "  WHERE conditions"
+    echo "    --name n             filename pattern"
+    # echo "    --type t             f or d"
+    echo "    --[amc]time_before t seconds since epoch"
+    echo "    --[amc]time_after t  seconds since epoch"
+    echo "    --smaller_than b     bytes"
+    echo "    --larger_than b      bytes"
+    echo "    --uid | --user u     uid or user name"
+    echo
+    echo "  GUFI_tree              directory containing GUFI index-tree database"
+}
+
+# counter for queries that should be called at most once per invocation
+at_most_one=0
+
+# depth to search; -1 represents "as deep as possible"
+depth=-1
+
+# default treating options as SELECT options
+mode="SELECT"
+
+# array of SELECT columns to print
+SELECT=()
+
+# limit the number of results per database
+# empty results in no limit
+LIMIT=""
+
+# array of WHERE conditions to combine
+WHERE=()
+
+# array of GROUP BY columns
+GROUP=()
+
+# array of ORDER BY columns
+ORDER=()
+
+# Parse command line arguments
+# https://stackoverflow.com/a/14203146
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    --root)
+        root="$2"
+        shift
+        shift
+        continue
+        ;;
+    --depth)
+        depth="$2"
+        shift
+        shift
+        continue
+        ;;
+    --num_results)
+        LIMIT="$2"
+        shift
+        shift
+        continue
+        ;;
+    --smallest)
+        ORDER=("${ORDER[@]}" "size ASC")
+        shift
+        continue
+        ;;
+    --largest)
+        ORDER=("${ORDER[@]}" "size DESC")
+        shift
+        continue
+        ;;
+    --newest)
+        ORDER=("${ORDER[@]}" "ctime DESC")
+        shift
+        continue
+        ;;
+    --least-space-used)
+        SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
+        GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total ASC")
+        complex=$((complex+1))
+        shift
+        continue
+        ;;
+    --most-space-used)
+        SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
+        GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total DESC")
+        at_most_one=$((at_most_one+1))
+        shift
+        continue
+        ;;
+    --least-files)
+        SELECT=("${SELECT[@]}" "uid" "count(*) as total")
+        GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total ASC")
+        at_most_one=$((at_most_one+1))
+        shift
+        continue
+        ;;
+    --most-files)
+        SELECT=("${SELECT[@]}" "uid" "count(*) as total")
+        GROUP=("${WHERE[@]}" "uid")
+        ORDER=("${ORDER[@]}" "total DESC")
+        at_most_one=$((at_most_one+1))
+        shift
+        continue
+        ;;
+    SELECT|WHERE|GROUPBY)
+        mode="$1"
+        shift
+        continue
+        ;;
+esac
+
+case $mode in
+    # SELECT options
+    SELECT)
+        case $key in
+            --all)
+                SELECT=("${SELECT[@]}" "*")
+                shift
+                ;;
+            --name|--[amc]time|--type|--size|--uid)
+                SELECT=("${SELECT[@]}" "${key#--}")
+                shift
+                ;;
+            --user)
+                SELECT=("${SELECT[@]}" "uid")
+                shift
+                ;;
+            # all other options are considered GUFI tree directories
+            *)
+                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
+                shift
+                ;;
+        esac
+        continue
+        ;;
+
+    # WHERE options
+    WHERE)
+        case $key in
+            --name)
+                WHERE=("${WHERE[@]}" "name REGEXP '$2'")
+                shift
+                shift
+                ;;
+            # # bfq needs some changing to make type work properly
+            # --type)
+            #    WHERE=("${WHERE[@]}" "type REGEXP '$2'")
+            #    shift
+            #    shift
+            #    ;;
+            --[amc]time_before)
+                time_type="${key#--}"
+                time_type="${time_type%_before}"
+                WHERE=("${WHERE[@]}" "${time_type} < $2")
+                shift
+                shift
+                ;;
+            --[amc]time_after)
+                time_type="${key#--}"
+                time_type="${time_type%_after}"
+                WHERE=("${WHERE[@]}" "${time_type} > $2")
+                shift
+                shift
+                ;;
+            --smaller_than)
+                WHERE=("${WHERE[@]}" "size < $2")
+                shift
+                shift
+                ;;
+            --larger_than)
+                WHERE=("${WHERE[@]}" "size > $2")
+                shift
+                shift
+                ;;
+            --uid|--user)
+                uid=$(id -u "$2" 2>/dev/null)
+                rc=$?
+                # ignore errors
+                if [[ "$rc" -ne "0" ]]
+                then
+                    uid="$2"
+                fi
+                WHERE=("${WHERE[@]}" "uid == '$uid'")
+                shift
+                shift
+                ;;
+            # all other options are considered GUFI tree directories
+            *)
+                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
+                shift
+                ;;
+        esac
+        continue
+        ;;
+
+    # GROUP BY options
+    GROUPBY)
+        case $key in
+            --name|--[amc]time|--type|--size|--uid)
+                GROUP=("${GROUP[@]}" "${key#--}")
+                shift
+                ;;
+            --user)
+                GROUP=("${GROUP[@]}" "uid")
+                shift
+                ;;
+            # all other options are considered GUFI tree directories
+            *)
+                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
+                shift
+                ;;
+        esac
+        continue
+        ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+# make sure at least one GUFI tree is provided and
+# at most 1 of the independent options is selected
+if [[ "${#POSITIONAL[@]}" -lt "1" ]] || [[ "${at_most_one}" -gt "1" ]];
+then
+    usage
+    exit 1
+fi
+
+# combine SELECT columns
+columns=""
+if [[ "${#SELECT[@]}" -gt "0" ]]
+then
+    #combine columns
+    columns="${SELECT[0]}"
+    for column in "${SELECT[@]:1}"
+    do
+        columns="${columns}, ${column}"
+    done
+fi
+
+# only combine WHERE conditions if there are any
+conditions=""
+if [[ "${#WHERE[@]}" -gt "0" ]]
+then
+    # combine conditions
+    conditions="WHERE (${WHERE[0]})"
+    for condition in "${WHERE[@]:1}"
+    do
+        conditions="${conditions} AND (${condition})"
+    done
+fi
+
+# combine output grouping
+grouping=""
+if [[ "${#GROUP[@]}" -gt "0" ]]
+then
+    # combine groupings
+    grouping="GROUP BY ${GROUP[0]}"
+    for group in "${GROUP[@]:1}"
+    do
+        grouping="${grouping}, ${group}"
+    done
+fi
+
+# combine output ordering
+ordering=""
+if [[ "${#ORDER[@]}" -gt "0" ]]
+then
+    # combine orderings
+    ordering="ORDER BY ${ORDER[0]}"
+    for order in "${ORDER[@]:1}"
+    do
+        ordering="${ordering}, ${order}"
+    done
+fi
+
+# limit the number of results
+limit=""
+if [[ ! -z "${LIMIT}" ]]
+then
+    limit="LIMIT ${LIMIT}"
+fi
+
+# generate paths
+patterns=()
+for pattern in "${POSITIONAL[@]}"
+do
+    patterns+=("-o" "-path" "*${pattern}")
+done
+paths=$(find "${root}" "${patterns[@]:1}" 2>/dev/null)
+
+# generate query
+query="SELECT ${columns} FROM entries ${conditions} ${grouping} ${ordering} ${limit};"
+
+echo ${query}
+
+# run query
+$(dirname ${BASH_SOURCE})/bfq -p -P -d " " -l "${depth}" -E "${query}" ${paths}

@@ -84,7 +84,7 @@ OF SUCH DAMAGE.
 
 #define MAXPATH 1024
 #define MAXXATTR 1024
-#define MAXSQL 2048 
+#define MAXSQL 2048
 #define MAXRECS 100000
 #define MAXPTHREAD 100
 #define MAXSTRIDE 1000000000   // maximum records per stripe
@@ -152,7 +152,6 @@ struct input {
    int  printheader;
    int  printrows;
    int  helped;                 // support parsing of per-app sub-options
-   int  dodelim;
    char delim[2];
    int  doxattrs;
    int  buildindex;
@@ -173,9 +172,10 @@ struct input {
    int  suspectfl;           // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
    char insuspect[MAXPATH];  // added for bfwreaddirplus2db input path for suspects file
    int  suspectfile;         // added for bfwreaddirplus2db flag for if we are processing suspects file
-   int  suspectmethod;       // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use 
+   int  suspectmethod;       // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
    int  stride;              // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
-   int  suspecttime;          // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
+   int  suspecttime;         // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
+   size_t max_level;         // deepest level of recursion allowed
 };
 extern struct input in;
 
@@ -228,6 +228,7 @@ typedef enum {
 
 
 struct work {
+   size_t        level;
    char          name[MAXPATH];
    char          type[2];
    char          nameto[MAXPATH];

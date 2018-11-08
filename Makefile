@@ -2,11 +2,11 @@ DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 
-# TOOLS = querydb querydbn make_testdirs dbdump 
-TOOLS = querydb querydbn make_testdirs
+# TOOLS = querydb querydbn make_testdirs dbdump
+TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
 
 # # TBD ...
-# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse 
+# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse
 
 all: bfw tools
 
@@ -15,7 +15,8 @@ mysql: $(BFW_MYSQL)
 dfw:   $(DFW)
 tools: $(TOOLS)
 
-
+sqlite3-pcre/pcre.so:
+	$(MAKE) -C sqlite3-pcre
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
@@ -50,16 +51,14 @@ else
 endif
 
 
-LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
 
 
 # --- library
 
-libgufi.a: $(LIB_O) $(LIB_H) thpool.o
-	ar -r $@ $(LIB_O) thpool.o
-	ranlib $@
+libgufi.a: $(LIB_O) thpool.o
+	ar -rs $@ $^
 
 # NOTE
 #
@@ -78,7 +77,7 @@ libgufi.a: $(LIB_O) $(LIB_H) thpool.o
 thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
 
-%.o: %.c
+%.o: %.c $(LIB_H)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
 
 
@@ -88,8 +87,11 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 %: %.c libgufi.a
 	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
+%: %.cpp libgufi.a
+	$(CXX) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
+
 # recursive make of the '%' part
-# recursive make will catch the ifneq ($(MYSQL),) ... above 
+# recursive make will catch the ifneq ($(MYSQL),) ... above
 %.mysql:
 	$(MAKE) -C . $* MYSQL=1
 
