@@ -184,7 +184,7 @@ bool create_tables(sqlite3 *db) {
             (sqlite3_exec(db, vesql,      nullptr, nullptr, nullptr) == SQLITE_OK));
 }
 
-sqlite3 *opendb(const std::string &name){
+sqlite3 *open_and_create_tables(const std::string &name){
     sqlite3 *db = nullptr;
     if (sqlite3_open_v2(name.c_str(), &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, nullptr) != SQLITE_OK) {
         return nullptr;
@@ -210,10 +210,45 @@ sqlite3 *opendb(const std::string &name){
     return db;
 }
 
-// Thread function for handling db.db file generation
+// Creates the path and creates a databse file in the directory
+// If there is an error, previously created directories and databases are not deleted
+bool create_database_file(const std::string &path, const char separator, const std::string &db_name, bool &exists) {
+    // check if the path is a directory
+    struct stat path_stat;
+    if (exists && stat(path.c_str(), &path_stat) == 0) {
+        if (!S_ISDIR(path_stat.st_mode)) {
+            std::cerr << path << " is not a directory. Skipping." << std::endl;
+            return false;
+        }
+        else {
+            exists = true;
+        }
+    }
+    else if (!exists || (errno == ENOENT)) {
+        // if it doesn't, create the directory
+        exists = false;
+        if (mkdir(path.c_str(), 0777) != 0) {
+            std::cerr << "Could not create " << path << ". Skipping." << std::endl;
+            return false;
+        }
+    }
+
+    // open database file
+    const std::string full_name = path + separator + db_name;
+    sqlite3 *db = open_and_create_tables(full_name);
+    if (!db) {
+        std::cerr << "Could not open " << full_name << std::endl;
+        return false;
+    }
+
+    sqlite3_close(db);
+    return true;
+}
+
+// Thread function for handling database file generation
 // This function starts out by building the directory it was assigned, along with all subdirectories
-// The db.db file is generated for each directory. Once the target depth has been reached,
-// random file metadata is generated and pushed into the db.db file of the bottom most directory.
+// The database file is generated for each directory. Once the target depth has been reached,
+// random file metadata is generated and pushed into the database file of the bottom most directory.
 void thread(void *args) {
     ThreadArgs *arg = (ThreadArgs *) args;
 
@@ -226,40 +261,11 @@ void thread(void *args) {
     for(std::size_t depth = 0; depth < arg->target_depth; depth++) {
         // generate the current directory path
         s << arg->settings->path_separator << "dir" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << arg->index;
-        const std::string directory = s.str();
 
-        // check if the directory exists
-        struct stat path_stat;
-        if (exists && stat(directory.c_str(), &path_stat) == 0) {
-            if (!S_ISDIR(path_stat.st_mode)) {
-                std::cerr << directory << " is not a directory. Skipping." << std::endl;
-                delete arg;
-                return;
-            }
-            else {
-                exists = true;
-            }
-        }
-        else if (!exists || (errno == ENOENT)) {
-            // if it doesn't, create the directory
-            exists = false;
-            if (mkdir(directory.c_str(), 0777) != 0) {
-                std::cerr << "Could not create " << directory << ". Skipping." << std::endl;
-                delete arg;
-                return;
-            }
-        }
-
-        // open a database file
-        const std::string db_name = directory + arg->settings->path_separator + arg->settings->db_name;
-        sqlite3 *db = opendb(db_name);
-        if (!db) {
-            std::cerr << "Could not open " << db_name << std::endl;
+        if (!create_database_file(s.str(), arg->settings->path_separator, arg->settings->db_name, exists)) {
             delete arg;
             return;
         }
-
-        sqlite3_close(db);
     }
 
     // depth has been reached, fill up the database file
@@ -274,7 +280,7 @@ void thread(void *args) {
     }
 
     // the active database is in memory until insertion is done
-    sqlite3 *in_memory = opendb(":memory:");
+    sqlite3 *in_memory = open_and_create_tables(":memory:");
     if (!in_memory) {
         std::cerr << "Could not open in memory database for " << db_name << std::endl;
         sqlite3_close(on_disk);
@@ -581,24 +587,16 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // create the top level directory and the database file
+    bool exists = true;
+    if (!create_database_file(settings.top, settings.path_separator, settings.db_name, exists)) {
+        std::cerr << "Could not create database file in " << settings.top << std::endl;
+        return 1;
+    }
+
     // use this rng to generate seeds for other rngs
     std::default_random_engine seed_gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     std::uniform_int_distribution <std::size_t> seed_rng(0, -1);
-
-    // create the top level directory
-    struct stat path_stat;
-    if (stat(settings.top.c_str(), &path_stat) == 0) {
-        if (!S_ISDIR(path_stat.st_mode)) {
-            std::cerr << "Existing " << settings.top << " is not a directory. Skipping." << std::endl;
-            return 1;
-        }
-    }
-    else if (errno == ENOENT) {
-        if (mkdir(settings.top.c_str(), 0777) != 0) {
-            std::cerr << "Could not create " << settings.top << ". Skipping." << std::endl;
-            return 1;
-        }
-    }
 
     // generate file distribution by user
     std::vector <std::size_t> file_counts(settings.users);
