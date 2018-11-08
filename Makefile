@@ -88,7 +88,7 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
 %: %.cpp libgufi.a
-	$(CXX) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
+	$(CXX) $(CFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
@@ -108,4 +108,4 @@ clean:
 	rm -rf core.*
 	@ # for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
 	@ # final "echo" is so sub-shell will return success
-	@ (for F in `ls *.c | sed -e 's/\.c$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
+	@ (for F in `ls *.c* | sed -e 's/\.c.*$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
