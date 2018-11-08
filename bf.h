@@ -221,7 +221,7 @@ typedef enum {
 
 
 struct work {
-   size_t level;
+   size_t        level;
    char          name[MAXPATH];
    char          type[2];
    char          nameto[MAXPATH];

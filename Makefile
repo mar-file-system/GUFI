@@ -3,7 +3,7 @@ BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 
 # TOOLS = querydb querydbn make_testdirs dbdump
-TOOLS = querydb querydbn make_testdirs sqlite3-pcre/pcre.so
+TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
 
 # # TBD ...
 # cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse
@@ -86,6 +86,9 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 
 %: %.c libgufi.a
 	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
+
+%: %.cpp libgufi.a
+	$(CXX) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
