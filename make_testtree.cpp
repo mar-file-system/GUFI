@@ -173,9 +173,12 @@ struct ThreadArgs {
     std::size_t inode;                   // inode offset
     std::size_t files;                   // total number of files under this directory
     std::string directory;               // directory to put database into
-    Settings *settings;
-    threadpool *pool;
+    static Settings *settings;
+    static threadpool *pool;
 };
+
+Settings   *ThreadArgs::settings  = nullptr;
+threadpool *ThreadArgs::pool      = nullptr;
 
 // Generate random counts such that they add up to total
 // file_counts should have been resized to the desired
@@ -536,7 +539,7 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
         }
         else if (args == "--files-with-dirs") {
             if (!(std::stringstream(argv[i]) >> std::boolalpha >> settings.files_with_dirs)) {
-                std::cerr << "Bad boolean: " <<  argv[i] << std::endl;
+                std::cerr << "Bad boolean: " << argv[i] << std::endl;
                 return false;
             }
 
@@ -624,6 +627,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    ThreadArgs::settings = &settings;
+    ThreadArgs::pool = &pool;
+
     // use this rng to generate seeds for other rngs
     std::default_random_engine seed_gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     std::uniform_int_distribution <std::size_t> seed_rng(0, -1);
@@ -649,8 +655,6 @@ int main(int argc, char *argv[]) {
         args->inode = inode;
         args->files = file_counts[uid];
         args->directory = settings.top;
-        args->settings = &settings;
-        args->pool = &pool;
 
         // next directory starts with an new set of inodes
         inode += args->files + args->target_depth;
