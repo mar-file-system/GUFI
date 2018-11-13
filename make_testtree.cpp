@@ -309,8 +309,11 @@ void thread(void *args) {
     // generate file distribution for each level of this path
     // this vector is used as 1 indexed instead of 0
     std::vector <std::size_t> file_counts(arg->target_depth);
-    file_counts[arg->target_depth - 1] = arg->files;
-    if (!arg->settings->files_with_dirs) {
+
+    // if records should be created throughout the directory, distribute the file count
+    // otherwise, default to the bottom-most directory containing all of the files
+    file_counts.back() = arg->files;
+    if (arg->settings->files_with_dirs) {
         distribute_total_randomly(file_counts, arg->files, seed_gen, seed_rng);
     }
 
@@ -532,9 +535,12 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
             }
         }
         else if (args == "--files-with-dirs") {
-            if (!read_value(argc, argv, i, settings.files_with_dirs, "files with dirs")) {
+            if (!(std::stringstream(argv[i]) >> std::boolalpha >> settings.files_with_dirs)) {
+                std::cerr << "Bad boolean: " <<  argv[i] << std::endl;
                 return false;
             }
+
+            i++;
         }
         else if (args == "--seed") {
             if (!read_value(argc, argv, i, settings.seed, "seed count")) {
