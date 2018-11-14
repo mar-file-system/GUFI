@@ -101,7 +101,7 @@ const std::size_t DEFAULT_NUM_FILES = 750000000;
 const char        DEFAULT_PATH_SEPARATOR = '/';
 const std::size_t DEFAULT_MIN_DEPTH = 1;
 const std::size_t DEFAULT_MAX_DEPTH = 1;
-const std::size_t DEFAULT_LEADING_ZEROS = 0;
+const std::size_t DEFAULT_LEADING_ZEROS = 5;
 const std::string DEFAULT_DB_NAME = "db.db";
 const bool        DEFAULT_FILES_WITH_DIRS = false;
 

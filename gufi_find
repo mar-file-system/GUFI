@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 
@@ -72,346 +72,150 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+import argparse
+import os
+import subprocess
+import sys
 
+# ###############################################
+# https://stackoverflow.com/a/14117511
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
 
+def check_non_negative(value):
+    ivalue = int(value)
+    if ivalue < 0:
+         raise argparse.ArgumentTypeError("%s is an invalid non-negative int value" % value)
+    return ivalue
 
-# gufi_find
-#
-# This script somewhat replicates
-# GNU find and ls using GUFI's bfq
-#
+def check_char(value):
+    if len(value) != 1:
+        raise argparse.ArgumentTypeError("%s is not a character" % value)
+    return value
+# ###############################################
 
-# default top-most directory is the current directory
-root="$(pwd)"
+# build the query
+def build_query(args):
+    query = 'SELECT {} FROM entries'.format(args.select)
 
-function usage() {
-    echo "Usage ${BASH_SOURCE} [options] [SELECT [columns]] [WHERE [conditions]] [GROUPBY [conditions]] GUFI_tree ..."
-    echo
-    echo "  options"
-    echo "    -h | --help          print help message"
-    echo "    --root               top-most directory to search from (default: ${root})"
-    echo "    --depth d            the number of levels to search"
-    echo "    --num_results n      first n results"
-    echo "    --smallest           top n smallest files"
-    echo "    --largest            top n largest files"
-    echo "    --newest             top n newest files"
-    echo
-    echo "    There should not be more one of these in a single call to $(basename $0)"
-    echo "      --least-space-used top n users of space"
-    echo "      --most-space-used  top n users of space"
-    echo "      --least-files      top n users with most files"
-    echo "      --most-files       top n users with most files"
-    echo
-    echo "  SELECT columns"
-    echo "    --all"
-    echo "    --type"
-    echo "    --[amc]time"
-    echo "    --size"
-    echo "    --uid | --user"
-    echo
-    echo "  WHERE conditions"
-    echo "    --name n             filename pattern"
-    # echo "    --type t             f or d"
-    echo "    --[amc]time_before t seconds since epoch"
-    echo "    --[amc]time_after t  seconds since epoch"
-    echo "    --smaller_than b     bytes"
-    echo "    --larger_than b      bytes"
-    echo "    --uid | --user u     uid or user name"
-    echo
-    echo "  GUFI_tree              directory containing GUFI index-tree database"
-}
+    # build the WHERE portion of the query
+    where = []
 
-# counter for queries that should be called at most once per invocation
-at_most_one=0
+    if args.name:
+        where += ['name REGEXP "{}"'.format(args.name)]
 
-# depth to search; -1 represents "as deep as possible"
-depth=-1
+    if args.atime_before:
+        where += ['atime < {}'.format(args.atime_before)]
 
-# default treating options as SELECT options
-mode="SELECT"
+    if args.mtime_before:
+        where += ['mtime < {}'.format(args.mtime_before)]
 
-# array of SELECT columns to print
-SELECT=()
+    if args.ctime_before:
+        where += ['ctime < {}'.format(args.ctime_before)]
 
-# limit the number of results per database
-# empty results in no limit
-LIMIT=""
+    if args.atime_after:
+        where += ['atime > {}'.format(args.atime_after)]
 
-# array of WHERE conditions to combine
-WHERE=()
+    if args.mtime_after:
+        where += ['mtime > {}'.format(args.mtime_after)]
 
-# array of GROUP BY columns
-GROUP=()
+    if args.ctime_after:
+        where += ['ctime > {}'.format(args.ctime_after)]
 
-# array of ORDER BY columns
-ORDER=()
+    if args.smaller_than:
+        where += ['size < {}'.format(args.smaller_than)]
 
-# Parse command line arguments
-# https://stackoverflow.com/a/14203146
-POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-key="$1"
+    if args.larger_than:
+        where += ['size < {}'.format(args.larger_than)]
 
-case $key in
-    -h|--help)
-        usage
-        exit 0
-        ;;
-    --root)
-        root="$2"
-        shift
-        shift
-        continue
-        ;;
-    --depth)
-        depth="$2"
-        shift
-        shift
-        continue
-        ;;
-    --num_results)
-        LIMIT="$2"
-        shift
-        shift
-        continue
-        ;;
-    --smallest)
-        ORDER=("${ORDER[@]}" "size ASC")
-        shift
-        continue
-        ;;
-    --largest)
-        ORDER=("${ORDER[@]}" "size DESC")
-        shift
-        continue
-        ;;
-    --newest)
-        ORDER=("${ORDER[@]}" "ctime DESC")
-        shift
-        continue
-        ;;
-    --least-space-used)
-        SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
-        GROUP=("${WHERE[@]}" "uid")
-        ORDER=("${ORDER[@]}" "total ASC")
-        complex=$((complex+1))
-        shift
-        continue
-        ;;
-    --most-space-used)
-        SELECT=("${SELECT[@]}" "uid" "SUM(size) as total")
-        GROUP=("${WHERE[@]}" "uid")
-        ORDER=("${ORDER[@]}" "total DESC")
-        at_most_one=$((at_most_one+1))
-        shift
-        continue
-        ;;
-    --least-files)
-        SELECT=("${SELECT[@]}" "uid" "count(*) as total")
-        GROUP=("${WHERE[@]}" "uid")
-        ORDER=("${ORDER[@]}" "total ASC")
-        at_most_one=$((at_most_one+1))
-        shift
-        continue
-        ;;
-    --most-files)
-        SELECT=("${SELECT[@]}" "uid" "count(*) as total")
-        GROUP=("${WHERE[@]}" "uid")
-        ORDER=("${ORDER[@]}" "total DESC")
-        at_most_one=$((at_most_one+1))
-        shift
-        continue
-        ;;
-    SELECT|WHERE|GROUPBY)
-        mode="$1"
-        shift
-        continue
-        ;;
-esac
+    if args.uid:
+        uid_proc = subprocess.Popen(['id', '-u', args.uid], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        uid_out, uid_err = uid_proc.communicate()
+        uid = args.uid
+        if uid_proc.returncode == 0:
+            uid = uid_out.split()[0]
+        where += ['uid == "{}"'.format(uid)]
 
-case $mode in
-    # SELECT options
-    SELECT)
-        case $key in
-            --all)
-                SELECT=("${SELECT[@]}" "*")
-                shift
-                ;;
-            --name|--[amc]time|--type|--size|--uid)
-                SELECT=("${SELECT[@]}" "${key#--}")
-                shift
-                ;;
-            --user)
-                SELECT=("${SELECT[@]}" "uid")
-                shift
-                ;;
-            # all other options are considered GUFI tree directories
-            *)
-                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
-                shift
-                ;;
-        esac
-        continue
-        ;;
+    if len(where):
+        query += ' WHERE ({})'.format(') AND ('.join(where))
 
-    # WHERE options
-    WHERE)
-        case $key in
-            --name)
-                WHERE=("${WHERE[@]}" "name REGEXP '$2'")
-                shift
-                shift
-                ;;
-            # # bfq needs some changing to make type work properly
-            # --type)
-            #    WHERE=("${WHERE[@]}" "type REGEXP '$2'")
-            #    shift
-            #    shift
-            #    ;;
-            --[amc]time_before)
-                time_type="${key#--}"
-                time_type="${time_type%_before}"
-                WHERE=("${WHERE[@]}" "${time_type} < $2")
-                shift
-                shift
-                ;;
-            --[amc]time_after)
-                time_type="${key#--}"
-                time_type="${time_type%_after}"
-                WHERE=("${WHERE[@]}" "${time_type} > $2")
-                shift
-                shift
-                ;;
-            --smaller_than)
-                WHERE=("${WHERE[@]}" "size < $2")
-                shift
-                shift
-                ;;
-            --larger_than)
-                WHERE=("${WHERE[@]}" "size > $2")
-                shift
-                shift
-                ;;
-            --uid|--user)
-                uid=$(id -u "$2" 2>/dev/null)
-                rc=$?
-                # ignore errors
-                if [[ "$rc" -ne "0" ]]
-                then
-                    uid="$2"
-                fi
-                WHERE=("${WHERE[@]}" "uid == '$uid'")
-                shift
-                shift
-                ;;
-            # all other options are considered GUFI tree directories
-            *)
-                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
-                shift
-                ;;
-        esac
-        continue
-        ;;
+    # build the GROUP BY portion of the query
+    if args.groupby:
+        query += ' GROUP BY {}'.format(args.groupby)
 
-    # GROUP BY options
-    GROUPBY)
-        case $key in
-            --name|--[amc]time|--type|--size|--uid)
-                GROUP=("${GROUP[@]}" "${key#--}")
-                shift
-                ;;
-            --user)
-                GROUP=("${GROUP[@]}" "uid")
-                shift
-                ;;
-            # all other options are considered GUFI tree directories
-            *)
-                POSITIONAL=("${POSITIONAL[@]}" "$1") # save it in an array for later
-                shift
-                ;;
-        esac
-        continue
-        ;;
-esac
-done
-set -- "${POSITIONAL[@]}" # restore positional parameters
+    # build the ORDER BY portion of the query
+    order_by = []
 
-# make sure at least one GUFI tree is provided and
-# at most 1 of the independent options is selected
-if [[ "${#POSITIONAL[@]}" -lt "1" ]] || [[ "${at_most_one}" -gt "1" ]];
-then
-    usage
-    exit 1
-fi
+    if args.smallest:
+        order_by += ['size ASC']
 
-# combine SELECT columns
-columns=""
-if [[ "${#SELECT[@]}" -gt "0" ]]
-then
-    #combine columns
-    columns="${SELECT[0]}"
-    for column in "${SELECT[@]:1}"
-    do
-        columns="${columns}, ${column}"
-    done
-fi
+    if args.largest:
+        order_by += ['size DESC']
 
-# only combine WHERE conditions if there are any
-conditions=""
-if [[ "${#WHERE[@]}" -gt "0" ]]
-then
-    # combine conditions
-    conditions="WHERE (${WHERE[0]})"
-    for condition in "${WHERE[@]:1}"
-    do
-        conditions="${conditions} AND (${condition})"
-    done
-fi
+    if args.oldest:
+        order_by += ['ctime ASC']
 
-# combine output grouping
-grouping=""
-if [[ "${#GROUP[@]}" -gt "0" ]]
-then
-    # combine groupings
-    grouping="GROUP BY ${GROUP[0]}"
-    for group in "${GROUP[@]:1}"
-    do
-        grouping="${grouping}, ${group}"
-    done
-fi
+    if args.newest:
+        order_by += ['ctime DESC']
 
-# combine output ordering
-ordering=""
-if [[ "${#ORDER[@]}" -gt "0" ]]
-then
-    # combine orderings
-    ordering="ORDER BY ${ORDER[0]}"
-    for order in "${ORDER[@]:1}"
-    do
-        ordering="${ordering}, ${order}"
-    done
-fi
+    if len(order_by):
+        query += ' ORDER BY {}'.format(', '.join(order_by))
 
-# limit the number of results
-limit=""
-if [[ ! -z "${LIMIT}" ]]
-then
-    limit="LIMIT ${LIMIT}"
-fi
+    # limit the number of results
+    if args.num_results:
+        query += ' LIMIT {}'.format(args.num_results)
 
-# generate paths
-patterns=()
-for pattern in "${POSITIONAL[@]}"
-do
-    patterns+=("-o" "-path" "*${pattern}")
-done
-paths=$(find "${root}" "${patterns[@]:1}" 2>/dev/null)
+    return query
 
-# generate query
-query="SELECT ${columns} FROM entries ${conditions} ${grouping} ${ordering} ${limit};"
+if __name__=='__main__':
+    cwd = os.getcwd()
 
-echo ${query}
+    parser = argparse.ArgumentParser(description='GUFI version of find')
+    parser.add_argument('--root',             metavar='path', dest='root',          type=str,                default=cwd, help='top-most directory to search from (default: ' + cwd + ')')
+    parser.add_argument('--delim',            metavar='c',    dest='delim',         type=check_char,                      help='delimiter separating output columns')
+    parser.add_argument('--depth',            metavar='d',    dest='depth',         type=check_positive,                  help='the number of levels to search')
+    parser.add_argument('--num_results',      metavar='n',    dest='num_results',   type=check_non_negative,              help='first n results')
+    parser.add_argument('--smallest',                         dest='smallest',      action='store_true',                  help='top n smallest files')
+    parser.add_argument('--largest',                          dest='largest',       action='store_true',                  help='top n largest files')
+    parser.add_argument('--oldest',                           dest='oldest',        action='store_true',                  help='top n oldest files')
+    parser.add_argument('--newest',                           dest='newest',        action='store_true',                  help='top n newest files')
+    parser.add_argument('--name',             metavar='name', dest='name',          type=str,                             help='filename pattern')
+    parser.add_argument('--atime_before',     metavar='t',    dest='atime_before',  type=check_non_negative,              help='seconds since epoch')
+    parser.add_argument('--mtime_before',     metavar='t',    dest='mtime_before',  type=check_non_negative,              help='seconds since epoch')
+    parser.add_argument('--ctime_before',     metavar='t',    dest='ctime_before',  type=check_non_negative,              help='seconds since epoch')
+    parser.add_argument('--atime_after',      metavar='t',    dest='atime_after',   type=check_non_negative,              help='seconds since epoch')
+    parser.add_argument('--mtime_after',      metavar='t',    dest='mtime_after',   type=check_non_negative,              help='seconds since epoch')
+    parser.add_argument('--ctime_after',      metavar='t',    dest='ctime_after',   type=check_non_negative,              help='seconds since epoch')
+    parser.add_argument('--smaller_than',     metavar='b',    dest='smaller_than',  type=check_non_negative,              help='bytes')
+    parser.add_argument('--larger_than',      metavar='b',    dest='larger_than',   type=check_non_negative,              help='bytes')
+    parser.add_argument('--uid', '--user',    metavar='u',    dest='uid',           type=str,                             help='uid or username')
+    parser.add_argument('--select',           metavar='cols', dest='select',        type=str,                default='*', help='comma separated columns (default: *)')
+    parser.add_argument('--groupby',          metavar='cols', dest='groupby',       type=str,                             help='comma separated columns (default: None)')
+    parser.add_argument('GUFI_tree',                                                                         nargs='+',   help='path containing GUFI tree database file')
 
-# run query
-$(dirname ${BASH_SOURCE})/bfq -p -P -d " " -l "${depth}" -E "${query}" ${paths}
+    args = parser.parse_args();
+
+    # create the find command
+    find_cmd = ['find', args.root, '-type', 'd'] + '-o -path *'.join([''] + args.GUFI_tree).split()[1:]
+    find = subprocess.Popen(find_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    find_out, find_err = find.communicate()
+    if find.returncode != 0:
+        print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
+        sys.exit(find.returncode)
+
+    # create the bfq command
+    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))), '-p', '-P', '-E', build_query(args)] + find_out.split()
+
+    if args.delim:
+        bfq_cmd += ['-d', args.delim]
+
+    if args.depth:
+        bfq_cmd += ['-l', str(args.depth)]
+
+    bfq = subprocess.Popen(bfq_cmd)
+    bfq.communicate() # block until bfq finishes
+
+    sys.exit(bfq.returncode)
