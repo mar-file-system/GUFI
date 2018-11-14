@@ -240,6 +240,11 @@ sqlite3 *open_and_create_tables(const std::string &name){
         std::cerr << "Could not turn journal_mode off " << sqlite3_errmsg(db) << std::endl;
     }
 
+    // // try increasing the page size
+    // if (sqlite3_exec(db, "PRAGMA page_size = 16777216", nullptr, nullptr, nullptr) != SQLITE_OK) {
+    //     std::cerr << "Could not change page size" << sqlite3_errmsg(db) << std::endl;
+    // }
+
     // create tables
     if (!create_tables(db)) {
         std::cerr << "Could not create tables: " << sqlite3_errmsg(db) << std::endl;
@@ -278,6 +283,8 @@ bool create_path(const std::string &path, bool &exists) {
 
 // This function creates all directories, database files, and fills
 // in the database files with random file metadata for a single user
+//
+// https://stackoverflow.com/q/1711631
 void thread(void *args) {
     ThreadArgs *arg = (ThreadArgs *) args;
 
@@ -340,17 +347,9 @@ void thread(void *args) {
 
         // open the database file (but don't do anything with it until the very end)
         const std::string db_name = directory + arg->settings->path_separator + arg->settings->db_name;
-        sqlite3 *on_disk = nullptr;
-        if (sqlite3_open(db_name.c_str(), &on_disk) != SQLITE_OK) {
+        sqlite3 *on_disk = open_and_create_tables(db_name.c_str());
+        if (!on_disk) {
             std::cerr << "Could not open " << db_name << ": " << sqlite3_errmsg(on_disk) << std::endl;
-            break;
-        }
-
-        // the active database is in memory until insertion is done
-        sqlite3 *in_memory = open_and_create_tables(":memory:");
-        if (!in_memory) {
-            std::cerr << "Could not open in memory database for " << db_name << std::endl;
-            sqlite3_close(on_disk);
             break;
         }
 
@@ -362,12 +361,13 @@ void thread(void *args) {
             // prepare to insert entries
             sqlite3_stmt *res = nullptr;
             static const std::size_t esqli_len = strlen(esqli);
-            if (sqlite3_prepare_v2(in_memory, esqli, esqli_len, &res, nullptr) != SQLITE_OK) {
-                std::cerr << "Could not prepare statement for " << arg->directory << " (" << sqlite3_errmsg(in_memory) << "). Skipping" << std::endl;
+            if (sqlite3_prepare_v2(on_disk, esqli, esqli_len, &res, nullptr) != SQLITE_OK) {
+                std::cerr << "Could not prepare statement for " << arg->directory << " (" << sqlite3_errmsg(on_disk) << "). Skipping" << std::endl;
                 sqlite3_close(on_disk);
-                sqlite3_close(in_memory);
                 break;
             }
+
+            sqlite3_exec(on_disk, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
 
             // create file entries and insert them into the database
             for(std::size_t i = 0; i < file_counts[depth]; i++) {
@@ -404,10 +404,12 @@ void thread(void *args) {
                 work.ossint4 = rng(gen);
 
                 sumit(&summary, &work);
-                insertdbgo(&work, in_memory, res);
+                insertdbgo(&work, on_disk, res);
             }
 
-            insertdbfin(in_memory, res);
+            sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
+
+            insertdbfin(on_disk, res);
         }
 
         // summarize this directory
@@ -440,19 +442,8 @@ void thread(void *args) {
         work.ossint3 = rng(gen);
         work.ossint4 = rng(gen);
 
-        insertsumdb(in_memory, &work, &summary);
+        insertsumdb(on_disk, &work, &summary);
 
-        // write the in memory database out to disk
-        sqlite3_backup *backup = sqlite3_backup_init(on_disk, "main", in_memory, "main");
-        if (backup) {
-            (void) sqlite3_backup_step(backup, -1);
-            (void) sqlite3_backup_finish(backup);
-        }
-        else {
-            std::cerr << "Could not initiate moving of in memory database into " << db_name << std::endl;
-        }
-
-        sqlite3_close(in_memory);
         sqlite3_close(on_disk);
     }
 

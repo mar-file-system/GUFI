@@ -644,7 +644,7 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
           //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
           //return 0;
     }
-    sqlite3_clear_bindings(res);
+    /* sqlite3_clear_bindings(res); */
     sqlite3_reset(res);
 
     return 0;
