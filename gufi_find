@@ -76,61 +76,152 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
+import time
 
 import query_builder as qb
 
-# build the SELECT portion of the query
+'''file size units specified in GNU find.'''
+filesize = {'b' : 512,
+            'c' : 1,
+            'w' : 2,
+            'k' : 1024,
+            'M' : 1048576,
+            'G' : 1048576}
+
 def build_select(args):
+    '''Build the SELECT portion of the query.'''
     if args.select:
         return [args.select]
     return None
 
-# build the WHERE portion of the query
 def build_where(args):
+    '''Build the WHERE portion of the query.'''
     where = []
 
-    if args.name:
+    if args.amin != None:
+        where += ['atime > {}'.format(time.time() - args.amin * 60)]
+
+    # if args.anewer != None:
+
+    if args.atime != None:
+        where += ['atime > {}'.format(time.time() - args.atime * 24 * 60 * 60)]
+
+    if args.cmin != None:
+        where += ['ctime > {}'.format(time.time() - args.cmin * 60)]
+
+    # if args.cnewer != None:
+
+    if args.ctime != None:
+        where += ['ctime > {}'.format(time.time() - args.ctime * 24 * 60 * 60)]
+
+    if args.empty == True:
+        where += ['size == 0']
+
+    # if args.executable:
+
+    # if args.false != None:
+
+    if args.gid != None:
+        where += ['gid == {}'.format(args.gid)]
+
+    if args.group != None:
+        where += ['gid == {}'.format(qb.get_gid(args.group))]
+
+    # if args.ilname != None:
+
+    # if args.iname != None:
+
+    if args.inum != None:
+        where += ['inode == {}'.format(args.inum)]
+
+    # if args.ipath != None:
+
+    # if args.iregex != None:
+
+    # if args.iwholename != None:
+
+    if args.links != None:
+        where += ['nlinks == {}'.format(args.links)]
+
+    # if args.lname != None:
+
+    if args.mmin != None:
+        where += ['mtime > {}'.format(time.time() - args.mmin * 60)]
+
+    if args.mtime != None:
+        where += ['mtime > {}'.format(time.time() - args.mtime * 24 * 60 * 60)]
+
+    if args.name != None:
         where += ['name REGEXP "{}"'.format(args.name)]
 
-    if args.atime_before:
-        where += ['atime < {}'.format(args.atime_before)]
+    # if args.newer != None:
 
-    if args.mtime_before:
-        where += ['mtime < {}'.format(args.mtime_before)]
+    # if args.newerXY != None:
 
-    if args.ctime_before:
-        where += ['ctime < {}'.format(args.ctime_before)]
+    # if args.nouser != None:
 
-    if args.atime_after:
-        where += ['atime > {}'.format(args.atime_after)]
+    if args.path != None:
+        print "Need to modify GUFI to store/access path names when selecting file names"
+        # where += ['name REGEXP "{}"'.format(args.regex)]
 
-    if args.mtime_after:
-        where += ['mtime > {}'.format(args.mtime_after)]
+    # if args.readable != None:
 
-    if args.ctime_after:
-        where += ['ctime > {}'.format(args.ctime_after)]
+    if args.regex != None:
+        print "Need to modify GUFI to store/access path names when selecting file names"
+        # where += ['name REGEXP "{}"'.format(args.regex)]
 
-    if args.smaller_than:
-        where += ['size < {}'.format(args.smaller_than)]
+    # if args.samefile != None:
 
-    if args.larger_than:
-        where += ['size < {}'.format(args.larger_than)]
+    if args.size != None:
+        unit = 'b'
+        if args.size[-1] in 'bcwkMG':
+            unit = args.size[-1]
+            args.size = args.size[:-1]
 
-    if args.uid:
-        where += ['uid == "{}"'.format(qb.get_uid(args.uid))]
+        comp = '=='
+        if args.size[0] == '+':
+            comp = '>'
+            args.size = args.size[1:]
+        elif args.size[0] == '-':
+            comp = '<'
+            args.size = args.size[1:]
+
+        where += ['size {} {}'.format(comp, int(args.size) * filesize[unit])]
+
+    # if args.true:
+
+    if args.type != None:
+        where += ['type == {}'.format(args.type)]
+
+    if args.uid != None:
+        where += ['uid == {}'.format(args.uid)]
+
+    # if args.used != None:
+
+    if args.user != None:
+        where += ['uid == {}'.format(qb.get_uid(args.user))]
+
+    # if args.wholename != None:
+
+    # if args.writable != None:
+
+    # if args.xtype != None:
+
+    # if args.context != None:
 
     return where
 
-# build the GROUP BY portion of the query
 def build_group_by(args):
+    '''Build the GROUP BY portion of the query.'''
     if args.group_by:
         return [args.group_by]
     return None
 
-# build the ORDER BY portion of the query
 def build_order_by(args):
+    '''Build the ORDER BY portion of the query.'''
     order_by = []
 
     if args.smallest:
@@ -139,39 +230,72 @@ def build_order_by(args):
     if args.largest:
         order_by += ['size DESC']
 
-    if args.oldest:
-        order_by += ['ctime ASC']
-
-    if args.newest:
-        order_by += ['ctime DESC']
-
     return order_by
+
+def check_size(value):
+    '''Make sure the value matches [+/-]n[bcwkMG].'''
+    if not re.match('^[+-]?[0-9]+[bcwkMG]?$', value):
+        raise argparse.ArgumentTypeError("%s is not a valid size" % value)
+
+    return value
 
 if __name__=='__main__':
     cwd = os.getcwd()
 
     parser = argparse.ArgumentParser(description='GUFI version of find')
-    parser.add_argument('--root',             metavar='path', dest='root',          type=str,                default=cwd, help='top-most directory to search from (default: ' + cwd + ')')
-    parser.add_argument('--delim',            metavar='c',    dest='delim',         type=qb.check_char,                   help='delimiter separating output columns')
-    parser.add_argument('--depth',            metavar='d',    dest='depth',         type=qb.check_positive,               help='the number of levels to search')
-    parser.add_argument('--num_results',      metavar='n',    dest='num_results',   type=qb.check_non_negative,           help='first n results')
-    parser.add_argument('--smallest',                         dest='smallest',      action='store_true',                  help='top n smallest files')
-    parser.add_argument('--largest',                          dest='largest',       action='store_true',                  help='top n largest files')
-    parser.add_argument('--oldest',                           dest='oldest',        action='store_true',                  help='top n oldest files')
-    parser.add_argument('--newest',                           dest='newest',        action='store_true',                  help='top n newest files')
-    parser.add_argument('--name',             metavar='name', dest='name',          type=str,                             help='filename pattern')
-    parser.add_argument('--atime_before',     metavar='t',    dest='atime_before',  type=qb.check_non_negative,           help='seconds since epoch')
-    parser.add_argument('--mtime_before',     metavar='t',    dest='mtime_before',  type=qb.check_non_negative,           help='seconds since epoch')
-    parser.add_argument('--ctime_before',     metavar='t',    dest='ctime_before',  type=qb.check_non_negative,           help='seconds since epoch')
-    parser.add_argument('--atime_after',      metavar='t',    dest='atime_after',   type=qb.check_non_negative,           help='seconds since epoch')
-    parser.add_argument('--mtime_after',      metavar='t',    dest='mtime_after',   type=qb.check_non_negative,           help='seconds since epoch')
-    parser.add_argument('--ctime_after',      metavar='t',    dest='ctime_after',   type=qb.check_non_negative,           help='seconds since epoch')
-    parser.add_argument('--smaller_than',     metavar='b',    dest='smaller_than',  type=qb.check_non_negative,           help='bytes')
-    parser.add_argument('--larger_than',      metavar='b',    dest='larger_than',   type=qb.check_non_negative,           help='bytes')
-    parser.add_argument('--uid', '--user',    metavar='u',    dest='uid',           type=str,                             help='uid or username')
-    parser.add_argument('--select',           metavar='cols', dest='select',        type=str,                default='*', help='comma separated columns (default: *)')
-    parser.add_argument('--group_by',         metavar='cols', dest='group_by',      type=str,                             help='comma separated columns (default: None)')
-    parser.add_argument('GUFI_tree',                                                                         nargs='+',   help='path containing GUFI tree database file')
+    parser.add_argument('-amin',              metavar='n',         dest='amin',          type=qb.check_non_negative,          help='File was last accessed n minutes ago.')
+    # parser.add_argument('-anewer',            metavar='file',      dest='anewer',        type=qb.check_non_negative,          help='File was last accessed more recently than file was modified.')
+    parser.add_argument('-atime',             metavar='n',         dest='atime',         type=qb.check_non_negative,          help='File was last accessed n*24 hours ago.')
+    parser.add_argument('-cmin',              metavar='n',         dest='cmin',          type=qb.check_non_negative,          help='File\'s status was last changed n minutes ago.')
+    # parser.add_argument('-cnewer',            metavar='file',      dest='cnewer',        type=qb.check_non_negative,          help='File\'s status was last changed more recently than file was modified.')
+    parser.add_argument('-ctime',             metavar='n',         dest='ctime',         type=qb.check_non_negative,          help='File\'s status was last changed n*24 hours ago.')
+    parser.add_argument('-empty',                                  dest='empty',         action='store_true',                 help='File is empty and is either a regular file or a directory.')
+    # parser.add_argument('-executable',                             dest='executable',    action='store_true',                 help='Matches files which are executable and directories which are searchable (in a file name resolution sense).')
+    # parser.add_argument('-false',                                  dest='false',         action='store_true',                 help='File is false and is either a regular file or a directory.')
+    # parser.add_argument('-fstype',            metavar='n',         dest='fstype',        type=str,                            help='File is on a filesystem of type type.')
+    parser.add_argument('-gid',               metavar='n',         dest='gid',           type=qb.check_non_negative,          help='File\'s numeric group ID is n.')
+    parser.add_argument('-group',             metavar='gname',     dest='group',         type=qb.get_gid,                     help='File belongs to group gname (numeric group ID allowed).')
+    # parser.add_argument('-ilname',            metavar='pattern',   dest='ilname',        type=str,                            help='Like -lname, but the match is case insensitive.')
+    # parser.add_argument('-iname',             metavar='pattern',   dest='iname',         type=str,                            help='Like -name, but the match is case insensitive.')
+    parser.add_argument('-inum',              metavar='n',         dest='inum',          type=qb.check_non_negative,          help='File has inode number n. It is normally easier to use the -samefile test instead.')
+    # parser.add_argument('-ipath',             metavar='pattern',   dest='ipath',         type=str,                            help='Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.')
+    # parser.add_argument('-iregex',            metavar='pattern',   dest='iregex',        type=str,                            help='Like -regex, but the match is case insensitive.')
+    # parser.add_argument('-iwholename',        metavar='pattern',   dest='iwholename',    type=str,                            help='Like -wholename, but the match is case insensitive.')
+    parser.add_argument('-links',             metavar='n',         dest='links',         type=qb.check_non_negative,          help='File has n links.')
+    # parser.add_argument('-lname',             metavar='pattern',   dest='lname',         type=str,                            help='File is a symbolic link whose contents match shell pattern pattern.')
+    parser.add_argument('-mmin',              metavar='n',         dest='mmin',          type=qb.check_non_negative,          help='File\'s data was last modified n minutes ago.')
+    parser.add_argument('-mtime',             metavar='n',         dest='mtime',         type=qb.check_non_negative,          help='File\'s data was last modified n*24 hours ago.')
+    parser.add_argument('-name',              metavar='pattern',   dest='name',          type=str,                            help='Base of file name (the path with the leading directories removed) matches shell pattern pattern.')
+    # parser.add_argument('-newer',             metavar='file',      dest='newer',         type=str,                            help='File was modified more recently than file.')
+    # parser.add_argument('-newerXY',           metavar='reference', dest='newerXY',       type=str,                            help='Compares the timestamp of the current file with reference.')
+    # parser.add_argument('-nouser',                                 dest='nouser',        type=qb.check_bool,                  help='No user corresponds to file\'s numeric user ID.')
+    parser.add_argument('-path',              metavar='pattern',   dest='path',          type=str,                            help='File name matches shell pattern pattern.')
+    # parser.add_argument('-readable',                               dest='readable',      type=qb.check_bool,                  help='Matches files which are readable.')
+    parser.add_argument('-regex',             metavar='pattern',   dest='regex',         type=str,                            help='File name matches regular expression pattern.')
+    # parser.add_argument('-samefile',          metavar='name',      dest='samefile',      type=qb.check_bool,                  help='File refers to the same inode as name.')
+    parser.add_argument('-size',              metavar='n',         dest='size',          type=check_size,                     help='')
+    # parser.add_argument('-true',                                   dest='true',          type=qb.check_bool,                  help='Always true/')
+    parser.add_argument('-type',              metavar='c',         dest='type',          type=qb.check_char,                  help='File is of type c')
+    parser.add_argument('-uid',               metavar='n',         dest='uid',           type=qb.check_non_negative,          help='File\'s numeric user ID is n.')
+    # parser.add_argument('-used',              metavar='n',         dest='used',          type=qb.check_non_negative,          help='File was last accessed n days after its status was last changed.')
+    parser.add_argument('-user',              metavar='uname',     dest='user',          type=qb.get_uid,                     help='File is owned by user uname (numeric user ID allowed).')
+    # parser.add_argument('-wholename',         metavar='pattern',   dest='wholename',     type=str,                            help='See -path. This alternative is less portable than -path.')
+    # parser.add_argument('-writable',                               dest='',              type=qb.check_bool,                  help='Matches files which are writable.')
+    # parser.add_argument('-xtype',             metavar='c',         dest='xtype',         type=qb.check_char,                  help='The same as -type unless the file is a symbolic link.')
+    # parser.add_argument('-context',           metavar='pattern',   dest='context',       type=str,                            help='(SELinux only) Security context of the file matches glob pattern.')
+
+    parser.add_argument('-maxdepth',          metavar='levels',    dest='depth',      type=qb.check_non_negative,          help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
+    # parser.add_argument('-mindepth',          metavar='levels',    dest='mindepth',      type=qb.check_non_negative,          help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
+
+    # GUFI specific arguments
+    parser.add_argument('--root',             metavar='path',      dest='root',          type=str,           default=cwd,     help='top-most directory to search from (default: ' + cwd + ')')
+    parser.add_argument('--select',           metavar='cols',      dest='select',        type=str,           default='*',     help='comma separated columns (default: *)')
+    parser.add_argument('--group_by',         metavar='cols',      dest='group_by',      type=str,                            help='comma separated columns (default: None)')
+    parser.add_argument('--delim',            metavar='c',         dest='delim',         type=qb.check_char,                  help='delimiter separating output columns')
+    parser.add_argument('--num_results',      metavar='n',         dest='num_results',   type=qb.check_non_negative,          help='first n results')
+    parser.add_argument('--smallest',                              dest='smallest',      action='store_true',                 help='top n smallest files')
+    parser.add_argument('--largest',                               dest='largest',       action='store_true',                 help='top n largest files')
+    parser.add_argument('GUFI_tree',                                                                         nargs='+',       help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 

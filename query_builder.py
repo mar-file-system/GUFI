@@ -102,40 +102,56 @@ def check_char(value):
     if len(value) != 1:
         raise argparse.ArgumentTypeError("%s is not a character" % value)
     return value
+
+def check_bool(value):
+    '''Make sure the value is 'true' or 'false'.'''
+    if value == 'true':
+        return true
+    elif value == 'false':
+        return false
+    raise argparse.ArgumentTypeError("%s is not a valid boolean string" % value)
 # ###############################################
 
-def get_uid(user):
+def get_id(id_str, mode):
     """
-    Attempts to convert the input string into a uid
-    by calling GNU id. If GNU id fails, the 'user'
+    Attempts to convert the input string into a uid/gid
+    by calling GNU id. If GNU id fails, the 'id_str'
     will be attempted to be converted to an integer.
     If the conversion fails, or if the resulting value
     is less than 0, it is considered an error and will
     return None.
 
     Args:
-        user: A string uid or username
+        input_id: A string uid, username, gid, or groupname
 
     Returns:
-        An int that is a uid, or None
+        An int that is an id, or None
     """
 
-    if type(user) != str:
-        return None
+    if type(id_str) != str:
+        raise argparse.ArgumentTypeError("%s is not a valid id value" % id_str)
 
-    uid_proc = subprocess.Popen(['id', '-u', str(user)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    uid_out, uid_err = uid_proc.communicate()
-    uid = None
-    if uid_proc.returncode == 0:
-        uid = uid_out.split()[0]
+    id_proc = subprocess.Popen(['id', '-' + mode, id_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    id_out, id_err = id_proc.communicate()
+    my_id = None
+    if id_proc.returncode == 0:
+        my_id = id_out.split()[0]
     else:
         try:
-            uid = int(args.uid)
+            my_id = int(input_id)
         except ValueError:
-            pass
-        if uid < 0:
-            uid = None
-    return uid
+            raise argparse.ArgumentTypeError("%s is not a valid id value" % id_str)
+
+        if my_id < 0:
+            raise argparse.ArgumentTypeError("%s is not a valid id value" % id_str)
+
+    return my_id
+
+def get_uid(user):
+    return get_id(user, 'u')
+
+def get_gid(group):
+    return get_id(group, 'g')
 
 # build a query that searches the entries table
 def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None):
