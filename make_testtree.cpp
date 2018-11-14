@@ -105,7 +105,7 @@ const std::size_t DEFAULT_LEADING_ZEROS = 5;
 const std::string DEFAULT_DB_NAME = "db.db";
 const bool        DEFAULT_FILES_WITH_DIRS = false;
 
-const std::size_t DEFAULT_THREAD_COUNT = std::thread::hardware_concurrency() / 2;
+const std::size_t DEFAULT_THREAD_COUNT = std::max(std::thread::hardware_concurrency() / 2, (decltype(std::thread::hardware_concurrency())) 1);
 
 // File size min, max, and weight to choose from
 struct Bucket {
