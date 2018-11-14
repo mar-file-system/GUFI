@@ -72,36 +72,23 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+
+
 import argparse
 import os
 import subprocess
 import sys
 
-# ###############################################
-# https://stackoverflow.com/a/14117511
-def check_positive(value):
-    ivalue = int(value)
-    if ivalue <= 0:
-         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
-    return ivalue
+import query_builder as qb
 
-def check_non_negative(value):
-    ivalue = int(value)
-    if ivalue < 0:
-         raise argparse.ArgumentTypeError("%s is an invalid non-negative int value" % value)
-    return ivalue
+# build the SELECT portion of the query
+def build_select(args):
+    if args.select:
+        return [args.select]
+    return None
 
-def check_char(value):
-    if len(value) != 1:
-        raise argparse.ArgumentTypeError("%s is not a character" % value)
-    return value
-# ###############################################
-
-# build the query
-def build_query(args):
-    query = 'SELECT {} FROM entries'.format(args.select)
-
-    # build the WHERE portion of the query
+# build the WHERE portion of the query
+def build_where(args):
     where = []
 
     if args.name:
@@ -132,21 +119,18 @@ def build_query(args):
         where += ['size < {}'.format(args.larger_than)]
 
     if args.uid:
-        uid_proc = subprocess.Popen(['id', '-u', args.uid], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        uid_out, uid_err = uid_proc.communicate()
-        uid = args.uid
-        if uid_proc.returncode == 0:
-            uid = uid_out.split()[0]
-        where += ['uid == "{}"'.format(uid)]
+        where += ['uid == "{}"'.format(qb.get_uid(args.uid))]
 
-    if len(where):
-        query += ' WHERE ({})'.format(') AND ('.join(where))
+    return where
 
-    # build the GROUP BY portion of the query
-    if args.groupby:
-        query += ' GROUP BY {}'.format(args.groupby)
+# build the GROUP BY portion of the query
+def build_group_by(args):
+    if args.group_by:
+        return [args.group_by]
+    return None
 
-    # build the ORDER BY portion of the query
+# build the ORDER BY portion of the query
+def build_order_by(args):
     order_by = []
 
     if args.smallest:
@@ -161,53 +145,52 @@ def build_query(args):
     if args.newest:
         order_by += ['ctime DESC']
 
-    if len(order_by):
-        query += ' ORDER BY {}'.format(', '.join(order_by))
-
-    # limit the number of results
-    if args.num_results:
-        query += ' LIMIT {}'.format(args.num_results)
-
-    return query
+    return order_by
 
 if __name__=='__main__':
     cwd = os.getcwd()
 
     parser = argparse.ArgumentParser(description='GUFI version of find')
     parser.add_argument('--root',             metavar='path', dest='root',          type=str,                default=cwd, help='top-most directory to search from (default: ' + cwd + ')')
-    parser.add_argument('--delim',            metavar='c',    dest='delim',         type=check_char,                      help='delimiter separating output columns')
-    parser.add_argument('--depth',            metavar='d',    dest='depth',         type=check_positive,                  help='the number of levels to search')
-    parser.add_argument('--num_results',      metavar='n',    dest='num_results',   type=check_non_negative,              help='first n results')
+    parser.add_argument('--delim',            metavar='c',    dest='delim',         type=qb.check_char,                   help='delimiter separating output columns')
+    parser.add_argument('--depth',            metavar='d',    dest='depth',         type=qb.check_positive,               help='the number of levels to search')
+    parser.add_argument('--num_results',      metavar='n',    dest='num_results',   type=qb.check_non_negative,           help='first n results')
     parser.add_argument('--smallest',                         dest='smallest',      action='store_true',                  help='top n smallest files')
     parser.add_argument('--largest',                          dest='largest',       action='store_true',                  help='top n largest files')
     parser.add_argument('--oldest',                           dest='oldest',        action='store_true',                  help='top n oldest files')
     parser.add_argument('--newest',                           dest='newest',        action='store_true',                  help='top n newest files')
     parser.add_argument('--name',             metavar='name', dest='name',          type=str,                             help='filename pattern')
-    parser.add_argument('--atime_before',     metavar='t',    dest='atime_before',  type=check_non_negative,              help='seconds since epoch')
-    parser.add_argument('--mtime_before',     metavar='t',    dest='mtime_before',  type=check_non_negative,              help='seconds since epoch')
-    parser.add_argument('--ctime_before',     metavar='t',    dest='ctime_before',  type=check_non_negative,              help='seconds since epoch')
-    parser.add_argument('--atime_after',      metavar='t',    dest='atime_after',   type=check_non_negative,              help='seconds since epoch')
-    parser.add_argument('--mtime_after',      metavar='t',    dest='mtime_after',   type=check_non_negative,              help='seconds since epoch')
-    parser.add_argument('--ctime_after',      metavar='t',    dest='ctime_after',   type=check_non_negative,              help='seconds since epoch')
-    parser.add_argument('--smaller_than',     metavar='b',    dest='smaller_than',  type=check_non_negative,              help='bytes')
-    parser.add_argument('--larger_than',      metavar='b',    dest='larger_than',   type=check_non_negative,              help='bytes')
+    parser.add_argument('--atime_before',     metavar='t',    dest='atime_before',  type=qb.check_non_negative,           help='seconds since epoch')
+    parser.add_argument('--mtime_before',     metavar='t',    dest='mtime_before',  type=qb.check_non_negative,           help='seconds since epoch')
+    parser.add_argument('--ctime_before',     metavar='t',    dest='ctime_before',  type=qb.check_non_negative,           help='seconds since epoch')
+    parser.add_argument('--atime_after',      metavar='t',    dest='atime_after',   type=qb.check_non_negative,           help='seconds since epoch')
+    parser.add_argument('--mtime_after',      metavar='t',    dest='mtime_after',   type=qb.check_non_negative,           help='seconds since epoch')
+    parser.add_argument('--ctime_after',      metavar='t',    dest='ctime_after',   type=qb.check_non_negative,           help='seconds since epoch')
+    parser.add_argument('--smaller_than',     metavar='b',    dest='smaller_than',  type=qb.check_non_negative,           help='bytes')
+    parser.add_argument('--larger_than',      metavar='b',    dest='larger_than',   type=qb.check_non_negative,           help='bytes')
     parser.add_argument('--uid', '--user',    metavar='u',    dest='uid',           type=str,                             help='uid or username')
     parser.add_argument('--select',           metavar='cols', dest='select',        type=str,                default='*', help='comma separated columns (default: *)')
-    parser.add_argument('--groupby',          metavar='cols', dest='groupby',       type=str,                             help='comma separated columns (default: None)')
+    parser.add_argument('--group_by',         metavar='cols', dest='group_by',      type=str,                             help='comma separated columns (default: None)')
     parser.add_argument('GUFI_tree',                                                                         nargs='+',   help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 
     # create the find command
-    find_cmd = ['find', args.root, '-type', 'd'] + '-o -path *'.join([''] + args.GUFI_tree).split()[1:]
-    find = subprocess.Popen(find_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    find = qb.find(args.root, args.GUFI_tree)
     find_out, find_err = find.communicate()
     if find.returncode != 0:
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
         sys.exit(find.returncode)
 
     # create the bfq command
-    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))), '-p', '-P', '-E', build_query(args)] + find_out.split()
+    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+               '-p', '-P',
+               '-E', qb.build_query(build_select(args),
+                                    ['entries'],
+                                    build_where(args),
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results)] + find_out.split()
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]

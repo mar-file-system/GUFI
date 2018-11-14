@@ -1,0 +1,159 @@
+#!/usr/bin/env python2
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+
+
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# -----
+# NOTE:
+# -----
+
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+
+
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import os
+import subprocess
+import sys
+
+import query_builder as qb
+
+def least_space(args):
+    select   = ["SUM(size) as total"]
+    where    = []
+    group_by = ["uid"]
+    order_by = ["total ASC"]
+
+    return select, where, group_by, order_by
+
+def most_space(args):
+    select   = ["SUM(size) as total"]
+    where    = []
+    group_by = ["uid"]
+    order_by = ["total DESC"]
+
+    return select, where, group_by, order_by
+
+def least_files(args):
+    select   = ["count(*) as total"]
+    where    = []
+    group_by = ["uid"]
+    order_by = ["total ASC"]
+
+    return select, where, group_by, order_by
+
+def most_files(args):
+    select   = ["count(*) as total"]
+    where    = []
+    group_by = ["uid"]
+    order_by = ["total DESC"]
+
+    return select, where, group_by, order_by
+
+# mapping of valid 'operation' argument values to array generators
+QUERY_FORMAT = {'least-space' : least_space,
+                'most-space'  : most_space,
+                'least-files' : least_files,
+                'most-files'  : most_files}
+
+if __name__=='__main__':
+    cwd = os.getcwd()
+
+    parser = argparse.ArgumentParser(description='GUFI version of find')
+    parser.add_argument('--root',        metavar='path', dest='root',        type=str,                    default=cwd,                 help='top-most directory to search from (default: ' + cwd + ')')
+    parser.add_argument('--delim',       metavar='c',    dest='delim',       type=qb.check_char,                                       help='delimiter separating output columns')
+    parser.add_argument('--depth',       metavar='d',    dest='depth',       type=qb.check_positive,                                   help='the number of levels to search')
+    parser.add_argument('--num_results', metavar='n',    dest='num_results', type=qb.check_non_negative,                               help='first n results')
+    parser.add_argument('--select',      metavar='cols', dest='select',      type=str,                                                 help='comma separated columns')
+    parser.add_argument('operation',                                         type=str,                    choices=QUERY_FORMAT.keys(), help='operation to perform')
+    parser.add_argument('GUFI_tree',                                                                      nargs='+',                   help='path containing GUFI tree database file')
+
+    args = parser.parse_args();
+
+    # create the find command
+    find = qb.find(args.root, args.GUFI_tree)
+    find_out, find_err = find.communicate()
+    if find.returncode != 0:
+        print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
+        sys.exit(find.returncode)
+
+    select, where, group_by, order_by = QUERY_FORMAT[args.operation](args)
+    if args.select:
+        select = [args.select] + select
+
+    # create the bfq command
+    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))), '-p', '-P', '-E', qb.build_query(select, ['entries'], where, group_by, order_by, args.num_results)] + find_out.split()
+
+    if args.delim:
+        bfq_cmd += ['-d', args.delim]
+
+    if args.depth:
+        bfq_cmd += ['-l', str(args.depth)]
+
+    bfq = subprocess.Popen(bfq_cmd)
+    bfq.communicate() # block until bfq finishes
+
+    sys.exit(bfq.returncode)
