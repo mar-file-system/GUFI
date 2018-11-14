@@ -197,7 +197,7 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
 
     return query + ';'
 
-def find(root, paths, out=subprocess.PIPE, err=subprocess.PIPE):
+def find_dir(root, paths, out=subprocess.PIPE, err=subprocess.PIPE):
     '''
     Calls GNU find to try to find paths that match the given patterns
 

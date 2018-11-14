@@ -101,20 +101,20 @@ def build_where(args):
     '''Build the WHERE portion of the query.'''
     where = []
 
-    if args.amin != None:
+    if args.amin is not None:
         where += ['atime > {}'.format(time.time() - args.amin * 60)]
 
-    # if args.anewer != None:
+    # if args.anewer is not None:
 
-    if args.atime != None:
+    if args.atime is not None:
         where += ['atime > {}'.format(time.time() - args.atime * 24 * 60 * 60)]
 
-    if args.cmin != None:
+    if args.cmin is not None:
         where += ['ctime > {}'.format(time.time() - args.cmin * 60)]
 
-    # if args.cnewer != None:
+    # if args.cnewer is not None:
 
-    if args.ctime != None:
+    if args.ctime is not None:
         where += ['ctime > {}'.format(time.time() - args.ctime * 24 * 60 * 60)]
 
     if args.empty == True:
@@ -122,60 +122,60 @@ def build_where(args):
 
     # if args.executable:
 
-    # if args.false != None:
+    # if args.false is not None:
 
-    if args.gid != None:
+    if args.gid is not None:
         where += ['gid == {}'.format(args.gid)]
 
-    if args.group != None:
+    if args.group is not None:
         where += ['gid == {}'.format(qb.get_gid(args.group))]
 
-    # if args.ilname != None:
+    # if args.ilname is not None:
 
-    # if args.iname != None:
+    # if args.iname is not None:
 
-    if args.inum != None:
+    if args.inum is not None:
         where += ['inode == {}'.format(args.inum)]
 
-    # if args.ipath != None:
+    # if args.ipath is not None:
 
-    # if args.iregex != None:
+    # if args.iregex is not None:
 
-    # if args.iwholename != None:
+    # if args.iwholename is not None:
 
-    if args.links != None:
+    if args.links is not None:
         where += ['nlinks == {}'.format(args.links)]
 
-    # if args.lname != None:
+    # if args.lname is not None:
 
-    if args.mmin != None:
+    if args.mmin is not None:
         where += ['mtime > {}'.format(time.time() - args.mmin * 60)]
 
-    if args.mtime != None:
+    if args.mtime is not None:
         where += ['mtime > {}'.format(time.time() - args.mtime * 24 * 60 * 60)]
 
-    if args.name != None:
+    if args.name is not None:
         where += ['name REGEXP "{}"'.format(args.name)]
 
-    # if args.newer != None:
+    # if args.newer is not None:
 
-    # if args.newerXY != None:
+    # if args.newerXY is not None:
 
-    # if args.nouser != None:
+    # if args.nouser is not None:
 
-    if args.path != None:
+    if args.path is not None:
         print "Need to modify GUFI to store/access path names when selecting file names"
         # where += ['name REGEXP "{}"'.format(args.regex)]
 
-    # if args.readable != None:
+    # if args.readable is not None:
 
-    if args.regex != None:
+    if args.regex is not None:
         print "Need to modify GUFI to store/access path names when selecting file names"
         # where += ['name REGEXP "{}"'.format(args.regex)]
 
-    # if args.samefile != None:
+    # if args.samefile is not None:
 
-    if args.size != None:
+    if args.size is not None:
         unit = 'b'
         if args.size[-1] in 'bcwkMG':
             unit = args.size[-1]
@@ -193,24 +193,24 @@ def build_where(args):
 
     # if args.true:
 
-    if args.type != None:
+    if args.type is not None:
         where += ['type == {}'.format(args.type)]
 
-    if args.uid != None:
+    if args.uid is not None:
         where += ['uid == {}'.format(args.uid)]
 
-    # if args.used != None:
+    # if args.used is not None:
 
-    if args.user != None:
+    if args.user is not None:
         where += ['uid == {}'.format(qb.get_uid(args.user))]
 
-    # if args.wholename != None:
+    # if args.wholename is not None:
 
-    # if args.writable != None:
+    # if args.writable is not None:
 
-    # if args.xtype != None:
+    # if args.xtype is not None:
 
-    # if args.context != None:
+    # if args.context is not None:
 
     return where
 
@@ -300,7 +300,7 @@ if __name__=='__main__':
     args = parser.parse_args();
 
     # create the find command
-    find = qb.find(args.root, args.GUFI_tree)
+    find = qb.find_dir(args.root, args.GUFI_tree)
     find_out, find_err = find.communicate()
     if find.returncode != 0:
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)

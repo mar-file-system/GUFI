@@ -76,82 +76,91 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
+import time
 
 import query_builder as qb
 
-def least_space(args):
-    select   = ["SUM(size) as total"]
-    where    = []
-    group_by = ["uid"]
-    order_by = ["total ASC"]
+def build_select(args):
+    '''Build the SELECT portion of the query.'''
+    select = []
 
-    return select, where, group_by, order_by
+    # ordering of concatenation matters
 
-def most_space(args):
-    select   = ["SUM(size) as total"]
-    where    = []
-    group_by = ["uid"]
-    order_by = ["total DESC"]
+    if args.inode:
+        select = ['inode'] + select
 
-    return select, where, group_by, order_by
+    if args.size:
+        select += ['blocks']
 
-def least_files(args):
-    select   = ["count(*) as total"]
-    where    = []
-    group_by = ["uid"]
-    order_by = ["total ASC"]
+    if args.long_listing:
+        select += ['mode', 'nlink', 'uid', 'gid', 'size', 'strftime("%m %d %H:%M", mtime, "unixepoch")', 'case when (type == "l") then name || " -> " || linkname else name end']
 
-    return select, where, group_by, order_by
+    if 'name' not in select:
+        select += ['name']
 
-def most_files(args):
-    select   = ["count(*) as total"]
-    where    = []
-    group_by = ["uid"]
-    order_by = ["total DESC"]
+    return select
 
-    return select, where, group_by, order_by
+def build_order_by(args):
+    '''Build the ORDER BY portion of the query.'''
+    order_by = []
 
-# mapping of valid 'operation' argument values to array generators
-QUERY_FORMAT = {'least-space' : least_space,
-                'most-space'  : most_space,
-                'least-files' : least_files,
-                'most-files'  : most_files}
+    if args.reverse:
+        order_by += ['name DESC']
+
+    if args.sort_largest:
+        order_by += ['size DESC']
+
+    if args.mtime:
+        order_by += ['mtime DESC']
+
+    if len(order_by) == 0:
+        return ['name ASC']
+
+    return order_by
+
+def check_size(value):
+    '''Make sure the value matches [+/-]n[bcwkMG].'''
+    if not re.match('^[+-]?[0-9]+[bcwkMG]?$', value):
+        raise argparse.ArgumentTypeError("%s is not a valid size" % value)
+
+    return value
 
 if __name__=='__main__':
     cwd = os.getcwd()
 
-    parser = argparse.ArgumentParser(description='GUFI version of find')
-    parser.add_argument('--root',        metavar='path', dest='root',        type=str,                    default=cwd,                 help='top-most directory to search from (default: ' + cwd + ')')
-    parser.add_argument('--delim',       metavar='c',    dest='delim',       type=qb.check_char,                                       help='delimiter separating output columns')
-    parser.add_argument('--depth',       metavar='d',    dest='depth',       type=qb.check_positive,                                   help='the number of levels to search')
-    parser.add_argument('--num_results', metavar='n',    dest='num_results', type=qb.check_non_negative,                               help='first n results')
-    parser.add_argument('--select',      metavar='cols', dest='select',      type=str,                                                 help='comma separated columns')
-    parser.add_argument('operation',                                         type=str,                    choices=QUERY_FORMAT.keys(), help='operation to perform')
-    parser.add_argument('GUFI_tree',                                                                      nargs='+',                   help='path containing GUFI tree database file')
+    parser = argparse.ArgumentParser(description='GUFI version of ls')
+    parser.add_argument('-i', '--inode',                           dest='inode',         action='store_true',         help='print the index number of each file')
+    parser.add_argument('-l',                                      dest='long_listing',  action='store_true',         help='use a long listing format')
+    parser.add_argument('-r', '--reverse',                         dest='reverse',       action='store_true',         help='reverse order while sorting')
+    parser.add_argument('-R', '--recursive',                       dest='recursive',     action='store_true',         help='list subdirectories recursively')
+    parser.add_argument('-s', '--size',                            dest='size',          action='store_true',         help='print the allocated size of each file, in blocks')
+    parser.add_argument('-S',                                      dest='sort_largest',  action='store_true',         help='sort by file size, largest first')
+    parser.add_argument('-t',                                      dest='mtime',         action='store_true',         help='sort by modification time, newest first')
+
+    # GUFI specific arguments
+    parser.add_argument('--delim',            metavar='c',         dest='delim',         type=qb.check_char,          help='delimiter separating output columns')
+    parser.add_argument('--num_results',      metavar='n',         dest='num_results',   type=qb.check_non_negative,  help='first n results')
+    parser.add_argument('GUFI_tree',                                                     default=cwd,                 help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 
-    # create the find command
-    find = qb.find_dir(args.root, args.GUFI_tree)
-    find_out, find_err = find.communicate()
-    if find.returncode != 0:
-        print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
-        sys.exit(find.returncode)
-
-    select, where, group_by, order_by = QUERY_FORMAT[args.operation](args)
-    if args.select:
-        select = [args.select] + select
-
     # create the bfq command
-    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))), '-p', '-P', '-E', qb.build_query(select, ['entries'], where, group_by, order_by, args.num_results)] + find_out.split()
+    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+               '-p', '-P',
+               '-E', qb.build_query(build_select(args),
+                                    ['entries'],
+                                    None,
+                                    None,
+                                    build_order_by(args),
+                                    args.num_results),
+               args.GUFI_tree,
+               '-l', '-1' if args.recursive else '0']
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]
-
-    if args.depth:
-        bfq_cmd += ['-l', str(args.depth)]
 
     bfq = subprocess.Popen(bfq_cmd)
     bfq.communicate() # block until bfq finishes
