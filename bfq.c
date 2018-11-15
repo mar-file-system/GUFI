@@ -188,8 +188,12 @@ static void processdir(void * passv)
             // queue, if file or link print it, fill up qwork structure for
             // each
             do {
-                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                const size_t len = strlen(entry->d_name);
+                if (((len == 1) && (strncmp(entry->d_name, ".", 1) == 0))  ||
+                    ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
                     continue;
+                }
+
                 bzero(&qwork,sizeof(qwork));
                 sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
                 qwork.pinode=passmywork->statuso.st_ino;
@@ -377,12 +381,14 @@ sqlite3 *open_aggregate(const char *query) {
 
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;
-    if ((sqlite3_open_v2(AGGREGATE_NAME, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) ||   // create the aggregate database
-        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                             != SQLITE_OK) ||   // create the original entries table for the aggregate table to copy from
-        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                             != SQLITE_OK) ||   // create the aggregate table
-        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                            != SQLITE_OK) ||   // drop the entries table
-        (sqlite3_exec(aggregate, "ALTER TABLE aggregate RENAME TO entries;", NULL, NULL, &err_msg)                       != SQLITE_OK) ||   // rename the aggregate table to entries
-        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                           != SQLITE_OK)) {   // delete all rows from the entries table, since there shouldn't be anything in the table at this point
+    if ((sqlite3_open_v2(AGGREGATE_NAME, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
+        (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                                    != SQLITE_OK) || // enable extension loading
+        (sqlite3_load_extension(aggregate, "sqlite3-pcre/pcre.so", NULL, NULL)                                           != SQLITE_OK) || // load sqlite3-pcre
+        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                             != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
+        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                             != SQLITE_OK) || // create the aggregate table
+        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                            != SQLITE_OK) || // drop the entries table
+        (sqlite3_exec(aggregate, "ALTER TABLE aggregate RENAME TO entries;", NULL, NULL, &err_msg)                       != SQLITE_OK) || // rename the aggregate table to entries
+        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                           != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
         fprintf(stderr, "failed to create result aggregation database: %s\n", err_msg);
         sqlite3_close(aggregate);
         aggregate = NULL;
@@ -405,14 +411,16 @@ int main(int argc, char *argv[])
      if (idx < 0)
         return -1;
 
-     // get a copy of the original sqlent for use with the aggregate table
+     // modify in.sqlent to insert the results into the aggregate table
      char orig_sqlent[MAXSQL];
      snprintf(orig_sqlent, MAXSQL, in.sqlent);
-
-     sqlite3 *aggregate = open_aggregate(orig_sqlent);
-
-     // modify in.sqlent to insert the results into the aggregate table
      snprintf(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
+
+     // create the aggregate database
+     sqlite3 *aggregate = open_aggregate(orig_sqlent);
+     if (!aggregate) {
+         return -1;
+     }
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here
@@ -457,8 +465,8 @@ int main(int argc, char *argv[])
      thpool_destroy(mythpool);
 
      // run the original query on the aggregated results
-     sqlite3_stmt *res;
-     int error = sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL);
+     sqlite3_stmt *res = NULL;
+     sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL);
      print_results(res, stdout, 1, 0, in.printing, in.delim);
      sqlite3_finalize(res);
 

@@ -132,6 +132,6 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 
 int addqueryfuncs(sqlite3 *db);
 
-int print_results(sqlite3_stmt *res, FILE *out,const int printpath, const int printheader, const int printrows, const char *delim);
+int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
 #endif
