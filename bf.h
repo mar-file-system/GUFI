@@ -175,6 +175,7 @@ struct input {
    int  suspectmethod;       // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
    int  stride;              // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
    int  suspecttime;         // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
+   int infile;               // added for bfq to be able to read input file to get dir/inode info
    size_t min_level;         // minimum level of recursion to reach before running queries
    size_t max_level;         // maximum level of recursion to run queries on
 };

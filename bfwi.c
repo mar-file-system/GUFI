@@ -99,6 +99,78 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "dbutils.h"
 
+/* used to allow all threads to open up the input file if there is one */
+FILE *gin[MAXPTHREAD];
+
+pthread_t gtid;
+pthread_attr_t gattr;
+
+void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
+
+    struct work *pinwork=inpwork;
+    char *p;
+    char *q;
+
+    //printf("in parsetowork delim %s inpline %s\n",inpdelim,inpline);
+    inpline[strlen(inpline)-1]= '\0';
+    p=inpline; q=strstr(p,inpdelim);   bzero(q,1); sprintf(pinwork->name,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1), sprintf(pinwork->type,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1); pinwork->statuso.st_ino=atol(p);
+    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1); pinwork->statuso.st_mode=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_nlink=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_uid=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_gid=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_size=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_blksize=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_blocks=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_atime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_mtime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_ctime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); sprintf(pinwork->linkname,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); sprintf(pinwork->xattr,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->crtime=atol(p);
+
+}
+
+void *scout(void * param) {
+    char *ret;
+    FILE *finfile;
+    char linein[MAXPATH+MAXPATH+MAXPATH];
+    long long int foffset;
+    struct work * mywork;
+
+    mywork=malloc(sizeof(struct work));
+    //printf("in scout arg %s\n",param);
+    //incrthread(); /* add one thread so the others wait for the scout */
+    finfile=fopen(in.name,"r");
+    if (finfile == NULL) {
+      fprintf(stderr,"Cant open up the input file %s\n",in.name);
+      exit(-1); /* not the best way out i suppose */
+    }
+    //printf("reading input file now\n");
+    bzero(linein,sizeof(linein));;
+    //sleep(5);
+    while (fgets (linein, sizeof(linein), finfile) !=NULL ) {
+          //printf("got input line %s\n",linein);
+          parsetowork (in.delim, linein, mywork );
+          //printf("%s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
+          fgetpos(finfile,&foffset);
+          if (!strncmp("d",mywork->type,1)) {
+             mywork->pinode=0;
+             //printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
+             //printf("foffsett %lld\n",foffset);
+             mywork->offset=foffset;
+             pushdir(mywork);
+          }
+          bzero(linein,sizeof(linein));;
+    }
+    fclose(finfile);
+    //sleep(5);
+    decrthread(); /* take one thread away so others can finish */
+    ret=(char *) malloc(20);
+    strcpy(ret, "scout finished");
+    pthread_exit(ret);
+}
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
@@ -118,27 +190,42 @@ static void processdir(void * passv)
     sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
+    int loop;
+    char plinein[MAXPATH+MAXPATH+MAXPATH];
+    long long int pos;
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
     mytid=0;
-    if (in.outfile > 0) mytid=gettid();
+    //if (in.outfile > 0) mytid=gettid();
+    mytid=gettid();
 
-    // open directory
-    if (!(dir = opendir(passmywork->name)))
-       goto out_free; // return NULL;
+    //if (in.infile > 0) return;
+    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,passmywork->offset);
 
-    if (!(entry = readdir(dir)))
-       goto out_dir; // return NULL;
+    if (in.infile == 0) {
+      // open directory
+      if (!(dir = opendir(passmywork->name)))
+         goto out_free; // return NULL;
+      //if (!(entry = readdir(dir)))
+      //   goto out_dir; // return NULL;
+    } else {
+      /* seek to the fileslinks following the directory in my fopened file */
+      fsetpos(gin[mytid],&passmywork->offset);
+      //fgetpos(gin[mytid],&pos);
+      //printf("position set for tid %d position %lld\n",mytid,pos);
+    }
 
     sprintf(passmywork->type,"%s","d");
     if (in.printing > 0 || in.printdir > 0) {
       printits(passmywork,mytid);
     }
+    //printf("tid %d make dir %s\n",mytid,passmywork->name);
 
     if (in.buildindex > 0) {
        if (in.buildinindir == 0) {
          dupdir(passmywork);
+         //printf("tid %d made dir %s\n",mytid,passmywork->name);
        }
        records=malloc(MAXRECS);
        bzero(records,MAXRECS);
@@ -146,37 +233,71 @@ static void processdir(void * passv)
        if (!(db = opendb(passmywork->name,db1,4,1)))
           goto out_dir;
        res=insertdbprep(db,reso);
-       //printf("inbfilistdir res %d\n",res);
        startdb(db);
     }
 
+    //printf("tid %d made db\n",mytid);
     // loop over dirents, if link push it on the queue, if file or link
     // print it, fill up qwork structure for each
     transcnt = 0;
-    do {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-           continue;
+    loop=1;
+    //do {
+    while (loop == 1) {
+
+        if (in.infile == 0) {
+          /* get the next dirent */
+          if (!(entry = readdir(dir))) break;
+        } else {
+          /* get the next record */
+          bzero(plinein,sizeof(plinein));
+          if (fgets (plinein, sizeof(plinein), gin[mytid]) ==NULL ) break;
+          //printf("tid %d got line %s\n",mytid,plinein);
+        }
+
+/*?????  farret out two modes from here */
+
         bzero(&qwork,sizeof(qwork));
-        sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
         qwork.pinode=passmywork->statuso.st_ino;
-        lstat(qwork.name, &qwork.statuso);
-        qwork.xattrs=0;
-        if (in.doxattrs > 0) {
-          qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
+        if (in.infile == 0) {
+          if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+             continue;
+          sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
+          lstat(qwork.name, &qwork.statuso);
+          qwork.xattrs=0;
+          if (in.doxattrs > 0) {
+            qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
+          }
+        } else {
+          /* just parse the read line into qwork */
+          parsetowork(in.delim, plinein, &qwork);
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {
-            if (!access(qwork.name, R_OK | X_OK))
-                // this is how the parent gets passed on
-                qwork.pinode=passmywork->statuso.st_ino;
+            // this is how the parent gets passed on
+            qwork.pinode=passmywork->statuso.st_ino;
+            if (in.infile == 0) {
+              if (!access(qwork.name, R_OK | X_OK)) {
                 // this pushes the dir onto queue - pushdir does locking around queue update
                 if (in.dontdescend < 1) {
                   pushdir(&qwork);
                 }
+              }
+            } else {
+/*
+              sprintf(qwork.type,"%s","d");
+              fgetpos(gin[mytid],&pos);
+              qwork.offset=pos;
+              pushdir(&qwork);
+*/
+              loop=0;
+            }
         } else if (S_ISLNK(qwork.statuso.st_mode) ) {
             // its a link so get the linkname
-            bzero(lpatho,sizeof(lpatho));
-            readlink(qwork.name,lpatho,MAXPATH);
-            sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+            if (in.infile == 0) {
+              /* if its infile we have to get this elsewhere */
+              bzero(lpatho,sizeof(lpatho));
+              readlink(qwork.name,lpatho,MAXPATH);
+              sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+            }
             sprintf(qwork.type,"%s","l");
             if (in.printing > 0) {
               printits(&qwork,mytid);
@@ -207,8 +328,8 @@ static void processdir(void * passv)
               }
             }
         }
-    } while ((entry = (readdir(dir))));
-
+    //} while ((entry = (readdir(dir))));
+    }
 
     if (in.buildindex > 0) {
       stopdb(db);
@@ -225,8 +346,10 @@ static void processdir(void * passv)
     }
 
  out_dir:
-    // close dir
-    closedir(dir);
+    if (in.infile == 0) {
+      // close dir
+      closedir(dir);
+    }
 
  out_free:
     // free the queue entry - this has to be here or there will be a leak
@@ -245,6 +368,9 @@ int processinit(void * myworkin) {
      struct work * mywork = myworkin;
      int i;
      char outfn[MAXPATH];
+     FILE *finfile;
+     char linein[MAXPATH+MAXPATH+MAXPATH];
+     long long int foffset;
 
      //open up the output files if needed
      if (in.outfile > 0) {
@@ -256,33 +382,91 @@ int processinit(void * myworkin) {
        }
      }
 
-     // process input directory and put it on the queue
-     sprintf(mywork->name,"%s",in.name);
-     lstat(in.name, &mywork->statuso);
-     if (access(in.name, R_OK | X_OK)) {
-        fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in.name, strerror(errno));
-         return 1;
-     }
-     if (!S_ISDIR(mywork->statuso.st_mode) ) {
-        fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
-        return 1;
-     }
-     if (in.doxattrs > 0) {
-       mywork->xattrs=0;
-       mywork->xattrs=pullxattrs(in.name,mywork->xattr);
-     }
+     //open up the input file if needed
+     if (in.infile > 0) {
+       //finfile=fopen(in.name,"r");
+       if (finfile == NULL) {
+         fprintf(stderr,"Cant open up the input file %s\n",in.name);
+         exit(-1); /* not the best way out i suppose */
+       }
+       i=0;
+       while (i < in.maxthreads) {
+         gin[i]=fopen(in.name,"r");
+         i++;
+       }
+       /* loop through reading the input file and putting the directories found on the queue */
+       /* we will not know if this file is in sort order of paths, we know that the file */
+       /* has all the files/links in a dir immediatly following the dir record but */
+       /* the dirs may not be in order, for this reason we can just set the parent inode */
+       /* equal zero i think, what gets put into the entries and summary tables doesnt */
+       /* have the parent inode anyway, so this is presentation level stuff only */
+       /* the parent inode is not stored in the tables anyway because of rename/unlink  */
+       //foffset=0;
+/*
+       while (fgets (linein, sizeof(linein), finfile) !=NULL ) {
+          parsetowork (in.delim, linein, mywork );
+          printf("%s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
+          fgetpos(finfile,&foffset);
+          if (!strncmp("d",mywork->type,1)) {
+             mywork->pinode=0;
+             printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
+             printf("foffsett %lld\n",foffset);
+             mywork->offset=foffset;
+             pushdir(mywork);
+          }
+          bzero(linein,sizeof(linein));;
+       }
+*/
+/***
+       bzero(linein,sizeof(linein));;
+       if (fgets(linein, sizeof(linein), finfile) !=NULL ) {
+          parsetowork (in.delim, linein, mywork );
+          if (!strncmp(mywork->type,"d",1)) {
+            mywork->pinode=0;
+            fgetpos(finfile,&foffset);
+            mywork->offset=foffset;
+            pushdir(mywork);
+          } else {
+            fprintf(stderr,"first line of input file is not a dir %s\n",in.name);
+          }
+       } else {
+         fprintf(stderr,"cant read first line of input file %s\n",in.name);
+       }
+       fclose(finfile);
+***/
+       //pthread_attr_init(&gattr);
+       //printf("starting scout\n");
+       incrthread(); /* add one thread so the others wait for the scout */
+       pthread_create(&gtid,NULL,scout,&in.name);
+     } else { /* no input file we are walking*/
+       // process input directory and put it on the queue
+       sprintf(mywork->name,"%s",in.name);
+       lstat(in.name, &mywork->statuso);
+       if (access(in.name, R_OK | X_OK)) {
+          fprintf(stderr, "couldn't access input dir '%s': %s\n",
+                  in.name, strerror(errno));
+           return 1;
+       }
+       if (!S_ISDIR(mywork->statuso.st_mode) ) {
+          fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
+          return 1;
+       }
+       if (in.doxattrs > 0) {
+         mywork->xattrs=0;
+         mywork->xattrs=pullxattrs(in.name,mywork->xattr);
+       }
 
-     // set top parent inode to zero
-     mywork->pinode=0;
-     pushdir(mywork);
+       // set top parent inode to zero
+       mywork->pinode=0;
+       pushdir(mywork);
+     }
 
      return 0;
 }
 
-
 int processfin() {
      int i;
+     void *retval;
 
      if (in.outfile > 0) {
        i=0;
@@ -291,10 +475,19 @@ int processfin() {
          i++;
        }
      }
+     if (in.infile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         fclose(gin[i]);
+         i++;
+       }
+       /* wait on the scout thread */
+       pthread_join(gtid, &retval);
+       //printf("retval=%s\n",retval);
+     }
+
      return 0;
 }
-
-
 
 // This app allows users to do any of the following: (a) just walk the
 // input tree, (b) like a, but also creating corresponding GUFI-tree
@@ -348,7 +541,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:D", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:Du", 1, "input_dir");
      if (in.helped)
         sub_help();
      if (idx < 0)
@@ -384,6 +577,7 @@ int main(int argc, char *argv[])
      // have to be done per instance of a bf program loops through and
      // processes all directories that enter the queue by farming the work
      // out to the threadpool
+     //sleep(5);
      processdirs(processdir);
 
      // processfin - this is work done after the threads are done working

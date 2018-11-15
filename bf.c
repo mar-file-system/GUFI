@@ -140,6 +140,7 @@ void print_help(const char* prog_name,
       case 'A': printf("  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
+      case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
       case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
 
@@ -182,6 +183,7 @@ void show_input(struct input* in, int retval) {
    printf("in.suspectmethod = '%d'\n", in->suspectmethod);
    printf("in.suspecttime   = '%d'\n", in->suspecttime);
    printf("in.stride        = '%d'\n", in->stride);
+   printf("in.infile        = '%d'\n", in->infile);
    printf("in.min_level     = %zu\n",  in->min_level);
    printf("in.max_level     = %zu\n",  in->max_level);
    printf("\n");
@@ -221,6 +223,7 @@ int parse_cmd_line(int         argc,
    in.suspectfile   = 0;
    in.suspectmethod = 0;
    in.stride        = 0;       // default striping of inodes
+   in.infile        = 0;       // default infile being used
    in.min_level     = 0;       // default to the top
    in.max_level     = -1;      // default to all the way down
 
@@ -368,6 +371,10 @@ int parse_cmd_line(int         argc,
       case 'z':
          in.max_level = atoi(optarg); // need better string to int conversion
          retval = -(in.max_level < 0);
+         break;
+
+      case 'u':
+         in.infile = 1;
          break;
 
       case '?':

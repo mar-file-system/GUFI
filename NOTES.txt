@@ -127,3 +127,7 @@ in the output database is suspect
 added flag -g to allow you to control stride size if you want to stripe inodes into output dbs
 Added flag -A to allow you to control suspect method 0 none, 1 file with suspect fld, 2 file with suspect fl and stat dirs, and 3 stat fld 
 Added flag -c to allow you to input a number of seconds since epoch for suspect comparison 
+-----------------------------------------------------------------------
+adding flag to to indicate provide input file into bfwi so it can create a gufi tree from a text file delmited
+adding capability to read that file in paralle with threads instead of readdir/stat of source tree
+

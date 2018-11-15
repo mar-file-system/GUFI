@@ -533,8 +533,9 @@ int processdirs(DirFunc dir_fn) {
      // loop over queue entries and running threads and do all work until
      // running threads zero and queue empty
      myqent=0;
-     runningthreads=0;
+     //runningthreads=0;
      while (1) {
+        //printf("%d,%d|",runningthreads,myqent);
         myqent=getqent();
         if (runningthreads == 0) {
           if (myqent == 0) {
