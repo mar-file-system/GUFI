@@ -140,6 +140,7 @@ void print_help(const char* prog_name,
       case 'A': printf("  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
+      case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -180,8 +181,8 @@ void show_input(struct input* in, int retval) {
    printf("in.suspectfile = '%d'\n", in->suspectfile);
    printf("in.suspectmethod = '%d'\n", in->suspectmethod);
    printf("in.suspecttime = '%d'\n", in->suspecttime);
-   printf("in.stride = '%d'\n", in->stride);
-   printf("\n");
+   printf("in.stride      = '%d'\n", in->stride);
+   printf("in.infile      = '%d'\n", in->infile);
    printf("retval         = %d\n", retval);
    printf("\n");
 }
@@ -218,6 +219,7 @@ int parse_cmd_line(int         argc,
    in.suspectfile  = 0;
    in.suspectmethod = 0;
    in.stride       = 0;       // default striping of inodes
+   in.infile       = 0;       // default infile being used 
 
    int show   = 0;
    int retval = 0;
@@ -356,6 +358,10 @@ int parse_cmd_line(int         argc,
 
       case 'c':
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
+         break;
+
+      case 'u':
+         in.infile = 1;
          break;
 
       case '?':
