@@ -218,6 +218,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     //       }
     //    }
 
+    //printf("sqlite3_open %s\n",dbn);
     rc = sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL);
     if (rc != SQLITE_OK) {
        sleep(2);
@@ -234,9 +235,13 @@ exit(9);
         return NULL;
     }
 
+    //printf("sqlite3_open %s openwhat %d\n",dbn,openwhat);
     if (createtables) {
+       //printf("sqlite3_open %s openwhat %d creating tables\n",dbn,openwhat);
        if (openwhat==1 || openwhat==4)
+          //printf("esql: %s \n", dbn);
           SQLITE3_EXEC(db, esql, 0, 0, &err_msg);
+          //printf("esql: %s %s \n", dbn, sqlite3_errmsg(db));
 
        if (openwhat==3) {
           SQLITE3_EXEC(db, tsql, 0, 0, &err_msg);
@@ -250,6 +255,7 @@ exit(9);
           SQLITE3_EXEC(db, vssqluser, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vssqlgroup, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vesql, 0, 0, &err_msg);
+          //printf("vesql: %s %s \n", dbn, sqlite3_errmsg(db));
        }
        if (openwhat==7) {
           SQLITE3_EXEC(db, rsql, 0, 0, &err_msg);
@@ -644,7 +650,7 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
           //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
           //return 0;
     }
-    sqlite3_clear_bindings(res);
+    /* sqlite3_clear_bindings(res); */
     sqlite3_reset(res);
 
     return 0;

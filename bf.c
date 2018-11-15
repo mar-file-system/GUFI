@@ -140,7 +140,9 @@ void print_help(const char* prog_name,
       case 'A': printf("  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
-      case 'l': printf("  -l <max level>  deepest level to go down\n"); break;
+      case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
+      case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
+      case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -150,40 +152,42 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.doxattrs    = %d\n",   in->doxattrs);
-   printf("in.printing    = %d\n",   in->printing);
-   printf("in.printdir    = %d\n",   in->printdir);
-   printf("in.printheader = %d\n",   in->printheader);
-   printf("in.printrows   = %d\n",   in->printrows);
-   printf("in.writetsum   = %d\n",   in->writetsum);
-   printf("in.buildindex  = %d\n",   in->buildindex);
-   printf("in.maxthreads  = %d\n",   in->maxthreads);
-   printf("in.delim       = '%s'\n", in->delim);
-   printf("in.name        = '%s'\n", in->name);
-   printf("in.outfile     = %d\n",   in->outfile);
-   printf("in.outfilen    = '%s'\n", in->outfilen);
-   printf("in.outdb       = %d\n",   in->outdb);
-   printf("in.outdbn      = '%s'\n", in->outdbn);
-   printf("in.nameto      = '%s'\n", in->nameto);
-   printf("in.andor       = %d\n",   in->andor);
-   printf("in.sqlinit     = '%s'\n", in->sqlinit);
-   printf("in.sqltsum     = '%s'\n", in->sqltsum);
-   printf("in.sqlsum      = '%s'\n", in->sqlsum);
-   printf("in.sqlent      = '%s'\n", in->sqlent);
-   printf("in.sqlfin      = '%s'\n", in->sqlfin);
-   printf("in.insertdir   = '%d'\n", in->insertdir);
-   printf("in.insertfl    = '%d'\n", in->insertfl);
-   printf("in.dontdescend = '%d'\n", in->dontdescend);
-   printf("in.suspectd    = '%d'\n", in->suspectd);
-   printf("in.suspectfl   = '%d'\n", in->suspectfl);
-   printf("in.insuspect   = '%s'\n", in->insuspect);
-   printf("in.suspectfile = '%d'\n", in->suspectfile);
+   printf("in.doxattrs      = %d\n",   in->doxattrs);
+   printf("in.printing      = %d\n",   in->printing);
+   printf("in.printdir      = %d\n",   in->printdir);
+   printf("in.printheader   = %d\n",   in->printheader);
+   printf("in.printrows     = %d\n",   in->printrows);
+   printf("in.writetsum     = %d\n",   in->writetsum);
+   printf("in.buildindex    = %d\n",   in->buildindex);
+   printf("in.maxthreads    = %d\n",   in->maxthreads);
+   printf("in.delim         = '%s'\n", in->delim);
+   printf("in.name          = '%s'\n", in->name);
+   printf("in.outfile       = %d\n",   in->outfile);
+   printf("in.outfilen      = '%s'\n", in->outfilen);
+   printf("in.outdb         = %d\n",   in->outdb);
+   printf("in.outdbn        = '%s'\n", in->outdbn);
+   printf("in.nameto        = '%s'\n", in->nameto);
+   printf("in.andor         = %d\n",   in->andor);
+   printf("in.sqlinit       = '%s'\n", in->sqlinit);
+   printf("in.sqltsum       = '%s'\n", in->sqltsum);
+   printf("in.sqlsum        = '%s'\n", in->sqlsum);
+   printf("in.sqlent        = '%s'\n", in->sqlent);
+   printf("in.sqlfin        = '%s'\n", in->sqlfin);
+   printf("in.insertdir     = '%d'\n", in->insertdir);
+   printf("in.insertfl      = '%d'\n", in->insertfl);
+   printf("in.dontdescend   = '%d'\n", in->dontdescend);
+   printf("in.suspectd      = '%d'\n", in->suspectd);
+   printf("in.suspectfl     = '%d'\n", in->suspectfl);
+   printf("in.insuspect     = '%s'\n", in->insuspect);
+   printf("in.suspectfile   = '%d'\n", in->suspectfile);
    printf("in.suspectmethod = '%d'\n", in->suspectmethod);
-   printf("in.suspecttime = '%d'\n", in->suspecttime);
-   printf("in.stride = '%d'\n", in->stride);
-   printf("in.max_level    = %d\n",  in->max_level);
+   printf("in.suspecttime   = '%d'\n", in->suspecttime);
+   printf("in.stride        = '%d'\n", in->stride);
+   printf("in.infile        = '%d'\n", in->infile);
+   printf("in.min_level     = %zu\n",  in->min_level);
+   printf("in.max_level     = %zu\n",  in->max_level);
    printf("\n");
-   printf("retval         = %d\n", retval);
+   printf("retval           = %d\n", retval);
    printf("\n");
 }
 
@@ -219,6 +223,8 @@ int parse_cmd_line(int         argc,
    in.suspectfile   = 0;
    in.suspectmethod = 0;
    in.stride        = 0;       // default striping of inodes
+   in.infile        = 0;       // default infile being used
+   in.min_level     = 0;       // default to the top
    in.max_level     = -1;      // default to all the way down
 
    int show   = 0;
@@ -357,8 +363,18 @@ int parse_cmd_line(int         argc,
       case 'c':
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
 
-      case 'l':
+      case 'y':
+         in.min_level = atoi(optarg); // need better string to int conversion
+         retval = -(in.min_level < 0);
+         break;
+
+      case 'z':
          in.max_level = atoi(optarg); // need better string to int conversion
+         retval = -(in.max_level < 0);
+         break;
+
+      case 'u':
+         in.infile = 1;
          break;
 
       case '?':
@@ -374,6 +390,8 @@ int parse_cmd_line(int         argc,
       };
    }
 
+   retval = -(in.min_level > in.max_level);
+
    // caller requires given number of positional args, after the options.
    // <optind> is the number of argv[] values that were recognized as options.
    // NOTE: caller may have custom options ovf their own, so returning a
@@ -386,7 +404,6 @@ int parse_cmd_line(int         argc,
       }
       retval = -1;
    }
-
 
    // DEBUGGING:
    if (show)

@@ -354,7 +354,11 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
     init allows you to run an SQL statement per thread associated to the
     output db before starting the walk, and an SQL statement per thread on
     the output db after the walk.
-
+    there is also a mode that will take input from a file instead of getting info from a walk/stat
+    the file must have the appropriate fields delimted by a delimiter provided and it should
+    have a line for dir and lines for files/links in that dir and then another dir and then files/links
+    the file does not have to be in tree order, it just must have all files/links associated with a dir
+    immediately after that dir
 
 # Usage: bfq [options] GUFI_tree
 # options:
@@ -372,6 +376,8 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
 #   -O <out_DB>     output DB
 #   -I <SQL_init>   SQL init
 #   -F <SQL_fin>    SQL cleanup
+#   -d <delim>      delimiter (one char) used as a delimiter if you are getting input from a file not a walk
+#   -u              input is not a dir its a file that you read input from
 # 
 # GUFI_tree         find GUFI index-tree here
 # 
@@ -397,7 +403,10 @@ close output files if needed
 if fin SQL provided run that per thread
 close outputdb
 you can end up with an output file per thread and/or a dbfile per thread
-
+If you are reading the input from a file instead of a treewalk, the file 
+must have a record for dir immediately followed by files and links in that dir
+but beyond that it doesnt have to be in any order. In this input file mode
+the info is read from this file and not gotten from a walk/stat activity
 
 
 ...........................................................................
