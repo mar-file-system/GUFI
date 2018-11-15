@@ -85,22 +85,22 @@ def add_select(args, tail):
     return "SELECT " + ((args.select  + ',') if args.select else '') + tail
 
 def least_space(args):
-    entries = add_select(args, "uid, SUM(size) as total FROM entries GROUP BY uid ORDER BY size ASC")
+    entries = add_select(args, "uid, SUM(size) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
     aggregate = add_select(args, "uid, SUM(total) as used FROM entries GROUP BY uid ORDER BY used ASC")
     return entries, aggregate
 
 def most_space(args):
-    entries = add_select(args, "uid, SUM(size) as total FROM entries GROUP BY uid ORDER BY size DESC")
+    entries = add_select(args, "uid, SUM(size) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
     aggregate = add_select(args, "uid, SUM(total) as used FROM entries GROUP BY uid ORDER BY used DESC")
     return entries, aggregate
 
 def least_files(args):
-    entries = add_select(args, "uid, COUNT(*) as total FROM entries GROUP BY uid ORDER BY total ASC")
+    entries = add_select(args, "uid, COUNT(*) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
     aggregate = add_select(args, "uid, SUM(total) as files FROM entries GROUP BY uid ORDER BY files ASC")
     return entries, aggregate
 
 def most_files(args):
-    entries = add_select(args, "uid, COUNT(*) as total FROM entries GROUP BY uid ORDER BY total DESC")
+    entries = add_select(args, "uid, COUNT(*) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
     aggregate = add_select(args, "uid, SUM(total) as files FROM entries GROUP BY uid ORDER BY files DESC")
     return entries, aggregate
 
