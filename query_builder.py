@@ -133,10 +133,10 @@ def get_uid(uid_str):
         raise argparse.ArgumentTypeError("%s is not a valid id value" % uid_str)
 
     uid_proc = subprocess.Popen(['id', '-u', uid_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    uid_out, uid_err = iud_proc.communicate()
+    uid_out, uid_err = uid_proc.communicate()
     uid = None
     if uid_proc.returncode == 0:
-        uid = uid_out.split()[0]
+        uid = int(uid_out.split()[0])
     else:
         try:
             uid = int(uid)

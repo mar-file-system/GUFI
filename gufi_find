@@ -300,7 +300,7 @@ if __name__=='__main__':
     args = parser.parse_args();
 
     # create the find command
-    find = qb.find_dir(args.root, args.GUFI_tree)
+    find = qb.find_dir(args.root, [os.path.normpath(path) for path in args.GUFI_tree])
     find_out, find_err = find.communicate()
     if find.returncode != 0:
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
