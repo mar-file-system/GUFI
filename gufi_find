@@ -284,8 +284,8 @@ if __name__=='__main__':
     # parser.add_argument('-xtype',             metavar='c',         dest='xtype',         type=qb.check_char,                  help='The same as -type unless the file is a symbolic link.')
     # parser.add_argument('-context',           metavar='pattern',   dest='context',       type=str,                            help='(SELinux only) Security context of the file matches glob pattern.')
 
-    parser.add_argument('-maxdepth',          metavar='levels',    dest='depth',      type=qb.check_non_negative,          help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
-    # parser.add_argument('-mindepth',          metavar='levels',    dest='mindepth',      type=qb.check_non_negative,          help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
+    parser.add_argument('-maxdepth',          metavar='levels',    dest='maxdepth',      type=qb.check_non_negative,          help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
+    parser.add_argument('-mindepth',          metavar='levels',    dest='mindepth',      type=qb.check_non_negative,          help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
 
     # GUFI specific arguments
     parser.add_argument('--root',             metavar='path',      dest='root',          type=str,           default=cwd,     help='top-most directory to search from (default: ' + cwd + ')')
@@ -319,8 +319,11 @@ if __name__=='__main__':
     if args.delim:
         bfq_cmd += ['-d', args.delim]
 
-    if args.depth:
-        bfq_cmd += ['-l', str(args.depth)]
+    if args.maxdepth:
+        bfq_cmd += ['-z', str(args.maxdepth)]
+
+    if args.mindepth:
+        bfq_cmd += ['-y', str(args.mindepth)]
 
     bfq = subprocess.Popen(bfq_cmd)
     bfq.communicate() # block until bfq finishes

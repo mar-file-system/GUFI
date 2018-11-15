@@ -125,7 +125,8 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='GUFI version of find')
     parser.add_argument('--root',        metavar='path', dest='root',        type=str,                    default=cwd,                 help='top-most directory to search from (default: ' + cwd + ')')
     parser.add_argument('--delim',       metavar='c',    dest='delim',       type=qb.check_char,                                       help='delimiter separating output columns')
-    parser.add_argument('--depth',       metavar='d',    dest='depth',       type=qb.check_positive,                                   help='the number of levels to search')
+    parser.add_argument('--maxdepth',    metavar='d',    dest='maxdepth',    type=qb.check_positive,                                   help='the maximum number of levels to search')
+    parser.add_argument('--mindepth',    metavar='d',    dest='mindepth',    type=qb.check_positive,                                   help='the minimum number of levels to search')
     parser.add_argument('--num_results', metavar='n',    dest='num_results', type=qb.check_non_negative,                               help='first n results')
     parser.add_argument('--select',      metavar='cols', dest='select',      type=str,                                                 help='comma separated columns')
     parser.add_argument('operation',                                         type=str,                    choices=QUERY_FORMAT.keys(), help='operation to perform')
@@ -150,8 +151,11 @@ if __name__=='__main__':
     if args.delim:
         bfq_cmd += ['-d', args.delim]
 
-    if args.depth:
-        bfq_cmd += ['-l', str(args.depth)]
+    if args.maxdepth:
+        bfq_cmd += ['-z', str(args.maxdepth)]
+
+    if args.mindepth:
+        bfq_cmd += ['-y', str(args.mindepth)]
 
     bfq = subprocess.Popen(bfq_cmd)
     bfq.communicate() # block until bfq finishes

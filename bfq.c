@@ -191,34 +191,38 @@ static void processdir(void * passv)
                 }
             } while ((entry = (readdir(dir))));
         }
-        // run query on summary, print it if printing is needed, if returns none
-        // and we are doing AND, skip querying the entries db
-        // bzero(endname,sizeof(endname));
-        shortpath(passmywork->name,shortname,endname);
-        sprintf(gps[mytid].gepath,"%s",endname);
-        if (strlen(in.sqlsum) > 1) {
-          recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
-          // for directories we have to take off after the last slash
-          // and set the path so users can put path() in their queries
-          sprintf(gps[mytid].gpath,"%s",shortname);
-          recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
-          //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
-        } else {
-          recs=1;
-        }
-        if (in.andor > 0)
-           recs=1;
 
-        // if we have recs (or are running an OR) query the entries table
-        if (recs > 0) {
-          if (strlen(in.sqlent) > 1) {
-            // set the path so users can put path() in their queries
-            //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
-            sprintf(gps[mytid].gpath,"%s",passmywork->name);
-            rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
-            //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
-            //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
-          }
+        // only query this level if the min_level has been reached
+        if (passmywork->level >= in.min_level) {
+            // run query on summary, print it if printing is needed, if returns none
+            // and we are doing AND, skip querying the entries db
+            // bzero(endname,sizeof(endname));
+            shortpath(passmywork->name,shortname,endname);
+            sprintf(gps[mytid].gepath,"%s",endname);
+            if (strlen(in.sqlsum) > 1) {
+                recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
+                // for directories we have to take off after the last slash
+                // and set the path so users can put path() in their queries
+                sprintf(gps[mytid].gpath,"%s",shortname);
+                recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+                //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
+            } else {
+                recs=1;
+            }
+            if (in.andor > 0)
+                recs=1;
+
+            // if we have recs (or are running an OR) query the entries table
+            if (recs > 0) {
+                if (strlen(in.sqlent) > 1) {
+                    // set the path so users can put path() in their queries
+                    //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
+                    sprintf(gps[mytid].gpath,"%s",passmywork->name);
+                    rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
+                    //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
+                    //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
+                }
+            }
         }
     }
 
@@ -336,7 +340,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:l:", 1, "GUFI_tree ...");
+     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:", 1, "GUFI_tree ...");
      if (in.helped)
         sub_help();
      if (idx < 0)
