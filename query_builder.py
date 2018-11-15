@@ -224,5 +224,5 @@ def find_dir(root, paths, out=subprocess.PIPE, err=subprocess.PIPE):
         This value should be waited on with communcate.
     '''
 
-    find_cmd = ['find', root, '-type', 'd'] + '-o -path *'.join([''] + paths).split()[1:]
+    find_cmd = ['find', root, '-type', 'd'] + ' -o -path *'.join([''] + paths).split()[1:]
     return subprocess.Popen(find_cmd, stdout=out, stderr=err)

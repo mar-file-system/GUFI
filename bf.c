@@ -367,13 +367,11 @@ int parse_cmd_line(int         argc,
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
 
       case 'y':
-         in.min_level = atoi(optarg); // need better string to int conversion
-         retval = -(in.min_level < 0);
+         INSTALL_INT(in.min_level, optarg, 0, (size_t) -1, "-y");
          break;
 
       case 'z':
-         in.max_level = atoi(optarg); // need better string to int conversion
-         retval = -(in.max_level < 0);
+         INSTALL_INT(in.max_level, optarg, 0, (size_t) -1, "-z");
          break;
 
       case 'u':

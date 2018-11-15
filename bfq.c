@@ -194,7 +194,7 @@ static void processdir(void * passv)
                     continue;
                 }
 
-                bzero(&qwork,sizeof(qwork));
+                memset(&qwork, 0, sizeof(qwork));
                 sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
                 qwork.pinode=passmywork->statuso.st_ino;
                 qwork.level = next_level;
