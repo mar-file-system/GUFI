@@ -241,7 +241,7 @@ static void processdir(void * passv)
     }
 
     // detach in-memory result aggregation database
-    if (sqlite3_exec(db, "DETACH aggregate;",0, 0, NULL) != SQLITE_OK) {
+    if (sqlite3_exec(db, "DETACH aggregate;", 0, 0, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
         return;
@@ -354,6 +354,7 @@ void sub_help() {
 
 sqlite3 *open_aggregate(const char *query) {
     // find the first clause after FROM
+    // more clauses are probably needed
     static const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
     char *after_from = NULL;
     for(size_t i = 0; (i < sizeof(clauses) / sizeof(char *)) && !after_from; i++) {
@@ -368,21 +369,21 @@ sqlite3 *open_aggregate(const char *query) {
         *after_from = 0;
     }
 
-    // there is no need to modify the query, since the entries table is empty
-    snprintf(create_results_table, MAXSQL, "CREATE TABLE entries_tmp AS %s;", query);
+    // there is no need to modify the query, since the entries table is empty (but will generate a NULL row, which will be removed)
+    snprintf(create_results_table, MAXSQL, "CREATE TABLE aggregate AS %s;", query);
     if (after_from) {
         *after_from = af;
     }
 
-    // create the aggregate database
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;
-    if ((sqlite3_open_v2(AGGREGATE_NAME, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) ||
-        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                             != SQLITE_OK) ||   // create the entries table for the aggregate table to copy from
-        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                             != SQLITE_OK) ||   // create the result aggregation table
+    if ((sqlite3_open_v2(AGGREGATE_NAME, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) ||   // create the aggregate database
+        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                             != SQLITE_OK) ||   // create the original entries table for the aggregate table to copy from
+        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                             != SQLITE_OK) ||   // create the aggregate table
         (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                            != SQLITE_OK) ||   // drop the entries table
-        (sqlite3_exec(aggregate, "ALTER TABLE entries_tmp RENAME TO entries", NULL, NULL, &err_msg)                      != SQLITE_OK)) {   // rename the results table into entries
-        fprintf(stderr, "failed to create result aggregation entries database: %s\n", err_msg);
+        (sqlite3_exec(aggregate, "ALTER TABLE aggregate RENAME TO entries;", NULL, NULL, &err_msg)                       != SQLITE_OK) ||   // rename the aggregate table to entries
+        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                           != SQLITE_OK)) {   // delete all rows from the entries table, since there shouldn't be anything in the table at this point
+        fprintf(stderr, "failed to create result aggregation database: %s\n", err_msg);
         sqlite3_close(aggregate);
         aggregate = NULL;
     }
@@ -390,19 +391,6 @@ sqlite3 *open_aggregate(const char *query) {
     sqlite3_free(err_msg);
 
     return aggregate;
-}
-
-static int my_special_callback(void *unused, int count, char **data, char **columns)
-{
-    int idx;
-
-    for (idx = 0; idx < count; idx++) {
-        printf("%s: %s ", columns[idx], data[idx]);
-    }
-
-    printf("\n");
-
-    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -467,8 +455,6 @@ int main(int argc, char *argv[])
      // wait for all threads to stop before processing the aggregate data
      thpool_wait(mythpool);
      thpool_destroy(mythpool);
-
-     /* sqlite3_exec(aggregate, "select * from entries", my_special_callback, NULL, NULL); */
 
      // run the original query on the aggregated results
      sqlite3_stmt *res;
