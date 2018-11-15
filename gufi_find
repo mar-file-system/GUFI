@@ -306,15 +306,18 @@ if __name__=='__main__':
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
         sys.exit(find.returncode)
 
+    query = qb.build_query(build_select(args),
+                           ['entries'],
+                           build_where(args),
+                           build_group_by(args),
+                           build_order_by(args),
+                           args.num_results)
+
     # create the bfq command
     bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
                '-p', '-P',
-               '-E', qb.build_query(build_select(args),
-                                    ['entries'],
-                                    build_where(args),
-                                    build_group_by(args),
-                                    build_order_by(args),
-                                    args.num_results)] + find_out.split()
+               '-E', query,
+               '-G', query] + find_out.split()
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]
