@@ -392,13 +392,26 @@ sqlite3 *open_aggregate(const char *query) {
     return aggregate;
 }
 
+static int my_special_callback(void *unused, int count, char **data, char **columns)
+{
+    int idx;
+
+    for (idx = 0; idx < count; idx++) {
+        printf("%s: %s ", columns[idx], data[idx]);
+    }
+
+    printf("\n");
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:", 1, "GUFI_tree ...");
+     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:G:", 1, "GUFI_tree ...");
      if (in.helped)
         sub_help();
      if (idx < 0)
@@ -455,9 +468,11 @@ int main(int argc, char *argv[])
      thpool_wait(mythpool);
      thpool_destroy(mythpool);
 
+     /* sqlite3_exec(aggregate, "select * from entries", my_special_callback, NULL, NULL); */
+
      // run the original query on the aggregated results
      sqlite3_stmt *res;
-     int error = sqlite3_prepare_v2(aggregate, orig_sqlent, MAXSQL, &res, NULL);
+     int error = sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL);
      print_results(res, stdout, 1, 0, in.printing, in.delim);
      sqlite3_finalize(res);
 

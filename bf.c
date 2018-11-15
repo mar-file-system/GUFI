@@ -143,6 +143,7 @@ void print_help(const char* prog_name,
       case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
       case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
+      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -186,6 +187,7 @@ void show_input(struct input* in, int retval) {
    printf("in.infile        = '%d'\n", in->infile);
    printf("in.min_level     = %zu\n",  in->min_level);
    printf("in.max_level     = %zu\n",  in->max_level);
+   printf("in.aggregate     = '%s'\n", in->aggregate);
    printf("\n");
    printf("retval           = %d\n", retval);
    printf("\n");
@@ -226,6 +228,7 @@ int parse_cmd_line(int         argc,
    in.infile        = 0;       // default infile being used
    in.min_level     = 0;       // default to the top
    in.max_level     = -1;      // default to all the way down
+   snprintf(in.aggregate, MAXSQL, "SELECT * from entries;");
 
    int show   = 0;
    int retval = 0;
@@ -375,6 +378,10 @@ int parse_cmd_line(int         argc,
 
       case 'u':
          in.infile = 1;
+         break;
+
+      case 'G':
+         INSTALL_STR(in.aggregate, optarg, MAXSQL, "-G");
          break;
 
       case '?':
