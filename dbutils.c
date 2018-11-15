@@ -286,12 +286,10 @@ int rawquerydb(const char *name,
      int           ncols;
      int           cnt;
      int           lastsql;
-     int           onetime;
      //char   lsqlstmt[MAXSQL];
      //char   prefix[MAXPATH];
      //char   shortname[MAXPATH];
      //char  *pp;
-     int name_col; // index of column whose name is "name"
 
      int           i;
      FILE *        out;
@@ -323,70 +321,12 @@ int rawquerydb(const char *name,
        sqlstmt = (char*)tail;
      }
 
-     // NOTE: if <sqlstmt> actually contained multiple statments, then this
-     //       loop only runs with the final statement.
-     onetime=0;
-     while (sqlite3_step(res) == SQLITE_ROW) {
-         //printf("looping through rec_count %ds\n",rec_count);
+     rec_count = print_results(res, out, printpath, printheader, printrows, in.delim);
 
-         // find the column whose name is "name"
-         name_col = -1; // default to -1 if not found
-         ncols=sqlite3_column_count(res);
-         for(cnt = 0; cnt < ncols; cnt++) {
-             const char *col_name = sqlite3_column_name(res, cnt);
-             if ((strlen(col_name) == 4) &&
-                 (strncmp(col_name, "name", 4) == 0)) {
-                 name_col = cnt;
-                 break;
-             }
-         }
-
-        // maybe print column-names as a header (once)
-        if (printheader) {
-           if (onetime == 0) {
-              cnt=0;
-              while (ncols > 0) {
-                 if (cnt==0) {
-                    //if (printpath) fprintf(out,"path/%s",in.delim);
-                 }
-                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),in.delim);
-                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),in.delim);
-                 ncols--;
-                 cnt++;
-              }
-              fprintf(out,"\n");
-              onetime++;
-           }
-        }
-
-        // maybe print result-row values
-        if (printrows) {
-           //if (printpath) printf("%s/", name);
-           cnt=0;
-           while (ncols > 0) {
-              if (cnt==0) {
-                 //if (printpath) fprintf(out,"%s/%s",shortname,in.delim);
-              }
-              if (cnt == name_col) {
-                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
-              }
-              else {
-                  fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
-              }
-              ncols--;
-              cnt++;
-           }
-           fprintf(out,"\n");
-        }
-
-        // count of rows in query-result
-        rec_count++;
-     }
-
-    //printf("We received %d records.\n", rec_count);
-    // sqlite3_reset(res);
-    sqlite3_finalize(res);
-    return(rec_count);
+     //printf("We received %d records.\n", rec_count);
+     // sqlite3_reset(res);
+     sqlite3_finalize(res);
+     return(rec_count);
 }
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int ts)
@@ -870,4 +810,71 @@ int addqueryfuncs(sqlite3 *db) {
        sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
        sqlite3_create_function(db, "modetotxt", 1, SQLITE_UTF8, NULL, &modetotxt, NULL, NULL);
        return 0;
+}
+
+int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
+    int rec_count = 0;
+
+    // NOTE: if <sqlstmt> actually contained multiple statments, then this
+    //       loop only runs with the final statement.
+    int onetime=0;
+    while (sqlite3_step(res) == SQLITE_ROW) {
+
+        //printf("looping through rec_count %ds\n",rec_count);
+
+        // find the column whose name is "name"
+        int name_col = -1; // default to -1 if not found
+        int ncols=sqlite3_column_count(res);
+        for(int cnt = 0; cnt < ncols; cnt++) {
+            const char *col_name = sqlite3_column_name(res, cnt);
+            if ((strlen(col_name) == 4) &&
+                (strncmp(col_name, "name", 4) == 0)) {
+                name_col = cnt;
+                break;
+            }
+        }
+
+        // maybe print column-names as a header (once)
+        if (printheader) {
+            if (onetime == 0) {
+                int cnt=0;
+                while (ncols > 0) {
+                    if (cnt==0) {
+                        //if (printpath) fprintf(out,"path/%s",delim);
+                    }
+                    fprintf(out,"%s%s", sqlite3_column_name(res,cnt),delim);
+                    //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),delim);
+                    ncols--;
+                    cnt++;
+                }
+                fprintf(out,"\n");
+                onetime++;
+            }
+        }
+
+        // maybe print result-row values
+        if (printrows) {
+            //if (printpath) printf("%s/", name);
+            int cnt=0;
+            while (ncols > 0) {
+                if (cnt==0) {
+                    //if (printpath) fprintf(out,"%s/%s",shortname,delim);
+                }
+                if (cnt == name_col) {
+                    fprintf(out,"%s%s", sqlite3_column_text(res,cnt),delim);
+                }
+                else {
+                    fprintf(out,"%s%s", sqlite3_column_text(res,cnt),delim);
+                }
+                ncols--;
+                cnt++;
+            }
+            fprintf(out,"\n");
+        }
+
+        // count of rows in query-result
+        rec_count++;
+    }
+
+    return rec_count;
 }

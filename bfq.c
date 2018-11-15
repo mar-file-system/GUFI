@@ -104,6 +104,9 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 // #include "putils.h"
 
+#define AGGREGATE_NAME         "file:aggregate?mode=memory&cache=shared"
+#define AGGREGATE_ATTACH_NAME  "aggregate"
+
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 static void processdir(void * passv)
@@ -149,15 +152,12 @@ static void processdir(void * passv)
       db=opendb(passmywork->name,db1,1,0);
     }
 
-    /* // attach in-memory result aggregation database */
-    /* { */
-    /*     static const char sqlstmt[MAXSQL] = "ATTACH 'file:aggregate?mode=memory&cache=shared' AS aggregate;"; */
-    /*     if (sqlite3_exec(db, sqlstmt,0, 0, NULL) != SQLITE_OK) { */
-    /*         fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db)); */
-    /*         sqlite3_close(db); */
-    /*         return; */
-    /*     } */
-    /* } */
+    // attach in-memory result aggregation database
+    if (sqlite3_exec(db, "ATTACH '" AGGREGATE_NAME "' AS " AGGREGATE_ATTACH_NAME ";", 0, 0, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
 
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
     addqueryfuncs(db);
@@ -240,15 +240,12 @@ static void processdir(void * passv)
         }
     }
 
-    /* // detach in-memory result aggregation database */
-    /* { */
-    /*     static const char sqlstmt[MAXSQL] = "DETACH aggregate;"; */
-    /*     if (sqlite3_exec(db, sqlstmt,0, 0, NULL) != SQLITE_OK) { */
-    /*         fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db)); */
-    /*         sqlite3_close(db); */
-    /*         return; */
-    /*     } */
-    /* } */
+    // detach in-memory result aggregation database
+    if (sqlite3_exec(db, "DETACH aggregate;",0, 0, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
 
     // if we have an out db we just detach gufi db
     if (in.outdb > 0) {
@@ -270,7 +267,6 @@ static void processdir(void * passv)
 
     // return NULL;
 }
-
 
 int processinit(void * myworkin) {
 
@@ -356,10 +352,48 @@ void sub_help() {
    printf("\n");
 }
 
+sqlite3 *open_aggregate(const char *query) {
+    // find the first clause after FROM
+    static const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
+    char *after_from = NULL;
+    for(size_t i = 0; (i < sizeof(clauses) / sizeof(char *)) && !after_from; i++) {
+        after_from = strstr(query, clauses[i]);
+    }
+
+    // create the aggregate table using the SELECT and FROM portions of the original query
+    char create_results_table[MAXSQL];
+    char af = 0;
+    if (after_from) {
+        af = *after_from;
+        *after_from = 0;
+    }
+
+    // there is no need to modify the query, since the entries table is empty
+    snprintf(create_results_table, MAXSQL, "CREATE TABLE entries_tmp AS %s;", query);
+    if (after_from) {
+        *after_from = af;
+    }
+
+    // create the aggregate database
+    sqlite3 *aggregate = NULL;
+    char *err_msg = NULL;
+    if ((sqlite3_open_v2(AGGREGATE_NAME, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) ||
+        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                             != SQLITE_OK) ||   // create the entries table for the aggregate table to copy from
+        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                             != SQLITE_OK) ||   // create the result aggregation table
+        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                            != SQLITE_OK) ||   // drop the entries table
+        (sqlite3_exec(aggregate, "ALTER TABLE entries_tmp RENAME TO entries", NULL, NULL, &err_msg)                      != SQLITE_OK)) {   // rename the results table into entries
+        fprintf(stderr, "failed to create result aggregation entries database: %s\n", err_msg);
+        sqlite3_close(aggregate);
+        aggregate = NULL;
+    }
+
+    sqlite3_free(err_msg);
+
+    return aggregate;
+}
+
 int main(int argc, char *argv[])
 {
-     struct work mywork;
-
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
@@ -370,81 +404,39 @@ int main(int argc, char *argv[])
      if (idx < 0)
         return -1;
 
-     size_t len = strlen(in.sqlent) + 1;
+     // get a copy of the original sqlent for use with the aggregate table
      char orig_sqlent[MAXSQL];
-     memcpy(orig_sqlent, in.sqlent, len);
+     snprintf(orig_sqlent, MAXSQL, in.sqlent);
 
-     {
-         // find FROM clause
-         char *from = strstr(orig_sqlent, "FROM");
-         if (!from) {
-             printf("Could not locate FROM clause\n");
-             return -1;
-         }
-         snprintf(in.sqlent, len, "SELECT * %s", from);
+     sqlite3 *aggregate = open_aggregate(orig_sqlent);
 
-         const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
-         char *after_from = NULL;
-         for(size_t i = 0; (i < sizeof(clauses)) && !after_from; i++) {
-             after_from = strstr(orig_sqlent, clauses[i]);
-         }
-         if (!after_from) {
-             printf("No clauses found after from\n");
-             return -1;
-         }
-
-         *from = 0;
-
-         {
-             char buf1[MAXSQL];
-             snprintf(buf1, MAXSQL, "%s", orig_sqlent);
-             char buf2[MAXSQL];
-             snprintf(buf2, MAXSQL, "%s", after_from);
-
-             snprintf(orig_sqlent, MAXSQL, "%s FROM aggregate %s", buf1, buf2);
-         }
-     }
+     // modify in.sqlent to insert the results into the aggregate table
+     snprintf(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here
      mythpool = thpool_init(in.maxthreads);
      if (thpool_null(mythpool)) {
         fprintf(stderr, "thpool_init() failed!\n");
+        sqlite3_close(aggregate);
         return -1;
      }
-
-     sqlite3 *aggregate = NULL;
-     if (sqlite3_open_v2("file:aggregate?mode=memory&cache=shared", &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
-         fprintf(stderr, "failed to open result aggregation database");
-         return -1;
-     }
-
-     char *err_msg = NULL;
-     if (sqlite3_exec(aggregate, "DROP TABLE IF EXISTS aggregate; CREATE TABLE aggregate(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);", NULL, NULL, &err_msg)) {
-         fprintf(stderr, "failed to create result aggregation table: %s\n", err_msg);
-         sqlite3_free(err_msg);
-         sqlite3_close(aggregate);
-
-         // clean up threads and exit
-         thpool_wait(mythpool);
-         thpool_destroy(mythpool);
-         return -1;
-     }
-
-     sqlite3_free(err_msg);
 
      for(; idx < argc; idx++) {
          // parse positional args, following the options
          int retval = 0;
          INSTALL_STR(in.name, argv[idx], MAXPATH, "GUFI_tree");
 
-         if (retval)
+         if (retval) {
+             sqlite3_close(aggregate);
              return retval;
+         }
 
          // process initialization, this is work done once the threads are up
          // but not busy yet - this will be different for each instance of a bf
          // program in this case we are stating the directory passed in and
          // putting that directory on the queue
+         struct work mywork;
          processinit(&mywork);
 
          // processdirs - if done properly, this routine is common and does not
@@ -459,84 +451,16 @@ int main(int argc, char *argv[])
          processfin();
      }
 
-     int printpath = 1;
-     int printheader = 0;
-     int printrows = in.printing;
-
-     sqlite3_stmt *res;
-     int error = sqlite3_prepare_v2(aggregate, orig_sqlent, MAXSQL, &res, NULL);
-
-     int rec_count = 0;
-     int onetime = 0;
-     while (sqlite3_step(res) == SQLITE_ROW) {
-         /* int ncols = sqlite3_column_count(res); */
-
-         /* for(int i = 0; i < ncols; i++) { */
-         /*     fprintf(stdout,"%s%s", sqlite3_column_text(res, i),in.delim); */
-         /* } */
-         /* fprintf(stdstdout,"\n"); */
-
-         //printf("looping through rec_count %ds\n",rec_count);
-
-         // find the column whose name is "name"
-         int name_col = -1; // default to -1 if not found
-         int ncols=sqlite3_column_count(res);
-         for(int cnt = 0; cnt < ncols; cnt++) {
-             const char *col_name = sqlite3_column_name(res, cnt);
-             if ((strlen(col_name) == 4) &&
-                 (strncmp(col_name, "name", 4) == 0)) {
-                 name_col = cnt;
-                 break;
-             }
-         }
-
-        // maybe print column-names as a header (once)
-        if (printheader) {
-           if (onetime == 0) {
-              int cnt=0;
-              while (ncols > 0) {
-                 if (cnt==0) {
-                    //if (printpath) fprintf(stdout,"path/%s",in.delim);
-                 }
-                 fprintf(stdout,"%s%s", sqlite3_column_name(res,cnt),in.delim);
-                 //fprintf(stdout,"%s%s", sqlite3_column_decltype(res,cnt),in.delim);
-                 ncols--;
-                 cnt++;
-              }
-              fprintf(stdout,"\n");
-              onetime++;
-           }
-        }
-
-        // maybe print result-row values
-        if (printrows) {
-           //if (printpath) printf("%s/", name);
-           int cnt=0;
-           while (ncols > 0) {
-              if (cnt==0) {
-                 //if (printpath) fprintf(stdout,"%s/%s",shortname,in.delim);
-              }
-              if (cnt == name_col) {
-                  fprintf(stdout,"%s%s", sqlite3_column_text(res,cnt),in.delim);
-              }
-              else {
-                  fprintf(stdout,"%s%s", sqlite3_column_text(res,cnt),in.delim);
-              }
-              ncols--;
-              cnt++;
-           }
-           fprintf(stdout,"\n");
-        }
-
-        // count of rows in query-result
-        rec_count++;
-
-     }
-
-     sqlite3_close(aggregate);
-
-     // clean up threads and exit
+     // wait for all threads to stop before processing the aggregate data
      thpool_wait(mythpool);
      thpool_destroy(mythpool);
+
+     // run the original query on the aggregated results
+     sqlite3_stmt *res;
+     int error = sqlite3_prepare_v2(aggregate, orig_sqlent, MAXSQL, &res, NULL);
+     print_results(res, stdout, 1, 0, in.printing, in.delim);
+     sqlite3_finalize(res);
+
+     sqlite3_close(aggregate);
      return 0;
 }
