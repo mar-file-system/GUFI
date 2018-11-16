@@ -582,13 +582,13 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
     sqlite3_bind_int64(res,20,pwork->ossint4);
     error=sqlite3_bind_text(res,21,zosstext1,-1,SQLITE_STATIC);
     error=sqlite3_bind_text(res,22,zosstext1,-1,SQLITE_STATIC);
+    error=sqlite3_step(res);
     sqlite3_free(zname);
     sqlite3_free(ztype);
     sqlite3_free(zlinkname);
     sqlite3_free(zxattr);
     sqlite3_free(zosstext1);
     sqlite3_free(zosstext2);
-    error = sqlite3_step(res);
     if (error != SQLITE_ROW) {
           //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
           //return 0;
@@ -618,9 +618,9 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_bind_int64(res,4,pwork->pinode);
     sqlite3_bind_int64(res,5,pwork->suspect);
 
+    error = sqlite3_step(res);
     sqlite3_free(zname);
     sqlite3_free(ztype);
-    error = sqlite3_step(res);
     if (error != SQLITE_ROW) {
           //fprintf(stderr, "SQL error on insertdbgor: error %d err %s\n",error,sqlite3_errmsg(db));
           //return 0;
@@ -638,7 +638,7 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     char *err_msg = 0;
     char sqlstmt[MAXSQL];
     int rc;
-    int len=0;;
+    int len=0;
     const char *shortname;
     int depth;
     int i;
