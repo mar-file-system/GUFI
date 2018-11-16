@@ -321,7 +321,10 @@ int rawquerydb(const char *name,
        sqlstmt = (char*)tail;
      }
 
-     rec_count = print_results(res, out, printpath, printheader, printrows, in.delim);
+     while (sqlite3_step(res) == SQLITE_ROW) {
+         rec_count++;
+     }
+     /* rec_count = print_results(res, out, printpath, printheader, printrows, in.delim); */
 
      //printf("We received %d records.\n", rec_count);
      // sqlite3_reset(res);

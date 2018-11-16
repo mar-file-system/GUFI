@@ -143,7 +143,7 @@ void print_help(const char* prog_name,
       case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
       case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
-      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")"); break;
+      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -365,6 +365,7 @@ int parse_cmd_line(int         argc,
 
       case 'c':
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
+         break;
 
       case 'y':
          INSTALL_INT(in.min_level, optarg, 0, (size_t) -1, "-y");

@@ -178,7 +178,7 @@ struct input {
    int infile;               // added for bfq to be able to read input file to get dir/inode info
    size_t min_level;         // minimum level of recursion to reach before running queries
    size_t max_level;         // maximum level of recursion to run queries on
-   char aggregate[MAXSQL];
+   char aggregate[MAXSQL];   // SQL query to run on aggregated data
 };
 extern struct input in;
 
