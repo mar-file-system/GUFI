@@ -81,47 +81,66 @@ import sys
 
 import query_builder as qb
 
-def add_select(args, tail):
-    return "SELECT " + ((args.select  + ',') if args.select else '') + tail
+def build(args):
+    select = [args.select] if args.select else []
 
-def least_space(args):
-    entries = add_select(args, "uid, SUM(size) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
-    aggregate = add_select(args, "uid, SUM(total) as used FROM entries GROUP BY uid ORDER BY used ASC")
+    where = []
+    if args.uid:
+        where += ['uid == "{}"'.format(args.uid)]
+
+    return select, where
+
+def size(args, order=''):
+    select, where = build(args)
+    entries = qb.build_query(select + ['uid', 'TOTAL(size) AS total'], ['entries'], where, ['uid'], None, args.num_results)
+    aggregate = qb.build_query(select + ['uid', 'TOTAL(total) AS used'], ['entries'], where, ['uid'], ['used {}'.format(order)], args.num_results)
     return entries, aggregate
 
-def most_space(args):
-    entries = add_select(args, "uid, SUM(size) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
-    aggregate = add_select(args, "uid, SUM(total) as used FROM entries GROUP BY uid ORDER BY used DESC")
+def files(args, order=''):
+    select, where = build(args)
+    entries = qb.build_query(select + ['uid', 'COUNT(*) AS count'], ['entries'], where, ['uid'], None, args.num_results)
+    aggregate = qb.build_query(select + ['uid', 'TOTAL(count) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
     return entries, aggregate
 
-def least_files(args):
-    entries = add_select(args, "uid, COUNT(*) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
-    aggregate = add_select(args, "uid, SUM(total) as files FROM entries GROUP BY uid ORDER BY files ASC")
+def total_files(args):
+    _, where = build(args)
+    entries = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, args.num_results)
+    aggregate = qb.build_query(['TOTAL(count) AS files'], ['entries'], None, None, None, args.num_results)
     return entries, aggregate
 
-def most_files(args):
-    entries = add_select(args, "uid, COUNT(*) as total FROM entries GROUP BY uid") # should add a path(?) here to make each row unique
-    aggregate = add_select(args, "uid, SUM(total) as files FROM entries GROUP BY uid ORDER BY files DESC")
+def total_size(args):
+    _, where = build(args)
+    entries = qb.build_query(['TOTAL(size) AS total'], ['entries'], where, None, None, args.num_results)
+    aggregate = qb.build_query(['TOTAL(total)'], ['entries'], None, None, None, args.num_results)
     return entries, aggregate
 
 # mapping of valid 'operation' argument values to array generators
-PREMADE_QUERIES = {'least-space' : least_space,
-                   'most-space'  : most_space,
-                   'least-files' : least_files,
-                   'most-files'  : most_files}
+PREMADE_QUERIES = {'size'        : size,
+                   'files'       : files,
+                   'total-size'  : total_size,
+                   'total-files' : total_files}
+
+# allowd keywords for sorting output
+ORDER = {'ASC'   : 'ASC',
+         'DESC'  : 'DESC',
+         'least' : 'ASC',
+         'most'  : 'DESC'}
 
 if __name__=='__main__':
     cwd = os.getcwd()
 
     parser = argparse.ArgumentParser(description='GUFI version of find')
-    parser.add_argument('--root',        metavar='path', dest='root',        type=str,                    default=cwd,                    help='top-most directory to search from (default: ' + cwd + ')')
-    parser.add_argument('--delim',       metavar='c',    dest='delim',       type=qb.check_char,                                          help='delimiter separating output columns')
-    parser.add_argument('--maxdepth',    metavar='d',    dest='maxdepth',    type=qb.check_non_negative,                                  help='the maximum number of levels to search')
-    parser.add_argument('--mindepth',    metavar='d',    dest='mindepth',    type=qb.check_non_negative,                                  help='the minimum number of levels to search')
-    parser.add_argument('--num_results', metavar='n',    dest='num_results', type=qb.check_non_negative,                                  help='first n results')
-    parser.add_argument('--select',      metavar='cols', dest='select',      type=str,                                                    help='comma separated columns')
-    parser.add_argument('operation',                                         type=str,                    choices=PREMADE_QUERIES.keys(), help='operation to perform')
-    parser.add_argument('GUFI_tree',                                                                      nargs='+',                      help='path containing GUFI tree database file')
+    parser.add_argument('--order',         metavar='order', dest='order',       choices=ORDER.keys(),        default='',   help='sort output (if applicable)')
+    parser.add_argument('--root',          metavar='path',  dest='root',        type=str,                    default=cwd,  help='top-most directory to search from (default: ' + cwd + ')')
+    parser.add_argument('--delim',         metavar='c',     dest='delim',       type=qb.check_char,                        help='delimiter separating output columns')
+    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',    type=qb.check_non_negative,                help='the maximum number of levels to search')
+    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',    type=qb.check_non_negative,                help='the minimum number of levels to search')
+    parser.add_argument('--num_results',   metavar='n',     dest='num_results', type=qb.check_non_negative,                help='first n results')
+    parser.add_argument('--select',        metavar='cols',  dest='select',      type=str,                                  help='comma separated columns')
+    parser.add_argument('--threads',       metavar='n',     dest='threads',     type=qb.check_non_negative,  default=1,    help='number of threads')
+    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',         type=qb.get_uid,                           help='restrict to user')
+    parser.add_argument('operation',                                            choices=PREMADE_QUERIES.keys(),            help='operation to perform')
+    parser.add_argument('GUFI_tree',                                                                         nargs='+',    help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 
@@ -135,7 +154,11 @@ if __name__=='__main__':
     entries, aggregate = PREMADE_QUERIES[args.operation](args)
 
     # create the bfq command
-    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))), '-p', '-P', '-E', entries, '-G', aggregate] + find_out.split()
+    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+               '-n', str(args.threads),
+               '-p', '-P',
+               '-E', entries,
+               '-G', aggregate] + find_out.split()
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]

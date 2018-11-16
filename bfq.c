@@ -467,8 +467,12 @@ int main(int argc, char *argv[])
 
      // run the aggregate query on the aggregated results
      sqlite3_stmt *res = NULL;
-     sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL);
-     print_results(res, stdout, 1, 0, in.printing, in.delim);
+     if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
+         print_results(res, stdout, 1, 0, in.printing, in.delim);
+     }
+     else {
+         fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
+     }
      sqlite3_finalize(res);
 
      sqlite3_close(aggregate);

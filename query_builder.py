@@ -167,7 +167,6 @@ def get_gid(group_str):
         gid = int(group_str)
     return gid
 
-# build a query that searches the entries table
 def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None):
     '''
     Builds a query using arrays of data for each field.

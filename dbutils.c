@@ -822,7 +822,6 @@ int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int p
     //       loop only runs with the final statement.
     int onetime=0;
     while (sqlite3_step(res) == SQLITE_ROW) {
-
         //printf("looping through rec_count %ds\n",rec_count);
 
         // find the column whose name is "name"
