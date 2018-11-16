@@ -129,7 +129,7 @@ ORDER = {'ASC'   : 'ASC',
 if __name__=='__main__':
     cwd = os.getcwd()
 
-    parser = argparse.ArgumentParser(description='GUFI version of find')
+    parser = argparse.ArgumentParser(description='GUFI statistics')
     parser.add_argument('--order',         metavar='order', dest='order',       choices=ORDER.keys(),        default='',   help='sort output (if applicable)')
     parser.add_argument('--root',          metavar='path',  dest='root',        type=str,                    default=cwd,  help='top-most directory to search from (default: ' + cwd + ')')
     parser.add_argument('--delim',         metavar='c',     dest='delim',       type=qb.check_char,                        help='delimiter separating output columns')
