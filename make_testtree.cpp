@@ -95,18 +95,6 @@ extern "C" {
 
 }
 
-const std::size_t DEFAULT_USERS = 200;
-const std::size_t DEFAULT_NUM_FILES = 750000000;
-
-const char        DEFAULT_PATH_SEPARATOR = '/';
-const std::size_t DEFAULT_MIN_DEPTH = 1;
-const std::size_t DEFAULT_MAX_DEPTH = 1;
-const std::size_t DEFAULT_LEADING_ZEROS = 5;
-const std::string DEFAULT_DB_NAME = "db.db";
-const bool        DEFAULT_FILES_WITH_DIRS = false;
-
-const std::size_t DEFAULT_THREAD_COUNT = std::max(std::thread::hardware_concurrency() / 2, (decltype(std::thread::hardware_concurrency())) 1);
-
 // File size min, max, and weight to choose from
 struct Bucket {
     Bucket(const std::size_t min, const std::size_t max, const double weight)
@@ -123,43 +111,61 @@ struct Bucket {
 // setting set by the user
 struct Settings {
     Settings()
-        : users(DEFAULT_USERS),
-          files(DEFAULT_NUM_FILES),
-          path_separator(DEFAULT_PATH_SEPARATOR),
-          min_depth(DEFAULT_MIN_DEPTH),
-          max_depth(DEFAULT_MAX_DEPTH),
-          leading_zeros(DEFAULT_LEADING_ZEROS),
-          db_name(DEFAULT_DB_NAME),
+        : users(200),
+          files(750000000),
+          path_separator('/'),
+          leading_zeros(5),
+          db_name("db.db"),
           seed(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
-          thread_count(DEFAULT_THREAD_COUNT),
+          depth(),
+          time(),
+          threads(std::max(std::thread::hardware_concurrency() / 2, (decltype(std::thread::hardware_concurrency())) 1)),
+          blocksize(512),
           top(),
           buckets()
-    {}
+    {
+        depth.min = 1;
+        depth.max = 5;
+
+        time.min = 0;
+        time.max = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    }
 
     operator bool() const {
         return users &&
             (files >= users) &&
-            min_depth &&
-            (min_depth <= max_depth) &&
-            thread_count &&
+            depth.min && (depth.min <= depth.max) &&
+            (time.min <= time.max) &&
+            threads &&
+            blocksize &&
             path_separator &&
             db_name.size() &&
             top.size() &&
             buckets.size();
     }
 
+    template <typename T = std::size_t>
+    struct Range {
+        T min;
+        T max;
+    };
+
     std::size_t users;                   // count
     std::size_t files;                   // count
 
     char        path_separator;          // '/'
-    std::size_t min_depth;               // > 0
-    std::size_t max_depth;               // >= min_depth
     std::size_t leading_zeros;           // for filling file/directory names
     std::string db_name;                 // db.db
     bool        files_with_dirs;         // whether or not to generate files next to directories
 
+    // RNG settings
     std::size_t seed;                    // used to seed a seed rng
-    std::size_t thread_count;            // count
+    Range <>    depth;
+    Range <>    time;
+
+    std::size_t threads;                 // count
+
+    std::size_t blocksize;               // > 0
 
     std::string top;                     // top depth directory
     std::vector <Bucket> buckets;        // set of file size buckets
@@ -294,11 +300,11 @@ void thread(void *args) {
 
     // generic rng
     std::default_random_engine gen(seed_rng(seed_gen));
-    std::uniform_int_distribution <std::size_t> rng(0, -1);
+    std::uniform_int_distribution <std::size_t> rng(0, ((std::size_t) -1) >> 1);
 
     // rng for timestamps
     std::default_random_engine time_gen(seed_rng(seed_gen));
-    std::uniform_int_distribution <std::size_t> time_rng(0, std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution <std::size_t> time_rng(arg->settings->time.min, arg->settings->time.max);
 
     // rng for selecting size bucket
     std::vector <double> weights;
@@ -391,8 +397,8 @@ void thread(void *args) {
                 work.statuso.st_uid = arg->uid;
                 work.statuso.st_gid = arg->uid;
                 work.statuso.st_size = size_rngs[bucket](size_gens[bucket]);
-                work.statuso.st_blksize = rng(gen);
-                work.statuso.st_blocks = rng(gen);
+                work.statuso.st_blksize = arg->settings->blocksize;
+                work.statuso.st_blocks = work.statuso.st_size / work.statuso.st_blksize;
                 work.statuso.st_ctime = time_rng(time_gen);
                 work.statuso.st_atime = std::max(work.statuso.st_ctime, (time_t) time_rng(time_gen));
                 work.statuso.st_mtime = std::max(work.statuso.st_ctime, (time_t) time_rng(time_gen));
@@ -451,22 +457,28 @@ void thread(void *args) {
 }
 
 std::ostream &print_help(std::ostream &stream, char *argv0) {
-    return stream << "Syntax: " << argv0 << " [options] directory bucket_0 [bucket_1 ... bucket_n]\n"
+    static const Settings s;
+    return stream << "Syntax: " << argv0 << " [options] directory bucket_0 --filesize min,max,weight [--filesize min,max,weight ...]\n"
                   << "\n"
                   << "    Options:\n"
-                  << "        --users n               Number of users                                        (Default: " << DEFAULT_USERS << ")\n"
-                  << "        --files n               Number of files in the tree                            (Default: " << DEFAULT_NUM_FILES << ")\n"
-                  << "        --path_separator c      Character that separates path sections                 (Default: " << DEFAULT_PATH_SEPARATOR << ") \n"
-                  << "        --min-depth n           Minimum layers of directories                          (Default: " << DEFAULT_MIN_DEPTH << ")\n"
-                  << "        --max-depth n           Maximum layers of directories                          (Default: " << DEFAULT_MAX_DEPTH << ")\n"
-                  << "        --leading-zeros n       Number of leading zeros in names                       (Default: " << DEFAULT_LEADING_ZEROS <<")\n"
-                  << "        --db-name name          Name of each database file                             (Default: " << DEFAULT_DB_NAME << ")\n"
-                  << "        --files-with-dirs b     Whether or not files exist in intermediate directories (Default: " << DEFAULT_FILES_WITH_DIRS << ")\n"
-                  << "        --threads n             Set the number of threads to use                       (Default: " << DEFAULT_THREAD_COUNT << ")\n"
-                  << "        --seed n                Value to seed the seed generator                       (Default: Seconds since epoch)\n"
+                  << "        --users n               Number of users                                        (Default: "  << s.users << ")\n"
+                  << "        --files n               Number of files in the tree                            (Default: "  << s.files << ")\n"
+                  << "        --path-separator c      Character that separates path sections                 (Default: '" << s.path_separator << "') \n"
+                  << "        --leading-zeros n       Number of leading zeros in names                       (Default: "  << s.leading_zeros <<")\n"
+                  << "        --db-name name          Name of each database file                             (Default: "  << s.db_name << ")\n"
+                  << "        --files-with-dirs b     Whether or not files exist in intermediate directories (Default: "  << std::boolalpha << s.files_with_dirs << ")\n"
+                  << "        --threads n             Set the number of threads to use                       (Default: "  << s.threads << ")\n"
+                  << "        --blocksize n           Block size for filesystem I/O                          (Default: "  << s.blocksize << ")\n"
                   << "\n"
-                  << "    directory                   The directory to put the generated tree into\n"
-                  << "    bucket_i                    A comma separated triple of min,max,weight file size bucket\n";
+                  << "    RNG configuration:\n"
+                  << "        --seed n                Value to seed the seed generator                       (Default: Seconds since epoch)\n"
+                  << "        --min-depth n           Minimum layers of directories                          (Default: "  << s.depth.min << ")\n"
+                  << "        --max-depth n           Maximum layers of directories                          (Default: "  << s.depth.max << ")\n"
+                  << "        --min-time n            Minimum timestamp                                      (Default: "  << s.time.min << ")\n"
+                  << "        --max-time n            Maximum timestamp                                      (Default: "  << s.time.max << ")\n"
+                  << "        --filesize              Comma separated triple of min,max,weight. At least one should be provided.\n"
+                  << "\n"
+                  << "    directory                   The directory to put the generated tree into\n";
 }
 
 template <typename T>
@@ -485,96 +497,66 @@ bool read_value(int argc, char *argv[], int &i, T &setting, const std::string &n
     return true;
 }
 
+#define PARSE(opt, var, err)                                 \
+    else if (args == "--" opt) {                             \
+        if (!read_value(argc, argv, i, settings.var, err)) { \
+            return false;                                    \
+        }                                                    \
+    }
+
 bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
-    int positional = 0;
     int i = 1;
     while (i < argc) {
         const std::string args(argv[i++]);
         if ((args == "--help") || (args == "-h")) {
             return help = true;
         }
-        else if (args == "--users") {
-            if (!read_value(argc, argv, i, settings.users, "user count")) {
-                return false;
-            }
-        }
-        else if (args == "--files") {
-            if (!read_value(argc, argv, i, settings.files, "file count")) {
-                return false;
-            }
-        }
-        else if (args == "--path_separator") {
-            if (!read_value(argc, argv, i, settings.path_separator, "path separator")) {
-                return false;
-            }
-        }
-        else if (args == "--min-depth") {
-            if (!read_value(argc, argv, i, settings.min_depth, "min depth")) {
-                return false;
-            }
-        }
-        else if (args == "--max-depth") {
-            if (!read_value(argc, argv, i, settings.max_depth, "max depth")) {
-                return false;
-            }
-        }
-        else if (args == "--leading-zeros") {
-            if (!read_value(argc, argv, i, settings.leading_zeros, "leading zero count")) {
-                return false;
-            }
-        }
-        else if (args == "--db-name") {
-            if (!read_value(argc, argv, i, settings.db_name, "db name")) {
-                return false;
-            }
-        }
+        PARSE("users",           users,             "user count")
+        PARSE("files",           files,             "file count")
+        PARSE("path-separator",  path_separator,    "path separator")
+        PARSE("leading-zeros",   leading_zeros,     "leading zero count")
+        PARSE("db-name",         db_name,           "db name")
         else if (args == "--files-with-dirs") {
             if (!(std::stringstream(argv[i]) >> std::boolalpha >> settings.files_with_dirs)) {
                 std::cerr << "Bad boolean: " << argv[i] << std::endl;
-                return false;
             }
 
             i++;
         }
-        else if (args == "--seed") {
-            if (!read_value(argc, argv, i, settings.seed, "seed count")) {
+        PARSE("seed",            seed,              "seed")
+        PARSE("min-depth",       depth.min,         "min depth")
+        PARSE("max-depth",       depth.max,         "max depth")
+        PARSE("min-time",        time.min,          "min atime")
+        PARSE("max-time",        time.max,          "max atime")
+        PARSE("threads",         threads,           "thread count")
+        PARSE("blocksize",       blocksize,         "blocksize")
+        else if (args == "--filesize") {
+            std::size_t min;
+            char comma1;
+            std::size_t max;
+            char comma2;
+            double weight;
+
+            if (!(std::stringstream(argv[i]) >> min >> comma1 >> max >> comma2 >> weight) ||
+                (comma1 != ',') || (comma2 != ',') ||
+                (min > max) || !max) {
+                std::cerr << "Bad filesize range: " << argv[i] << std::endl;
                 return false;
             }
-        }
-        else if (args == "--threads") {
-            if (!read_value(argc, argv, i, settings.thread_count, "thread count")) {
-                return false;
-            }
+
+            settings.buckets.emplace_back(Bucket(min, max, weight));
+            i++;
         }
         else {
             // first positional argument is the directory
             if (!settings.top.size()) {
                 settings.top = std::move(args);
             }
-            // all others are buckets
-            else {
-                std::size_t min;
-                char comma1;
-                std::size_t max;
-                char comma2;
-                double weight;
-
-                if (!(std::stringstream(args) >> min >> comma1 >> max >> comma2 >> weight) ||
-                    (comma1 != ',') || (comma2 != ',') ||
-                    (min > max) || !max) {
-                    std::cerr << "Bad bucket: " << argv[i] << std::endl;
-                    return false;
-                }
-
-                settings.buckets.emplace_back(Bucket(min, max, weight));
-            }
-
-            positional++;
         }
     }
 
-    if (positional < 2) {
-        std::cerr << "Missing positional arguments" << std::endl;
+    if (!settings.buckets.size()) {
+        std::cerr << "At least one filesize range is needed" << std::endl;
         return false;
     }
 
@@ -585,6 +567,7 @@ int main(int argc, char *argv[]) {
     Settings settings;
     bool help = false;
     if (!parse_args(argc, argv, settings, help)) {
+        print_help(std::cout, argv[0]);
         return 1;
     }
 
@@ -612,7 +595,7 @@ int main(int argc, char *argv[]) {
     sqlite3_close(top);
 
     // start up thread pool
-    threadpool pool = thpool_init(settings.thread_count);
+    threadpool pool = thpool_init(settings.threads);
     if (thpool_null(pool)) {
         std::cerr << "Failed to create thread pool" << std::endl;
         return 1;
@@ -631,7 +614,7 @@ int main(int argc, char *argv[]) {
 
     // rng for depth selection
     std::default_random_engine depth_gen(seed_rng(seed_gen));
-    std::uniform_int_distribution <std::size_t> depth_rng(settings.min_depth, settings.max_depth);
+    std::uniform_int_distribution <std::size_t> depth_rng(settings.depth.min, settings.depth.max);
 
     // inode current subdirectory starts at
     std::size_t inode = 0;
