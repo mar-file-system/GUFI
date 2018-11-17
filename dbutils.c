@@ -278,41 +278,25 @@ int rawquerydb(const char *name,
                int         printrows,
                int         ptid)         // pthread-ID
 {
-     sqlite3_stmt *res;
-     int           error     = 0;
+     sqlite3_stmt *res = NULL;
      int           rec_count = 0;
-     const char   *errMSG;
-     const char   *tail;
-     int           ncols;
-     int           cnt;
-     int           lastsql;
-     //char   lsqlstmt[MAXSQL];
-     //char   prefix[MAXPATH];
-     //char   shortname[MAXPATH];
-     //char  *pp;
+     const char   *errMSG = NULL;
+     const char   *tail = NULL;
+     FILE *        out = (in.outfile > 0)?gts.outfd[ptid]:stdout;
 
-     int           i;
-     FILE *        out;
-
-     if (! sqlstmt) {
+     if (!sqlstmt) {
         fprintf(stderr, "SQL was empty\n");
         return -1;
      }
 
-     out = stdout;
-     if (in.outfile > 0)
-        out = gts.outfd[ptid];
-
      while (*sqlstmt) {
        // WARNING: passing length-arg that is longer than SQL text
-       error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
-       if (error != SQLITE_OK) {
+       if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail) != SQLITE_OK) {
           fprintf(stderr, "SQL error on query: %s name %s err %s\n",
                   sqlstmt,name,sqlite3_errmsg(db));
           return -1;
        }
 
-       //printf("running on %s query %s printpath %d tail %s\n",name,sqlstmt,printpath,tail);
        if (*tail) {
          sqlite3_step(res);
          //sqlite3_finalize(res);
@@ -321,12 +305,11 @@ int rawquerydb(const char *name,
        sqlstmt = (char*)tail;
      }
 
+     #warning not sure if this is still needed
      while (sqlite3_step(res) == SQLITE_ROW) {
          rec_count++;
      }
-     /* rec_count = print_results(res, out, printpath, printheader, printrows, in.delim); */
 
-     //printf("We received %d records.\n", rec_count);
      // sqlite3_reset(res);
      sqlite3_finalize(res);
      return(rec_count);
