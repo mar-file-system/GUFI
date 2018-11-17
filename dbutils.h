@@ -134,4 +134,6 @@ int addqueryfuncs(sqlite3 *db);
 
 int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
+sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query);
+
 #endif

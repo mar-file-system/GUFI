@@ -355,52 +355,6 @@ void sub_help() {
    printf("\n");
 }
 
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query) {
-    // find the first clause after FROM
-    // more clauses are probably needed
-    static const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
-    char *after_from = NULL;
-    for(size_t i = 0; (i < sizeof(clauses) / sizeof(char *)) && !after_from; i++) {
-        after_from = strstr(query, clauses[i]);
-    }
-
-    // create the aggregate table using the SELECT and FROM portions of the original query
-    char create_results_table[MAXSQL];
-    char af = 0;
-    if (after_from) {
-        af = *after_from;
-        *after_from = 0;
-    }
-
-    // there is no need to modify the query, since the entries table is empty (but will generate a NULL row, which will be removed)
-    snprintf(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, query);
-    if (after_from) {
-        *after_from = af;
-    }
-
-    char alter[MAXSQL];
-    snprintf(alter, MAXSQL, "ALTER TABLE %s RENAME TO entries;", attach_name);
-
-    sqlite3 *aggregate = NULL;
-    char *err_msg = NULL;
-    if ((sqlite3_open_v2(name, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
-        (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                          != SQLITE_OK) || // enable extension loading
-        (sqlite3_load_extension(aggregate, "sqlite3-pcre/pcre.so", NULL, NULL)                                 != SQLITE_OK) || // load sqlite3-pcre
-        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                   != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
-        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                   != SQLITE_OK) || // create the aggregate table
-        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                  != SQLITE_OK) || // drop the entries table
-        (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                  != SQLITE_OK) || // rename the aggregate table to entries
-        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                 != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
-        fprintf(stderr, "failed to create result aggregation database: %s\n", err_msg);
-        sqlite3_close(aggregate);
-        aggregate = NULL;
-    }
-
-    sqlite3_free(err_msg);
-
-    return aggregate;
-}
-
 int main(int argc, char *argv[])
 {
      // process input args - all programs share the common 'struct input',

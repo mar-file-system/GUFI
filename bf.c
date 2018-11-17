@@ -228,7 +228,7 @@ int parse_cmd_line(int         argc,
    in.infile        = 0;       // default infile being used
    in.min_level     = 0;       // default to the top
    in.max_level     = -1;      // default to all the way down
-   snprintf(in.aggregate, MAXSQL, "SELECT * from entries;");
+   snprintf(in.aggregate, MAXSQL, "SELECT * FROM entries;");
 
    int show   = 0;
    int retval = 0;
