@@ -79,20 +79,21 @@ OF SUCH DAMAGE.
 #define _GNU_SOURCE
 #endif
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <utime.h>
-#include <sys/xattr.h>
-#include <sqlite3.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sqlite3.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/xattr.h>
+#ifdef DEBUG
+#include <time.h>
+#endif
+#include <unistd.h>
 
 #include <pwd.h>
 #include <grp.h>
@@ -116,7 +117,6 @@ static void processdir(void * passv)
     DIR *dir;
     struct dirent *entry;
     int mytid;
-    char *records;
     sqlite3_stmt *res;
     char dbpath[MAXPATH];
     sqlite3 *db;
@@ -362,6 +362,14 @@ void sub_help() {
    printf("\n");
 }
 
+#ifdef DEBUG
+long double elapsed(const struct timespec *start, const struct timespec *end) {
+    const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
+    const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
+    return e - s;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
      // process input args - all programs share the common 'struct input',
@@ -394,6 +402,11 @@ int main(int argc, char *argv[])
         return -1;
      }
 
+#ifdef DEBUG
+     struct timespec aggregate_start;
+     clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
+#endif
+
      for(; idx < argc; idx++) {
          // parse positional args, following the options
          int retval = 0;
@@ -424,7 +437,18 @@ int main(int argc, char *argv[])
 
      // wait for all threads to stop before processing the aggregate data
      thpool_wait(mythpool);
+
+#ifdef DEBUG
+     struct timespec aggregate_end;
+     clock_gettime(CLOCK_MONOTONIC, &aggregate_end);
+#endif
+
      thpool_destroy(mythpool);
+
+#ifdef DEBUG
+     struct timespec output_start;
+     clock_gettime(CLOCK_MONOTONIC, &output_start);
+#endif
 
      // run the aggregate query on the aggregated results
      sqlite3_stmt *res = NULL;
@@ -435,6 +459,18 @@ int main(int argc, char *argv[])
          fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
      }
      sqlite3_finalize(res);
+
+#ifdef DEBUG
+     struct timespec output_end;
+     clock_gettime(CLOCK_MONOTONIC, &output_end);
+
+     const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
+     const long double output_time = elapsed(&output_start, &output_end);
+
+     fprintf(stderr, "Time to complete aggregation: %Le\n", aggregate_time);
+     fprintf(stderr, "Time to complete printing:    %Le\n", output_time);
+     fprintf(stderr, "Time to complete both:        %Le\n", aggregate_time + output_time);
+#endif
 
      closedb(aggregate);
      return 0;

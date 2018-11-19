@@ -23,9 +23,9 @@ LIBFILES = bf structq dbutils utils
 
 
 ifneq ($(DEBUG),)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -DDEBUG
 else
-	CFLAGS += -g -O3
+	CFLAGS += -O3
 endif
 
 
