@@ -1,0 +1,4 @@
+rm -rf testdirout
+#./bfwi -n 2 -xp -u -d"|" -t testdirout /tmp/outq
+./bfwi -n 2 -xp -u -d"|" -t testdirout /tmp/outq
+ls -lR testdirout

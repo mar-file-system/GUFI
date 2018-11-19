@@ -93,6 +93,7 @@ OF SUCH DAMAGE.
 struct globalpathstate {
   char gpath[MAXPATH];
   char gepath[MAXPATH];
+  char gfpath[MAXPATH]; // added to provide dumping of full path in query extension
 } gps[MAXPTHREAD];
 
 struct sum {

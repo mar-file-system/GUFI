@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
@@ -79,7 +79,8 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-BFWI=$DIR/../bfwi
+BFWREADDIRPLUS2DB=$DIR/../bfwreaddirplus2db
+QUERYDBN=$DIR/../querydbn
 
 
 # NOTE: The destination GUFI-tree is optional
@@ -87,19 +88,18 @@ BFWI=$DIR/../bfwi
 #       This might be useful to see the amount of time spent just in reading.
 
 
-# Usage: bfwi [options] input_dir
+# Usage: bfwreaddirplus2db [options] input_dir
 # options:
 #   -h              help
 #   -H              show assigned input values (debugging)
 #   -p              print file-names
 #   -n <threads>    number of threads
-#   -d <delim>      delimiter (one char)  [use 'x' for 0x1E]
-#   -x              pull xattrs from source file-sys into GUFI
 #   -P              print directories as they are encountered
-#   -b              build GUFI index tree
-#   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-#   -t <to_dir>     dir GUFI-tree should be built
-#   -u              consider input_dir to be input file  
+#   -O <outputdb>   output db
+#   -Y                 default all directories as suspect
+#   -Z                 default all files links as suspect
+#   -W <insuspectfile> path to input suspect file
+
 # 
 # input_dir         walk this tree to produce GUFI-tree
 # 
@@ -107,7 +107,7 @@ BFWI=$DIR/../bfwi
 
 usage() {
     PROG=$1
-    echo "Usage: $PROG <source_tree> [ <GUFI_tree> ]"
+    echo "Usage: $PROG <source_tree> "
     exit -1
 }
 
@@ -124,70 +124,133 @@ fi
 # ...........................................................................
 # WARNING!
 #
-#   bfwi builds the GUFI tree as a replication of the entire source-tree
-#   underneath the <to_dir> directory that is provided with '-t' on the
-#   command line.  For example:
-#
-#       source   = /a/b/c
-#       to_dir   = .
-#
-#       actual GUFI-tree = ./a/b/c
-#
-#   We must be very careful during cleanup to avoid e.g. "rm -rf
-#   to_dir" (i.e. the dir that is optionally provided on the
-#   command-line).
+#   bfwreaddirplus2db can list a tree or build a db from a tree 
 #
 # THEREFORE:
 #
-#   Use "$CLEAN_GUFI", to be safe
 #
 # ...........................................................................
 
 
 # defaults
-DEST=
-CLEAN_GUFI=":"
+DEST=$1
 
-if [ -n "$GUFI_BASE" ]; then
-    DEST="-b -t $GUFI_BASE"
-    GUFI="$GUFI_BASE/$SOURCE"
-    CLEAN_GUFI="rm -rf $GUFI"
-fi
-
-# echo "clean:  $CLEAN_GUFI"
-
-
-
-# run bfwi and send output to screen
+# run bfwreaddirplus2db and send output to screen
 echo
 echo "out to screen"
 
-echo $CLEAN_GUFI
-$CLEAN_GUFI
+echo $BFWREADDIRPLUS2DB -n 1 -P -p $DEST
+$BFWREADDIRPLUS2DB -n 1 -P -p $DEST 
 
-echo $BFWI -n 2 -xP $DEST $SOURCE
-$BFWI -n 1 -xP $DEST $SOURCE
-
-
-
-
-# run to output files testout.*
+# run to create output db 
 echo
-echo "send to output files"
+echo "send to output to a db both files and dirs"
 
-echo $CLEAN_GUFI
-$CLEAN_GUFI
-rm -f  testout*
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 1 -P -p -r -R -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -P -p -r -R -O bfwreaddirplusdb $DEST 
 
-echo $BFWI -n 2 -xP -o testout $DEST $SOURCE
-$BFWI -n 2 -xP -o testout $DEST $SOURCE
+ls -l bfwreaddirplusdb.* 
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
 
-ls -l testout*
-for F in testout*; do echo; echo $F; cat $F; done
+# run to create output db dirs only 
+echo
+echo "send to output to a db dirs only"
 
-if [ -n "$GUFI" ]; then
-    ls -lR $GUFI
-else
-    echo
-    echo "No <GUFI_tree> specified.  Skipping display of contents."
-fi
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 1 -P -p -R -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -P -p -R -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+
+# run to create output db files and links only 
+echo
+echo "send to output to a db files and links only"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 1 -P -p -r -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -P -p -r -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.*
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+
+# run to create output db 
+echo
+echo "send to output to a db both files and dirs with all dirs suspect 2 threads"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+echo ""
+
+# run querydbn to union all the db's together into one table
+echo " run querydbn to union all the db's together into one table" 
+echo ""
+$QUERYDBN -N -V -p bfwreaddirplusdb 2 "select * from vreaddirplus" readdirplus
+
+# run to create output db 
+echo
+echo "send to output to a db both files and dirs with all dirs suspect 2 threads stride 10"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -g 10 -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -g 10 -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+
+
+# run to create output db 
+echo
+echo "send to output db dirs  only 2 threads suspectmethod 1 insuspectdfile"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -P -p -R -A 1 -W insuspectfile -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -P -p -r -R -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+
+
+# run to create output db 
+echo
+echo "send to output to a db only dirs 2 threads suspectmethod 1 stride 10 insuspectfile"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -P -p -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -P -p -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
