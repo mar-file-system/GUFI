@@ -114,7 +114,6 @@ int main(int argc, char *argv[])
      struct stat statuso;
      int printpath = 0;
      sqlite3 *db;
-     sqlite3 *db1;
      int recs;
      int dirsummary = 0;        // rawquerydb() ignores this argument
 
@@ -169,7 +168,7 @@ int main(int argc, char *argv[])
      }
 
      // run the query
-     db = opendb(name,db1,0,0);
+     db = opendb(name,0,0);
 
      // modify rsqlstmt to insert the results into the aggregate table
      char orig_sql[MAXSQL];
@@ -198,19 +197,17 @@ int main(int argc, char *argv[])
         sprintf(gps[0].gpath,"%s",name);
 
     // attach in-memory result aggregation database
-    if (sqlite3_exec(db, "ATTACH '" AGGREGATE_NAME "' AS " AGGREGATE_ATTACH_NAME ";", 0, 0, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return;
+    if (!attachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
+        closedb(db);
+        return -1;
     }
 
-     recs=rawquerydb(name, dirsummary, db, rsqlstmt, in.printing, in.printheader, in.printrows, 0);
+    recs=rawquerydb(db, rsqlstmt);
 
     // detach in-memory result aggregation database
-    if (sqlite3_exec(db, "DETACH " AGGREGATE_ATTACH_NAME ";", 0, 0, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return;
+    if (!detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
+        closedb(db);
+        return -1;
     }
 
      if (recs >= 0)

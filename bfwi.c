@@ -136,7 +136,7 @@ void *scout(void * param) {
     char *ret;
     FILE *finfile;
     char linein[MAXPATH+MAXPATH+MAXPATH];
-    long long int foffset;
+    fpos_t foffset;
     struct work * mywork;
 
     mywork=malloc(sizeof(struct work));
@@ -183,7 +183,6 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
     char *records;
     struct sum summary;
     sqlite3_stmt *res;
@@ -230,7 +229,7 @@ static void processdir(void * passv)
        records=malloc(MAXRECS);
        bzero(records,MAXRECS);
        zeroit(&summary);
-       if (!(db = opendb(passmywork->name,db1,4,1)))
+       if (!(db = opendb(passmywork->name,4,1)))
           goto out_dir;
        res=insertdbprep(db,reso);
        startdb(db);

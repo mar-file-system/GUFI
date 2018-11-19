@@ -123,43 +123,36 @@ char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
 
 
 
-sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn)
+sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn)
 {
-  char *err_msg = 0;
-  int rc;
-  char sqlat[MAXSQL];
-  char *zname;
-
-  zname = sqlite3_mprintf("%q",name);
-  sprintf(sqlat,"ATTACH \'%s/%s\' as %s",zname,DBNAME,dbn);
-  sqlite3_free(zname);
-  rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
-  if (rc != SQLITE_OK) {
-      fprintf(stderr, "Cannot attach database: %s/%s %s\n", name,DBNAME, sqlite3_errmsg(db));
-      sqlite3_close(db);
+  char attach[MAXSQL];
+  if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn)) {
+      fprintf(stderr, "Cannot create ATTACH command\n");
       return NULL;
   }
-  sqlite3_free(err_msg);
 
-  return 0;
+  if (sqlite3_exec(db, attach, NULL, NULL, NULL) != SQLITE_OK) {
+      fprintf(stderr, "Cannot attach database: %s %s\n", name, sqlite3_errmsg(db));
+      return NULL;
+  }
+
+  return db;
 }
 
-sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
+sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
 {
-  char *err_msg = 0;
-  int rc;
-  char sqldet[MAXSQL];
-
-  sprintf(sqldet,"DETACH %s",dbn);
-  rc=sqlite3_exec(db, sqldet,0, 0, &err_msg);
-  if (rc != SQLITE_OK) {
-      fprintf(stderr, "Cannot detach database: %s/%s %s\n", name,DBNAME, sqlite3_errmsg(db));
-      sqlite3_close(db);
+  char detach[MAXSQL];
+  if (!sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn)) {
+      fprintf(stderr, "Cannot create DETACH command\n");
       return NULL;
   }
-  sqlite3_free(err_msg);
 
-  return 0;
+  if (sqlite3_exec(db, detach, NULL, NULL, NULL) != SQLITE_OK) {
+      fprintf(stderr, "Cannot detach database: %s %s\n", name, sqlite3_errmsg(db));
+      return NULL;
+  }
+
+  return db;
 }
 
 
@@ -185,25 +178,26 @@ sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn)
    } while (0)
 
 
-sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
+sqlite3 * opendb(const char *name, int openwhat, int createtables)
 {
+    sqlite3 *db = NULL;
     char *err_msg = 0;
     char dbn[MAXPATH];
     int rc;
     char deb[MAXPATH];
 
-    sprintf(dbn,"%s/%s", name,DBNAME);
+    sqlite3_snprintf(MAXSQL, dbn,"%s/%s", name, DBNAME);
     if (createtables) {
         if (openwhat != 3)
-          sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
-       if (openwhat==7)
-          sprintf(dbn,"%s", name);
+          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+       if (openwhat == 7)
+          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
     else {
        if (openwhat == 6)
-          sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
-       if (openwhat==5)
-          sprintf(dbn,"%s", name);
+          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+       if (openwhat == 5)
+          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
 
 
@@ -262,57 +256,36 @@ exit(9);
        }
     }
 
-    sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL);
-    sqlite3_load_extension(db, "sqlite3-pcre/pcre.so", NULL, NULL);
+    // Load a regular expression extension
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) ||
+        (sqlite3_load_extension(db, "sqlite3-pcre/pcre.so", NULL, NULL)        != SQLITE_OK)) {
+        fprintf(stderr, "Unable to load regex extension\n");
+        sqlite3_close(db);
+        db = NULL;
+    }
 
     //printf("returning from opendb ok\n");
     return db;
 }
 
-int rawquerydb(const char *name,
-               int         isdir,        // (unused)
-               sqlite3    *db,
-               char       *sqlstmt,
-               int         printpath,    // (unused)
-               int         printheader,
-               int         printrows,
-               int         ptid)         // pthread-ID
+int rawquerydb(sqlite3 *db,
+               char    *sqlstmt)
 {
-     sqlite3_stmt *res = NULL;
-     int           rec_count = 0;
-     const char   *errMSG = NULL;
-     const char   *tail = NULL;
-     FILE *        out = (in.outfile > 0)?gts.outfd[ptid]:stdout;
+     int rc = 1;
 
-     if (!sqlstmt) {
-        fprintf(stderr, "SQL was empty\n");
-        return -1;
+     // sanitize query
+     char query[MAXSQL];
+     sqlite3_snprintf(MAXSQL, query, "%q", sqlstmt);
+
+     char *err = NULL;
+     if (sqlite3_exec(db, query, NULL, NULL, &err) != SQLITE_OK) {
+         fprintf(stderr, "Error: %s", err);
+         rc = -1;
      }
 
-     while (*sqlstmt) {
-       // WARNING: passing length-arg that is longer than SQL text
-       if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail) != SQLITE_OK) {
-          fprintf(stderr, "SQL error on query: %s name %s err %s\n",
-                  sqlstmt,name,sqlite3_errmsg(db));
-          return -1;
-       }
+     sqlite3_free(err);
 
-       if (*tail) {
-         sqlite3_step(res);
-         //sqlite3_finalize(res);
-         sqlite3_reset(res);
-       }
-       sqlstmt = (char*)tail;
-     }
-
-     #warning not sure if this is still needed
-     while (sqlite3_step(res) == SQLITE_ROW) {
-         rec_count++;
-     }
-
-     // sqlite3_reset(res);
-     sqlite3_finalize(res);
-     return(rec_count);
+     return rc;
 }
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int ts)
@@ -419,11 +392,8 @@ int stopdb(sqlite3 *db)
 int closedb(sqlite3 *db)
 {
     char *err_msg = 0;
-    int rc;
-    sqlite3_free(err_msg);
-    rc = sqlite3_close(db);
-    if (rc != SQLITE_OK) {
-      printf("closedb issue %s\n",sqlite3_errmsg(db));
+    if (sqlite3_close(db) != SQLITE_OK) {
+      printf("closedb issue %s\n", sqlite3_errmsg(db));
       exit(9);
     }
     return 0;
@@ -758,8 +728,8 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int mytid;
- 
-    mytid=gettid(); 
+
+    mytid=gettid();
     sqlite3_result_text(context, gps[mytid].gfpath, -1, SQLITE_TRANSIENT);
     return;
 }
@@ -914,6 +884,9 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
         sqlite3_close(aggregate);
         aggregate = NULL;
     }
+
+    /* // this is needed to add some query functions like path() uidtouser() gidtogroup() */
+    /* addqueryfuncs(aggregate); */
 
     sqlite3_free(err_msg);
 

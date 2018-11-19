@@ -164,15 +164,15 @@ def build_where(args):
 
     # if args.nouser is not None:
 
-    if args.path is not None:
-        raise Exception("Need to modify GUFI to store/access path names when selecting file names")
-        # where += ['name REGEXP "{}"'.format(args.regex)]
+    # if args.path is not None:
+    #     raise Exception("Need to modify GUFI to store/access path names when selecting file names")
+    #     # where += ['name REGEXP "{}"'.format(args.regex)]
 
     # if args.readable is not None:
 
-    if args.regex is not None:
-        raise Exception("Need to modify GUFI to store/access path names when selecting file names")
-        # where += ['name REGEXP "{}"'.format(args.regex)]
+    # if args.regex is not None:
+    #     raise Exception("Need to modify GUFI to store/access path names when selecting file names")
+    #     # where += ['name REGEXP "{}"'.format(args.regex)]
 
     # if args.samefile is not None:
 
@@ -276,9 +276,9 @@ if __name__=='__main__':
     # parser.add_argument('-newer',             metavar='file',      dest='newer',         type=str,                                    help='File was modified more recently than file.')
     # parser.add_argument('-newerXY',           metavar='reference', dest='newerXY',       type=str,                                    help='Compares the timestamp of the current file with reference.')
     # parser.add_argument('-nouser',                                 dest='nouser',        type=qb.check_bool,                          help='No user corresponds to file\'s numeric user ID.')
-    parser.add_argument('-path',              metavar='pattern',   dest='path',          type=str,                                    help='File name matches shell pattern pattern.')
+    # parser.add_argument('-path',              metavar='pattern',   dest='path',          type=str,                                    help='File name matches shell pattern pattern.')
     # parser.add_argument('-readable',                               dest='readable',      type=qb.check_bool,                          help='Matches files which are readable.')
-    parser.add_argument('-regex',             metavar='pattern',   dest='regex',         type=str,                                    help='File name matches regular expression pattern.')
+    # parser.add_argument('-regex',             metavar='pattern',   dest='regex',         type=str,                                    help='File name matches regular expression pattern.')
     # parser.add_argument('-samefile',          metavar='name',      dest='samefile',      type=qb.check_bool,                          help='File refers to the same inode as name.')
     parser.add_argument('-size',              metavar='n',         dest='size',          type=check_size,                             help='')
     # parser.add_argument('-true',                                   dest='true',          type=qb.check_bool,                          help='Always true/')

@@ -118,10 +118,8 @@ static void processdir(void * passv)
     int mytid;
     char *records;
     sqlite3_stmt *res;
-    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     sqlite3 *db;
-    sqlite3 *db1;
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
@@ -141,28 +139,29 @@ static void processdir(void * passv)
     if (!(entry = readdir(dir)))
        goto out_dir; // return NULL;
 
-    sprintf(passmywork->type,"%s","d");
+    sprintf(passmywork->type, "%s", "d");
     //if (in.printdir > 0) {
     //  printits(passmywork,mytid);
     //}
 
     // if we have out db then we have that db open so we just attach the gufi db
     if (in.outdb > 0) {
-      db=gts.outdbd[mytid];
-      attachdb(passmywork->name,db,"tree");
+      db = gts.outdbd[mytid];
+      char name[MAXSQL];
+      snprintf(name, MAXSQL, "%s/%s", passmywork->name, DBNAME);
+      attachdb(name, db, "tree");
     } else {
-      db=opendb(passmywork->name,db1,1,0);
+        db = opendb(passmywork->name, 1, 0);
     }
 
     // attach in-memory result aggregation database
-    if (sqlite3_exec(db, "ATTACH '" AGGREGATE_NAME "' AS " AGGREGATE_ATTACH_NAME ";", 0, 0, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
+    if (!attachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
+        closedb(db);
         return;
     }
 
-    // this is needed to add some query functions like path() uidtouser() gidtogroup()
-    addqueryfuncs(db);
+    /* // this is needed to add some query functions like path() uidtouser() gidtogroup() */
+    /* addqueryfuncs(db); */
 
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
              /* if it fails then this will be set to 1 and will go on */
@@ -172,7 +171,7 @@ static void processdir(void * passv)
     if (strlen(in.sqltsum) > 1) {
 
        if (in.andor == 0)       // AND
-         recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
+         recs=rawquerydb(db, in.sqltsum);
 
       // this is an OR or we got a record back. go on to summary/entries
       // queries, if not done with this dir and all dirs below it
@@ -191,7 +190,7 @@ static void processdir(void * passv)
             // each
             do {
                 const size_t len = strlen(entry->d_name);
-                if (((len == 1) && (strncmp(entry->d_name, ".", 1) == 0))  ||
+                if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                     ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
                     continue;
                 }
@@ -227,7 +226,7 @@ static void processdir(void * passv)
                 getcwd(tpath,sizeof(tpath));
                 sprintf(trpath,"%s/%s",tpath,shortname);
                 realpath(trpath,gps[mytid].gfpath);
-                recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+                recs=rawquerydb(db, in.sqlsum);
                 //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
             } else {
                 recs=1;
@@ -244,7 +243,7 @@ static void processdir(void * passv)
                     getcwd(tpath,sizeof(tpath));
                     sprintf(trpath,"%s/%s",tpath,passmywork->name);
                     realpath(trpath,gps[mytid].gfpath);
-                    rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
+                    rawquerydb(db, in.sqlent);
                     //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
                     //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
                 }
@@ -253,15 +252,16 @@ static void processdir(void * passv)
     }
 
     // detach in-memory result aggregation database
-    if (sqlite3_exec(db, "DETACH " AGGREGATE_ATTACH_NAME ";", 0, 0, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot attach in memory database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
+    if (!detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
+        closedb(db);
         return;
     }
 
     // if we have an out db we just detach gufi db
     if (in.outdb > 0) {
-      detachdb(passmywork->name,db,"tree");
+      char name[MAXSQL];
+      snprintf(name, MAXSQL, "%s/%s", passmywork->name, DBNAME);
+      detachdb(name, db, "tree");
     } else {
       closedb(db);
     }
@@ -285,7 +285,6 @@ int processinit(void * myworkin) {
      int i;
      char outfn[MAXPATH];
      char outdbn[MAXPATH];
-     sqlite3 *dbo;
 
      //open up the output files if needed
      if (in.outfile > 0) {
@@ -300,9 +299,9 @@ int processinit(void * myworkin) {
        i=0;
        while (i < in.maxthreads) {
          sprintf(outdbn,"%s.%d",in.outdbn,i);
-         gts.outdbd[i]=opendb(outdbn,dbo,5,0);
+         gts.outdbd[i]=opendb(outdbn,5,0);
          if (strlen(in.sqlinit) > 1) {
-           rawquerydb(outdbn, 1, gts.outdbd[i], in.sqlinit, 1, 0, in.printdir, i);
+           rawquerydb(gts.outdbd[i], in.sqlinit);
          }
          i++;
        }
@@ -349,7 +348,7 @@ int processfin() {
        while (i < in.maxthreads) {
          closedb(gts.outdbd[i]);
          if (strlen(in.sqlfin) > 1) {
-           rawquerydb("fin", 1, gts.outdbd[i], in.sqlfin, 1, 0, in.printdir, i);
+           rawquerydb(gts.outdbd[i], in.sqlfin);
          }
          i++;
        }
@@ -391,7 +390,7 @@ int main(int argc, char *argv[])
      mythpool = thpool_init(in.maxthreads);
      if (thpool_null(mythpool)) {
         fprintf(stderr, "thpool_init() failed!\n");
-        sqlite3_close(aggregate);
+        closedb(aggregate);
         return -1;
      }
 
@@ -437,6 +436,6 @@ int main(int argc, char *argv[])
      }
      sqlite3_finalize(res);
 
-     sqlite3_close(aggregate);
+     closedb(aggregate);
      return 0;
 }

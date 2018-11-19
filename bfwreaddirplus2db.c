@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -123,7 +123,7 @@ int searchmyll(long long int lull, int lutype) {
      if (lull < glsuspectdmin) return 0;
      if (lull > glsuspectdmax) return 0;
      sprintf(lut,"%lld",lull);
-     ret=searchll(headd,lut); 
+     ret=searchll(headd,lut);
      //printf("in searchmyll search dir %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headd,lut);  this is not thread safe
    }
@@ -132,12 +132,12 @@ int searchmyll(long long int lull, int lutype) {
      if (lull < glsuspectflmin) return 0;
      if (lull > glsuspectflmax) return 0;
      sprintf(lut,"%lld",lull);
-     ret=searchll(headfl,lut); 
+     ret=searchll(headfl,lut);
      //printf("in searchmyll search fl %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headfl,lut); this is not thread safe
    }
    //printf("in searchmyll %lld %d ret %d\n",lull, lutype,ret);
-   return(ret); 
+   return(ret);
 }
 
 // This becomes an argument to thpool_add_work(), so it must return void,
@@ -152,10 +152,10 @@ static void processdir(void * passv)
     int mytid;
     sqlite3 *db;
     sqlite3 *db1;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
     int wentry;
@@ -213,7 +213,7 @@ static void processdir(void * passv)
            }
          }
     }
- 
+
     if (in.printing > 0 || in.printdir > 0) {
       printits(passmywork,mytid);
     }
@@ -315,7 +315,7 @@ static void processdir(void * passv)
          }
       }
     }
- 
+
     if (in.outdb > 0) {
       if (in.stride == 0) {
         todb=mytid;
@@ -338,12 +338,11 @@ static void processdir(void * passv)
 }
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
      int i;
      sqlite3_stmt *reso;
      sqlite3_stmt *res;
-     sqlite3 *dbo;
      char outdbn[MAXPATH];
      FILE *isf;
      char incsuspect[24];
@@ -357,14 +356,14 @@ int processinit(void * myworkin) {
        {
           fprintf(stderr,"Cant open input suspect file %s\n",in.insuspect);
           exit(1);
-       }  
+       }
        cntfl=0;
        cntd=0;
        /* set up triell for directories and one for files and links */
        headd = getNewTrieNode();
        headfl = getNewTrieNode();
-       while (fscanf(isf,"%s %s",incsuspect, incsuspecttype)!= EOF) { 
-          //printf("insuspect |%s| |%s|\n",incsuspect, incsuspecttype );  
+       while (fscanf(isf,"%s %s",incsuspect, incsuspecttype)!= EOF) {
+          //printf("insuspect |%s| |%s|\n",incsuspect, incsuspecttype );
           testll=atoll(incsuspect);
           if (!strncmp(incsuspecttype,"f",1)) {
              if (cntfl==0) {
@@ -374,7 +373,7 @@ int processinit(void * myworkin) {
                if (testll < glsuspectflmin) glsuspectflmin=testll;
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
-             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );  
+             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
              insertll(&headfl, incsuspect);
              cntfl++;
           }
@@ -386,7 +385,7 @@ int processinit(void * myworkin) {
                if (testll < glsuspectflmin) glsuspectflmin=testll;
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
-             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );  
+             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
              insertll(&headfl, incsuspect);
              cntfl++;
           }
@@ -398,19 +397,19 @@ int processinit(void * myworkin) {
                if (testll < glsuspectdmin) glsuspectdmin=testll;
                if (testll > glsuspectdmax) glsuspectdmax=testll;
              }
-             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );  
+             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );
              insertll(&headd, incsuspect);
              cntd++;
           }
-       }  
+       }
        fclose(isf);
-     }  
+     }
 
      if (in.outdb > 0) {
        i=0;
        while (i < in.maxthreads) {
          sprintf(outdbn,"%s.%d",in.outdbn,i);
-         gts.outdbd[i]=opendb(outdbn,dbo,7,1);
+         gts.outdbd[i]=opendb(outdbn,7,1);
          global_res[i]=insertdbprepr(gts.outdbd[i],reso);
          if (in.stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
@@ -437,7 +436,7 @@ int processinit(void * myworkin) {
      // set top parent inode to zero
      mywork->pinode=0;
      pushdir(mywork);
- 
+
      return 0;
 }
 
@@ -456,11 +455,11 @@ int i;
          i++;
        }
      }
-  
+
      return 0;
 }
 
-// This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb 
+// This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb
 int validate_inputs() {
 
    return 0;

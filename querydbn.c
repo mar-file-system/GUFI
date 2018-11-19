@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -118,7 +118,6 @@ int main(int argc, char *argv[])
    struct stat statuso;
    int rc;
    sqlite3 *db;
-   sqlite3 *db1;
    int recs;
    struct sum sumout;
    int dirsummary = 0;
@@ -171,14 +170,14 @@ int main(int argc, char *argv[])
 
    printf("processing query name %s  numb dbs %d\n",name, numdbs);
    sprintf(dbname,"%s",name);
-   db = opendb(name,db1,5,0);
+   db = opendb(name,5,0);
 
    // add query funcs to get path() uidtouser() gidtogroup()
    addqueryfuncs(db);
 
    // just zero out the global path so path() for this query is useless
    bzero(gps[0].gpath,sizeof(gps[0].gpath));
-   
+
    bzero(sqlu,sizeof(sqlu));
    sprintf(sqlu,"create temp view v%s as ",tabnam);
    bzero(up,sizeof(up));
@@ -206,12 +205,11 @@ int main(int argc, char *argv[])
    //…… union all d10.summary;
 
    printf("sqlu: %s\n",sqlu);
-   rawquerydb(dbnam, dirsummary, db, sqlu,
-              in.printing, in.printheader, in.printrows,0);
+   rawquerydb(db, sqlu);
 
    printf("after union running %s\n",rsqlstmt);
-   recs=rawquerydb(dbnam, dirsummary, db, rsqlstmt,
-                   in.printing, in.printheader, in.printrows, 0);
+   recs=rawquerydb(db, rsqlstmt);
+
    if (recs >= 0)
       printf("query returned %d records\n",recs);
    else
@@ -222,7 +220,7 @@ int main(int argc, char *argv[])
       sprintf(dbnam,"%s.%d",name,i);
       sprintf(dbn,"%s%d",name,i);
 
-      //detachdb(dbnam,db,dbn); 
+      //detachdb(dbnam,db,dbn);
       sprintf(sqlat,"DETACH %s",dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {

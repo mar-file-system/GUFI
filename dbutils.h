@@ -101,14 +101,13 @@ extern char *vtssqlgroup;
 
 
 
-sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn);
+sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
 
-sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn);
+sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 
-sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables);
+sqlite3 * opendb(const char *name, int openwhat, int createtables);
 
-int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
-               int printpath, int printheader, int printing, int ptid);
+int rawquerydb(sqlite3 *db, char *sqlstmt);
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
 

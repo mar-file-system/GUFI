@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -108,13 +108,12 @@ static void processdir(void * passv)
     DIR *dir;
     struct dirent *entry;
     int mytid;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     sqlite3 *db;
-    sqlite3 *db1;
     struct sum sumin;
     int recs;
 
@@ -155,7 +154,7 @@ static void processdir(void * passv)
     } while ((entry = (readdir(dir))));
 
 
-    if ((db=opendb(passmywork->name,db1,3,0))) {
+    if ((db=opendb(passmywork->name,3,0))) {
        zeroit(&sumin);
        querytsdb(passmywork->name,&sumin,db,&recs,0);
        tsumit(&sumin,&sumout);
@@ -182,7 +181,7 @@ static void processdir(void * passv)
 }
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
 
      // process input directory and put it on the queue
@@ -206,9 +205,8 @@ int processinit(void * myworkin) {
 int processfin() {
 
      sqlite3 *tdb;
-     sqlite3 *tdb1;
      if (in.writetsum) {
-        if (! (tdb = opendb(in.name,tdb1,3,1)))
+        if (! (tdb = opendb(in.name,3,1)))
            return -1;
         inserttreesumdb(in.name,tdb,&sumout,0,0,0);
         closedb(tdb);
