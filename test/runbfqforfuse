@@ -1,0 +1,4 @@
+rm outfpdb*
+../bfq -Pp -n1 -O outfpdb -E "insert into qout select fpath(),name,type,size,mode,blksize,blocks,mtime,atime,ctime from entries;" -S "insert into qout select fpath(),name,type,size,mode,blksize,blocks,mtime,atime,ctime from summary;" -I "create table qout (fullpath text, name text, type text, size int(64), mode int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64));" -a testdirdup2/testdir
+ls -l outfpdb*
+sqlite3 -line outfpdb.0 'select * from qout;'

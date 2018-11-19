@@ -755,6 +755,15 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    int mytid;
+ 
+    mytid=gettid(); 
+    sqlite3_result_text(context, gps[mytid].gfpath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
 static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int mytid;
@@ -793,6 +802,7 @@ int addqueryfuncs(sqlite3 *db) {
        sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
        sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
        sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
+       sqlite3_create_function(db, "fpath", 0, SQLITE_UTF8, NULL, &fpath, NULL, NULL);
        sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
        sqlite3_create_function(db, "modetotxt", 1, SQLITE_UTF8, NULL, &modetotxt, NULL, NULL);
        return 0;

@@ -137,7 +137,7 @@ The build seems to be working on OSX (10.12.6), and Linux (CentOS 7).
   make clean
 
   # build (into local dir)
-  make        -> libgufi.a, bfwi, bfti, bfq, querydb, querydbn, make_testdirs, bfwreaddirplus2db
+  make        -> libgufi.a, bfwi, bfti, bfq, querydb, querydbn, make_testdirs
 
   # if desired, do any/all of these:
   make mysql  -> bfmi
@@ -178,9 +178,6 @@ options:
   -Y                 default all directories as suspect
   -Z                 default all files links as suspect
   -W <insuspectfile> path to input suspect file
-  -A <suspectmethod> suspect method 
-  -c <suspecttime>   time in seconds since epoch for suspect comparison
-  -g <stridesize>    stride size for striping inodes into separate output db's 
 
 Flow:
 if using input suspect file read that in and put into memory trie for lookups
@@ -189,7 +186,6 @@ threads are started
 loop assigning work (directories) from queue to threads
 each thread lists the directory readdirplus
   if using suspect file, see if this inode matches a suspect file or dir or link
-  if we are striping the inodes into different outdb's, we have to lock on the output db to place records into proper outdbs
   if directory put it on the queue print to screen write to outdb
   if link or file print it to screen write to outdb
   close directory
@@ -354,11 +350,7 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
     init allows you to run an SQL statement per thread associated to the
     output db before starting the walk, and an SQL statement per thread on
     the output db after the walk.
-    there is also a mode that will take input from a file instead of getting info from a walk/stat
-    the file must have the appropriate fields delimted by a delimiter provided and it should
-    have a line for dir and lines for files/links in that dir and then another dir and then files/links
-    the file does not have to be in tree order, it just must have all files/links associated with a dir
-    immediately after that dir
+
 
 # Usage: bfq [options] GUFI_tree
 # options:
@@ -376,8 +368,6 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
 #   -O <out_DB>     output DB
 #   -I <SQL_init>   SQL init
 #   -F <SQL_fin>    SQL cleanup
-#   -d <delim>      delimiter (one char) used as a delimiter if you are getting input from a file not a walk
-#   -u              input is not a dir its a file that you read input from
 # 
 # GUFI_tree         find GUFI index-tree here
 # 
@@ -403,10 +393,7 @@ close output files if needed
 if fin SQL provided run that per thread
 close outputdb
 you can end up with an output file per thread and/or a dbfile per thread
-If you are reading the input from a file instead of a treewalk, the file 
-must have a record for dir immediately followed by files and links in that dir
-but beyond that it doesnt have to be in any order. In this input file mode
-the info is read from this file and not gotten from a walk/stat activity
+
 
 
 ...........................................................................
@@ -469,8 +456,6 @@ path() - path you are working in
 
 epath() - last dirname in the path you are working in
 
-fpath() - full path you are working in
-
 uidtouser(uid) - converts uid to username - GUFI stores in uid
 
 gidtogroup(gid) - coinverts gid to groupname - GUFI stores gid
@@ -525,10 +510,6 @@ N rectype=1 is the summary per user
 M rectype=2 is the summary per group
 there are views below that assist with using this multifunction table
 
-char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
-            "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
-
-used to make a list of all paths, type, inode, pinode, and suspect flag from a tree walk
 
 -- This is the schema for the tree directory/user/group summary records (summary representing tree below) the ossint* fields are for use by non posix storage systems
 
@@ -637,7 +618,6 @@ runbfti - run bfti and create a tree index at the top of testdirdup
 runbfq - run various queries on testdirdup/testdir gufi tree including output files and output dbs
 runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir  
 runquerydbn - do various queries on outdb.* output dbs using the union capability of querydbn
-runbfwreaddirplus2db - run tests that walk trees using readdirplus and write path,inode,pinode etc. to output dbs
 
 rundfw - do various walks on the testdir tree
 runlistschemadb - list the schema in a gufi db

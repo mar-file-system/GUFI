@@ -130,4 +130,5 @@ Added flag -c to allow you to input a number of seconds since epoch for suspect 
 -----------------------------------------------------------------------
 adding flag to to indicate provide input file into bfwi so it can create a gufi tree from a text file delmited
 adding capability to read that file in paralle with threads instead of readdir/stat of source tree
-
+------------------------------------------------------------------------------
+Added fpath() sql query function to get full path as an sql variable you can use

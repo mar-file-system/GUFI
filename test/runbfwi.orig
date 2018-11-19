@@ -99,7 +99,6 @@ BFWI=$DIR/../bfwi
 #   -b              build GUFI index tree
 #   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
 #   -t <to_dir>     dir GUFI-tree should be built
-#   -u              consider input_dir to be input file  
 # 
 # input_dir         walk this tree to produce GUFI-tree
 # 
