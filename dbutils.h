@@ -78,8 +78,9 @@ OF SUCH DAMAGE.
 #ifndef DBUTILS_H
 #define DBUTILS_H
 
-#include <sqlite3.h>
 #include <sys/stat.h>
+
+#include <sqlite3.h>
 
 #include "utils.h"
 
@@ -107,7 +108,7 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 
 sqlite3 * opendb(const char *name, int openwhat, int createtables);
 
-int rawquerydb(sqlite3 *db, char *sqlstmt);
+int rawquerydb(sqlite3 *db, char *sqlstmt, int (*callback)(void*,int,char**,char**), void *args);
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
 

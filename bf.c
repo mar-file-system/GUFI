@@ -141,9 +141,12 @@ void print_help(const char* prog_name,
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
       case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
+      case 'v': printf("  -v <count>         number of intermediate databases to use (preferrably prime)\n"); break;
+      case 'w': printf("  -w <count>         number of intermediate databases to skip when selecting (should be primitive root of intermediate database count, or 1)\n"); break;
       case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
+      case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -153,43 +156,46 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.doxattrs      = %d\n",   in->doxattrs);
-   printf("in.printing      = %d\n",   in->printing);
-   printf("in.printdir      = %d\n",   in->printdir);
-   printf("in.printheader   = %d\n",   in->printheader);
-   printf("in.printrows     = %d\n",   in->printrows);
-   printf("in.writetsum     = %d\n",   in->writetsum);
-   printf("in.buildindex    = %d\n",   in->buildindex);
-   printf("in.maxthreads    = %d\n",   in->maxthreads);
-   printf("in.delim         = '%s'\n", in->delim);
-   printf("in.name          = '%s'\n", in->name);
-   printf("in.outfile       = %d\n",   in->outfile);
-   printf("in.outfilen      = '%s'\n", in->outfilen);
-   printf("in.outdb         = %d\n",   in->outdb);
-   printf("in.outdbn        = '%s'\n", in->outdbn);
-   printf("in.nameto        = '%s'\n", in->nameto);
-   printf("in.andor         = %d\n",   in->andor);
-   printf("in.sqlinit       = '%s'\n", in->sqlinit);
-   printf("in.sqltsum       = '%s'\n", in->sqltsum);
-   printf("in.sqlsum        = '%s'\n", in->sqlsum);
-   printf("in.sqlent        = '%s'\n", in->sqlent);
-   printf("in.sqlfin        = '%s'\n", in->sqlfin);
-   printf("in.insertdir     = '%d'\n", in->insertdir);
-   printf("in.insertfl      = '%d'\n", in->insertfl);
-   printf("in.dontdescend   = '%d'\n", in->dontdescend);
-   printf("in.suspectd      = '%d'\n", in->suspectd);
-   printf("in.suspectfl     = '%d'\n", in->suspectfl);
-   printf("in.insuspect     = '%s'\n", in->insuspect);
-   printf("in.suspectfile   = '%d'\n", in->suspectfile);
-   printf("in.suspectmethod = '%d'\n", in->suspectmethod);
-   printf("in.suspecttime   = '%d'\n", in->suspecttime);
-   printf("in.stride        = '%d'\n", in->stride);
-   printf("in.infile        = '%d'\n", in->infile);
-   printf("in.min_level     = %zu\n",  in->min_level);
-   printf("in.max_level     = %zu\n",  in->max_level);
-   printf("in.aggregate     = '%s'\n", in->aggregate);
+   printf("in.doxattrs           = %d\n",   in->doxattrs);
+   printf("in.printing           = %d\n",   in->printing);
+   printf("in.printdir           = %d\n",   in->printdir);
+   printf("in.printheader        = %d\n",   in->printheader);
+   printf("in.printrows          = %d\n",   in->printrows);
+   printf("in.writetsum          = %d\n",   in->writetsum);
+   printf("in.buildindex         = %d\n",   in->buildindex);
+   printf("in.maxthreads         = %d\n",   in->maxthreads);
+   printf("in.delim              = '%s'\n", in->delim);
+   printf("in.name               = '%s'\n", in->name);
+   printf("in.outfile            = %d\n",   in->outfile);
+   printf("in.outfilen           = '%s'\n", in->outfilen);
+   printf("in.outdb              = %d\n",   in->outdb);
+   printf("in.outdbn             = '%s'\n", in->outdbn);
+   printf("in.nameto             = '%s'\n", in->nameto);
+   printf("in.andor              = %d\n",   in->andor);
+   printf("in.sqlinit            = '%s'\n", in->sqlinit);
+   printf("in.sqltsum            = '%s'\n", in->sqltsum);
+   printf("in.sqlsum             = '%s'\n", in->sqlsum);
+   printf("in.sqlent             = '%s'\n", in->sqlent);
+   printf("in.sqlfin             = '%s'\n", in->sqlfin);
+   printf("in.insertdir          = '%d'\n", in->insertdir);
+   printf("in.insertfl           = '%d'\n", in->insertfl);
+   printf("in.dontdescend        = '%d'\n", in->dontdescend);
+   printf("in.suspectd           = '%d'\n", in->suspectd);
+   printf("in.suspectfl          = '%d'\n", in->suspectfl);
+   printf("in.insuspect          = '%s'\n", in->insuspect);
+   printf("in.suspectfile        = '%d'\n", in->suspectfile);
+   printf("in.suspectmethod      = '%d'\n", in->suspectmethod);
+   printf("in.suspecttime        = '%d'\n", in->suspecttime);
+   printf("in.stride             = '%d'\n", in->stride);
+   printf("in.infile             = '%d'\n", in->infile);
+   printf("in.min_level          = %zu\n",  in->min_level);
+   printf("in.max_level          = %zu\n",  in->max_level);
+   printf("in.aggregate          = '%s'\n", in->aggregate);
+   printf("in.intermediate       = '%s'n",  in->intermediate);
+   printf("in.intermediate_count = '%d'\n", in->intermediate_count);
+   printf("in.intermediate_skip  = '%d'\n", in->intermediate_skip);
    printf("\n");
-   printf("retval           = %d\n", retval);
+   printf("retval                = %d\n", retval);
    printf("\n");
 }
 
@@ -216,19 +222,22 @@ int parse_cmd_line(int         argc,
 
    //bzero(in.sqlent,sizeof(in.sqlent));
    // <in> defaults to all-zeros.
-   in.maxthreads    = 1;       // don't default to zero threads
-   in.delim[0]      = '|';
-   in.dontdescend   = 0;       // default to descend
-   in.buildinindir  = 0;       // default to not building db in input dir
-   in.suspectd      = 0;
-   in.suspectfl     = 0;
-   in.suspectfile   = 0;
-   in.suspectmethod = 0;
-   in.stride        = 0;       // default striping of inodes
-   in.infile        = 0;       // default infile being used
-   in.min_level     = 0;       // default to the top
-   in.max_level     = -1;      // default to all the way down
+   in.maxthreads         = 1;       // don't default to zero threads
+   in.delim[0]           = '|';
+   in.dontdescend        = 0;       // default to descend
+   in.buildinindir       = 0;       // default to not building db in input dir
+   in.suspectd           = 0;
+   in.suspectfl          = 0;
+   in.suspectfile        = 0;
+   in.suspectmethod      = 0;
+   in.stride             = 0;       // default striping of inodes
+   in.infile             = 0;       // default infile being used
+   in.min_level          = 0;       // default to the top
+   in.max_level          = -1;      // default to all the way down
+   snprintf(in.intermediate, MAXSQL, "SELECT * FROM entries;");
    snprintf(in.aggregate, MAXSQL, "SELECT * FROM entries;");
+   in.intermediate_count = in.maxthreads * 4 + 1;
+   in.intermediate_skip  = 1;
 
    int show   = 0;
    int retval = 0;
@@ -367,6 +376,14 @@ int parse_cmd_line(int         argc,
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
          break;
 
+      case 'v':
+          INSTALL_INT(in.intermediate_count, optarg, 1, (size_t) -1, "-v");
+          break;
+
+      case 'w':
+          INSTALL_INT(in.intermediate_skip, optarg, 1, (size_t) -1, "-w");
+          break;
+
       case 'y':
          INSTALL_INT(in.min_level, optarg, 0, (size_t) -1, "-y");
          break;
@@ -381,6 +398,10 @@ int parse_cmd_line(int         argc,
 
       case 'G':
          INSTALL_STR(in.aggregate, optarg, MAXSQL, "-G");
+         break;
+
+      case 'J':
+         INSTALL_STR(in.intermediate, optarg, MAXSQL, "-J");
          break;
 
       case '?':

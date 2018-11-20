@@ -205,10 +205,10 @@ int main(int argc, char *argv[])
    //…… union all d10.summary;
 
    printf("sqlu: %s\n",sqlu);
-   rawquerydb(db, sqlu);
+   rawquerydb(db, sqlu, NULL, NULL);
 
    printf("after union running %s\n",rsqlstmt);
-   recs=rawquerydb(db, rsqlstmt);
+   recs=rawquerydb(db, rsqlstmt, NULL, NULL);
 
    if (recs >= 0)
       printf("query returned %d records\n",recs);

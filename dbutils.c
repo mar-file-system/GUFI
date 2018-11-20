@@ -269,7 +269,9 @@ exit(9);
 }
 
 int rawquerydb(sqlite3 *db,
-               char    *sqlstmt)
+               char    *sqlstmt,
+               int (*callback)(void*,int,char**,char**),
+               void *arg)
 {
      int rc = 1;
 
@@ -278,8 +280,8 @@ int rawquerydb(sqlite3 *db,
      sqlite3_snprintf(MAXSQL, query, "%q", sqlstmt);
 
      char *err = NULL;
-     if (sqlite3_exec(db, query, NULL, NULL, &err) != SQLITE_OK) {
-         fprintf(stderr, "Error: %s", err);
+     if (sqlite3_exec(db, query, callback, arg, &err) != SQLITE_OK) {
+         fprintf(stderr, "Error: %s\n", err);
          rc = -1;
      }
 
@@ -769,13 +771,12 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 }
 
 int addqueryfuncs(sqlite3 *db) {
-       sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
-       sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
-       sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
-       sqlite3_create_function(db, "fpath", 0, SQLITE_UTF8, NULL, &fpath, NULL, NULL);
-       sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
-       sqlite3_create_function(db, "modetotxt", 1, SQLITE_UTF8, NULL, &modetotxt, NULL, NULL);
-       return 0;
+    return ((sqlite3_create_function(db, "uidtouser",  1, SQLITE_UTF8, NULL, &uidtouser,  NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "path",       0, SQLITE_UTF8, NULL, &path,       NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "fpath",      0, SQLITE_UTF8, NULL, &fpath,      NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "epath",      0, SQLITE_UTF8, NULL, &epath,      NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "modetotxt",  1, SQLITE_UTF8, NULL, &modetotxt,  NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
@@ -845,12 +846,16 @@ int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int p
 }
 
 sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query) {
+    // copy and sanitize query
+    char buf[MAXSQL];
+    snprintf(buf, MAXSQL, "%s", query);
+
     // find the first clause after FROM
     // more clauses are probably needed
     static const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
     char *after_from = NULL;
     for(size_t i = 0; (i < sizeof(clauses) / sizeof(char *)) && !after_from; i++) {
-        after_from = strstr(query, clauses[i]);
+        after_from = strstr(buf, clauses[i]);
     }
 
     // create the aggregate table using the SELECT and FROM portions of the original query
@@ -862,7 +867,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     }
 
     // there is no need to modify the query, since the entries table is empty (but will generate a NULL row, which will be removed)
-    snprintf(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, query);
+    snprintf(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, buf);
     if (after_from) {
         *after_from = af;
     }
@@ -875,18 +880,17 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     if ((sqlite3_open_v2(name, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                          != SQLITE_OK) || // enable extension loading
         (sqlite3_load_extension(aggregate, "sqlite3-pcre/pcre.so", NULL, NULL)                                 != SQLITE_OK) || // load sqlite3-pcre
+        (addqueryfuncs(aggregate)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
         (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                   != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
         (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                   != SQLITE_OK) || // create the aggregate table
         (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                  != SQLITE_OK) || // drop the entries table
         (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                  != SQLITE_OK) || // rename the aggregate table to entries
         (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                 != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
         fprintf(stderr, "failed to create result aggregation database: %s\n", err_msg);
+        sqlite3_free(err_msg);
         sqlite3_close(aggregate);
         aggregate = NULL;
     }
-
-    /* // this is needed to add some query functions like path() uidtouser() gidtogroup() */
-    /* addqueryfuncs(aggregate); */
 
     sqlite3_free(err_msg);
 

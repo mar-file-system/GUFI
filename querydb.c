@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    recs=rawquerydb(db, rsqlstmt);
+    recs=rawquerydb(db, rsqlstmt, NULL, NULL);
 
     // detach in-memory result aggregation database
     if (!detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {

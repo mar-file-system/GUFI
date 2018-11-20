@@ -76,6 +76,7 @@
 
 import argparse
 import grp
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -225,3 +226,10 @@ def find_dir(root, paths, out=subprocess.PIPE, err=subprocess.PIPE):
 
     find_cmd = ['find', root, '-type', 'd'] + ' -o -path *'.join([''] + paths).split()[1:]
     return subprocess.Popen(find_cmd, stdout=out, stderr=err)
+
+def cpus():
+    '''Try to get the number of hardware threads'''
+    try:
+        return multiprocessing.cpu_count()
+    except:
+        return 1;

@@ -78,13 +78,15 @@ OF SUCH DAMAGE.
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <sys/stat.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "C-Thread-Pool/thpool.h"
 #include <sqlite3.h>
 
 #include "bf.h"
-#include "C-Thread-Pool/thpool.h"
 
 /* this block is for the triell */
 #define CHAR_SIZE 24
@@ -122,7 +124,7 @@ int tsumit (struct sum *sumin,struct sum *smout);
 
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
-// 
+//
 int mkpath(char* file_path, mode_t mode);
 
 int dupdir(struct work *pwork);

@@ -90,34 +90,38 @@ def build(args):
 
     return select, where
 
-def size(args, order=''):
+def space(args, order=''):
     select, where = build(args)
-    entries = qb.build_query(select + ['uid', 'TOTAL(size) AS total'], ['entries'], where, ['uid'], None, args.num_results)
-    aggregate = qb.build_query(select + ['uid', 'TOTAL(total) AS used'], ['entries'], where, ['uid'], ['used {}'.format(order)], args.num_results)
-    return entries, aggregate
+    entries       = qb.build_query(select + ['uid', 'TOTAL(size) AS space'],  ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
+    intermediate  = None # qb.build_query(['*'],                                     ['entries'], None,   None,   None,                       None)
+    aggregate     = qb.build_query(select + ['uid', 'TOTAL(space) AS space'], ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
+    return entries, intermediate, aggregate
 
 def files(args, order=''):
     select, where = build(args)
-    entries = qb.build_query(select + ['uid', 'COUNT(*) AS count'], ['entries'], where, ['uid'], None, args.num_results)
-    aggregate = qb.build_query(select + ['uid', 'TOTAL(count) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
-    return entries, aggregate
+    entries       = qb.build_query(select + ['uid', 'COUNT(*) AS files'],     ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
+    intermediate  = None # qb.build_query(['*'],                                     ['entries'], None,  None,    None,                       None)
+    aggregate     = qb.build_query(select + ['uid', 'TOTAL(files) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
+    return entries, intermediate, aggregate
 
-def total_files(args):
+def total_space(args, *ignored):
     _, where = build(args)
-    entries = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, args.num_results)
-    aggregate = qb.build_query(['TOTAL(count) AS files'], ['entries'], None, None, None, args.num_results)
-    return entries, aggregate
+    entries      = qb.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, args.num_results)
+    intermediate = qb.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, args.num_results)
+    # aggregate    = qb.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, args.num_results)
+    return entries, intermediate, intermediate # aggregate
 
-def total_size(args):
+def total_files(args, *ignored):
     _, where = build(args)
-    entries = qb.build_query(['TOTAL(size) AS total'], ['entries'], where, None, None, args.num_results)
-    aggregate = qb.build_query(['TOTAL(total)'], ['entries'], None, None, None, args.num_results)
-    return entries, aggregate
+    entries      = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, args.num_results)
+    intermediate = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, args.num_results)
+    # aggregate    = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, args.num_results)
+    return entries, intermediate, intermediate # aggregate
 
 # mapping of valid 'operation' argument values to array generators
-PREMADE_QUERIES = {'size'        : size,
+PREMADE_QUERIES = {'space'       : space,
                    'files'       : files,
-                   'total-size'  : total_size,
+                   'total-space' : total_space,
                    'total-files' : total_files}
 
 # allowd keywords for sorting output
@@ -130,17 +134,17 @@ if __name__=='__main__':
     cwd = os.getcwd()
 
     parser = argparse.ArgumentParser(description='GUFI statistics')
-    parser.add_argument('--order',         metavar='order', dest='order',       choices=ORDER.keys(),        default='',   help='sort output (if applicable)')
-    parser.add_argument('--root',          metavar='path',  dest='root',        type=str,                    default=cwd,  help='top-most directory to search from (default: ' + cwd + ')')
-    parser.add_argument('--delim',         metavar='c',     dest='delim',       type=qb.check_char,                        help='delimiter separating output columns')
-    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',    type=qb.check_non_negative,                help='the maximum number of levels to search')
-    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',    type=qb.check_non_negative,                help='the minimum number of levels to search')
-    parser.add_argument('--num_results',   metavar='n',     dest='num_results', type=qb.check_non_negative,                help='first n results')
-    parser.add_argument('--select',        metavar='cols',  dest='select',      type=str,                                  help='comma separated columns')
-    parser.add_argument('--threads',       metavar='n',     dest='threads',     type=qb.check_non_negative,  default=1,    help='number of threads')
-    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',         type=qb.get_uid,                           help='restrict to user')
-    parser.add_argument('operation',                                            choices=PREMADE_QUERIES.keys(),            help='operation to perform')
-    parser.add_argument('GUFI_tree',                                                                         nargs='+',    help='path containing GUFI tree database file')
+    parser.add_argument('--order',         metavar='order', dest='order',       choices=ORDER.keys(),        default='',           help='sort output (if applicable)')
+    parser.add_argument('--root',          metavar='path',  dest='root',        type=str,                    default=cwd,          help='top-most directory to search from (default: ' + cwd + ')')
+    parser.add_argument('--delim',         metavar='c',     dest='delim',       type=qb.check_char,                                help='delimiter separating output columns')
+    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',    type=qb.check_non_negative,                        help='the maximum number of levels to search')
+    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',    type=qb.check_non_negative,                        help='the minimum number of levels to search')
+    parser.add_argument('--num_results',   metavar='n',     dest='num_results', type=qb.check_non_negative,                        help='first n results')
+    parser.add_argument('--select',        metavar='cols',  dest='select',      type=str,                                          help='comma separated columns')
+    parser.add_argument('--threads',       metavar='n',     dest='threads',     type=qb.check_non_negative,  default=qb.cpus(),    help='number of threads')
+    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',         type=qb.get_uid,                                   help='restrict to user')
+    parser.add_argument('operation',                                            choices=PREMADE_QUERIES.keys(),                    help='operation to perform')
+    parser.add_argument('GUFI_tree',                                                                         nargs='+',            help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 
@@ -151,14 +155,21 @@ if __name__=='__main__':
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
         sys.exit(find.returncode)
 
-    entries, aggregate = PREMADE_QUERIES[args.operation](args)
+    entries, intermediate, aggregate = PREMADE_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
 
     # create the bfq command
     bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
                '-n', str(args.threads),
-               '-p', '-P',
-               '-E', entries,
-               '-G', aggregate] + find_out.split()
+               '-p', '-P']
+
+    if entries is not None:
+        bfq_cmd += ['-E', entries]
+
+    if intermediate is not None:
+        bfq_cmd += ['-J', intermediate]
+
+    if aggregate is not None:
+        bfq_cmd += ['-G', aggregate]
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]
@@ -169,7 +180,7 @@ if __name__=='__main__':
     if args.mindepth:
         bfq_cmd += ['-y', str(args.mindepth)]
 
-    bfq = subprocess.Popen(bfq_cmd)
+    bfq = subprocess.Popen(bfq_cmd + find_out.split())
     bfq.communicate() # block until bfq finishes
 
     sys.exit(bfq.returncode)
