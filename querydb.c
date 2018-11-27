@@ -95,9 +95,6 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "dbutils.h"
 
-#define AGGREGATE_NAME         "file:aggregate?mode=memory&cache=shared"
-#define AGGREGATE_ATTACH_NAME  "aggregate"
-
 void sub_help() {
    printf("DB_path           path to dir containinng %s.*\n",DBNAME);
    printf("SQL               arbitrary SQL on DB\n");
@@ -113,6 +110,7 @@ int main(int argc, char *argv[])
      char rsqlstmt[MAXSQL];
      struct stat statuso;
      int printpath = 0;
+     int rc;
      sqlite3 *db;
      int recs;
      int dirsummary = 0;        // rawquerydb() ignores this argument
@@ -123,7 +121,7 @@ int main(int argc, char *argv[])
      // printheader=atoi(argv[4]);
      // dirsummary=atoi(argv[5]);
 
-     int idx = parse_cmd_line(argc, argv, "hHNVG:", 2, "[-s] DB_path SQL");
+     int idx = parse_cmd_line(argc, argv, "hHNV", 2, "[-s] DB_path SQL");
      if (in.helped)
         sub_help();
      if (idx < 0)
@@ -132,7 +130,7 @@ int main(int argc, char *argv[])
         // parse our custom option '-s'
         if ((argc - idx) > 2) {
            if (strcmp(argv[idx], "-s")) {
-              print_help(argv[0], "hHNVG:", "[-s] DB_path SQL");
+              print_help(argv[0], "hHNV", "[-s] DB_path SQL");
               return -1;
            }
            dirsummary = 1;
@@ -146,12 +144,12 @@ int main(int argc, char *argv[])
         if (retval)
            return retval;
      }
-
      printf("processing query name %s\n", name);
 
 
      // assure we have access to the directory
-     if (lstat(name,&statuso) != 0) {
+     rc=lstat(name,&statuso);
+     if (rc != 0) {
         printf("ERROR: directory %s: %s\n", name, strerror(errno));
        return 1;
      }
@@ -162,24 +160,15 @@ int main(int argc, char *argv[])
 
      // assure we have access to the DB
      sprintf(dbname,"%s/%s",name,DBNAME);
-     if (lstat(dbname,&statuso) != 0) {
+     rc=lstat(dbname,&statuso);
+     if (rc != 0) {
         printf("ERROR:  db %s: %s\n", dbname, strerror(errno));
         return 1;
      }
 
+
      // run the query
      db = opendb(name,0,0);
-
-     // modify rsqlstmt to insert the results into the aggregate table
-     char orig_sql[MAXSQL];
-     snprintf(orig_sql, MAXSQL, rsqlstmt);
-     snprintf(rsqlstmt, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sql);
-
-     // create the aggregate database
-     sqlite3 *aggregate = open_aggregate(AGGREGATE_NAME, AGGREGATE_ATTACH_NAME, orig_sql);
-     if (!aggregate) {
-         return -1;
-     }
 
      //add query funcs to get uidtouser() gidtogroup() and path()
      addqueryfuncs(db);
@@ -196,20 +185,7 @@ int main(int argc, char *argv[])
      else
         sprintf(gps[0].gpath,"%s",name);
 
-    // attach in-memory result aggregation database
-    if (!attachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
-        closedb(db);
-        return -1;
-    }
-
-    recs=rawquerydb(db, rsqlstmt, NULL, NULL);
-
-    // detach in-memory result aggregation database
-    if (!detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
-        closedb(db);
-        return -1;
-    }
-
+     recs=rawquerydb(name, dirsummary, db, rsqlstmt, in.printing, in.printheader, in.printrows, 0);
      if (recs >= 0)
         printf("query returned %d records\n",recs);
      else
@@ -217,17 +193,7 @@ int main(int argc, char *argv[])
 
      closedb(db);
 
-     // run the aggregate query on the aggregated results
-     sqlite3_stmt *res = NULL;
-     if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
-         print_results(res, stdout, in.printing, in.printheader, in.printrows, in.delim);
-     }
-     else {
-         fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
-     }
-     sqlite3_finalize(res);
 
-     sqlite3_close(aggregate);
 
      return 0;
 }

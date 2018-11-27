@@ -147,6 +147,7 @@ void print_help(const char* prog_name,
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
+      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating\n");
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -194,6 +195,7 @@ void show_input(struct input* in, int retval) {
    printf("in.intermediate       = '%s'n",  in->intermediate);
    printf("in.intermediate_count = '%d'\n", in->intermediate_count);
    printf("in.intermediate_skip  = '%d'\n", in->intermediate_skip);
+   printf("in.aggregate_or_print = '%d'\n", in->aggregate_or_print);
    printf("\n");
    printf("retval                = %d\n", retval);
    printf("\n");
@@ -222,22 +224,23 @@ int parse_cmd_line(int         argc,
 
    //bzero(in.sqlent,sizeof(in.sqlent));
    // <in> defaults to all-zeros.
-   in.maxthreads         = 1;       // don't default to zero threads
+   in.maxthreads         = 1;         // don't default to zero threads
    in.delim[0]           = '|';
-   in.dontdescend        = 0;       // default to descend
-   in.buildinindir       = 0;       // default to not building db in input dir
+   in.dontdescend        = 0;         // default to descend
+   in.buildinindir       = 0;         // default to not building db in input dir
    in.suspectd           = 0;
    in.suspectfl          = 0;
    in.suspectfile        = 0;
    in.suspectmethod      = 0;
-   in.stride             = 0;       // default striping of inodes
-   in.infile             = 0;       // default infile being used
-   in.min_level          = 0;       // default to the top
-   in.max_level          = -1;      // default to all the way down
+   in.stride             = 0;         // default striping of inodes
+   in.infile             = 0;         // default infile being used
+   in.min_level          = 0;         // default to the top
+   in.max_level          = -1;        // default to all the way down
    snprintf(in.intermediate, MAXSQL, "SELECT * FROM entries;");
    snprintf(in.aggregate, MAXSQL, "SELECT * FROM entries;");
    in.intermediate_count = in.maxthreads * 4 + 1;
    in.intermediate_skip  = 1;
+   in.aggregate_or_print = AGGREGATE; // aggregate by default
 
    int show   = 0;
    int retval = 0;
@@ -376,6 +379,10 @@ int parse_cmd_line(int         argc,
          INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
          break;
 
+      case 'e':
+          INSTALL_INT(in.aggregate_or_print, optarg, 0, 1, "-e");
+          break;
+
       case 'v':
           INSTALL_INT(in.intermediate_count, optarg, 1, (size_t) -1, "-v");
           break;
@@ -418,6 +425,10 @@ int parse_cmd_line(int         argc,
    }
 
    retval = -(in.min_level > in.max_level);
+
+   if (in.aggregate_or_print != AGGREGATE) {
+       in.intermediate_count = 0;
+   }
 
    // caller requires given number of positional args, after the options.
    // <optind> is the number of argv[] values that were recognized as options.

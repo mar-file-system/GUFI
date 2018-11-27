@@ -184,12 +184,10 @@ def build_where(args):
         comp = '=='
         if args.size[0] == '+':
             comp = '>'
-            args.size = args.size[1:]
         elif args.size[0] == '-':
             comp = '<'
-            args.size = args.size[1:]
 
-        where += ['size {} {}'.format(comp, int(args.size) * filesize[unit])]
+        where += ['size {} {}'.format(comp, int(args.size[1:]) * filesize[unit])]
 
     # if args.true:
 
@@ -298,6 +296,7 @@ if __name__=='__main__':
     parser.add_argument('--threads', '-t',     metavar='n',         dest='threads',       type=qb.check_positive, default=qb.cpus(),   help='number of threads')
     parser.add_argument('--intermediate_dbs',  metavar='n',         dest='intermediates', type=qb.check_non_negative,                  help='number of intermediate databases')
     parser.add_argument('--intermediate_skip', metavar='n',         dest='skip',          type=qb.check_non_negative,                  help='number of intermediate databases to skip when selecting the next database')
+    parser.add_argument('--no-aggregate',                           dest='no_aggregate',  action='store_true',                         help='do not aggregate results before printing')
     parser.add_argument('GUFI_tree',                                                                              nargs='+',           help='path containing GUFI tree database file')
 
     args = parser.parse_args();
@@ -309,27 +308,21 @@ if __name__=='__main__':
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
         sys.exit(find.returncode)
 
-    entries = qb.build_query(['*'],
+    entries = qb.build_query(build_select(args),
                              ['entries'],
                              build_where(args),
                              build_group_by(args),
                              build_order_by(args),
                              args.num_results)
 
-    aggregate = qb.build_query(build_select(args),
-                               ['entries'],
-                               build_where(args),
-                               build_group_by(args),
-                               build_order_by(args),
-                               args.num_results)
-
     # create the bfq command
     bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
                '-p', '-P',
+               '-e', ['0', '1'][args.no_aggregate],
                '-n', str(args.threads),
                '-E', entries,
                '-J', entries,
-               '-G', aggregate] + find_out.split()
+               '-G', entries] + find_out.split()
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]

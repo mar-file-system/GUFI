@@ -154,12 +154,14 @@ static void processdir(void * passv)
         db = opendb(passmywork->name, 1, 0);
     }
 
-    // attach in-memory result aggregation database
-    char intermediate_name[MAXSQL];
-    snprintf(intermediate_name, MAXSQL, AGGREGATE_NAME, passmywork->aggregate_id);
-    if (!attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
-        closedb(db);
-        return;
+    if (in.aggregate_or_print == AGGREGATE) {
+        // attach in-memory result aggregation database
+        char intermediate_name[MAXSQL];
+        snprintf(intermediate_name, MAXSQL, AGGREGATE_NAME, passmywork->aggregate_id);
+        if (!attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
+            closedb(db);
+            return;
+        }
     }
 
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
@@ -173,7 +175,7 @@ static void processdir(void * passv)
     if (strlen(in.sqltsum) > 1) {
 
        if (in.andor == 0)       // AND
-         recs=rawquerydb(db, in.sqltsum, NULL, NULL);
+         recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
 
       // this is an OR or we got a record back. go on to summary/entries
       // queries, if not done with this dir and all dirs below it
@@ -203,7 +205,9 @@ static void processdir(void * passv)
                 /* printf("%s\n", qwork.name); */
                 qwork.pinode=passmywork->statuso.st_ino;
                 qwork.level = next_level;
-                aggregate_id = (aggregate_id + in.intermediate_skip) % in.intermediate_count;
+                if (in.aggregate_or_print == AGGREGATE) {
+                    aggregate_id = (aggregate_id + in.intermediate_skip) % in.intermediate_count;
+                }
                 qwork.aggregate_id = aggregate_id;
 
                 lstat(qwork.name, &qwork.statuso);
@@ -233,7 +237,7 @@ static void processdir(void * passv)
                 getcwd(tpath,sizeof(tpath));
                 sprintf(trpath,"%s/%s",tpath,shortname);
                 realpath(trpath,gps[mytid].gfpath);
-                recs=rawquerydb(db, in.sqlsum, NULL, NULL);
+                recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
                 //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
             } else {
                 recs=1;
@@ -250,7 +254,17 @@ static void processdir(void * passv)
                     getcwd(tpath,sizeof(tpath));
                     sprintf(trpath,"%s/%s",tpath,passmywork->name);
                     realpath(trpath,gps[mytid].gfpath);
-                    rawquerydb(db, in.sqlent, NULL, NULL);
+                    if (in.aggregate_or_print == AGGREGATE) {
+                        char *err = NULL;
+                        if (sqlite3_exec(db, in.sqlent, NULL, NULL, &err) != SQLITE_OK) {
+                            fprintf(stderr, "Error: %s\n", err);
+                        }
+
+                        sqlite3_free(err);
+                    }
+                    else {
+                        rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printdir, mytid);
+                    }
                     //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
                     //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
                 }
@@ -258,10 +272,12 @@ static void processdir(void * passv)
         }
     }
 
-    // detach in-memory result aggregation database
-    if (!detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
-        closedb(db);
-        return;
+    if (in.aggregate_or_print == AGGREGATE) {
+        // detach in-memory result aggregation database
+        if (!detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
+            closedb(db);
+            return;
+        }
     }
 
     // if we have an out db we just detach gufi db
@@ -308,7 +324,17 @@ int processinit(void * myworkin) {
          sprintf(outdbn,"%s.%d",in.outdbn,i);
          gts.outdbd[i]=opendb(outdbn,5,0);
          if (strlen(in.sqlinit) > 1) {
-           rawquerydb(gts.outdbd[i], in.sqlinit, NULL, NULL);
+           if (in.aggregate_or_print == AGGREGATE) {
+             char *err = NULL;
+             if (sqlite3_exec(gts.outdbd[i], in.sqlent, NULL, NULL, &err) != SQLITE_OK) {
+               fprintf(stderr, "Error: %s\n", err);
+             }
+
+             sqlite3_free(err);
+           }
+           else {
+             rawquerydb(outdbn, 1, gts.outdbd[i], in.sqlinit, 1, 0, in.printdir, i);
+           }
          }
          i++;
        }
@@ -355,7 +381,17 @@ int processfin() {
        while (i < in.maxthreads) {
          closedb(gts.outdbd[i]);
          if (strlen(in.sqlfin) > 1) {
-           rawquerydb(gts.outdbd[i], in.sqlfin, NULL, NULL);
+           if (in.aggregate_or_print == AGGREGATE) {
+             char *err = NULL;
+             if (sqlite3_exec(gts.outdbd[i], in.sqlent, NULL, NULL, &err) != SQLITE_OK) {
+               fprintf(stderr, "Error: %s\n", err);
+             }
+
+             sqlite3_free(err);
+           }
+           else {
+             rawquerydb("fin", 1, gts.outdbd[i], in.sqlfin, 1, 0, in.printdir, i);
+           }
          }
          i++;
        }
@@ -383,36 +419,39 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:v:w:G:J:", 1, "GUFI_tree ...");
+     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:v:w:G:J:e:", 1, "GUFI_tree ...");
      if (in.helped)
         sub_help();
      if (idx < 0)
         return -1;
 
-     // modify in.sqlent to insert the results into the aggregate table
-     char orig_sqlent[MAXSQL];
-     snprintf(orig_sqlent, MAXSQL, in.sqlent);
-     snprintf(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
+     sqlite3 *aggregate = NULL;
+     sqlite3 **intermediates = NULL;
+     char aggregate_name[MAXSQL] = {};
+     if (in.aggregate_or_print == AGGREGATE) {
+         // modify in.sqlent to insert the results into the aggregate table
+         char orig_sqlent[MAXSQL];
+         snprintf(orig_sqlent, MAXSQL, in.sqlent);
+         snprintf(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
 
-     // create the aggregate database
-     char aggregate_name[MAXSQL];
-     snprintf(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
-     sqlite3 *aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent);
-     if (!aggregate) {
-         return -1;
-     }
-
-     sqlite3 **intermediates = malloc(sizeof(sqlite3 *) * in.intermediate_count);
-     for(int i = 0; i < in.intermediate_count; i++) {
-         char intermediate_name[MAXSQL];
-         snprintf(intermediate_name, MAXSQL, AGGREGATE_NAME, i);
-         if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
-             for(int j = 0; j < i; j++) {
-                 closedb(intermediates[j]);
-             }
-             free(intermediates);
-             closedb(aggregate);
+         // create the aggregate database
+         snprintf(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
+         if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
              return -1;
+         }
+
+         intermediates = malloc(sizeof(sqlite3 *) * in.intermediate_count);
+         for(int i = 0; i < in.intermediate_count; i++) {
+             char intermediate_name[MAXSQL];
+             snprintf(intermediate_name, MAXSQL, AGGREGATE_NAME, i);
+             if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
+                 for(int j = 0; j < i; j++) {
+                     closedb(intermediates[j]);
+                 }
+                 free(intermediates);
+                 closedb(aggregate);
+                 return -1;
+             }
          }
      }
 
@@ -449,7 +488,9 @@ int main(int argc, char *argv[])
          // program in this case we are stating the directory passed in and
          // putting that directory on the queue
          struct work mywork;
-         mywork.aggregate_id = (aggregate_id + in.intermediate_skip) % in.intermediate_count;
+         if (in.aggregate_or_print == AGGREGATE) {
+             mywork.aggregate_id = (aggregate_id + in.intermediate_skip) % in.intermediate_count;
+         }
          processinit(&mywork);
 
          // processdirs - if done properly, this routine is common and does not
@@ -470,68 +511,75 @@ int main(int argc, char *argv[])
 #ifdef DEBUG
      struct timespec intermediate_end;
      clock_gettime(CLOCK_MONOTONIC, &intermediate_end);
+
+     if (in.aggregate_or_print == PRINT) {
+         fprintf(stderr, "Time to query and print: %Les\n", elapsed(&intermediate_start, &intermediate_end));
+     }
 #endif
 
      thpool_destroy(mythpool);
 
-     // prepend the intermediate database query with "INSERT INTO" to move
-     // the data from the databases into the final aggregation database
-     char intermediate[MAXSQL];
-     sqlite3_snprintf(MAXSQL, intermediate, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, in.intermediate);
+     if (in.aggregate_or_print == AGGREGATE) {
+         // prepend the intermediate database query with "INSERT INTO" to move
+         // the data from the databases into the final aggregation database
+         char intermediate[MAXSQL];
+         sqlite3_snprintf(MAXSQL, intermediate, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, in.intermediate);
 
 #ifdef DEBUG
-     struct timespec aggregate_start;
-     clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
+         struct timespec aggregate_start;
+         clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
 #endif
 
-     // aggregate the intermediate aggregations
-     for(int i = 0; i < in.intermediate_count; i++) {
-         if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
-             (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
-             printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
+         // aggregate the intermediate aggregations
+         for(int i = 0; i < in.intermediate_count; i++) {
+             if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
+                 (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
+                 printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
+             }
          }
-     }
 
 #ifdef DEBUG
-     struct timespec aggregate_end;
-     clock_gettime(CLOCK_MONOTONIC, &aggregate_end);
+         struct timespec aggregate_end;
+         clock_gettime(CLOCK_MONOTONIC, &aggregate_end);
 #endif
 
-     // cleanup the intermediate databases outside of the timing (no need to detach)
-     for(int i = 0; i < in.intermediate_count; i++) {
-         sqlite3_close(intermediates[i]);
-     }
-     free(intermediates);
+         // cleanup the intermediate databases outside of the timing (no need to detach)
+         for(int i = 0; i < in.intermediate_count; i++) {
+             sqlite3_close(intermediates[i]);
+         }
+         free(intermediates);
 
 #ifdef DEBUG
-     struct timespec output_start;
-     clock_gettime(CLOCK_MONOTONIC, &output_start);
+         struct timespec output_start;
+         clock_gettime(CLOCK_MONOTONIC, &output_start);
 #endif
 
-     // run the aggregate query on the aggregated results
-     sqlite3_stmt *res = NULL;
-     if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
-         print_results(res, stdout, 1, 0, in.printing, in.delim);
-     }
-     else {
-         fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
-     }
-     sqlite3_finalize(res);
+         // run the aggregate query on the aggregated results
+         sqlite3_stmt *res = NULL;
+         if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
+             print_results(res, stdout, 1, 0, in.printing, in.delim);
+         }
+         else {
+             fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
+         }
+         sqlite3_finalize(res);
 
 #ifdef DEBUG
-     struct timespec output_end;
-     clock_gettime(CLOCK_MONOTONIC, &output_end);
+         struct timespec output_end;
+         clock_gettime(CLOCK_MONOTONIC, &output_end);
 
-     const long double intermediate_time = elapsed(&intermediate_start, &intermediate_end);
-     const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
-     const long double output_time = elapsed(&output_start, &output_end);
+         const long double intermediate_time = elapsed(&intermediate_start, &intermediate_end);
+         const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
+         const long double output_time = elapsed(&output_start, &output_end);
 
-     fprintf(stderr, "Time to aggregatee into intermediate databases: %Les\n", intermediate_time);
-     fprintf(stderr, "Time to aggregate into final databases:         %Les\n", aggregate_time);
-     fprintf(stderr, "Time to print:                                  %Les\n", output_time);
-     fprintf(stderr, "Time to complete all:                           %Les\n", intermediate_time + aggregate_time + output_time);
+         fprintf(stderr, "Time to aggregate into intermediate databases:  %Les\n", intermediate_time);
+         fprintf(stderr, "Time to aggregate into final databases:         %Les\n", aggregate_time);
+         fprintf(stderr, "Time to print:                                  %Les\n", output_time);
+         fprintf(stderr, "Time to complete all:                           %Les\n", intermediate_time + aggregate_time + output_time);
 #endif
 
-     closedb(aggregate);
+         closedb(aggregate);
+     }
+
      return 0;
 }

@@ -143,6 +143,11 @@ struct sum {
   long long int totossint4;
 };
 
+typedef enum ShowResults {
+    AGGREGATE,
+    PRINT
+} ShowResults_t;
+
 struct input {
    char name[MAXPATH];
    char nameto[MAXPATH];
@@ -184,6 +189,7 @@ struct input {
    char intermediate[MAXSQL]; // SQL query to run on intermediate tables
    size_t intermediate_count;
    size_t intermediate_skip;
+   ShowResults_t aggregate_or_print;
 };
 extern struct input in;
 

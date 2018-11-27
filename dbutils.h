@@ -108,7 +108,8 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 
 sqlite3 * opendb(const char *name, int openwhat, int createtables);
 
-int rawquerydb(sqlite3 *db, char *sqlstmt, int (*callback)(void*,int,char**,char**), void *args);
+int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
+               int printpath, int printheader, int printing, int ptid);
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
 

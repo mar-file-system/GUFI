@@ -268,26 +268,109 @@ exit(9);
     return db;
 }
 
-int rawquerydb(sqlite3 *db,
-               char    *sqlstmt,
-               int (*callback)(void*,int,char**,char**),
-               void *arg)
+int rawquerydb(const char *name,
+               int         isdir,        // (unused)
+               sqlite3    *db,
+               char       *sqlstmt,
+               int         printpath,    // (unused)
+               int         printheader,
+               int         printrows,
+               int         ptid)         // pthread-ID
 {
-     int rc = 1;
+     sqlite3_stmt *res;
+     int           error     = 0;
+     int           rec_count = 0;
+     const char   *errMSG;
+     const char   *tail;
+     int           ncols;
+     int           cnt;
+     int           lastsql;
+     int           onetime;
+     //char   lsqlstmt[MAXSQL];
+     //char   prefix[MAXPATH];
+     //char   shortname[MAXPATH];
+     //char  *pp;
 
-     // sanitize query
-     char query[MAXSQL];
-     sqlite3_snprintf(MAXSQL, query, "%q", sqlstmt);
+     int           i;
+     FILE *        out;
+     char          ffielddelim[2];
 
-     char *err = NULL;
-     if (sqlite3_exec(db, query, callback, arg, &err) != SQLITE_OK) {
-         fprintf(stderr, "Error: %s\n", err);
-         rc = -1;
+     if (! sqlstmt) {
+        fprintf(stderr, "SQL was empty\n");
+        return -1;
      }
 
-     sqlite3_free(err);
+     out = stdout;
+     if (in.outfile > 0)
+        out = gts.outfd[ptid];
 
-     return rc;
+     while (*sqlstmt) {
+       // WARNING: passing length-arg that is longer than SQL text
+       error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
+       if (error != SQLITE_OK) {
+          fprintf(stderr, "SQL error on query: %s name %s err %s\n",
+                  sqlstmt,name,sqlite3_errmsg(db));
+          return -1;
+       }
+
+       //printf("running on %s query %s printpath %d tail %s\n",name,sqlstmt,printpath,tail);
+       if (*tail) {
+         sqlite3_step(res);
+         //sqlite3_finalize(res);
+         sqlite3_reset(res);
+       }
+       sqlstmt = (char*)tail;
+     }
+
+     // NOTE: if <sqlstmt> actually contained multiple statments, then this
+     //       loop only runs with the final statement.
+     onetime=0;
+     while (sqlite3_step(res) == SQLITE_ROW) {
+        //printf("looping through rec_count %ds\n",rec_count);
+
+        // maybe print column-names as a header (once)
+        if (printheader) {
+           if (onetime == 0) {
+              cnt=0;
+              ncols=sqlite3_column_count(res);
+              while (ncols > 0) {
+                 if (cnt==0) {
+                    //if (printpath) fprintf(out,"path/%s",ffielddelim);
+                 }
+                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),in.delim);
+                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
+                 ncols--;
+                 cnt++;
+              }
+              fprintf(out,"\n");
+              onetime++;
+           }
+        }
+
+        // maybe print result-row values
+        if (printrows) {
+           //if (printpath) printf("%s/", name);
+           cnt=0;
+           ncols=sqlite3_column_count(res);
+           while (ncols > 0) {
+              if (cnt==0) {
+                 //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
+              }
+              fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+              ncols--;
+              cnt++;
+           }
+           fprintf(out,"\n");
+        }
+
+        // count of rows in query-result
+        rec_count++;
+     }
+
+    //printf("We received %d records.\n", rec_count);
+    // sqlite3_reset(res);
+    sqlite3_finalize(res);
+    return(rec_count);
 }
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int ts)
@@ -886,7 +969,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
         (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                  != SQLITE_OK) || // drop the entries table
         (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                  != SQLITE_OK) || // rename the aggregate table to entries
         (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                 != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
-        fprintf(stderr, "failed to create result aggregation database: %s\n", err_msg);
+        fprintf(stderr, "failed to create result aggregation database %s: %s\n", name, err_msg);
         sqlite3_free(err_msg);
         sqlite3_close(aggregate);
         aggregate = NULL;
