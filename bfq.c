@@ -116,21 +116,14 @@ static void processdir(void * passv)
     struct work qwork;
     DIR *dir;
     struct dirent *entry;
-    int mytid;
+    const int mytid = gettid();     // get thread id so we can get access to thread state we need to keep until the thread ends
     sqlite3_stmt *res;
     char dbpath[MAXPATH];
     sqlite3 *db;
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
-    char tpath[MAXPATH];
-    char trpath[MAXPATH];
     const size_t next_level = passmywork->level + 1;
-
-    // get thread id so we can get access to thread state we need to keep until the thread ends
-    mytid=0;
-    if (in.outfile > 0) mytid=gettid();
-    if (in.outdb > 0) mytid=gettid();
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
@@ -195,11 +188,6 @@ static void processdir(void * passv)
             // each
             do {
                 const size_t len = strlen(entry->d_name);
-                if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
-                    ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
-                    continue;
-                }
-
                 memset(&qwork, 0, sizeof(qwork));
                 sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
                 /* printf("%s\n", qwork.name); */
@@ -215,6 +203,12 @@ static void processdir(void * passv)
                     if (!access(qwork.name, R_OK | X_OK)) {
                         // this is how the parent gets passed on
                         qwork.pinode=passmywork->statuso.st_ino;
+
+                        if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
+                            ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
+                            continue;
+                        }
+
                         // this pushes the dir onto queue - pushdir does locking around queue update
                         pushdir(&qwork);
                     }
@@ -234,9 +228,7 @@ static void processdir(void * passv)
                 // for directories we have to take off after the last slash
                 // and set the path so users can put path() in their queries
                 sprintf(gps[mytid].gpath,"%s",shortname);
-                getcwd(tpath,sizeof(tpath));
-                sprintf(trpath,"%s/%s",tpath,shortname);
-                realpath(trpath,gps[mytid].gfpath);
+                realpath(passmywork->name,gps[mytid].gfpath);
                 recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
                 //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
             } else {
@@ -251,9 +243,7 @@ static void processdir(void * passv)
                     // set the path so users can put path() in their queries
                     //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
                     sprintf(gps[mytid].gpath,"%s",passmywork->name);
-                    getcwd(tpath,sizeof(tpath));
-                    sprintf(trpath,"%s/%s",tpath,passmywork->name);
-                    realpath(trpath,gps[mytid].gfpath);
+                    realpath(passmywork->name,gps[mytid].gfpath);
                     if (in.aggregate_or_print == AGGREGATE) {
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, NULL, NULL, &err) != SQLITE_OK) {
@@ -339,7 +329,6 @@ int processinit(void * myworkin) {
          i++;
        }
      }
-
 
      //  ******  create and open output db's here
 
