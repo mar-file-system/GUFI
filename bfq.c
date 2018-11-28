@@ -188,6 +188,11 @@ static void processdir(void * passv)
             // each
             do {
                 const size_t len = strlen(entry->d_name);
+                if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
+                    ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
+                    continue;
+                }
+
                 memset(&qwork, 0, sizeof(qwork));
                 sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
                 /* printf("%s\n", qwork.name); */
@@ -203,12 +208,6 @@ static void processdir(void * passv)
                     if (!access(qwork.name, R_OK | X_OK)) {
                         // this is how the parent gets passed on
                         qwork.pinode=passmywork->statuso.st_ino;
-
-                        if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
-                            ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
-                            continue;
-                        }
-
                         // this pushes the dir onto queue - pushdir does locking around queue update
                         pushdir(&qwork);
                     }
