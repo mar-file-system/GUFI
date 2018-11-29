@@ -1,3 +1,4 @@
 [submodule "C-Thread-Pool"]
 	path = C-Thread-Pool
 	url = https://github.com/jti-lanl/C-Thread-Pool.git
+	branch = lanl
