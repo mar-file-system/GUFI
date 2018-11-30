@@ -20,7 +20,8 @@ tools: $(TOOLS)
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
 
-
+# CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
+CFLAGS += -std=gnu11
 ifneq ($(DEBUG),)
 	CFLAGS += -g -O0
 else
