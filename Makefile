@@ -2,8 +2,15 @@ DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 
+.PHONY: sqlite3-pcre googletest test
+
+SQLITE3_PCRE      ?= sqlite3-pcre
+GTEST_SRC         ?= $(realpath googletest)
+GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
+GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
+
 # TOOLS = querydb querydbn make_testdirs dbdump
-TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
+TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so $(GTEST_INSTALL_DIR) test
 
 # # TBD ...
 # cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse
@@ -15,8 +22,8 @@ mysql: $(BFW_MYSQL)
 dfw:   $(DFW)
 tools: $(TOOLS)
 
-sqlite3-pcre/pcre.so:
-	$(MAKE) -C sqlite3-pcre
+$(SQLITE3_PCRE)/pcre.so:
+	$(MAKE) -C $(SQLITE3_PCRE)
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
@@ -95,6 +102,12 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 %.mysql:
 	$(MAKE) -C . $* MYSQL=1
 
+$(GTEST_INSTALL_DIR):
+	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) .. && $(MAKE) -j install
+
+test: $(GTEST_INSTALL_DIR)
+	$(MAKE) -C test
+
 # these are trashable files and dirs produced by the test/run* tests
 TEST_PRODUCTS = test/testout.* test/testdirdup test/outdb* test/outq.* test/core.*
 clean_test:
@@ -109,3 +122,6 @@ clean:
 	@ # for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
 	@ # final "echo" is so sub-shell will return success
 	@ (for F in `ls *.c* | sed -e 's/\.c.*$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
+	rm -f $(SQLITE3_PCRE)/pcre.so
+	rm -rf $(GTEST_BUILD_DIR) $(GTEST_INSTALL_DIR)
+	$(MAKE) -C test clean
