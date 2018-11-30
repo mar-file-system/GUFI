@@ -1,6 +1,7 @@
 [submodule "C-Thread-Pool"]
 	path = C-Thread-Pool
 	url = https://github.com/jti-lanl/C-Thread-Pool.git
+	branch = lanl
 [submodule "sqlite3-pcre"]
 	path = sqlite3-pcre
 	url = https://github.com/ralight/sqlite3-pcre
