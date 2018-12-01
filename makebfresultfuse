@@ -1,1 +1,0 @@
-cc bfresultfuse.c -I . -I/usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64  -l sqlite3 -L/usr/local/lib -L. -l osxfuse -l gufi -o bfresultfuse

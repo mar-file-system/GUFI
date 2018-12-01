@@ -97,8 +97,8 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <sqlite3.h>
 
-#include <bf.h>
-#include <dbutils.h>
+#include "bf.h"
+#include "dbutils.h"
 
 char globalmnt[MAXPATH];
 int  globalmntlen;
@@ -128,7 +128,8 @@ int att(sqlite3 *indb) {
           if (rc != SQLITE_OK) {
             fprintf(stderr, "Cannot attach database: %s %s\n", sqlite3_errmsg(db),globaldbname[i]);
             sqlite3_close(db);
-            exit(9);
+
+            return -EIO;  // exit(9);
           }
           sprintf(up,"select * from mdb%d.%s",i,globaltab);
           strcat(sqlu,up);
@@ -662,7 +663,7 @@ int main(int argc, char *argv[]) {
           exit(-1);
         }
         
-        getwd(cwd);
+        getcwd(cwd, MAXPATH);
         stat(cwd,&globalst);
 
 	return fuse_main(argc, argv, &gufir_oper, NULL);
