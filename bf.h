@@ -79,7 +79,7 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <unistd.h>
-#include <stdio.h>
+#include <stdio.h>              // fpos_t
 #include <sys/stat.h>
 #include <pthread.h>            // thpool.h expects us to do this
 

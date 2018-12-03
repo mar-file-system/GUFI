@@ -97,11 +97,8 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <sqlite3.h>
 
-#define MAXPATH 1024
-#define MAXXATTR 1024
-#define MAXSQL 1024
 #include "bf.h"
-#include "dbutils.c"
+#include "dbutils.h"
 
 //char globalmnt[1024];
 //static const char *globalmnt = "/tmp/testdirdup/Users/ggrider";

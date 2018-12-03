@@ -1,27 +1,55 @@
-DFW       = dfw
+# DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
-BFW_MYSQL = bfmi.mysql
+TOOLS     = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
 
-# TOOLS = querydb querydbn make_testdirs dbdump
-TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
+MYSQL_FILES = bfmi
 
-# # TBD ...
-# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse
+# bffuse:        run query under fuse
+# bfresultfuse:  fuse-view of query-results in a DB
+# FUSE_FILES    = bffuse bfresultfuse
+FUSE_FILES    = bfresultfuse
 
-all: bfw tools
+
+
+all:   bfw tools
 
 bfw:   $(BFW)
-mysql: $(BFW_MYSQL)
-dfw:   $(DFW)
 tools: $(TOOLS)
 
-sqlite3-pcre/pcre.so:
-	$(MAKE) -C sqlite3-pcre
+# obsolete?
+# dfw:   $(DFW)
+
+# recurse with set-up for special build
+fuse:
+	$(MAKE) -C . $(FUSE_FILES) FUSE=1
+
+# recurse with set-up for special build
+mysql:
+	$(MAKE) -C . $(MYSQL_FILES) MYSQL=1
+
+everything: all mysql fuse
+
+help:
+	@ echo "make [ target ]"
+	@ echo "    where <target> is one of:"
+	@ echo
+	@ echo "    all   -- $(BFW) $(TOOLS)"
+	@ echo "    mysql -- bfmi, requires you to have installed sqlite3, *and* mysql"
+	@ echo "    fuse  -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
+	@ echo "    everything -- all of the above"
+	@ echo
+	@ echo "    with no target, we will build 'all'"
+
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
 
+INCS :=
+LIBS := -lgufi -pthread
 
+
+# CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
+CFLAGS += -std=gnu11
 ifneq ($(DEBUG),)
 	CFLAGS += -g -O0 -DDEBUG
 else
@@ -29,18 +57,9 @@ else
 endif
 
 
-ifeq ($(shell uname -s), Darwin)
-	CPPFLAGS +=  -D _DARWIN_C_SOURCE
-endif
-
-
-INCS :=
-LIBS := -lgufi -pthread
-
 # this is invoked in a recursive build, for bfmi.mysql
 # (see target "%.mysql")
 ifeq ($(MYSQL),)
-	INCS +=
 	LIBS += -lsqlite3
 	LIBFILES += dbutils
 else
@@ -50,7 +69,27 @@ else
 	LIBS += -lsqlite3
 endif
 
+sqlite3-pcre/pcre.so:
+	$(MAKE) -C sqlite3-pcre
 
+# different fuse libs for OSX/Linux
+UNAME_S = $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+	CPPFLAGS += -D_DARWIN_C_SOURCE
+	LIBFUSE   = -losxfuse
+endif
+ifeq ($(UNAME_S), Linux)
+	LIBFUSE   = -lfuse
+endif
+
+
+ifneq ($(FUSE),)
+	CPPFLAGS += -D_FILE_OFFSET_BITS=64
+	LIBS     += $(LIBFUSE)
+endif
+
+
+LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
 
@@ -90,13 +129,18 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 %: %.cpp libgufi.a
 	$(CXX) $(CFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
-# recursive make of the '%' part
-# recursive make will catch the ifneq ($(MYSQL),) ... above
-%.mysql:
-	$(MAKE) -C . $* MYSQL=1
+# --- clean-up
 
-# these are trashable files and dirs produced by the test/run* tests
-TEST_PRODUCTS = test/testout.* test/testdirdup test/outdb* test/outq.* test/core.*
+# trashable files and dirs produced by the test/run* tests, and example_run
+TEST_PRODUCTS = \
+	test/testout.* \
+	test/testdirdup \
+	test/outdb* \
+	test/outq.* \
+	test/core.* \
+	test/in \
+	test/out
+
 clean_test:
 	rm -rf $(TEST_PRODUCTS)
 
