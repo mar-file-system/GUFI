@@ -82,6 +82,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sys/stat.h>
 #include <utime.h>
 #include <sys/xattr.h>
@@ -136,7 +137,7 @@ void *scout(void * param) {
     char *ret;
     FILE *finfile;
     char linein[MAXPATH+MAXPATH+MAXPATH];
-    fpos_t foffset;
+    fpos_t  foffset;
     struct work * mywork;
 
     mywork=malloc(sizeof(struct work));
@@ -158,7 +159,7 @@ void *scout(void * param) {
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              //printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             //printf("foffsett %lld\n",foffset);
+             //printf("foffsett %lld\n",(int64_t)foffset); // non-portable cast
              mywork->offset=foffset;
              pushdir(mywork);
           }
@@ -200,7 +201,7 @@ static void processdir(void * passv)
     mytid=gettid();
 
     //if (in.infile > 0) return;
-    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,passmywork->offset);
+    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,(uint64_t)passmywork->offset); // non-portable cast of fpos_t
 
     if (in.infile == 0) {
       // open directory
@@ -369,7 +370,7 @@ int processinit(void * myworkin) {
      char outfn[MAXPATH];
      FILE *finfile;
      char linein[MAXPATH+MAXPATH+MAXPATH];
-     long long int foffset;
+     fpos_t foffset;
 
      //open up the output files if needed
      if (in.outfile > 0) {
@@ -409,7 +410,7 @@ int processinit(void * myworkin) {
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             printf("foffsett %lld\n",foffset);
+             printf("foffsett %lld\n",(uint64_t)foffset); // non-portable cast of fpos_t
              mywork->offset=foffset;
              pushdir(mywork);
           }
