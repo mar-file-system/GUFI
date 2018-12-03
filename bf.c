@@ -147,7 +147,7 @@ void print_help(const char* prog_name,
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
-      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating\n");
+      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -422,6 +422,7 @@ int parse_cmd_line(int         argc,
          retval = -1;
          fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
       };
+
    }
 
    retval = -(in.min_level > in.max_level);
