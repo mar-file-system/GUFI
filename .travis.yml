@@ -1,0 +1,26 @@
+language: c
+sudo: false
+
+branches:
+    only:
+        - gufi_find
+
+os:
+    - linux
+    - osx
+
+compiler:
+    - gcc
+
+addons:
+    apt:
+        packages:
+            - cmake
+            - libsqlite3-dev
+            - libfuse-dev
+
+script:
+    - make
+    - make test
+    - test/runtests
+    - test/googletest/test
