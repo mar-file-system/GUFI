@@ -1,0 +1,20 @@
+language: c
+sudo: false
+
+branches:
+    only:
+        - gufi_find
+os:
+    - linux
+    - osx
+
+compiler:
+    - gcc
+
+addons:
+    apt:
+        packages:
+            - libfuse-dev
+script:
+    - make
+    - test/runtests
