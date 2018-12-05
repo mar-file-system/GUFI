@@ -73,7 +73,7 @@ OF SUCH DAMAGE.
 
 
 
-
+[![Build Status](https://travis-ci.org/mar-file-system/GUFI.svg?branch=gufi_find)](https://travis-ci.org/mar-file-system/GUFI)
 
 
 
@@ -178,9 +178,9 @@ options:
   -Y                 default all directories as suspect
   -Z                 default all files links as suspect
   -W <insuspectfile> path to input suspect file
-  -A <suspectmethod> suspect method 
+  -A <suspectmethod> suspect method
   -c <suspecttime>   time in seconds since epoch for suspect comparison
-  -g <stridesize>    stride size for striping inodes into separate output db's 
+  -g <stridesize>    stride size for striping inodes into separate output db's
 
 Flow:
 if using input suspect file read that in and put into memory trie for lookups
@@ -225,7 +225,7 @@ threads are started
 loop assigning work (directories) from queue to threads
 each thread lists the directory readdir/stat and xattr if called for
   if directory put it on the queue and duplicate the directory if making a gufi
-  if link or file print it to screen or out file 
+  if link or file print it to screen or out file
       and build an entries table with entries and keep a sum for the directory
   close directory
   write directory summary table
@@ -263,7 +263,7 @@ bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
 #   -b              build GUFI index tree
 #   -t <to_dir>     dir GUFI-tree should be built
 #   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-# 
+#
 # robin_in          file containing custom RobinHood parameters
 #                      example contents:
 #                      /path  - top dir-path (RH doesnt have a name for the root)
@@ -275,11 +275,11 @@ bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
 #                      ggrider              - user of mysql
 #                      mypassword           - password for user of mysql
 #                      institutes           - name of db of mysql
-# 
+#
 # future options:
 #   -U              create by user summary record
 #   -G              create by group summary record
-# 
+#
 
 
 Flow:
@@ -290,10 +290,10 @@ output file(s) are opened one per thread
 mysql connections are made, on for each thread
 threads are started
 loop assigning work (directories) from queue to threads
-each thread processes a directory by querying all records with parentid=id 
+each thread processes a directory by querying all records with parentid=id
  for that directory
   if directory put it on the queue and duplicate the directory if making a gufi
-  if link or file print it to screen or out file 
+  if link or file print it to screen or out file
       and build an entries table with entries and keep a sum for the directory
   close directory
   write directory summary table
@@ -317,21 +317,21 @@ bfti - walks breadth first below the input directory path and summarizes
 #   -P              print directories as they are encountered
 #   -n <threads>    number of threads
 #   -s              generate tree-summary table (in top-level DB)
-# 
+#
 # GUFI_tree         path to GUFI tree-dir
-# 
+#
 # future options:
 #   -U              create by user summary record
 #   -G              create by group summary record
-# 
+#
 
 
 Flow:
 input directory is put on a queue
 threads are started
 loop assigning work (directories) from queue to threads
-each thread reads the directory and the  summary table for each the dir 
-  if directory put it on the queue 
+each thread reads the directory and the  summary table for each the dir
+  if directory put it on the queue
   accumulate each directory summary into a global summary for all directories below the input directory
   close directory
 end
@@ -378,9 +378,9 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
 #   -F <SQL_fin>    SQL cleanup
 #   -d <delim>      delimiter (one char) used as a delimiter if you are getting input from a file not a walk
 #   -u              input is not a dir its a file that you read input from
-# 
+#
 # GUFI_tree         find GUFI index-tree here
-# 
+#
 
 
 Flow:
@@ -390,8 +390,8 @@ output dbs are opened if needed one per thread
 if init SQL provided run once per thread
 threads are started
 loop assigning work (directories) from queue to threads
-each thread lists the directory and queries the gufi tables for that directory 
-  if directory put it on the queue 
+each thread lists the directory and queries the gufi tables for that directory
+  if directory put it on the queue
   if treesql input run query on treesummary table
   and/or applied on whether to continue
   if dirsql input run query on summary table - if printdir - print, if output to db do that
@@ -403,7 +403,7 @@ close output files if needed
 if fin SQL provided run that per thread
 close outputdb
 you can end up with an output file per thread and/or a dbfile per thread
-If you are reading the input from a file instead of a treewalk, the file 
+If you are reading the input from a file instead of a treewalk, the file
 must have a record for dir immediately followed by files and links in that dir
 but beyond that it doesnt have to be in any order. In this input file mode
 the info is read from this file and not gotten from a walk/stat activity
@@ -479,7 +479,7 @@ gidtogroup(gid) - coinverts gid to groupname - GUFI stores gid
 
 -- a useful built-in sqlite function is
 
-datetime(mtime,'unixepoch') 
+datetime(mtime,'unixepoch')
 
 GUFI stores its date/time in unixepoch form and datetime() will return a
 human readable date/time - of course there are many formats of date/time
@@ -594,7 +594,7 @@ querydb - run an SQL query against a table in a GUFI db - just point it at
 #   -H              show assigned input values (debugging)
 #   -N              print column-names (header) for DB results
 #   -V              print column-values (rows) for DB results
-# 
+#
 # DB_path           path to dir containinng db.db.*
 # SQL               arbitrary SQL on DB
 
@@ -613,9 +613,9 @@ querydbn - run an SQL query against an output db from bfq, it can be one
 #   -N              print column-names (header) for DB results
 #   -V              print column-values (rows) for DB results
 #   -p              print file-names
-# 
+#
 #   -s              dir-summary (currently-unused internal functionality)
-# 
+#
 # DB_path           path to dir containinng db.db.*
 # DB_count          number of DBs (should match thread-count used in 'bfq')
 # SQL               arbitrary SQL on each DB (unified into single view)
@@ -635,7 +635,7 @@ runbfmi - run bfmi to read from a robinhood mysql db and list and/or create
 runbfwi - run bfwi and create gufi testdirdup from input testdir
 runbfti - run bfti and create a tree index at the top of testdirdup
 runbfq - run various queries on testdirdup/testdir gufi tree including output files and output dbs
-runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir  
+runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir
 runquerydbn - do various queries on outdb.* output dbs using the union capability of querydbn
 runbfwreaddirplus2db - run tests that walk trees using readdirplus and write path,inode,pinode etc. to output dbs
 
