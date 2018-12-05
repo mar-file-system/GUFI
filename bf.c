@@ -312,6 +312,7 @@ int parse_cmd_line(int         argc,
       case 'O':
          in.outdb = 1;
          INSTALL_STR(in.outdbn, optarg, MAXPATH, "-O");
+         in.aggregate_or_print = PRINT;
          break;
 
       case 't':
@@ -422,10 +423,13 @@ int parse_cmd_line(int         argc,
          retval = -1;
          fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
       };
-
    }
 
-   retval = -(in.min_level > in.max_level);
+   // if there were no other errors,
+   // make sure min_level <= max_level
+   if (retval == 0) {
+       retval = -(in.min_level > in.max_level);
+   }
 
    if (in.aggregate_or_print != AGGREGATE) {
        in.intermediate_count = 0;

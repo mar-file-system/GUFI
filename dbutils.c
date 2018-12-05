@@ -285,7 +285,6 @@ int rawquerydb(const char *name,
      int           ncols;
      int           cnt;
      int           lastsql;
-     int           onetime;
      //char   lsqlstmt[MAXSQL];
      //char   prefix[MAXPATH];
      //char   shortname[MAXPATH];
@@ -324,47 +323,30 @@ int rawquerydb(const char *name,
 
      // NOTE: if <sqlstmt> actually contained multiple statments, then this
      //       loop only runs with the final statement.
-     onetime=0;
-     while (sqlite3_step(res) == SQLITE_ROW) {
-        //printf("looping through rec_count %ds\n",rec_count);
 
-        // maybe print column-names as a header (once)
-        if (printheader) {
-           if (onetime == 0) {
-              cnt=0;
-              ncols=sqlite3_column_count(res);
-              while (ncols > 0) {
-                 if (cnt==0) {
-                    //if (printpath) fprintf(out,"path/%s",ffielddelim);
-                 }
+     if (sqlite3_step(res) == SQLITE_ROW) {
+         const int ncols = sqlite3_column_count(res);
+
+         // maybe print column-names as a header (once)
+         if (printheader) {
+             for(int cnt = 0; cnt < ncols; cnt++) {
                  fprintf(out,"%s%s", sqlite3_column_name(res,cnt),in.delim);
-                 //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),ffielddelim);
-                 ncols--;
-                 cnt++;
-              }
-              fprintf(out,"\n");
-              onetime++;
-           }
-        }
+             }
+             fprintf(out,"\n");
+         }
 
-        // maybe print result-row values
-        if (printrows) {
-           //if (printpath) printf("%s/", name);
-           cnt=0;
-           ncols=sqlite3_column_count(res);
-           while (ncols > 0) {
-              if (cnt==0) {
-                 //if (printpath) fprintf(out,"%s/%s",shortname,ffielddelim);
-              }
-              fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
-              ncols--;
-              cnt++;
-           }
-           fprintf(out,"\n");
-        }
+         do {
+             // maybe print result-row values
+             if (printrows) {
+                 for(int cnt = 0; cnt < ncols; cnt++) {
+                     fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+                 }
+                 fprintf(out,"\n");
+             }
 
-        // count of rows in query-result
-        rec_count++;
+             // count of rows in query-result
+             rec_count++;
+        } while (sqlite3_step(res) == SQLITE_ROW);
      }
 
     //printf("We received %d records.\n", rec_count);
@@ -969,7 +951,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
         (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                  != SQLITE_OK) || // drop the entries table
         (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                  != SQLITE_OK) || // rename the aggregate table to entries
         (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                 != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
-        fprintf(stderr, "failed to create result aggregation database %s: %s\n", name, err_msg);
+        fprintf(stderr, "failed to create result aggregation database %s: %s: \"%s\"\n", name, err_msg, query);
         sqlite3_free(err_msg);
         sqlite3_close(aggregate);
         aggregate = NULL;

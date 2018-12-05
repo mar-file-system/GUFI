@@ -177,17 +177,18 @@ def build_where(args):
 
     if args.size is not None:
         unit = 'b'
+        size = args.size
         if args.size[-1] in 'bcwkMG':
             unit = args.size[-1]
-            args.size = args.size[:-1]
+            size = args.size[:-1]
 
         comp = '=='
-        if args.size[0] == '+':
+        if size[0] == '+':
             comp = '>'
-        elif args.size[0] == '-':
+        elif size[0] == '-':
             comp = '<'
 
-        where += ['size {} {}'.format(comp, int(args.size[1:]) * filesize[unit])]
+        where += ['size {} {}'.format(comp, int(size[1:]) * filesize[unit])]
 
     # if args.true:
 
@@ -304,7 +305,7 @@ if __name__=='__main__':
     # create the find command
     find = qb.find_dir(args.root, [os.path.normpath(path) for path in args.GUFI_tree])
     find_out, find_err = find.communicate()
-    if find.returncode != 0:
+    if len(find_out) == 0:
         print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
         sys.exit(find.returncode)
 
