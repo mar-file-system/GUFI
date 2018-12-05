@@ -108,6 +108,28 @@ OF SUCH DAMAGE.
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
+struct aggregate_id_args {
+    ShowResults_t aggregate_or_print;
+    size_t id;
+    size_t skip;
+    size_t count;
+};
+
+// callback for setting qwork's aggregate_id
+int set_aggregate_id(struct work *qwork, void *args) {
+    if (!qwork || !args) {
+        return -1;
+    }
+
+    struct aggregate_id_args *id_args = (struct aggregate_id_args *) args;
+    if (id_args->aggregate_or_print == AGGREGATE) {
+        id_args->id = (id_args->id + id_args->skip) % id_args->count;
+    }
+
+    qwork->aggregate_id = id_args->id;
+    return 0;
+}
+
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 static void processdir(void * passv)
@@ -129,8 +151,8 @@ static void processdir(void * passv)
     if (!(dir = opendir(passmywork->name)))
        goto out_free; // return NULL;
 
-    if (!(entry = readdir(dir)))
-       goto out_dir; // return NULL;
+    /* if (!(entry = readdir(dir))) */
+    /*    goto out_dir; // return NULL; */
 
     sprintf(passmywork->type, "%s", "d");
     //if (in.printdir > 0) {
@@ -179,41 +201,15 @@ static void processdir(void * passv)
     }
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
-        // only push more levels in if needed
-        if (next_level <= in.max_level) {
-            int aggregate_id = passmywork->aggregate_id;
-            // go ahead and send the subdirs to the queue since we need to look
-            // further down the tree.  loop over dirents, if link push it on the
-            // queue, if file or link print it, fill up qwork structure for
-            // each
-            do {
-                const size_t len = strlen(entry->d_name);
-                if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
-                    ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
-                    continue;
-                }
+        struct aggregate_id_args aggregate_id_args;
+        aggregate_id_args.aggregate_or_print = in.aggregate_or_print;
+        aggregate_id_args.id = passmywork->aggregate_id;
+        aggregate_id_args.skip = in.intermediate_skip;
+        aggregate_id_args.count = in.intermediate_count;
 
-                memset(&qwork, 0, sizeof(qwork));
-                sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
-                /* printf("%s\n", qwork.name); */
-                qwork.pinode=passmywork->statuso.st_ino;
-                qwork.level = next_level;
-                if (in.aggregate_or_print == AGGREGATE) {
-                    aggregate_id = (aggregate_id + in.intermediate_skip) % in.intermediate_count;
-                }
-                qwork.aggregate_id = aggregate_id;
-
-                lstat(qwork.name, &qwork.statuso);
-                if (S_ISDIR(qwork.statuso.st_mode)) {
-                    if (!access(qwork.name, R_OK | X_OK)) {
-                        // this is how the parent gets passed on
-                        qwork.pinode=passmywork->statuso.st_ino;
-                        // this pushes the dir onto queue - pushdir does locking around queue update
-                        pushdir(&qwork);
-                    }
-                }
-            } while ((entry = (readdir(dir))));
-        }
+        // push subdirectories into the queue
+        descend(passmywork, dir, in.max_level,
+                set_aggregate_id, &aggregate_id_args);
 
         // only query this level if the min_level has been reached
         if (passmywork->level >= in.min_level) {

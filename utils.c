@@ -75,12 +75,12 @@ OF SUCH DAMAGE.
 
 
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <ctype.h>              /* isprint() */
 #include <errno.h>
 #include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
 #include "structq.h"
@@ -736,3 +736,52 @@ int deletionll(struct Trie* *curr, char* str)
 }
 
 /* end of  the triell */
+
+// Push the subdirectories in the current directory onto the queue
+size_t descend(struct work *passmywork, DIR *dir,
+               const size_t max_level,
+               int (*callback)(struct work *qwork, void *), void *args) {
+    if (!passmywork || !dir) {
+        return 0;
+    }
+
+    size_t pushed = 0;
+    const size_t next_level = passmywork->level + 1;
+    if (next_level <= max_level) {
+        // go ahead and send the subdirs to the queue since we need to look
+        // further down the tree.  loop over dirents, if link push it on the
+        // queue, if file or link print it, fill up qwork structure for
+        // each
+        struct dirent *entry = NULL;
+        while ((entry = (readdir(dir)))) {
+            const size_t len = strlen(entry->d_name);
+            if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
+                ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
+                continue;
+            }
+
+            struct work qwork;
+            memset(&qwork, 0, sizeof(qwork));
+            snprintf(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
+            qwork.pinode=passmywork->statuso.st_ino;
+            qwork.level = next_level;
+
+            if (callback && (callback(&qwork, args) != 0)) {
+                continue;
+            }
+
+            lstat(qwork.name, &qwork.statuso);
+            if (S_ISDIR(qwork.statuso.st_mode)) {
+                if (!access(qwork.name, R_OK | X_OK)) {
+                    // this is how the parent gets passed on
+                    qwork.pinode = passmywork->statuso.st_ino;
+                    // this pushes the dir onto queue - pushdir does locking around queue update
+                    pushdir(&qwork);
+                    pushed++;
+                }
+            }
+        }
+    }
+
+    return pushed;
+}

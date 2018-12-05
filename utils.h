@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <dirent.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -149,5 +150,13 @@ typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
 
+// Function used in processdir to decend into subdirectories.
+// The callback function is used to modify the qwork before
+// it is pushed onto the queue. The callback function should
+// return 0 if there were no errors. Non-zero values results
+// the qwork not being pushed onto the queue.
+size_t descend(struct work *passmywork, DIR *dir,
+               const size_t max_level,
+               int (*callback)(struct work *, void *), void *args);
 
 #endif
