@@ -312,6 +312,7 @@ int parse_cmd_line(int         argc,
       case 'O':
          in.outdb = 1;
          INSTALL_STR(in.outdbn, optarg, MAXPATH, "-O");
+         in.aggregate_or_print = PRINT;
          break;
 
       case 't':

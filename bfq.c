@@ -224,13 +224,13 @@ static void processdir(void * passv)
                 // and set the path so users can put path() in their queries
                 sprintf(gps[mytid].gpath,"%s",shortname);
                 realpath(passmywork->name,gps[mytid].gfpath);
-                recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+                recs = rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
                 //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
             } else {
-                recs=1;
+                recs = 1;
             }
             if (in.andor > 0)
-                recs=1;
+                recs = 1;
 
             // if we have recs (or are running an OR) query the entries table
             if (recs > 0) {
@@ -303,6 +303,7 @@ int processinit(void * myworkin) {
          i++;
        }
      }
+
      if (in.outdb > 0) {
        i=0;
        while (i < in.maxthreads) {
