@@ -21,6 +21,6 @@ addons:
 
 script:
     - make
-    - make test
     - test/runtests
+    - test/verifyknowntree
     - test/googletest/test

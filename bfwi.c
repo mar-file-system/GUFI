@@ -181,7 +181,6 @@ static void processdir(void * passv)
     struct work qwork;
     DIR *dir;
     struct dirent *entry;
-    char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
     char *records;
@@ -294,9 +293,7 @@ static void processdir(void * passv)
             // its a link so get the linkname
             if (in.infile == 0) {
               /* if its infile we have to get this elsewhere */
-              bzero(lpatho,sizeof(lpatho));
-              readlink(qwork.name,lpatho,MAXPATH);
-              sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+              readlink(qwork.name,qwork.linkname,MAXPATH);
             }
             sprintf(qwork.type,"%s","l");
             if (in.printing > 0) {

@@ -306,7 +306,10 @@ if __name__=='__main__':
     find = qb.find_dir(args.root, [os.path.normpath(path) for path in args.GUFI_tree])
     find_out, find_err = find.communicate()
     if len(find_out) == 0:
-        print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
+        if len(find_err):
+            print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
+        else:
+            print 'Error: No directories found'
         sys.exit(find.returncode)
 
     initial = qb.build_query(build_select(args),

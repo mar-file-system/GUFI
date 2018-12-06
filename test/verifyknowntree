@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -e
+
+root="/tmp"
+src="${root}/testdir"
+dst="${root}/testgufi"
+
+rm -rf "${src}" "${dst}"
+
+# go to the root GUFI directory
+cd "$(dirname $(dirname $0))"
+
+# create the original tree
+test/generatetree -d "${src}"
+
+# read it into GUFI
+./bfwi -t "${dst}" "${src}" 2>/dev/null
+
+dst="${dst}${src}"
+
+# extract everything
+diff <(./gufi_find "${dst}" --select "path(), name, type, mode, nlink, uid, gid, size, linkname" --root "${root}" | sort) <(
+    (echo "${dst}|1MB|f|33204|1|1001|1001|1048576||"
+     echo "${dst}|.hidden|f|33204|1|1001|1001|0||"
+     echo "${dst}|unusual, name?#|f|33204|1|1001|1001|0||"
+     echo "${dst}|empty_file|f|33204|1|1001|1001|0||"
+     echo "${dst}|1KB|f|33204|1|1001|1001|1024||"
+     echo "${dst}|repeat_name|f|33204|1|1001|1001|0||"
+     echo "${dst}/directory|writeonly|f|32912|1|1001|1001|0||"
+     echo "${dst}/directory|readonly|f|33060|1|1001|1001|0||"
+     echo "${dst}/directory|executable|f|33277|1|1001|1001|0||"
+     echo "${dst}/directory/subdirectory|repeat_name|f|33204|1|1001|1001|0||"
+
+    ) | sort)

@@ -18,7 +18,7 @@ FUSE_FILES    = bfresultfuse
 
 
 
-all:   bfw tools
+all:   bfw tools test
 
 bfw:   $(BFW)
 tools: $(TOOLS)
@@ -61,8 +61,10 @@ LIBS := -lgufi -pthread
 CFLAGS += -std=gnu11
 ifneq ($(DEBUG),)
 	CFLAGS += -g -O0 -DDEBUG
+	CXXFLAGS += -g -O0 -DDEBUG
 else
 	CFLAGS += -O3
+	CXXFLAGS += -O3
 endif
 
 
@@ -136,7 +138,7 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
 %: %.cpp libgufi.a
-	$(CXX) $(CFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
+	$(CXX) $(CXXFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
 
 # --- clean-up
 
@@ -158,6 +160,7 @@ test: $(GTEST_INSTALL_DIR)
 
 clean_test:
 	rm -rf $(TEST_PRODUCTS)
+	$(MAKE) -C test clean
 
 clean:
 	rm -f libgufi.a
@@ -170,4 +173,3 @@ clean:
 	@ (for F in `ls *.c* | sed -e 's/\.c.*$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
 	rm -f $(SQLITE3_PCRE)/pcre.so
 	rm -rf $(GTEST_BUILD_DIR) $(GTEST_INSTALL_DIR)
-	$(MAKE) -C test clean
