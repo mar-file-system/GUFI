@@ -80,9 +80,6 @@ else
 	LIBS += -lsqlite3
 endif
 
-sqlite3-pcre/pcre.so:
-	$(MAKE) -C sqlite3-pcre
-
 # different fuse libs for OSX/Linux
 UNAME_S = $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
