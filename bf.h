@@ -212,7 +212,7 @@ int parse_cmd_line(int         argc,
 #define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                         \
    do {                                                                 \
       const char* src = (SOURCE); /* might be "argv[idx++]" */          \
-      if (strlen(src) >= (MAX)) {                                    \
+      if (strlen(src) >= (MAX)) {                                       \
          fprintf(stderr, "argument '%s' exceeds max allowed (%d)\n",    \
                  (ARG_NAME), (MAX));                                    \
          retval = -1;                                                   \
@@ -224,9 +224,25 @@ int parse_cmd_line(int         argc,
 
 #define INSTALL_INT(VAR, SOURCE, MIN, MAX, ARG_NAME)                    \
    do {                                                                 \
-      (VAR) = atoi(SOURCE); /* might be "argv[idx++]" */                \
+      if (sscanf((SOURCE), "%d", &(VAR)) != 1) {                        \
+        retval = -1;                                                    \
+        break;                                                          \
+      }                                                                 \
       if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
          fprintf(stderr, "argument '%s' not in range [%d,%d]\n",        \
+                 (ARG_NAME), (MIN), (MAX));                             \
+         retval = -1;                                                   \
+      }                                                                 \
+   } while (0)
+
+#define INSTALL_UINT(VAR, SOURCE, MIN, MAX, ARG_NAME)                   \
+   do {                                                                 \
+      if (sscanf((SOURCE), "%lu", &(VAR)) != 1) {                       \
+        retval = -1;                                                    \
+        break;                                                          \
+      }                                                                 \
+      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
+         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",      \
                  (ARG_NAME), (MIN), (MAX));                             \
          retval = -1;                                                   \
       }                                                                 \

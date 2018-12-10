@@ -416,7 +416,7 @@ int main(int argc, char *argv[])
      if (in.aggregate_or_print == AGGREGATE) {
          // modify in.sqlent to insert the results into the aggregate table
          char orig_sqlent[MAXSQL];
-         snprintf(orig_sqlent, MAXSQL, in.sqlent);
+         snprintf(orig_sqlent, MAXSQL, "%s", in.sqlent);
          snprintf(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
 
          // create the aggregate database

@@ -3,7 +3,7 @@ GTEST_INSTALL_DIR ?= ../../googletest/install
 
 CC?=gcc
 CXX?=g++
-CFLAGS=-Wall -g3 -O0 -I$(GTEST_INSTALL_DIR)/include/
+CFLAGS=-Wall -std=c++11 -g3 -O0 -I$(GTEST_INSTALL_DIR)/include/
 LDFLAGS=-L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -lpthread
 
 TARGET=test

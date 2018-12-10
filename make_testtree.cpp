@@ -384,7 +384,7 @@ void thread(void *args) {
 
                 struct work work;
 
-                snprintf(work.name, MAXPATH, s.str().c_str());
+                snprintf(work.name, MAXPATH, "%s", s.str().c_str());
                 snprintf(work.type, 2, "f");
                 snprintf(work.linkname, MAXPATH, "");
                 snprintf(work.xattr, MAXPATH, "xattr %zu", i);
@@ -423,7 +423,7 @@ void thread(void *args) {
 
         struct work work;
 
-        snprintf(work.name, MAXPATH, arg->directory.c_str());
+        snprintf(work.name, MAXPATH, "%s", arg->directory.c_str());
         snprintf(work.type, 2, "d");
         snprintf(work.linkname, MAXPATH, "");
         snprintf(work.xattr, MAXPATH, "xattr");
