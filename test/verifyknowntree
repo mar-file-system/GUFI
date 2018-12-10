@@ -30,6 +30,7 @@ diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, t
         echo "${dst}/directory/writeonly|f|--w--w--w-|1|1001|1001|0||"
         echo "${dst}/empty_file|f|-rw-rw-rw-|1|1001|1001|0||"
         echo "${dst}/.hidden|f|-rw-rw-rw-|1|1001|1001|0||"
+        echo "${dst}/old_file|f|-rw-rw-rw-|1|1001|1001|0||"
         echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001|0||"
         echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001|0||"
     ) | sort)
@@ -47,6 +48,7 @@ diff <(./gufi_find "${dst}" --select "path() || '/' || name as name, type, modet
         echo "${dst}/empty_file|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/file_symlink|l|-rwxrwxrwx|1|1001|1001|${src}/1KB|"
         echo "${dst}/.hidden|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/old_file|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001||"
     ) | sort)

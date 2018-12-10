@@ -97,6 +97,7 @@
 # |---- empty_file
 # |---- file_symlink -> 1KB
 # |---- .hidden
+# |---- old_file
 # |---- repeat_name
 #
 # Symlinks are not generated because their size changes depending on the directory they point to
@@ -201,6 +202,7 @@ touch "unusual, name?#"
 touch .hidden
 touch repeat_name
 ln -f -s $(realpath 1KB) file_symlink
+touch -d "1970-01-01 00:00:00" old_file
 
 mkdir directory
 cd directory
