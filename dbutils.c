@@ -196,7 +196,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     if (createtables) {
         if (openwhat != 3)
           sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
-       if (openwhat==7)
+       if (openwhat==7 || openwhat==8)
           sprintf(dbn,"%s", name);
     }
     else {
@@ -237,7 +237,7 @@ exit(9);
     //printf("sqlite3_open %s openwhat %d\n",dbn,openwhat);
     if (createtables) {
        //printf("sqlite3_open %s openwhat %d creating tables\n",dbn,openwhat);
-       if (openwhat==1 || openwhat==4)
+       if (openwhat==1 || openwhat==4 || openwhat==8)
           //printf("esql: %s \n", dbn);
           SQLITE3_EXEC(db, esql, 0, 0, &err_msg);
           //printf("esql: %s %s \n", dbn, sqlite3_errmsg(db));
@@ -248,7 +248,7 @@ exit(9);
           SQLITE3_EXEC(db, vtssqluser, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vtssqlgroup, 0, 0, &err_msg);
        }
-       if (openwhat==2 || openwhat==4) {
+       if (openwhat==2 || openwhat==4 || openwhat==8) {
           SQLITE3_EXEC(db, ssql, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vssqldir, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vssqluser, 0, 0, &err_msg);
@@ -820,6 +820,15 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    int mytid;
+ 
+    mytid=gettid(); 
+    sqlite3_result_text(context, gps[mytid].gfpath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
 static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int mytid;
@@ -858,6 +867,7 @@ int addqueryfuncs(sqlite3 *db) {
        sqlite3_create_function(db, "uidtouser", 1, SQLITE_UTF8, NULL, &uidtouser, NULL, NULL);
        sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL);
        sqlite3_create_function(db, "path", 0, SQLITE_UTF8, NULL, &path, NULL, NULL);
+       sqlite3_create_function(db, "fpath", 0, SQLITE_UTF8, NULL, &fpath, NULL, NULL);
        sqlite3_create_function(db, "epath", 0, SQLITE_UTF8, NULL, &epath, NULL, NULL);
        sqlite3_create_function(db, "modetotxt", 1, SQLITE_UTF8, NULL, &modetotxt, NULL, NULL);
        return 0;

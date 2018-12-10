@@ -118,6 +118,8 @@ static void processdir(void * passv)
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
+    char tpath[MAXPATH];
+    char trpath[MAXPATH];
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     mytid=0;
@@ -198,6 +200,9 @@ static void processdir(void * passv)
           // for directories we have to take off after the last slash
           // and set the path so users can put path() in their queries
           sprintf(gps[mytid].gpath,"%s",shortname);
+          getcwd(tpath,sizeof(tpath));
+          sprintf(trpath,"%s/%s",tpath,shortname);
+          realpath(trpath,gps[mytid].gfpath);
           recs=rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
           //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
         } else {
@@ -212,6 +217,9 @@ static void processdir(void * passv)
             // set the path so users can put path() in their queries
             //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
             sprintf(gps[mytid].gpath,"%s",passmywork->name);
+            getcwd(tpath,sizeof(tpath));
+            sprintf(trpath,"%s/%s",tpath,passmywork->name);
+            realpath(trpath,gps[mytid].gfpath);
             rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
             //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
             //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
