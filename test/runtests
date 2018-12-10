@@ -74,26 +74,34 @@
 # OF SUCH DAMAGE.
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-TEST=`dirname $SCRIPT`
+SCRIPT="$(dirname $BASH_SOURCE)" # Must be at the top
 
 
-# don't risk rf -rf /test/...
-[ -n "$TEST" ] && rm -rf $TEST/copy
+function usage() {
+    echo "$0 dir GUFI_tree"
+}
 
+if [[ "$#" -lt "2" ]]; then
+    usage
+    exit 1
+fi
 
+TEST="$1"
+COPY="$2"
 
+function cleanup {
+    rm -rf "$COPY"
+}
+
+trap cleanup EXIT
 
 # example
+$SCRIPT/runbfwi $TEST $COPY
+COPY="$COPY/$TEST"
 
-$TEST/runbfwi $TEST/testdir  $TEST/copy
-
-$TEST/runbfti $TEST/copy/test/testdir
-
-$TEST/runbfq  $TEST/copy/test/testdir
-
-
-$TEST/runquerydb  $TEST/copy/test/testdir
+$SCRIPT/runbfti $COPY
+$SCRIPT/runbfq  $COPY
+$SCRIPT/runquerydb  $COPY
 
 
 

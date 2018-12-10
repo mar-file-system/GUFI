@@ -193,7 +193,7 @@ def build_where(args):
     # if args.true:
 
     if args.type is not None:
-        where += ['type == {}'.format(args.type)]
+        where += ['type == "{}"'.format(args.type)]
 
     if args.uid is not None:
         where += ['uid == {}'.format(args.uid)]

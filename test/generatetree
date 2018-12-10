@@ -81,12 +81,12 @@
 # ${ROOT}/
 # |---- 1KB
 # |---- 1MB
-# |---- empty_file
 # |---- directory/
 #       |---- executable
 #       |---- readonly
 #       |---- writeonly
 #       |---- subdirectory/
+#             |---- directory_symlink -> subdirectory
 #             |---- (optional) <gid>_gid_directory/
 #             |---- (optional) <gid>_gid_file
 #             |---- (optional) <uid>_uid_<gid>_gid_directory/
@@ -94,6 +94,8 @@
 #             |---- (optional) <uid>_uid_directory/
 #             |---- (optional) <uid>_uid_file
 #             |---- repeate_name
+# |---- empty_file
+# |---- file_symlink -> 1KB
 # |---- .hidden
 # |---- repeat_name
 #
@@ -198,7 +200,7 @@ truncate --size=1M 1MB
 touch "unusual, name?#"
 touch .hidden
 touch repeat_name
-# ln -f -s $(realpath 1KB) file_symlink
+ln -f -s $(realpath 1KB) file_symlink
 
 mkdir directory
 cd directory
@@ -211,7 +213,7 @@ chmod -rx writeonly
 mkdir subdirectory
 
 cd subdirectory
-# ln -f -s $(realpath .) directory_symlink
+ln -f -s $(realpath .) directory_symlink
 touch repeat_name
 
 # create file and directory with a given uid (requires sudo)
