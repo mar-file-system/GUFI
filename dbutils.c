@@ -196,7 +196,7 @@ sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
     if (createtables) {
         if (openwhat != 3)
           sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
-       if (openwhat==7)
+       if (openwhat==7 || openwhat==8)
           sprintf(dbn,"%s", name);
     }
     else {
@@ -237,7 +237,7 @@ exit(9);
     //printf("sqlite3_open %s openwhat %d\n",dbn,openwhat);
     if (createtables) {
        //printf("sqlite3_open %s openwhat %d creating tables\n",dbn,openwhat);
-       if (openwhat==1 || openwhat==4)
+       if (openwhat==1 || openwhat==4 || openwhat==8)
           //printf("esql: %s \n", dbn);
           SQLITE3_EXEC(db, esql, 0, 0, &err_msg);
           //printf("esql: %s %s \n", dbn, sqlite3_errmsg(db));
@@ -248,7 +248,7 @@ exit(9);
           SQLITE3_EXEC(db, vtssqluser, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vtssqlgroup, 0, 0, &err_msg);
        }
-       if (openwhat==2 || openwhat==4) {
+       if (openwhat==2 || openwhat==4 || openwhat==8) {
           SQLITE3_EXEC(db, ssql, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vssqldir, 0, 0, &err_msg);
           SQLITE3_EXEC(db, vssqluser, 0, 0, &err_msg);

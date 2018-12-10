@@ -178,9 +178,11 @@ options:
   -Y                 default all directories as suspect
   -Z                 default all files links as suspect
   -W <insuspectfile> path to input suspect file
-  -A <suspectmethod> suspect method 
+  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl)
   -c <suspecttime>   time in seconds since epoch for suspect comparison
   -g <stridesize>    stride size for striping inodes into separate output db's 
+  -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
+  -x                 process xattrs if you are creating gufi dbs of suspect directories
 
 Flow:
 if using input suspect file read that in and put into memory trie for lookups
@@ -189,9 +191,12 @@ threads are started
 loop assigning work (directories) from queue to threads
 each thread lists the directory readdirplus
   if using suspect file, see if this inode matches a suspect file or dir or link
+  if using suspect mode involving stat then use that to help determine of a directory is suspect
   if we are striping the inodes into different outdb's, we have to lock on the output db to place records into proper outdbs
   if directory put it on the queue print to screen write to outdb
   if link or file print it to screen write to outdb
+  put dirs and/or files into output db (path, inode, pinode, type, suspect) into output dir
+  if to_dir provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
   close directory
 end
 close outdb if needed
@@ -424,7 +429,55 @@ dfw - depth first walk of tree using readdir, or readdir/stat, or
 Flow:
 single threaded depth first walk, using readdir+, or stat depending on input parms and optionally get xattrs, write output to stdout
 
+...........................................................................
+bfresultfuse - fuse daemon to read the output of a properly formed bfq query with output dbs and present it as a fuse mount point
 
+Usage: bfresultfuse -s mountpoint  tablename_from_bfq_query inputdb number_of_inputdbs 
+options:
+  -s                           tells fuse to run single threaded - this has only been tested in single thread mode 
+   mountpoint                  directory on which you want the fuse mounted
+   tablename_from_bfq_query    this fuse daemon takes the output of a bfq query which produced output db's (one per thread) as input to the fuse
+                               the query must be formed properly to have the right fields/order in the output dbs 
+                               see test/runbfqforfuse as how to run bfq to produce output dbs suitable for input into this fuse daemon
+                               this is the output table name in the output dbs from the bfq run
+   inputdb                     base name for output dbs of bfq query used as input to this fuse (basename.threadnum)
+   number_of_inputdbs          this is how many threads you ran on the bfq to produce the output dbs to tell the fuse how many dbs there are to union
+
+Flow:
+This is a fuse daemon that honors 
+getattr, readdir, readlink, access, getxattr, listxattr
+meaning you can only run commands that use the implicated posix calls against this mount point like 
+ls, stat, find, etc.  you can not run file ops like open/read/write/close etc. so no cat or the like
+it issues queries into the inputdbs to respond to these fuse requests
+
+...........................................................................
+
+bffuse - fuse daemon to sit atop the gufi tree and present the gufi tree as a mounted fuse file system on the mountpoint provided
+         it will honor a partial sql statement you provide as input 
+         the partial sql is just the where part and only supports where clause on files/links, so like size > 40000
+         you must look at the schema for the entries table in the gufi db to see what fields you have to provide sql where clause 
+
+Usage: bffuse mountpoint top_dir_of_gufitree 
+options:
+   -s                          tells fuse to run single threaded - this has only been tested in single thread mode
+   mountpoint                  directory on which you want the fuse mounted
+   top_dir_of_gufitree         point this where in the gufi tree you want to have this fuse file system to present as a fuse file system
+                               it can be the very top of the gufi tree but it can be lower in the gufitree as well 
+                               it is designed to be used in single user mode you launch the fuse and point it at the place in the gufi tree
+                               you want to down into, and provide the query criteria for what types of files/links you want to look at
+                               all subsequent readdir/stat operations honor that query criteria when you use standard file system
+                               commands on the fuse mount like find/ls/stat etc.
+   "sql where clause"          the sql where clause on the files/links 
+
+Flow:
+This is a fuse daemon that honors 
+getattr, readdir, readlink, access, getxattr, listxattr
+meaning you can only run commands that use the implicated posix calls against this mount point like 
+ls, stat, find, etc.  you can not run file ops like open/read/write/close etc. so no cat or the like
+it uses the gufi tree for directory tree placement lookups and issues queries into the gufi database per directory level  to respond to these fuse requests
+it is designed to be run as a user, if you run it as root then it should be a private mount point for root
+
+...........................................................................
 
 === scripts
 
@@ -638,6 +691,8 @@ runbfq - run various queries on testdirdup/testdir gufi tree including output fi
 runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir  
 runquerydbn - do various queries on outdb.* output dbs using the union capability of querydbn
 runbfwreaddirplus2db - run tests that walk trees using readdirplus and write path,inode,pinode etc. to output dbs
+runbfqforfuse - run bfwi to create gufi then run bfq to create an output db and then run bfresultfuse on that output db 
+runbffuse - run bfwi to create gufi then run bfq to show you have a gufi then run bffuse over that gufi
 
 rundfw - do various walks on the testdir tree
 runlistschemadb - list the schema in a gufi db

@@ -107,6 +107,8 @@ long long int glsuspectflmax;
 long long int glsuspectdmin;
 long long int glsuspectdmax;
 
+int gltodirmode;
+
 /* a triell for directories and one for files and links */
 struct Trie* headd;
 struct Trie* headfl;
@@ -140,6 +142,109 @@ int searchmyll(long long int lull, int lutype) {
    return(ret); 
 }
 
+
+int reprocessdir(void * passv, DIR *dir)
+{
+    struct work *passmywork = passv;
+    struct work qwork;
+    //DIR *dir;
+    struct dirent *entry;
+    int mytid;
+    sqlite3 *db;
+    sqlite3 *db1;
+    char *records; 
+    char lpatho[MAXPATH];
+    struct sum summary;
+    sqlite3_stmt *res;   
+    sqlite3_stmt *reso;   
+    char dbpath[MAXPATH];
+    int transcnt;
+    int loop;
+    char plinein[MAXPATH+MAXPATH+MAXPATH];
+    long long int pos;
+    int rc;
+
+    // rewind the directory
+    rewinddir(dir);
+
+    //open the gufi db for this directory into the parking lot directory the name as the inode of the dir 
+    sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
+    if (!(db = opendb(dbpath,db1,8,1)))
+       return -1;
+    res=insertdbprep(db,reso);
+    startdb(db);
+    records=malloc(MAXRECS);
+    bzero(records,MAXRECS);
+    zeroit(&summary);
+
+    // loop over dirents, if link push it on the queue, if file or link
+    // print it, fill up qwork structure for each
+    transcnt = 0;
+    loop=1;
+    while (loop == 1) {
+        
+        /* get the next dirent */
+        if (!(entry = readdir(dir))) break;
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+          continue;
+        //printf("reprocessdir: dir %s entry %s\n",passmywork->name,entry->d_name);
+
+        bzero(&qwork,sizeof(qwork));
+        qwork.pinode=passmywork->statuso.st_ino;
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+           continue;
+        sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
+        lstat(qwork.name, &qwork.statuso);
+        qwork.xattrs=0;
+        if (in.doxattrs > 0) {
+          qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
+        }
+        if (S_ISDIR(qwork.statuso.st_mode) ) {
+            // this is how the parent gets passed on
+            //qwork.pinode=passmywork->statuso.st_ino;
+            // there is no work to do for a directory here - we are processing files and links of this dir into a gufi db
+            continue;
+        } else if (S_ISLNK(qwork.statuso.st_mode) ) {
+            // its a link so get the linkname
+            bzero(lpatho,sizeof(lpatho));
+            readlink(qwork.name,lpatho,MAXPATH);
+            sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+            sumit(&summary,&qwork);
+            insertdbgo(&qwork,db,res);
+            transcnt++;
+            if (transcnt > 100000) {
+              stopdb(db);
+              startdb(db);
+              transcnt=0;
+            }
+        } else if (S_ISREG(qwork.statuso.st_mode) ) {
+            sprintf(qwork.type,"%s","f");
+            sumit(&summary,&qwork);
+            insertdbgo(&qwork,db,res);
+            transcnt++;
+            if (transcnt > 100000) {
+              stopdb(db);
+              startdb(db);
+              transcnt=0;
+            }
+        }
+    }
+
+    stopdb(db);
+    insertdbfin(db,res);
+
+    // this i believe has to be after we close off the entries transaction 
+    insertsumdb(db,passmywork,&summary);
+    closedb(db);
+
+    chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
+    chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
+    free(records);
+
+    return 0;
+
+}
+
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 static void processdir(void * passv)
@@ -162,6 +267,7 @@ static void processdir(void * passv)
     int todb;
     int lookup;
     struct stat st;
+    int rc;
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
@@ -323,6 +429,13 @@ static void processdir(void * passv)
       }
     }
 
+    if (passmywork->suspect==1) {
+      if (gltodirmode==1) {
+        rc=reprocessdir(passmywork,dir);
+        if (rc !=0) fprintf(stderr,"problem producing gufi db for suspect directory\n");
+      }
+    }
+
  out_dir:
     // close dir
     closedir(dir);
@@ -477,12 +590,14 @@ int main(int argc, char *argv[])
      struct work mywork;
      int i;
      sqlite3 *dbo;
+     struct stat st;
+     int rc;
 
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHpPn:O:rRYZW:g:A:c:", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHpPn:O:rRYZW:g:A:c:xt:", 1, "input_dir");
      if (in.helped)
         sub_help();
 
@@ -498,6 +613,23 @@ int main(int argc, char *argv[])
      }
      if (validate_inputs())
         return -1;
+
+     /* check the output directory for the gufi dbs for suspect dirs if provided */
+     gltodirmode=0;
+     rc=1;
+     if (strlen(in.nameto) > 0) {
+       gltodirmode=1;
+       /*make sure the directory to put the gufi dbs into exists and we can write to it */       
+       rc=lstat(in.nameto,&st);
+       if (rc != 0) {
+         fprintf(stdout,"directory to place gufi dbs problem for %s\n",in.nameto);
+         return -1;
+       }
+       if (!S_ISDIR(st.st_mode) ) {
+         fprintf(stdout,"directory to place gufi dbs is not a directory\n");
+         return -1;
+       }
+     }
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here
@@ -529,3 +661,4 @@ int main(int argc, char *argv[])
      thpool_destroy(mythpool);
      return 0;
 }
+
