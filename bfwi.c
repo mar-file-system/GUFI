@@ -114,22 +114,22 @@ void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
 
     //printf("in parsetowork delim %s inpline %s\n",inpdelim,inpline);
     inpline[strlen(inpline)-1]= '\0';
-    p=inpline; q=strstr(p,inpdelim);   bzero(q,1); sprintf(pinwork->name,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1), sprintf(pinwork->type,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1); pinwork->statuso.st_ino=atol(p);
-    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1); pinwork->statuso.st_mode=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_nlink=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_uid=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_gid=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_size=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_blksize=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_blocks=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_atime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_mtime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_ctime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); sprintf(pinwork->linkname,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); sprintf(pinwork->xattr,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->crtime=atol(p);
+    p=inpline; q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->name,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1), sprintf(pinwork->type,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_ino=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_mode=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_nlink=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_uid=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_gid=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_size=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_blksize=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_blocks=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_atime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_mtime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_ctime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->linkname,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->xattr,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->crtime=atol(p);
 
 }
 
@@ -149,7 +149,7 @@ void *scout(void * param) {
       exit(-1); /* not the best way out i suppose */
     }
     //printf("reading input file now\n");
-    bzero(linein,sizeof(linein));;
+    memset(linein, 0, sizeof(linein));
     //sleep(5);
     while (fgets (linein, sizeof(linein), finfile) !=NULL ) {
           //printf("got input line %s\n",linein);
@@ -163,7 +163,7 @@ void *scout(void * param) {
              mywork->offset=foffset;
              pushdir(mywork);
           }
-          bzero(linein,sizeof(linein));;
+          memset(linein, 0, sizeof(linein));
     }
     fclose(finfile);
     //sleep(5);
@@ -227,7 +227,7 @@ static void processdir(void * passv)
          //printf("tid %d made dir %s\n",mytid,passmywork->name);
        }
        records=malloc(MAXRECS);
-       bzero(records,MAXRECS);
+       memset(records, 0, MAXRECS);
        zeroit(&summary);
        if (!(db = opendb(passmywork->name,4,1)))
           goto out_dir;
@@ -248,14 +248,14 @@ static void processdir(void * passv)
           if (!(entry = readdir(dir))) break;
         } else {
           /* get the next record */
-          bzero(plinein,sizeof(plinein));
+          memset(plinein, 0, sizeof(plinein));
           if (fgets (plinein, sizeof(plinein), gin[mytid]) ==NULL ) break;
           //printf("tid %d got line %s\n",mytid,plinein);
         }
 
 /*?????  farret out two modes from here */
 
-        bzero(&qwork,sizeof(qwork));
+        memset(&qwork, 0, sizeof(qwork));
         qwork.pinode=passmywork->statuso.st_ino;
         if (in.infile == 0) {
           if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -411,11 +411,11 @@ int processinit(void * myworkin) {
              mywork->offset=foffset;
              pushdir(mywork);
           }
-          bzero(linein,sizeof(linein));;
+          memset(linein, 0, sizeof(linein));;
        }
 */
 /***
-       bzero(linein,sizeof(linein));;
+       memset(linein, 0, sizeof(linein));;
        if (fgets(linein, sizeof(linein), finfile) !=NULL ) {
           parsetowork (in.delim, linein, mywork );
           if (!strncmp(mywork->type,"d",1)) {

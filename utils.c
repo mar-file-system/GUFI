@@ -177,7 +177,7 @@ int pullxattrs( const char *name, char *bufx) {
     int xattrs;
     unsigned int ptest;
     bufxp=bufx;
-    bzero(buf,sizeof(buf));
+    memset(buf, 0, sizeof(buf));
 
     buflen = LISTXATTR(name, buf, sizeof(buf));
 
@@ -187,7 +187,7 @@ int pullxattrs( const char *name, char *bufx) {
        //printf("xattr exists len %zu %s\n",buflen,buf);
        key=buf;
        while (buflen > 0) {
-         bzero(bufv,sizeof(bufv));
+         memset(bufv, 0, sizeof(bufv));
 
          bufvlen = GETXATTR(name, key, bufv, sizeof(bufv));
 
@@ -511,7 +511,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      //printf("cutting name down %s len %d\n",prefix,i);
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
-          bzero(pp,1);
+          memset(pp, 0, 1);
           sprintf(endname,"%s",pp+1);
           break;
        }
@@ -591,8 +591,8 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
     printf("xattr: %s",xattr);
 /*
     while (cnt < xattrs) {
-      bzero(buf,sizeof(buf));
-      bzero(bufv,sizeof(bufv));
+      memset(buf, 0, sizeof(buf));
+      memset(bufv, 0, sizeof(bufv));
       strcpy(buf,xattrp); xattrp=xattrp+strlen(buf)+1;
       printf("%s",buf);
       strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1;

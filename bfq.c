@@ -215,7 +215,7 @@ static void processdir(void * passv)
         if (passmywork->level >= in.min_level) {
             // run query on summary, print it if printing is needed, if returns none
             // and we are doing AND, skip querying the entries db
-            // bzero(endname,sizeof(endname));
+            // memset(endname, 0, sizeof(endname));
             shortpath(passmywork->name,shortname,endname);
             sprintf(gps[mytid].gepath,"%s",endname);
             if (strlen(in.sqlsum) > 1) {

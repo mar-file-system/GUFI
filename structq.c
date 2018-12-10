@@ -79,7 +79,7 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 
 
 struct Node
@@ -123,7 +123,7 @@ void pushn(struct work *twork)
      struct Node *temp;
      temp=(struct Node *)malloc(sizeof(struct Node));
      qent++;
-     bcopy (twork,&temp->swork,sizeof(struct work));
+     memcpy(&temp->swork,twork,sizeof(struct work));
      temp->swork.freeme=temp;
      if (front == NULL)
      {
@@ -148,7 +148,7 @@ struct work* pushn2_part1(struct work *twork)
 {
      struct Node *temp;
      temp=(struct Node *)malloc(sizeof(struct Node));
-     bcopy (twork,&temp->swork,sizeof(struct work));
+     memcpy(&temp->swork,twork,sizeof(struct work));
      temp->swork.freeme=temp;
      return &temp->swork;
 }
@@ -186,7 +186,7 @@ void display()
                 var=var->next;
            }
      printf("\n");
-     } 
+     }
      else
      printf("\ndisplayQueue is Empty");
 }
@@ -198,7 +198,7 @@ void displaycurrent()
      {
         printf("current: \t%s",var->swork.name);
         printf("\n");
-     } 
+     }
      else
         printf("\ndisplaycurrentQueue is Empty");
 }
@@ -222,4 +222,3 @@ struct work * addrcurrents()
         printf("\naddrcurrentsQueue is Empty");
      return NULL;
 }
-
