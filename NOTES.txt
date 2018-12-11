@@ -150,3 +150,7 @@ fixed test/runbfqforfuse was pointed at /tmp bfq db
 still dont see why it wont work unless you run it in debug mode
 -------------------------------------------------------------------
 created runbffuse to run bfwi to create a gufi, run bfq to show the gufi, then run bffuse over the gufi
+-------------------------------------------------------------------
+added -d and -o t allow bfwreaddirplus2db to write output files in addition to output dbs and removed -p and -P for printing
+added testcases in test/runbfwreaddirplus2db to test this
+changed README to reflect these changes

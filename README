@@ -171,9 +171,9 @@ Usage: bfwreaddirplus2db [options] input_dir outdb
 options:
   -h                 help
   -H                 show assigned input values (debugging)
-  -p                 print files as they are encountered
+  -o <outfile>       output file one per thread writes path, inode, pinode, type to file
   -n <threads>       number of threads
-  -P                 print directories as they are encountered
+  -P <delimiter>     delimiter for output file 
   -O <outputdb>      write a set of output dbs
   -Y                 default all directories as suspect
   -Z                 default all files links as suspect
@@ -197,6 +197,7 @@ each thread lists the directory readdirplus
   if link or file print it to screen write to outdb
   put dirs and/or files into output db (path, inode, pinode, type, suspect) into output dir
   if to_dir provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
+  if writing output file write files, links, and directories to output files on  per thread (can use striping of inodes across files)
   close directory
 end
 close outdb if needed

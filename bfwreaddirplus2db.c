@@ -100,6 +100,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 
 pthread_mutex_t outdb_mutex[MAXPTHREAD];
+pthread_mutex_t outfile_mutex[MAXPTHREAD];
 sqlite3_stmt *global_res[MAXPTHREAD];
 
 long long int glsuspectflmin;
@@ -265,6 +266,7 @@ static void processdir(void * passv)
     int transcnt;
     int wentry;
     int todb;
+    int tooutfile;
     int lookup;
     struct stat st;
     int rc;
@@ -319,11 +321,24 @@ static void processdir(void * passv)
            }
          }
     }
- 
+    if (in.outfile > 0) {
+      tooutfile=mytid;
+      if (in.stride > 0) {
+        tooutfile=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+        //******** start a lock
+        pthread_mutex_lock(&outfile_mutex[todb]);
+      }
+      //fprintf(stderr,"threadd %d inode %lld file %d\n",mytid,passmywork->statuso.st_ino,tooutfile);
+      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim);
+      if (in.stride > 0) {
+        pthread_mutex_unlock(&outfile_mutex[todb]);
+      }
+    }
+/*
     if (in.printing > 0 || in.printdir > 0) {
       printits(passmywork,mytid);
     }
-
+*/
     // loop over dirents, if link push it on the queue, if file or link
     // print it, fill up qwork structure for each
     transcnt=0;
@@ -351,9 +366,11 @@ static void processdir(void * passv)
             wentry=1;
         }
         if (wentry==1) {
+/*
           if (in.printing > 0) {
             printits(&qwork,mytid);
           }
+*/
           /* if suspect method is not zero then we can insert files and links, if not we dont care about files and links in db */
           if (in.suspectmethod == 0) {
             if (in.outdb > 0) {
@@ -395,6 +412,19 @@ static void processdir(void * passv)
               lstat(qwork.name,&st);
               if (st.st_ctime >= in.suspecttime) passmywork->suspect=1;
               if (st.st_mtime >= in.suspecttime) passmywork->suspect=1;
+            }
+          }
+          if (in.outfile > 0) {
+            tooutfile=mytid;
+            if (in.stride > 0) {
+              tooutfile=(qwork.statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+              //******** start a lock
+              pthread_mutex_lock(&outfile_mutex[todb]);
+            }
+            //fprintf(stderr,"threadf %d inode %lld file %d\n",mytid,qwork.statuso.st_ino,tooutfile);
+            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim);
+            if (in.stride > 0) {
+              pthread_mutex_unlock(&outfile_mutex[todb]);
             }
           }
         }
@@ -464,6 +494,7 @@ int processinit(void * myworkin) {
      long long int testll;
      long long int cntd;
      long long int cntfl;
+     char outfn[MAXPATH];
 
      if (in.suspectfile > 0) {
        if( (isf = fopen(in.insuspect, "r")) == NULL)
@@ -534,6 +565,22 @@ int processinit(void * myworkin) {
        }
      }
 
+     //open up the output files if needed
+     if (in.outfile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         sprintf(outfn,"%s.%d",in.outfilen,i);
+         //fprintf(stderr,"init opening %s.%d",in.outfilen,i);
+         gts.outfd[i]=fopen(outfn,"w");
+         if (in.stride > 0) {
+           if (pthread_mutex_init(&outfile_mutex[i], NULL) != 0) {
+             fprintf(stderr,"\n mutex %d init failed\n",i);
+           }
+         }
+         i++;
+       }
+     }
+
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
      lstat(in.name, &mywork->statuso);
@@ -569,7 +616,18 @@ int i;
          i++;
        }
      }
-  
+     // close outputfiles
+     if (in.outfile > 0) {
+       i=0;
+       while (i < in.maxthreads) {
+         fclose(gts.outfd[i]);
+         if (in.stride > 0) {
+           pthread_mutex_destroy(&outdb_mutex[i]);
+         }
+         i++;
+       }
+     }
+
      return 0;
 }
 
@@ -597,7 +655,9 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHpPn:O:rRYZW:g:A:c:xt:", 1, "input_dir");
+     //fprintf(stderr,"in main beforeparse\n");
+     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xt:", 1, "input_dir");
+     //fprintf(stderr,"in main right after parse\n");
      if (in.helped)
         sub_help();
 
@@ -611,9 +671,11 @@ int main(int argc, char *argv[])
         if (retval)
            return retval;
      }
+     //fprintf(stderr,"in main after parse\n");
      if (validate_inputs())
         return -1;
 
+     //fprintf(stderr,"in main after validate\n");
      /* check the output directory for the gufi dbs for suspect dirs if provided */
      gltodirmode=0;
      rc=1;

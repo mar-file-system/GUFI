@@ -1,0 +1,330 @@
+#!/bin/bash
+
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+# 
+# 
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+# 
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# 
+# -----
+# NOTE:
+# -----
+# 
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+# 
+# 
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+# 
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+# 
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+# 
+# 
+# 
+
+
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+BFWREADDIRPLUS2DB=$DIR/../bfwreaddirplus2db
+QUERYDBN=$DIR/../querydbn
+
+
+# NOTE: The destination GUFI-tree is optional
+#       i.e. You can use bfwi just to do a breadth-first scan of the source-tree.
+#       This might be useful to see the amount of time spent just in reading.
+
+
+# Usage: bfwreaddirplus2db [options] input_dir
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -n <threads>    number of threads
+#   -O <outputdb>   output db
+#   -o <outfile>    output file one per thread
+#   -d <delimiter>  delimiter character for file output
+#   -Y                 default all directories as suspect
+#   -Z                 default all files links as suspect
+#   -W <insuspectfile> path to input suspect file
+#   -g <stridesize>    stride size for striping inodes
+#   -c <suspecttime>   time in seconds since epoch for suspect comparision
+#   -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+#   -r                 insert files and links into db 
+#   -R                 insert dires into db 
+
+# 
+# input_dir         walk this tree to produce GUFI-tree
+# 
+
+usage() {
+    PROG=$1
+    echo "Usage: $PROG <source_tree> "
+    exit -1
+}
+
+SOURCE=$1
+GUFI_BASE=$2
+
+if (( $# < 1 || $# > 2 )); then
+    usage $0
+elif [ ! -d $SOURCE ]; then
+    usage $0
+fi
+
+
+# ...........................................................................
+# WARNING!
+#
+#   bfwreaddirplus2db can list a tree or build a db from a tree 
+#
+# THEREFORE:
+#
+#
+# ...........................................................................
+
+
+# defaults
+DEST=$1
+
+# run bfwreaddirplus2db and send output to screen
+echo
+echo "out to screen"
+
+echo $BFWREADDIRPLUS2DB -n 1 $DEST
+$BFWREADDIRPLUS2DB -n 1 $DEST 
+
+# run to create output db 
+echo
+echo "send to output to a db both files and dirs"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 1 -r -R -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -r -R -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+
+# run to create output db dirs only 
+echo
+echo "send to output to a db dirs only"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 1 -R -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -R -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+
+# run to create output db files and links only 
+echo
+echo "send to output to a db files and links only"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 1 -r -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -r -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.*
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+
+# run to create output db 
+echo
+echo "send to output to a db both files and dirs with all dirs suspect 2 threads"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -r -R -Y -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -r -R -Y -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+echo ""
+
+# run querydbn to union all the db's together into one table
+echo " run querydbn to union all the db's together into one table" 
+echo ""
+$QUERYDBN -N -V -p bfwreaddirplusdb 2 "select * from vreaddirplus" readdirplus
+
+# run to create output db 
+echo
+echo "send to output to a db both files and dirs with all dirs suspect 2 threads stride 10"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -r -R -Y -g 10 -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -r -R -Y -g 10 -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+
+
+# run to create output db 
+echo
+echo "send to output db dirs  only 2 threads suspectmethod 1 insuspectdfile"
+
+rm insuspectfile
+stat testdir/a | awk ' { print $2 " f" } ' >> insuspectfile
+stat testdir/c | awk ' { print $2 " d" } ' >> insuspectfile
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -R -A 1 -W insuspectfile -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -r -R -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+
+
+# run to create output db 
+echo
+echo "send to output to a db only dirs 2 threads suspectmethod 1 stride 10 insuspectfile"
+
+rm bfwreaddirplusdb.*
+echo $BFWREADDIRPLUS2DB -n 2 -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+
+
+# run to create output db 
+echo
+echo "send to output to a db only dirs 2 threads suspectmethod 1 stride 10 insuspectfile create gufi db for suspect dir"
+
+rm bfwreaddirplusdb.*
+rm -rf testbwrpdb
+mkdir testbwrpdb
+echo $BFWREADDIRPLUS2DB -n 2  -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb -x -t testbwrpdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb -x -t testbwrpdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+ls -l testbwrpdb
+t1=`ls testbwrpdb | head -1 | awk ' { print $1 } '`
+sqlite3 -line testbwrpdb/$t1 '.tables'
+sqlite3 -line testbwrpdb/$t1 'select * from entries;'
+sqlite3 -line testbwrpdb/$t1 'select * from summary;'
+t2=`ls testbwrpdb | tail -1 | awk ' { print $1 } '`
+sqlite3 -line testbwrpdb/$t1 '.tables'
+sqlite3 -line testbwrpdb/$t2 'select * from entries;'
+sqlite3 -line testbwrpdb/$t2 'select * from summary;'
+
+# run to create output files 
+echo
+echo "send to output to files files and dirs 2 threads suspectmethod 0 "
+
+rm bfwreaddirplusfl.*
+echo $BFWREADDIRPLUS2DB -n 2 -A 0 -o bfwreaddirplusfl $DEST
+$BFWREADDIRPLUS2DB -n 2 -o bfwreaddirplusfl $DEST 
+
+ls -l bfwreaddirplusfl.* 
+echo ""
+echo "thread 0 outfl"
+echo ""
+cat bfwreaddirplusfl.0
+echo ""
+echo "thread 1 outfl"
+cat bfwreaddirplusfl.1
+echo ""
+
+# run to create output files with stride
+echo
+echo "send to output to files files and dirs 2 threads suspectmethod 0 stride 10 "
+
+rm bfwreaddirplusfl.*
+echo $BFWREADDIRPLUS2DB -n 2 -A 0 -g 10 -o bfwreaddirplusfl $DEST
+$BFWREADDIRPLUS2DB -n 2 -o bfwreaddirplusfl $DEST 
+
+ls -l bfwreaddirplusfl.* 
+echo ""
+echo "thread 0 outfl"
+echo ""
+cat bfwreaddirplusfl.0
+echo ""
+echo "thread 1 outfl"
+cat bfwreaddirplusfl.1
+echo ""
