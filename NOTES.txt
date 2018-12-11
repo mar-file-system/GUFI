@@ -132,3 +132,25 @@ adding flag to to indicate provide input file into bfwi so it can create a gufi 
 adding capability to read that file in paralle with threads instead of readdir/stat of source tree
 ------------------------------------------------------------------------------
 Added fpath() sql query function to get full path as an sql variable you can use
+--------------------------------------------------------------------------------
+Added -t flag to bfreaddirplus2db to_dir to control if and where gufi dbs are created for suspect directories
+Added -x flag to bfreaddirplus2db to specify if xattrs are to be collected if making an output gufi db per suspect directory 
+----------------------------------------------------------------------------------
+Build bfresultfuse to allow running a fuse daemon (mounted file system) over the output of a properly formed bfq query that produces output dbs)
+-----------------------------------------------------------------------------------
+Build bffuse to allow mounting of a gufi tree as a fuse mounted file system and honor sql queries provided in users $home/.bffusesql
+made makebffuse to compile it
+-----------------------------------------------------------------------------------
+added -t and -x flags to bfwreaddirplus to provide a directory and whether
+to get xattrs when creating gufi dbs for suspect dirs named inode of suspect dir
+-----------------------------------------------------------------------------------
+added another open type to opendb in dbutils.c
+--------------------------------------------------------------------
+fixed test/runbfqforfuse was pointed at /tmp bfq db
+still dont see why it wont work unless you run it in debug mode
+-------------------------------------------------------------------
+created runbffuse to run bfwi to create a gufi, run bfq to show the gufi, then run bffuse over the gufi
+-------------------------------------------------------------------
+added -d and -o t allow bfwreaddirplus2db to write output files in addition to output dbs and removed -p and -P for printing
+added testcases in test/runbfwreaddirplus2db to test this
+changed README to reflect these changes

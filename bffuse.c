@@ -96,272 +96,633 @@ OF SUCH DAMAGE.
 #include <sys/uio.h>
 #include <unistd.h>
 #include <sqlite3.h>
+#include <sys/xattr.h>
 
 #include "bf.h"
 #include "dbutils.h"
 
-//char globalmnt[1024];
-//static const char *globalmnt = "/tmp/testdirdup/Users/ggrider";
-static const char *globalmnt = "testdirdup/testdir";
-static const char *globalsloc = "/tmp/summary.query";
-static const char *globaleloc = "/tmp/entries.query";
+char globalmnt[MAXPATH];
+int  globalmntlen;
+char globaldbname[MAXPTHREAD][MAXPATH];
+int  globaldbs;
+//sqlite3 *globaldb;
+char globalsql[MAXSQL];
+char globaltab[MAXSQL];
+char globalview[MAXSQL];
+struct stat globalst;
 
-static int hello_getattr(const char *path, struct stat *stbuf)
-{       
+static int gufir_getattr(const char *path, struct stat *stbuf) {
         int rc;
-        char fpath[1024];
-        const char * ptr;
+        sqlite3 *mydb;
         sqlite3_stmt    *res;
-        const char      *tail;
-        const char      *errMSG;
-        int     error = 0;
-        sqlite3 *db;
-        sqlite3 *db1;
+        const char   *tail;
         int rec_count;
-        const char *ptrl;
-        int cnt;
         char sqlstmt[1024];
-        char dbpath[1024];
-        struct stat st;
+        char *p;
+        char shortpathc[MAXPATH];
+        char endpath[MAXPATH];
+        char tpath[MAXPATH];
+        char dbn[MAXPATH];
 
-        ptr = path;
-        if (!strncmp(path,"/",1)) ptr++;   
-        sprintf(fpath,"%s/%s",globalmnt,ptr);
-        //fprintf(stdout,"fpath %s\n",fpath);
-        rc = lstat(fpath, stbuf);
-        //printf("lstat return %d\n",rc);
-        if (rc == -1) {
-            if (errno == ENOENT) {
-               sprintf(dbpath,"%s",fpath);
-               ptr = dbpath;
-               cnt = strlen(dbpath);
-               ptrl = dbpath + cnt;
-               while (cnt > 0) {
-                 if (strncmp(ptrl,"/",1)) {
-                    ptrl--; 
-                 } else {
-                    bzero((void *)ptrl,1); 
-                    break;
-                 }
-                 cnt--;
-               } 
-               //fprintf(stderr,"in getattr opening db %s\n",dbpath);
-               db = opendb(dbpath,"",&st, db1,1,0);
-               ptr = fpath;
-               cnt = strlen(fpath);
-               ptrl = fpath + cnt;
-               while (cnt > 0) {
-                 if (strncmp(ptrl,"/",1)) {
-                    ptrl--; 
-                 } else {
-                    break;
-                 }
-                 cnt--;
-               } 
-
-               sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from entries where name='%s';",ptrl+1); 
-               //fprintf(stderr,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from entries where name='%s';",ptrl+1); 
-               error = sqlite3_prepare_v2(db,sqlstmt, 1000, &res, &tail);
-               if (error != SQLITE_OK) {
-                 fprintf(stderr, "SQL error on query: %s name %s \n",sqlstmt,fpath);
-                 return -1;
-               }
-               rec_count = 0;
-               
-               //rc = lstat("/tmp/testdirdup/entries.db", stbuf);
-
-               while (sqlite3_step(res) == SQLITE_ROW) {
-                 //printf("in sql step loop %s\n",sqlite3_column_text(res,0));
-                 //ncols=sqlite3_column_count(res);
-                 stbuf->st_dev=1;
-                 stbuf->st_rdev=1;
-#ifdef BSDSTAT
-                 stbuf->st_flags=0;
-#endif
-                 stbuf->st_mode=atol((const char *) sqlite3_column_text(res,0));
-                 stbuf->st_nlink=atol((const char *)sqlite3_column_text(res,1));
-                 stbuf->st_ino=atoll((const char *)sqlite3_column_text(res,2));
-                 stbuf->st_uid=atol((const char *)sqlite3_column_text(res,3));
-                 stbuf->st_gid=atol((const char *)sqlite3_column_text(res,4));
-                 stbuf->st_size=atoll((const char *)sqlite3_column_text(res,5));
-                 stbuf->st_atime=atol((const char *)sqlite3_column_text(res,6));
-                 stbuf->st_mtime=atol((const char *)sqlite3_column_text(res,7));
-                 stbuf->st_ctime=atol((const char *)sqlite3_column_text(res,8));
-                 stbuf->st_blksize=atol((const char *)sqlite3_column_text(res,9));
-                 stbuf->st_blocks=atol((const char *)sqlite3_column_text(res,10));
-                 //printf("in sql step mode %hu nlink %d inode %lld uid %d gid %d size %lld atime %ld ctime %ld mtime %ld blksize %d blocks %lld\n",stbuf->st_mode,stbuf->st_nlink,stbuf->st_ino,stbuf->st_uid,stbuf->st_gid,stbuf->st_size,stbuf->st_atime,stbuf->st_ctime,stbuf->st_mtime, stbuf->st_blksize, stbuf->st_blocks);
-                 rec_count++;
-                 break;
-               }
-
-               sqlite3_finalize(res);
-               closedb(db);
-               if (rec_count  < 1) return ENOENT;
-            } else {
-               return -errno;
-            }
-        }     
-
-        return 0;
-}
-
-static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-			 off_t offset, struct fuse_file_info *fi)
-{
-        DIR *dp;
-        struct dirent *de;
-        struct dirent des;
-        char fpath[1024];
-
-        (void) offset;
-        (void) fi;
-        sqlite3 *db;
-        sqlite3 *sdb;
-        sqlite3 *db1;
-        sqlite3 *db2;
-        char eesqlstmt[1024];
-        char esqlstmt[1024];
-        char ssqlstmt[1024];
-        char sssqlstmt[1024];
-        int     error = 0;
-        int     rec_count = 0;
-        const char      *errMSG;
-        const char      *tail;
-        int ncols;
-        int cnt;
-        int rc;
-        char ctmp[1024];
-        char dbn[1024];
-        sqlite3_stmt    *res;
-        struct stat st;
-        const char * ptr;
-        int fdentries;
-        int fdsummary;
-        int summarymatch;
-
-        ptr = path;
-        if (!strncmp(path,"/",1)) ptr++;   
-        sprintf(fpath,"%s/%s",globalmnt,ptr);
-        //fprintf(stderr,"in readdir: fpath %s\n",fpath);
-        dp = opendir(fpath);
-        if (dp == NULL)
-                return -errno;
-
-        while ((de = readdir(dp)) != NULL) {
-                memset(&st, 0, sizeof(st));
-                st.st_ino = de->d_ino;
-                st.st_mode = de->d_type << 12;
-                if (de->d_type == DT_DIR) {
-                  if (filler(buf, de->d_name, &st, 0))
-                        break;
-                } 
+        sprintf(tpath,"%s%s",globalmnt,path);
+        p=&tpath[0]+strlen(tpath)-1;
+        if (!strncmp(p,"/",1)) bzero(p,1); 
+        shortpath(tpath,shortpathc,endpath);
+        //fprintf(stderr,"getattr %s/%s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        //fprintf(stderr,"getattr: lstat tpath %s\n",tpath);
+        sprintf(dbn,"%s/%s",tpath,DBNAME); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          //fprintf(stderr, "getattr SQL error on open: name %s err %s\n",dbn,sqlite3_errmsg(mydb));
+          //return -EIO;
+          //must not be a directory just to to files
+          goto skiptofiles;
         }
-      
-        /*??? put get sql from variable here ???*/
-        db = opendb(fpath,"",&st,db1,1,0);
-        sdb = opendb(fpath,"",&st,db2,0,0);
-        bzero(esqlstmt,sizeof(esqlstmt));
-        bzero(eesqlstmt,sizeof(eesqlstmt));
-        bzero(ssqlstmt,sizeof(ssqlstmt));
-        bzero(sssqlstmt,sizeof(sssqlstmt));
-        summarymatch = 1;
-        fdsummary = open(globalsloc, O_RDONLY); 
-        if (fdsummary > 0) {
-          summarymatch = 0;
-          rc = pread(fdsummary, ssqlstmt, sizeof(ssqlstmt), 0);
-          close(fdsummary);
-          sprintf(sssqlstmt,"select name from summary %s ;",ssqlstmt); 
-          //printf("summary: %s",sssqlstmt); 
-          error = sqlite3_prepare_v2(sdb,sssqlstmt, 1000, &res, &tail);
-          if (error != SQLITE_OK) {
-            fprintf(stderr, "SQL error on query: %s name %s \n",esqlstmt,fpath);
-            sqlite3_finalize(res);
-            return 0;
-          } 
-          while (sqlite3_step(res) == SQLITE_ROW) {
-            summarymatch++;
-            break;
-          }
-          //sqlite3_finalize(res);
-        } 
-        if (summarymatch > 0) {
-          fdentries = open(globaleloc, O_RDONLY);
-          if (fdentries > 0) {
-            rc = pread(fdentries, esqlstmt, sizeof(esqlstmt), 0);
-            close(fdentries);
-          }
-          sprintf(eesqlstmt,"select name,inode,type from entries %s ;",esqlstmt); 
-          //printf("entries: %s",eesqlstmt); 
-          error = sqlite3_prepare_v2(db,eesqlstmt, 1000, &res, &tail);
-          if (error != SQLITE_OK) {
-            fprintf(stderr, "SQL error on query: %s name %s \n",esqlstmt,fpath);
-            return 0;
-          }
-          //printf("printdir %d issummary %d\n",printdir,issummary);
+        sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from summary where name='%s';",endpath); 
+        //fprintf(stderr,"dir select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from entries where name='%s';",endpath); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          //fprintf(stderr, "getattr dir SQL error on query: %s name %s \n",sqlstmt,dbn);
+          //return -1;
+          //must not be a directory just to to files
+          sqlite3_finalize(res);
+          closedb(mydb);
+          goto skiptofiles;
+        }
+        rec_count = 0;
+        while (sqlite3_step(res) == SQLITE_ROW) {
           //ncols=sqlite3_column_count(res);
-          //printf("query ncols %d\n",ncols);
-          while (sqlite3_step(res) == SQLITE_ROW) {
-             memset(&st, 0, sizeof(st));
-             //printf("in sql step loop %s\n",sqlite3_column_text(res,0));
-             //ncols=sqlite3_column_count(res);
-             //printf("%s|", sqlite3_column_text(res, cnt));
-             //printf("%s|", sqlite3_column_text(res, 0));
-             sprintf(des.d_name,"%s",sqlite3_column_text(res,0));
-             //printf("in sql step loop name %s\n",des.d_name);
-             sprintf(ctmp,"%s",sqlite3_column_text(res,1));
-             des.d_ino=atoll(ctmp);
-             st.st_ino = des.d_ino;
-             sprintf(ctmp,"%s",sqlite3_column_text(res,2));
-             if (!strncmp(ctmp,"f",1)) des.d_type = DT_REG ;
-             if (!strncmp(ctmp,"l",1)) des.d_type = DT_LNK;
-             st.st_mode = des.d_type << 12;
-             if (filler(buf, des.d_name, &st, 0))
-                   break;
-             rec_count++;
-          }
+          stbuf->st_dev=1;
+          stbuf->st_rdev=1;
+#ifdef BSDSTAT
+          stbuf->st_flags=0;
+#endif
+          stbuf->st_mode=sqlite3_column_int64(res,0);
+          stbuf->st_nlink=sqlite3_column_int64(res,1);
+          stbuf->st_ino=sqlite3_column_int64(res,2);
+          stbuf->st_uid=sqlite3_column_int64(res,3);
+          stbuf->st_gid=sqlite3_column_int64(res,4);
+          stbuf->st_size=sqlite3_column_int64(res,5);
+          stbuf->st_atime=sqlite3_column_int64(res,6);
+          stbuf->st_mtime=sqlite3_column_int64(res,7);
+          stbuf->st_ctime=sqlite3_column_int64(res,8);
+          stbuf->st_blksize=sqlite3_column_int64(res,9);
+          stbuf->st_blocks=sqlite3_column_int64(res,10);
+          rec_count++;
+          break;
         }
         sqlite3_finalize(res);
-        closedb(db);
-        closedb(sdb);
-        closedir(dp);
+        closedb(mydb);
+
+        if (rec_count  > 0) return 0;
+
+skiptofiles:
+        sprintf(dbn,"%s/%s",shortpathc,DBNAME); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "getattr SQL error on open: name %s err %s\n",dbn,sqlite3_errmsg(mydb));
+          return -EIO;
+        }
+        if (strlen(globalsql) > 0) {
+          sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from entries where name='%s' and %s;",endpath,globalsql); 
+        } else {
+          sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from entries where name='%s';",endpath); 
+        }
+        //fprintf(stderr,"getattr %s",sqlstmt); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "SQL error on query: %s name %s \n",sqlstmt,dbn);
+          return -1;
+        }
+        rec_count = 0;
+               
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          //ncols=sqlite3_column_count(res);
+          stbuf->st_dev=1;
+          stbuf->st_rdev=1;
+#ifdef BSDSTAT
+          stbuf->st_flags=0;
+#endif
+          stbuf->st_mode=sqlite3_column_int64(res,0);
+          stbuf->st_nlink=sqlite3_column_int64(res,1);
+          stbuf->st_ino=sqlite3_column_int64(res,2);
+          stbuf->st_uid=sqlite3_column_int64(res,3);
+          stbuf->st_gid=sqlite3_column_int64(res,4);
+          stbuf->st_size=sqlite3_column_int64(res,5);
+          stbuf->st_atime=sqlite3_column_int64(res,6);
+          stbuf->st_mtime=sqlite3_column_int64(res,7);
+          stbuf->st_ctime=sqlite3_column_int64(res,8);
+          stbuf->st_blksize=sqlite3_column_int64(res,9);
+          stbuf->st_blocks=sqlite3_column_int64(res,10);
+          rec_count++;
+          break;
+        }
+        sqlite3_finalize(res);
+        closedb(mydb);
+        if (rec_count  < 1) return -ENOENT;
+
         return 0;
 }
-/*
-static int hello_open(const char *path, struct fuse_file_info *fi)
-{
-	if (strcmp(path, hello_path) != 0)
-		return -ENOENT;
-	if ((fi->flags & 3) != O_RDONLY)
-		return -EACCES;
-	return 0;
+
+static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t offset, struct fuse_file_info *fi) {
+        int i;
+        int rc;
+        sqlite3_stmt    *res;
+        const char      *tail;
+        int rec_count;
+        char sqlstmt[1024];
+        char *p;
+        char shortpathc[MAXPATH];
+        struct dirent des;
+        struct stat stbuc;
+        char ttype[2];
+        sqlite3 *mydb;
+        DIR *dp;
+        struct dirent *de;
+        char tpath[MAXPATH];
+        char endpath[MAXPATH];
+        char dbn[MAXPATH];
+
+        //sprintf(tpath,"%s/%s",globalmnt,path);
+        sprintf(tpath,"%s%s",globalmnt,path);
+        p=&tpath[0]+strlen(tpath)-1;
+        if (!strncmp(p,"/",1)) bzero(p,1); 
+        shortpath(tpath,shortpathc,endpath);
+
+        rec_count=0;
+        dp = opendir(tpath);
+        if (dp == NULL)
+                return -errno;
+        while ((de = readdir(dp)) != NULL) {
+                memset(&stbuc, 0, sizeof(stbuc));
+                stbuc.st_ino = de->d_ino;
+                stbuc.st_mode = de->d_type << 12;
+                rec_count++;
+                if (de->d_type == DT_DIR) {
+                  if (filler(buf, de->d_name, &stbuc, 0))
+                        break;
+                }
+        }
+        closedir(dp);
+
+        //shortpath(tpath,shortpathc,endpath);
+        //sprintf(dbn,"%s/%s",shortpathc,DBNAME); 
+        sprintf(dbn,"%s/%s",tpath,DBNAME); 
+        //fprintf(stderr,"readdir: opendb %s",dbn); 
+        if (strlen(globalsql) > 0) {
+          sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks,name,type from entries where %s;",globalsql); 
+        } else {
+          sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks,name,type from entries;"); 
+        }
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,dbn,sqlite3_errmsg(mydb));
+          return -EIO;
+        }
+        //fprintf(stderr,"readdir lookup %s\n",sqlstmt); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "SQL error on readdir query: %s name %s \n",sqlstmt,dbn);
+          return -1;
+        }
+               
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          //printf("in sql step loop %s\n",sqlite3_column_text(res,0));
+          stbuc.st_dev=1;
+          stbuc.st_rdev=1;
+#ifdef BSDSTAT
+          stbuc.st_flags=0;
+#endif
+          stbuc.st_mode=sqlite3_column_int64(res,0);
+          stbuc.st_nlink=sqlite3_column_int64(res,1);
+          stbuc.st_ino=sqlite3_column_int64(res,2);
+          stbuc.st_uid=sqlite3_column_int64(res,3);
+          stbuc.st_gid=sqlite3_column_int64(res,4);
+          stbuc.st_size=sqlite3_column_int64(res,5);
+          stbuc.st_atime=sqlite3_column_int64(res,6);
+          stbuc.st_mtime=sqlite3_column_int64(res,7);
+          stbuc.st_ctime=sqlite3_column_int64(res,8);
+          stbuc.st_blksize=sqlite3_column_int64(res,9);
+          stbuc.st_blocks=sqlite3_column_int64(res,10);
+          sprintf(des.d_name,"%s",(const char *)sqlite3_column_text(res,11));
+          sprintf(ttype,"%s",(const char *)sqlite3_column_text(res,12));
+          des.d_ino=stbuc.st_ino;
+          if (!strncmp(ttype,"d",1)) des.d_type = DT_DIR;
+          if (!strncmp(ttype,"f",1)) des.d_type = DT_REG;
+          if (!strncmp(ttype,"l",1)) des.d_type = DT_LNK;
+          //printf("in sql step mode %hu nlink %d inode %lld uid %d gid %d size %lld atime %ld ctime %ld mtime %ld blksize %d blocks %lld\n",stbuf->st_mode,stbuf->st_nlink,stbuf->st_ino,stbuf->st_uid,stbuf->st_gid,stbuf->st_size,stbuf->st_atime,stbuf->st_ctime,stbuf->st_mtime, stbuf->st_blksize, stbuf->st_blocks);
+          rec_count++;
+
+          filler(buf, des.d_name, &stbuc, 0);
+        }
+        if (rec_count  < 1) return -ENOENT;
+        sqlite3_finalize(res);
+        closedb(mydb);
+
+        return 0;
 }
 
-static int hello_read(const char *path, char *buf, size_t size, off_t offset,
-		      struct fuse_file_info *fi)
-{
-	size_t len;
-	(void) fi;
-	if(strcmp(path, hello_path) != 0)
-		return -ENOENT;
+static int gufir_access(const char *path, int mask) {
+        int res;
+        struct stat stbuf; 
+        char dbn[MAXPATH];
+        char tpath[MAXPATH];
+        char shortpathc[MAXPATH];
+        char endpath[MAXPATH];
+        int rc;
+        char *p;
 
-	len = strlen(hello_str);
-	if (offset < len) {
-		if (offset + size > len)
-			size = len - offset;
-		memcpy(buf, hello_str + offset, size);
-	} else
-		size = 0;
-	return size;
+        //sprintf(tpath,"%s/%s",globalmnt,path);
+        sprintf(tpath,"%s%s",globalmnt,path);
+        p=&tpath[0]+strlen(tpath)-1;
+        if (!strncmp(p,"/",1)) bzero(p,1); 
+
+        //fprintf(stderr,"access: lstat  and access on %s\n",tpath);
+        rc = lstat(tpath, &stbuf);
+        if (rc != -1) {
+          if (S_IFDIR,stbuf.st_mode) {
+             res = access(tpath, mask);
+             if (res == 0) {
+                return 0;
+             }
+          }
+        }
+
+        shortpath(tpath,shortpathc,endpath);
+        sprintf(dbn,"%s/%s",shortpathc,DBNAME); 
+        //fprintf(stderr,"access: calling access on %s/%s",shortpathc,DBNAME); 
+        res = access(dbn, mask);
+        if (res == 0) {
+          return 0;
+        }
+        return -1;
 }
-*/
-static struct fuse_operations hello_oper = {
-	.getattr	= hello_getattr,
-	.readdir	= hello_readdir,
-//	.open		= hello_open,
-//	.read		= hello_read,
+
+static int gufir_statfs(const char *path, struct statvfs *stbuf) {
+   int res;
+
+   res = statvfs("/", stbuf);
+   if (res == -1)
+      return -errno;
+
+   return 0;
+}
+
+static int gufir_getxattr(const char *path, const char *name, char *value,size_t size) {
+        int rc;
+        sqlite3_stmt    *res;
+        const char      *tail;
+        int     error = 0;
+        char sqlstmt[1024];
+        char *p;
+        char shortpathc[MAXPATH];
+        char endpath[MAXPATH];
+        char txattr[MAXXATTR];
+        sqlite3 *mydb;
+        int rec_count;
+        char tpath[MAXPATH];
+        char dbn[MAXPATH];
+        struct stat stbuf;
+
+        /* if they call with zero size tell them how big it will be padded by 1 */
+        if (size==0) return MAXXATTR; 
+
+        sprintf(tpath,"%s%s",globalmnt,path);
+        p=&tpath[0]+strlen(tpath)-1;
+        if (!strncmp(p,"/",1)) bzero(p,1); 
+        shortpath(tpath,shortpathc,endpath);
+
+        //fprintf(stderr,"getattr %s %s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        //fprintf(stderr,"getxattr: lstat tpath %s\n",tpath);
+        sprintf(dbn,"%s/%s",tpath,DBNAME); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          //must not be a directory just to to files
+          goto skiptofilesgx;
+        }
+
+        sprintf(sqlstmt,"select xattrs from summary where name='%s';",endpath); 
+        //fprintf(stderr,"dir select xattrs from summary where name='%s';",endpath); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          //must not be a directory just to to files
+          sqlite3_finalize(res);
+          closedb(mydb);
+          goto skiptofilesgx;
+        }
+        rec_count = 0;
+        bzero(txattr,sizeof(txattr)); 
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          sprintf(txattr,"%s",sqlite3_column_text(res,0));
+          //printf("getxattr found %s",txattr);
+          rec_count++;
+          break;
+        }
+        sqlite3_finalize(res);
+        closedb(mydb);
+
+        if (rec_count  > 0) goto finishgx; 
+
+skiptofilesgx:
+
+        sprintf(dbn,"%s/%s",shortpathc,DBNAME); 
+        //fprintf(stderr,"getxattr %s/%s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "getxattr SQL error on open: name %s err %s\n",dbn,sqlite3_errmsg(mydb));
+          return -EIO;
+        }
+        if (strlen(globalsql) > 0) {
+          sprintf(sqlstmt,"select xattrs from entries where name='%s' and %s;",endpath,globalsql); 
+        } else {
+          sprintf(sqlstmt,"select xattrs from entries where name='%s';",endpath); 
+        }
+
+        //fprintf(stderr,"%s",sqlstmt); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "getxattr SQL error on query: %s name %s \n",sqlstmt,dbn);
+          return -1;
+        }
+        rec_count = 0;
+               
+        bzero(txattr,sizeof(txattr)); 
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          sprintf(txattr,"%s",sqlite3_column_text(res,0));
+          //printf("getxattr found %s",txattr);
+          rec_count++;
+          break;
+          }
+        sqlite3_finalize(res);
+        closedb(mydb);
+finishgx:
+        if (rec_count  < 1) {
+          size=0;
+          return 0;
+        } 
+        if (size < strlen(txattr)+1) {
+           /* not enough space to store */
+          size=0;
+          return EINVAL;
+        }
+        sprintf(value,"%s",txattr);
+        size=strlen(txattr)+1;    
+        return  strlen(txattr);
+}
+
+static int gufir_listxattr(const char *path, char *list, size_t size) {
+        char myattr[256];
+        int rc;
+        sqlite3_stmt    *res;
+        const char      *tail;
+        int     error = 0;
+        int rec_count;
+        char sqlstmt[1024];
+        char *p;
+        char shortpathc[MAXPATH];
+        char endpath[MAXPATH];
+        char txattr[MAXXATTR];
+        char tpath[MAXXATTR];
+        sqlite3 *mydb;
+        char dbn[MAXPATH];
+
+        sprintf(myattr,"xattrs");
+        /* if they call with zero size tell them how big it will be padded by 1 */
+        if (size==0) return (strlen(myattr)+1); 
+
+        sprintf(tpath,"%s%s",globalmnt,path);
+        p=&tpath[0]+strlen(tpath)-1;
+        if (!strncmp(p,"/",1)) bzero(p,1); 
+        shortpath(tpath,shortpathc,endpath);
+
+        //fprintf(stderr,"listattr %s %s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        //fprintf(stderr,"listxattr: lstat tpath %s\n",tpath);
+        sprintf(dbn,"%s/%s",tpath,DBNAME); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          //must not be a directory just to to files
+          goto skiptofileslx;
+        }
+
+        sprintf(sqlstmt,"select xattrs from summary where name='%s';",endpath); 
+        //fprintf(stderr,"listxattr dir select xattrs from summary where name='%s';",endpath); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          //must not be a directory just to to files
+          sqlite3_finalize(res);
+          closedb(mydb);
+          goto skiptofileslx;
+        }
+        rec_count = 0;
+        bzero(txattr,sizeof(txattr)); 
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          sprintf(txattr,"%s",sqlite3_column_text(res,0));
+          //printf("listxattr found %s",txattr);
+          rec_count++;
+          break;
+        }
+        sqlite3_finalize(res);
+        closedb(mydb);
+
+        if (rec_count  > 0) goto finishlx; 
+
+skiptofileslx:
+
+        sprintf(dbn,"%s/%s",shortpathc,DBNAME); 
+        //fprintf(stderr,"listxattr %s/%s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "listxattr SQL error on open: name %s err %s\n",dbn,sqlite3_errmsg(mydb));
+          return -EIO;
+        }
+        if (strlen(globalsql) > 0) {
+          sprintf(sqlstmt,"select xattrs from entries where name='%s' and %s;",endpath,globalsql); 
+        } else {
+          sprintf(sqlstmt,"select xattrs from entries where name='%s';",endpath); 
+        }
+        //fprintf(stderr,"%s",sqlstmt); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "listxattr SQL error on query: %s name %s \n",sqlstmt,dbn);
+          return -1;
+        }
+        rec_count = 0;
+               
+        bzero(txattr,sizeof(txattr)); 
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          sprintf(txattr,"%s",sqlite3_column_text(res,0));
+          //printf("getxattr found %s",txattr);
+          rec_count++;
+          break;
+          }
+        sqlite3_finalize(res);
+        closedb(mydb);
+finishlx:
+        sprintf(txattr,"%s",myattr);
+        if (rec_count  < 1) {
+          size=0;
+          return 0;
+        } 
+        if (size < strlen(txattr)+1) {
+           /* not enough space to store */
+          size=0;
+          return -1;
+        }
+        sprintf(list,"%s",txattr);
+        size=strlen(txattr)+1;    
+        return  strlen(txattr)+1;
+}
+
+static int gufir_readlink(const char *path, char *buf, size_t size) {
+        int rc;
+        sqlite3_stmt    *res;
+        const char      *tail;
+        int rec_count;
+        char sqlstmt[1024];
+        char *p;
+        char shortpathc[MAXPATH];
+        char endpath[MAXPATH];
+        char treadlink[MAXPATH];
+        sqlite3 *mydb;
+        int     error = 0;
+        char tpath[MAXXATTR];
+        char dbn[MAXPATH];
+
+        /* if they call with zero size tell them how big it will be padded by 1 */
+        if (size==0) return (MAXPATH); 
+
+        sprintf(tpath,"%s%s",globalmnt,path);
+        p=&tpath[0]+strlen(tpath)-1;
+        if (!strncmp(p,"/",1)) bzero(p,1); 
+        shortpath(tpath,shortpathc,endpath);
+
+        //fprintf(stderr,"readlink %s %s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        //fprintf(stderr,"readlink: lstat tpath %s\n",tpath);
+        sprintf(dbn,"%s/%s",tpath,DBNAME); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          //must not be a directory just to to files
+          goto skiptofilesl;
+        }
+
+        sprintf(sqlstmt,"select linkname from summary where name='%s';",endpath); 
+        //fprintf(stderr,"readlink dir select xattrs from summary where name='%s';",endpath); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          //must not be a directory just to to files
+          sqlite3_finalize(res);
+          closedb(mydb);
+          goto skiptofilesl;
+        }
+        rec_count = 0;
+        bzero(treadlink,sizeof(treadlink)); 
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          sprintf(treadlink,"%s",sqlite3_column_text(res,0));
+          //printf("readlink found %s",treadlink);
+          rec_count++;
+          break;
+        }
+        sqlite3_finalize(res);
+        closedb(mydb);
+
+        if (rec_count  > 0) goto finishl; 
+
+skiptofilesl:
+
+        sprintf(dbn,"%s/%s",shortpathc,DBNAME); 
+        //fprintf(stderr,"readlink %s/%s tpath %s endpath %s\n",shortpathc,DBNAME,tpath,endpath); 
+        rc = sqlite3_open(dbn, &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "readlink SQL error on open: name %s err %s\n",dbn,sqlite3_errmsg(mydb));
+          return -EIO;
+        }
+        if (strlen(globalsql) > 0) {
+          sprintf(sqlstmt,"select linkname from entries where name='%s' and %s;",endpath,globalsql); 
+        } else {
+          sprintf(sqlstmt,"select linkname from entries where name='%s';",endpath); 
+        }
+        //fprintf(stderr,"%s",sqlstmt); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "readlink SQL error on query: %s name %s \n",sqlstmt,dbn);
+          return -1;
+        }
+        rec_count = 0;
+               
+        bzero(treadlink,sizeof(treadlink)); 
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          sprintf(treadlink,"%s",sqlite3_column_text(res,0));
+          //printf("readlink found %s",treadlink);
+          rec_count++;
+          break;
+          }
+        sqlite3_finalize(res);
+        closedb(mydb);
+finishl:
+        if (rec_count  < 1) {
+          size=0;
+          return 0;
+        } 
+        if (size < strlen(treadlink)+1) {
+           /* not enough space to store */
+          size=0;
+          return -1;
+        }
+        sprintf(buf,"%s",treadlink);
+        size=strlen(treadlink)+1;    
+        return  (strlen(treadlink)+1);
+}
+
+static struct fuse_operations gufir_oper = {
+   .getattr   = gufir_getattr,
+   .readdir   = gufir_readdir,
+   .access    = gufir_access,
+   .statfs    = gufir_statfs,
+   .listxattr = gufir_listxattr,
+   .getxattr  = gufir_getxattr,
+   .readlink  = gufir_readlink,
 };
-int main(int argc, char *argv[])
-{
-	return fuse_main(argc, argv, &hello_oper, NULL);
+
+int main(int argc, char *argv[]) {
+        sqlite3 *mydb;
+        int i;
+        char indbname[MAXPATH];
+        int rc;
+        char sqlu[MAXSQL];
+        sqlite3_stmt *res;
+        const char   *tail;
+        char cwd[MAXPATH];
+
+ 
+        //printf("argc %d argv0 %s argv1 %s argv2 %s argv3 %s\n",argc,argv[0],argv[1],argv[2],argv[3]);
+        //last arg is sql where clause
+        sprintf(globalsql,"%s",argv[argc-1]);
+        argc--;
+        // next to last a gufi directory where you are making your top dir 
+        sprintf(globalmnt,"%s",argv[argc-1]);
+        argc--;
+
+        sprintf(indbname,"%s/%s",globalmnt,DBNAME);
+        rc = sqlite3_open(indbname, &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "main SQL error on open:  err %s\n",sqlite3_errmsg(mydb));
+          exit(-1);
+        }
+
+        sprintf(sqlu,"select name from summary limit 1;");
+        rc = sqlite3_prepare_v2(mydb, sqlu, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "SQL error on testing to see if the top dir is a gufi dir: %s err %s\n",sqlu,sqlite3_errmsg(mydb));
+          exit(-1);
+        }
+        if (sqlite3_step(res) != SQLITE_ROW) {
+          fprintf(stderr, "SQL error in main testing to see if we are a gufi\n");
+          exit(-1);
+        }
+        sqlite3_finalize(res);
+        closedb(mydb);
+
+        return fuse_main(argc, argv, &gufir_oper, NULL);
+
 }
 
