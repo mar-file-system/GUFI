@@ -76,4 +76,4 @@
 
 EPATH=..
 echo "delete all uid and gid summary records from summary tables in $1"
-$EPATH/bfq -i $1 -S "delete from summary where rectype>0;" -Pp -n 2
+$EPATH/bfq -S "delete from summary where rectype>0;" -Pp -n 2 $1
