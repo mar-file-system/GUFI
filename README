@@ -88,7 +88,7 @@ feature-requests, etc, through github:
     https://github.com/mar-file-system/GUFI
 
 We will attempt to respond to requests, but we can't make promises about
-the level of resources that will be dedicated to GUFI maintenace.
+the level of resources that will be dedicated to GUFI maintenance.
 
 All bug-reports, issues, requests, etc, should go through github.
 For other conversation about GUFI (and MarFS), there is:
@@ -185,7 +185,7 @@ options:
   -x                 process xattrs if you are creating gufi dbs of suspect directories
 
 Flow:
-if using input suspect file read that in and put into memory trie for lookups
+if using input suspect file read that in and put into memory tree for lookups
 input directory is put on a queue
 threads are started
 loop assigning work (directories) from queue to threads
@@ -361,7 +361,7 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
     output db before starting the walk, and an SQL statement per thread on
     the output db after the walk.
     there is also a mode that will take input from a file instead of getting info from a walk/stat
-    the file must have the appropriate fields delimted by a delimiter provided and it should
+    the file must have the appropriate fields delimited by a delimiter provided and it should
     have a line for dir and lines for files/links in that dir and then another dir and then files/links
     the file does not have to be in tree order, it just must have all files/links associated with a dir
     immediately after that dir
@@ -699,7 +699,7 @@ rundfw - do various walks on the testdir tree
 runlistschemadb - list the schema in a gufi db
 runlisttablesdb - list the tables in a gufi db
 rungroupfilespacehogusesummary - generate gid summary records via summary and entries
-runuserfilespacehogusesummary - generiate uid summary records via summary and entries
+runuserfilespacehogusesummary - generate uid summary records via summary and entries
 rungroupfilespacehog - do parallel query to create output dbs and list group file space hogs
 runuserfilespacehog - do parallel query to create output dbs and list user file space hog
-runoldbigfiles - do parallel query to craete output dbs and list old/big files
+runoldbigfiles - do parallel query to create output dbs and list old/big files
