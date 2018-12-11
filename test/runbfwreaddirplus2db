@@ -92,18 +92,23 @@ QUERYDBN=$DIR/../querydbn
 # options:
 #   -h              help
 #   -H              show assigned input values (debugging)
-#   -p              print file-names
 #   -n <threads>    number of threads
-#   -P              print directories as they are encountered
 #   -O <outputdb>   output db
+#   -o <outfile>    output file one per thread
+#   -d <delimiter>  delimiter character for file output
 #   -Y                 default all directories as suspect
 #   -Z                 default all files links as suspect
 #   -W <insuspectfile> path to input suspect file
+#   -g <stridesize>    stride size for striping inodes
+#   -c <suspecttime>   time in seconds since epoch for suspect comparision
+#   -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl
+#   -r                 insert files and links into db 
+#   -R                 insert dires into db 
+
 
 # 
 # input_dir         walk this tree to produce GUFI-tree
 # 
-
 
 usage() {
     PROG=$1
@@ -139,16 +144,16 @@ DEST=$1
 echo
 echo "out to screen"
 
-echo $BFWREADDIRPLUS2DB -n 1 -P -p $DEST
-$BFWREADDIRPLUS2DB -n 1 -P -p $DEST 
+echo $BFWREADDIRPLUS2DB -n 1 $DEST
+$BFWREADDIRPLUS2DB -n 1 $DEST 
 
 # run to create output db 
 echo
 echo "send to output to a db both files and dirs"
 
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 1 -P -p -r -R -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 1 -P -p -r -R -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 1 -r -R -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -r -R -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.* 
 sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
@@ -158,8 +163,8 @@ echo
 echo "send to output to a db dirs only"
 
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 1 -P -p -R -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 1 -P -p -R -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 1 -R -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -R -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.* 
 sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
@@ -169,8 +174,8 @@ echo
 echo "send to output to a db files and links only"
 
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 1 -P -p -r -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 1 -P -p -r -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 1 -r -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 1 -r -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.*
 sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
@@ -180,8 +185,8 @@ echo
 echo "send to output to a db both files and dirs with all dirs suspect 2 threads"
 
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 2 -r -R -Y -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -r -R -Y -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.* 
 echo ""
@@ -204,8 +209,8 @@ echo
 echo "send to output to a db both files and dirs with all dirs suspect 2 threads stride 10"
 
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -g 10 -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 2 -P -p -r -R -Y -g 10 -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 2 -r -R -Y -g 10 -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -r -R -Y -g 10 -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.* 
 echo ""
@@ -222,9 +227,13 @@ sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
 echo
 echo "send to output db dirs  only 2 threads suspectmethod 1 insuspectdfile"
 
+rm insuspectfile
+stat testdir/a | awk ' { print $2 " f" } ' >> insuspectfile
+stat testdir/c | awk ' { print $2 " d" } ' >> insuspectfile
+
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 2 -P -p -R -A 1 -W insuspectfile -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 2 -P -p -r -R -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 2 -R -A 1 -W insuspectfile -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -r -R -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.* 
 echo ""
@@ -242,8 +251,8 @@ echo
 echo "send to output to a db only dirs 2 threads suspectmethod 1 stride 10 insuspectfile"
 
 rm bfwreaddirplusdb.*
-echo $BFWREADDIRPLUS2DB -n 2 -P -p -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST
-$BFWREADDIRPLUS2DB -n 2 -P -p -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST 
+echo $BFWREADDIRPLUS2DB -n 2 -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb $DEST 
 
 ls -l bfwreaddirplusdb.* 
 echo ""
@@ -254,3 +263,69 @@ echo ""
 echo "thread 1 outdb"
 echo ""
 sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+
+
+# run to create output db 
+echo
+echo "send to output to a db only dirs 2 threads suspectmethod 1 stride 10 insuspectfile create gufi db for suspect dir"
+
+rm bfwreaddirplusdb.*
+rm -rf testbwrpdb
+mkdir testbwrpdb
+echo $BFWREADDIRPLUS2DB -n 2  -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb -x -t testbwrpdb $DEST
+$BFWREADDIRPLUS2DB -n 2 -R -A 1 -g 10 -W insuspectfile -O bfwreaddirplusdb -x -t testbwrpdb $DEST 
+
+ls -l bfwreaddirplusdb.* 
+echo ""
+echo "thread 0 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
+echo ""
+echo "thread 1 outdb"
+echo ""
+sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
+ls -l testbwrpdb
+t1=`ls testbwrpdb | head -1 | awk ' { print $1 } '`
+sqlite3 -line testbwrpdb/$t1 '.tables'
+sqlite3 -line testbwrpdb/$t1 'select * from entries;'
+sqlite3 -line testbwrpdb/$t1 'select * from summary;'
+t2=`ls testbwrpdb | tail -1 | awk ' { print $1 } '`
+sqlite3 -line testbwrpdb/$t1 '.tables'
+sqlite3 -line testbwrpdb/$t2 'select * from entries;'
+sqlite3 -line testbwrpdb/$t2 'select * from summary;'
+
+# run to create output files 
+echo
+echo "send to output to files files and dirs 2 threads suspectmethod 0 "
+
+rm bfwreaddirplusfl.*
+echo $BFWREADDIRPLUS2DB -n 2 -A 0 -o bfwreaddirplusfl $DEST
+$BFWREADDIRPLUS2DB -n 2 -o bfwreaddirplusfl $DEST 
+
+ls -l bfwreaddirplusfl.* 
+echo ""
+echo "thread 0 outfl"
+echo ""
+cat bfwreaddirplusfl.0
+echo ""
+echo "thread 1 outfl"
+cat bfwreaddirplusfl.1
+echo ""
+
+# run to create output files with stride
+echo
+echo "send to output to files files and dirs 2 threads suspectmethod 0 stride 10 "
+
+rm bfwreaddirplusfl.*
+echo $BFWREADDIRPLUS2DB -n 2 -A 0 -g 10 -o bfwreaddirplusfl $DEST
+$BFWREADDIRPLUS2DB -n 2 -o bfwreaddirplusfl $DEST 
+
+ls -l bfwreaddirplusfl.* 
+echo ""
+echo "thread 0 outfl"
+echo ""
+cat bfwreaddirplusfl.0
+echo ""
+echo "thread 1 outfl"
+cat bfwreaddirplusfl.1
+echo ""
