@@ -90,7 +90,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 
 /* this block is for the triell */
-#define CHAR_SIZE 24
+#define CHAR_SIZE 256
 struct Trie
 {
     int isLeaf;    // 1 when node is a leaf node
@@ -101,6 +101,7 @@ void insertll(struct Trie* *head, char* str);
 int searchll(struct Trie* head, char* str);
 int haveChildren(struct Trie* curr);
 int deletionll(struct Trie* *curr, char* str);
+void cleanup(struct Trie *head);
 
 extern threadpool mythpool;
 

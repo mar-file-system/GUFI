@@ -88,9 +88,9 @@ char xattrdelim[] = "\x1F";     // ASCII Unit Separator
 char fielddelim[] = "\x1E";     // ASCII Record Separator
 
 
+struct globalpathstate gps[MAXPTHREAD] = {0};
+
 struct input in = {0};
-
-
 
 
 
@@ -241,6 +241,7 @@ int parse_cmd_line(int         argc,
    int show   = 0;
    int retval = 0;
    int ch;
+   optind = 1; // reset to 1, not 0 (man 3 getopt)
    while ( (ch = getopt(argc, argv, getopt_str)) != -1) {
       switch (ch) {
 
@@ -446,7 +447,7 @@ int parse_cmd_line(int         argc,
 
    // DEBUGGING:
    if (show)
-      show_input(&in, retval);
+      show_input(in, retval);
 
    return (retval ? retval : optind);
 }

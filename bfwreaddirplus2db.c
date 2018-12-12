@@ -168,7 +168,7 @@ int reprocessdir(void * passv, DIR *dir)
     rewinddir(dir);
 
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir
-    sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
+    sprintf(dbpath,"%s/%lu",in.nameto,passmywork->statuso.st_ino);
     if (!(db = opendb(dbpath,8,1)))
        return -1;
     res=insertdbprep(db,reso);
@@ -328,7 +328,7 @@ static void processdir(void * passv)
         pthread_mutex_lock(&outfile_mutex[todb]);
       }
       //fprintf(stderr,"threadd %d inode %lld file %d\n",mytid,passmywork->statuso.st_ino,tooutfile);
-      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim);
+      fprintf(gts.outfd[tooutfile],"%s%s%lu%s%lld%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim);
       if (in.stride > 0) {
         pthread_mutex_unlock(&outfile_mutex[todb]);
       }
@@ -421,7 +421,7 @@ static void processdir(void * passv)
               pthread_mutex_lock(&outfile_mutex[todb]);
             }
             //fprintf(stderr,"threadf %d inode %lld file %d\n",mytid,qwork.statuso.st_ino,tooutfile);
-            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim);
+            fprintf(gts.outfd[tooutfile],"%s%s%lu%s%lld%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim);
             if (in.stride > 0) {
               pthread_mutex_unlock(&outfile_mutex[todb]);
             }

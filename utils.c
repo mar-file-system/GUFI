@@ -243,17 +243,17 @@ int zeroit(struct sum *summary)
   summary->maxsubdirsize=LLONG_MIN;
   summary->mincrtime=LLONG_MAX;
   summary->maxcrtime=LLONG_MIN;
-  summary->minossint1=0;
-  summary->maxossint1=0;
+  summary->minossint1=LLONG_MAX;
+  summary->maxossint1=LLONG_MIN;
   summary->totossint1=0;
-  summary->minossint2=0;
-  summary->maxossint2=0;
+  summary->minossint2=LLONG_MAX;
+  summary->maxossint2=LLONG_MIN;
   summary->totossint2=0;
-  summary->minossint3=0;
-  summary->maxossint3=0;
+  summary->minossint3=LLONG_MAX;
+  summary->maxossint3=LLONG_MIN;
   summary->totossint3=0;
-  summary->minossint4=0;
-  summary->maxossint4=0;
+  summary->minossint4=LLONG_MAX;
+  summary->maxossint4=LLONG_MIN;
   summary->totossint4=0;
   return 0;
 }
@@ -302,12 +302,14 @@ int sumit (struct sum *summary,struct work *pwork) {
      if (pwork->statuso.st_size > 1073741824) summary->totmtg++;
      if (pwork->statuso.st_size > 1099511627776) summary->totmtt++;
      summary->totsize=summary->totsize+pwork->statuso.st_size;
+
      if (pwork->statuso.st_blocks < summary->minblocks) summary->minblocks=pwork->statuso.st_blocks;
      if (pwork->statuso.st_blocks > summary->maxblocks) summary->maxblocks=pwork->statuso.st_blocks;
   }
   if (!strncmp(pwork->type,"l",1)) {
      summary->totlinks++;
   }
+
   if (pwork->statuso.st_uid < summary->minuid) summary->minuid=pwork->statuso.st_uid;
   if (pwork->statuso.st_uid > summary->maxuid) summary->maxuid=pwork->statuso.st_uid;
   if (pwork->statuso.st_gid < summary->mingid) summary->mingid=pwork->statuso.st_gid;
@@ -320,18 +322,23 @@ int sumit (struct sum *summary,struct work *pwork) {
   if (pwork->statuso.st_atime > summary->maxatime) summary->maxatime=pwork->statuso.st_atime;
   if (pwork->crtime < summary->mincrtime) summary->mincrtime=pwork->crtime;
   if (pwork->crtime > summary->maxcrtime) summary->maxcrtime=pwork->crtime;
+
   if (pwork->ossint1 < summary->minossint1) summary->minossint1=pwork->ossint1;
   if (pwork->ossint1 > summary->maxossint1) summary->maxossint1=pwork->ossint1;
   summary->totossint1=summary->totossint1+pwork->ossint1;
-  if (pwork->ossint2 < summary->minossint2) summary->minossint1=pwork->ossint2;
-  if (pwork->ossint2 > summary->maxossint2) summary->maxossint1=pwork->ossint2;
+
+  if (pwork->ossint2 < summary->minossint2) summary->minossint2=pwork->ossint2;
+  if (pwork->ossint2 > summary->maxossint2) summary->maxossint2=pwork->ossint2;
   summary->totossint2=summary->totossint2+pwork->ossint2;
-  if (pwork->ossint3 < summary->minossint3) summary->minossint1=pwork->ossint3;
-  if (pwork->ossint3 > summary->maxossint3) summary->maxossint1=pwork->ossint3;
+
+  if (pwork->ossint3 < summary->minossint3) summary->minossint3=pwork->ossint3;
+  if (pwork->ossint3 > summary->maxossint3) summary->maxossint3=pwork->ossint3;
   summary->totossint3=summary->totossint3+pwork->ossint3;
-  if (pwork->ossint4 < summary->minossint4) summary->minossint1=pwork->ossint4;
-  if (pwork->ossint4 > summary->maxossint4) summary->maxossint1=pwork->ossint4;
+
+  if (pwork->ossint4 < summary->minossint4) summary->minossint4=pwork->ossint4;
+  if (pwork->ossint4 > summary->maxossint4) summary->maxossint4=pwork->ossint4;
   summary->totossint4=summary->totossint4+pwork->ossint4;
+
   if (pwork->xattrs > 0) summary->totxattr++;
   return 0;
 }
@@ -347,7 +354,6 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 
   smout->totfiles += sumin->totfiles;
   smout->totlinks += sumin->totlinks;
-  smout->totsize  += sumin->totsize;
 
   /* only set these mins and maxes if there are files in the directory
      otherwise mins are all zero */
@@ -627,16 +633,20 @@ struct Trie* getNewTrieNode()
 // Iterative function to insert a string in Trie.
 void insertll(struct Trie* *head, char* str)
 {
+    if (!head || !str) {
+        return;
+    }
+
     // start from root node
     struct Trie* curr = *head;
     while (*str)
     {
         // create a new node if path doesn't exists
-        if (curr->character[*str - '0'] == NULL)
-            curr->character[*str - '0'] = getNewTrieNode();
+        if (curr->character[*str] == NULL)
+            curr->character[*str] = getNewTrieNode();
 
         // go to next node
-        curr = curr->character[*str - '0'];
+        curr = curr->character[*str];
 
         // move to next character
         str++;
@@ -654,11 +664,15 @@ int searchll(struct Trie* head, char* str)
     if (head == NULL)
         return 0;
 
+    if (str == NULL) {
+        return 0;
+    }
+
     struct Trie* curr = head;
     while (*str)
     {
         // go to next node
-        curr = curr->character[*str - '0'];
+        curr = curr->character[*str];
 
         // if string is invalid (reached end of path in Trie)
         if (curr == NULL)
@@ -696,8 +710,8 @@ int deletionll(struct Trie* *curr, char* str)
         // recurse for the node corresponding to next character in
         // the string and if it returns 1, delete current node
         // (if it is non-leaf)
-        if (*curr != NULL && (*curr)->character[*str - '0'] != NULL &&
-            deletionll(&((*curr)->character[*str - '0']), str + 1) &&
+        if (*curr != NULL && (*curr)->character[*str] != NULL &&
+            deletionll(&((*curr)->character[*str]), str + 1) &&
             (*curr)->isLeaf == 0)
         {
             if (!haveChildren(*curr))
@@ -733,6 +747,16 @@ int deletionll(struct Trie* *curr, char* str)
     }
 
     return 0;
+}
+
+void cleanup(struct Trie *head) {
+    if (head) {
+        for(int i = 0; i < CHAR_SIZE; i++) {
+            cleanup(head->character[i]);
+        }
+
+        free(head);
+    }
 }
 
 /* end of  the triell */
