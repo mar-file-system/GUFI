@@ -9,6 +9,9 @@ os:
     - linux
     - osx
 
+env:
+    - NIGHTLY=nightly.tar.gz
+
 compiler:
     - gcc
     - clang
@@ -19,9 +22,23 @@ addons:
             - cmake
             - libsqlite3-dev
             - libfuse-dev
+            - npm
 
 script:
     - make
     - test/runtests
     - test/verifyknowntree
     - test/googletest/test
+
+after_success:
+    # https://www.npmjs.com/package/travis-deploy-once
+    - npm install -g travis-deploy-once
+    - tar -czf "${NIGHTLY}" $(git ls-tree --full-tree --name-only -r HEAD | grep -v ${NIGHTLY})
+
+deploy:
+    provider: script
+    script: travis-deploy-once nightly.sh
+    on:
+        branch: master
+        condition: "${TRAVIS_EVENT_TYPE}" = "cron"
+        tags: false
