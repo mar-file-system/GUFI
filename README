@@ -185,7 +185,7 @@ options:
   -x                 process xattrs if you are creating gufi dbs of suspect directories
 
 Flow:
-if using input suspect file read that in and put into memory tree for lookups
+if using input suspect file read that in and put into memory trie for lookups
 input directory is put on a queue
 threads are started
 loop assigning work (directories) from queue to threads
