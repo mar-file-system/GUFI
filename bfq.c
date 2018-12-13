@@ -145,14 +145,10 @@ static void processdir(void * passv)
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
-    const size_t next_level = passmywork->level + 1;
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
        goto out_free; // return NULL;
-
-    /* if (!(entry = readdir(dir))) */
-    /*    goto out_dir; // return NULL; */
 
     sprintf(passmywork->type, "%s", "d");
     //if (in.printdir > 0) {
@@ -404,7 +400,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:v:w:G:J:e:", 1, "GUFI_tree ...");
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:v:w:G:J:e:", 1, "GUFI_tree ...", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)

@@ -126,9 +126,6 @@ static void processdir(void * passv)
     if (!(dir = opendir(passmywork->name)))
        goto out_free; // return NULL;
 
-    /* if (!(entry = readdir(dir))) */
-    /*    goto out_dir; // return NULL; */
-
     sprintf(passmywork->type,"%s","d");
     if (in.printing || in.printdir) {
       printits(passmywork,mytid);
@@ -244,7 +241,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_tree");
+     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_tree", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)

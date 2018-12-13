@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
    // sprintf(tabnam,"%s",argv[7]);
 
    const char* pos_args = "[-s] DB_path DB_count SQL tabname";
-   int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args);
+   int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args, &in);
    if (in.helped)
       sub_help();
    if (idx < 0)

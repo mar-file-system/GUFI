@@ -654,7 +654,7 @@ int main(int argc, char *argv[])
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
      //fprintf(stderr,"in main beforeparse\n");
-     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xt:", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xt:", 1, "input_dir", &in);
      //fprintf(stderr,"in main right after parse\n");
      if (in.helped)
         sub_help();

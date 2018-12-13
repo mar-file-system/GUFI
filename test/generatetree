@@ -100,8 +100,6 @@
 # |---- old_file
 # |---- repeat_name
 #
-# Symlinks are not generated because their size changes depending on the directory they point to
-#
 
 set -e
 

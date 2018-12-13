@@ -740,7 +740,7 @@ int deletionll(struct Trie* *curr, char* str)
 // Push the subdirectories in the current directory onto the queue
 size_t descend(struct work *passmywork, DIR *dir,
                const size_t max_level,
-               int (*callback)(struct work *qwork, void *), void *args) {
+               int (*callback)(struct work *, void *), void *args) {
     if (!passmywork || !dir) {
         return 0;
     }

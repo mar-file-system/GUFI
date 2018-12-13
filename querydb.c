@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
      // printheader=atoi(argv[4]);
      // dirsummary=atoi(argv[5]);
 
-     int idx = parse_cmd_line(argc, argv, "hHNV", 2, "[-s] DB_path SQL");
+     int idx = parse_cmd_line(argc, argv, "hHNV", 2, "[-s] DB_path SQL", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)

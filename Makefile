@@ -18,7 +18,7 @@ FUSE_FILES    = bfresultfuse
 
 
 
-all:   bfw tools test
+all:   bfw tools
 
 bfw:   $(BFW)
 tools: $(TOOLS)

@@ -205,7 +205,8 @@ int parse_cmd_line(int         argc,
                    char*       argv[],
                    const char* getopt_str,
                    int         n_positional,
-                   const char* positional_args_help_str);
+                   const char* positional_args_help_str,
+                   struct input *in);
 
 // help for parsing a cmd-line string-argument into a fixed-size array.
 // NOTE: This assumes you have a variable <retval> in scope.
@@ -278,7 +279,7 @@ struct work {
    char          osstext2[MAXXATTR];
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
-   int aggregate_id;
+   int           aggregate_id;
 };
 
 extern char xattrdelim[];
