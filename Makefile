@@ -10,15 +10,6 @@ GTEST_SRC         ?= $(realpath googletest)
 GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
 GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
 
-# OS=$(shell uname -s)
-# ifeq ($(OS),Darwin)
-# 	SQLITE3_LIB_DIR ?= /opt/local/lib
-# 	SQLITE3_INC_DIR ?= /opt/local/include
-# else
-# 	SQLITE3_LIB_DIR ?= /usr/lib64
-# 	SQLITE3_INC_DIR ?= /usr/include
-# endif
-
 MYSQL_FILES = bfmi
 
 # # bffuse:        run query under fuse
@@ -28,9 +19,7 @@ MYSQL_FILES = bfmi
 FUSE_FILES    = bfresultfuse
 
 
-# The target 'test' currently fails to build on CentOS 7.5 (even with a
-# version of cmake > 3.0.  The current problem is missing files in
-# test/googletest).  Making 'test' optional, until we sort things out.
+
 all:   bfw tools
 
 bfw:   $(BFW)
@@ -50,22 +39,35 @@ fuse:
 mysql:
 	$(MAKE) -C . $(MYSQL_FILES) MYSQL=1
 
-everything: all mysql fuse test
+
+# The target 'test' currently fails to build on CentOS 7.5 (even with a
+# version of cmake > 3.0.  The current problem is missing files in
+# test/googletest).  Making 'test' optional, until we sort things out.
+OS=$(shell uname -s)
+
+EVERYTHING = all mysql fuse
+ifneq ($(OS),Darwin)
+   EVERYTHING += test
+endif
+
+everything: $(EVERYTHING)
 
 help:
-	@ echo "make [ target ]"
-	@ echo "    where <target> is one of:"
-	@ echo
-	@ echo "    all   -- $(BFW) $(TOOLS)"
-	@ echo "    mysql -- bfmi, requires you to have installed sqlite3, *and* mysql"
-	@ echo "    fuse  -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
-	@ echo "    test  -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
-	@ echo
-	@ echo "    everything -- all of the above"
-	@# echo "    osx        -- stuff that is working on OSX"
-	@# echo "    centos     -- stuff that is working on CentOS 7.5"
-	@ echo
-	@ echo "    with no target, we will build 'all'"
+	@  echo "make [ target ]"
+	@  echo "    where <target> is one of:"
+	@  echo
+	@  echo "    bfw        -- $(BFW)"
+	@  echo "    tools      -- $(TOOLS)"
+	@  echo "    mysql      -- bfmi, requires you to have installed sqlite3, *and* mysql"
+	@  echo "    fuse       -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
+	@  echo "    test       -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
+	@  echo
+	@  echo "    all        -- bfw tools"
+	@  echo "    everything -- $(EVERYTHING)"
+	@ #echo "    osx        -- stuff that is working on OSX"
+	@ #echo "    centos     -- stuff that is working on CentOS 7.5"
+	@  echo
+	@  echo "    default    -- all"
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
@@ -78,10 +80,10 @@ LIBS := -lgufi -pthread
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
 CFLAGS += -std=gnu11
 ifneq ($(DEBUG),)
-   CFLAGS += -g -O0 -DDEBUG
+   CFLAGS   += -g -O0 -DDEBUG
    CXXFLAGS += -g -O0 -DDEBUG
 else
-   CFLAGS += -O3
+   CFLAGS   += -O3
    CXXFLAGS += -O3
 endif
 
