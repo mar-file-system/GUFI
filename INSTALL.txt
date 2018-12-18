@@ -1,5 +1,29 @@
 Preliminary attempt to capture build-requirements
 
+(0) On any platform
+
+# install packages (see platform-specific caveats, below)
+install sqlite3
+[optional] install mysql
+[optional] install osxfuse
+
+# packages provided as submodules:
+sqlite3-pcre
+googletest
+C-Thread-Pool
+
+# clone GUFI
+git clone https://github.com/mar-file-system/GUFI.git
+git submodule init
+git submodule update
+
+# get help on what targets you want to build
+make help
+
+# build
+make some_target
+
+
 
 (1) CentOS 7.5
 
@@ -71,9 +95,17 @@ sudo port install pcre     [tested with 8.42_0]
 (1.3) sqlite3-pcre (submodule) doesn't build on OSX
 
 -- WORK-AROUND:
-* change "-Wl,-z,defs" to "-Wl,-undefined,error" in the Makefile
-  in the the sqlite-pcre3 submodule.
 
-TBD: We will spin off our own fork, and host that while waiting for a
-    pull-request to the original developers.  Meanwhile, the
-    work-around-above will allow you to build.
+We have spun off our own fork of sqlite3-pcre, to add support for building
+on OSX.  We will use this fork until we're satisfied with testing, then
+submit a pull-request to the original developers.  Our fork is hosted here:
+
+   https://github.com/mar-file-system/sqlite3-pcre.git
+
+The git submodule should now pull this version for you.  If you are just
+now installing GUFI, you will get this fork by following the instructions
+in (0).  If you already pulled the submodule previously, you can update
+your install by changing to the top-level project-directory (GUFI/), and
+doing this:
+
+   git submodule sync
