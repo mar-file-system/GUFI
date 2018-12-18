@@ -5,7 +5,7 @@ Preliminary attempt to capture build-requirements
 # install packages (see platform-specific caveats, below)
 install sqlite3
 [optional] install mysql
-[optional] install osxfuse
+[optional] install osxfuse    (OSX only)
 
 # packages provided as submodules:
 sqlite3-pcre
