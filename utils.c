@@ -512,6 +512,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
      int i;
+     int slashfound;
 
      *endname = 0;              // in case there's no '/'
      i=0;
@@ -519,16 +520,23 @@ int shortpath(const char *name, char *nameout, char *endname) {
      i=strlen(prefix);
      pp=prefix+i;
      //printf("cutting name down %s len %d\n",prefix,i);
+     slashfound=0;
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
           bzero(pp,1);
           sprintf(endname,"%s",pp+1);
+          slashfound=1;
           break;
        }
        pp--;
        i--;
      }
-     sprintf(nameout,"%s",prefix);
+     if (slashfound == 0) {
+        sprintf(endname,"%s",name);
+        bzero(nameout,1);
+        //printf("shortpath: name %s, nameout %s, endname %s.\n",name,nameout,endname);
+     } else
+        sprintf(nameout,"%s",prefix);
      return 0;
 }
 
