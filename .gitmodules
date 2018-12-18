@@ -4,7 +4,8 @@
 	branch = lanl
 [submodule "sqlite3-pcre"]
 	path = sqlite3-pcre
-	url = https://github.com/ralight/sqlite3-pcre
+	# url = https://github.com/ralight/sqlite3-pcre
+	url = https://github.com/mar-file-system/sqlite3-pcre.git
 [submodule "googletest"]
 	path = googletest
 	url = https://github.com/abseil/googletest.git
