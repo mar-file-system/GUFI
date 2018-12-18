@@ -139,19 +139,19 @@ int printits(struct work *pwork,int ptid) {
   if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",in.delim);
   if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",in.delim);
 
-  fprintf(out, "%lu%s",  pwork->statuso.st_ino, in.delim);
-  fprintf(out, "%lld%s", pwork->pinode,         in.delim);
-  fprintf(out, "%d%s",   pwork->statuso.st_mode, in.delim);
-  fprintf(out, "%lu%s",  pwork->statuso.st_nlink, in.delim);
-  fprintf(out, "%d%s",   pwork->statuso.st_uid, in.delim);
-  fprintf(out, "%d%s",   pwork->statuso.st_gid, in.delim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_size, in.delim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_blksize, in.delim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_blocks, in.delim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_atime, in.delim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_mtime, in.delim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_ctime, in.delim);
-  fprintf(out, "%d%s",  pwork->suspect, in.delim);
+  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino, in.delim);
+  fprintf(out, "%lld%s",           pwork->pinode,         in.delim);
+  fprintf(out, "%d%s",             pwork->statuso.st_mode, in.delim);
+  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink, in.delim);
+  fprintf(out, "%d%s",             pwork->statuso.st_uid, in.delim);
+  fprintf(out, "%d%s",             pwork->statuso.st_gid, in.delim);
+  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size, in.delim);
+  fprintf(out, "%"STAT_bsize"%s",  pwork->statuso.st_blksize, in.delim);
+  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks, in.delim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_atime, in.delim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_mtime, in.delim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_ctime, in.delim);
+  fprintf(out, "%d%s",             pwork->suspect, in.delim);
 
   if (!strncmp(pwork->type,"l",1)) {
     fprintf(out, "%s", pwork->linkname);
@@ -571,20 +571,23 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   if (!strncmp(type,"l",1)) printf("l ");
   if (!strncmp(type,"f",1)) printf("f ");
   if (!strncmp(type,"d",1)) printf("d ");
+
   printf("%s ", name);
   if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
-  printf("%lu ",  status->st_ino);
-  printf("%lld ", pinode);
-  printf("%d ",   status->st_mode);
-  printf("%lu ",  status->st_nlink);
-  printf("%d ",   status->st_uid);
-  printf("%d ",   status->st_gid);
-  printf("%ld ",  status->st_size);
-  printf("%ld ",  status->st_blksize);
-  printf("%ld ",  status->st_blocks);
-  printf("%ld ",  status->st_atime);
-  printf("%ld ",  status->st_mtime);
-  printf("%ld ",  status->st_ctime);
+
+  printf("%"STAT_ino" ",    status->st_ino);
+  printf("%lld ",           pinode);
+  printf("%d ",             status->st_mode);
+  printf("%"STAT_nlink" ",  status->st_nlink);
+  printf("%d ",             status->st_uid);
+  printf("%d ",             status->st_gid);
+  printf("%"STAT_size" ",   status->st_size);
+  printf("%"STAT_bsize" ",  status->st_blksize);
+  printf("%"STAT_blocks" ", status->st_blocks);
+  printf("%ld ",            status->st_atime);
+  printf("%ld ",            status->st_mtime);
+  printf("%ld ",            status->st_ctime);
+
   cnt = 0;
   xattrp=xattr;
   if (xattrs > 0) {

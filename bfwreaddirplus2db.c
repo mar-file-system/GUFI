@@ -152,7 +152,6 @@ int reprocessdir(void * passv, DIR *dir)
     struct dirent *entry;
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
     char *records; 
     char lpatho[MAXPATH];
     struct sum summary;
@@ -170,7 +169,7 @@ int reprocessdir(void * passv, DIR *dir)
 
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir 
     sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
-    if (!(db = opendb(dbpath,db1,8,1)))
+    if (!(db = opendb(dbpath,8,1)))
        return -1;
     res=insertdbprep(db,reso);
     startdb(db);
@@ -257,7 +256,6 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
     char *records;
     struct sum summary;
     sqlite3_stmt *res;

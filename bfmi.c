@@ -128,7 +128,6 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
     char *records;
     struct sum summary;
     sqlite3_stmt *res;
@@ -167,7 +166,7 @@ static void processdir(void * passv)
        memset(records, 0, MAXRECS);
        //sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
        zeroit(&summary);
-       db = opendb(passmywork->name,db1,4,1);
+       db = opendb(passmywork->name,4,1);
        res=insertdbprep(db,reso);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);

@@ -2,6 +2,7 @@
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 TOOLS     = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
 
+
 .PHONY: sqlite3-pcre googletest test
 
 SQLITE3_PCRE      ?= sqlite3-pcre
@@ -9,16 +10,28 @@ GTEST_SRC         ?= $(realpath googletest)
 GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
 GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
 
+# OS=$(shell uname -s)
+# ifeq ($(OS),Darwin)
+# 	SQLITE3_LIB_DIR ?= /opt/local/lib
+# 	SQLITE3_INC_DIR ?= /opt/local/include
+# else
+# 	SQLITE3_LIB_DIR ?= /usr/lib64
+# 	SQLITE3_INC_DIR ?= /usr/include
+# endif
+
 MYSQL_FILES = bfmi
 
-# bffuse:        run query under fuse
-# bfresultfuse:  fuse-view of query-results in a DB
+# # bffuse:        run query under fuse
+# # bfresultfuse:  fuse-view of query-results in a DB
+#
 # FUSE_FILES    = bffuse bfresultfuse
 FUSE_FILES    = bfresultfuse
 
 
-
-all:   bfw tools test
+# The target 'test' currently fails to build on CentOS 7.5 (even with a
+# version of cmake > 3.0.  The current problem is missing files in
+# test/googletest).  Making 'test' optional, until we sort things out.
+all:   bfw tools
 
 bfw:   $(BFW)
 tools: $(TOOLS)
@@ -37,7 +50,7 @@ fuse:
 mysql:
 	$(MAKE) -C . $(MYSQL_FILES) MYSQL=1
 
-everything: all mysql fuse
+everything: all mysql fuse test
 
 help:
 	@ echo "make [ target ]"
@@ -46,7 +59,11 @@ help:
 	@ echo "    all   -- $(BFW) $(TOOLS)"
 	@ echo "    mysql -- bfmi, requires you to have installed sqlite3, *and* mysql"
 	@ echo "    fuse  -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
+	@ echo "    test  -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
+	@ echo
 	@ echo "    everything -- all of the above"
+	@# echo "    osx        -- stuff that is working on OSX"
+	@# echo "    centos     -- stuff that is working on CentOS 7.5"
 	@ echo
 	@ echo "    with no target, we will build 'all'"
 
@@ -57,43 +74,62 @@ INCS :=
 LIBS := -lgufi -pthread
 
 
+
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
 CFLAGS += -std=gnu11
 ifneq ($(DEBUG),)
-	CFLAGS += -g -O0 -DDEBUG
-	CXXFLAGS += -g -O0 -DDEBUG
+   CFLAGS += -g -O0 -DDEBUG
+   CXXFLAGS += -g -O0 -DDEBUG
 else
-	CFLAGS += -O3
-	CXXFLAGS += -O3
+   CFLAGS += -O3
+   CXXFLAGS += -O3
 endif
 
 
+
+
+# --- DARWIN
+UNAME_S = $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+	CFLAGS += -D_DARWIN_C_SOURCE
+endif
+
+
+
+# --- SQL
 # this is invoked in a recursive build, for bfmi.mysql
 # (see target "%.mysql")
+# bfmi currently uses *both* sqlite3 and mysql!
 ifeq ($(MYSQL),)
-	LIBS += -lsqlite3
 	LIBFILES += dbutils
 else
 	INCS += $(shell mysql_config --include)
-	# bfmi currently uses *both* sqlite3 and mysql!
 	LIBS += $(shell mysql_config --libs_r)
-	LIBS += -lsqlite3
 endif
 
+# We always need sqlite
+# Set env-var PKG_CONFIG_PATH to your install
+CFLAGS   += $(shell pkg-config --cflags      sqlite3)
+CXXFLAGS += $(shell pkg-config --cflags      sqlite3)
+LDFLAGS  += $(shell pkg-config --libs-only-L sqlite3)
+LIBS     += $(shell pkg-config --libs-only-l sqlite3)
+
+
+
+# --- FUSE
 # different fuse libs for OSX/Linux
-UNAME_S = $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
-	CPPFLAGS += -D_DARWIN_C_SOURCE
-	LIBFUSE   = -losxfuse
-endif
-ifeq ($(UNAME_S), Linux)
-	LIBFUSE   = -lfuse
+	FUSE_PKG = osxfuse
+else
+	FUSE_PKG = fuse
 endif
 
 
 ifneq ($(FUSE),)
-	CPPFLAGS += -D_FILE_OFFSET_BITS=64
-	LIBS     += $(LIBFUSE)
+	CFLAGS   += $(shell pkg-config --cflags      $(FUSE_PKG))
+	CXXFLAGS += $(shell pkg-config --cflags      $(FUSE_PKG))
+	LDFLAGS  += $(shell pkg-config --libs-only-L $(FUSE_PKG))
+	LIBS     += $(shell pkg-config --libs-only-l $(FUSE_PKG))
 endif
 
 

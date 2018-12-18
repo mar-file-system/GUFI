@@ -1,0 +1,79 @@
+Preliminary attempt to capture build-requirements
+
+
+(1) CentOS 7.5
+
+(1.1) submodule googletest build fails for cmake < 3.0
+
+CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
+  No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
+Call Stack (most recent call first):
+  /usr/share/cmake/Modules/CMakePackageConfigHelpers.cmake:152 (write_basic_config_version_file)
+  googletest/CMakeLists.txt:96 (write_basic_package_version_file)
+
+See: https://github.com/google/googletest/issues/1786
+
+--- FIX:
+[as root]
+yum install epel-release
+yum remove cmake
+yum install cmake3
+ln -s /usr/bin/cmake3 /usr/bin/cmake
+
+
+
+(1.2) our build of test/googletest fails
+
+-- WORK-AROUND
+the 'test' make-target is now optional
+don't build it
+
+
+
+(1.3) compile fails for sqlite3 3.7.17 (CentOS 7.5), works for sqlite3 3.14.2 (Fedora)
+
+-- FIX:
+
+Upgrade to newer version.  There is no newer version available through yum repos, so do this:
+
+download sqlite-src-xxxxx.zip [https://www.sqlite.org/download.html]
+unzip sqlite-src-xxxxx.zip
+cd sqlite-src-xxxxx
+./configure
+make clean
+make
+[as root] make install
+
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+
+This will allow the 'pkg-config' commands in the makefile to find this newer version.
+
+
+
+
+(2) OSX
+
+(1.1) Need osxfuse to build 'fuse'
+
+This is an optional target.  If you need it, then ...
+
+-- FIX:
+sudo port install osxfuse   [tested with 3.8.2_0]
+
+
+(1.2) need pcre
+
+-- FIX:
+sudo port install pcre     [tested with 8.42_0]
+
+
+
+(1.3) sqlite3-pcre (submodule) doesn't build on OSX
+
+-- WORK-AROUND:
+* change "-Wl,-z,defs" to "-Wl,-undefined,error" in the Makefile
+  in the the sqlite-pcre3 submodule.
+
+TBD: We will spin off our own fork, and host that while waiting for a
+    pull-request to the original developers.  Meanwhile, the
+    work-around-above will allow you to build.

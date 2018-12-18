@@ -369,7 +369,12 @@ static int gufir_statfs(const char *path, struct statvfs *stbuf) {
 	return 0;
 }
 
-static int gufir_getxattr(const char *path, const char *name, char *value,size_t size) {
+#ifdef __APPLE__
+static int gufir_getxattr(const char *path, const char *name, char *value, size_t size, uint32_t position)
+#else
+static int gufir_getxattr(const char *path, const char *name, char *value, size_t size)
+#endif
+{
         int rc;
         sqlite3_stmt    *res;
         const char      *tail;

@@ -79,10 +79,10 @@ OF SUCH DAMAGE.
 #define DBUTILS_H
 
 #include <sys/stat.h>
-
 #include <sqlite3.h>
 
 #include "utils.h"
+
 
 extern char *esql;
 extern char *esqli;
