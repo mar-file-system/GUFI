@@ -311,11 +311,19 @@ static void processdir(void * passv)
            if (in.suspectmethod > 1) {
              /* ????? we would add a stat call on the directory here and compare mtime and ctime with the last run time provided */
              /* and mark the dir suspect if mtime or ctime are >= provided last run time */
+/*
              st.st_ctime=0;
              st.st_mtime=0;
              lstat(passmywork->name,&st);
              if (st.st_ctime >= in.suspecttime) passmywork->suspect=1;
              if (st.st_mtime >= in.suspecttime) passmywork->suspect=1;
+*/
+             // needed to fill in passmywork status structure
+             passmywork->statuso.st_ctime=0;
+             passmywork->statuso.st_mtime=0;
+             lstat(passmywork->name,&passmywork->statuso);
+             if (passmywork->statuso.st_ctime >= in.suspecttime) passmywork->suspect=1;
+             if (passmywork->statuso.st_mtime >= in.suspecttime) passmywork->suspect=1;
            }
          }
     }
@@ -338,7 +346,7 @@ static void processdir(void * passv)
       printits(passmywork,mytid);
     }
 */
-    // loop over dirents, if link push it on the queue, if file or link
+    // loop over dirents, if dir push it on the queue, if file or link
     // print it, fill up qwork structure for each
     transcnt=0;
     do {
