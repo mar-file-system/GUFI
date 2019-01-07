@@ -80,6 +80,7 @@ OF SUCH DAMAGE.
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <pthread.h>
 #include <random>
 #include <sstream>
 #include <thread>
@@ -116,8 +117,10 @@ struct Settings {
           path_separator('/'),
           leading_zeros(5),
           db_name("db.db"),
+          files_with_dirs(true),
           seed(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
           depth(),
+          subdirs(),
           time(),
           threads(std::max(std::thread::hardware_concurrency() / 2, (decltype(std::thread::hardware_concurrency())) 1)),
           blocksize(512),
@@ -126,6 +129,9 @@ struct Settings {
     {
         depth.min = 1;
         depth.max = 5;
+
+        subdirs.min = 1;
+        subdirs.max = 5;
 
         time.min = 0;
         time.max = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -161,6 +167,7 @@ struct Settings {
     // RNG settings
     std::size_t seed;                    // used to seed a seed rng
     Range <>    depth;
+    Range <>    subdirs;
     Range <>    time;
 
     std::size_t threads;                 // count
@@ -171,53 +178,82 @@ struct Settings {
     std::vector <Bucket> buckets;        // set of file size buckets
 };
 
+// per thread configuration
+template <typename Engine, typename Distribution>
 struct ThreadArgs {
+    ThreadArgs(Engine &gen, Distribution &rng)
+        : seed_gen(gen),
+          seed_rng(rng)
+    {}
+
+    std::string path;                    // path of current directory being worked on
+    std::size_t files;                   // how many files should be created under this directory (including subdirectories)
     std::size_t target_depth;            // final depth of directories
+    std::size_t curr_depth;              // the current depth
     std::size_t uid;                     // uid/gid to use
     std::size_t index;                   // unique id within the current depth
     std::size_t seed;                    // seed for seeding the RNGs inside this thread
     std::size_t inode;                   // inode offset
-    std::size_t files;                   // total number of files under this directory
-    std::string directory;               // directory to put database into
+
+    Engine &seed_gen;
+    Distribution &seed_rng;
+
     static Settings *settings;
     static threadpool *pool;
 };
 
-Settings   *ThreadArgs::settings  = nullptr;
-threadpool *ThreadArgs::pool      = nullptr;
+template <typename Engine, typename Distribution>
+Settings   *ThreadArgs <Engine, Distribution>::settings = nullptr;
 
-// Generate random counts such that they add up to total
-// file_counts should have been resized to the desired
-// number of slots before being passed into this function
+template <typename Engine, typename Distribution>
+threadpool *ThreadArgs <Engine, Distribution>::pool     = nullptr;
+
+// Distribute total into file_distribution (which should
+// have been resized to the desired number of slots
+// before being passed into this function).
+//
+// file_distribution[0] is the current directory.
 //
 // https://stackoverflow.com/a/22381248
 template <typename Engine, typename Distribution>
-void distribute_total_randomly(std::vector <std::size_t> &counts, const std::size_t total_files,
-                                Engine &seed_gen, Distribution &seed_rng) {
+void distribute_total_randomly(const std::size_t total,
+                               std::vector <std::size_t> &file_distribution,
+                               const bool files_in_currdir,
+                               Engine &seed_gen, Distribution &seed_rng) {
+    if (!file_distribution.size()) {
+        throw std::runtime_error("Input vector requires at least 1 slot");
+    }
+
     std::default_random_engine count_gen(seed_rng(seed_gen));
-    std::uniform_int_distribution <std::size_t> count_rng(1, total_files);
+    std::uniform_int_distribution <std::size_t> count_rng(1, total);
     std::size_t sum = 0;
 
     // assign each user a random number of files
-    for(std::size_t &count : counts) {
+    for(std::size_t &count : file_distribution) {
         count = count_rng(count_gen);
         sum += count;
     }
 
-    const double factor = (double) (total_files - counts.size()) / sum;
+    // if files are not supposed to be in the current directory, set it to 0
+    if (!files_in_currdir) {
+        sum -= file_distribution[0];
+        file_distribution[0] = 0;
+    }
 
     // scale the number of files down so that the sum is close to the target number of files
-    std::size_t missing = total_files;
-    for(std::size_t &count : counts) {
+    const double factor = ((double) total - files_in_currdir - file_distribution.size()) / sum;
+    std::size_t missing = total;
+    for(std::size_t &count : file_distribution) {
         count = ((double) count) * factor + 1;
         missing -= count;
     }
 
     // place missing counts in random locations
-    std::default_random_engine user_gen(seed_rng(seed_gen));
-    std::uniform_int_distribution <std::size_t> user_rng(0, counts.size() - 1);
+    std::default_random_engine fill_gen(seed_rng(seed_gen));
+    std::uniform_int_distribution <std::size_t> fill_rng(!files_in_currdir, file_distribution.size() - 1);
+
     for(std::size_t i = 0; i < missing; i++) {
-        counts[user_rng(user_gen)]++;
+        file_distribution[fill_rng(fill_gen)]++;
     }
 }
 
@@ -261,49 +297,23 @@ sqlite3 *open_and_create_tables(const std::string &name){
     return db;
 }
 
-// Creates the path and creates a databse file in the directory
-// If there is an error, previously created directories and databases are not deleted
-bool create_path(const std::string &path, bool &exists) {
-    // check if the path is a directory
-    struct stat path_stat;
-    if (exists && stat(path.c_str(), &path_stat) == 0) {
-        if (!S_ISDIR(path_stat.st_mode)) {
-            std::cerr << path << " is not a directory. Skipping." << std::endl;
-            return false;
-        }
-        else {
-            exists = true;
-        }
+// This function creates somewhat random file records for the current directory
+template <typename Engine, typename Distribution>
+void generatecurr(ThreadArgs <Engine, Distribution> *arg, const std::size_t files) {
+    const std::string fullname = arg->path + arg->settings->path_separator + arg->settings->db_name;
+
+    sqlite3 *on_disk = open_and_create_tables(fullname.c_str());
+    if (!on_disk) {
+        std::cerr << "Could not open " << fullname << ": " << sqlite3_errmsg(on_disk) << std::endl;
+        return;
     }
-    else if (!exists || (errno == ENOENT)) {
-        // if it doesn't, create the directory
-        exists = false;
-        if (mkdir(path.c_str(), 0777) != 0) {
-            std::cerr << "Could not create " << path << ". Skipping." << std::endl;
-            return false;
-        }
-    }
-
-    return true;
-}
-
-// This function creates all directories, database files, and fills
-// in the database files with random file metadata for a single user
-//
-// https://stackoverflow.com/q/1711631
-void thread(void *args) {
-    ThreadArgs *arg = (ThreadArgs *) args;
-
-    // use this rng to generate seeds for other rngs
-    std::default_random_engine seed_gen(arg->seed);
-    std::uniform_int_distribution <std::size_t> seed_rng(0, -1);
 
     // generic rng
-    std::default_random_engine gen(seed_rng(seed_gen));
+    std::default_random_engine gen(arg->seed_rng(arg->seed_gen));
     std::uniform_int_distribution <std::size_t> rng(0, ((std::size_t) -1) >> 1);
 
     // rng for timestamps
-    std::default_random_engine time_gen(seed_rng(seed_gen));
+    std::default_random_engine time_gen(arg->seed_rng(arg->seed_gen));
     std::uniform_int_distribution <std::size_t> time_rng(arg->settings->time.min, arg->settings->time.max);
 
     // rng for selecting size bucket
@@ -311,136 +321,59 @@ void thread(void *args) {
     for(Bucket const &bucket : arg->settings->buckets) {
         weights.push_back(bucket.weight);
     }
-    std::default_random_engine bucket_gen(seed_rng(seed_gen));
+    std::default_random_engine bucket_gen(arg->seed_rng(arg->seed_gen));
     std::discrete_distribution <std::size_t> bucket_rng(weights.begin(), weights.end());
 
     // rng for selecting size within a bucket
     std::vector <std::default_random_engine> size_gens(arg->settings->buckets.size());
     std::vector <std::uniform_int_distribution <std::size_t> > size_rngs(arg->settings->buckets.size());
     for(std::size_t i = 0; i < arg->settings->buckets.size(); i++) {
-        size_gens[i] = std::default_random_engine(seed_rng(seed_gen));
+        size_gens[i] = std::default_random_engine(arg->seed_rng(arg->seed_gen));
         size_rngs[i] = std::uniform_int_distribution <std::size_t>(arg->settings->buckets[i].min, arg->settings->buckets[i].max);
     }
 
-    // generate file distribution for each level of this path
-    // this vector is used as 1 indexed instead of 0
-    std::vector <std::size_t> file_counts(arg->target_depth);
+    struct sum summary;
+    zeroit(&summary);
 
-    // if records should be created throughout the directory, distribute the file count
-    // otherwise, default to the bottom-most directory containing all of the files
-    file_counts.back() = arg->files;
-    if (arg->settings->files_with_dirs) {
-        distribute_total_randomly(file_counts, arg->files, seed_gen, seed_rng);
+    // prepare to insert entries
+    sqlite3_stmt *res = nullptr;
+    static const std::size_t esqli_len = strlen(esqli);
+    if (sqlite3_prepare_v2(on_disk, esqli, esqli_len, &res, nullptr) != SQLITE_OK) {
+        std::cerr << "Could not prepare statement for " << fullname << " (" << sqlite3_errmsg(on_disk) << "). Skipping" << std::endl;
+        sqlite3_close(on_disk);
+        return;
     }
 
-    // full directory is accumulated here
-    std::stringstream s;
-    s << arg->directory;
+    // https://stackoverflow.com/q/1711631
+    sqlite3_exec(on_disk, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
 
-    const std::size_t last_level = arg->target_depth - 1;
+    // create file entries and insert them into the database
+    for(std::size_t i = 0; i < files; i++) {
+        std::stringstream s;
+        s << arg->path << arg->settings->path_separator << "file" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << i;
 
-    // generate entire path, including database file at each level
-    bool exists = true; // assume the current directory does exist
-    for(std::size_t depth = 0; depth < arg->target_depth; depth++) {
-        // generate the current directory path
-        s << arg->settings->path_separator << "dir" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << arg->index;
-
-        const std::string directory = s.str();
-        if (!create_path(directory, exists)) {
-            std::cerr << "Could not create directory " << directory << std::endl;
-            break;
-        }
-
-        // open the database file (but don't do anything with it until the very end)
-        const std::string db_name = directory + arg->settings->path_separator + arg->settings->db_name;
-        sqlite3 *on_disk = open_and_create_tables(db_name.c_str());
-        if (!on_disk) {
-            std::cerr << "Could not open " << db_name << ": " << sqlite3_errmsg(on_disk) << std::endl;
-            break;
-        }
-
-        struct sum summary;
-        zeroit(&summary);
-
-        // only generate files if specified or if at last level
-        if (arg->settings->files_with_dirs || (depth == last_level)) {
-            // prepare to insert entries
-            sqlite3_stmt *res = nullptr;
-            static const std::size_t esqli_len = strlen(esqli);
-            if (sqlite3_prepare_v2(on_disk, esqli, esqli_len, &res, nullptr) != SQLITE_OK) {
-                std::cerr << "Could not prepare statement for " << arg->directory << " (" << sqlite3_errmsg(on_disk) << "). Skipping" << std::endl;
-                sqlite3_close(on_disk);
-                break;
-            }
-
-            sqlite3_exec(on_disk, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
-
-            // create file entries and insert them into the database
-            for(std::size_t i = 0; i < file_counts[depth]; i++) {
-                std::stringstream s;
-                s << arg->directory << arg->settings->path_separator << "file" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << i;
-
-                std::size_t bucket = bucket_rng(bucket_gen);
-
-                struct work work;
-
-                snprintf(work.name, MAXPATH, "%s", s.str().c_str());
-                snprintf(work.type, 2, "f");
-                snprintf(work.linkname, MAXPATH, "");
-                snprintf(work.xattr, MAXPATH, "xattr %zu", i);
-                snprintf(work.osstext1, MAXXATTR, "osstext1 %zu", i);
-                snprintf(work.osstext2, MAXXATTR, "osstext2 %zu", i);
-
-                work.statuso.st_ino = arg->inode++;
-                work.statuso.st_mode = 0777;
-                work.statuso.st_nlink = 1;
-                work.statuso.st_uid = arg->uid;
-                work.statuso.st_gid = arg->uid;
-                work.statuso.st_size = size_rngs[bucket](size_gens[bucket]);
-                work.statuso.st_blksize = arg->settings->blocksize;
-                work.statuso.st_blocks = work.statuso.st_size / work.statuso.st_blksize;
-                work.statuso.st_ctime = time_rng(time_gen);
-                work.statuso.st_atime = std::max(work.statuso.st_ctime, (time_t) time_rng(time_gen));
-                work.statuso.st_mtime = std::max(work.statuso.st_ctime, (time_t) time_rng(time_gen));
-
-                work.crtime  = rng(gen);
-                work.ossint1 = rng(gen);
-                work.ossint2 = rng(gen);
-                work.ossint3 = rng(gen);
-                work.ossint4 = rng(gen);
-
-                sumit(&summary, &work);
-                insertdbgo(&work, on_disk, res);
-            }
-
-            sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
-
-            insertdbfin(on_disk, res);
-        }
-
-        // summarize this directory
         std::size_t bucket = bucket_rng(bucket_gen);
 
         struct work work;
 
-        snprintf(work.name, MAXPATH, "%s", arg->directory.c_str());
-        snprintf(work.type, 2, "d");
+        snprintf(work.name, MAXPATH, "%s", s.str().c_str());
+        snprintf(work.type, 2, "f");
         snprintf(work.linkname, MAXPATH, "");
-        snprintf(work.xattr, MAXPATH, "xattr");
-        snprintf(work.osstext1, MAXXATTR, "osstext1");
-        snprintf(work.osstext2, MAXXATTR, "osstext2");
+        snprintf(work.xattr, MAXPATH, "xattr %zu", i);
+        snprintf(work.osstext1, MAXXATTR, "osstext1 %zu", i);
+        snprintf(work.osstext2, MAXXATTR, "osstext2 %zu", i);
 
-        work.statuso.st_ino = arg->inode;
-        work.statuso.st_mode = 0775;
+        work.statuso.st_ino = arg->inode++;
+        work.statuso.st_mode = 0777;
         work.statuso.st_nlink = 1;
         work.statuso.st_uid = arg->uid;
         work.statuso.st_gid = arg->uid;
         work.statuso.st_size = size_rngs[bucket](size_gens[bucket]);
-        work.statuso.st_blksize = rng(gen);
-        work.statuso.st_blocks = rng(gen);
+        work.statuso.st_blksize = arg->settings->blocksize;
+        work.statuso.st_blocks = work.statuso.st_size / work.statuso.st_blksize;
         work.statuso.st_ctime = time_rng(time_gen);
-        work.statuso.st_atime = work.statuso.st_ctime + time_rng(time_gen);
-        work.statuso.st_mtime = work.statuso.st_ctime + time_rng(time_gen);
+        work.statuso.st_atime = std::max(work.statuso.st_ctime, (time_t) time_rng(time_gen));
+        work.statuso.st_mtime = std::max(work.statuso.st_ctime, (time_t) time_rng(time_gen));
 
         work.crtime  = rng(gen);
         work.ossint1 = rng(gen);
@@ -448,9 +381,104 @@ void thread(void *args) {
         work.ossint3 = rng(gen);
         work.ossint4 = rng(gen);
 
-        insertsumdb(on_disk, &work, &summary);
+        sumit(&summary, &work);
+        insertdbgo(&work, on_disk, res);
+    }
 
-        sqlite3_close(on_disk);
+    sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
+
+    insertdbfin(on_disk, res);
+
+    // summarize this directory
+    std::size_t bucket = bucket_rng(bucket_gen);
+
+    struct work work;
+
+    snprintf(work.name, MAXPATH, "%s", arg->path.c_str());
+    snprintf(work.type, 2, "d");
+    snprintf(work.linkname, MAXPATH, "");
+    snprintf(work.xattr, MAXPATH, "xattr");
+    snprintf(work.osstext1, MAXXATTR, "osstext1");
+    snprintf(work.osstext2, MAXXATTR, "osstext2");
+
+    work.statuso.st_ino = arg->inode;
+    work.statuso.st_mode = 0775;
+    work.statuso.st_nlink = 1;
+    work.statuso.st_uid = arg->uid;
+    work.statuso.st_gid = arg->uid;
+    work.statuso.st_size = size_rngs[bucket](size_gens[bucket]);
+    work.statuso.st_blksize = rng(gen);
+    work.statuso.st_blocks = rng(gen);
+    work.statuso.st_ctime = time_rng(time_gen);
+    work.statuso.st_atime = work.statuso.st_ctime + time_rng(time_gen);
+    work.statuso.st_mtime = work.statuso.st_ctime + time_rng(time_gen);
+
+    work.crtime  = rng(gen);
+    work.ossint1 = rng(gen);
+    work.ossint2 = rng(gen);
+    work.ossint3 = rng(gen);
+    work.ossint4 = rng(gen);
+
+    insertsumdb(on_disk, &work, &summary);
+
+    sqlite3_close(on_disk);
+}
+
+template <typename Engine, typename Distribution>
+void generatedir(void *args) {
+    ThreadArgs <Engine, Distribution> *arg = (ThreadArgs <Engine, Distribution> *) args;
+    if (!arg->files) {
+        return;
+    }
+
+    // this function is responsible for creating the directory it is working on
+    if (mkdir(arg->path.c_str(), 0777) != 0) {
+        const int err = errno;
+        std::cerr << "mkdir error: " << arg->path << ": " << strerror(err) << std::endl;
+        if (err != EEXIST) {
+            return;
+        }
+    }
+
+    // subdirectory count generator
+    std::default_random_engine subdir_gen(arg->seed_rng(arg->seed_gen));
+    std::uniform_int_distribution <std::size_t> subdir_rng(arg->settings->subdirs.min, arg->settings->subdirs.max);
+
+    // distribute the files across the current directory
+    std::vector <std::size_t> file_distribution(subdir_rng(subdir_gen) + 1);
+    if (arg->curr_depth < arg->target_depth) {
+        distribute_total_randomly(arg->files, file_distribution, arg->settings->files_with_dirs, arg->seed_gen, arg->seed_rng);
+    }
+    // this is the final directory, so all files are here
+    else {
+        file_distribution.resize(1);
+        file_distribution[0] = arg->files;
+    }
+
+    // generate the files in the current directory
+    generatecurr(arg, file_distribution[0]);
+
+    std::size_t inode = arg->inode + 1 + file_distribution[0];
+
+    for(std::size_t i = 1; i < file_distribution.size(); i++) {
+        std::stringstream s;
+        s << arg->path << "/dir" << i - 1;
+
+        // push into work queue
+        ThreadArgs <Engine, Distribution> *sub_args = new ThreadArgs <Engine, Distribution>(arg->seed_gen, arg->seed_rng);
+        sub_args->path = s.str();
+        sub_args->files = file_distribution[i];
+        sub_args->target_depth = arg->target_depth;
+        sub_args->curr_depth = arg->curr_depth + 1;
+        sub_args->uid = arg->uid;
+        sub_args->index = arg->index;
+        sub_args->seed = arg->seed_rng(arg->seed_gen);
+        sub_args->inode = inode;
+
+        // increment inode by directory + files (not perfect because subdirectory count is not known)
+        inode += 1 + file_distribution[i];
+
+        thpool_add_work(*arg->pool, generatedir <Engine, Distribution>, sub_args);
     }
 
     delete arg;
@@ -458,7 +486,7 @@ void thread(void *args) {
 
 std::ostream &print_help(std::ostream &stream, char *argv0) {
     static const Settings s;
-    return stream << "Syntax: " << argv0 << " [options] directory bucket_0 --filesize min,max,weight [--filesize min,max,weight ...]\n"
+    return stream << "Syntax: " << argv0 << " [options] directory bucket [bucket ...]\n"
                   << "\n"
                   << "    Options:\n"
                   << "        --users n               Number of users                                        (Default: "  << s.users << ")\n"
@@ -476,9 +504,9 @@ std::ostream &print_help(std::ostream &stream, char *argv0) {
                   << "        --max-depth n           Maximum layers of directories                          (Default: "  << s.depth.max << ")\n"
                   << "        --min-time n            Minimum timestamp                                      (Default: "  << s.time.min << ")\n"
                   << "        --max-time n            Maximum timestamp                                      (Default: "  << s.time.max << ")\n"
-                  << "        --filesize              Comma separated triple of min,max,weight. At least one should be provided.\n"
                   << "\n"
-                  << "    directory                   The directory to put the generated tree into\n";
+                  << "    directory                   The directory to put the generated tree into\n"
+                  << "    bucket                      Comma separated triple of min,max,weight. At least one should be provided.\n";
 }
 
 template <typename T>
@@ -505,6 +533,7 @@ bool read_value(int argc, char *argv[], int &i, T &setting, const std::string &n
     }
 
 bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
+    bool positional = false;
     int i = 1;
     while (i < argc) {
         const std::string args(argv[i++]);
@@ -526,31 +555,36 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
         PARSE("seed",            seed,              "seed")
         PARSE("min-depth",       depth.min,         "min depth")
         PARSE("max-depth",       depth.max,         "max depth")
+        PARSE("min-subdirs",     subdirs.min,       "min subdirectories")
+        PARSE("max-subdirs",     subdirs.max,       "max subdirectories")
         PARSE("min-time",        time.min,          "min atime")
         PARSE("max-time",        time.max,          "max atime")
         PARSE("threads",         threads,           "thread count")
         PARSE("blocksize",       blocksize,         "blocksize")
-        else if (args == "--filesize") {
-            std::size_t min;
-            char comma1;
-            std::size_t max;
-            char comma2;
-            double weight;
-
-            if (!(std::stringstream(argv[i]) >> min >> comma1 >> max >> comma2 >> weight) ||
-                (comma1 != ',') || (comma2 != ',') ||
-                (min > max) || !max) {
-                std::cerr << "Bad filesize range: " << argv[i] << std::endl;
-                return false;
-            }
-
-            settings.buckets.emplace_back(Bucket(min, max, weight));
-            i++;
-        }
         else {
             // first positional argument is the directory
-            if (!settings.top.size()) {
-                settings.top = std::move(args);
+            if (!positional) {
+                if (!settings.top.size()) {
+                    settings.top = std::move(args);
+                    positional = true;
+                }
+            }
+            // all others are filesize buckets
+            else {
+                std::size_t min;
+                char comma1;
+                std::size_t max;
+                char comma2;
+                double weight;
+
+                if (!(std::stringstream(args) >> min >> comma1 >> max >> comma2 >> weight) ||
+                    (comma1 != ',') || (comma2 != ',') ||
+                    (min > max) || !max) {
+                    std::cerr << "Bad filesize bucket: " << argv[i] << std::endl;
+                    return false;
+                }
+
+                settings.buckets.emplace_back(Bucket(min, max, weight));
             }
         }
     }
@@ -561,6 +595,55 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
     }
 
     return (i == argc) && settings;
+}
+
+// Recursive mkdir
+// If there is an error, previously created directories are not deleted
+bool create_path(const std::string &path, bool &exists) {
+    // check if the path is a directory
+    struct stat path_stat;
+    if (exists && stat(path.c_str(), &path_stat) == 0) {
+        if (!S_ISDIR(path_stat.st_mode)) {
+            std::cerr << path << " is not a directory. Skipping." << std::endl;
+            return false;
+        }
+        else {
+            exists = true;
+        }
+    }
+    else if (!exists || (errno == ENOENT)) {
+        // if it doesn't, create the directory
+        exists = false;
+        if (mkdir(path.c_str(), 0777) != 0) {
+            std::cerr << "Could not create " << path << ". Skipping." << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// create the top level separately
+bool create_top(const Settings &settings, std::string &fullname) {
+    // create the top level directory
+    bool exists = true;
+    if (!create_path(settings.top, exists)) {
+        std::cerr << "Could not create directory " << settings.top << std::endl;
+        return false;
+    }
+
+    // create the top level database file
+    fullname = settings.top + settings.path_separator + settings.db_name;
+    sqlite3 *top = open_and_create_tables(fullname);
+    if (!top) {
+        std::cerr << "Could not open " << fullname << std::endl;
+        return false;
+    }
+
+    // do not add files to this layer
+    sqlite3_close(top);
+
+    return true;
 }
 
 int main(int argc, char *argv[]) {
@@ -576,23 +659,11 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    // create the top level directory
-    bool exists = true;
-    if (!create_path(settings.top, exists)) {
-        std::cerr << "Could not create directory " << settings.top << std::endl;
+    // create the top level separately
+    std::string fullname;
+    if (!create_top(settings, fullname)) {
         return 1;
     }
-
-    // create the top level database file
-    const std::string full_name = settings.top + settings.path_separator + settings.db_name;
-    sqlite3 *top = open_and_create_tables(full_name);
-    if (!top) {
-        std::cerr << "Could not open " << full_name << std::endl;
-        return 1;
-    }
-
-    // do not add files to this layer
-    sqlite3_close(top);
 
     // start up thread pool
     threadpool pool = thpool_init(settings.threads);
@@ -601,8 +672,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    ThreadArgs::settings = &settings;
-    ThreadArgs::pool = &pool;
+    ThreadArgs <std::default_random_engine, std::uniform_int_distribution <std::size_t> >::settings = &settings;
+    ThreadArgs <std::default_random_engine, std::uniform_int_distribution <std::size_t> >::pool = &pool;
 
     // use this rng to generate seeds for other rngs
     std::default_random_engine seed_gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -610,7 +681,7 @@ int main(int argc, char *argv[]) {
 
     // generate file distribution by user
     std::vector <std::size_t> file_counts(settings.users);
-    distribute_total_randomly(file_counts, settings.files, seed_gen, seed_rng);
+    distribute_total_randomly(settings.files, file_counts, true, seed_gen, seed_rng);
 
     // rng for depth selection
     std::default_random_engine depth_gen(seed_rng(seed_gen));
@@ -621,19 +692,24 @@ int main(int argc, char *argv[]) {
 
     // push each subdirectory generation into the thread pool
     for(std::size_t uid = 0; uid < settings.users; uid++) {
-        ThreadArgs *args = new ThreadArgs;
+        std::stringstream s;
+        s << settings.top << "/user" << uid;
+
+        // push into work queue
+        ThreadArgs <std::default_random_engine, std::uniform_int_distribution <std::size_t> > *args = new ThreadArgs <std::default_random_engine, std::uniform_int_distribution <std::size_t> >(seed_gen, seed_rng);
+        args->path = s.str();
+        args->files = file_counts[uid];
         args->target_depth = depth_rng(depth_gen);
+        args->curr_depth = 1;
         args->uid = uid;
         args->index = uid;
         args->seed = seed_rng(seed_gen);
         args->inode = inode;
-        args->files = file_counts[uid];
-        args->directory = settings.top;
 
         // next directory starts with an new set of inodes
         inode += args->files + args->target_depth;
 
-        thpool_add_work(pool, thread, args);
+        thpool_add_work(pool, generatedir <std::default_random_engine, std::uniform_int_distribution <std::size_t> >, args);
     }
 
     thpool_wait(pool);
