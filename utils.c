@@ -535,6 +535,7 @@ int processdirs(DirFunc dir_fn) {
 
      int myqent;
      struct work * workp;
+     int thread_count = 0;
 
      // loop over queue entries and running threads and do all work until
      // running threads zero and queue empty
@@ -559,13 +560,14 @@ int processdirs(DirFunc dir_fn) {
             // buffer, that has to be done in dir_fn(), something like:
             // "free(((struct work*)workp)->freeme)"
             thpool_add_work(mythpool, dir_fn, (void *)workp);
+            thread_count++;
             delQueuenofree();
             pthread_mutex_unlock(&queue_mutex);
           }
         }
      }
 
-     return 0;
+     return thread_count;
 }
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {

@@ -455,6 +455,7 @@ int main(int argc, char *argv[])
 #endif
 
      int aggregate_id = 0;
+     int thread_count = 0;
      for(; idx < argc; idx++) {
          // parse positional args, following the options
          int retval = 0;
@@ -478,7 +479,7 @@ int main(int argc, char *argv[])
          // have to be done per instance of a bf program loops through and
          // processes all directories that enter the queue by farming the work
          // out to the threadpool
-         processdirs(processdir);
+         thread_count += processdirs(processdir);
 
          // processfin - this is work done after the threads are done working
          // before they are taken down - this will be different for each
@@ -553,6 +554,7 @@ int main(int argc, char *argv[])
          const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
          const long double output_time = elapsed(&output_start, &output_end);
 
+         fprintf(stderr, "Queries performed:                              %d\n",   thread_count + in.intermediate_count + 1);
          fprintf(stderr, "Time to aggregate into intermediate databases:  %Les\n", intermediate_time);
          fprintf(stderr, "Time to aggregate into final databases:         %Les\n", aggregate_time);
          fprintf(stderr, "Time to print:                                  %Les\n", output_time);
