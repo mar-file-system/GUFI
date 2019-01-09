@@ -75,6 +75,7 @@
 
 
 import argparse
+import itertools
 import os
 import subprocess
 import sys
@@ -93,36 +94,74 @@ def build(args):
 def space(args, order=''):
     select, where = build(args)
     entries       = qb.build_query(select + ['uid', 'TOTAL(size) AS space'],  ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
-    intermediate  = None # qb.build_query(['*'],                                     ['entries'], None,   None,   None,                       None)
+    intermediate  = None
     aggregate     = qb.build_query(select + ['uid', 'TOTAL(space) AS space'], ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
     return entries, intermediate, aggregate
 
 def files(args, order=''):
     select, where = build(args)
     entries       = qb.build_query(select + ['uid', 'COUNT(*) AS files'],     ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
-    intermediate  = None # qb.build_query(['*'],                                     ['entries'], None,  None,    None,                       None)
+    intermediate  = None
     aggregate     = qb.build_query(select + ['uid', 'TOTAL(files) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
     return entries, intermediate, aggregate
 
 def total_space(args, *ignored):
     _, where = build(args)
-    entries      = qb.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, args.num_results)
-    intermediate = qb.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, args.num_results)
-    # aggregate    = qb.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, args.num_results)
-    return entries, intermediate, intermediate # aggregate
+    entries      = qb.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, None, None)
+    intermediate = qb.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, None, None)
+    return entries, intermediate, intermediate
 
 def total_files(args, *ignored):
     _, where = build(args)
-    entries      = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, args.num_results)
-    intermediate = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, args.num_results)
-    # aggregate    = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, args.num_results)
-    return entries, intermediate, intermediate # aggregate
+    entries      = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
+    intermediate = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    return entries, intermediate, intermediate
+
+def directory(args, order = ''):
+    _, where = build(args)
+    entries        = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    aggregate      = qb.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
+
+    return entries, None, aggregate
+
+def get_leaf_dirs(path):
+    '''Return an array containing path names of leaf directories under path'''
+    return [dirpath for dirpath, dirnames, filenames in os.walk(path) if not dirnames]
+
+def leaf(args, order = ''):
+    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+    return directory(args, order)
+
+def total_in_leaf(args, *ignored):
+    _, where = build(args)
+    entries        = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
+    intermediate   = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    aggregate      = qb.build_query(['count'],                 ['entries'], None,  None, None, None, None)
+
+    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+
+    return entries, intermediate, aggregate
+
+def median_in_leaf(args, *ignored):
+    '''https://stackoverflow.com/a/15766121'''
+    _, where = build(args)
+    entries      = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    intermediate = qb.build_query(['count'],             ['entries'], None,  None, ['count'], '2 - (SELECT COUNT(*) FROM entries) % 2', 'OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)')
+    aggregate    = qb.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
+
+    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+
+    return entries, intermediate, aggregate
 
 # mapping of valid 'operation' argument values to array generators
-PREMADE_QUERIES = {'space'       : space,
-                   'files'       : files,
-                   'total-space' : total_space,
-                   'total-files' : total_files}
+PREMADE_QUERIES = {'space'        : space,
+                   'files'        : files,
+                   'total-space'  : total_space,
+                   'total-files'  : total_files,
+                   'directory'    : directory,
+                   'leaf'         : leaf,
+                   'total-leaf'   : total_in_leaf,
+                   'median-leaf'  : median_in_leaf}
 
 # allowd keywords for sorting output
 ORDER = {'ASC'   : 'ASC',

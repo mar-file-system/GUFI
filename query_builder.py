@@ -168,7 +168,7 @@ def get_gid(group_str):
         gid = int(group_str)
     return gid
 
-def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None):
+def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None, extra = None):
     '''
     Builds a query using arrays of data for each field.
     'select' and 'from_tables' must exist. All other arguments are optional.
@@ -206,8 +206,11 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
     if order_by and len(order_by):
         query += ' ORDER BY {}'.format(', '.join(order_by))
 
-    if type(num_results) == int:
+    if num_results:
         query += ' LIMIT {}'.format(num_results)
+
+    if extra:
+        query += ' ' + extra
 
     return query + ';'
 
