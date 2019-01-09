@@ -117,7 +117,7 @@ def total_files(args, *ignored):
     intermediate = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
     return entries, intermediate, intermediate
 
-def directory(args, order = ''):
+def directory_count(args, order = ''):
     _, where = build(args)
     entries        = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
     aggregate      = qb.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
@@ -128,9 +128,9 @@ def get_leaf_dirs(path):
     '''Return an array containing path names of leaf directories under path'''
     return [dirpath for dirpath, dirnames, filenames in os.walk(path) if not dirnames]
 
-def leaf(args, order = ''):
+def leaf_count(args, order = ''):
     args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
-    return directory(args, order)
+    return directory_count(args, order)
 
 def total_in_leaf(args, *ignored):
     _, where = build(args)
@@ -146,28 +146,56 @@ def median_in_leaf(args, *ignored):
     '''https://stackoverflow.com/a/15766121'''
     _, where = build(args)
     entries      = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    intermediate = qb.build_query(['count'],             ['entries'], None,  None, ['count'], '2 - (SELECT COUNT(*) FROM entries) % 2', 'OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)')
+    intermediate = qb.build_query(['count'],             ['entries'], None,  None, ['count'], '2 - (SELECT COUNT(*) FROM entries) % 2', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
     aggregate    = qb.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
 
     args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
 
     return entries, intermediate, aggregate
 
-# mapping of valid 'operation' argument values to array generators
-PREMADE_QUERIES = {'space'        : space,
-                   'files'        : files,
-                   'total-space'  : total_space,
-                   'total-files'  : total_files,
-                   'directory'    : directory,
-                   'leaf'         : leaf,
-                   'total-leaf'   : total_in_leaf,
-                   'median-leaf'  : median_in_leaf}
+def get_depth(path, sep = '/'):
+    ret = []
+    path_len = len(path)
+    sub = path[-1] != sep # subtract 1 if the provided path did not include a separator because the split string will start with a separator
 
-# allowd keywords for sorting output
-ORDER = {'ASC'   : 'ASC',
-         'DESC'  : 'DESC',
-         'least' : 'ASC',
-         'most'  : 'DESC'}
+    for dirpath, _, _ in os.walk(path):
+        ret += [[path, len(dirpath[path_len:].split(sep)) - sub]]
+    return ret
+
+def depth(args, sep = '/'):
+    ret = []
+    for path in args.GUFI_tree:
+        ret += get_depth(path);
+    return ret
+
+def leaf_depth(args, sep = '/'):
+    ret = []
+    for path in args.GUFI_tree:
+        for leaf in get_leaf_dirs(path):
+            ret += get_depth(leaf, sep)
+    return ret
+
+# mapping of valid non-bfq 'operation' argument values
+NONQUERIES  = {'depth'      : depth,
+               'leaf-depth' : leaf_depth}
+
+# mapping of valid bfq 'operation' argument values to array generators
+BFQ_QUERIES = {'space'           : space,
+               'files'           : files,
+               'total-space'     : total_space,
+               'total-files'     : total_files,
+               'directory-count' : directory_count,
+               'leaf-count'      : leaf_count,
+               'total-leaf'      : total_in_leaf,
+               'median-leaf'     : median_in_leaf}
+
+# allowed keywords for sorting output (if applicable)
+ASCENDING  = 'ASC'
+DESCENDING = 'DESC'
+ORDER = {'ASC'   : ASCENDING,
+         'DESC'  : DESCENDING,
+         'least' : ASCENDING,
+         'most'  : DESCENDING}
 
 if __name__=='__main__':
     cwd = os.getcwd()
@@ -181,37 +209,42 @@ if __name__=='__main__':
     parser.add_argument('--select',        metavar='cols',  dest='select',      type=str,                                          help='comma separated columns')
     parser.add_argument('--threads',       metavar='n',     dest='threads',     type=qb.check_non_negative,  default=qb.cpus(),    help='number of threads')
     parser.add_argument('--uid', '--user', metavar='u',     dest='uid',         type=qb.get_uid,                                   help='restrict to user')
-    parser.add_argument('operation',                                            choices=PREMADE_QUERIES.keys(),                    help='operation to perform')
+    parser.add_argument('operation',                                            choices=NONQUERIES.keys() + BFQ_QUERIES.keys(),    help='operation to perform')
     parser.add_argument('GUFI_tree',                                                                         nargs='+',            help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 
-    entries, intermediate, aggregate = PREMADE_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
+    if args.operation in NONQUERIES:
+        res = NONQUERIES[args.operation](args)
+        res.sort(key = lambda pair: pair[1], reverse=(args.order==DESCENDING))
+        print len(res[:args.num_results])
+    elif args.operation in BFQ_QUERIES:
+        entries, intermediate, aggregate = BFQ_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
 
-    # create the bfq command
-    bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
-               '-n', str(args.threads),
-               '-p', '-P']
+        # create the bfq command
+        bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+                   '-n', str(args.threads),
+                   '-p', '-P']
 
-    if entries is not None:
-        bfq_cmd += ['-E', entries]
+        if entries is not None:
+            bfq_cmd += ['-E', entries]
 
-    if intermediate is not None:
-        bfq_cmd += ['-J', intermediate]
+        if intermediate is not None:
+            bfq_cmd += ['-J', intermediate]
 
-    if aggregate is not None:
-        bfq_cmd += ['-G', aggregate]
+        if aggregate is not None:
+            bfq_cmd += ['-G', aggregate]
 
-    if args.delim:
-        bfq_cmd += ['-d', args.delim]
+        if args.delim:
+            bfq_cmd += ['-d', args.delim]
 
-    if args.maxdepth:
-        bfq_cmd += ['-z', str(args.maxdepth)]
+        if args.maxdepth:
+            bfq_cmd += ['-z', str(args.maxdepth)]
 
-    if args.mindepth:
-        bfq_cmd += ['-y', str(args.mindepth)]
+        if args.mindepth:
+            bfq_cmd += ['-y', str(args.mindepth)]
 
-    bfq = subprocess.Popen(bfq_cmd + args.GUFI_tree)
-    bfq.communicate() # block until bfq finishes
+        bfq = subprocess.Popen(bfq_cmd + args.GUFI_tree)
+        bfq.communicate() # block until bfq finishes
 
-    sys.exit(bfq.returncode)
+        sys.exit(bfq.returncode)
