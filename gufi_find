@@ -83,6 +83,8 @@ import time
 
 import query_builder as qb
 
+SECONDS_PER_DAY = str(24 * 60 * 60)
+
 '''file size units specified in GNU find.'''
 filesize = {'b' : 512,
             'c' : 1,
@@ -102,20 +104,20 @@ def build_where(args):
     where = []
 
     if args.amin is not None:
-        where += ['atime > {}'.format(time.time() - args.amin * 60)]
+        where += ['({} - atime) / 60 == {}'.format(time.time(), args.amin)]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        where += ['atime > {}'.format(time.time() - args.atime * 24 * 60 * 60)]
+        where += ['({} - atime) / {} == {} '.format(time.time(), SECONDS_PER_DAY, args.atime)]
 
     if args.cmin is not None:
-        where += ['ctime > {}'.format(time.time() - args.cmin * 60)]
+        where += ['({} - ctime) / 60 == {}'.format(time.time(), args.cmin)]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        where += ['ctime > {}'.format(time.time() - args.ctime * 24 * 60 * 60)]
+        where += ['({} - ctime) / {} == {} '.format(time.time(), SECONDS_PER_DAY, args.ctime)]
 
     if args.empty == True:
         where += ['size == 0']
@@ -149,10 +151,10 @@ def build_where(args):
     # if args.lname is not None:
 
     if args.mmin is not None:
-        where += ['mtime > {}'.format(time.time() - args.mmin * 60)]
+        where += ['({} - mtime) / 60 == {}'.format(time.time(), args.mmin)]
 
     if args.mtime is not None:
-        where += ['mtime > {}'.format(time.time() - args.mtime * 24 * 60 * 60)]
+        where += ['({} - mtime) / {} == {} '.format(time.time(), SECONDS_PER_DAY, args.mtime)]
 
     if args.name is not None:
         where += ['name REGEXP "{}"'.format(args.name)]
