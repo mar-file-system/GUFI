@@ -154,3 +154,35 @@ created runbffuse to run bfwi to create a gufi, run bfq to show the gufi, then r
 added -d and -o t allow bfwreaddirplus2db to write output files in addition to output dbs and removed -p and -P for printing
 added testcases in test/runbfwreaddirplus2db to test this
 changed README to reflect these changes
+-----------------------------------------------------------------
+added options to dfw to make it useful for loading gufi tree using bfwi -u load from flat file
+added common output routine printload to utils.c to enable writing of records for loading using bfwi -u
+modified bfwi -o to use output that is suitable for using bfwi -u load from flat file
+added dfw2gufitest and bfwiflat2gufitest python scripts to test each of these functions
+updated README
+updated gufimaster doc to V2
+---------------------------------------------------
+updated bfwreaddirplus2db added sortfield to output file to make sorting for bfwi load from flat easy as you sort on sortfield and then type
+--------------------------------------------------
+updated rundfw due to changes in dfw
+------------------------------------------
+updated runbfwreaddirplus2db to enable running from gufitest.py
+-------------------------------------------
+updated bfwi.c readlink processing processing
+-------------------------------------------
+updated bfwreaddirplus2db.c fix xattr processing in reprocessdir for suspect dirs
+-------------------------------------
+minor fix to bfq.c to check for existence of tree index in a mroe reasonable way
+---------------------------------
+minor fix to querydbn.c  to control the output to be more reasonable
+----------------------------------------
+built test/gufitest.py
+it has a bunch of correctness tests in python
+and also enables you to run most of the most important functional scripts (runbfq,runbfwi,rundfw,runbfti,runquerydbn,runbquerydb,etc)
+builds a tree in /tmp and runs all tests in tmp and cleans up after itself so you dont have test stuff in the src dir
+---------------------------------------------
+fixed a ton of stuff in test and scripts directories - mostly transparent but allows scripts and tests to run
+______________________________________________________
+update of bfq to allow for the top directory where we start to be a link to a dir as well as a dir
+___________________________________________
+wrote a way to convert dates for use in tsm queries and get dates from tsm query into a usable form for compare

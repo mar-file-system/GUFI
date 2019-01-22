@@ -73,6 +73,10 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+SCR=$DIR/../scripts
+BFQ=$DIR/../bfq
 
 rm outdb*
-../scripts/userfilespacehogusesummary testdirdup/testdir 2
+$SCR/userfilespacehogusesummary testdirdup/testdir 2

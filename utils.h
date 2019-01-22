@@ -90,7 +90,9 @@ OF SUCH DAMAGE.
 #include "bf.h"
 
 /* this block is for the triell */
-#define CHAR_SIZE 256
+/* we think this should be 10 since we are just using chars 0-9 but 10 doesnt work for some reason */
+#define CHAR_SIZE 24
+//#define CHAR_SIZE 12
 struct Trie
 {
     int isLeaf;    // 1 when node is a leaf node

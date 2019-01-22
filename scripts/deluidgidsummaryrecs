@@ -73,7 +73,9 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+BFQ=$DIR/../bfq
 
-EPATH=..
 echo "delete all uid and gid summary records from summary tables in $1"
-$EPATH/bfq -S "delete from summary where rectype>0;" -Pp -n 2 $1
+$BFQ -S "delete from summary where rectype>0;" -Pp -n 2 $1

@@ -82,7 +82,6 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <sys/stat.h>
 #include <utime.h>
 #include <sys/xattr.h>
@@ -137,7 +136,7 @@ void *scout(void * param) {
     char *ret;
     FILE *finfile;
     char linein[MAXPATH+MAXPATH+MAXPATH];
-    fpos_t  foffset;
+    long long int foffset;
     struct work * mywork;
 
     mywork=malloc(sizeof(struct work));
@@ -159,7 +158,7 @@ void *scout(void * param) {
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              //printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             //printf("foffsett %lld\n",(int64_t)foffset); // non-portable cast
+             //printf("foffsett %lld\n",foffset);
              mywork->offset=foffset;
              pushdir(mywork);
           }
@@ -181,6 +180,7 @@ static void processdir(void * passv)
     struct work qwork;
     DIR *dir;
     struct dirent *entry;
+    char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
     char *records;
@@ -200,7 +200,7 @@ static void processdir(void * passv)
     mytid=gettid();
 
     //if (in.infile > 0) return;
-    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,(uint64_t)passmywork->offset); // non-portable cast of fpos_t
+    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,passmywork->offset);
 
     if (in.infile == 0) {
       // open directory
@@ -264,6 +264,7 @@ static void processdir(void * passv)
           lstat(qwork.name, &qwork.statuso);
           qwork.xattrs=0;
           if (in.doxattrs > 0) {
+            bzero(qwork.xattr,sizeof(qwork.xattr));
             qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
           }
         } else {
@@ -293,7 +294,10 @@ static void processdir(void * passv)
             // its a link so get the linkname
             if (in.infile == 0) {
               /* if its infile we have to get this elsewhere */
-              readlink(qwork.name,qwork.linkname,MAXPATH);
+              bzero(lpatho,sizeof(lpatho));
+              readlink(qwork.name,lpatho,MAXPATH);
+              //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+              sprintf(qwork.linkname,"%s",lpatho);
             }
             sprintf(qwork.type,"%s","l");
             if (in.printing > 0) {
@@ -367,7 +371,7 @@ int processinit(void * myworkin) {
      char outfn[MAXPATH];
      FILE *finfile;
      char linein[MAXPATH+MAXPATH+MAXPATH];
-     fpos_t foffset;
+     long long int foffset;
 
      //open up the output files if needed
      if (in.outfile > 0) {
@@ -407,7 +411,7 @@ int processinit(void * myworkin) {
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             printf("foffsett %lld\n",(uint64_t)foffset); // non-portable cast of fpos_t
+             printf("foffsett %lld\n",foffset);
              mywork->offset=foffset;
              pushdir(mywork);
           }
@@ -448,6 +452,8 @@ int processinit(void * myworkin) {
           fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
           return 1;
        }
+       bzero(mywork->xattr,sizeof(mywork->xattr));
+       bzero(mywork->linkname,sizeof(mywork->linkname));
        if (in.doxattrs > 0) {
          mywork->xattrs=0;
          mywork->xattrs=pullxattrs(in.name,mywork->xattr);

@@ -97,8 +97,8 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <sqlite3.h>
 
-#include "bf.h"
-#include "dbutils.h"
+#include <bf.h>
+#include <dbutils.h>
 
 char globalmnt[MAXPATH];
 int  globalmntlen;
@@ -124,12 +124,12 @@ int att(sqlite3 *indb) {
         i=0;
         while (i<globaldbs) {
           sprintf(qat,"ATTACH \'%s\' as mdb%d;",globaldbname[i],i);
+          //printf("ATTACH \'%s\' as mdb%d;\n",globaldbname[i],i);
           rc=sqlite3_exec(indb, qat,0, 0, &err_msg);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "Cannot attach database: %s %s\n", sqlite3_errmsg(db),globaldbname[i]);
             sqlite3_close(db);
-
-            return -EIO;  // exit(9);
+            exit(9);
           }
           sprintf(up,"select * from mdb%d.%s",i,globaltab);
           strcat(sqlu,up);
@@ -143,7 +143,7 @@ int att(sqlite3 *indb) {
         }
         strcat(sqlu,";");
 
-        //printf("sqlu: %s\n",sqlu);
+        //fprintf(stderr,"sqlu: %s\n",sqlu);
         rawquerydb(indbname, 0, indb, sqlu,0, 0, 0, 0);
         return 0;
 }
@@ -190,8 +190,6 @@ static int gufir_getattr(const char *path, struct stat *stbuf) {
         } else {
           /* input path is equal to or longer than the shortest db path meaning we should just look up for an exact match */
 
-          //mydb = opendb(":memory",db,5,0);
-          //rc = sqlite3_open(":memory", &mydb);
           rc = sqlite3_open("", &mydb);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,path,sqlite3_errmsg(mydb));
@@ -360,11 +358,64 @@ static int gufir_access(const char *path, int mask) {
 }
 
 static int gufir_statfs(const char *path, struct statvfs *stbuf) {
-	int res;
+        int i;
+        int rc;
+        sqlite3_stmt    *res;
+        const char      *tail;
+        int rec_count;
+        char sqlstmt[1024];
+        char *p;
+        char shortpathc[MAXPATH];
+        struct stat stbuc;
+        sqlite3 *mydb;
+        int bsize=512;
+        long long int totbytes;
+        long long int totfiles;
 
-	res = statvfs("/", stbuf);
-	if (res == -1)
+/*
+	rc = statvfs("/", stbuf);
+	if (rc == -1)
 		return -errno;
+*/
+        rc = sqlite3_open("", &mydb);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,path,sqlite3_errmsg(mydb));
+          return -EIO;
+        }
+        att(mydb); 
+        //shortpath(path,shortpathc,endpath);
+        totbytes=0;
+        totfiles=0;
+        sprintf(sqlstmt,"select sum(size),count(*)from %s where type='f';",globalview); 
+        rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
+        if (rc != SQLITE_OK) {
+          fprintf(stderr, "statvfs SQL error on query: %s name %s \n",sqlstmt,path);
+          return -1;
+        }
+        rec_count = 0;
+             
+        while (sqlite3_step(res) == SQLITE_ROW) {
+          //ncols=sqlite3_column_count(res);
+          totbytes=sqlite3_column_int64(res,0);
+          totfiles=sqlite3_column_int64(res,1);
+          rec_count++;
+          break;
+        }
+        sqlite3_finalize(res);
+        closedb(mydb);
+
+        /* these ar available in both OSX and Linux */
+        stbuf->f_bsize=bsize;
+        stbuf->f_namemax=MAXPATH;
+        stbuf->f_fsid=0;
+        stbuf->f_frsize=bsize;
+        stbuf->f_flag=ST_RDONLY;
+        stbuf->f_blocks=(totbytes/bsize)+1;
+        stbuf->f_bfree=0;
+        stbuf->f_bavail=0;
+        stbuf->f_files=totfiles;
+        stbuf->f_ffree=0;
+        stbuf->f_favail=0;
 
 	return 0;
 }
@@ -662,8 +713,9 @@ int main(int argc, char *argv[]) {
           fprintf(stderr,"path from query resulted in length < 1 %d %s\n",globalmntlen,globalmnt);
           exit(-1);
         }
+        //fprintf(stderr,"path from query resulted in %d %s\n",globalmntlen,globalmnt);
         
-        getcwd(cwd, MAXPATH);
+        getwd(cwd);
         stat(cwd,&globalst);
 
 	return fuse_main(argc, argv, &gufir_oper, NULL);

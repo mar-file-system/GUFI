@@ -140,7 +140,8 @@ int printits(struct work *pwork,int ptid) {
   if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",in.delim);
 
   fprintf(out, "%lu%s",  pwork->statuso.st_ino, in.delim);
-  fprintf(out, "%lld%s", pwork->pinode,         in.delim);
+  /* moved this to end because we would like to use this for input to bfwi load from file */
+  //fprintf(out, "%lld%s", pwork->pinode,         in.delim);
   fprintf(out, "%d%s",   pwork->statuso.st_mode, in.delim);
   fprintf(out, "%lu%s",  pwork->statuso.st_nlink, in.delim);
   fprintf(out, "%d%s",   pwork->statuso.st_uid, in.delim);
@@ -151,17 +152,30 @@ int printits(struct work *pwork,int ptid) {
   fprintf(out, "%ld%s",  pwork->statuso.st_atime, in.delim);
   fprintf(out, "%ld%s",  pwork->statuso.st_mtime, in.delim);
   fprintf(out, "%ld%s",  pwork->statuso.st_ctime, in.delim);
-  fprintf(out, "%d%s",  pwork->suspect, in.delim);
 
+/* we need this field even if its not populated for bfwi load from file */
+/*
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s", pwork->linkname);
-    fprintf(out, "%s", in.delim);
+    fprintf(out, "%s%s", pwork->linkname,in.delim;
   }
+*/
+  fprintf(out, "%s%s", pwork->linkname,in.delim);
+
+/* we need this field even if its not populated for bfwi load from file */
+/*
   if (pwork->xattrs > 0) {
     //printf("xattr: ");
-    fprintf(out,"%s",pwork->xattr);
+    fprintf(out,"%s%s",pwork->xattr,in.delim);
   }
-  fprintf(out,"%s\n", in.delim);
+*/
+  fprintf(out,"%s%s",pwork->xattr,in.delim);
+
+  /* this one is for create tiem which posix doesnt have */
+  fprintf(out,"%s", in.delim);
+  /* moved this to end because we would like to use this for input to bfwi load from file */
+  fprintf(out, "%lld%s", pwork->pinode,         in.delim);
+  fprintf(out, "%d%s",  pwork->suspect, in.delim);
+  fprintf(out,"\n");
   return 0;
 }
 
@@ -508,6 +522,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
      int i;
+     int slashfound;
 
      *endname = 0;              // in case there's no '/'
      i=0;
@@ -515,16 +530,23 @@ int shortpath(const char *name, char *nameout, char *endname) {
      i=strlen(prefix);
      pp=prefix+i;
      //printf("cutting name down %s len %d\n",prefix,i);
+     slashfound=0;
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
           memset(pp, 0, 1);
           sprintf(endname,"%s",pp+1);
+          slashfound=1;
           break;
        }
        pp--;
        i--;
      }
-     sprintf(nameout,"%s",prefix);
+     if (slashfound == 0) {
+        sprintf(endname,"%s",name);
+        bzero(nameout,1);
+        //printf("shortpath: name %s, nameout %s, endname %s.\n",name,nameout,endname);
+     } else
+        sprintf(nameout,"%s",prefix);
      return 0;
 }
 
@@ -613,6 +635,44 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   return 0;
 }
 
+int printload(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,long long pinode,char *sortf,FILE *of) {
+  char buf[MAXXATTR];
+  char bufv[MAXXATTR];
+  char  ffielddelim[2];
+  char * xattrp;
+  int cnt;
+
+  fprintf(of,"%s%s", name,in.delim);
+  if (!strncmp(type,"l",1)) fprintf(of,"l%s",in.delim);
+  if (!strncmp(type,"f",1)) fprintf(of,"f%s",in.delim);
+  if (!strncmp(type,"d",1)) fprintf(of,"d%s",in.delim);
+  fprintf(of,"%lld%s", status->st_ino,in.delim);
+  //fprintf(of,"%lld%s", pinode,in.delim);
+  fprintf(of,"%d%s",status->st_mode,in.delim);
+  fprintf(of,"%d%s",status->st_nlink,in.delim);
+  fprintf(of,"%d%s", status->st_uid,in.delim);
+  fprintf(of,"%d%s", status->st_gid,in.delim);
+  fprintf(of,"%lld%s", status->st_size,in.delim);
+  fprintf(of,"%d%s", status->st_blksize,in.delim);
+  fprintf(of,"%lld%s", status->st_blocks,in.delim);
+  fprintf(of,"%ld%s", status->st_atime,in.delim);
+  fprintf(of,"%ld%s", status->st_mtime,in.delim);
+  fprintf(of,"%ld%s", status->st_ctime,in.delim);
+  fprintf(of,"%s%s",linkname,in.delim);
+  if (xattrs > 0) {
+    fprintf(of,"%s%s",xattr,in.delim);
+  } else {
+    fprintf(of,"%s",in.delim);
+  }
+  /* this one is for create time which posix doenst have */
+  fprintf(of,"%s",in.delim);
+  /* sort field at the end not required */
+  if (strlen(sortf) > 0) fprintf(of,"%s",sortf);
+
+  fprintf(of,"\n");
+  return(0);
+}
+
 /* the following is for the triell */
 
 /* Adapted to character representation of long long from                  */
@@ -644,11 +704,11 @@ void insertll(struct Trie* *head, char* str)
     while (*str)
     {
         // create a new node if path doesn't exists
-        if (curr->character[*str] == NULL)
-            curr->character[*str] = getNewTrieNode();
+        if (curr->character[*str - '0'] == NULL)
+            curr->character[*str - '0'] = getNewTrieNode();
 
         // go to next node
-        curr = curr->character[*str];
+        curr = curr->character[*str - '0'];
 
         // move to next character
         str++;
@@ -673,8 +733,9 @@ int searchll(struct Trie* head, char* str)
     struct Trie* curr = head;
     while (*str)
     {
+
         // go to next node
-        curr = curr->character[*str];
+        curr = curr->character[*str - '0'];
 
         // if string is invalid (reached end of path in Trie)
         if (curr == NULL)
@@ -712,8 +773,8 @@ int deletionll(struct Trie* *curr, char* str)
         // recurse for the node corresponding to next character in
         // the string and if it returns 1, delete current node
         // (if it is non-leaf)
-        if (*curr != NULL && (*curr)->character[*str] != NULL &&
-            deletionll(&((*curr)->character[*str]), str + 1) &&
+        if (*curr != NULL && (*curr)->character[*str - '0'] != NULL &&
+            deletionll(&((*curr)->character[*str - '0']), str + 1) &&
             (*curr)->isLeaf == 0)
         {
             if (!haveChildren(*curr))

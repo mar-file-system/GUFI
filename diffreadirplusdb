@@ -1,0 +1,16 @@
+first
+sqlite3 ""
+attach "b.0" as b0;
+attach "b.1" as b1;
+
+a temp view that does a full outer join removing dups from the union and then 
+look for any records that are different in paths, pinodes, or today is marked suspect.
+
+create temp view jt as select a0.path a0path,a0.type a0type,a0.inode a0inode,a0.pinode a0pinode,a0.suspect a0suspect,a1.path a1path,a1.type a1type,a1.inode a1inode,a1.pinode a1pinode,a1.suspect a1suspect from b0.readdirplus as a0 left outer join b1.readdirplus as a1 on a0.inode=a1.inode union all select a0.path a0path ,a0.type a0type,a0.inode a0inode,a0.pinode a0pinode,a0.suspect a0suspect,a1.path a1path,a1.type a1type,a1.inode a1inode,a1.pinode a1pinode,a1.suspect a1suspect from b1.readdirplus as a1 left outer join b0.readdirplus as a0 on a1.inode=a0.inode where a0.inode is null;
+
+select * from jt where a0pinode!=a1pinode or a0path!=a1path or a0inode is null or a1inode is null or a1suspectd=1;;
+
+or a with clause query
+
+with jt as (select a0.path a0path,a0.type a0type,a0.inode a0inode,a0.pinode a0pinode,a0.suspect a0suspect,a1.path a1path,a1.type a1type,a1.inode a1inode,a1.pinode a1pinode,a1.suspect a1suspect from b0.readdirplus as a0 left outer join b1.readdirplus as a1 on a0.inode=a1.inode union all select a0.path a0path ,a0.type a0type,a0.inode a0inode,a0.pinode a0pinode,a0.suspect a0suspect,a1.path a1path,a1.type a1type,a1.inode a1inode,a1.pinode a1pinode,a1.suspect a1suspect from b1.readdirplus as a1 left outer join b0.readdirplus as a0 on a1.inode=a0.inode where a0.inode is null) select * from jt where a0pinode!=a1pinode or a0path!=a1path or a0inode is null or a1inode is null or a1suspect=1;
+

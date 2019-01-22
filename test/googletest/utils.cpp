@@ -40,7 +40,7 @@ TEST(Trie, insert_empty) {
 }
 
 TEST(Trie, searchll) {
-    char buf[MAXPATH] = "trie string";
+    char buf[MAXPATH] = "1234";
 
     struct Trie *root = getNewTrieNode();
     ASSERT_NE(root, nullptr);
@@ -53,7 +53,7 @@ TEST(Trie, searchll) {
 }
 
 TEST(Trie, haveChildren) {
-    char buf[MAXPATH] = "trie string";
+    char buf[MAXPATH] = "1234";
 
     struct Trie *root = getNewTrieNode();
     ASSERT_NE(root, nullptr);
@@ -68,7 +68,7 @@ TEST(Trie, haveChildren) {
 }
 
 TEST(Trie, deletionll) {
-    char buf[MAXPATH] = "trie string";
+    char buf[MAXPATH] = "1234";
 
     struct Trie *root = getNewTrieNode();
     ASSERT_NE(root, nullptr);
@@ -82,8 +82,8 @@ TEST(Trie, deletionll) {
 }
 
 TEST(Trie, substring) {
-    char sub[MAXPATH] = "trie";
-    char str[MAXPATH] = "trie string";
+    char sub[MAXPATH] = "12";
+    char str[MAXPATH] = "1234";
 
     struct Trie *root = getNewTrieNode();
     ASSERT_NE(root, nullptr);

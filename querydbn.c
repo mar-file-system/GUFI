@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
    }
 
 
-   printf("processing query name %s  numb dbs %d\n",name, numdbs);
+   //printf("processing query name %s  numb dbs %d\n",name, numdbs);
    sprintf(dbname,"%s",name);
    db = opendb(name,5,0);
 
@@ -191,6 +191,7 @@ int main(int argc, char *argv[])
          sprintf(up,"select * from %s.%s;",dbn,tabnam);
       strcat(sqlu,up);
       sprintf(sqlat,"ATTACH \'%s\' as %s",dbnam,dbn);
+      //printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {
          fprintf(stderr, "Cannot attach database: %s %s\n", dbnam, sqlite3_errmsg(db));
