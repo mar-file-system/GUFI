@@ -6,6 +6,7 @@
 	path = sqlite3-pcre
 	# url = https://github.com/ralight/sqlite3-pcre
 	url = https://github.com/mar-file-system/sqlite3-pcre.git
+	branch = master
 [submodule "googletest"]
 	path = googletest
 	url = https://github.com/abseil/googletest.git
