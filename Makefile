@@ -58,16 +58,16 @@ help:
 	@  echo
 	@  echo "    bfw        -- $(BFW)"
 	@  echo "    tools      -- $(TOOLS)"
-	@  echo "    mysql      -- bfmi, requires you to have installed sqlite3, *and* mysql"
-	@  echo "    fuse       -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
-	@  echo "    test       -- bffuse/bfresultfuse, needs osxfuse (on Mac), or libfuse (on Linux)"
+	@  echo "    mysql      -- bfmi             needs sqlite3 installed  (in addition to mysql)"
+	@  echo "    fuse       -- bfresultfuse     needs osxfuse (on Mac), or libfuse (on Linux)"
+	@  echo "    test       -- googletest       not working on OSX, yet"
 	@  echo
-	@  echo "    all        -- bfw tools"
-	@  echo "    everything -- $(EVERYTHING)"
+	@  echo "    all        = bfw, tools"
+	@  echo "    everything = $(shell echo $(EVERYTHING) | sed -e 's/ /, /g')"
 	@ #echo "    osx        -- stuff that is working on OSX"
 	@ #echo "    centos     -- stuff that is working on CentOS 7.5"
 	@  echo
-	@  echo "    default    -- all"
+	@  echo "    [default]  = all"
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils

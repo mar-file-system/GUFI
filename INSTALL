@@ -1,19 +1,36 @@
-Preliminary attempt to capture build-requirements
+Installation instructions for the Grand Unified File-Index (GUFI).
 
-(0) On any platform
+Please pardon the dust!  We have ongoing efforts that are developing on
+OSX, CentOS (7.5), and Fedora.  We are also exploring various support
+packages, some of which we include as git submodules.  All of the builds
+are currently driven by a single Makefile.  We will soon transition to
+an autotools process.
+
+Meanwhile, we have not yet completed our automated regression-testing.  So,
+it is possible you will run into trouble building some of the targets shown
+by 'make help'.  Please let us know, if you have trouble.  (Details would
+be appreciated; what OS you were using, what you tried, what went wrong.)
+
+Thanks!
+
+
+
+(0) Initial set-up and installation
 
 # install packages (see platform-specific caveats, below)
 install sqlite3
-[optional] install mysql
-[optional] install osxfuse    (OSX only)
+[optional] install mysql                    (see 'make help')
+[optional] install osxfuse      (OSX only)  (see 'make help')
 
-# packages provided as submodules:
+# packages that are provided as submodules (these come with GUFI):
 sqlite3-pcre
 googletest
 C-Thread-Pool
 
 # clone GUFI
+cd  install_directory
 git clone https://github.com/mar-file-system/GUFI.git
+cd  GUFI
 git submodule init
 git submodule update
 
@@ -21,11 +38,11 @@ git submodule update
 make help
 
 # build
-make some_target
+make some_target     (see 'make help')
 
 
 
-(1) CentOS 7.5
+(1) ========== CentOS 7.5
 
 (1.1) submodule googletest build fails for cmake < 3.0
 
@@ -75,7 +92,7 @@ This will allow the 'pkg-config' commands in the makefile to find this newer ver
 
 
 
-(2) OSX
+(2) ========== OSX
 
 (1.1) Need osxfuse to build 'fuse'
 

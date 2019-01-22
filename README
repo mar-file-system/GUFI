@@ -81,16 +81,19 @@ OF SUCH DAMAGE.
 --- development
 
 Initial development was done at LANL via an internal git-hosting service.
-As of rev 0.1.0, we are moving GUFI to github.  We invite anyone to
-contribute suggestions, new features, bug-reports, bug-fixes,
-feature-requests, etc, through github:
+As of rev 0.1.0, we are moving GUFI to github:
 
     https://github.com/mar-file-system/GUFI
 
+We invite anyone to contribute suggestions, new features, bug-reports,
+bug-fixes, feature-requests, etc, through github:
+
+    https://github.com/mar-file-system/GUFI/issues
+
+All bug-reports, issues, requests, etc, should go through github.
 We will attempt to respond to requests, but we can't make promises about
 the level of resources that will be dedicated to GUFI maintenace.
 
-All bug-reports, issues, requests, etc, should go through github.
 For other conversation about GUFI (and MarFS), there is:
 
     marfs-on-github@lanl.gov
@@ -110,9 +113,11 @@ db2     for bfd*
 
 
 
---- builds ok on OSX and Linux
+--- builds on OSX and Linux
 
 The build seems to be working on OSX (10.12.6), and Linux (CentOS 7).
+
+See INSTALL
 
 
 
