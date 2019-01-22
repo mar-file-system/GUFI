@@ -73,60 +73,16 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+# arg 1 gufi tree arg 2 num threads
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-QUERYDB=$DIR/../querydb
+SCR=$DIR/../scripts
+BFQ=$DIR/../bfq
+QUERYDBN=$DIR/../querydbn
 
-
-usage() {
-    PROG=$1
-    echo "Usage: $PROG <GUFI_tree> <DB_count> <SQL> <tab_name>"
-    exit -1
-}
-
-
-GUFI=$1
-DB_COUNT=$2
-SQL=$3
-TABNAME=$4
-
-if (( $# != 4 )); then
-    usage $0
-elif [ ! -d $GUFI ]; then
-    usage $0
-elif [ ! -e $GUFI/db.db.[0-9]* ]; then
-    echo "$GUFI/db.db.[0-9]* does not exist.  Need the root of a GUFI tree."
-    exit -1
-fi
-
-
-# Usage: querydbn [options] [-s] DB_path DB_count SQL tabname
-# options:
-#   -h              help
-#   -H              show assigned input values (debugging)
-#   -N              print column-names (header) for DB results
-#   -V              print column-values (rows) for DB results
-#   -p              print file-names
-# 
-#   -s              dir-summary (currently-unused internal functionality)
-# 
-# DB_path           path to dir containinng db.db.*
-# DB_count          number of DBs (should match thread-count used in 'bfq')
-# SQL               arbitrary SQL on each DB (unified into single view)
-# table_name        name of view table = 'v<table_name>'
-
-
-
-
-echo
-echo "query on out dbs create union view and query that view on entries subset"
-$QUERYDBN -sN outdb $DB_COUNT "select * from vsument;" sument
-
-echo
-echo "query on out dbs create union view and query that view on summaries subset sum/orderby"
-$QUERYDBN -sN outdb $DB_COUNT "select type,uid,sum(totfiles) from vsument group by type;" sument
-
-echo
-echo "query on out dbs create union view and query that view on summaries subset"
-$QUERYDBN -sN outdb "select * from vsumsummary;" sumsummary
+echo "query to create db insert recs from entry query into out db big files and run querydbn"
+rm -f outdb*
+# if you want to be fancy then use date functions to provide this in user readable date/time
+$BFQ -E "insert into sument select uidtouser(uid), path(), name, size, mtime from entries where type='f'and size>4;" -n $2 -O outdb -I "create table sument (username text, pathname text, name text, size int64, mtime int64);" $1
+$QUERYDBN -NV outdb $2 "select username, pathname,name,size,mtime from vsument order by size;" sument

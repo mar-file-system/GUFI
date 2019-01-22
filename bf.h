@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <unistd.h>
-#include <stdio.h>              // fpos_t
 #include <sys/stat.h>
 #include <pthread.h>            // thpool.h expects us to do this
 
@@ -237,7 +236,7 @@ struct work {
    char          linkname[MAXPATH];
    struct stat   statuso;
    long long int pinode;
-   fpos_t        offset;
+   long long int offset;
    int           xattrs;
    char          xattr[MAXXATTR];
    void*         freeme;

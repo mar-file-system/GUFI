@@ -76,12 +76,17 @@
 # 
 # 
 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+SCR=$DIR/../scripts
+BFQ=$DIR/../bfq
+
 echo "delete uid and gid summaries"
-../scripts/deluidgidsummaryrecs	testdirdup/testdir
+$SCR/deluidgidsummaryrecs	testdirdup/testdir
 echo "generate uid and gid summaries"
-../scripts/genuidsummaryavoidentriesscan testdirdup/testdir
-../scripts/gengidsummaryavoidentriesscan testdirdup/testdir
+$SCR/genuidsummaryavoidentriesscan testdirdup/testdir
+$SCR/gengidsummaryavoidentriesscan testdirdup/testdir
 echo "list uid summaries"
-../bfq -i testdirdup/testdir -S "select epath(),uid,totfiles,totsize from summary where rectype=1;" -Pp -n 1
+$BFQ -S "select epath(),uid,totfiles,totsize from summary where rectype=1;" -Pp -n 1 testdirdup/testdir
 echo "list gid summaries"
-../bfq -i testdirdup/testdir -S "select epath(),gid,totfiles,totsize from summary where rectype=2;" -Pp -n 1
+$BFQ -S "select epath(),gid,totfiles,totsize from summary where rectype=2;" -Pp -n 1 testdirdup/testdir

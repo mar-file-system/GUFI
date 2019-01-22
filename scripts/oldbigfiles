@@ -73,10 +73,14 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+SCR=$DIR/../scripts
+BFQ=$DIR/../bfq
+QUERYDBN=$DIR/../querydbn
 
-EPATH=..
 echo "query to create db insert recs from entry query into out db old big files"
 rm -f outdb*
 # if you want to be fancy then use date functions to provide this in user readable date/time
-$EPATH/bfq -E "insert into sument select uidtouser(uid), path(), name, size, mtime from entries where type='f' and size>4 and mtime<150000000000;" -n $2 -O outdb -I "create table sument (username text, pathname text, name text, size int64, mtime int64);" $1
-$EPATH/querydbn -NV outdb $2 "select username, pathname,name,size,mtime from vsument order by size;" sument
+$BFQ -E "insert into sument select uidtouser(uid), path(), name, size, mtime from entries where type='f'and size>4;" -n $2 -O outdb -I "create table sument (username text, pathname text, name text, size int64, mtime int64);" $1
+$QUERYDBN -NV outdb $2 "select username, pathname,name,size,mtime from vsument order by size;" sument

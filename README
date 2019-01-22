@@ -171,7 +171,7 @@ Usage: bfwreaddirplus2db [options] input_dir outdb
 options:
   -h                 help
   -H                 show assigned input values (debugging)
-  -o <outfile>       output file one per thread writes path, inode, pinode, type to file
+  -o <outfile>       output file one per thread writes path, inode, pinode, type, sortfield to file (sortfield enables sorting for bfwi load from flat file)
   -n <threads>       number of threads
   -P <delimiter>     delimiter for output file 
   -O <outputdb>      write a set of output dbs
@@ -183,6 +183,9 @@ options:
   -g <stridesize>    stride size for striping inodes into separate output db's 
   -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
   -x                 process xattrs if you are creating gufi dbs of suspect directories
+
+
+This program is largely used for a part of an incremental update of a GUFI tree, see the document for how this works.
 
 Flow:
 if using input suspect file read that in and put into memory trie for lookups
@@ -218,13 +221,18 @@ options:
   -b              build GUFI index tree
   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
   -D              dont descend in the tree (make a single gufi db at one level of the tree
-
+  -u              input mode is from a file so input is a file not a dir
 future options:
   -U              create by user summary per directory
   -G              create by group summary per directory
 
+If -P -p and -x are used in conjunction with -o  to create an output file per thread
+the format of the files created make it so that you can run bfwi again against one or all of them concantenated) with the -u option
 
 Flow:
+input is either a directory to walk or a file that is formatted properly for input using the -u option
+file format is directory then files/links in that directory following the directory record
+record format is pathname, type, stat info, linkname, xattrs   delimited.
 input directory is put on a queue
 output file(s) are opened one per thread
 threads are started
@@ -422,13 +430,45 @@ dfw - depth first walk of tree using readdir, or readdir/stat, or
       readdir/xattr or readdir/stat/xattr based on passed-in flags,
       just writes output to stdout
 
-[Not recently maintained.]
+dfw - dfw depth first file system tree walk printing:
+      path, type, stat info, linkname
+      optionally if asked for xattrs 
+      syntax dfw -s -x -h -d -l directorytowalk (or file to print info on)
+      -s stat everything - otherwise this is just a readdirplus walk 
+      -x get xattrs 
+      -d delimiter (one char)  [use 'x' for 0x1E]
+      -D dont traverse/descend the tree, just stat this directory or file
+      -l print in loader format (only works if -x and -s are provided 
+      -h help 
 
-# Usage: dfw inputpath statflag(0/1) xattrflag(0/1)
+if you run with no options, this is just a readdirplus walk and print
+
+if you run with -s it stats everything and prints
+
+if you run with -x it pulls xattr info and prints that
+
+If you us -s -x -d '|' -l  in conjunction (using any delimiter you wish) 
+dfw will print out a record suitable for sorting and then loading using bfwi -u option which loads/builds a gufi tree from a flat file
+the file format for bfwi -u is director then all the files and links for that directory, then another directory etc.
+the record format is pathname,normal attrs, linkname, xattrs  and must be delimited by something unique from the data
+the output of dfw in this use mode puts 2 sort fields on the end of the records (which can be left in the file as bfwi -u will ignore them)
+the sort records are path (the directory full pathname for a directory or just the directory path for a file/link (field 17), and type (field 18) )
+To get the proper order you need to sort the file using the following method or similar
+sort -t '|' -k17,17 -k18,18 -o sortedoutputfile outputfromdfw
+this sortedoutputfile can be used in bfwi -u as the input file to create a gufi tree from
+dfw does not have sqlite or cthreads calls so it should be easier to build this on a computer, run to get the output file and move the output file
+to a machine for bfwi to be used to load into a gufi tree
+
+Normally you would pass dfw the name of a directory and it would walk the tree, but since the input is a pathname, it could a pathname be to a file
+If its a pathname to a file, dfw will just print info about that file.  This enables you to use something like
+find path -exec dfw -s -x -d '|' -l -D {} \; which will print information about files that are found using the find command and make a suitable file for loading
+into gufi using bfwi -u or other uses.  Notice the use of -D which tells dfw to not descend into the tree, just stat this pathname and print,
+because find will be traversing or whatever you ask it to do.
 
 
 Flow:
-single threaded depth first walk, using readdir+, or stat depending on input parms and optionally get xattrs, write output to stdout
+if input is a file/link then stat/pull xattrs and print,
+if input is a directory then single threaded depth first walk, using readdir+, or stat depending on input parms and optionally get xattrs, write output to stdout
 
 ...........................................................................
 bfresultfuse - fuse daemon to read the output of a properly formed bfq query with output dbs and present it as a fuse mount point
@@ -551,7 +591,7 @@ string
 
 -- This is the schema for the entries table (one per dir) one record for each file/link
 
-NOTE: We don't yet support incremental additions to a GUFI index tree.
+NOTE: We are beginning to support incremental updates to a GUFI index tree.
     Rerunning bfwi on top of an existing tree would not remove entries that
     had been deleted, etc.  In order to prevent loss of old data by an
     ill-advised rerun of bfwi, we suppress the table-drop from the
@@ -675,6 +715,9 @@ querydbn - run an SQL query against an output db from bfq, it can be one
 # SQL               arbitrary SQL on each DB (unified into single view)
 # table_name        name of view table = 'v<table_name>'
 
+tsmepoch2time.c convert epoch time to a time usable in a tsm query
+tsmtime2epoch.c convert a tsm query time output to epoch time
+
 
 
 --- testtools
@@ -685,6 +728,10 @@ runbfmi - run bfmi to read from a robinhood mysql db and list and/or create
 
 -- The following functional tests all work together, create a gufi index
    from input testdir into testdirdup and run queries/etc.
+
+gitest - run a test on incremental and full and compare incrementals to fulls
+gufitest - a framework to run all the run* tests and more, builds a src tree in /tmp and runs all run tests in /tmp as well as a
+bunch of correctdness tests
 
 runbfwi - run bfwi and create gufi testdirdup from input testdir
 runbfti - run bfti and create a tree index at the top of testdirdup
@@ -703,3 +750,15 @@ runuserfilespacehogusesummary - generiate uid summary records via summary and en
 rungroupfilespacehog - do parallel query to create output dbs and list group file space hogs
 runuserfilespacehog - do parallel query to create output dbs and list user file space hog
 runoldbigfiles - do parallel query to craete output dbs and list old/big files
+gitest - a python script that does an entire source tree create, use bfwi to load a gufi from the tree,  use bfq to make a directory snapshot, make changes to the tree,
+  use bfwi to create another fresh gufi tree after the change to the tree, then use bfwireaddirplus2db to detect changes in the source and make a new directory snapshot 
+  marking suspect directories and creating new gufi database files for those suspect directories, then do compare of directory snapshots and do an incremental update of
+  the original gufi tree, then do a bfq to the fresh full gufi tree after changes and the incrementally updated original gufi tree after changes and compares the results,
+  which tests the incremental process to see if it gets the same result as just doing full overwrite loads of a gufi tree
+dfw2gufitest - a python script that makes a source tree, makes a full gufi tree using bfwi using the source tree, then runs dfw on the source tree to make a flat
+  output file that is then sorted and bfwi is used to create another gufi tree using the flat file input and then uses bfq on both gufi trees to compare to see if 
+  the flat file load process gets the same answer as the source tree loaded gufi tree. The same thing is run again using find -exec dfw ...  to produce the 
+  flat file for the new gufi tree and same comparison with original gufi is done.
+bfwiflat2gufitest - a python script that makes a source tree, makes a full gufi tree using bfwi using the source tree, then runs bfwi on the source tree to make  flat
+  output files that that are concatenated (one per thread) and bfwi is used to create another gufi tree using the flat file
+  input and then uses bfq on both gufi trees to compare to see if the flat file load process gets the same answer as the source tree loaded gufi tree

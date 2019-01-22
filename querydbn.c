@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
    }
 
 
-   printf("processing query name %s  numb dbs %d\n",name, numdbs);
+   //printf("processing query name %s  numb dbs %d\n",name, numdbs);
    sprintf(dbname,"%s",name);
    db = opendb(name,db1,5,0);
 
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
          sprintf(up,"select * from %s.%s;",dbn,tabnam);
       strcat(sqlu,up);
       sprintf(sqlat,"ATTACH \'%s\' as %s",dbnam,dbn);
-      printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
+      //printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {
          fprintf(stderr, "Cannot attach database: %s %s\n", dbnam, sqlite3_errmsg(db));
@@ -205,11 +205,11 @@ int main(int argc, char *argv[])
    //create view concat as select * from d1.summary union all d2.summary
    //…… union all d10.summary;
 
-   printf("sqlu: %s\n",sqlu);
+   //printf("sqlu: %s\n",sqlu);
    rawquerydb(dbnam, dirsummary, db, sqlu,
               in.printing, in.printheader, in.printrows,0);
 
-   printf("after union running %s\n",rsqlstmt);
+   //printf("after union running %s\n",rsqlstmt);
    recs=rawquerydb(dbnam, dirsummary, db, rsqlstmt,
                    in.printing, in.printheader, in.printrows, 0);
    if (recs >= 0)

@@ -116,6 +116,7 @@ static void processdir(void * passv)
     sqlite3 *db;
     sqlite3 *db1;
     int recs;
+    int trecs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
     char tpath[MAXPATH];
@@ -156,9 +157,14 @@ static void processdir(void * passv)
     // if this is OR, as well as no-sql-to-run, skip this query
     if (strlen(in.sqltsum) > 1) {
 
-       if (in.andor == 0)       // AND
-         recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
-
+       if (in.andor == 0) {      // AND
+         trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
+         if (trecs<1) {
+           recs=-1;
+         } else {
+           recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
+         }
+      }
       // this is an OR or we got a record back. go on to summary/entries
       // queries, if not done with this dir and all dirs below it
     }
@@ -200,6 +206,7 @@ static void processdir(void * passv)
           // for directories we have to take off after the last slash
           // and set the path so users can put path() in their queries
           sprintf(gps[mytid].gpath,"%s",shortname);
+          //printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath);
           getcwd(tpath,sizeof(tpath));
           sprintf(trpath,"%s/%s",tpath,shortname);
           realpath(trpath,gps[mytid].gfpath);
@@ -284,7 +291,9 @@ int processinit(void * myworkin) {
 
      // process input directory and put it on the queue
      sprintf(mywork->name,"%s",in.name);
-     lstat(in.name,&mywork->statuso);
+     // this should be stat so we can make links to the top of the tree or an dir in the tree where we start our walking
+     //lstat(in.name,&mywork->statuso);
+     stat(in.name,&mywork->statuso);
      if (access(in.name, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 in.name, strerror(errno));

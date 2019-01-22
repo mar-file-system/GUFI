@@ -1,0 +1,21 @@
+get time of last GUFI incremental into a variable  lastgi
+
+use this command to get the time last backup for the file system in question into a variable lastbu
+dsmc q filesp /var | grep '/var' | awk '{ system("./tsmtime2epoch " $2 " " $3) }'
+
+if lastbu>lastbi then do a GUFI incremental, otherwise dont bother
+
+  put new GUFI time into new GUFI incremental file for use next time
+  run this command to convert last GUFI incremental time and put the output into variable fdft
+  ./tsmepoch2time lastgi
+  which will give you a string with -fromdate and -fromtime for a dsmc backup command 
+  now run the dsmc query backup command looking for files backed up since last GUFI incremental and output a file called filesuspects
+  dsmc q backup -filesonly -detail fdft /var | grep 'Inode#' | awk -F 'Inode#' ' { print $2 } ' | awk ' { print $2 " f" } ' > filesuspects
+end if
+
+Now you have a suspect file to feed into bfwreaddirplus2db to finish up the incremental process
+
+tsmtime2epochg converts the date/time out of the dsmc q filesp command into seconds since epoch
+tsmtepoch2time converts the seconds since epoch to a -fromdate=xx/xx/xxxx -fromtime=xx:xx
+
+

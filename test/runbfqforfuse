@@ -1,73 +1,39 @@
-#!/bin/bash -e
-
 #test of running bfq and creating an output database and then running bfresultfuse which is a fuse daemon
 #that makes a file system over the result of a bfq query
 # first do a query and show the entire tree just to the screen
 # the query selects all the fields required for all the needed file system calls the fuse will honor
-
-echo
 echo " clear out testdirdup2 gufi tree"
 rm -rf testdirdup2
-
-echo
 echo " create testdirdup2 gufi tree"
 ./runbfwi testdir testdirdup2
-
-echo
 echo "run query and show entire tree to screen"
 ../bfq -Pp -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdirdup2/testdir
-
-echo
 echo "run query and show entire tree to screen but elimiate files bigger than 50000 bytes in size"
 ../bfq -Pp -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdirdup2/testdir
-
-echo
 echo "run query where size < 50000 and create 2 output dbs"
-rm -f outfpdb*
-
+rm outfpdb*
 ../bfq -Pp -n2 -O outfpdb -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text);" -a testdirdup2/testdir
 ls -l outfpdb*
-
-echo
-echo "contents of outfpdb.0"
 sqlite3 -line outfpdb.0 'select * from qout;'
-
-echo
-echo "contents of outfpdb.1"
 sqlite3 -line outfpdb.1 'select * from qout;'
-
-echo
 echo "ensure fuse is not mounted"
-fusermount -u mnt || echo "skipping umount"
-[-d mnt ] && rmdir mnt
-
-echo
+umount mnt
+rm -rf mnt
 echo "mount fuse"
 mkdir mnt
-
-
-function run() {
-    echo
-    echo "$@"
-    ( exec "$@" 2>&1 )
-}
-
-#run ../bfresultfuse -s -o rdonly mnt qout outfpdb 2>debug
-#run ../bfresultfuse -s -r mnt qout /tmp/outfpdb 2 2>debug
-run ../bfresultfuse -s mnt qout ./outfpdb 2
-#sleep 3
-
-PATH=mnt`pwd`/testdirdup2
-run ls     $PATH/testdir
-run ls -l  $PATH/testdir
-run stat   $PATH
-run ls -lR $PATH/testdir
-run stat   $PATH/testdir/a
-run stat   $PATH
-run stat   $PATH/test
-run xattr -l $PATH/testdir/a
-
-echo
-echo "unmount fuse"
+#../bfresultfuse -s -o rdonly mnt qout outfpdb 2>debug
+#../bfresultfuse -s -r mnt qout /tmp/outfpdb 2 2>debug
+../bfresultfuse -d -s mnt qout outfpdb 2 2>/dev/null &
+echo " run an ls and an ls -l and an ls -lr and stat and xattr -l"
+sleep 2
+ls mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir
+ls -l mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir
+stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718
+ls -lR mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir
+stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir/a
+stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2
+stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test
+xattr -l mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir/a
+#/Users/ggrider/tree/tree-1.8.0/tree mnt
 umount mnt
 rm -rf mnt

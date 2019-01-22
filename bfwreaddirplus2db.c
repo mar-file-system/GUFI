@@ -168,6 +168,15 @@ int reprocessdir(void * passv, DIR *dir)
     // rewind the directory
     rewinddir(dir);
 
+    /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
+    bzero(passmywork->xattr,sizeof(passmywork->xattr));
+    bzero(passmywork->linkname,sizeof(passmywork->linkname));
+    if (in.doxattrs > 0) {
+       passmywork->xattrs=0;
+       passmywork->xattrs=pullxattrs(passmywork->name,passmywork->xattr);
+    }
+
+
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir 
     sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
     if (!(db = opendb(dbpath,db1,8,1)))
@@ -263,6 +272,7 @@ static void processdir(void * passv)
     sqlite3_stmt *res;   
     sqlite3_stmt *reso;   
     char dbpath[MAXPATH];
+    char sortf[MAXPATH];
     int transcnt;
     int wentry;
     int todb;
@@ -313,11 +323,19 @@ static void processdir(void * passv)
            if (in.suspectmethod > 1) {
              /* ????? we would add a stat call on the directory here and compare mtime and ctime with the last run time provided */
              /* and mark the dir suspect if mtime or ctime are >= provided last run time */
+/*
              st.st_ctime=0;
              st.st_mtime=0;
              lstat(passmywork->name,&st);
              if (st.st_ctime >= in.suspecttime) passmywork->suspect=1;
              if (st.st_mtime >= in.suspecttime) passmywork->suspect=1;
+*/
+             // needed to fill in passmywork status structure
+             passmywork->statuso.st_ctime=0;
+             passmywork->statuso.st_mtime=0;
+             lstat(passmywork->name,&passmywork->statuso);
+             if (passmywork->statuso.st_ctime >= in.suspecttime) passmywork->suspect=1;
+             if (passmywork->statuso.st_mtime >= in.suspecttime) passmywork->suspect=1;
            }
          }
     }
@@ -329,7 +347,9 @@ static void processdir(void * passv)
         pthread_mutex_lock(&outfile_mutex[todb]);
       }
       //fprintf(stderr,"threadd %d inode %lld file %d\n",mytid,passmywork->statuso.st_ino,tooutfile);
-      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim);
+      /* only directories are here so sortf is set to the directory full pathname */
+      sprintf(sortf,"%s",passmywork->name);
+      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim,sortf,in.delim);
       if (in.stride > 0) {
         pthread_mutex_unlock(&outfile_mutex[todb]);
       }
@@ -339,7 +359,7 @@ static void processdir(void * passv)
       printits(passmywork,mytid);
     }
 */
-    // loop over dirents, if link push it on the queue, if file or link
+    // loop over dirents, if dir push it on the queue, if file or link
     // print it, fill up qwork structure for each
     transcnt=0;
     do {
@@ -402,8 +422,10 @@ static void processdir(void * passv)
             if ((in.suspectmethod == 1) || (in.suspectmethod == 2)) {   /* if method 1 or 2 we look up the inode in trie and mark dir suspect or not */
                lookup=0;
                lookup=searchmyll(qwork.statuso.st_ino,1);
-               if (lookup == 1) passmywork->suspect=1;  /* set the directory suspect flag on so we will mark it in output */
-
+               if (lookup == 1) {
+                 passmywork->suspect=1;  /* set the directory suspect flag on so we will mark it in output */
+                 //printf("######### found a file suspect %s %lld\n",qwork.name,qwork.statuso.st_ino);
+               }
             }
             if (in.suspectmethod > 2) {
               /* ???? we would stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
@@ -422,7 +444,9 @@ static void processdir(void * passv)
               pthread_mutex_lock(&outfile_mutex[todb]);
             }
             //fprintf(stderr,"threadf %d inode %lld file %d\n",mytid,qwork.statuso.st_ino,tooutfile);
-            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim);
+            /* since this is a file or link, we need the path to the file or link without the name as the sortf */
+            sprintf(sortf,"%s",passmywork->name);
+            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim,sortf,in.delim);
             if (in.stride > 0) {
               pthread_mutex_unlock(&outfile_mutex[todb]);
             }

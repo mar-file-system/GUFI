@@ -136,10 +136,10 @@ int printits(struct work *pwork,int ptid) {
   if (in.dodelim == 0) {
     sprintf(ffielddelim," "); 
   }
-  if (in.dodelim == 1) {
+  if (in.dodelim == 2) {
     sprintf(ffielddelim,"%s",fielddelim); 
   }
-  if (in.dodelim == 2) {
+  if (in.dodelim == 1) {
     sprintf(ffielddelim,"%s",in.delim); 
   }
 
@@ -150,7 +150,8 @@ int printits(struct work *pwork,int ptid) {
   if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",ffielddelim);
 
   fprintf(out, "%lld%s", pwork->statuso.st_ino, ffielddelim);
-  fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
+  /* moved this to end because we would like to use this for input to bfwi load from file */
+  //fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
   fprintf(out, "%d%s",   pwork->statuso.st_mode, ffielddelim);
   fprintf(out, "%d%s",   pwork->statuso.st_nlink, ffielddelim);
   fprintf(out, "%d%s",   pwork->statuso.st_uid, ffielddelim);
@@ -161,17 +162,30 @@ int printits(struct work *pwork,int ptid) {
   fprintf(out, "%ld%s",  pwork->statuso.st_atime, ffielddelim);
   fprintf(out, "%ld%s",  pwork->statuso.st_mtime, ffielddelim);
   fprintf(out, "%ld%s",  pwork->statuso.st_ctime, ffielddelim);
-  fprintf(out, "%d%s",  pwork->suspect, ffielddelim);
 
+/* we need this field even if its not populated for bfwi load from file */
+/*
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s", pwork->linkname);
-    fprintf(out, "%s", ffielddelim);
+    fprintf(out, "%s%s", pwork->linkname,ffielddelim);
   }
+*/
+  fprintf(out, "%s%s", pwork->linkname,ffielddelim);
+
+/* we need this field even if its not populated for bfwi load from file */
+/*
   if (pwork->xattrs > 0) {
     //printf("xattr: ");
-    fprintf(out,"%s",pwork->xattr);
+    fprintf(out,"%s%s",pwork->xattr,ffielddelim);
   }
-  fprintf(out,"%s\n", ffielddelim);
+*/
+  fprintf(out,"%s%s",pwork->xattr,ffielddelim);
+
+  /* this one is for create tiem which posix doesnt have */
+  fprintf(out,"%s", ffielddelim);
+  /* moved this to end because we would like to use this for input to bfwi load from file */
+  fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
+  fprintf(out, "%d%s",  pwork->suspect, ffielddelim);
+  fprintf(out,"\n");
   return 0;
 }
 
@@ -512,6 +526,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
      int i;
+     int slashfound;
 
      *endname = 0;              // in case there's no '/'
      i=0;
@@ -519,16 +534,23 @@ int shortpath(const char *name, char *nameout, char *endname) {
      i=strlen(prefix);
      pp=prefix+i;
      //printf("cutting name down %s len %d\n",prefix,i);
+     slashfound=0;
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
           bzero(pp,1);
           sprintf(endname,"%s",pp+1);
+          slashfound=1;
           break;
        }
        pp--;
        i--;
      }
-     sprintf(nameout,"%s",prefix);
+     if (slashfound == 0) {
+        sprintf(endname,"%s",name);
+        bzero(nameout,1);
+        //printf("shortpath: name %s, nameout %s, endname %s.\n",name,nameout,endname);
+     } else
+        sprintf(nameout,"%s",prefix);
      return 0;
 }
 
@@ -613,6 +635,54 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   }
   printf("\n");
   return 0;
+}
+
+int printload(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,long long pinode,char *sortf,FILE *of) {
+  char buf[MAXXATTR];
+  char bufv[MAXXATTR];
+  char  ffielddelim[2];
+  char * xattrp;
+  int cnt;
+
+  if (in.dodelim == 0) {
+    sprintf(ffielddelim," "); 
+  }
+  if (in.dodelim == 1) {
+    sprintf(ffielddelim,"%s",fielddelim); 
+  }
+  if (in.dodelim == 2) {
+    sprintf(ffielddelim,"%s",in.delim); 
+  }
+
+  fprintf(of,"%s%s", name,ffielddelim);
+  if (!strncmp(type,"l",1)) fprintf(of,"l%s",ffielddelim);
+  if (!strncmp(type,"f",1)) fprintf(of,"f%s",ffielddelim);
+  if (!strncmp(type,"d",1)) fprintf(of,"d%s",ffielddelim);
+  fprintf(of,"%lld%s", status->st_ino,ffielddelim);
+  //fprintf(of,"%lld%s", pinode,ffielddelim);
+  fprintf(of,"%d%s",status->st_mode,ffielddelim);
+  fprintf(of,"%d%s",status->st_nlink,ffielddelim);
+  fprintf(of,"%d%s", status->st_uid,ffielddelim);
+  fprintf(of,"%d%s", status->st_gid,ffielddelim);
+  fprintf(of,"%lld%s", status->st_size,ffielddelim);
+  fprintf(of,"%d%s", status->st_blksize,ffielddelim);
+  fprintf(of,"%lld%s", status->st_blocks,ffielddelim);
+  fprintf(of,"%ld%s", status->st_atime,ffielddelim);
+  fprintf(of,"%ld%s", status->st_mtime,ffielddelim);
+  fprintf(of,"%ld%s", status->st_ctime,ffielddelim);
+  fprintf(of,"%s%s",linkname,ffielddelim);
+  if (xattrs > 0) {
+    fprintf(of,"%s%s",xattr,ffielddelim);
+  } else {
+    fprintf(of,"%s",ffielddelim);
+  }
+  /* this one is for create time which posix doenst have */
+  fprintf(of,"%s",ffielddelim);
+  /* sort field at the end not required */
+  if (strlen(sortf) > 0) fprintf(of,"%s",sortf);
+  
+  fprintf(of,"\n");
+  return(0);
 }
 
 /* the following is for the triell */

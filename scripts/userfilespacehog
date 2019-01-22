@@ -73,10 +73,14 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+BFQ=$DIR/../bfq
+QUERYDBN=$DIR/../querydbn
 
 EPATH=..
 echo "query to create db insert recs from entry query into out db user file space hog"
 rm -f outdb*
-$EPATH/bfq -E "insert into sument select uidtouser(uid), count(*), sum(size) from entries where type='f' group by uid;" -n $2 -O outdb -I "create table sument (username text, totfiles int64, totsize int64);" $1
+$BFQ -E "insert into sument select uidtouser(uid), count(*), sum(size) from entries where type='f' group by uid;" -n $2 -O outdb -I "create table sument (username text, totfiles int64, totsize int64);" $1
 #$EPATH/querydbn outdb "select username, totfiles, totsize from vsument group by username;" 0 1 1 $2 sument
-$EPATH/querydbn -NV outdb $2 "select username, sum(totfiles), sum(totsize) from vsument group by username;" sument
+$QUERYDBN -NV outdb $2 "select username, sum(totfiles), sum(totsize) from vsument group by username;" sument

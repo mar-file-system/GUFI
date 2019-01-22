@@ -75,6 +75,9 @@
 # 
 # 
 # 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+SCR=$DIR/../scripts
 
 rm outdb*
-../scripts/groupfilespacehogusesummary testdirdup/testdir 2
+$SCR/groupfilespacehogusesummary testdirdup/testdir 2
