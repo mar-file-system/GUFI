@@ -258,7 +258,7 @@ exit(9);
 
     // Load a regular expression extension
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) ||
-        (sqlite3_load_extension(db, "sqlite3-pcre/pcre.so", NULL, NULL)        != SQLITE_OK)) {
+        (sqlite3_load_extension(db, "sqlite3-pcre/lib/libpcre.so", NULL, NULL) != SQLITE_OK)) {
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;

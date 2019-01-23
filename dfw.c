@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -85,11 +86,11 @@ OF SUCH DAMAGE.
 #include <sys/xattr.h>
 #include <ctype.h>
 #include <errno.h>
-#include <utime.h> 
+#include <utime.h>
 
 #include "bf.h"
 #include "utils.c"
- 
+
 void listdir(const char *name, long long int level, struct dirent *entry, long long int pin, int statit, int xattrit,int loader )
 {
     DIR *dir;
@@ -113,7 +114,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
            dir = opendir(name);
         }
       }
-    } else { 
+    } else {
       if (in.dontdescend == 0) {
         if (!(dir = opendir(name)))
           return;
@@ -150,7 +151,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     } else {
       printf("d %s %lld %lld\n", name, pin , level);
     }
-    
+
     if (statit) {
       if (!S_ISDIR(st.st_mode)) {
          return;
@@ -267,11 +268,9 @@ int main(int argc, char **argv)
           break;
         case 'd':
           if (optarg[0] == 'x') {
-            in.dodelim = 1;
             in.delim[0] = fielddelim[0];
           }
           else {
-            in.dodelim = 2;
             in.delim[0] = optarg[0];
           }
           break;
@@ -299,4 +298,3 @@ int main(int argc, char **argv)
     listdir(argv[optind], 0, entries, status.st_ino,statit,xattrit,loader);
     return 0;
 }
- 
