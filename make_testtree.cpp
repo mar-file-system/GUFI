@@ -73,6 +73,7 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
+#include <condition_variable>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -140,7 +141,9 @@ struct Settings {
           file_size(),
           chown(false),
           chgrp(false),
-          dryrun(false)
+          dryrun(false),
+          stat_rate(1000),
+          progress_rate(1000)
     {
         subdirs.min = 1;
         subdirs.max = 5;
@@ -248,8 +251,10 @@ struct Settings {
                << "\n    Files with directories: " << std::boolalpha << files_with_dirs
                << "\n"
                // << "\nRNG Seed: " << seed
-               << "\nThreads:  " << threads
-               << "\nDry Run:  " << std::boolalpha << dryrun;
+               << "\nThreads:              " << threads
+               << "\nDry Run:              " << std::boolalpha << dryrun
+               << "\nStat Collection Rate: " << stat_rate << " ms"
+               << "\nProgress Print Rate:  " << progress_rate << " ms";
 
         return stream;
     }
@@ -287,6 +292,9 @@ struct Settings {
     bool chgrp;
 
     bool dryrun;
+
+    unsigned int stat_rate;              // interval between collecting statistics, in milliseconds
+    unsigned int progress_rate;          // interval to print progress, in milliseconds
 };
 
 std::ostream &operator<<(std::ostream &stream, const Settings &settings) {
@@ -325,7 +333,27 @@ struct ThreadArgs {
         const std::list <off_t> sizes;
     };
     static std::list <Stats> stats;
+
+    // stats that are collected and wiped on a timer
+    struct Timed {
+        void clear() {
+            files = 0;
+            directories = 0;
+            mkdir = 0;
+        }
+
+        std::mutex mutex;
+        std::size_t files;
+        std::size_t directories;
+        double mkdir;
+    };
+
+    static Timed timed_stats;
 };
+
+std::ostream &operator<<(std::ostream &stream, const ThreadArgs::Timed &stats) {
+    return stream << "Created " << stats.directories << " directories, averaging " << stats.mkdir / stats.directories << " seconds per directory, and " << stats.files << " files";
+}
 
 Settings *ThreadArgs::settings = nullptr;
 threadpool *ThreadArgs::pool = nullptr;
@@ -333,6 +361,12 @@ std::mutex ThreadArgs::mutex = {};
 std::size_t ThreadArgs::files = 0;
 off_t ThreadArgs::size = 0;
 std::list <ThreadArgs::Stats> ThreadArgs::stats = {};
+ThreadArgs::Timed ThreadArgs::timed_stats = {};
+
+long double elapsed(const struct timespec &start, const struct timespec &end) {
+    return ((long double) (end.tv_sec - start.tv_sec) +
+            ((long double) (end.tv_nsec - start.tv_nsec) / 1000000000.0));
+}
 
 bool create_tables(sqlite3 *db) {
     return ((sqlite3_exec(db, esql,       nullptr, nullptr, nullptr) == SQLITE_OK) &&
@@ -464,9 +498,17 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
         insertdbgo(&work, on_disk, res);
 
-        std::lock_guard <std::mutex> lock(ThreadArgs::mutex);
-        arg->size += work.statuso.st_size;
-        sizes.push_back(work.statuso.st_size);
+        {
+            std::lock_guard <std::mutex> lock(ThreadArgs::mutex);
+            arg->size += work.statuso.st_size;
+            sizes.push_back(work.statuso.st_size);
+        }
+
+        // collect timed stats
+        {
+            std::lock_guard <std::mutex> lock(ThreadArgs::timed_stats.mutex);
+            ThreadArgs::timed_stats.files++;
+        }
     }
 
     sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
@@ -576,8 +618,23 @@ void generatedir(void *args) {
     std::list <off_t> sizes;
 
     if (!arg->settings->dryrun) {
+        struct timespec start;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
         // this function is responsible for creating the directory it is working on
-        if (mkdir(arg->path.c_str(), 0777) != 0) {
+        const int ret = mkdir(arg->path.c_str(), 0777);
+
+        struct timespec end;
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        // collect timed stats
+        {
+            std::lock_guard <std::mutex> lock(ThreadArgs::timed_stats.mutex);
+            ThreadArgs::timed_stats.directories++;
+            ThreadArgs::timed_stats.mkdir += elapsed(start, end);
+        }
+
+        if (ret != 0) {
             const int err = errno;
             std::cerr << "mkdir error: " << arg->path << ": " << strerror(err) << std::endl;
             if (err != EEXIST) {
@@ -629,31 +686,36 @@ std::ostream &print_help(std::ostream &stream, const char *argv0) {
     static const Settings s;
     return stream << "Syntax: " << argv0 << " [options] directory --file-count [--file-count ...] --file-size [--file-size ...]\n"
                   << "\n"
-                  << "    Options:\n"
-                  << "        --users n               Number of users                                        (Default: "  << s.users << ")\n"
-                  << "        --files n               Number of files in the tree                            (Default: "  << s.files << ")\n"
-                  << "        --uid uid               Set the starting uid                                   (Default: "  << s.uid << ")\n"
-                  << "        --gid gid               Set the starting gid                                   (Default: "  << s.gid << ")\n"
-                  << "        --path-separator c      Character that separates path sections                 (Default: '" << s.path_separator << "') \n"
-                  << "        --leading-zeros n       Number of leading zeros in names                       (Default: "  << s.leading_zeros <<")\n"
-                  << "        --db-name name          Name of each database file                             (Default: "  << s.db_name << ")\n"
-                  << "        --files-with-dirs b     Whether or not files exist in intermediate directories (Default: "  << std::boolalpha << s.files_with_dirs << ")\n"
-                  << "        --threads n             Set the number of threads to use                       (Default: "  << s.threads << ")\n"
-                  << "        --blocksize n           Block size for filesystem I/O                          (Default: "  << s.blocksize << ")\n"
-                  << "        --chown uid             Set the owner of each directory (requires sudo)        (Default: "  << s.chown << ")\n"
-                  << "        --chgrp gid             Set the group of each directory (requires sudo)        (Default: "  << s.chgrp << ")\n"
-                  << "        --file-count            Comma separated triple of min,max,weight. At least one should be provided.\n"
-                  << "        --file-size             Comma separated triple of min,max,weight. At least one should be provided.\n"
-                  << "        --dry-run               Runs without creating the GUFI tree                    (Default: " << s.dryrun << ")\n"
+                  << "\n    -h | --help"
                   << "\n"
-                  << "    RNG configuration:\n"
-                  // << "        --seed n                Value to seed the seed generator                       (Default: Seconds since epoch)\n"
-                  << "        --min-time n            Minimum timestamp                                      (Default: "  << s.time.min << ")\n"
-                  << "        --max-time n            Maximum timestamp                                      (Default: "  << s.time.max << ")\n"
-                  << "        --min-subdirs n         Minimum subdirectories                                 (Default: "  << s.subdirs.min << ")\n"
-                  << "        --max-subdirs n         Maximum subdirectories                                 (Default: "  << s.subdirs.max << ")\n"
+                  << "\n    Options:"
+                  << "\n        --users n               Number of users                                        (Default: "  << s.users << ")"
+                  << "\n        --files n               Number of files in the tree                            (Default: "  << s.files << ")"
+                  << "\n        --uid uid               Set the starting uid                                   (Default: "  << s.uid << ")"
+                  << "\n        --gid gid               Set the starting gid                                   (Default: "  << s.gid << ")"
+                  << "\n        --path-separator c      Character that separates path sections                 (Default: '" << s.path_separator << "') "
+                  << "\n        --leading-zeros n       Number of leading zeros in names                       (Default: "  << s.leading_zeros <<")"
+                  << "\n        --db-name name          Name of each database file                             (Default: "  << s.db_name << ")"
+                  << "\n        --files-with-dirs       Whether or not files exist in intermediate directories (Default: "  << std::boolalpha << s.files_with_dirs << ")"
+                  << "\n        --blocksize n           Block size for filesystem I/O                          (Default: "  << s.blocksize << ")"
+                  << "\n        --chown                 Set the owner of each directory (requires sudo)        (Default: "  << s.chown << ")"
+                  << "\n        --chgrp                 Set the group of each directory (requires sudo)        (Default: "  << s.chgrp << ")"
+                  << "\n        --file-count            Comma separated triple of min,max,weight. At least one should be provided."
+                  << "\n        --file-size             Comma separated triple of min,max,weight. At least one should be provided."
                   << "\n"
-                  << "    directory                   The directory to put the generated tree into\n";
+                  << "\n    RNG configuration:"
+                  // << "\n        --seed n                Value to seed the seed generator                       (Default: Seconds since epoch)"
+                  << "\n        --min-time n            Minimum timestamp                                      (Default: "  << s.time.min << ")"
+                  << "\n        --max-time n            Maximum timestamp                                      (Default: "  << s.time.max << ")"
+                  << "\n        --min-subdirs n         Minimum subdirectories                                 (Default: "  << s.subdirs.min << ")"
+                  << "\n        --max-subdirs n         Maximum subdirectories                                 (Default: "  << s.subdirs.max << ")"
+                  << "\n"
+                  << "\n    Runtime Configuration:"
+                  << "\n        --threads n             Set the number of threads to use                       (Default: "  << s.threads << ")"
+                  << "\n        --stat-rate ms          How often to print timed statistics, in milliseconds   (Default: "  << s.stat_rate << ", 0 cancels)"
+                  << "\n        --progress-rate ms      How often to print progress, in milliseconds           (Default: "  << s.progress_rate << ", 0 cancels)"
+                  << "\n        --dry-run               Runs without creating the GUFI tree                    (Default: "  << s.dryrun << ")"
+                  << "\n    directory                   The directory to put the generated tree into";
 }
 
 template <typename T>
@@ -681,7 +743,27 @@ bool read_value(int argc, char *argv[], int &i, T &setting, const std::string &n
 
 #define PARSE_FLAG(opt, var)                                 \
     else if (args == "--" opt) {                             \
-        settings.var = true;                                 \
+        settings.var ^= true;                                \
+    }
+
+#define PARSE_BUCKET(opt, var, err)                          \
+    else if (args == "--" opt) {                             \
+        std::size_t min;                                     \
+        char comma1;                                         \
+        std::size_t max;                                     \
+        char comma2;                                         \
+        double weight;                                       \
+        if (!(std::stringstream(argv[i]) >> min >> comma1    \
+                                         >> max >> comma2    \
+                                         >> weight) ||       \
+            (comma1 != ',') || (comma2 != ',') ||            \
+            (min > max) || !max) {                           \
+            std::cerr << "Bad " << err << " bucket: "        \
+                      << args << std::endl;                  \
+            return false;                                    \
+        }                                                    \
+        settings.var.emplace_back(Bucket(min, max, weight)); \
+        i++;                                                 \
     }
 
 bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
@@ -691,62 +773,28 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
         if ((args == "--help") || (args == "-h")) {
             return help = true;
         }
-        PARSE_VALUE("users",           users,             "user count")
-        PARSE_VALUE("files",           files,             "file count")
-        PARSE_VALUE("uid",             uid,               "uid")
-        PARSE_VALUE("gid",             gid,               "gid")
-        PARSE_VALUE("path-separator",  path_separator,    "path separator")
-        PARSE_VALUE("leading-zeros",   leading_zeros,     "leading zero count")
-        PARSE_VALUE("db-name",         db_name,           "db name")
-        else if (args == "--files-with-dirs") {
-            if (!(std::stringstream(argv[i]) >> std::boolalpha >> settings.files_with_dirs)) {
-                std::cerr << "Bad boolean: " << argv[i] << std::endl;
-            }
-
-            i++;
-        }
-        PARSE_FLAG("chown", chown)
-        PARSE_FLAG("chgrp", chgrp)
-        else if (args == "--file-count") {
-            std::size_t min;
-            char comma1;
-            std::size_t max;
-            char comma2;
-            double weight;
-
-            if (!(std::stringstream(argv[i++]) >> min >> comma1 >> max >> comma2 >> weight) ||
-                (comma1 != ',') || (comma2 != ',') ||
-                (min > max) || !max) {
-                std::cerr << "Bad file count bucket: " << args << std::endl;
-                return false;
-            }
-
-            settings.file_count.emplace_back(Bucket(min, max, weight));
-        }
-        else if (args == "--file-size") {
-            std::size_t min;
-            char comma1;
-            std::size_t max;
-            char comma2;
-            double weight;
-
-            if (!(std::stringstream(argv[i++]) >> min >> comma1 >> max >> comma2 >> weight) ||
-                (comma1 != ',') || (comma2 != ',') ||
-                (min > max) || !max) {
-                std::cerr << "Bad file size bucket: " << args << std::endl;
-                return false;
-            }
-
-            settings.file_size.emplace_back(Bucket(min, max, weight));
-        }
-        // PARSE_VALUE("seed",            seed,              "seed")
-        PARSE_VALUE("min-subdirs",     subdirs.min,       "min subdirectories")
-        PARSE_VALUE("max-subdirs",     subdirs.max,       "max subdirectories")
-        PARSE_VALUE("min-time",        time.min,          "min atime")
-        PARSE_VALUE("max-time",        time.max,          "max atime")
-        PARSE_VALUE("threads",         threads,           "thread count")
-        PARSE_VALUE("blocksize",       blocksize,         "blocksize")
-        PARSE_FLAG("dry-run", dryrun)
+        PARSE_VALUE ("users",           users,             "user count")
+        PARSE_VALUE ("files",           files,             "file count")
+        PARSE_VALUE ("uid",             uid,               "uid")
+        PARSE_VALUE ("gid",             gid,               "gid")
+        PARSE_VALUE ("path-separator",  path_separator,    "path separator")
+        PARSE_VALUE ("leading-zeros",   leading_zeros,     "leading zero count")
+        PARSE_VALUE ("db-name",         db_name,           "db name")
+        PARSE_FLAG  ("files-with-dirs", files_with_dirs)
+        PARSE_FLAG  ("chown",           chown)
+        PARSE_FLAG  ("chgrp",           chgrp)
+        PARSE_BUCKET("file-count",      file_count,        "file count")
+        PARSE_BUCKET("file-size",       file_size,         "file size")
+        // PARSE_VALUE ("seed",            seed,              "seed")
+        PARSE_VALUE ("min-subdirs",     subdirs.min,       "min subdirectories")
+        PARSE_VALUE ("max-subdirs",     subdirs.max,       "max subdirectories")
+        PARSE_VALUE ("min-time",        time.min,          "min atime")
+        PARSE_VALUE ("max-time",        time.max,          "max atime")
+        PARSE_VALUE ("blocksize",       blocksize,         "blocksize")
+        PARSE_VALUE ("threads",         threads,           "thread count")
+        PARSE_VALUE ("stat-rate",       stat_rate,         "timed statistics collection rate")
+        PARSE_VALUE ("progress-rate",   progress_rate,     "progress print rate")
+        PARSE_FLAG  ("dry-run", dryrun)
         else if ((args[0] == '-') && (args[1] == '-')) {
             std::cerr << "Unknown option: " << args << std::endl;
             return false;
@@ -821,6 +869,51 @@ bool create_top(const Settings &settings) {
     return true;
 }
 
+// Convenience class for running functions in a timed loop on a thread
+class LoopedThread {
+    public:
+        template <typename F, typename... Args>
+        LoopedThread(const unsigned int rate, std::mutex &mutex, F &&func, Args &&...args)
+            : rate(rate),
+              mutex(mutex),
+              cv(),
+              thread([this, &func, &args...]() {
+                      auto run = std::bind(std::forward <F> (func), std::forward <Args>(args)...);
+                      std::chrono::milliseconds ms(this->rate);
+                      std::unique_lock <std::mutex> lock(this->mutex);
+                      while (this->rate) {
+                          this->cv.wait_for(lock, ms);
+                          run();
+                      }
+                  }
+                  )
+        {}
+
+        ~LoopedThread() {
+            thread.join();
+        }
+
+        void stop() {
+            bool notify = true;
+            {
+                std::lock_guard <std::mutex> lock(mutex);
+                notify = rate;
+                rate = 0;
+            }
+
+            if (notify) {
+                cv.notify_all();
+            }
+        }
+
+    private:
+        unsigned int rate;
+        std::mutex &mutex;
+        std::condition_variable cv;
+
+        std::thread thread;
+};
+
 int main(int argc, char *argv[]) {
     Settings settings;
 
@@ -870,6 +963,22 @@ int main(int argc, char *argv[]) {
     // use this rng to generate seeds for other rngs
     std::mt19937 gen(settings.seed);
 
+    // mutex for preventing prints from overlapping
+    std::mutex print_mutex;
+
+    // set up timed stats thread
+    LoopedThread timed_stats(settings.stat_rate, ThreadArgs::timed_stats.mutex, [&settings, &print_mutex](){
+            std::lock_guard <std::mutex> print_lock(print_mutex);
+            std::cout << ThreadArgs::timed_stats << " since the last stat collection " << settings.stat_rate << " ms ago" << std::endl;
+            ThreadArgs::timed_stats.clear();
+        });
+
+    // set up timed stats thread
+    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex](){
+            std::lock_guard <std::mutex> print_lock(print_mutex);
+            std::cout << "Progress: " << ThreadArgs::files << " files in " << ThreadArgs::stats.size() << " directories" << std::endl;
+        });
+
     struct timespec start = {};
     clock_gettime(CLOCK_MONOTONIC, &start);
 
@@ -894,12 +1003,15 @@ int main(int argc, char *argv[]) {
     struct timespec end = {};
     clock_gettime(CLOCK_MONOTONIC, &end);
 
+    // stop print threads
+    timed_stats.stop();
+    progress.stop();
+
     thpool_destroy(pool);
 
     // print stats
     std::cout << std::endl
-              << "Elapsed time: " << ((long double) (end.tv_sec - start.tv_sec) +
-                                      ((long double) (end.tv_nsec - start.tv_nsec) / 1000000000.0)) << " seconds" << std::endl;
+              << "Elapsed time: " << elapsed(start, end) << " seconds" << std::endl;
 
     if (settings.dryrun) {
         std::cout << "Would have generated" << std::endl;
