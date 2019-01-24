@@ -9,10 +9,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # include the source directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+# load the ExternalProject module
+include(ExternalProject)
+
+# need the PkgConfig module for pkg_search_module
+find_package(PkgConfig REQUIRED)
+
 # download and build C-Thread-Pool
 set(thpool_PREFIX ${CMAKE_BINARY_DIR}/C-Thread-Pool)
-
-include(ExternalProject)
 ExternalProject_Add(C-Thread-Pool
   GIT_REPOSITORY    https://github.com/calccrypto/C-Thread-Pool.git
   GIT_TAG           cmake
@@ -23,17 +27,13 @@ ExternalProject_Add(C-Thread-Pool
 include_directories(${thpool_PREFIX}/include)             # -Ipath/to/C-Thread-Pool/include
 link_directories(${thpool_PREFIX}/lib)                    # -Lpath/to/C-Thread-Pool/lib
 
-# need the PkgConfig module for pkg_search_module
-find_package(PkgConfig REQUIRED)
-
-# search for pre-install sqlite3
+# search for sqlite3 installation
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
 
 # download and build sqlite3-pcre
 set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/sqlite3-pcre)
-
 ExternalProject_Add(sqlite3-pcre
   GIT_REPOSITORY    https://github.com/calccrypto/sqlite3-pcre.git
   GIT_TAG           cmake
@@ -44,15 +44,12 @@ ExternalProject_Add(sqlite3-pcre
 include_directories(${pcre_PREFIX}/include)               # -Ipath/to/sqlite3-pcre/include
 link_directories(${pcre_PREFIX}/lib)                      # -Lpath/to/sqlite3-pcre/lib
 
-# put common files into this variable
-set(COMMON_SOURCES bf.c dbutils.c structq.c utils.c)
-
-# create the GUFI library, which contains all of the common functions
-add_library(GUFI STATIC ${COMMON_SOURCES})
+# create the GUFI library, which contains all of the common source files
+add_library(GUFI STATIC bf.c dbutils.c structq.c utils.c)
 add_dependencies(GUFI C-Thread-Pool)
 install(TARGETS GUFI DESTINATION lib)
 
-# put common dependencies into this variable
+# pack common values into variables
 set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
 set(COMMON_LIBRARIES GUFI sqlite3 thpool pthread)
 
@@ -137,6 +134,13 @@ if (FUSE_FOUND)
 else()
   message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
 endif()
+
+# copy user tools into bin folder
+set(GUFI_SCRIPTS gufi_find gufi_stats gufi_ls query_builder.py)
+foreach(SCRIPT ${GUFI_SCRIPTS})
+  configure_file(${CMAKE_SOURCE_DIR}/${SCRIPT} ${CMAKE_BINARY_DIR}/${SCRIPT} COPYONLY)
+endforeach()
+install(FILES ${GUFI_SCRIPTS} DESTINATION bin PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
 
 # add the test subdirectory
 add_subdirectory(test)
