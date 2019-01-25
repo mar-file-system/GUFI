@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -118,7 +118,6 @@ int main(int argc, char *argv[])
    struct stat statuso;
    int rc;
    sqlite3 *db;
-   sqlite3 *db1;
    int recs;
    struct sum sumout;
    int dirsummary = 0;
@@ -141,7 +140,7 @@ int main(int argc, char *argv[])
    // sprintf(tabnam,"%s",argv[7]);
 
    const char* pos_args = "[-s] DB_path DB_count SQL tabname";
-   int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args);
+   int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args, &in);
    if (in.helped)
       sub_help();
    if (idx < 0)
@@ -169,16 +168,16 @@ int main(int argc, char *argv[])
    }
 
 
-   printf("processing query name %s  numb dbs %d\n",name, numdbs);
+   //printf("processing query name %s  numb dbs %d\n",name, numdbs);
    sprintf(dbname,"%s",name);
-   db = opendb(name,db1,5,0);
+   db = opendb(name,5,0);
 
    // add query funcs to get path() uidtouser() gidtogroup()
    addqueryfuncs(db);
 
    // just zero out the global path so path() for this query is useless
    bzero(gps[0].gpath,sizeof(gps[0].gpath));
-   
+
    bzero(sqlu,sizeof(sqlu));
    sprintf(sqlu,"create temp view v%s as ",tabnam);
    bzero(up,sizeof(up));
@@ -192,7 +191,7 @@ int main(int argc, char *argv[])
          sprintf(up,"select * from %s.%s;",dbn,tabnam);
       strcat(sqlu,up);
       sprintf(sqlat,"ATTACH \'%s\' as %s",dbnam,dbn);
-      printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
+      //printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {
          fprintf(stderr, "Cannot attach database: %s %s\n", dbnam, sqlite3_errmsg(db));
@@ -205,11 +204,11 @@ int main(int argc, char *argv[])
    //create view concat as select * from d1.summary union all d2.summary
    //…… union all d10.summary;
 
-   printf("sqlu: %s\n",sqlu);
+   //printf("sqlu: %s\n",sqlu);
    rawquerydb(dbnam, dirsummary, db, sqlu,
               in.printing, in.printheader, in.printrows,0);
 
-   printf("after union running %s\n",rsqlstmt);
+   //printf("after union running %s\n",rsqlstmt);
    recs=rawquerydb(dbnam, dirsummary, db, rsqlstmt,
                    in.printing, in.printheader, in.printrows, 0);
    if (recs >= 0)
@@ -222,7 +221,7 @@ int main(int argc, char *argv[])
       sprintf(dbnam,"%s.%d",name,i);
       sprintf(dbn,"%s%d",name,i);
 
-      //detachdb(dbnam,db,dbn); 
+      //detachdb(dbnam,db,dbn);
       sprintf(sqlat,"DETACH %s",dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {

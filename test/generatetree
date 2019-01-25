@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# -----
+# NOTE:
+# -----
+#
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+#
+#
+#
+
+#
+# This script generates a fixed tree with the following structure:
+#
+# ${ROOT}/
+# |---- 1KB
+# |---- 1MB
+# |---- directory/
+#       |---- executable
+#       |---- readonly
+#       |---- writeonly
+#       |---- subdirectory/
+#             |---- directory_symlink -> subdirectory
+#             |---- (optional) <gid>_gid_directory/
+#             |---- (optional) <gid>_gid_file
+#             |---- (optional) <uid>_uid_<gid>_gid_directory/
+#             |---- (optional) <uid>_uid_<gid>_gid_file
+#             |---- (optional) <uid>_uid_directory/
+#             |---- (optional) <uid>_uid_file
+#             |---- repeate_name
+# |---- empty_file
+# |---- file_symlink -> 1KB
+# |---- .hidden
+# |---- old_file
+# |---- repeat_name
+#
+
+set -e
+
+function help() {
+    echo "Create a known tree for testing"
+    echo "Syntax: $0 [options] directory"
+    echo
+    echo "Options:"
+    echo "    -h | --help"
+    echo "    -d | --delete      delete previously existing directory"
+    echo "    -u | --uid <uid>   create file and directory with given uid (requires sudo)"
+    echo "    -g | --gid <gid>   create file and directory with given gid (requires sudo)"
+}
+
+DELETE=false
+uid=
+gid=
+
+# https://stackoverflow.com/a/806923
+re='^[0-9]+$'
+
+# https://stackoverflow.com/a/14203146
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -h|--help)
+        help
+        exit 0
+        ;;
+    -d|--delete)
+        DELETE=true
+        shift
+        ;;
+    -u|--uid)
+        uid="$2"
+        # https://stackoverflow.com/a/3951175
+        case ${uid} in
+            ''|*[!0-9]*)
+                help
+                exit 1
+                ;;
+            *)
+                shift
+                shift
+                ;;
+            esac
+        ;;
+    -g|--gid)
+        gid="$2"
+        # https://stackoverflow.com/a/3951175
+        case ${gid} in
+            ''|*[!0-9]*)
+                help
+                exit 1
+                ;;
+            *)
+                shift
+                shift
+                ;;
+            esac
+        ;;
+    *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        shift # past argument
+        ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+if [[ "$#" -eq "0" ]]; then
+    help
+    exit 1
+fi
+
+ROOT="${POSITIONAL[0]}"
+
+if [[ -d "${ROOT}" ]]; then
+    if [[ "${DELETE}" = true ]]; then
+        rm -rf ${ROOT}
+    else
+        echo "Directory ${ROOT} already exists. Nothing done."
+        exit 1
+    fi
+fi
+
+# ${ROOT} should not exist at this point
+mkdir ${ROOT}
+
+# generate tree
+cd ${ROOT}
+touch empty_file
+truncate --size=1K 1KB
+truncate --size=1M 1MB
+touch "unusual, name?#"
+touch .hidden
+touch repeat_name
+ln -f -s $(realpath 1KB) file_symlink
+touch -d "1970-01-01 00:00:00" old_file
+
+mkdir directory
+cd directory
+touch executable
+chmod +x executable
+touch readonly
+chmod -wx readonly
+touch writeonly
+chmod -rx writeonly
+mkdir subdirectory
+
+cd subdirectory
+ln -f -s $(realpath .) directory_symlink
+touch repeat_name
+
+# create file and directory with a given uid (requires sudo)
+if [[ ! -z "${uid}" ]]; then
+    touch "${uid}_uid_file"
+    sudo chown "${uid}" "${uid}_uid_file"
+    mkdir "${uid}_uid_directory"
+    sudo chown "${uid}" "${uid}_uid_directory"
+fi
+
+# create file and directory with a given gid (requires sudo)
+if [[ ! -z "${gid}" ]]; then
+    touch "${gid}_gid_file"
+    sudo chgrp "${gid}" "${gid}_gid_file"
+    mkdir "${gid}_gid_directory"
+    sudo chgrp "${gid}" "${gid}_gid_directory"
+fi
+
+# if both uid and gid are set, create a file and a directory with both changed (requires sudo)
+if [[ (! -z "${uid}") && (! -z "${gid}") ]]; then
+    touch "${uid}_uid_${gid}_gid_file"
+    sudo chown "${uid}" "${uid}_uid_${gid}_gid_file"
+    sudo chgrp "${gid}" "${uid}_uid_${gid}_gid_file"
+    mkdir "${uid}_uid_${gid}_gid_directory"
+    sudo chown "${uid}" "${uid}_uid_${gid}_gid_directory"
+    sudo chgrp "${gid}" "${uid}_uid_${gid}_gid_directory"
+fi

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -e
+
+root="/tmp"
+src="${root}/testdir"
+dst="${root}/testgufi"
+
+rm -rf "${src}" "${dst}"
+
+# go to the root GUFI directory
+cd "$(dirname $(dirname $0))"
+
+# create the original tree
+test/generatetree -d "${src}"
+
+# read it into GUFI
+./bfwi -t "${dst}" "${src}" 2>/dev/null
+
+dst="${dst}${src}"
+
+# compare files
+diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, size, linkname" --root "${root}" | sort) <(
+    (
+        echo "${dst}/1KB|f|-rw-rw-rw-|1|1001|1001|1024||"
+        echo "${dst}/1MB|f|-rw-rw-rw-|1|1001|1001|1048576||"
+        echo "${dst}/directory/executable|f|-rwxrwxrwx|1|1001|1001|0||"
+        echo "${dst}/directory/readonly|f|-r--r--r--|1|1001|1001|0||"
+        echo "${dst}/directory/subdirectory/repeat_name|f|-rw-rw-rw-|1|1001|1001|0||"
+        echo "${dst}/directory/writeonly|f|--w--w--w-|1|1001|1001|0||"
+        echo "${dst}/empty_file|f|-rw-rw-rw-|1|1001|1001|0||"
+        echo "${dst}/.hidden|f|-rw-rw-rw-|1|1001|1001|0||"
+        echo "${dst}/old_file|f|-rw-rw-rw-|1|1001|1001|0||"
+        echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001|0||"
+        echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001|0||"
+    ) | sort)
+
+# compare files and symlinks
+diff <(./gufi_find "${dst}" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, linkname" --root "${root}" | sort) <(
+    (
+        echo "${dst}/1KB|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/1MB|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/directory/executable|f|-rwxrwxrwx|1|1001|1001||"
+        echo "${dst}/directory/readonly|f|-r--r--r--|1|1001|1001||"
+        echo "${dst}/directory/subdirectory/directory_symlink|l|-rwxrwxrwx|1|1001|1001|${src}/directory/subdirectory|"
+        echo "${dst}/directory/subdirectory/repeat_name|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/directory/writeonly|f|--w--w--w-|1|1001|1001||"
+        echo "${dst}/empty_file|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/file_symlink|l|-rwxrwxrwx|1|1001|1001|${src}/1KB|"
+        echo "${dst}/.hidden|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/old_file|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001||"
+        echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001||"
+    ) | sort)

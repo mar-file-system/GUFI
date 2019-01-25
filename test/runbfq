@@ -2,25 +2,25 @@
 
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
-# 
-# 
+#
+#
 # Copyright (c) 2017, Los Alamos National Security (LANS), LLC
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
-# 
+#
 # 1. Redistributions of source code must retain the above copyright notice, this
 # list of conditions and the following disclaimer.
-# 
+#
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 # this list of conditions and the following disclaimer in the documentation and/or
 # other materials provided with the distribution.
-# 
+#
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
 # specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -31,11 +31,11 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 # -----
 # NOTE:
 # -----
-# 
+#
 # GUFI uses the C-Thread-Pool library.  The original version, written by
 # Johan Hanssen Seferidis, is found at
 # https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
@@ -44,11 +44,11 @@
 # found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
 # License.  The MIT License can be found at
 # https://opensource.org/licenses/MIT.
-# 
-# 
+#
+#
 # From Los Alamos National Security, LLC:
 # LA-CC-15-039
-# 
+#
 # Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
 # Copyright 2017. Los Alamos National Security, LLC. This software was produced
 # under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
@@ -60,7 +60,7 @@
 # modified to produce derivative works, such modified software should be
 # clearly marked, so as not to confuse it with the version available from
 # LANL.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -72,9 +72,9 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
-# 
-# 
-# 
+#
+#
+#
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
@@ -99,42 +99,19 @@ elif [ ! -e $GUFI/db.db ]; then
     exit -1
 fi
 
-
-
-# Usage: bfq [options] GUFI_tree
-# options:
-#   -h              help
-#   -H              show assigned input values (debugging)
-#   -T <SQL_tsum>   SQL for tree-summary table
-#   -S <SQL_sum>    SQL for summary table
-#   -E <SQL_ent>    SQL for entries table
-#   -P              print directories as they are encountered
-#   -a              AND/OR (SQL query combination)
-#   -p              print file-names
-#   -n <threads>    number of threads
-#   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-#   -d <delim>      delimiter (one char)  [use 'x' for 0x1E]
-#   -O <out_DB>     output DB
-#   -I <SQL_init>   SQL init
-#   -F <SQL_fin>    SQL cleanup
-# 
-# GUFI_tree         find GUFI index-tree here
-# 
-
-
 echo
 echo "query to screen"
 $BFQ \
     -Pp -n 1\
-    -E "select path(),* from entries;" \
+    -E "SELECT path(),* FROM entries;" \
     $GUFI
 
 echo
 echo "query to screen show date conversion (limited to 10 entries)"
 $BFQ \
     -Pp -n 1 \
-    -S "select path(),name,type,size,datetime(mtime,'unixepoch') from vsummarydir limit 10;" \
-    -E "select path(),name, type, size, datetime(mtime,'unixepoch') from entries limit 10;" \
+    -S "SELECT path(),name,type,size,datetime(mtime,'unixepoch') FROM vsummarydir limit 10;" \
+    -E "SELECT path(),name, type, size, datetime(mtime,'unixepoch') FROM entries limit 10;" \
     $GUFI
 
 echo
@@ -142,7 +119,7 @@ echo "query to out files"
 rm -f outq*
 $BFQ \
     -Pp -n 2 -o outq \
-    -E "select * from entries;" \
+    -E "SELECT * FROM entries;" \
     $GUFI
 
 ls -l outq*
@@ -153,30 +130,30 @@ echo "query to screen, insert per-user size-summary into table 'sument' in outdb
 rm -f outdb*
 $BFQ \
     -Pp -n 2 -O outdb \
-    -I "create table sument (uid int64, type text, totfiles int64, totsize int64);" \
-    -E "insert into sument select uid, type, count(*), sum(size) from entries group by type;" \
+    -I "CREATE TABLE sument (uid int64, type text, totfiles int64, totsize int64);" \
+    -E "INSERT INTO sument SELECT uid, type, count(*), sum(size) FROM entries group by type;" \
     $GUFI
 
 echo
 echo "contents of table 'sument' created in previous step (thread 0)"
-sqlite3 -line outdb.0 'select * from sument;'
+sqlite3 -line outdb.0 'SELECT * FROM sument;'
 
 echo
 echo "contents of table 'sument' created in previous step (thread 1)"
-sqlite3 -line outdb.1 'select * from sument;'
+sqlite3 -line outdb.1 'SELECT * FROM sument;'
 
 echo
 echo "query to screen, insert vsummarydir recs into table 'sumsummary' in outdb.<thread_no>"
 $BFQ \
     -Pp -n 2 -O outdb \
     -I "CREATE TABLE sumsummary(uid INT64, gid INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64);" \
-    -S "insert into sumsummary select uid, gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr from vsummarydir;" \
+    -S "INSERT INTO sumsummary SELECT uid, gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr FROM vsummarydir;" \
     $GUFI
 
 echo
 echo "contents of table 'sumsummary' created in previous step (thread 0)"
-sqlite3 -line outdb.0 'select * from sumsummary;'
+sqlite3 -line outdb.0 'SELECT * FROM sumsummary;'
 
 echo
 echo "contents of table 'sumsummary' created in previous step (thread 1)"
-sqlite3 -line outdb.1 'select * from sumsummary;'
+sqlite3 -line outdb.1 'SELECT * FROM sumsummary;'

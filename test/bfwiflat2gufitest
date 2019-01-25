@@ -1,0 +1,106 @@
+#!/usr/bin/python
+## get subprocess module 
+## get os module 
+## get time module 
+import subprocess
+import os 
+import time
+
+tdir=os.getcwd()
+gdir=".."
+mtmp="/tmp"
+top="/tmp/gftest"
+topgt="/tmp/gftest/gt"
+toptg="/tmp/gftest/tg"
+topfullafter="/tmp/gftest/fullafter"
+fa="fullafter"
+thegt="gt"
+dirs0=[0,1,2]
+dirs1=[0,1,2]
+dirs2=[0,1,2]
+files=[0,1,2]
+
+# initialize a src tree, make a full gufi tree, do a bfq in case we want to compare with the full at initial state 
+def ginit():
+ print "initializing a tree, full gufi tree, and full tree snap"
+ # clean up and make initial directories
+ os.system('rm -rf %s' % (top))
+ os.system('mkdir %s' % (top))
+ os.system('mkdir %s/d0' % (top))
+ os.system('mkdir %s/gt' % (top))
+ # make the source tree
+ for i in dirs0:
+   os.system('mkdir %s/d0/d0%d' % (top,i))
+   for j in files:
+      os.system('touch %s/d0/d0%d/f0%d%d' % (top,i,i,j))
+   for k in dirs1:
+      os.system('mkdir %s/d0/d0%d/d0%d%d' % (top,i,i,k))
+      for l in files:
+         os.system('touch %s/d0/d0%d/d0%d%d/f0%d%d%d' % (top,i,i,k,i,k,l))
+      for m in dirs2:
+         os.system('mkdir %s/d0/d0%d/d0%d%d/d0%d%d%d' % (top,i,i,k,i,k,m))
+         for n in files:
+            os.system('touch %s/d0/d0%d/d0%d%d/d0%d%d%d/f0%d%d%d%d' % (top,i,i,k,i,k,m,i,k,m,n))
+
+ # wait a second and then put time in the current timestamp file - about to start the full
+ time.sleep(1)
+ #we have to do most of this from the top directory but sometimes we have to cd to the top of the gufi tree for bfqs
+ # to have the same relative diretory structure
+ os.chdir(top)
+
+ # create a gufi tree
+ os.system('%s/%s/bfwi -n 2 -x -b -t gt d0' % (tdir,gdir)) 
+
+ # this is just for testing - make a bfq output to compare with if we want to - leave out atime as it may change
+ os.chdir(topgt)
+ os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/fullbfqout d0'  % (tdir,gdir,top)) 
+
+ os.chdir(top)
+
+ # what have we accomplished
+ print "we should have created a source tree d0, a gufi tree gt, a full bfq out to compare to"
+ #os.system('ls -l %s' % (top))
+
+# make a full gufi tree from a dfw output flat file to compare with original bfwi created gufi tree
+def gfullafter():
+
+ os.system('mkdir %s' % (topfullafter))
+ os.chdir(top)
+ os.system('%s/%s/bfwi -n 2 -d \'|\' -x -Pp -o %s/load d0' % (tdir,gdir,top))
+ os.system('cat %s/load.0 %s/load.1 > %s/load.out ' % (top,top,top ))
+ os.chdir(top)
+ os.system('%s/%s/bfwi -n 2 -d \'|\' -x -b -t %s -u %s/load.out' % (tdir,gdir,fa,top)) 
+ print "created gufi with bfwi output"
+ os.chdir(topfullafter)
+ #leave out atime
+ os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/fullbfqoutafter d0'  % (tdir,gdir,top)) 
+ os.chdir(top)
+
+
+##################################  main  ############################################
+################################### test1 ############################################
+testn="load gufi from bfwi flat file output"
+# this cleans up and makes a fresh gufi
+# you have to not be in the top temp directory as this deletes that and rebuilds it
+os.chdir(mtmp)
+ginit()
+# set the dir back to top temp directory
+os.chdir(top)
+
+# wait a bit and make a change
+time.sleep(1)
+
+# do a full gufi tree from bfwi flat file output and a bfq on it to compare with the original bfwi walk created gufi
+gfullafter()
+# wait 
+time.sleep(1)
+print "++++++++++ comparing fulbfq to  fullafter, original bfwi walk produced gufi and bfwi flat file loaded with bfwi produced gufi"
+#you have to sort these as bfq will walk in entry order and bfwi will produce a gufi in some order and it might be a different order using different modes 
+os.system('sort -o %s/fullbfqout.srt %s/fullbfqout.0' % (top,top))
+os.system('sort -o %s/fullbfqoutafter.srt %s/fullbfqoutafter.0' % (top,top))
+cmd=os.system('cmp %s/fullbfqout.srt %s/fullbfqoutafter.srt' % (top,top))
+
+exit_code = os.WEXITSTATUS(cmd)
+print "---------- test %s done result %d" % (testn,exit_code)
+#end bfwiload test
+################################### test1 end ########################################

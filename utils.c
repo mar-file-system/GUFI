@@ -75,11 +75,12 @@ OF SUCH DAMAGE.
 
 
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <ctype.h>              /* isprint() */
 #include <errno.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
 #include "structq.h"
@@ -126,52 +127,55 @@ struct globalthreadstate gts = {0};
 
 
 int printits(struct work *pwork,int ptid) {
-  char  ffielddelim[2];
   FILE * out;
 
   out = stdout;
   if (in.outfile > 0)
      out = gts.outfd[ptid];
- 
-  if (in.dodelim == 0) {
-    sprintf(ffielddelim," "); 
-  }
-  if (in.dodelim == 1) {
-    sprintf(ffielddelim,"%s",fielddelim); 
-  }
-  if (in.dodelim == 2) {
-    sprintf(ffielddelim,"%s",in.delim); 
-  }
 
-  fprintf(out,"%s%s",pwork->name,ffielddelim);
+  fprintf(out,"%s%s",pwork->name,in.delim);
 
-  if (!strncmp(pwork->type,"l",1)) fprintf(out,"l%s",ffielddelim);
-  if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",ffielddelim);
-  if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",ffielddelim);
+  if (!strncmp(pwork->type,"l",1)) fprintf(out,"l%s",in.delim);
+  if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",in.delim);
+  if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",in.delim);
 
-  fprintf(out, "%lld%s", pwork->statuso.st_ino, ffielddelim);
-  fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_mode, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_nlink, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_uid, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_gid, ffielddelim);
-  fprintf(out, "%lld%s", pwork->statuso.st_size, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_blksize, ffielddelim);
-  fprintf(out, "%lld%s", pwork->statuso.st_blocks, ffielddelim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_atime, ffielddelim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_mtime, ffielddelim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_ctime, ffielddelim);
-  fprintf(out, "%d%s",  pwork->suspect, ffielddelim);
+  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino, in.delim);
+  fprintf(out, "%lld%s",           pwork->pinode,         in.delim);
+  fprintf(out, "%d%s",             pwork->statuso.st_mode, in.delim);
+  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink, in.delim);
+  fprintf(out, "%d%s",             pwork->statuso.st_uid, in.delim);
+  fprintf(out, "%d%s",             pwork->statuso.st_gid, in.delim);
+  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size, in.delim);
+  fprintf(out, "%"STAT_bsize"%s",  pwork->statuso.st_blksize, in.delim);
+  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks, in.delim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_atime, in.delim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_mtime, in.delim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_ctime, in.delim);
+  fprintf(out, "%d%s",             pwork->suspect, in.delim);
 
+/* we need this field even if its not populated for bfwi load from file */
+/*
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s", pwork->linkname);
-    fprintf(out, "%s", ffielddelim);
+    fprintf(out, "%s%s", pwork->linkname,in.delim;
   }
+*/
+  fprintf(out, "%s%s", pwork->linkname,in.delim);
+
+/* we need this field even if its not populated for bfwi load from file */
+/*
   if (pwork->xattrs > 0) {
     //printf("xattr: ");
-    fprintf(out,"%s",pwork->xattr);
+    fprintf(out,"%s%s",pwork->xattr,in.delim);
   }
-  fprintf(out,"%s\n", ffielddelim);
+*/
+  fprintf(out,"%s%s",pwork->xattr,in.delim);
+
+  /* this one is for create tiem which posix doesnt have */
+  fprintf(out,"%s", in.delim);
+  /* moved this to end because we would like to use this for input to bfwi load from file */
+  fprintf(out, "%lld%s", pwork->pinode,         in.delim);
+  fprintf(out, "%d%s",  pwork->suspect, in.delim);
+  fprintf(out,"\n");
   return 0;
 }
 
@@ -187,7 +191,7 @@ int pullxattrs( const char *name, char *bufx) {
     int xattrs;
     unsigned int ptest;
     bufxp=bufx;
-    bzero(buf,sizeof(buf));
+    memset(buf, 0, sizeof(buf));
 
     buflen = LISTXATTR(name, buf, sizeof(buf));
 
@@ -197,16 +201,16 @@ int pullxattrs( const char *name, char *bufx) {
        //printf("xattr exists len %zu %s\n",buflen,buf);
        key=buf;
        while (buflen > 0) {
-         bzero(bufv,sizeof(bufv));
+         memset(bufv, 0, sizeof(bufv));
 
-         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv)); 
+         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv));
 
          keylen=strlen(key) + 1;
          //printf("key: %s value: %s len %zd keylen %d\n",key,bufv,bufvlen,keylen);
          sprintf(bufxp,"%s%s",key,xattrdelim); bufxp=bufxp+keylen;
          ptest = *(bufv);
          if (isprint(ptest)) {
-           sprintf(bufxp,"%s%s",bufv,xattrdelim); 
+           sprintf(bufxp,"%s%s",bufv,xattrdelim);
            bufxp=bufxp+bufvlen+1;
          } else {
            bufxp=bufxp+1;
@@ -220,16 +224,16 @@ int pullxattrs( const char *name, char *bufx) {
     return xattrs;
 }
 
-int zeroit(struct sum *summary) 
+int zeroit(struct sum *summary)
 {
   summary->totfiles=0;
   summary->totlinks=0;
-  summary->minuid=0;
-  summary->maxuid=0;
-  summary->mingid=0;
-  summary->maxgid=0;
-  summary->minsize=0;
-  summary->maxsize=0;
+  summary->minuid=LLONG_MAX;
+  summary->maxuid=LLONG_MIN;
+  summary->mingid=LLONG_MAX;
+  summary->maxgid=LLONG_MIN;
+  summary->minsize=LLONG_MAX;
+  summary->maxsize=LLONG_MIN;
   summary->totltk=0;
   summary->totmtk=0;
   summary->totltm=0;
@@ -237,33 +241,33 @@ int zeroit(struct sum *summary)
   summary->totmtg=0;
   summary->totmtt=0;
   summary->totsize=0;
-  summary->minctime=0;
-  summary->maxctime=0;
-  summary->minmtime=0;
-  summary->maxmtime=0;
-  summary->minatime=0;
-  summary->maxatime=0;
-  summary->minblocks=0;
-  summary->maxblocks=0;
+  summary->minctime=LLONG_MAX;
+  summary->maxctime=LLONG_MIN;
+  summary->minmtime=LLONG_MAX;
+  summary->maxmtime=LLONG_MIN;
+  summary->minatime=LLONG_MAX;
+  summary->maxatime=LLONG_MIN;
+  summary->minblocks=LLONG_MAX;
+  summary->maxblocks=LLONG_MIN;
   summary->setit=0;
   summary->totxattr=0;
   summary->totsubdirs=0;
-  summary->maxsubdirfiles=0;
-  summary->maxsubdirlinks=0;
-  summary->maxsubdirsize=0;
-  summary->mincrtime=0;
-  summary->maxcrtime=0;
-  summary->minossint1=0;
-  summary->maxossint1=0;
+  summary->maxsubdirfiles=LLONG_MIN;
+  summary->maxsubdirlinks=LLONG_MIN;
+  summary->maxsubdirsize=LLONG_MIN;
+  summary->mincrtime=LLONG_MAX;
+  summary->maxcrtime=LLONG_MIN;
+  summary->minossint1=LLONG_MAX;
+  summary->maxossint1=LLONG_MIN;
   summary->totossint1=0;
-  summary->minossint2=0;
-  summary->maxossint2=0;
+  summary->minossint2=LLONG_MAX;
+  summary->maxossint2=LLONG_MIN;
   summary->totossint2=0;
-  summary->minossint3=0;
-  summary->maxossint3=0;
+  summary->minossint3=LLONG_MAX;
+  summary->maxossint3=LLONG_MIN;
   summary->totossint3=0;
-  summary->minossint4=0;
-  summary->maxossint4=0;
+  summary->minossint4=LLONG_MAX;
+  summary->maxossint4=LLONG_MIN;
   summary->totossint4=0;
   return 0;
 }
@@ -312,12 +316,14 @@ int sumit (struct sum *summary,struct work *pwork) {
      if (pwork->statuso.st_size > 1073741824) summary->totmtg++;
      if (pwork->statuso.st_size > 1099511627776) summary->totmtt++;
      summary->totsize=summary->totsize+pwork->statuso.st_size;
+
      if (pwork->statuso.st_blocks < summary->minblocks) summary->minblocks=pwork->statuso.st_blocks;
      if (pwork->statuso.st_blocks > summary->maxblocks) summary->maxblocks=pwork->statuso.st_blocks;
   }
   if (!strncmp(pwork->type,"l",1)) {
      summary->totlinks++;
   }
+
   if (pwork->statuso.st_uid < summary->minuid) summary->minuid=pwork->statuso.st_uid;
   if (pwork->statuso.st_uid > summary->maxuid) summary->maxuid=pwork->statuso.st_uid;
   if (pwork->statuso.st_gid < summary->mingid) summary->mingid=pwork->statuso.st_gid;
@@ -330,18 +336,23 @@ int sumit (struct sum *summary,struct work *pwork) {
   if (pwork->statuso.st_atime > summary->maxatime) summary->maxatime=pwork->statuso.st_atime;
   if (pwork->crtime < summary->mincrtime) summary->mincrtime=pwork->crtime;
   if (pwork->crtime > summary->maxcrtime) summary->maxcrtime=pwork->crtime;
+
   if (pwork->ossint1 < summary->minossint1) summary->minossint1=pwork->ossint1;
   if (pwork->ossint1 > summary->maxossint1) summary->maxossint1=pwork->ossint1;
   summary->totossint1=summary->totossint1+pwork->ossint1;
-  if (pwork->ossint2 < summary->minossint2) summary->minossint1=pwork->ossint2;
-  if (pwork->ossint2 > summary->maxossint2) summary->maxossint1=pwork->ossint2;
+
+  if (pwork->ossint2 < summary->minossint2) summary->minossint2=pwork->ossint2;
+  if (pwork->ossint2 > summary->maxossint2) summary->maxossint2=pwork->ossint2;
   summary->totossint2=summary->totossint2+pwork->ossint2;
-  if (pwork->ossint3 < summary->minossint3) summary->minossint1=pwork->ossint3;
-  if (pwork->ossint3 > summary->maxossint3) summary->maxossint1=pwork->ossint3;
+
+  if (pwork->ossint3 < summary->minossint3) summary->minossint3=pwork->ossint3;
+  if (pwork->ossint3 > summary->maxossint3) summary->maxossint3=pwork->ossint3;
   summary->totossint3=summary->totossint3+pwork->ossint3;
-  if (pwork->ossint4 < summary->minossint4) summary->minossint1=pwork->ossint4;
-  if (pwork->ossint4 > summary->maxossint4) summary->maxossint1=pwork->ossint4;
+
+  if (pwork->ossint4 < summary->minossint4) summary->minossint4=pwork->ossint4;
+  if (pwork->ossint4 > summary->maxossint4) summary->maxossint4=pwork->ossint4;
   summary->totossint4=summary->totossint4+pwork->ossint4;
+
   if (pwork->xattrs > 0) summary->totxattr++;
   return 0;
 }
@@ -357,12 +368,11 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 
   smout->totfiles += sumin->totfiles;
   smout->totlinks += sumin->totlinks;
-  smout->totsize  += sumin->totsize;
 
   /* only set these mins and maxes if there are files in the directory
      otherwise mins are all zero */
   if (sumin->totfiles > 0) {
-    if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid; 
+    if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid;
     if (sumin->maxuid > smout->maxuid) smout->maxuid=sumin->maxuid;
     if (sumin->mingid < smout->mingid) smout->mingid=sumin->mingid;
     if (sumin->maxgid > smout->maxgid) smout->maxgid=sumin->maxgid;
@@ -408,7 +418,7 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
-// 
+//
 int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
@@ -436,10 +446,10 @@ int dupdir(struct work *pwork)
 {
     char topath[MAXPATH];
     int rc;
-    
+
     sprintf(topath,"%s/%s",in.nameto,pwork->name);
     //printf("mkdir %s\n",topath);
-    // the writer must be able to create the index files into this directory so or in S_IWRITE 
+    // the writer must be able to create the index files into this directory so or in S_IWRITE
     //rc = mkdir(topath,pwork->statuso.st_mode | S_IWRITE);
     rc = mkdir(topath,pwork->statuso.st_mode | S_IRWXU);
     if (rc != 0) {
@@ -455,30 +465,30 @@ int dupdir(struct work *pwork)
     }
     chown(topath, pwork->statuso.st_uid,pwork->statuso.st_gid);
     // we dont need to set xattrs/time on the gufi directory those are in the db
-    // the gufi directory structure is there only to walk, not to provide 
+    // the gufi directory structure is there only to walk, not to provide
     // information, the information is in the db
 
     return 0;
 }
 
 int incrthread() {
-  pthread_mutex_lock(&running_mutex); 
-  runningthreads++; 
+  pthread_mutex_lock(&running_mutex);
+  runningthreads++;
   pthread_mutex_unlock(&running_mutex);
   return 0;
 }
 
 int decrthread() {
-  pthread_mutex_lock(&running_mutex); 
-  runningthreads--; 
+  pthread_mutex_lock(&running_mutex);
+  runningthreads--;
   pthread_mutex_unlock(&running_mutex);
   return 0;
 }
 
 int getqent() {
   int mylqent;
-  pthread_mutex_lock(&queue_mutex); 
-  mylqent=addrqent(); 
+  pthread_mutex_lock(&queue_mutex);
+  mylqent=addrqent();
   pthread_mutex_unlock(&queue_mutex);
   return mylqent;
 }
@@ -512,6 +522,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
      int i;
+     int slashfound;
 
      *endname = 0;              // in case there's no '/'
      i=0;
@@ -519,16 +530,23 @@ int shortpath(const char *name, char *nameout, char *endname) {
      i=strlen(prefix);
      pp=prefix+i;
      //printf("cutting name down %s len %d\n",prefix,i);
+     slashfound=0;
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
-          bzero(pp,1);
+          memset(pp, 0, 1);
           sprintf(endname,"%s",pp+1);
+          slashfound=1;
           break;
        }
        pp--;
        i--;
      }
-     sprintf(nameout,"%s",prefix);
+     if (slashfound == 0) {
+        sprintf(endname,"%s",name);
+        bzero(nameout,1);
+        //printf("shortpath: name %s, nameout %s, endname %s.\n",name,nameout,endname);
+     } else
+        sprintf(nameout,"%s",prefix);
      return 0;
 }
 
@@ -539,6 +557,7 @@ int processdirs(DirFunc dir_fn) {
 
      int myqent;
      struct work * workp;
+     int thread_count = 0;
 
      // loop over queue entries and running threads and do all work until
      // running threads zero and queue empty
@@ -558,18 +577,19 @@ int processdirs(DirFunc dir_fn) {
             pthread_mutex_lock(&queue_mutex);
             workp=addrcurrents();
             incrthread();
-            
+
             // this takes this entry off the queue but does NOT free the
             // buffer, that has to be done in dir_fn(), something like:
             // "free(((struct work*)workp)->freeme)"
             thpool_add_work(mythpool, dir_fn, (void *)workp);
+            thread_count++;
             delQueuenofree();
             pthread_mutex_unlock(&queue_mutex);
           }
         }
      }
 
-     return 0;
+     return thread_count;
 }
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
@@ -581,28 +601,31 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   if (!strncmp(type,"l",1)) printf("l ");
   if (!strncmp(type,"f",1)) printf("f ");
   if (!strncmp(type,"d",1)) printf("d ");
+
   printf("%s ", name);
   if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
-  printf("%lld ", status->st_ino);
-  printf("%lld ", pinode);
-  printf("%d ",status->st_mode);
-  printf("%d ",status->st_nlink);
-  printf("%d ", status->st_uid);
-  printf("%d ", status->st_gid);
-  printf("%lld ", status->st_size);
-  printf("%d ", status->st_blksize);
-  printf("%lld ", status->st_blocks);
-  printf("%ld ", status->st_atime);
-  printf("%ld ", status->st_mtime);
-  printf("%ld ", status->st_ctime);
+
+  printf("%"STAT_ino" ",    status->st_ino);
+  printf("%lld ",           pinode);
+  printf("%d ",             status->st_mode);
+  printf("%"STAT_nlink" ",  status->st_nlink);
+  printf("%d ",             status->st_uid);
+  printf("%d ",             status->st_gid);
+  printf("%"STAT_size" ",   status->st_size);
+  printf("%"STAT_bsize" ",  status->st_blksize);
+  printf("%"STAT_blocks" ", status->st_blocks);
+  printf("%ld ",            status->st_atime);
+  printf("%ld ",            status->st_mtime);
+  printf("%ld ",            status->st_ctime);
+
   cnt = 0;
   xattrp=xattr;
   if (xattrs > 0) {
     printf("xattr: %s",xattr);
 /*
     while (cnt < xattrs) {
-      bzero(buf,sizeof(buf));
-      bzero(bufv,sizeof(bufv));
+      memset(buf, 0, sizeof(buf));
+      memset(bufv, 0, sizeof(bufv));
       strcpy(buf,xattrp); xattrp=xattrp+strlen(buf)+1;
       printf("%s",buf);
       strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1;
@@ -613,6 +636,44 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   }
   printf("\n");
   return 0;
+}
+
+int printload(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,long long pinode,char *sortf,FILE *of) {
+  char buf[MAXXATTR];
+  char bufv[MAXXATTR];
+  char  ffielddelim[2];
+  char * xattrp;
+  int cnt;
+
+  fprintf(of,"%s%s", name,in.delim);
+  if (!strncmp(type,"l",1)) fprintf(of,"l%s",in.delim);
+  if (!strncmp(type,"f",1)) fprintf(of,"f%s",in.delim);
+  if (!strncmp(type,"d",1)) fprintf(of,"d%s",in.delim);
+  fprintf(of,"%lld%s", status->st_ino,in.delim);
+  //fprintf(of,"%lld%s", pinode,in.delim);
+  fprintf(of,"%d%s",status->st_mode,in.delim);
+  fprintf(of,"%d%s",status->st_nlink,in.delim);
+  fprintf(of,"%d%s", status->st_uid,in.delim);
+  fprintf(of,"%d%s", status->st_gid,in.delim);
+  fprintf(of,"%lld%s", status->st_size,in.delim);
+  fprintf(of,"%d%s", status->st_blksize,in.delim);
+  fprintf(of,"%lld%s", status->st_blocks,in.delim);
+  fprintf(of,"%ld%s", status->st_atime,in.delim);
+  fprintf(of,"%ld%s", status->st_mtime,in.delim);
+  fprintf(of,"%ld%s", status->st_ctime,in.delim);
+  fprintf(of,"%s%s",linkname,in.delim);
+  if (xattrs > 0) {
+    fprintf(of,"%s%s",xattr,in.delim);
+  } else {
+    fprintf(of,"%s",in.delim);
+  }
+  /* this one is for create time which posix doenst have */
+  fprintf(of,"%s",in.delim);
+  /* sort field at the end not required */
+  if (strlen(sortf) > 0) fprintf(of,"%s",sortf);
+
+  fprintf(of,"\n");
+  return(0);
 }
 
 /* the following is for the triell */
@@ -637,6 +698,10 @@ struct Trie* getNewTrieNode()
 // Iterative function to insert a string in Trie.
 void insertll(struct Trie* *head, char* str)
 {
+    if (!head || !str) {
+        return;
+    }
+
     // start from root node
     struct Trie* curr = *head;
     while (*str)
@@ -664,9 +729,14 @@ int searchll(struct Trie* head, char* str)
     if (head == NULL)
         return 0;
 
+    if (str == NULL) {
+        return 0;
+    }
+
     struct Trie* curr = head;
     while (*str)
     {
+
         // go to next node
         curr = curr->character[*str - '0'];
 
@@ -745,4 +815,67 @@ int deletionll(struct Trie* *curr, char* str)
     return 0;
 }
 
+void cleanup(struct Trie *head) {
+    if (head) {
+        for(int i = 0; i < CHAR_SIZE; i++) {
+            cleanup(head->character[i]);
+        }
+
+        free(head);
+    }
+}
+
 /* end of  the triell */
+
+// Push the subdirectories in the current directory onto the queue
+size_t descend(struct work *passmywork, DIR *dir,
+               const size_t max_level,
+               int (*callback)(struct work *, void *), void *args) {
+    if (!passmywork || !dir) {
+        return 0;
+    }
+
+    size_t pushed = 0;
+    const size_t next_level = passmywork->level + 1;
+    if (next_level <= max_level) {
+        // go ahead and send the subdirs to the queue since we need to look
+        // further down the tree.  loop over dirents, if link push it on the
+        // queue, if file or link print it, fill up qwork structure for
+        // each
+        struct dirent *entry = NULL;
+        while ((entry = (readdir(dir)))) {
+            const size_t len = strlen(entry->d_name);
+            if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
+                ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
+                continue;
+            }
+
+            struct work qwork;
+            memset(&qwork, 0, sizeof(qwork));
+            snprintf(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
+            qwork.pinode=passmywork->statuso.st_ino;
+            qwork.level = next_level;
+
+            if (callback && (callback(&qwork, args) != 0)) {
+                continue;
+            }
+
+            lstat(qwork.name, &qwork.statuso);
+            if (S_ISDIR(qwork.statuso.st_mode)) {
+                if (!access(qwork.name, R_OK | X_OK)) {
+                    // this is how the parent gets passed on
+                    qwork.pinode = passmywork->statuso.st_ino;
+                    // this pushes the dir onto queue - pushdir does locking around queue update
+                    pushdir(&qwork);
+                    pushed++;
+                }
+                else {
+                    fprintf(stderr, "couldn't access dir '%s': %s\n",
+                            qwork.name, strerror(errno));
+                }
+            }
+        }
+    }
+
+    return pushed;
+}

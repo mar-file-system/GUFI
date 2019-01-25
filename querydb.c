@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -112,7 +112,6 @@ int main(int argc, char *argv[])
      int printpath = 0;
      int rc;
      sqlite3 *db;
-     sqlite3 *db1;
      int recs;
      int dirsummary = 0;        // rawquerydb() ignores this argument
 
@@ -122,7 +121,7 @@ int main(int argc, char *argv[])
      // printheader=atoi(argv[4]);
      // dirsummary=atoi(argv[5]);
 
-     int idx = parse_cmd_line(argc, argv, "hHNV", 2, "[-s] DB_path SQL");
+     int idx = parse_cmd_line(argc, argv, "hHNV", 2, "[-s] DB_path SQL", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)
@@ -154,7 +153,7 @@ int main(int argc, char *argv[])
         printf("ERROR: directory %s: %s\n", name, strerror(errno));
        return 1;
      }
-     if (!S_ISDIR(statuso.st_mode)) {    
+     if (!S_ISDIR(statuso.st_mode)) {
        printf("ERROR: %s not a directory\n",name);
        return 1;
      }
@@ -167,9 +166,9 @@ int main(int argc, char *argv[])
         return 1;
      }
 
-     
+
      // run the query
-     db = opendb(name,db1,0,0);
+     db = opendb(name,0,0);
 
      //add query funcs to get uidtouser() gidtogroup() and path()
      addqueryfuncs(db);
@@ -180,11 +179,11 @@ int main(int argc, char *argv[])
      //printf("shortpath out shortname %s end name %s\n",shortname, endname);
 
      // per-thread
-     sprintf(gps[0].gepath,"%s",endname); 
+     sprintf(gps[0].gepath,"%s",endname);
      if (dirsummary)
-        sprintf(gps[0].gpath,"%s",shortname); 
+        sprintf(gps[0].gpath,"%s",shortname);
      else
-        sprintf(gps[0].gpath,"%s",name); 
+        sprintf(gps[0].gpath,"%s",name);
 
      recs=rawquerydb(name, dirsummary, db, rsqlstmt, in.printing, in.printheader, in.printrows, 0);
      if (recs >= 0)

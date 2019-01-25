@@ -73,9 +73,12 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+BFQ=$DIR/../bfq
+QUERYDBN=$DIR/../querydbn
 
-EPATH=..
 echo "query to create db insert recs from entry query into out db group file space hog use group summary"
 rm -f outdb*
-$EPATH/bfq -E "insert into sumsum select gidtogroup(gid), totfiles, totsize from vsummarygroup;" -n $2 -O outdb -I "create table sumsum (groupname text, totfiles int64, totsize int64);" $1
-$EPATH/querydbn -NV outdb $2 "select groupname, sum(totfiles), sum(totsize) from vsumsum group by groupname;" sumsum
+$BFQ -E "insert into sumsum select gidtogroup(gid), totfiles, totsize from vsummarygroup;" -n $2 -O outdb -I "create table sumsum (groupname text, totfiles int64, totsize int64);" $1
+$QUERYDBN -NV outdb $2 "select groupname, sum(totfiles), sum(totsize) from vsumsum group by groupname;" sumsum

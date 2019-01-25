@@ -80,9 +80,8 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <sys/stat.h>
 #include <utime.h>
 #include <sys/xattr.h>
@@ -114,22 +113,22 @@ void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
 
     //printf("in parsetowork delim %s inpline %s\n",inpdelim,inpline);
     inpline[strlen(inpline)-1]= '\0';
-    p=inpline; q=strstr(p,inpdelim);   bzero(q,1); sprintf(pinwork->name,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1), sprintf(pinwork->type,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1); pinwork->statuso.st_ino=atol(p);
-    p=q+1;     q=strstr(p,inpdelim);   bzero(q,1); pinwork->statuso.st_mode=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_nlink=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_uid=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_gid=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_size=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_blksize=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_blocks=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_atime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_mtime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->statuso.st_ctime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); sprintf(pinwork->linkname,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); sprintf(pinwork->xattr,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim); bzero(q,1); pinwork->crtime=atol(p);
+    p=inpline; q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->name,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1), sprintf(pinwork->type,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_ino=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_mode=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_nlink=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_uid=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_gid=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_size=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_blksize=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_blocks=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_atime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_mtime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_ctime=atol(p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->linkname,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->xattr,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->crtime=atol(p);
 
 }
 
@@ -137,9 +136,9 @@ void *scout(void * param) {
     char *ret;
     FILE *finfile;
     char linein[MAXPATH+MAXPATH+MAXPATH];
-    fpos_t  foffset;
+    long long int foffset;
     struct work * mywork;
-    
+
     mywork=malloc(sizeof(struct work));
     //printf("in scout arg %s\n",param);
     //incrthread(); /* add one thread so the others wait for the scout */
@@ -149,7 +148,7 @@ void *scout(void * param) {
       exit(-1); /* not the best way out i suppose */
     }
     //printf("reading input file now\n");
-    bzero(linein,sizeof(linein));;
+    memset(linein, 0, sizeof(linein));
     //sleep(5);
     while (fgets (linein, sizeof(linein), finfile) !=NULL ) {
           //printf("got input line %s\n",linein);
@@ -159,11 +158,11 @@ void *scout(void * param) {
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              //printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             //printf("foffsett %lld\n",(int64_t)foffset); // non-portable cast
+             //printf("foffsett %lld\n",foffset);
              mywork->offset=foffset;
              pushdir(mywork);
           }
-          bzero(linein,sizeof(linein));;
+          memset(linein, 0, sizeof(linein));
     }
     fclose(finfile);
     //sleep(5);
@@ -184,11 +183,10 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
     int loop;
@@ -202,7 +200,7 @@ static void processdir(void * passv)
     mytid=gettid();
 
     //if (in.infile > 0) return;
-    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,(uint64_t)passmywork->offset); // non-portable cast of fpos_t
+    //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,passmywork->offset);
 
     if (in.infile == 0) {
       // open directory
@@ -229,9 +227,9 @@ static void processdir(void * passv)
          //printf("tid %d made dir %s\n",mytid,passmywork->name);
        }
        records=malloc(MAXRECS);
-       bzero(records,MAXRECS);
+       memset(records, 0, MAXRECS);
        zeroit(&summary);
-       if (!(db = opendb(passmywork->name,db1,4,1)))
+       if (!(db = opendb(passmywork->name,4,1)))
           goto out_dir;
        res=insertdbprep(db,reso);
        startdb(db);
@@ -244,20 +242,20 @@ static void processdir(void * passv)
     loop=1;
     //do {
     while (loop == 1) {
-        
+
         if (in.infile == 0) {
           /* get the next dirent */
           if (!(entry = readdir(dir))) break;
         } else {
           /* get the next record */
-          bzero(plinein,sizeof(plinein));
+          memset(plinein, 0, sizeof(plinein));
           if (fgets (plinein, sizeof(plinein), gin[mytid]) ==NULL ) break;
           //printf("tid %d got line %s\n",mytid,plinein);
         }
 
 /*?????  farret out two modes from here */
 
-        bzero(&qwork,sizeof(qwork));
+        memset(&qwork, 0, sizeof(qwork));
         qwork.pinode=passmywork->statuso.st_ino;
         if (in.infile == 0) {
           if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -266,12 +264,13 @@ static void processdir(void * passv)
           lstat(qwork.name, &qwork.statuso);
           qwork.xattrs=0;
           if (in.doxattrs > 0) {
+            bzero(qwork.xattr,sizeof(qwork.xattr));
             qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
           }
         } else {
           /* just parse the read line into qwork */
           parsetowork(in.delim, plinein, &qwork);
-        } 
+        }
         if (S_ISDIR(qwork.statuso.st_mode) ) {
             // this is how the parent gets passed on
             qwork.pinode=passmywork->statuso.st_ino;
@@ -286,7 +285,7 @@ static void processdir(void * passv)
 /*
               sprintf(qwork.type,"%s","d");
               fgetpos(gin[mytid],&pos);
-              qwork.offset=pos; 
+              qwork.offset=pos;
               pushdir(&qwork);
 */
               loop=0;
@@ -297,7 +296,8 @@ static void processdir(void * passv)
               /* if its infile we have to get this elsewhere */
               bzero(lpatho,sizeof(lpatho));
               readlink(qwork.name,lpatho,MAXPATH);
-              sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+              //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+              sprintf(qwork.linkname,"%s",lpatho);
             }
             sprintf(qwork.type,"%s","l");
             if (in.printing > 0) {
@@ -336,7 +336,7 @@ static void processdir(void * passv)
       stopdb(db);
       insertdbfin(db,res);
 
-      // this i believe has to be after we close off the entries transaction 
+      // this i believe has to be after we close off the entries transaction
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
@@ -365,13 +365,13 @@ static void processdir(void * passv)
 
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
      int i;
      char outfn[MAXPATH];
      FILE *finfile;
      char linein[MAXPATH+MAXPATH+MAXPATH];
-     fpos_t foffset;
+     long long int foffset;
 
      //open up the output files if needed
      if (in.outfile > 0) {
@@ -411,15 +411,15 @@ int processinit(void * myworkin) {
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             printf("foffsett %lld\n",(uint64_t)foffset); // non-portable cast of fpos_t
+             printf("foffsett %lld\n",foffset);
              mywork->offset=foffset;
              pushdir(mywork);
           }
-          bzero(linein,sizeof(linein));;
+          memset(linein, 0, sizeof(linein));;
        }
 */
 /***
-       bzero(linein,sizeof(linein));;
+       memset(linein, 0, sizeof(linein));;
        if (fgets(linein, sizeof(linein), finfile) !=NULL ) {
           parsetowork (in.delim, linein, mywork );
           if (!strncmp(mywork->type,"d",1)) {
@@ -452,6 +452,8 @@ int processinit(void * myworkin) {
           fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
           return 1;
        }
+       bzero(mywork->xattr,sizeof(mywork->xattr));
+       bzero(mywork->linkname,sizeof(mywork->linkname));
        if (in.doxattrs > 0) {
          mywork->xattrs=0;
          mywork->xattrs=pullxattrs(in.name,mywork->xattr);
@@ -468,7 +470,7 @@ int processinit(void * myworkin) {
 int processfin() {
      int i;
      void *retval;
- 
+
      if (in.outfile > 0) {
        i=0;
        while (i < in.maxthreads) {
@@ -486,7 +488,7 @@ int processfin() {
        pthread_join(gtid, &retval);
        //printf("retval=%s\n",retval);
      }
- 
+
      return 0;
 }
 
@@ -509,9 +511,9 @@ int validate_inputs() {
 
    sprintf(expathtst,"%s/%s",in.nameto,in.name);
    realpath(expathtst,expathout);
-   //printf("expathtst: %s expathout %s\n",expathtst,expathout);   
+   //printf("expathtst: %s expathout %s\n",expathtst,expathout);
    realpath(in.name,expathin);
-   //printf("in.name: %s expathin %s\n",in.name,expathin); 
+   //printf("in.name: %s expathin %s\n",in.name,expathin);
    if (!strcmp(expathin,expathout)) {
      fprintf(stderr,"You are putting the index dbs in input directory\n");
      in.buildinindir = 1;
@@ -542,7 +544,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:Du", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:Du", 1, "input_dir", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)

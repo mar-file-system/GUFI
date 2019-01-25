@@ -78,26 +78,57 @@ OF SUCH DAMAGE.
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <sys/stat.h>
+#include <dirent.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "C-Thread-Pool/thpool.h"
 #include <sqlite3.h>
 
 #include "bf.h"
-#include "C-Thread-Pool/thpool.h"
+
+// members of struct stat have sizes that vary between OSX/Linux
+#ifdef __APPLE__
+#  define STAT_ino    "llu"
+#  define STAT_nlink  "hu"
+#  define STAT_size   "lld"
+#  define STAT_bsize  "d"
+#  define STAT_blocks "lld"
+
+// typedef uint32_t  STAT_size_t;
+//#  define STAT_size_t  uint32_t
+
+#else
+#  define STAT_ino    "lu"
+#  define STAT_nlink  "lu"
+#  define STAT_size   "ld"
+#  define STAT_bsize  "ld"
+#  define STAT_blocks "ld"
+
+// typedef size_t    STAT_size_t;
+//#  define STAT_size_t  size_t
+
+#endif
+
 
 /* this block is for the triell */
+/* we think this should be 10 since we are just using chars 0-9 but 10 doesnt work for some reason */
 #define CHAR_SIZE 24
+//#define CHAR_SIZE 12
 struct Trie
 {
     int isLeaf;    // 1 when node is a leaf node
     struct Trie* character[CHAR_SIZE];
 };
+
 struct Trie* getNewTrieNode();
 void insertll(struct Trie* *head, char* str);
 int searchll(struct Trie* head, char* str);
 int haveChildren(struct Trie* curr);
 int deletionll(struct Trie* *curr, char* str);
+void cleanup(struct Trie *head);
 
 extern threadpool mythpool;
 
@@ -122,7 +153,7 @@ int tsumit (struct sum *sumin,struct sum *smout);
 
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
-// 
+//
 int mkpath(char* file_path, mode_t mode);
 
 int dupdir(struct work *pwork);
@@ -147,5 +178,13 @@ typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
 
+// Function used in processdir to decend into subdirectories.
+// The callback function is used to modify the qwork before
+// it is pushed onto the queue. The callback function should
+// return 0 if there were no errors. Non-zero values results
+// the qwork not being pushed onto the queue.
+size_t descend(struct work *passmywork, DIR *dir,
+               const size_t max_level,
+               int (*callback)(struct work *, void *), void *args);
 
 #endif

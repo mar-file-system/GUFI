@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -128,11 +128,10 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
     MYSQL lmysql;
@@ -164,10 +163,10 @@ static void processdir(void * passv)
     if (in.buildindex > 0) {
        dupdir(passmywork);
        records=malloc(MAXRECS);
-       bzero(records,MAXRECS);
+       memset(records, 0, MAXRECS);
        //sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
        zeroit(&summary);
-       db = opendb(passmywork->name,db1,4,1);
+       db = opendb(passmywork->name,4,1);
        res=insertdbprep(db,reso);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);
@@ -186,7 +185,7 @@ static void processdir(void * passv)
       //printf("lnum_fields = %d\n",lnum_fields);
       transcnt = 0;
       while ((lrow = mysql_fetch_row(lresult))) {
-        //printf("fetching row\n"); 
+        //printf("fetching row\n");
         entry = &myentry;
         sprintf(ltchar,"%s",lrow[0]);  sprintf(qwork.name,"%s/%s", passmywork->name,ltchar);
         sprintf(ltchar,"%s",lrow[1]);  sprintf(qwork.type, "%1s", ltchar);
@@ -203,8 +202,8 @@ static void processdir(void * passv)
         sprintf(ltchar,"%s",lrow[11]); qwork.statuso.st_blocks= atoll(ltchar);
         sprintf(ltchar,"%s",lrow[12]); qwork.statuso.st_nlink = atol(ltchar);
         sprintf(ltchar,"%s",lrow[13]); qwork.statuso.st_ino = atoll(ltchar);
-        bzero(qwork.linkname,sizeof(qwork.linkname)); /* dont have linkname yet */
-        bzero(qwork.xattr,sizeof(qwork.xattr));
+        memset(qwork.linkname, 0, sizeof(qwork.linkname)); /* dont have linkname yet */
+        memset(qwork.xattr, 0, sizeof(qwork.xattr));
         /* need to get xattre right here */
         qwork.xattrs=0;
         qwork.xattrs=strlen(qwork.xattr);
@@ -259,7 +258,7 @@ static void processdir(void * passv)
       stopdb(db);
       insertdbfin(db,res);
 
-      // this i believe has to be after we close off the entries transaction 
+      // this i believe has to be after we close off the entries transaction
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
@@ -280,7 +279,6 @@ static void processdir(void * passv)
 
 
 int processinit(void * myworkin) {
-    
      struct work * mywork = myworkin;
      int i;
      char outfn[MAXPATH];
@@ -318,8 +316,8 @@ int processinit(void * myworkin) {
      mywork->statuso.st_blksize= 4096;
      mywork->statuso.st_blocks= 1;
      mywork->pinode = 0;
-     bzero(mywork->xattr,sizeof(mywork->xattr));
-     bzero(mywork->linkname,sizeof(mywork->linkname));
+     memset(mywork->xattr, 0, sizeof(mywork->xattr));
+     memset(mywork->linkname, 0, sizeof(mywork->linkname));
      //printf("name %s pinodec %s\n",mywork->name,mywork->pinodec);
 
      // open connection to mysql db per thread
@@ -346,7 +344,7 @@ int processinit(void * myworkin) {
 
 int processfin() {
      int i;
-  
+
      // close output files
      if (in.outfile > 0) {
        i=0;

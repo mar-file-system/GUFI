@@ -88,9 +88,9 @@ char xattrdelim[] = "\x1F";     // ASCII Unit Separator
 char fielddelim[] = "\x1E";     // ASCII Record Separator
 
 
+struct globalpathstate gps[MAXPTHREAD] = {0};
+
 struct input in = {0};
-
-
 
 
 
@@ -102,7 +102,7 @@ void print_help(const char* prog_name,
    const char* opt = getopt_str;
    if (! opt)
       return;
-   
+
    printf("Usage: %s [options] %s\n", prog_name, positional_args_help_str);
    printf("options:\n");
 
@@ -141,6 +141,13 @@ void print_help(const char* prog_name,
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
       case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
+      case 'v': printf("  -v <count>         number of intermediate databases to use (preferrably prime)\n"); break;
+      case 'w': printf("  -w <count>         number of intermediate databases to skip when selecting (should be primitive root of intermediate database count, or 1)\n"); break;
+      case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
+      case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
+      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
+      case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
+      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -150,40 +157,47 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.doxattrs    = %d\n",   in->doxattrs);
-   printf("in.printing    = %d\n",   in->printing);
-   printf("in.printdir    = %d\n",   in->printdir);
-   printf("in.printheader = %d\n",   in->printheader);
-   printf("in.printrows   = %d\n",   in->printrows);
-   printf("in.writetsum   = %d\n",   in->writetsum);
-   printf("in.buildindex  = %d\n",   in->buildindex);
-   printf("in.maxthreads  = %d\n",   in->maxthreads);
-   printf("in.dodelim     = %d\n",   in->dodelim);
-   printf("in.delim       = '%s'\n", in->delim);
-   printf("in.name        = '%s'\n", in->name);
-   printf("in.outfile     = %d\n",   in->outfile);
-   printf("in.outfilen    = '%s'\n", in->outfilen);
-   printf("in.outdb       = %d\n",   in->outdb);
-   printf("in.outdbn      = '%s'\n", in->outdbn);
-   printf("in.nameto      = '%s'\n", in->nameto);
-   printf("in.andor       = %d\n",   in->andor);
-   printf("in.sqlinit     = '%s'\n", in->sqlinit);
-   printf("in.sqltsum     = '%s'\n", in->sqltsum);
-   printf("in.sqlsum      = '%s'\n", in->sqlsum);
-   printf("in.sqlent      = '%s'\n", in->sqlent);
-   printf("in.sqlfin      = '%s'\n", in->sqlfin);
-   printf("in.insertdir   = '%d'\n", in->insertdir);
-   printf("in.insertfl    = '%d'\n", in->insertfl);
-   printf("in.dontdescend = '%d'\n", in->dontdescend);
-   printf("in.suspectd    = '%d'\n", in->suspectd);
-   printf("in.suspectfl   = '%d'\n", in->suspectfl);
-   printf("in.insuspect   = '%s'\n", in->insuspect);
-   printf("in.suspectfile = '%d'\n", in->suspectfile);
-   printf("in.suspectmethod = '%d'\n", in->suspectmethod);
-   printf("in.suspecttime = '%d'\n", in->suspecttime);
-   printf("in.stride      = '%d'\n", in->stride);
-   printf("in.infile      = '%d'\n", in->infile);
-   printf("retval         = %d\n", retval);
+   printf("in.doxattrs           = %d\n",    in->doxattrs);
+   printf("in.printing           = %d\n",    in->printing);
+   printf("in.printdir           = %d\n",    in->printdir);
+   printf("in.printheader        = %d\n",    in->printheader);
+   printf("in.printrows          = %d\n",    in->printrows);
+   printf("in.writetsum          = %d\n",    in->writetsum);
+   printf("in.buildindex         = %d\n",    in->buildindex);
+   printf("in.maxthreads         = %d\n",    in->maxthreads);
+   printf("in.delim              = '%s'\n",  in->delim);
+   printf("in.name               = '%s'\n",  in->name);
+   printf("in.outfile            = %d\n",    in->outfile);
+   printf("in.outfilen           = '%s'\n",  in->outfilen);
+   printf("in.outdb              = %d\n",    in->outdb);
+   printf("in.outdbn             = '%s'\n",  in->outdbn);
+   printf("in.nameto             = '%s'\n",  in->nameto);
+   printf("in.andor              = %d\n",    in->andor);
+   printf("in.sqlinit            = '%s'\n",  in->sqlinit);
+   printf("in.sqltsum            = '%s'\n",  in->sqltsum);
+   printf("in.sqlsum             = '%s'\n",  in->sqlsum);
+   printf("in.sqlent             = '%s'\n",  in->sqlent);
+   printf("in.sqlfin             = '%s'\n",  in->sqlfin);
+   printf("in.insertdir          = '%d'\n",  in->insertdir);
+   printf("in.insertfl           = '%d'\n",  in->insertfl);
+   printf("in.dontdescend        = '%d'\n",  in->dontdescend);
+   printf("in.suspectd           = '%d'\n",  in->suspectd);
+   printf("in.suspectfl          = '%d'\n",  in->suspectfl);
+   printf("in.insuspect          = '%s'\n",  in->insuspect);
+   printf("in.suspectfile        = '%d'\n",  in->suspectfile);
+   printf("in.suspectmethod      = '%d'\n",  in->suspectmethod);
+   printf("in.suspecttime        = '%d'\n",  in->suspecttime);
+   printf("in.stride             = '%d'\n",  in->stride);
+   printf("in.infile             = '%d'\n",  in->infile);
+   printf("in.min_level          = %zu\n",   in->min_level);
+   printf("in.max_level          = %zu\n",   in->max_level);
+   printf("in.aggregate          = '%s'\n",  in->aggregate);
+   printf("in.intermediate       = '%s'n",   in->intermediate);
+   printf("in.intermediate_count = '%zu'\n", in->intermediate_count);
+   printf("in.intermediate_skip  = '%zu'\n", in->intermediate_skip);
+   printf("in.aggregate_or_print = '%d'\n",  in->aggregate_or_print);
+   printf("\n");
+   printf("retval                = %d\n", retval);
    printf("\n");
 }
 
@@ -198,38 +212,42 @@ void show_input(struct input* in, int retval) {
 // return: -1 for error.  Otherwise, we return the index of the first
 //    positional argument in <argv>.  This allows the caller to do a custom
 //    parse of the remaining arguments as required (positional) args.
-//   
+//
 int parse_cmd_line(int         argc,
                    char*       argv[],
                    const char* getopt_str,
                    int         n_positional,
-                   const char* positional_args_help_str) {
+                   const char* positional_args_help_str,
+                   struct input *in) {
 
-   char outfn[MAXPATH];
-   int i;
-
-   //bzero(in.sqlent,sizeof(in.sqlent));
-   // <in> defaults to all-zeros.
-   in.maxthreads   = 1;         // don't default to zero threads
-   in.delim[0]     = '|';
-   in.dontdescend  = 0;        // default to descend
-   in.buildinindir = 0;       // default to not building db in input dir
-   in.suspectd     = 0;
-   in.suspectfl    = 0;
-   in.suspectfile  = 0;
-   in.suspectmethod = 0;
-   in.stride       = 0;       // default striping of inodes
-   in.infile       = 0;       // default infile being used 
+   in->maxthreads         = 1;         // don't default to zero threads
+   in->delim[0]           = '|';
+   in->dontdescend        = 0;         // default to descend
+   in->buildinindir       = 0;         // default to not building db in input dir
+   in->suspectd           = 0;
+   in->suspectfl          = 0;
+   in->suspectfile        = 0;
+   in->suspectmethod      = 0;
+   in->stride             = 0;         // default striping of inodes
+   in->infile             = 0;         // default infile being used
+   in->min_level          = 0;         // default to the top
+   in->max_level          = -1;        // default to all the way down
+   snprintf(in->intermediate, MAXSQL, "SELECT * FROM entries;");
+   snprintf(in->aggregate, MAXSQL, "SELECT * FROM entries;");
+   in->intermediate_count = in->maxthreads * 4 + 1;
+   in->intermediate_skip  = 1;
+   in->aggregate_or_print = AGGREGATE; // aggregate by default
 
    int show   = 0;
    int retval = 0;
    int ch;
+   optind = 1; // reset to 1, not 0 (man 3 getopt)
    while ( (ch = getopt(argc, argv, getopt_str)) != -1) {
       switch (ch) {
 
       case 'h':               // help
          print_help(argv[0], getopt_str, positional_args_help_str);
-         in.helped = 1;
+         in->helped = 1;
          retval = -1;
          break;
 
@@ -239,129 +257,156 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'x':               // xattrs
-         in.doxattrs = 1;
+         in->doxattrs = 1;
          break;
 
       case 'p':               // print file name/path?
-         in.printing = 1;
+         in->printing = 1;
          break;
 
       case 'P':               // print dirs?
-         in.printdir = 1;
+         in->printdir = 1;
          break;
 
       case 'N':               // print DB-result column-names?  (i.e. header)
-         in.printheader = 1;
+         in->printheader = 1;
          break;
 
       case 'V':               // print DB-result row-values?
-         in.printrows = 1;
+         in->printrows = 1;
          break;
 
       case 's':               // generate tree-summary table?
-         in.writetsum = 1;
+         in->writetsum = 1;
          break;
 
       case 'b':               // build index?
-         in.buildindex = 1;
+         in->buildindex = 1;
          break;
 
       case 'n':
-         INSTALL_INT(in.maxthreads, optarg, 1, MAXPTHREAD, "-n");
+         INSTALL_INT(in->maxthreads, optarg, 1, MAXPTHREAD, "-n");
          break;
 
       case 'g':
-         INSTALL_INT(in.stride, optarg, 1, MAXSTRIDE, "-g");
+         INSTALL_INT(in->stride, optarg, 1, MAXSTRIDE, "-g");
          break;
 
       case 'd':
          if (optarg[0] == 'x') {
-            in.dodelim = 2;
-            in.delim[0] = fielddelim[0];
+            in->delim[0] = fielddelim[0];
          }
          else {
-            in.dodelim = 1;
-            in.delim[0] = optarg[0];
+            in->delim[0] = optarg[0];
          }
          break;
 
       case 'o':
-         in.outfile = 1;
-         INSTALL_STR(in.outfilen, optarg, MAXPATH, "-o");
+         in->outfile = 1;
+         INSTALL_STR(in->outfilen, optarg, MAXPATH, "-o");
          break;
 
       case 'O':
-         in.outdb = 1;
-         INSTALL_STR(in.outdbn, optarg, MAXPATH, "-O");
+         in->outdb = 1;
+         INSTALL_STR(in->outdbn, optarg, MAXPATH, "-O");
+         in->aggregate_or_print = PRINT;
          break;
 
       case 't':
-         INSTALL_STR(in.nameto, optarg, MAXPATH, "-t");
+         INSTALL_STR(in->nameto, optarg, MAXPATH, "-t");
          break;
 
       case 'i':
-         INSTALL_STR(in.name, optarg, MAXPATH, "-i");
+         INSTALL_STR(in->name, optarg, MAXPATH, "-i");
          break;
 
       case 'I':               // SQL initializations
-         INSTALL_STR(in.sqlinit, optarg, MAXSQL, "-I");
+         INSTALL_STR(in->sqlinit, optarg, MAXSQL, "-I");
          break;
 
       case 'T':               // SQL for tree-summary
-         INSTALL_STR(in.sqltsum, optarg, MAXSQL, "-T");
+         INSTALL_STR(in->sqltsum, optarg, MAXSQL, "-T");
          break;
 
       case 'S':               // SQL for summary
-         INSTALL_STR(in.sqlsum, optarg, MAXSQL, "-S");
+         INSTALL_STR(in->sqlsum, optarg, MAXSQL, "-S");
          break;
 
       case 'E':               // SQL for entries
-         INSTALL_STR(in.sqlent, optarg, MAXSQL, "-E");
+         INSTALL_STR(in->sqlent, optarg, MAXSQL, "-E");
          break;
 
       case 'F':               // SQL clean-up
-         INSTALL_STR(in.sqlfin, optarg, MAXSQL, "-F");
+         INSTALL_STR(in->sqlfin, optarg, MAXSQL, "-F");
          break;
 
       case 'a':               // and/or
-         in.andor = 1;
+         in->andor = 1;
          break;
 
-      case 'r':               // insert files and links into db for bfwreaddirplus2db 
-         in.insertfl = 1;
+      case 'r':               // insert files and links into db for bfwreaddirplus2db
+         in->insertfl = 1;
          break;
 
-      case 'R':               // insert dirs into db for bfwreaddirplus2db 
-         in.insertdir = 1;
+      case 'R':               // insert dirs into db for bfwreaddirplus2db
+         in->insertdir = 1;
          break;
 
       case 'D':               // default is 0
-         in.dontdescend = 1;
+         in->dontdescend = 1;
          break;
 
       case 'Y':               // default is 0
-         in.suspectd = 1;
+         in->suspectd = 1;
          break;
 
       case 'Z':               // default is 0
-         in.suspectfl = 1;
+         in->suspectfl = 1;
          break;
 
       case 'W':               // SQL clean-up
-         INSTALL_STR(in.insuspect, optarg, MAXPATH, "-W");
-         in.suspectfile = 1;
+         INSTALL_STR(in->insuspect, optarg, MAXPATH, "-W");
+         in->suspectfile = 1;
          break;
 
       case 'A':
-         INSTALL_INT(in.suspectmethod, optarg, 1, 4, "-A");
+         INSTALL_INT(in->suspectmethod, optarg, 1, 4, "-A");
          break;
 
       case 'c':
-         INSTALL_INT(in.suspecttime, optarg, 1, 2147483646, "-c");
+         INSTALL_INT(in->suspecttime, optarg, 1, 2147483646, "-c");
+         break;
+
+      case 'e':
+          INSTALL_INT(in->aggregate_or_print, optarg, 0, 1, "-e");
+          break;
+
+      case 'v':
+          INSTALL_UINT(in->intermediate_count, optarg, (size_t) 1, (size_t) -1, "-v");
+          break;
+
+      case 'w':
+          INSTALL_UINT(in->intermediate_skip, optarg, (size_t) 1, (size_t) -1, "-w");
+          break;
+
+      case 'y':
+         INSTALL_UINT(in->min_level, optarg, (size_t) 0, (size_t) -1, "-y");
+         break;
+
+      case 'z':
+         INSTALL_UINT(in->max_level, optarg, (size_t) 0, (size_t) -1, "-z");
          break;
 
       case 'u':
-         in.infile = 1;
+         in->infile = 1;
+         break;
+
+      case 'G':
+         INSTALL_STR(in->aggregate, optarg, MAXSQL, "-G");
+         break;
+
+      case 'J':
+         INSTALL_STR(in->intermediate, optarg, MAXSQL, "-J");
          break;
 
       case '?':
@@ -377,23 +422,32 @@ int parse_cmd_line(int         argc,
       };
    }
 
+   // if there were no other errors,
+   // make sure min_level <= max_level
+   if (retval == 0) {
+       retval = -(in->min_level > in->max_level);
+   }
+
+   if (in->aggregate_or_print != AGGREGATE) {
+       in->intermediate_count = 0;
+   }
+
    // caller requires given number of positional args, after the options.
    // <optind> is the number of argv[] values that were recognized as options.
    // NOTE: caller may have custom options ovf their own, so returning a
    //       value > n_positional is okay (?)
    if (retval
        || ((argc - optind) < n_positional)) {
-      if (! in.helped) {
+      if (! in->helped) {
          print_help(argv[0], getopt_str, positional_args_help_str);
-         in.helped = 1;
+         in->helped = 1;
       }
       retval = -1;
    }
 
-
    // DEBUGGING:
    if (show)
-      show_input(&in, retval);
+      show_input(in, retval);
 
    return (retval ? retval : optind);
 }

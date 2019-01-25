@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -108,13 +108,12 @@ static void processdir(void * passv)
     DIR *dir;
     struct dirent *entry;
     int mytid;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     sqlite3 *db;
-    sqlite3 *db1;
     struct sum sumin;
     int recs;
 
@@ -127,35 +126,16 @@ static void processdir(void * passv)
     if (!(dir = opendir(passmywork->name)))
        goto out_free; // return NULL;
 
-    if (!(entry = readdir(dir)))
-       goto out_dir; // return NULL;
-
     sprintf(passmywork->type,"%s","d");
     if (in.printing || in.printdir) {
       printits(passmywork,mytid);
     }
 
-    // loop over dirents, if link push it on the queue, if file or link
-    // print it, fill up qwork structure for each
-    do {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-           continue;
-        bzero(&qwork,sizeof(qwork));
-        sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
-        qwork.pinode=passmywork->statuso.st_ino;
-        lstat(qwork.name, &qwork.statuso);
-        if (S_ISDIR(qwork.statuso.st_mode)) {
-            if (!access(qwork.name, R_OK | X_OK)) {
-                // this is how the parent gets passed on
-                qwork.pinode=passmywork->statuso.st_ino;
-                // this pushes the dir onto queue - pushdir does locking around queue update
-                pushdir(&qwork);
-            }
-        }
-    } while ((entry = (readdir(dir))));
+    // push subdirectories into the queue
+    descend(passmywork, dir, in.max_level,
+            NULL, NULL);
 
-
-    if ((db=opendb(passmywork->name,db1,3,0))) {
+    if ((db=opendb(passmywork->name,3,0))) {
        zeroit(&sumin);
        querytsdb(passmywork->name,&sumin,db,&recs,0);
        tsumit(&sumin,&sumout);
@@ -182,7 +162,7 @@ static void processdir(void * passv)
 }
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
 
      // process input directory and put it on the queue
@@ -206,9 +186,8 @@ int processinit(void * myworkin) {
 int processfin() {
 
      sqlite3 *tdb;
-     sqlite3 *tdb1;
      if (in.writetsum) {
-        if (! (tdb = opendb(in.name,tdb1,3,1)))
+        if (! (tdb = opendb(in.name,3,1)))
            return -1;
         inserttreesumdb(in.name,tdb,&sumout,0,0,0);
         closedb(tdb);
@@ -262,7 +241,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_tree");
+     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_tree", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)

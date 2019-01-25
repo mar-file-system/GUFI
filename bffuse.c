@@ -98,8 +98,8 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 #include <sys/xattr.h>
 
-#include "bf.h"
-#include "dbutils.h"
+#include <bf.h>
+#include <dbutils.h>
 
 char globalmnt[MAXPATH];
 int  globalmntlen;
@@ -323,7 +323,7 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off
 }
 
 static int gufir_access(const char *path, int mask) {
-        int res;
+	int res;
         struct stat stbuf; 
         char dbn[MAXPATH];
         char tpath[MAXPATH];
@@ -339,12 +339,12 @@ static int gufir_access(const char *path, int mask) {
 
         //fprintf(stderr,"access: lstat  and access on %s\n",tpath);
         rc = lstat(tpath, &stbuf);
-        if (rc != -1) {
+	if (rc != -1) {
           if (S_IFDIR,stbuf.st_mode) {
-             res = access(tpath, mask);
-             if (res == 0) {
-                return 0;
-             }
+	    res = access(tpath, mask);
+            if (res == 0) {
+	      return 0;
+            }
           }
         }
 
@@ -355,17 +355,17 @@ static int gufir_access(const char *path, int mask) {
         if (res == 0) {
           return 0;
         }
-        return -1;
+	return -1;
 }
 
 static int gufir_statfs(const char *path, struct statvfs *stbuf) {
-   int res;
+	int res;
 
-   res = statvfs("/", stbuf);
-   if (res == -1)
-      return -errno;
+	res = statvfs("/", stbuf);
+	if (res == -1)
+		return -errno;
 
-   return 0;
+	return 0;
 }
 
 static int gufir_getxattr(const char *path, const char *name, char *value,size_t size) {
@@ -674,13 +674,13 @@ finishl:
 }
 
 static struct fuse_operations gufir_oper = {
-   .getattr   = gufir_getattr,
-   .readdir   = gufir_readdir,
-   .access    = gufir_access,
-   .statfs    = gufir_statfs,
-   .listxattr = gufir_listxattr,
-   .getxattr  = gufir_getxattr,
-   .readlink  = gufir_readlink,
+	.getattr	= gufir_getattr,
+	.readdir	= gufir_readdir,
+        .access 	= gufir_access,
+        .statfs 	= gufir_statfs,
+	.listxattr	= gufir_listxattr,
+	.getxattr	= gufir_getxattr,
+        .readlink	= gufir_readlink,
 };
 
 int main(int argc, char *argv[]) {
@@ -722,7 +722,7 @@ int main(int argc, char *argv[]) {
         sqlite3_finalize(res);
         closedb(mydb);
 
-        return fuse_main(argc, argv, &gufir_oper, NULL);
+	return fuse_main(argc, argv, &gufir_oper, NULL);
 
 }
 

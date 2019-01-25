@@ -1,0 +1,250 @@
+#!/usr/bin/env python2
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+
+
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# -----
+# NOTE:
+# -----
+
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+
+
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import itertools
+import os
+import subprocess
+import sys
+
+import query_builder as qb
+
+def build(args):
+    select = [args.select] if args.select else []
+
+    where = []
+    if args.uid:
+        where += ['uid == "{}"'.format(args.uid)]
+
+    return select, where
+
+def space(args, order=''):
+    select, where = build(args)
+    entries       = qb.build_query(select + ['uid', 'TOTAL(size) AS space'],  ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
+    intermediate  = None
+    aggregate     = qb.build_query(select + ['uid', 'TOTAL(space) AS space'], ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
+    return entries, intermediate, aggregate
+
+def files(args, order=''):
+    select, where = build(args)
+    entries       = qb.build_query(select + ['uid', 'COUNT(*) AS files'],     ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
+    intermediate  = None
+    aggregate     = qb.build_query(select + ['uid', 'TOTAL(files) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
+    return entries, intermediate, aggregate
+
+def total_space(args, *ignored):
+    _, where = build(args)
+    entries      = qb.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, None, None)
+    intermediate = qb.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, None, None)
+    return entries, intermediate, intermediate
+
+def total_files(args, *ignored):
+    _, where = build(args)
+    entries      = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
+    intermediate = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    return entries, intermediate, intermediate
+
+def directory_count(args, order = ''):
+    _, where = build(args)
+    entries        = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    aggregate      = qb.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
+
+    return entries, None, aggregate
+
+def get_leaf_dirs(path):
+    '''Return an array containing path names of leaf directories under path'''
+    return [dirpath for dirpath, dirnames, filenames in os.walk(path) if not dirnames]
+
+def leaf_count(args, order = ''):
+    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+    return directory_count(args, order)
+
+def total_in_leaf(args, *ignored):
+    _, where = build(args)
+    entries        = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
+    intermediate   = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    aggregate      = qb.build_query(['count'],                 ['entries'], None,  None, None, None, None)
+
+    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+
+    return entries, intermediate, aggregate
+
+def median_in_leaf(args, *ignored):
+    '''https://stackoverflow.com/a/15766121'''
+    _, where = build(args)
+    entries      = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    intermediate = qb.build_query(['count'],             ['entries'], None,  None, ['count'], '2 - (SELECT COUNT(*) FROM entries) % 2', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
+    aggregate    = qb.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
+
+    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+
+    return entries, intermediate, aggregate
+
+def get_depth(path, sep = '/'):
+    ret = []
+    path_len = len(path)
+    sub = path[-1] != sep # subtract 1 if the provided path did not include a separator because the split string will start with a separator
+
+    for dirpath, _, _ in os.walk(path):
+        ret += [[path, len(dirpath[path_len:].split(sep)) - sub]]
+    return ret
+
+def depth(args, sep = '/'):
+    ret = []
+    for path in args.GUFI_tree:
+        ret += get_depth(path);
+    return ret
+
+def leaf_depth(args, sep = '/'):
+    ret = []
+    for path in args.GUFI_tree:
+        for leaf in get_leaf_dirs(path):
+            ret += get_depth(leaf, sep)
+    return ret
+
+# mapping of valid non-bfq 'operation' argument values
+NONQUERIES  = {'depth'      : depth,
+               'leaf-depth' : leaf_depth}
+
+# mapping of valid bfq 'operation' argument values to array generators
+BFQ_QUERIES = {'space'           : space,
+               'files'           : files,
+               'total-space'     : total_space,
+               'total-files'     : total_files,
+               'directory-count' : directory_count,
+               'leaf-count'      : leaf_count,
+               'total-leaf'      : total_in_leaf,
+               'median-leaf'     : median_in_leaf}
+
+# allowed keywords for sorting output (if applicable)
+ASCENDING  = 'ASC'
+DESCENDING = 'DESC'
+ORDER = {'ASC'   : ASCENDING,
+         'DESC'  : DESCENDING,
+         'least' : ASCENDING,
+         'most'  : DESCENDING}
+
+if __name__=='__main__':
+    cwd = os.getcwd()
+
+    parser = argparse.ArgumentParser(description='GUFI statistics')
+    parser.add_argument('--order',         metavar='order', dest='order',       choices=ORDER.keys(),        default='',           help='sort output (if applicable)')
+    parser.add_argument('--delim',         metavar='c',     dest='delim',       type=qb.check_char,                                help='delimiter separating output columns')
+    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',    type=qb.check_non_negative,                        help='the maximum number of levels to search')
+    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',    type=qb.check_non_negative,                        help='the minimum number of levels to search')
+    parser.add_argument('--num_results',   metavar='n',     dest='num_results', type=qb.check_non_negative,                        help='first n results')
+    parser.add_argument('--select',        metavar='cols',  dest='select',      type=str,                                          help='comma separated columns')
+    parser.add_argument('--threads',       metavar='n',     dest='threads',     type=qb.check_non_negative,  default=qb.cpus(),    help='number of threads')
+    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',         type=qb.get_uid,                                   help='restrict to user')
+    parser.add_argument('operation',                                            choices=NONQUERIES.keys() + BFQ_QUERIES.keys(),    help='operation to perform')
+    parser.add_argument('GUFI_tree',                                                                         nargs='+',            help='path containing GUFI tree database file')
+
+    args = parser.parse_args();
+
+    if args.operation in NONQUERIES:
+        res = NONQUERIES[args.operation](args)
+        res.sort(key = lambda pair: pair[1], reverse=(args.order==DESCENDING))
+        print len(res[:args.num_results])
+    elif args.operation in BFQ_QUERIES:
+        entries, intermediate, aggregate = BFQ_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
+
+        # create the bfq command
+        bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+                   '-n', str(args.threads),
+                   '-p', '-P']
+
+        if entries is not None:
+            bfq_cmd += ['-E', entries]
+
+        if intermediate is not None:
+            bfq_cmd += ['-J', intermediate]
+
+        if aggregate is not None:
+            bfq_cmd += ['-G', aggregate]
+
+        if args.delim:
+            bfq_cmd += ['-d', args.delim]
+
+        if args.maxdepth:
+            bfq_cmd += ['-z', str(args.maxdepth)]
+
+        if args.mindepth:
+            bfq_cmd += ['-y', str(args.mindepth)]
+
+        bfq = subprocess.Popen(bfq_cmd + args.GUFI_tree)
+        bfq.communicate() # block until bfq finishes
+
+        sys.exit(bfq.returncode)

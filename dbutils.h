@@ -78,10 +78,11 @@ OF SUCH DAMAGE.
 #ifndef DBUTILS_H
 #define DBUTILS_H
 
-#include <sqlite3.h>
 #include <sys/stat.h>
+#include <sqlite3.h>
 
 #include "utils.h"
+
 
 extern char *esql;
 extern char *esqli;
@@ -101,11 +102,11 @@ extern char *vtssqlgroup;
 
 
 
-sqlite3 *  attachdb(const char *name, sqlite3 *db, char *dbn);
+sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
 
-sqlite3 *  detachdb(const char *name, sqlite3 *db, char *dbn);
+sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 
-sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables);
+sqlite3 * opendb(const char *name, int openwhat, int createtables);
 
 int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
                int printpath, int printheader, int printing, int ptid);
@@ -131,5 +132,9 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
 
 int addqueryfuncs(sqlite3 *db);
- 
+
+int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
+
+sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query);
+
 #endif

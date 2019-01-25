@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -126,7 +126,7 @@ int searchmyll(long long int lull, int lutype) {
      if (lull < glsuspectdmin) return 0;
      if (lull > glsuspectdmax) return 0;
      sprintf(lut,"%lld",lull);
-     ret=searchll(headd,lut); 
+     ret=searchll(headd,lut);
      //printf("in searchmyll search dir %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headd,lut);  this is not thread safe
    }
@@ -135,12 +135,12 @@ int searchmyll(long long int lull, int lutype) {
      if (lull < glsuspectflmin) return 0;
      if (lull > glsuspectflmax) return 0;
      sprintf(lut,"%lld",lull);
-     ret=searchll(headfl,lut); 
+     ret=searchll(headfl,lut);
      //printf("in searchmyll search fl %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headfl,lut); this is not thread safe
    }
    //printf("in searchmyll %lld %d ret %d\n",lull, lutype,ret);
-   return(ret); 
+   return(ret);
 }
 
 
@@ -152,12 +152,11 @@ int reprocessdir(void * passv, DIR *dir)
     struct dirent *entry;
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
-    char *records; 
+    char *records;
     char lpatho[MAXPATH];
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
     int loop;
@@ -168,9 +167,18 @@ int reprocessdir(void * passv, DIR *dir)
     // rewind the directory
     rewinddir(dir);
 
-    //open the gufi db for this directory into the parking lot directory the name as the inode of the dir 
+    /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
+    bzero(passmywork->xattr,sizeof(passmywork->xattr));
+    bzero(passmywork->linkname,sizeof(passmywork->linkname));
+    if (in.doxattrs > 0) {
+       passmywork->xattrs=0;
+       passmywork->xattrs=pullxattrs(passmywork->name,passmywork->xattr);
+    }
+
+
+    //open the gufi db for this directory into the parking lot directory the name as the inode of the dir
     sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
-    if (!(db = opendb(dbpath,db1,8,1)))
+    if (!(db = opendb(dbpath,8,1)))
        return -1;
     res=insertdbprep(db,reso);
     startdb(db);
@@ -183,7 +191,7 @@ int reprocessdir(void * passv, DIR *dir)
     transcnt = 0;
     loop=1;
     while (loop == 1) {
-        
+
         /* get the next dirent */
         if (!(entry = readdir(dir))) break;
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -234,7 +242,7 @@ int reprocessdir(void * passv, DIR *dir)
     stopdb(db);
     insertdbfin(db,res);
 
-    // this i believe has to be after we close off the entries transaction 
+    // this i believe has to be after we close off the entries transaction
     insertsumdb(db,passmywork,&summary);
     closedb(db);
 
@@ -257,12 +265,12 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
-    char *records; 
+    char *records;
     struct sum summary;
-    sqlite3_stmt *res;   
-    sqlite3_stmt *reso;   
+    sqlite3_stmt *res;
+    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
+    char sortf[MAXPATH];
     int transcnt;
     int wentry;
     int todb;
@@ -313,14 +321,23 @@ static void processdir(void * passv)
            if (in.suspectmethod > 1) {
              /* ????? we would add a stat call on the directory here and compare mtime and ctime with the last run time provided */
              /* and mark the dir suspect if mtime or ctime are >= provided last run time */
+/*
              st.st_ctime=0;
              st.st_mtime=0;
              lstat(passmywork->name,&st);
              if (st.st_ctime >= in.suspecttime) passmywork->suspect=1;
              if (st.st_mtime >= in.suspecttime) passmywork->suspect=1;
+*/
+             // needed to fill in passmywork status structure
+             passmywork->statuso.st_ctime=0;
+             passmywork->statuso.st_mtime=0;
+             lstat(passmywork->name,&passmywork->statuso);
+             if (passmywork->statuso.st_ctime >= in.suspecttime) passmywork->suspect=1;
+             if (passmywork->statuso.st_mtime >= in.suspecttime) passmywork->suspect=1;
            }
          }
     }
+
     if (in.outfile > 0) {
       tooutfile=mytid;
       if (in.stride > 0) {
@@ -329,7 +346,9 @@ static void processdir(void * passv)
         pthread_mutex_lock(&outfile_mutex[todb]);
       }
       //fprintf(stderr,"threadd %d inode %lld file %d\n",mytid,passmywork->statuso.st_ino,tooutfile);
-      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim);
+      /* only directories are here so sortf is set to the directory full pathname */
+      sprintf(sortf,"%s",passmywork->name);
+      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim,sortf,in.delim);
       if (in.stride > 0) {
         pthread_mutex_unlock(&outfile_mutex[todb]);
       }
@@ -339,7 +358,7 @@ static void processdir(void * passv)
       printits(passmywork,mytid);
     }
 */
-    // loop over dirents, if link push it on the queue, if file or link
+    // loop over dirents, if dir push it on the queue, if file or link
     // print it, fill up qwork structure for each
     transcnt=0;
     do {
@@ -402,8 +421,10 @@ static void processdir(void * passv)
             if ((in.suspectmethod == 1) || (in.suspectmethod == 2)) {   /* if method 1 or 2 we look up the inode in trie and mark dir suspect or not */
                lookup=0;
                lookup=searchmyll(qwork.statuso.st_ino,1);
-               if (lookup == 1) passmywork->suspect=1;  /* set the directory suspect flag on so we will mark it in output */
-
+               if (lookup == 1) {
+                 passmywork->suspect=1;  /* set the directory suspect flag on so we will mark it in output */
+                 //printf("######### found a file suspect %s %lld\n",qwork.name,qwork.statuso.st_ino);
+               }
             }
             if (in.suspectmethod > 2) {
               /* ???? we would stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
@@ -422,7 +443,9 @@ static void processdir(void * passv)
               pthread_mutex_lock(&outfile_mutex[todb]);
             }
             //fprintf(stderr,"threadf %d inode %lld file %d\n",mytid,qwork.statuso.st_ino,tooutfile);
-            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim);
+            /* since this is a file or link, we need the path to the file or link without the name as the sortf */
+            sprintf(sortf,"%s",passmywork->name);
+            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim,sortf,in.delim);
             if (in.stride > 0) {
               pthread_mutex_unlock(&outfile_mutex[todb]);
             }
@@ -451,7 +474,7 @@ static void processdir(void * passv)
          }
       }
     }
- 
+
     if (in.outdb > 0) {
       if (in.stride == 0) {
         todb=mytid;
@@ -481,12 +504,11 @@ static void processdir(void * passv)
 }
 
 int processinit(void * myworkin) {
-    
+
      struct work * mywork = myworkin;
      int i;
      sqlite3_stmt *reso;
      sqlite3_stmt *res;
-     sqlite3 *dbo;
      char outdbn[MAXPATH];
      FILE *isf;
      char incsuspect[24];
@@ -501,14 +523,14 @@ int processinit(void * myworkin) {
        {
           fprintf(stderr,"Cant open input suspect file %s\n",in.insuspect);
           exit(1);
-       }  
+       }
        cntfl=0;
        cntd=0;
        /* set up triell for directories and one for files and links */
        headd = getNewTrieNode();
        headfl = getNewTrieNode();
-       while (fscanf(isf,"%s %s",incsuspect, incsuspecttype)!= EOF) { 
-          //printf("insuspect |%s| |%s|\n",incsuspect, incsuspecttype );  
+       while (fscanf(isf,"%s %s",incsuspect, incsuspecttype)!= EOF) {
+          //printf("insuspect |%s| |%s|\n",incsuspect, incsuspecttype );
           testll=atoll(incsuspect);
           if (!strncmp(incsuspecttype,"f",1)) {
              if (cntfl==0) {
@@ -518,7 +540,7 @@ int processinit(void * myworkin) {
                if (testll < glsuspectflmin) glsuspectflmin=testll;
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
-             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );  
+             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
              insertll(&headfl, incsuspect);
              cntfl++;
           }
@@ -530,7 +552,7 @@ int processinit(void * myworkin) {
                if (testll < glsuspectflmin) glsuspectflmin=testll;
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
-             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );  
+             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
              insertll(&headfl, incsuspect);
              cntfl++;
           }
@@ -542,19 +564,19 @@ int processinit(void * myworkin) {
                if (testll < glsuspectdmin) glsuspectdmin=testll;
                if (testll > glsuspectdmax) glsuspectdmax=testll;
              }
-             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );  
+             //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );
              insertll(&headd, incsuspect);
              cntd++;
           }
-       }  
+       }
        fclose(isf);
-     }  
+     }
 
      if (in.outdb > 0) {
        i=0;
        while (i < in.maxthreads) {
          sprintf(outdbn,"%s.%d",in.outdbn,i);
-         gts.outdbd[i]=opendb(outdbn,dbo,7,1);
+         gts.outdbd[i]=opendb(outdbn,7,1);
          global_res[i]=insertdbprepr(gts.outdbd[i],reso);
          if (in.stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
@@ -597,7 +619,7 @@ int processinit(void * myworkin) {
      // set top parent inode to zero
      mywork->pinode=0;
      pushdir(mywork);
- 
+
      return 0;
 }
 
@@ -616,6 +638,7 @@ int i;
          i++;
        }
      }
+
      // close outputfiles
      if (in.outfile > 0) {
        i=0;
@@ -631,7 +654,7 @@ int i;
      return 0;
 }
 
-// This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb 
+// This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb
 int validate_inputs() {
 
    return 0;
@@ -656,7 +679,7 @@ int main(int argc, char *argv[])
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
      //fprintf(stderr,"in main beforeparse\n");
-     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xt:", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xt:", 1, "input_dir", &in);
      //fprintf(stderr,"in main right after parse\n");
      if (in.helped)
         sub_help();
@@ -681,7 +704,7 @@ int main(int argc, char *argv[])
      rc=1;
      if (strlen(in.nameto) > 0) {
        gltodirmode=1;
-       /*make sure the directory to put the gufi dbs into exists and we can write to it */       
+       /*make sure the directory to put the gufi dbs into exists and we can write to it */
        rc=lstat(in.nameto,&st);
        if (rc != 0) {
          fprintf(stdout,"directory to place gufi dbs problem for %s\n",in.nameto);
@@ -723,4 +746,3 @@ int main(int argc, char *argv[])
      thpool_destroy(mythpool);
      return 0;
 }
-

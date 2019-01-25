@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -85,27 +86,41 @@ OF SUCH DAMAGE.
 #include <sys/xattr.h>
 #include <ctype.h>
 #include <errno.h>
-#include <utime.h> 
+#include <utime.h>
 
 #include "bf.h"
 #include "utils.c"
- 
-void listdir(const char *name, long long int level, struct dirent *entry, long long int pin, int statit, int xattrit )
+
+void listdir(const char *name, long long int level, struct dirent *entry, long long int pin, int statit, int xattrit,int loader )
 {
     DIR *dir;
     //struct dirent *entry;
-    char path[1024];
-    char lpath[1024];
+    char path[MAXPATH];
+    char lpath[MAXPATH];
     long long int ppin;
     struct stat st;
     char type[2];
     int xattrs;
     char xattr[MAXXATTR];
+    char sortf[MAXPATH];
+    char beginpath[MAXPATH];
+    char endpath[MAXPATH];
 
     //printf("inlistdir name %s\n",name);
-    if (!(dir = opendir(name)))
-        return;
-    if (statit) lstat(name,&st);
+    if (statit) {
+      lstat(name,&st);
+      if (in.dontdescend == 0) {
+        if (S_ISDIR(st.st_mode)) {
+           dir = opendir(name);
+        }
+      }
+    } else {
+      if (in.dontdescend == 0) {
+        if (!(dir = opendir(name)))
+          return;
+      }
+    }
+    //if (statit) lstat(name,&st);
     bzero(xattr, sizeof(xattr));
     xattrs=0;
     if (xattrit) {
@@ -115,11 +130,37 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
       bzero(lpath,sizeof(lpath));
       bzero(type,sizeof(type));
       //printf("%lld d ", level);
-      sprintf(type,"d");
-      printit(name,&st,type,lpath,xattrs,xattr,1,pin);
+      sprintf(type,"f");
+      if (S_ISDIR(st.st_mode)) {
+        sprintf(type,"d");
+      }
+      if (S_ISLNK(st.st_mode)) {
+        sprintf(type,"l");
+      }
+      if (loader>0) {
+        if (S_ISDIR(st.st_mode)) {
+          sprintf(sortf,"%s%s%s",name,in.delim,type);
+        } else {
+          shortpath(name,beginpath,endpath);
+          sprintf(sortf,"%s%s%s",beginpath,in.delim,type);
+        }
+        printload(name,&st,type,lpath,xattrs,xattr,pin,sortf,stdout);
+      } else {
+        printit(name,&st,type,lpath,xattrs,xattr,1,pin);
+      }
     } else {
       printf("d %s %lld %lld\n", name, pin , level);
     }
+
+    if (statit) {
+      if (!S_ISDIR(st.st_mode)) {
+         return;
+      }
+      if (in.dontdescend==1) {
+         return;
+      }
+    }
+
     ppin=pin;
     while ((entry = (readdir(dir)))) {
        int len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
@@ -147,7 +188,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
                 continue;
             sprintf(type,"d");
             //printf("inwhile d %s %lld %lld\n", name, entry->d_ino, ppin);
-            listdir(path, pin, entry, entry->d_ino, statit, xattrit);
+            listdir(path, pin, entry, entry->d_ino, statit, xattrit,loader);
         } else {
             len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
             bzero(lpath,sizeof(lpath));
@@ -163,7 +204,17 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
               //printf("%lld ", pin);
               //bzero(type,sizeof(type));
               //printf("readlink %s %s\n",path,lpath);
-              printit(path,&st,type,lpath,xattrs,xattr,1,pin);
+              if (loader>0) {
+                if (S_ISDIR(st.st_mode)) {
+                  sprintf(sortf,"%s%s%s",path,in.delim,type);
+                } else {
+                  shortpath(path,beginpath,endpath);
+                  sprintf(sortf,"%s%s%s",beginpath,in.delim,type);
+                }
+                printload(path,&st,type,lpath,xattrs,xattr,pin,sortf,stdout);
+              } else {
+                printit(path,&st,type,lpath,xattrs,xattr,1,pin);
+              }
             } else {
               printf("%s %s %lld %lld\n",type, path, entry->d_ino,pin);
             }
@@ -171,18 +222,79 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     }
     closedir(dir);
 }
- 
-int main(int argc, char *argv[])
+
+void helpme() {
+    fprintf (stderr, "dfw depth first file system tree walk printing:\n");
+    fprintf (stderr, "path, type, stat info, linkname\n");
+    fprintf (stderr, "optionally if asked for xattrs \n");
+    fprintf (stderr, "syntax dfw -s -x -h -d -l directorytowalk\n");
+    fprintf (stderr, "-s stat everything - otherwise this is just a readdirplus walk \n");
+    fprintf (stderr, "-x get xattrs \n");
+    fprintf (stderr, "-d delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]);
+    fprintf (stderr, "-D dont traverse/descend the tree, just stat this directory or file\n");
+    fprintf (stderr, "-l print in loader format (only works if -x and -s are provided \n");
+    fprintf (stderr, "-h help \n");
+}
+
+int main(int argc, char **argv)
 {
     struct dirent *entries;
     struct stat status;
     int statit;
     int xattrit;
-    statit=atoi(argv[2]);
-    xattrit=atoi(argv[3]);
-    lstat(argv[1],&status);
+    int c;
+    int numops;
+    int loader;
+
+    statit=0;
+    xattrit=0;
+    numops=0;
+    loader=0;
+    in.dontdescend=0;
+    while ((c = getopt (argc, argv, "sxlhDd:")) != -1)
+      switch (c)
+        {
+        case 's':
+          statit=1;
+          numops++;
+          break;
+        case 'x':
+          xattrit=1;
+          numops++;
+          break;
+        case 'l':
+          loader=1;
+          numops++;
+          break;
+        case 'd':
+          if (optarg[0] == 'x') {
+            in.delim[0] = fielddelim[0];
+          }
+          else {
+            in.delim[0] = optarg[0];
+          }
+          break;
+        case 'D':
+          in.dontdescend=1;
+          numops++;
+          break;
+        case 'h':
+          helpme();
+          exit(0);
+        //default:
+      }
+    if (argc <= optind) {
+      helpme();
+      exit(-1);
+    }
+    if ((in.dontdescend==1) && (statit<1)) {
+      fprintf(stderr,"-D must also have -s\n");
+      exit(-1);
+    }
+    //printf("argc=%d x=%d s=%d l=%d dod=%d d=%s non opt arg %s optind %d\n",argc,xattrit,statit,loader,in.dodelim,in.delim,argv[optind],optind);
+
+    lstat(argv[optind],&status);
     //printf("inmain d %s %lld 0\n", argv[1],status.st_ino);
-    listdir(argv[1], 0, entries, status.st_ino,statit,xattrit);
+    listdir(argv[optind], 0, entries, status.st_ino,statit,xattrit,loader);
     return 0;
 }
- 

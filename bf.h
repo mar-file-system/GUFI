@@ -79,13 +79,12 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <unistd.h>
-#include <stdio.h>              // fpos_t
 #include <sys/stat.h>
 #include <pthread.h>            // thpool.h expects us to do this
 
 #define MAXPATH 1024
 #define MAXXATTR 1024
-#define MAXSQL 2048 
+#define MAXSQL 2048
 #define MAXRECS 100000
 #define MAXPTHREAD 100
 #define MAXSTRIDE 1000000000   // maximum records per stripe
@@ -95,7 +94,9 @@ struct globalpathstate {
   char gpath[MAXPATH];
   char gepath[MAXPATH];
   char gfpath[MAXPATH]; // added to provide dumping of full path in query extension
-} gps[MAXPTHREAD];
+};
+
+extern struct globalpathstate gps[MAXPTHREAD];
 
 struct sum {
   long long int totfiles;
@@ -143,6 +144,11 @@ struct sum {
   long long int totossint4;
 };
 
+typedef enum ShowResults {
+    AGGREGATE,
+    PRINT
+} ShowResults_t;
+
 struct input {
    char name[MAXPATH];
    char nameto[MAXPATH];
@@ -153,8 +159,7 @@ struct input {
    int  printing;
    int  printheader;
    int  printrows;
-   int  helped;                 // support parsing of per-app sub-options
-   int  dodelim;
+   int  helped;               // support parsing of per-app sub-options
    char delim[2];
    int  doxattrs;
    int  buildindex;
@@ -167,18 +172,25 @@ struct input {
    char outdbn[MAXPATH];
    char sqlinit[MAXSQL];
    char sqlfin[MAXSQL];
-   int  insertdir;           // added for bfwreaddirplus2db
-   int  insertfl;            // added for bfwreaddirplus2db
-   int  dontdescend;         // added to allow single level directory operations
-   int  buildinindir;        // added to notice when writing index dbs into the input dir
-   int  suspectd;            // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
-   int  suspectfl;           // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
-   char insuspect[MAXPATH];  // added for bfwreaddirplus2db input path for suspects file
-   int  suspectfile;         // added for bfwreaddirplus2db flag for if we are processing suspects file
-   int  suspectmethod;       // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use 
-   int  stride;              // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
-   int  suspecttime;         // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
-   int infile;               // added for bfq to be able to read input file to get dir/inode info
+   int  insertdir;            // added for bfwreaddirplus2db
+   int  insertfl;             // added for bfwreaddirplus2db
+   int  dontdescend;          // added to allow single level directory operations
+   int  buildinindir;         // added to notice when writing index dbs into the input dir
+   int  suspectd;             // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
+   int  suspectfl;            // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
+   char insuspect[MAXPATH];   // added for bfwreaddirplus2db input path for suspects file
+   int  suspectfile;          // added for bfwreaddirplus2db flag for if we are processing suspects file
+   int  suspectmethod;        // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
+   int  stride;               // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
+   int  suspecttime;          // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
+   int infile;                // added for bfq to be able to read input file to get dir/inode info
+   size_t min_level;          // minimum level of recursion to reach before running queries
+   size_t max_level;          // maximum level of recursion to run queries on
+   char aggregate[MAXSQL];    // SQL query to run on aggregated data
+   char intermediate[MAXSQL]; // SQL query to run on intermediate tables
+   size_t intermediate_count;
+   size_t intermediate_skip;
+   ShowResults_t aggregate_or_print;
 };
 extern struct input in;
 
@@ -194,14 +206,15 @@ int parse_cmd_line(int         argc,
                    char*       argv[],
                    const char* getopt_str,
                    int         n_positional,
-                   const char* positional_args_help_str);
+                   const char* positional_args_help_str,
+                   struct input *in);
 
 // help for parsing a cmd-line string-argument into a fixed-size array.
 // NOTE: This assumes you have a variable <retval> in scope.
 #define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                         \
    do {                                                                 \
       const char* src = (SOURCE); /* might be "argv[idx++]" */          \
-      if (strlen(src) >= (MAX)) {                                    \
+      if (strlen(src) >= (MAX)) {                                       \
          fprintf(stderr, "argument '%s' exceeds max allowed (%d)\n",    \
                  (ARG_NAME), (MAX));                                    \
          retval = -1;                                                   \
@@ -213,9 +226,25 @@ int parse_cmd_line(int         argc,
 
 #define INSTALL_INT(VAR, SOURCE, MIN, MAX, ARG_NAME)                    \
    do {                                                                 \
-      (VAR) = atoi(SOURCE); /* might be "argv[idx++]" */                \
+      if (sscanf((SOURCE), "%d", &(VAR)) != 1) {                        \
+        retval = -1;                                                    \
+        break;                                                          \
+      }                                                                 \
       if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
          fprintf(stderr, "argument '%s' not in range [%d,%d]\n",        \
+                 (ARG_NAME), (MIN), (MAX));                             \
+         retval = -1;                                                   \
+      }                                                                 \
+   } while (0)
+
+#define INSTALL_UINT(VAR, SOURCE, MIN, MAX, ARG_NAME)                   \
+   do {                                                                 \
+      if (sscanf((SOURCE), "%lu", &(VAR)) != 1) {                       \
+        retval = -1;                                                    \
+        break;                                                          \
+      }                                                                 \
+      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
+         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",      \
                  (ARG_NAME), (MIN), (MAX));                             \
          retval = -1;                                                   \
       }                                                                 \
@@ -231,13 +260,14 @@ typedef enum {
 
 
 struct work {
+   size_t        level;
    char          name[MAXPATH];
    char          type[2];
    char          nameto[MAXPATH];
    char          linkname[MAXPATH];
    struct stat   statuso;
    long long int pinode;
-   fpos_t        offset;
+   long long int offset;
    int           xattrs;
    char          xattr[MAXXATTR];
    void*         freeme;
@@ -250,6 +280,7 @@ struct work {
    char          osstext2[MAXXATTR];
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
+   int           aggregate_id;
 };
 
 extern char xattrdelim[];
