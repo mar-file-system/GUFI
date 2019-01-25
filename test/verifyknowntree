@@ -2,14 +2,31 @@
 
 set -e
 
-root="/tmp"
-src="${root}/testdir"
-dst="${root}/testgufi"
+if [[ "$#" -ne "1" ]]; then
+    echo "Syntax: $0 non-existent-path"
+fi;
 
-rm -rf "${src}" "${dst}"
+root="$1"
+src="${root}/testdir"
+dst="${root}/testgufi/"
+
+if [[ -d "${root}" ]]; then
+    echo "Please provide the name of a non-existent directory"
+    exit 1
+fi;
 
 # go to the root GUFI directory
 cd "$(dirname $(dirname $0))"
+
+# build the directory in case it doesn't exist
+mkdir -p "${root}"
+
+# always remove root after it is created
+function cleanup {
+    rm -rf "${root}"
+}
+
+trap cleanup EXIT
 
 # create the original tree
 test/generatetree -d "${src}"
@@ -19,8 +36,12 @@ test/generatetree -d "${src}"
 
 dst="${dst}${src}"
 
+# do not exit after first error
+set +e
+
 # compare files
-diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, size, linkname" --root "${root}" | sort) <(
+echo "Compare files"
+diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, size, linkname" --root "${root}" 2>/dev/null | sort) <(
     (
         echo "${dst}/1KB|f|-rw-rw-rw-|1|1001|1001|1024||"
         echo "${dst}/1MB|f|-rw-rw-rw-|1|1001|1001|1048576||"
@@ -33,22 +54,26 @@ diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, t
         echo "${dst}/old_file|f|-rw-rw-rw-|1|1001|1001|0||"
         echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001|0||"
         echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001|0||"
-    ) | sort)
+    ) | sort) && echo "No Differences"
 
 # compare files and symlinks
-diff <(./gufi_find "${dst}" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, linkname" --root "${root}" | sort) <(
+echo
+echo "Compare files and symlinks"
+diff <(./gufi_find "${dst}" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, linkname" --root "${root}" 2>/dev/null | sort) <(
     (
         echo "${dst}/1KB|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/1MB|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/directory/executable|f|-rwxrwxrwx|1|1001|1001||"
         echo "${dst}/directory/readonly|f|-r--r--r--|1|1001|1001||"
-        echo "${dst}/directory/subdirectory/directory_symlink|l|-rwxrwxrwx|1|1001|1001|${src}/directory/subdirectory|"
+        echo "${dst}/directory/subdirectory/directory_symlink|l|-rwxrwxrwx|1|1001|1001|$(realpath ${src})/directory/subdirectory|"
         echo "${dst}/directory/subdirectory/repeat_name|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/directory/writeonly|f|--w--w--w-|1|1001|1001||"
         echo "${dst}/empty_file|f|-rw-rw-rw-|1|1001|1001||"
-        echo "${dst}/file_symlink|l|-rwxrwxrwx|1|1001|1001|${src}/1KB|"
+        echo "${dst}/file_symlink|l|-rwxrwxrwx|1|1001|1001|$(realpath ${src})/1KB|"
         echo "${dst}/.hidden|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/old_file|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001||"
-    ) | sort)
+    ) | sort) && echo "No Differences"
+
+exit 0

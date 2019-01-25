@@ -69,37 +69,50 @@ install(TARGETS GUFI DESTINATION lib)
 set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
 set(COMMON_LIBRARIES GUFI sqlite3 thpool Threads::Threads)
 
-# build the binaries that have C sources
-set(C_BINS bfq bfti bfwi bfwreaddirplus2db dfw make_testdirs querydb querydbn)
-foreach(NAME ${C_BINS})
-  add_executable(${NAME} ${NAME}.c)
-  add_dependencies(${NAME} ${COMMON_DEPENDENCIES})
-  target_link_libraries(${NAME} ${COMMON_LIBRARIES})
-endforeach()
+# This function builds and installs the files whose
+# source file name matches the pattern NAME.EXT
+#
+# ex:
+#     build_and_install(c file1 file2)
+#
+function(build_and_install EXT)
+  foreach(NAME ${ARGN})
+    # build the executable
+    add_executable(${NAME} ${NAME}.${EXT})
+    add_dependencies(${NAME} ${COMMON_DEPENDENCIES})
+    target_link_libraries(${NAME} ${COMMON_LIBRARIES})
 
-# build the binaries that have C++ sources
-set(CXX_BINS make_testtree)
-foreach(NAME ${CXX_BINS})
-  add_executable(${NAME} ${NAME}.cpp)
-  add_dependencies(${NAME} ${COMMON_DEPENDENCIES})
-  target_link_libraries(${NAME} ${COMMON_LIBRARIES})
-endforeach()
+    # install the executable in ${CMAKE_INSTALL_PREFIX}/bin
+    install(TARGETS ${NAME} DESTINATION bin)
+  endforeach()
+endfunction()
+
+# build and install the binaries that have C sources
+build_and_install(c
+  bfq
+  bfti
+  bfwi
+  bfwreaddirplus2db
+  dfw
+  make_testdirs
+  querydb
+  querydbn)
+
+# build and install the binaries that have C++ sources
+build_and_install(cpp
+  make_testtree)
 
 # build the miscellaneous binaries
 # this might have to be split into individual
 # instructions as the number of miscellaneous
 # binaries grows
-set(MISC_BINS tsmtime2epoch tsmepoch2time)
-foreach(NAME ${MISC_BINS})
+foreach(NAME tsmtime2epoch tsmepoch2time)
+  # build the executable
   add_executable(${NAME} ${NAME}.c)
-endforeach()
 
-# install the binaries in ${CMAKE_INSTALL_PREFIX}/bin
-install(TARGETS
-  ${C_BINS}
-  ${CXX_BINS}
-  ${MISC_BINS}
-  DESTINATION bin)
+  # install the executable in ${CMAKE_INSTALL_PREFIX}/bin
+  install(TARGETS ${NAME} DESTINATION bin)
+endforeach()
 
 # only build bffuse and bfresultfuse if FUSE is found
 pkg_search_module(FUSE fuse)
@@ -145,12 +158,14 @@ else()
   message(STATUS "MySQL not found. Not building bfmi.")
 endif()
 
-# copy user tools into bin folder
-set(GUFI_SCRIPTS gufi_find gufi_stats gufi_ls query_builder.py)
-foreach(SCRIPT ${GUFI_SCRIPTS})
+# copy and install scripts that act like binaries
+foreach(SCRIPT example_run gufi_find gufi_stats gufi_ls query_builder.py)
+  # copy the scropt into the build directory for easy access
   configure_file(${CMAKE_SOURCE_DIR}/${SCRIPT} ${CMAKE_BINARY_DIR}/${SCRIPT} COPYONLY)
-endforeach()
-install(PROGRAMS ${GUFI_SCRIPTS} DESTINATION bin)
 
-# add the test subdirectory
+  # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
+  install(PROGRAMS ${SCRIPT} DESTINATION bin)
+endforeach()
+
+# recurse down into the test subdirectory
 add_subdirectory(test)
