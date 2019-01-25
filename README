@@ -88,7 +88,7 @@ feature-requests, etc, through github:
     https://github.com/mar-file-system/GUFI
 
 We will attempt to respond to requests, but we can't make promises about
-the level of resources that will be dedicated to GUFI maintenace.
+the level of resources that will be dedicated to GUFI maintenance.
 
 All bug-reports, issues, requests, etc, should go through github.
 For other conversation about GUFI (and MarFS), there is:
@@ -173,14 +173,14 @@ options:
   -H                 show assigned input values (debugging)
   -o <outfile>       output file one per thread writes path, inode, pinode, type, sortfield to file (sortfield enables sorting for bfwi load from flat file)
   -n <threads>       number of threads
-  -P <delimiter>     delimiter for output file 
+  -P <delimiter>     delimiter for output file
   -O <outputdb>      write a set of output dbs
   -Y                 default all directories as suspect
   -Z                 default all files links as suspect
   -W <insuspectfile> path to input suspect file
   -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl)
   -c <suspecttime>   time in seconds since epoch for suspect comparison
-  -g <stridesize>    stride size for striping inodes into separate output db's 
+  -g <stridesize>    stride size for striping inodes into separate output db's
   -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
   -x                 process xattrs if you are creating gufi dbs of suspect directories
 
@@ -239,7 +239,7 @@ threads are started
 loop assigning work (directories) from queue to threads
 each thread lists the directory readdir/stat and xattr if called for
   if directory put it on the queue and duplicate the directory if making a gufi
-  if link or file print it to screen or out file 
+  if link or file print it to screen or out file
       and build an entries table with entries and keep a sum for the directory
   close directory
   write directory summary table
@@ -277,7 +277,7 @@ bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
 #   -b              build GUFI index tree
 #   -t <to_dir>     dir GUFI-tree should be built
 #   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-# 
+#
 # robin_in          file containing custom RobinHood parameters
 #                      example contents:
 #                      /path  - top dir-path (RH doesnt have a name for the root)
@@ -289,11 +289,11 @@ bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
 #                      ggrider              - user of mysql
 #                      mypassword           - password for user of mysql
 #                      institutes           - name of db of mysql
-# 
+#
 # future options:
 #   -U              create by user summary record
 #   -G              create by group summary record
-# 
+#
 
 
 Flow:
@@ -304,10 +304,10 @@ output file(s) are opened one per thread
 mysql connections are made, on for each thread
 threads are started
 loop assigning work (directories) from queue to threads
-each thread processes a directory by querying all records with parentid=id 
+each thread processes a directory by querying all records with parentid=id
  for that directory
   if directory put it on the queue and duplicate the directory if making a gufi
-  if link or file print it to screen or out file 
+  if link or file print it to screen or out file
       and build an entries table with entries and keep a sum for the directory
   close directory
   write directory summary table
@@ -331,21 +331,21 @@ bfti - walks breadth first below the input directory path and summarizes
 #   -P              print directories as they are encountered
 #   -n <threads>    number of threads
 #   -s              generate tree-summary table (in top-level DB)
-# 
+#
 # GUFI_tree         path to GUFI tree-dir
-# 
+#
 # future options:
 #   -U              create by user summary record
 #   -G              create by group summary record
-# 
+#
 
 
 Flow:
 input directory is put on a queue
 threads are started
 loop assigning work (directories) from queue to threads
-each thread reads the directory and the  summary table for each the dir 
-  if directory put it on the queue 
+each thread reads the directory and the  summary table for each the dir
+  if directory put it on the queue
   accumulate each directory summary into a global summary for all directories below the input directory
   close directory
 end
@@ -369,7 +369,7 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
     output db before starting the walk, and an SQL statement per thread on
     the output db after the walk.
     there is also a mode that will take input from a file instead of getting info from a walk/stat
-    the file must have the appropriate fields delimted by a delimiter provided and it should
+    the file must have the appropriate fields delimited by a delimiter provided and it should
     have a line for dir and lines for files/links in that dir and then another dir and then files/links
     the file does not have to be in tree order, it just must have all files/links associated with a dir
     immediately after that dir
@@ -392,9 +392,9 @@ bfq - breadth first walk of a GUFI tree.  We optionally perform queries
 #   -F <SQL_fin>    SQL cleanup
 #   -d <delim>      delimiter (one char) used as a delimiter if you are getting input from a file not a walk
 #   -u              input is not a dir its a file that you read input from
-# 
+#
 # GUFI_tree         find GUFI index-tree here
-# 
+#
 
 
 Flow:
@@ -404,8 +404,8 @@ output dbs are opened if needed one per thread
 if init SQL provided run once per thread
 threads are started
 loop assigning work (directories) from queue to threads
-each thread lists the directory and queries the gufi tables for that directory 
-  if directory put it on the queue 
+each thread lists the directory and queries the gufi tables for that directory
+  if directory put it on the queue
   if treesql input run query on treesummary table
   and/or applied on whether to continue
   if dirsql input run query on summary table - if printdir - print, if output to db do that
@@ -417,7 +417,7 @@ close output files if needed
 if fin SQL provided run that per thread
 close outputdb
 you can end up with an output file per thread and/or a dbfile per thread
-If you are reading the input from a file instead of a treewalk, the file 
+If you are reading the input from a file instead of a treewalk, the file
 must have a record for dir immediately followed by files and links in that dir
 but beyond that it doesnt have to be in any order. In this input file mode
 the info is read from this file and not gotten from a walk/stat activity
@@ -432,14 +432,14 @@ dfw - depth first walk of tree using readdir, or readdir/stat, or
 
 dfw - dfw depth first file system tree walk printing:
       path, type, stat info, linkname
-      optionally if asked for xattrs 
+      optionally if asked for xattrs
       syntax dfw -s -x -h -d -l directorytowalk (or file to print info on)
-      -s stat everything - otherwise this is just a readdirplus walk 
-      -x get xattrs 
+      -s stat everything - otherwise this is just a readdirplus walk
+      -x get xattrs
       -d delimiter (one char)  [use 'x' for 0x1E]
       -D dont traverse/descend the tree, just stat this directory or file
-      -l print in loader format (only works if -x and -s are provided 
-      -h help 
+      -l print in loader format (only works if -x and -s are provided
+      -h help
 
 if you run with no options, this is just a readdirplus walk and print
 
@@ -447,7 +447,7 @@ if you run with -s it stats everything and prints
 
 if you run with -x it pulls xattr info and prints that
 
-If you us -s -x -d '|' -l  in conjunction (using any delimiter you wish) 
+If you us -s -x -d '|' -l  in conjunction (using any delimiter you wish)
 dfw will print out a record suitable for sorting and then loading using bfwi -u option which loads/builds a gufi tree from a flat file
 the file format for bfwi -u is director then all the files and links for that directory, then another directory etc.
 the record format is pathname,normal attrs, linkname, xattrs  and must be delimited by something unique from the data
@@ -473,47 +473,47 @@ if input is a directory then single threaded depth first walk, using readdir+, o
 ...........................................................................
 bfresultfuse - fuse daemon to read the output of a properly formed bfq query with output dbs and present it as a fuse mount point
 
-Usage: bfresultfuse -s mountpoint  tablename_from_bfq_query inputdb number_of_inputdbs 
+Usage: bfresultfuse -s mountpoint  tablename_from_bfq_query inputdb number_of_inputdbs
 options:
-  -s                           tells fuse to run single threaded - this has only been tested in single thread mode 
+  -s                           tells fuse to run single threaded - this has only been tested in single thread mode
    mountpoint                  directory on which you want the fuse mounted
    tablename_from_bfq_query    this fuse daemon takes the output of a bfq query which produced output db's (one per thread) as input to the fuse
-                               the query must be formed properly to have the right fields/order in the output dbs 
+                               the query must be formed properly to have the right fields/order in the output dbs
                                see test/runbfqforfuse as how to run bfq to produce output dbs suitable for input into this fuse daemon
                                this is the output table name in the output dbs from the bfq run
    inputdb                     base name for output dbs of bfq query used as input to this fuse (basename.threadnum)
    number_of_inputdbs          this is how many threads you ran on the bfq to produce the output dbs to tell the fuse how many dbs there are to union
 
 Flow:
-This is a fuse daemon that honors 
+This is a fuse daemon that honors
 getattr, readdir, readlink, access, getxattr, listxattr
-meaning you can only run commands that use the implicated posix calls against this mount point like 
+meaning you can only run commands that use the implicated posix calls against this mount point like
 ls, stat, find, etc.  you can not run file ops like open/read/write/close etc. so no cat or the like
 it issues queries into the inputdbs to respond to these fuse requests
 
 ...........................................................................
 
 bffuse - fuse daemon to sit atop the gufi tree and present the gufi tree as a mounted fuse file system on the mountpoint provided
-         it will honor a partial sql statement you provide as input 
+         it will honor a partial sql statement you provide as input
          the partial sql is just the where part and only supports where clause on files/links, so like size > 40000
-         you must look at the schema for the entries table in the gufi db to see what fields you have to provide sql where clause 
+         you must look at the schema for the entries table in the gufi db to see what fields you have to provide sql where clause
 
-Usage: bffuse mountpoint top_dir_of_gufitree 
+Usage: bffuse mountpoint top_dir_of_gufitree
 options:
    -s                          tells fuse to run single threaded - this has only been tested in single thread mode
    mountpoint                  directory on which you want the fuse mounted
    top_dir_of_gufitree         point this where in the gufi tree you want to have this fuse file system to present as a fuse file system
-                               it can be the very top of the gufi tree but it can be lower in the gufitree as well 
+                               it can be the very top of the gufi tree but it can be lower in the gufitree as well
                                it is designed to be used in single user mode you launch the fuse and point it at the place in the gufi tree
                                you want to down into, and provide the query criteria for what types of files/links you want to look at
                                all subsequent readdir/stat operations honor that query criteria when you use standard file system
                                commands on the fuse mount like find/ls/stat etc.
-   "sql where clause"          the sql where clause on the files/links 
+   "sql where clause"          the sql where clause on the files/links
 
 Flow:
-This is a fuse daemon that honors 
+This is a fuse daemon that honors
 getattr, readdir, readlink, access, getxattr, listxattr
-meaning you can only run commands that use the implicated posix calls against this mount point like 
+meaning you can only run commands that use the implicated posix calls against this mount point like
 ls, stat, find, etc.  you can not run file ops like open/read/write/close etc. so no cat or the like
 it uses the gufi tree for directory tree placement lookups and issues queries into the gufi database per directory level  to respond to these fuse requests
 it is designed to be run as a user, if you run it as root then it should be a private mount point for root
@@ -544,7 +544,7 @@ listtablesdb - display tables in a gufi db
 
 groupfilespacehogusesummary - generate gid summary records via summary and entries
 
-userfilespacehogusesummary - generiate uid summary records via summary and entries
+userfilespacehogusesummary - generate uid summary records via summary and entries
 
 groupfilespacehog - do parallel query to create output dbs and list group file space hogs
 
@@ -573,7 +573,7 @@ gidtogroup(gid) - coinverts gid to groupname - GUFI stores gid
 
 -- a useful built-in sqlite function is
 
-datetime(mtime,'unixepoch') 
+datetime(mtime,'unixepoch')
 
 GUFI stores its date/time in unixepoch form and datetime() will return a
 human readable date/time - of course there are many formats of date/time
@@ -688,7 +688,7 @@ querydb - run an SQL query against a table in a GUFI db - just point it at
 #   -H              show assigned input values (debugging)
 #   -N              print column-names (header) for DB results
 #   -V              print column-values (rows) for DB results
-# 
+#
 # DB_path           path to dir containinng db.db.*
 # SQL               arbitrary SQL on DB
 
@@ -707,9 +707,9 @@ querydbn - run an SQL query against an output db from bfq, it can be one
 #   -N              print column-names (header) for DB results
 #   -V              print column-values (rows) for DB results
 #   -p              print file-names
-# 
+#
 #   -s              dir-summary (currently-unused internal functionality)
-# 
+#
 # DB_path           path to dir containinng db.db.*
 # DB_count          number of DBs (should match thread-count used in 'bfq')
 # SQL               arbitrary SQL on each DB (unified into single view)
@@ -736,10 +736,10 @@ bunch of correctdness tests
 runbfwi - run bfwi and create gufi testdirdup from input testdir
 runbfti - run bfti and create a tree index at the top of testdirdup
 runbfq - run various queries on testdirdup/testdir gufi tree including output files and output dbs
-runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir  
+runquerydb - do various queries on one of the gufi dbs in testdirdup/testdir
 runquerydbn - do various queries on outdb.* output dbs using the union capability of querydbn
 runbfwreaddirplus2db - run tests that walk trees using readdirplus and write path,inode,pinode etc. to output dbs
-runbfqforfuse - run bfwi to create gufi then run bfq to create an output db and then run bfresultfuse on that output db 
+runbfqforfuse - run bfwi to create gufi then run bfq to create an output db and then run bfresultfuse on that output db
 runbffuse - run bfwi to create gufi then run bfq to show you have a gufi then run bffuse over that gufi
 
 rundfw - do various walks on the testdir tree
@@ -751,13 +751,13 @@ rungroupfilespacehog - do parallel query to create output dbs and list group fil
 runuserfilespacehog - do parallel query to create output dbs and list user file space hog
 runoldbigfiles - do parallel query to craete output dbs and list old/big files
 gitest - a python script that does an entire source tree create, use bfwi to load a gufi from the tree,  use bfq to make a directory snapshot, make changes to the tree,
-  use bfwi to create another fresh gufi tree after the change to the tree, then use bfwireaddirplus2db to detect changes in the source and make a new directory snapshot 
+  use bfwi to create another fresh gufi tree after the change to the tree, then use bfwireaddirplus2db to detect changes in the source and make a new directory snapshot
   marking suspect directories and creating new gufi database files for those suspect directories, then do compare of directory snapshots and do an incremental update of
   the original gufi tree, then do a bfq to the fresh full gufi tree after changes and the incrementally updated original gufi tree after changes and compares the results,
   which tests the incremental process to see if it gets the same result as just doing full overwrite loads of a gufi tree
 dfw2gufitest - a python script that makes a source tree, makes a full gufi tree using bfwi using the source tree, then runs dfw on the source tree to make a flat
-  output file that is then sorted and bfwi is used to create another gufi tree using the flat file input and then uses bfq on both gufi trees to compare to see if 
-  the flat file load process gets the same answer as the source tree loaded gufi tree. The same thing is run again using find -exec dfw ...  to produce the 
+  output file that is then sorted and bfwi is used to create another gufi tree using the flat file input and then uses bfq on both gufi trees to compare to see if
+  the flat file load process gets the same answer as the source tree loaded gufi tree. The same thing is run again using find -exec dfw ...  to produce the
   flat file for the new gufi tree and same comparison with original gufi is done.
 bfwiflat2gufitest - a python script that makes a source tree, makes a full gufi tree using bfwi using the source tree, then runs bfwi on the source tree to make  flat
   output files that that are concatenated (one per thread) and bfwi is used to create another gufi tree using the flat file
