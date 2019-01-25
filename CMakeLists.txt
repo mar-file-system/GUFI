@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(GUFI LANGUAGES C CXX)
 
+# define the DEBUG macro when building in debug mode
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+
 # enable C++11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,43 +19,53 @@ include(ExternalProject)
 # need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
 
-# download and build C-Thread-Pool
-set(thpool_PREFIX ${CMAKE_BINARY_DIR}/C-Thread-Pool)
+# need pthread
+find_package(Threads REQUIRED)
+
+# download, build, and install C-Thread-Pool
+# installation needs to happen here so that the executables
+# have a fixed dynamic library location to link to
+set(thpool_PREFIX ${CMAKE_INSTALL_PREFIX}/C-Thread-Pool)
 ExternalProject_Add(C-Thread-Pool
   GIT_REPOSITORY    https://github.com/calccrypto/C-Thread-Pool.git
   GIT_TAG           cmake
   GIT_SHALLOW       1
-  PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/
+  PREFIX            ${CMAKE_BINARY_DIR}/
   CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${thpool_PREFIX}
 )
 include_directories(${thpool_PREFIX}/include)             # -Ipath/to/C-Thread-Pool/include
 link_directories(${thpool_PREFIX}/lib)                    # -Lpath/to/C-Thread-Pool/lib
+
+# set the install rpath so the executables that link
+# against C-Thread-Pool can find it after being installed
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
 
 # search for sqlite3 installation
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
 
-# download and build sqlite3-pcre
-set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/sqlite3-pcre)
+# download, build, and install sqlite3-pcre
+# installation needs to happen here so that the executables
+# have a fixed path to load sqlite3-pcre from
+set(pcre_PREFIX     ${CMAKE_INSTALL_PREFIX}/sqlite3-pcre)
 ExternalProject_Add(sqlite3-pcre
   GIT_REPOSITORY    https://github.com/calccrypto/sqlite3-pcre.git
   GIT_TAG           cmake
   GIT_SHALLOW       1
-  PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/
+  PREFIX            ${CMAKE_BINARY_DIR}/
   CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${pcre_PREFIX}
 )
-include_directories(${pcre_PREFIX}/include)               # -Ipath/to/sqlite3-pcre/include
-link_directories(${pcre_PREFIX}/lib)                      # -Lpath/to/sqlite3-pcre/lib
 
 # create the GUFI library, which contains all of the common source files
+set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/lib/libpcre.so")
 add_library(GUFI STATIC bf.c dbutils.c structq.c utils.c)
 add_dependencies(GUFI C-Thread-Pool)
 install(TARGETS GUFI DESTINATION lib)
 
 # pack common values into variables
 set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
-set(COMMON_LIBRARIES GUFI sqlite3 thpool pthread)
+set(COMMON_LIBRARIES GUFI sqlite3 thpool Threads::Threads)
 
 # create the bfq executable
 add_executable(bfq bfq.c)
@@ -140,7 +154,7 @@ set(GUFI_SCRIPTS gufi_find gufi_stats gufi_ls query_builder.py)
 foreach(SCRIPT ${GUFI_SCRIPTS})
   configure_file(${CMAKE_SOURCE_DIR}/${SCRIPT} ${CMAKE_BINARY_DIR}/${SCRIPT} COPYONLY)
 endforeach()
-install(FILES ${GUFI_SCRIPTS} DESTINATION bin PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
+install(PROGRAMS ${GUFI_SCRIPTS} DESTINATION bin)
 
 # add the test subdirectory
 add_subdirectory(test)

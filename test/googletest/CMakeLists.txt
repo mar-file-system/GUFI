@@ -29,6 +29,6 @@ message( STATUS "GTest source dir: " ${gtest_SOURCE_DIR})
 
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
-add_executable(tests bf.cpp utils.cpp)
-add_dependencies(tests GUFI)
-target_link_libraries(tests gtest gtest_main GUFI sqlite3 thpool pthread)
+add_executable(googletests bf.cpp utils.cpp)
+add_dependencies(googletests GUFI)
+target_link_libraries(googletests gtest gtest_main GUFI sqlite3 thpool pthread)

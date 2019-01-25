@@ -866,6 +866,10 @@ size_t descend(struct work *passmywork, DIR *dir,
                     pushdir(&qwork);
                     pushed++;
                 }
+                else {
+                    fprintf(stderr, "couldn't access dir '%s': %s\n",
+                            qwork.name, strerror(errno));
+                }
             }
         }
     }

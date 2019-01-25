@@ -85,6 +85,7 @@ OF SUCH DAMAGE.
 #include <pthread.h>
 #include <random>
 #include <sstream>
+#include <sys/stat.h>
 #include <thread>
 #include <vector>
 #include <unistd.h>
@@ -648,6 +649,12 @@ void generatedir(void *args) {
 
         // don't check for error
         chown(arg->path.c_str(), arg->settings->chown?arg->uid:-1, arg->settings->chgrp?arg->gid:-1);
+
+        // only allow the owner access to their home directory
+        if (arg->depth == 1) {
+            // don't check for error
+            chmod(arg->path.c_str(), S_IRWXU);
+        }
     }
 
     // generate number of subdirectories
@@ -684,7 +691,7 @@ void generatedir(void *args) {
 
 std::ostream &print_help(std::ostream &stream, const char *argv0) {
     static const Settings s;
-    return stream << "Syntax: " << argv0 << " [options] directory --file-count [--file-count ...] --file-size [--file-size ...]\n"
+    return stream << "Syntax: " << argv0 << " [options] directory --file-count [--file-count ...] --file-size [--file-size ...]"
                   << "\n"
                   << "\n    -h | --help"
                   << "\n"
@@ -866,6 +873,15 @@ bool create_top(const Settings &settings) {
     // do not add files to this layer
     sqlite3_close(top);
 
+    // set top level database owner and group
+    // don't check for errors
+    chown(fullname.c_str(), settings.chown?(settings.uid + settings.users):-1, settings.chgrp?(settings.gid + settings.users):-1);
+
+    // set top level directory owner, group, and permissions
+    // don't check for errors
+    chown(settings.top.c_str(), settings.chown?(settings.uid + settings.users):-1, settings.chgrp?(settings.gid + settings.users):-1);
+    chmod(settings.top.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+
     return true;
 }
 
@@ -873,16 +889,15 @@ bool create_top(const Settings &settings) {
 class LoopedThread {
     public:
         template <typename F, typename... Args>
-        LoopedThread(const unsigned int rate, std::mutex &mutex, F &&func, Args &&...args)
-            : rate(rate),
+        LoopedThread(const unsigned int &ms, std::mutex &mutex, F &&func, Args &&...args)
+            : rate(ms),
               mutex(mutex),
               cv(),
               thread([this, &func, &args...]() {
                       auto run = std::bind(std::forward <F> (func), std::forward <Args>(args)...);
-                      std::chrono::milliseconds ms(this->rate);
                       std::unique_lock <std::mutex> lock(this->mutex);
-                      while (this->rate) {
-                          this->cv.wait_for(lock, ms);
+                      while (this->rate.count()) {
+                          this->cv.wait_for(lock, this->rate);
                           run();
                       }
                   }
@@ -890,24 +905,21 @@ class LoopedThread {
         {}
 
         ~LoopedThread() {
+            stop();
             thread.join();
         }
 
         void stop() {
-            bool notify = true;
             {
                 std::lock_guard <std::mutex> lock(mutex);
-                notify = rate;
-                rate = 0;
+                rate = std::chrono::milliseconds::zero();
             }
 
-            if (notify) {
-                cv.notify_all();
-            }
+            cv.notify_all();
         }
 
     private:
-        unsigned int rate;
+        std::chrono::milliseconds rate;
         std::mutex &mutex;
         std::condition_variable cv;
 
