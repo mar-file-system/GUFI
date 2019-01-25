@@ -10,17 +10,17 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# include the source directory
+# include (-I) the source directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
-# load the ExternalProject module
-include(ExternalProject)
 
 # need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
 
 # need pthread
 find_package(Threads REQUIRED)
+
+# load the ExternalProject module
+include(ExternalProject)
 
 # download, build, and install C-Thread-Pool
 # installation needs to happen here so that the executables
@@ -44,6 +44,8 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
+message(STATUS "SQLITE3 headers located in ${SQLITE3_INCLUDEDIR}")
+message(STATUS "SQLITE3 libraries located in ${SQLITE3_LIBDIR}")
 
 # download, build, and install sqlite3-pcre
 # installation needs to happen here so that the executables
@@ -67,68 +69,42 @@ install(TARGETS GUFI DESTINATION lib)
 set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
 set(COMMON_LIBRARIES GUFI sqlite3 thpool Threads::Threads)
 
-# create the bfq executable
-add_executable(bfq bfq.c)
-add_dependencies(bfq ${COMMON_DEPENDENCIES})
-target_link_libraries(bfq ${COMMON_LIBRARIES})
+# build the binaries that have C sources
+set(C_BINS bfq bfti bfwi bfwreaddirplus2db dfw make_testdirs querydb querydbn)
+foreach(NAME ${C_BINS})
+  add_executable(${NAME} ${NAME}.c)
+  add_dependencies(${NAME} ${COMMON_DEPENDENCIES})
+  target_link_libraries(${NAME} ${COMMON_LIBRARIES})
+endforeach()
 
-# create the bfti executable
-add_executable(bfti bfti.c)
-add_dependencies(bfti ${COMMON_DEPENDENCIES})
-target_link_libraries(bfti ${COMMON_LIBRARIES})
+# build the binaries that have C++ sources
+set(CXX_BINS make_testtree)
+foreach(NAME ${CXX_BINS})
+  add_executable(${NAME} ${NAME}.cpp)
+  add_dependencies(${NAME} ${COMMON_DEPENDENCIES})
+  target_link_libraries(${NAME} ${COMMON_LIBRARIES})
+endforeach()
 
-# create the bfwi executable
-add_executable(bfwi bfwi.c)
-add_dependencies(bfwi ${COMMON_DEPENDENCIES})
-target_link_libraries(bfwi ${COMMON_LIBRARIES})
-
-# create the bfreaddirplus2b executable
-add_executable(bfwreaddirplus2db bfwreaddirplus2db.c)
-add_dependencies(bfwreaddirplus2db ${COMMON_DEPENDENCIES})
-target_link_libraries(bfwreaddirplus2db ${COMMON_LIBRARIES})
-
-# create the dfw executable
-add_executable(dfw dfw.c)
-add_dependencies(dfw ${COMMON_DEPENDENCIES})
-target_link_libraries(dfw ${COMMON_LIBRARIES})
-
-# create the make_testdirs executable
-add_executable(make_testdirs make_testdirs.c)
-add_dependencies(make_testdirs ${COMMON_DEPENDENCIES})
-target_link_libraries(make_testdirs ${COMMON_LIBRARIES})
-
-# create the make_testtree executable
-add_executable(make_testtree make_testtree.cpp)
-add_dependencies(make_testtree ${COMMON_DEPENDENCIES})
-target_link_libraries(make_testtree ${COMMON_LIBRARIES})
-
-# create the querydb executable
-add_executable(querydb querydb.c)
-add_dependencies(querydb ${COMMON_DEPENDENCIES})
-target_link_libraries(querydb ${COMMON_LIBRARIES})
-
-# create the querydbn executable
-add_executable(querydbn querydbn.c)
-add_dependencies(querydbn ${COMMON_DEPENDENCIES})
-target_link_libraries(querydbn ${COMMON_LIBRARIES})
+# build the miscellaneous binaries
+# this might have to be split into individual
+# instructions as the number of miscellaneous
+# binaries grows
+set(MISC_BINS tsmtime2epoch tsmepoch2time)
+foreach(NAME ${MISC_BINS})
+  add_executable(${NAME} ${NAME}.c)
+endforeach()
 
 # install the binaries in ${CMAKE_INSTALL_PREFIX}/bin
 install(TARGETS
-  bfq
-  bfti
-  bfwi
-  bfwreaddirplus2db
-  dfw
-  make_testdirs
-  make_testtree
-  querydb
-  querydbn
+  ${C_BINS}
+  ${CXX_BINS}
+  ${MISC_BINS}
   DESTINATION bin)
 
 # only build bffuse and bfresultfuse if FUSE is found
 pkg_search_module(FUSE fuse)
 if (FUSE_FOUND)
-  message(STATUS "FUSE headers located in   ${FUSE_INCLUDEDIR}")
+  message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
   message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
 
   # create the bffuse executable
@@ -147,6 +123,26 @@ if (FUSE_FOUND)
   install(TARGETS bffuse bfresultfuse DESTINATION bin)
 else()
   message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
+endif()
+
+# tell CMake to search the contrib directory for FindMYSQL.cmake and mysql-config.cmake
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/contrib)
+
+# only build bfmi if MySQL is found
+pkg_search_module(MYSQL mysql)
+if (MYSQL_FOUND)
+  message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
+  message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
+
+  # create the bfmi executable
+  add_executable(bfmi bfmi.c)
+  add_dependencies(bfmi ${COMMON_DEPENDENCIES})
+  target_link_libraries(bfmi ${COMMON_LIBRARIES} mysql)
+
+  # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
+  install(TARGETS bfmi DESTINATION bin)
+else()
+  message(STATUS "MySQL not found. Not building bfmi.")
 endif()
 
 # copy user tools into bin folder
