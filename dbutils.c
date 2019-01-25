@@ -83,7 +83,6 @@ OF SUCH DAMAGE.
 #include <uuid/uuid.h>
 
 #include "dbutils.h"
-
 #include "bf.h"
 
 #ifndef PCRE
@@ -195,10 +194,10 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
 
     sqlite3_snprintf(MAXSQL, dbn,"%s/%s", name, DBNAME);
     if (createtables) {
-        if (openwhat != 3)
-          sprintf(dbn,"%s/%s/%s", in.nameto,name,DBNAME);
+       if (openwhat != 3)
+          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
        if (openwhat==7 || openwhat==8)
-          sprintf(dbn,"%s", name);
+          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
     else {
        if (openwhat == 6)
@@ -264,12 +263,14 @@ exit(9);
     }
 
     // Load a regular expression extension
+    //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) ||
         (sqlite3_load_extension(db, TOSTR(PCRE), NULL, NULL)                   != SQLITE_OK)) {
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;
     }
+    //#endif
 
     //printf("returning from opendb ok\n");
     return db;
@@ -698,15 +699,81 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     }
     if (strlen(shortname) < 1) printf("***** shortname is < 1 %s\n",pwork->name);
 
+
+
 /*
 CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlink INT, uid INT, gid INT, size INT, blksize INT, blocks INT, atime INT, mtime INT, ctime INT, linkname TEXT, xattrs TEXT, totfiles INT, totlinks INT, minuid INT, maxuid INT, mingid INT, maxgid INT, minsize INT, maxsize INT, totltk INT, totmtk INT, totltm INT, totmtm INT, totmtg INT, totmtt INT, totsize INT, minctime INT, maxctime INT, minmtime INT, maxmtime INT, minatime INT, maxatime INT, minblocks INT, maxblocks INT, totxattr INT,depth INT, mincrtime INT, maxcrtime INT, minossint1 INT, maxossint1 INT, totossint1 INT, minossint2 INT, maxossint2, totossint2 INT, minossint3 INT, maxossint3, totossint3 INT,minossint4 INT, maxossint4 INT, totossint4 INT, rectype INT, pinode INT);
 */
-    char *zname = sqlite3_mprintf("%q",shortname);
-    char *ztype = sqlite3_mprintf("%q",pwork->type);
+    char *zname     = sqlite3_mprintf("%q",shortname);
+    char *ztype     = sqlite3_mprintf("%q",pwork->type);
     char *zlinkname = sqlite3_mprintf("%q",pwork->linkname);
-    char *zxattr = sqlite3_mprintf("%q",pwork->xattr);
-    sprintf(sqlstmt,"INSERT INTO summary VALUES (\'%s\', \'%s\',%lu, %d, %lu, %d, %d, %ld, %ld, %ld, %ld, %ld, %ld, \'%s\', \'%s\', %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld);",
-       zname, ztype, pwork->statuso.st_ino,pwork->statuso.st_mode,pwork->statuso.st_nlink,pwork->statuso.st_uid,pwork->statuso.st_gid,pwork->statuso.st_size,pwork->statuso.st_blksize,pwork->statuso.st_blocks,pwork->statuso.st_atime,pwork->statuso.st_mtime,pwork->statuso.st_ctime,zlinkname,zxattr,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, pwork->pinode);
+    char *zxattr    = sqlite3_mprintf("%q",pwork->xattr);
+
+    sprintf(sqlstmt,"INSERT INTO summary VALUES "
+            "(\'%s\', \'%s\', "
+            "%"STAT_ino", %d, %"STAT_nlink", %d, %d, %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
+            "\'%s\', \'%s\', "
+            "%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld);",
+            zname,
+            ztype,
+
+            pwork->statuso.st_ino,      // STAT_ino
+            pwork->statuso.st_mode,
+            pwork->statuso.st_nlink,    // STAT_nlink
+            pwork->statuso.st_uid,
+            pwork->statuso.st_gid,
+            pwork->statuso.st_size,     // STAT_size
+            pwork->statuso.st_blksize,  // STAT_bsize
+            pwork->statuso.st_blocks,   // STAT_blocks
+            pwork->statuso.st_atime,
+            pwork->statuso.st_mtime,
+            pwork->statuso.st_ctime,
+
+            zlinkname,
+            zxattr,
+
+            su->totfiles,
+            su->totlinks,
+            su->minuid,
+            su->maxuid,
+            su->mingid,
+            su->maxgid,
+            su->minsize,
+            su->maxsize,
+            su->totltk,
+            su->totmtk,
+            su->totltm,
+            su->totmtm,
+            su->totmtg,
+            su->totmtt,
+            su->totsize,
+            su->minctime,
+            su->maxctime,
+            su->minmtime,
+            su->maxmtime,
+            su->minatime,
+            su->maxatime,
+            su->minblocks,
+            su->maxblocks,
+            su->totxattr,
+            depth,
+            su->mincrtime,
+            su->maxcrtime,
+            su->minossint1,
+            su->maxossint1,
+            su->totossint1,
+            su->minossint2,
+            su->maxossint2,
+            su->totossint2,
+            su->minossint3,
+            su->maxossint3,
+            su->totossint3,
+            su->minossint4,
+            su->maxossint4,
+            su->totossint4,
+            rectype,
+            pwork->pinode);
+
     sqlite3_free(zname);
     sqlite3_free(ztype);
     sqlite3_free(zlinkname);
@@ -950,6 +1017,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;
     if ((sqlite3_open_v2(name, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
+        //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                          != SQLITE_OK) || // enable extension loading
         (sqlite3_load_extension(aggregate, TOSTR(PCRE), NULL, &err_msg)                                        != SQLITE_OK) || // load sqlite3-pcre
         (addqueryfuncs(aggregate)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()

@@ -265,7 +265,6 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db;
-    sqlite3 *db1;
     char *records;
     struct sum summary;
     sqlite3_stmt *res;
@@ -338,6 +337,7 @@ static void processdir(void * passv)
            }
          }
     }
+
     if (in.outfile > 0) {
       tooutfile=mytid;
       if (in.stride > 0) {
@@ -638,6 +638,7 @@ int i;
          i++;
        }
      }
+
      // close outputfiles
      if (in.outfile > 0) {
        i=0;

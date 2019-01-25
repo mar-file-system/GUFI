@@ -5,6 +5,7 @@ BFW_MYSQL = bfmi.mysql
 # TOOLS = querydb querydbn make_testdirs dbdump
 TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
 
+
 .PHONY: sqlite3-pcre googletest test
 
 SQLITE3_PCRE      ?= sqlite3-pcre
@@ -12,10 +13,7 @@ GTEST_SRC         ?= $(realpath googletest)
 GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
 GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
 
-# # TBD ...
-# cc bffuse.c -I /usr/local/include/osxfuse -D_FILE_OFFSET_BITS=64 -I.. -L../.libs -l sqlite3 -L /usr/local/lib -l osxfuse -o bffuse
-
-all: bfw tools
+all:   bfw tools
 
 bfw:   $(BFW)
 mysql: $(BFW_MYSQL)
@@ -29,36 +27,63 @@ $(SQLITE3_PCRE)/pcre.so:
 LIBFILES = bf structq dbutils utils
 
 
+
+# CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
+CFLAGS += -std=gnu11
 ifneq ($(DEBUG),)
-	CFLAGS += -g -O0 -DDEBUG
-	CXXFLAGS += -g -O0 -DDEBUG
+   CFLAGS   += -g -O0 -DDEBUG
+   CXXFLAGS += -g -O0 -DDEBUG
 else
-	CFLAGS += -O3
-	CXXFLAGS += -O3
+   CFLAGS   += -O3
+   CXXFLAGS += -O3
 endif
 
 
-ifeq ($(shell uname -s), Darwin)
-	CPPFLAGS +=  -D _DARWIN_C_SOURCE
+
+
+# --- DARWIN
+UNAME_S = $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+	CFLAGS += -D_DARWIN_C_SOURCE
 endif
 
 
-INCS :=
-LIBS := -lgufi -pthread
 
+# --- SQL
 # this is invoked in a recursive build, for bfmi.mysql
 # (see target "%.mysql")
+# bfmi currently uses *both* sqlite3 and mysql!
 ifeq ($(MYSQL),)
-	INCS +=
-	LIBS += -lsqlite3
 	LIBFILES += dbutils
 else
 	INCS += $(shell mysql_config --include)
-	# bfmi currently uses *both* sqlite3 and mysql!
 	LIBS += $(shell mysql_config --libs_r)
-	LIBS += -lsqlite3
 endif
 
+# We always need sqlite
+# Set env-var PKG_CONFIG_PATH to your install
+CFLAGS   += $(shell pkg-config --cflags      sqlite3)
+CXXFLAGS += $(shell pkg-config --cflags      sqlite3)
+LDFLAGS  += $(shell pkg-config --libs-only-L sqlite3)
+LIBS     += $(shell pkg-config --libs-only-l sqlite3)
+
+
+
+# --- FUSE
+# different fuse libs for OSX/Linux
+ifeq ($(UNAME_S), Darwin)
+	FUSE_PKG = osxfuse
+else
+	FUSE_PKG = fuse
+endif
+
+
+ifneq ($(FUSE),)
+	CFLAGS   += $(shell pkg-config --cflags      $(FUSE_PKG))
+	CXXFLAGS += $(shell pkg-config --cflags      $(FUSE_PKG))
+	LDFLAGS  += $(shell pkg-config --libs-only-L $(FUSE_PKG))
+	LIBS     += $(shell pkg-config --libs-only-l $(FUSE_PKG))
+endif
 
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
