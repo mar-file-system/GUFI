@@ -168,9 +168,12 @@ int reprocessdir(void * passv, DIR *dir)
     // rewind the directory
     rewinddir(dir);
 
+    //printf(" in reprocessdir rebuilding gufi for %s\n",passmywork->name);
+
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
     bzero(passmywork->xattr,sizeof(passmywork->xattr));
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
+    sprintf(passmywork->type,"d");
     if (in.doxattrs > 0) {
        passmywork->xattrs=0;
        passmywork->xattrs=pullxattrs(passmywork->name,passmywork->xattr);
@@ -179,6 +182,20 @@ int reprocessdir(void * passv, DIR *dir)
 
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir 
     sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
+    if (in.buildinindir == 1) {
+      sprintf(dbpath,"%s/%s",passmywork->name,DBNAME);
+    } else {
+      sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
+    }
+
+    /* if we are building a gufi in the src tree and the suspect mode is not zero then we need to wipe it out first */
+    if (in.buildinindir == 1) {
+        if (in.suspectmethod > 0) {
+          //unlink(dbpath);
+          truncate(dbpath,0);
+        }
+    }
+    
     if (!(db = opendb(dbpath,db1,8,1)))
        return -1;
     res=insertdbprep(db,reso);
@@ -197,12 +214,16 @@ int reprocessdir(void * passv, DIR *dir)
         if (!(entry = readdir(dir))) break;
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
           continue;
+        if (in.buildinindir == 1) {
+          if (strcmp(entry->d_name, DBNAME) == 0)
+               continue;
+        }
         //printf("reprocessdir: dir %s entry %s\n",passmywork->name,entry->d_name);
 
         bzero(&qwork,sizeof(qwork));
         qwork.pinode=passmywork->statuso.st_ino;
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-           continue;
+        //if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        //   continue;
         sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
         lstat(qwork.name, &qwork.statuso);
         qwork.xattrs=0;
@@ -218,7 +239,9 @@ int reprocessdir(void * passv, DIR *dir)
             // its a link so get the linkname
             bzero(lpatho,sizeof(lpatho));
             readlink(qwork.name,lpatho,MAXPATH);
-            sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
+            sprintf(qwork.linkname,"%s",lpatho);
+            sprintf(qwork.type,"l");
+            //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
             sumit(&summary,&qwork);
             insertdbgo(&qwork,db,res);
             transcnt++;
@@ -365,6 +388,10 @@ static void processdir(void * passv)
     do {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
            continue;
+        if (in.buildinindir == 1) {
+          if (strcmp(entry->d_name, DBNAME) == 0)
+               continue;
+        }
         bzero(&qwork,sizeof(qwork));
         sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
         qwork.pinode=passmywork->statuso.st_ino;
@@ -485,6 +512,8 @@ static void processdir(void * passv)
 
     if (passmywork->suspect==1) {
       if (gltodirmode==1) {
+        /* we may not have stat on the directory we may be told its suspect somehow not stating it */
+        lstat(passmywork->name,&passmywork->statuso);
         rc=reprocessdir(passmywork,dir);
         if (rc !=0) fprintf(stderr,"problem producing gufi db for suspect directory\n");
       }
@@ -657,8 +686,24 @@ int i;
 
 // This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb 
 int validate_inputs() {
+   char expathin[MAXPATH];
+   char expathout[MAXPATH];
+   char expathtst[MAXPATH];
 
+   if (in.buildindex && in.nameto[0]) {
+      fprintf(stderr, "In bfwreaddirplus2db building an index '-b' the index must go into the src tree\n");
+      fprintf(stderr, "and -t means you are specifying a parking lot directory for gufi directory db's to be put under their znumber\n");
+      fprintf(stderr, "for incremental operations by inode\n");
+      return -1;
+   }
+
+   if (in.buildindex) {
+     fprintf(stderr,"You are putting the index dbs in input directory\n");
+     in.buildinindir = 1;
+     sprintf(in.nameto,"%s",in.name);
+   }
    return 0;
+
 }
 
 void sub_help() {
@@ -680,7 +725,7 @@ int main(int argc, char *argv[])
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
      //fprintf(stderr,"in main beforeparse\n");
-     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xt:", 1, "input_dir");
+     int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xbt:", 1, "input_dir");
      //fprintf(stderr,"in main right after parse\n");
      if (in.helped)
         sub_help();
@@ -716,6 +761,8 @@ int main(int argc, char *argv[])
          return -1;
        }
      }
+
+     if (in.buildinindir == 1) gltodirmode=1;
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here

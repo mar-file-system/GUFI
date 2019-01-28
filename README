@@ -167,7 +167,7 @@ bfwreaddirplus2db - breadth first walk of input tree to list the tree, or create
 
 ...........................................................................
 
-Usage: bfwreaddirplus2db [options] input_dir outdb
+Usage: bfwreaddirplus2db [options] input_dir
 options:
   -h                 help
   -H                 show assigned input values (debugging)
@@ -181,7 +181,8 @@ options:
   -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl)
   -c <suspecttime>   time in seconds since epoch for suspect comparison
   -g <stridesize>    stride size for striping inodes into separate output db's
-  -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
+  -t <to_dir>        if this is provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode and this is in conflict with -b
+  -b                 build GUFI index tree but in bfwreaddirplus2db the gufi tree goes into src tree and this flag is in conflict with -t
   -x                 process xattrs if you are creating gufi dbs of suspect directories
 
 
@@ -201,6 +202,7 @@ each thread lists the directory readdirplus
   put dirs and/or files into output db (path, inode, pinode, type, suspect) into output dir
   if to_dir provided suspect directories will have gufi dbs created into this directories named by the suspect dirs inode
   if writing output file write files, links, and directories to output files on  per thread (can use striping of inodes across files)
+  if building a gufi tree it writes/rewrites the directory db's into the source tree for all suspect directories
   close directory
 end
 close outdb if needed
@@ -209,7 +211,7 @@ close outdb if needed
 
 bfwi - breadth first walk of input tree to list the tree, or create a GUFI index-tree
 
-Usage: bfwi [options] input_dir to_dir
+Usage: bfwi [options] input_dir
 options:
   -h              help
   -H              show assigned input values (debugging)
@@ -221,6 +223,7 @@ options:
   -b              build GUFI index tree
   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
   -D              dont descend in the tree (make a single gufi db at one level of the tree
+  -t <to_dir>     place to put gufi tree (remember it will put the top of the src directory in this to_dir directory
   -u              input mode is from a file so input is a file not a dir
 future options:
   -U              create by user summary per directory
@@ -259,6 +262,9 @@ Location of GUFI-tree:
     GUFI-tree as input.  We have debated whether the GUFI-tree should just
     be build at /q/r/s/c.  That may come in a future release.  We're open
     to discussion.
+
+    If you are putting your GUFI-tree index right into the source tree, you must follow the same syntax where input_dir is the top of the src tree and -t to dir is the directory above the source tree.  This keeps the same syntax for where you want your gufi tree built.
+Bfwi will recognize that the to dir and input dir are the same real paths and if so will save some work on creating output directories, setting the mode of the output directories, and will ignore the database file (DBNAME defined in bf.h default db.db) when building the index.  This way indexes built in the source tree and in another tree will create the exact same index.
 
 
 ...........................................................................
@@ -544,7 +550,7 @@ listtablesdb - display tables in a gufi db
 
 groupfilespacehogusesummary - generate gid summary records via summary and entries
 
-userfilespacehogusesummary - generate uid summary records via summary and entries
+userfilespacehogusesummary - generiate uid summary records via summary and entries
 
 groupfilespacehog - do parallel query to create output dbs and list group file space hogs
 
