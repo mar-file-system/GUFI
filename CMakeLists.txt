@@ -52,15 +52,15 @@ message(STATUS "SQLITE3 libraries located in ${SQLITE3_LIBDIR}")
 # have a fixed path to load sqlite3-pcre from
 set(pcre_PREFIX     ${CMAKE_INSTALL_PREFIX}/sqlite3-pcre)
 ExternalProject_Add(sqlite3-pcre
-  GIT_REPOSITORY    https://github.com/calccrypto/sqlite3-pcre.git
-  GIT_TAG           cmake
+  GIT_REPOSITORY    https://github.com/mar-file-system/sqlite3-pcre.git
+  GIT_TAG           master
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
   CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${pcre_PREFIX}
 )
 
 # create the GUFI library, which contains all of the common source files
-set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/lib/libpcre.so")
+set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/sqlite3-pcre.so")
 add_library(GUFI STATIC bf.c dbutils.c structq.c utils.c)
 add_dependencies(GUFI C-Thread-Pool)
 install(TARGETS GUFI DESTINATION lib)
