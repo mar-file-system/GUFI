@@ -69,59 +69,60 @@ install(TARGETS GUFI DESTINATION lib)
 set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
 set(COMMON_LIBRARIES GUFI sqlite3 thpool Threads::Threads)
 
-# This function builds the files whose source
-# file name matches the pattern NAME.EXT (NAME
-# is an optional argument, so it does not show
-# up in the arguments list). PATH is the
-# installation directory.
+# This function builds executables using the
+# provided file names (SOURCE is an optional
+# argument, so it does not show up in the
+# arguments list).
+#
+# PATH is the installation directory.
+#
+# There will be duplicate targets if two files
+# share the same name.
 #
 # ex:
-#     build_and_install(bin c file1 file2)
+#     build_and_install(bin TRUE file1.c file2.cpp)
 #        -> compiles file1.c into file1
-#        -> compiles file2.c into file2
+#        -> compiles file2.cpp into file2
 #        -> installs file1 and file2 into bin
 #
-function(build_and_install PATH EXT)
-  foreach(NAME ${ARGN})
-    # build the executable
-    add_executable(${NAME} ${NAME}.${EXT})
-    add_dependencies(${NAME} ${COMMON_DEPENDENCIES})
-    target_link_libraries(${NAME} ${COMMON_LIBRARIES})
+function(build_and_install PATH LINK_GUFI)
+  foreach(SOURCE ${ARGN})
+    # get the filename only (no path or extension)
+    get_filename_component(TARGET ${SOURCE} NAME_WE)
 
-    # install the executable in ${CMAKE_INSTALL_PREFIX}/bin
-    install(TARGETS ${NAME} DESTINATION ${PATH})
+    # build the executable
+    add_executable(${TARGET} ${SOURCE})
+
+    if (LINK_GUFI)
+      add_dependencies(${TARGET} ${COMMON_DEPENDENCIES})
+      target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+    endif()
+
+    # install the executable
+    install(TARGETS ${TARGET} DESTINATION ${PATH})
   endforeach()
 endfunction()
 
-# build and install the binaries that have C sources
-build_and_install(bin c
-  bfq
-  bfti
-  bfwi
-  bfwreaddirplus2db
-  dfw
-  make_testdirs
-  querydb
-  querydbn)
+# build and install the binaries that need to link with GUFI
+set(BIN_SOURCES
+  bfq.c
+  bfti.c
+  bfwi.c
+  bfwreaddirplus2db.c
+  dfw.c
+  make_testdirs.c
+  make_testtree.cpp
+  querydb.c
+  querydbn.c)
+build_and_install(bin TRUE ${BIN_SOURCES})
 
-# build and install the binaries that have C++ sources
-build_and_install(bin cpp
-  make_testtree)
-
-# build the miscellaneous binaries
-# this might have to be split into individual
-# instructions as the number of miscellaneous
-# binaries grows
-foreach(NAME tsmtime2epoch tsmepoch2time)
-  # build the executable
-  add_executable(${NAME} ${NAME}.c)
-
-  # install the executable in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS ${NAME} DESTINATION bin)
-endforeach()
+# build binaries that do not need to link with GUFI
+set(TIME_SOURCES tsmtime2epoch.c tsmepoch2time.c)
+build_and_install(bin FALSE ${TIME_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 pkg_search_module(FUSE fuse)
+set(FUSE_SOURCES bffuse.c bfresultfuse.c)
 if (FUSE_FOUND)
   message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
   message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
@@ -149,6 +150,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/contrib)
 
 # only build bfmi if MySQL is found
 pkg_search_module(MYSQL mysql)
+set(MYSQL_SOURCES bfmi.c)
 if (MYSQL_FOUND)
   message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
   message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
@@ -165,7 +167,8 @@ else()
 endif()
 
 # copy and install scripts that act like binaries
-foreach(SCRIPT example_run gufi_find gufi_stats gufi_ls query_builder.py)
+set(SCRIPTS example_run gufi_find gufi_stats gufi_ls query_builder.py)
+foreach(SCRIPT ${SCRIPTS})
   # copy the scropt into the build directory for easy access
   configure_file(${CMAKE_SOURCE_DIR}/${SCRIPT} ${CMAKE_BINARY_DIR}/${SCRIPT} COPYONLY)
 
@@ -178,3 +181,8 @@ enable_testing()
 
 # recurse down into the test subdirectory
 add_subdirectory(test)
+
+# define "make gary"
+# build tarball out of ${CMAKE_SOURCE_DIR}
+set(PATHS contrib docs include incremental scripts test ${BIN_SOURCES} ${TIME_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${SCRIPTS})
+add_custom_target(gary ALL COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/gary.tar" ${PATHS} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
