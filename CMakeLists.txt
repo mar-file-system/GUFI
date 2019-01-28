@@ -69,13 +69,19 @@ install(TARGETS GUFI DESTINATION lib)
 set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
 set(COMMON_LIBRARIES GUFI sqlite3 thpool Threads::Threads)
 
-# This function builds and installs the files whose
-# source file name matches the pattern NAME.EXT
+# This function builds the files whose source
+# file name matches the pattern NAME.EXT (NAME
+# is an optional argument, so it does not show
+# up in the arguments list). PATH is the
+# installation directory.
 #
 # ex:
-#     build_and_install(c file1 file2)
+#     build_and_install(bin c file1 file2)
+#        -> compiles file1.c into file1
+#        -> compiles file2.c into file2
+#        -> installs file1 and file2 into bin
 #
-function(build_and_install EXT)
+function(build_and_install PATH EXT)
   foreach(NAME ${ARGN})
     # build the executable
     add_executable(${NAME} ${NAME}.${EXT})
@@ -83,12 +89,12 @@ function(build_and_install EXT)
     target_link_libraries(${NAME} ${COMMON_LIBRARIES})
 
     # install the executable in ${CMAKE_INSTALL_PREFIX}/bin
-    install(TARGETS ${NAME} DESTINATION bin)
+    install(TARGETS ${NAME} DESTINATION ${PATH})
   endforeach()
 endfunction()
 
 # build and install the binaries that have C sources
-build_and_install(c
+build_and_install(bin c
   bfq
   bfti
   bfwi
@@ -99,7 +105,7 @@ build_and_install(c
   querydbn)
 
 # build and install the binaries that have C++ sources
-build_and_install(cpp
+build_and_install(bin cpp
   make_testtree)
 
 # build the miscellaneous binaries
