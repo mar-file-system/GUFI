@@ -260,6 +260,10 @@ static void processdir(void * passv)
         if (in.infile == 0) {
           if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
              continue;
+          if (in.buildinindir == 1) {
+            if (strcmp(entry->d_name, DBNAME) == 0)
+               continue;
+          }
           sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
           lstat(qwork.name, &qwork.statuso);
           qwork.xattrs=0;

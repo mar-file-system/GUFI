@@ -686,8 +686,92 @@ def cbfqbftiquerydbn():
  else: 
    print "good news: using tree summary examined %d directories and not using tree summary examined %d directories" % (numl,numl1)
  ######  end tree directory use test #####
- 
 ################################## test cbfqbftiquerydbn end ############################################
+################################### test cincr3modf ############################################
+def cbfwiinsrc():
+ testn="correctness bfwi in src tree"
+ cleanstart(testn,1)
+
+ # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+ gfullafter()
+ # wait until incremental time
+ time.sleep(1)
+ # make a full gufi tree and put it right in the source tree 
+ os.system('%s/%s/bfwi -n 2 -x -b -t %s %s' % (tdir,gdir,'.','d0')) 
+ mkbfqout('.','fullinsrc','d0')
+ print "++++++++++ comparing bfq from in src tree gufi and bfq from from not in src gufi tree "
+ cmd=os.system('cmp %s/fullbfqoutafter.0 %s/fullinsrc.0' % (top,top))
+ exit_code = os.WEXITSTATUS(cmd)
+ print "---------- test %s done result %d" % (testn,exit_code)
+ if (exit_code!=0):
+   exit()
+ #end cbfwiinsrc
+################################### test  cbfwiinsrc end ########################################
+################################### test cbfwrp2dbfullinsrc ############################################
+def cbfwrp2dbfullinsrc():
+ testn="correctness bfwreaddirplus2db full gufi tree build in src tree"
+ cleanstart(testn,1)
+ # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+ gfullafter()
+ # wait until incremental time
+ time.sleep(1) 
+ # make a full gufi tree and put it right in the source tree using bfwreaddirplus2db -b marking every dir suspect
+ os.system('%s/%s/bfwreaddirplus2db -n 2 -Y -b -x d0'  % (tdir,gdir))
+ mkbfqout('.','fullinsrc','d0')
+ print "++++++++++ comparing bfq from in src tree gufi and bfq from from not in src gufi tree "
+ cmd=os.system('cmp %s/fullbfqoutafter.0 %s/fullinsrc.0' % (top,top))
+ exit_code = os.WEXITSTATUS(cmd)
+ print "---------- test %s done result %d" % (testn,exit_code)
+ if (exit_code!=0):
+   exit()
+ #end  cbfwrp2dbfullinsrc
+################################### test  cbfwrp2dbfullinsrc end ########################################
+################################### test cbfwrdp2dbincrinsrc ############################################
+def cbfwrdp2dbincrinsrc():
+ testn="correctness bfwreaddirplus2db incr gufi tree update in src tree"
+ cleanstart(testn,1)
+ #make a gufi full in src tree
+ os.system('%s/%s/bfwreaddirplus2db -n 2 -Y -b -x d0'  % (tdir,gdir))
+ # wait until incremental time
+ time.sleep(1)
+ ############incremental test
+ os.system('mkdir d0/d00/nd000')
+ os.system('touch d0/d00/nd000/fnd000')
+ os.system('mkdir d0/d00/nd000/nd0000')
+ os.system('touch d0/d00/nd000/nd0000/fnd0000')
+ os.system('mv d0/d00/d000 d0')
+ os.system('mv d0/d000/d0000 d0')
+ os.system('mv d0/d000 d0/d0000')
+ os.system('rm -rf d0/d01/d000')
+ os.system('echo cheese >> d0/d02/d020/f0200')
+ #############################
+ # do a full gufi tree and a bfq on it to compare with the gufi we did an incremental on
+ gfullafter()
+ # the problem with just doing a bfwi to create a gufi from a src tree with a gufi in it is it will have the database files in it
+ # so we need to exclude the db files in the query of the bfwi created non in src tree gufi (for comparison)
+ mwd=os.getcwd()
+ os.chdir('%s' % ('fullafter'))
+ # we also cant compare the totals in the directory record in the summary table because it will be off by that database file that 
+ # we removed with the query excluding those files - the totals are still in the summary record
+ os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries where name!=\'db.db\';" -S "select path(),name,type,inode,linkname,xattrs from vsummarydir;" -a -o %s/%s %s'  % (tdir,gdir,top,'fullbfqoutafternodbname','d0')) 
+ os.chdir('%s' % (mwd))
+ # get time when the full original gufi was made
+ fo = open("fulltime", "rb")
+ itt = fo.read(12);
+ it = itt.rstrip()
+ fo.close()
+ # make a incremental gufi tree update and put it right in the source tree using bfwreaddirplus2db -b with suspect mode 3 
+ os.system('%s/%s/bfwreaddirplus2db -n 2 -A 3 -b -c %s -x d0'  % (tdir,gdir,it))
+ # do a bfq of the incrementally updated in src tree gufi again exclude totals from the summary record so it will match
+ os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries where name!=\'db.db\';" -S "select path(),name,type,inode,linkname,xattrs from vsummarydir;" -a -o %s/%s %s'  % (tdir,gdir,top,'incrinsrc','d0')) 
+ print "++++++++++ comparing bfq from in src tree gufi incremental  and bfq from from not in src gufi tree full "
+ cmd=os.system('cmp %s/fullbfqoutafternodbname.0 %s/incrinsrc.0' % (top,top))
+ exit_code = os.WEXITSTATUS(cmd)
+ print "---------- test %s done result %d" % (testn,exit_code)
+ if (exit_code!=0):
+   exit()
+ #end ccbfwrdp2dbincrinsrc
+################################### test  cbfwrdp2dbincrinsrc end ########################################
 
 ################################ functional tests and support start here ######################
 #tester for number of lines in output files for comparison to norm for functional tests
@@ -901,6 +985,9 @@ def runallc():
  cflatloadfinddfw()
  cflatloadbfwi()
  cbfqbftiquerydbn()
+ cbfwiinsrc()
+ cbfwrp2dbfullinsrc()
+ cbfwrdp2dbincrinsrc()
  print "+_+_+_+_+_+_+_+_+_ end of all correctness tests +_+_+_+_+_+_+_+_+"
 
 def runallf():
@@ -936,6 +1023,9 @@ def usage():
  print "cflatloadfinddfw                  - correctness flat load using bfwi -u from find dfw"
  print "cflatloadbfwi                     - correctness flat load using bfwi -u from bfwi"
  print "cbfqbftiquerydbn                  - correctness bfq and bfti and querydnb"
+ print "cbfwiinsrc                        - correctness bfwi putting index in src tree"
+ print "cbfwrp2dbfullinsrc                - correctness bfwreaddirplus2db full gufi tree build in src tree"
+ print "cbfwrdp2dbincrinsrc               - correctness bfwreaddirplus2db incr gufi tree update in src tree"
  print "fbfq                              - functional bfq"
  print "fbfti                             - functional bfti"
  print "fbfwi                             - functional bfwi"
@@ -1003,6 +1093,18 @@ if len(sys.argv) > 1:
   exit()  
  elif (sys.argv[1] == 'cbfqbftiquerydbn'):
   cbfqbftiquerydbn()
+  print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
+  exit()  
+ elif (sys.argv[1] == 'cbfwiinsrc'):
+  cbfwiinsrc()
+  print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
+  exit()  
+ elif (sys.argv[1] == 'cbfwrp2dbfullinsrc'):
+  cbfwrp2dbfullinsrc()
+  print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
+  exit()  
+ elif (sys.argv[1] == 'cbfwrdp2dbincrinsrc'):
+  cbfwrdp2dbincrinsrc()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
   exit()  
  elif (sys.argv[1] == 'fbfq'):

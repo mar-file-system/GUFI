@@ -186,3 +186,8 @@ ______________________________________________________
 update of bfq to allow for the top directory where we start to be a link to a dir as well as a dir
 ___________________________________________
 wrote a way to convert dates for use in tsm queries and get dates from tsm query into a usable form for compare
+-------------------------------------------------
+fixed bfwi so that if you are writing the gufi tree directly into the src tree you need to ignore the DBNAME in the index
+______________________________________________-
+fixed bfwreaddirplus2db put in -b flag for creating gufi index and check in reprocessdir to ignore the DBNAME in the index
+and to create directory databases in the source tree with the -b flag which can be used for either a full or incremental (of all suspect types) build/update of a gufi tree that is stored in the source tree
