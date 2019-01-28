@@ -2,25 +2,13 @@
 
 set -e
 
-if [[ "$#" -ne "1" ]]; then
-    echo "Syntax: $0 non-existent-path"
-    exit 1
-fi;
-
-root="$1"
-src="${root}/testdir"
-dst="${root}/testgufi/"
-
-if [[ -d "${root}" ]]; then
-    echo "Please provide the name of a non-existent directory"
-    exit 1
-fi;
-
 # go to the root GUFI directory
 cd "$(dirname $(dirname $0))"
 
-# build the directory in case it doesn't exist
-mkdir -p "${root}"
+# generate a directory
+root="$(mktemp -d XXXXXXXXXX)"
+src="${root}/testdir"
+dst="${root}/testgufi/"
 
 # always remove root after it is created
 function cleanup {

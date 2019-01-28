@@ -36,5 +36,7 @@ foreach(SCRIPT
   configure_file(${SCRIPT} ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} COPYONLY)
 endforeach()
 
+add_test(NAME verifyknowntree COMMAND verifyknowntree DEPENDS GUFI)
+
 # recurse down into the googletest subdirectory
 add_subdirectory(googletest)
