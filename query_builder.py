@@ -210,7 +210,7 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
         query += ' LIMIT {}'.format(num_results)
 
     if extra:
-        query += ' '.join(extra)
+        query += ' ' + ' '.join(extra)
 
     return query + ';'
 

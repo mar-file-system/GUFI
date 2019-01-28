@@ -135,8 +135,8 @@ def leaf_count(args, order = ''):
 def total_in_leaf(args, *ignored):
     _, where = build(args)
     entries        = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    intermediate   = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
-    aggregate      = qb.build_query(['count'],                 ['entries'], None,  None, None, None, None)
+    intermediate   = qb.build_query(['count'],                 ['entries'], None, None, None, None, None)
+    aggregate      = qb.build_query(['TOTAL(count)'],          ['entries'], None, None, None, None, None)
 
     args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
 
@@ -146,7 +146,7 @@ def median_in_leaf(args, *ignored):
     '''https://stackoverflow.com/a/15766121'''
     _, where = build(args)
     entries      = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    intermediate = qb.build_query(['count'],             ['entries'], None,  None, ['count'], '2 - (SELECT COUNT(*) FROM entries) % 2', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
+    intermediate = qb.build_query(['count'],             ['entries'], None,  None, ['count'], '(2 - (SELECT COUNT(*) FROM entries) % 2)', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
     aggregate    = qb.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
 
     args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
@@ -159,7 +159,7 @@ def get_depth(path, sep = '/'):
     sub = path[-1] != sep # subtract 1 if the provided path did not include a separator because the split string will start with a separator
 
     for dirpath, _, _ in os.walk(path):
-        ret += [[path, len(dirpath[path_len:].split(sep)) - sub]]
+        ret += [[dirpath, len(dirpath[path_len:].split(sep)) - sub]]
     return ret
 
 def depth(args, sep = '/'):
@@ -213,11 +213,14 @@ if __name__=='__main__':
     parser.add_argument('GUFI_tree',                                                                         nargs='+',            help='path containing GUFI tree database file')
 
     args = parser.parse_args();
+    if args.order:
+        args.order = ORDER[args.order]
 
     if args.operation in NONQUERIES:
         res = NONQUERIES[args.operation](args)
         res.sort(key = lambda pair: pair[1], reverse=(args.order==DESCENDING))
-        print len(res[:args.num_results])
+        for path, count in res[:args.num_results]:
+            print path, count
     elif args.operation in BFQ_QUERIES:
         entries, intermediate, aggregate = BFQ_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
 
