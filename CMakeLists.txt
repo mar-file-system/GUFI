@@ -184,5 +184,5 @@ add_subdirectory(test)
 
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
-set(PATHS contrib docs include incremental scripts test ${BIN_SOURCES} ${TIME_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${SCRIPTS})
+set(PATHS contrib docs include scripts test ${BIN_SOURCES} ${TIME_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${SCRIPTS})
 add_custom_target(gary ALL COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/gary.tar" ${PATHS} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
