@@ -28,6 +28,9 @@ dst="${dst}${src}"
 # do not exit after first error
 set +e
 
+# keep track of errors to use as return code
+error=0
+
 # compare files
 echo "Compare files"
 diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, type, modetotxt(mode), nlink, uid, gid, size, linkname" --root "${root}" 2>/dev/null | sort) <(
@@ -44,6 +47,7 @@ diff <(./gufi_find "${dst}" -type "f" --select "path() || '/' || name as name, t
         echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001|0||"
         echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001|0||"
     ) | sort) && echo "No Differences"
+error=$(($error + $?))
 
 # compare files and symlinks
 echo
@@ -64,5 +68,6 @@ diff <(./gufi_find "${dst}" --select "path() || '/' || name as name, type, modet
         echo "${dst}/repeat_name|f|-rw-rw-rw-|1|1001|1001||"
         echo "${dst}/unusual, name?#|f|-rw-rw-rw-|1|1001|1001||"
     ) | sort) && echo "No Differences"
+error=$(($error + $?))
 
-exit 0
+exit $error
