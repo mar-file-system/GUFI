@@ -184,5 +184,28 @@ add_subdirectory(test)
 
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
-set(PATHS contrib docs include scripts test ${BIN_SOURCES} ${TIME_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${SCRIPTS})
-add_custom_target(gary ALL COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/gary.tar" ${PATHS} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set(SOURCES ${BIN_SOURCES} ${TIME_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
+set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
+set(OTHER_FILES
+  CMakeLists.txt
+  INSTALL
+  LICENSE.txt
+  Makefile
+  NOTES.txt
+  README
+  README.md
+  TBD.txt
+  gpfs-scan-listnew-out.c
+  gpfs-scan-listnew.c
+  modu.c
+  mygpfs.h
+  nightly.sh
+  runtsm
+  triell.c)
+set(PATHS
+  contrib
+  docs
+  include
+  scripts
+  test)
+add_custom_target(gary ALL COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/gary.tar" ${PATHS} ${SOURCES} ${HEADERS} ${SCRIPTS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
