@@ -31,4 +31,6 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 add_executable(googletests bf.cpp utils.cpp)
 add_dependencies(googletests GUFI)
-target_link_libraries(googletests gtest gtest_main GUFI sqlite3 thpool pthread)
+target_link_libraries(googletests gtest gtest_main ${COMMON_LIBRARIES})
+
+add_test(NAME googletests COMMAND googletests DEPENDS GUFI)

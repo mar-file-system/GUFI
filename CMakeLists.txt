@@ -173,5 +173,8 @@ foreach(SCRIPT example_run gufi_find gufi_stats gufi_ls query_builder.py)
   install(PROGRAMS ${SCRIPT} DESTINATION bin)
 endforeach()
 
+# enable "make test"
+enable_testing()
+
 # recurse down into the test subdirectory
 add_subdirectory(test)
