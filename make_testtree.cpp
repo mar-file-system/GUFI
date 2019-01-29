@@ -673,9 +673,9 @@ void generatedir(void *args) {
         }
     }
 
-    for(std::size_t i = 1; i < subdir_count; i++) {
+    for(std::size_t i = 0; i < subdir_count; i++) {
         std::stringstream s;
-        s << arg->path << "/dir" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << i - 1;
+        s << arg->path << "/dir" << std::setw(arg->settings->leading_zeros) << std::setfill('0') << i;
 
         // push into work queue
         ThreadArgs *sub_args = new ThreadArgs();
@@ -722,7 +722,8 @@ std::ostream &print_help(std::ostream &stream, const char *argv0) {
                   << "\n        --stat-rate ms          How often to print timed statistics, in milliseconds   (Default: "  << s.stat_rate << ", 0 cancels)"
                   << "\n        --progress-rate ms      How often to print progress, in milliseconds           (Default: "  << s.progress_rate << ", 0 cancels)"
                   << "\n        --dry-run               Runs without creating the GUFI tree                    (Default: "  << s.dryrun << ")"
-                  << "\n    directory                   The directory to put the generated tree into";
+                  << "\n    directory                   The directory to put the generated tree into"
+                  << "\n";
 }
 
 template <typename T>
@@ -944,6 +945,17 @@ int main(int argc, char *argv[]) {
 
         if (!settings.valid(std::cout)) {
             print_help(std::cout, argv[0]);
+            return 1;
+        }
+
+        // make sure the path doesn't already exist
+        struct stat st;
+        if (stat(settings.top.c_str(), &st) == 0) { // if the top level path exists
+            std::cerr << "Error: \"" << settings.top << "\" already exists" << std::endl;
+            return 1;
+        }
+        else if (errno != ENOENT) {                 // if the error is not "path doesn't exist"
+            std::cerr << "Error: " << strerror(errno) << " (" << errno << ")" << std::endl;
             return 1;
         }
 

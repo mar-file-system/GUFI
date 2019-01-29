@@ -94,6 +94,7 @@ function(build_and_install PATH LINK_GUFI)
     # build the executable
     add_executable(${TARGET} ${SOURCE})
 
+    # link GUFI libraries if needed
     if (LINK_GUFI)
       add_dependencies(${TARGET} ${COMMON_DEPENDENCIES})
       target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
@@ -118,8 +119,8 @@ set(BIN_SOURCES
 build_and_install(bin TRUE ${BIN_SOURCES})
 
 # build binaries that do not need to link with GUFI
-set(TIME_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install(bin FALSE ${TIME_SOURCES})
+set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
+build_and_install(bin FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 pkg_search_module(FUSE fuse)
@@ -185,7 +186,7 @@ add_subdirectory(test)
 
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
-set(SOURCES ${BIN_SOURCES} ${TIME_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
+set(SOURCES ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
   .gitignore
