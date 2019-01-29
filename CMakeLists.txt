@@ -102,8 +102,8 @@ include(ExternalProject)
 # have a fixed dynamic library location to link to
 set(thpool_PREFIX ${CMAKE_INSTALL_PREFIX}/C-Thread-Pool)
 ExternalProject_Add(C-Thread-Pool
-  GIT_REPOSITORY    https://github.com/calccrypto/C-Thread-Pool.git
-  GIT_TAG           cmake
+  GIT_REPOSITORY    https://github.com/jti-lanl/C-Thread-Pool.git
+  GIT_TAG           lanl
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
   CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${thpool_PREFIX}
