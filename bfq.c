@@ -546,9 +546,10 @@ int main(int argc, char *argv[])
 #endif
 
          // run the aggregate query on the aggregated results
+         size_t rows = 0;
          sqlite3_stmt *res = NULL;
          if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
-             print_results(res, stdout, 1, 0, in.printing, in.delim);
+             rows = print_results(res, stdout, 1, 0, in.printing, in.delim);
          }
          else {
              fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
@@ -563,7 +564,8 @@ int main(int argc, char *argv[])
          const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
          const long double output_time = elapsed(&output_start, &output_end);
 
-         fprintf(stderr, "Queries performed:                              %d\n",   thread_count + in.intermediate_count + 1);
+         fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
+         fprintf(stderr, "Queries performed:                              %d\n",     thread_count + in.intermediate_count + 1);
          fprintf(stderr, "Time to aggregate into intermediate databases:  %Les\n", intermediate_time);
          fprintf(stderr, "Time to aggregate into final databases:         %Les\n", aggregate_time);
          fprintf(stderr, "Time to print:                                  %Les\n", output_time);

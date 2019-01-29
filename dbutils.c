@@ -918,8 +918,8 @@ int addqueryfuncs(sqlite3 *db) {
             (sqlite3_create_function(db, "modetotxt",  1, SQLITE_UTF8, NULL, &modetotxt,  NULL, NULL) == SQLITE_OK))?0:1;
 }
 
-int print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
-    int rec_count = 0;
+size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
+    size_t rec_count = 0;
 
     // NOTE: if <sqlstmt> actually contained multiple statments, then this
     //       loop only runs with the final statement.
