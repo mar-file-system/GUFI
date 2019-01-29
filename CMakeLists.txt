@@ -1,3 +1,78 @@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# -----
+# NOTE:
+# -----
+#
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
 cmake_minimum_required(VERSION 3.0.0)
 project(GUFI LANGUAGES C CXX)
 
@@ -44,8 +119,8 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
-message(STATUS "SQLITE3 headers located in ${SQLITE3_INCLUDEDIR}")
-message(STATUS "SQLITE3 libraries located in ${SQLITE3_LIBDIR}")
+message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
+message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
 
 # download, build, and install sqlite3-pcre
 # installation needs to happen here so that the executables
@@ -61,7 +136,8 @@ ExternalProject_Add(sqlite3-pcre
 
 # create the GUFI library, which contains all of the common source files
 set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/sqlite3-pcre.so")
-add_library(GUFI STATIC bf.c dbutils.c structq.c utils.c)
+set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
+add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI C-Thread-Pool)
 install(TARGETS GUFI DESTINATION lib)
 
@@ -186,7 +262,7 @@ add_subdirectory(test)
 
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
-set(SOURCES ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
+set(SOURCES ${GUFI_SOURCES} ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
   .gitignore
