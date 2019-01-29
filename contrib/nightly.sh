@@ -6,8 +6,8 @@
 git config --global user.name  "Travis CI Nightly Build"
 git config --global user.email "travis@travis-ci.org"
 
-git add "${NIGHTLY}"
-git commit --message "Travis CI Nightly Build $(date)" --message "[ci skip]"
+git add $1
+git commit --all --message "Travis CI Nightly Build $(date)" --message "[ci skip]"
 
 # Upload the nightly build
 git remove rm origin

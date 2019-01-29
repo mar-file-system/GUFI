@@ -78,6 +78,7 @@ OF SUCH DAMAGE.
 #include <cmath>
 #include <cstring>
 #include <ctime>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <list>

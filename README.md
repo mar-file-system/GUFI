@@ -2,12 +2,14 @@
 
 GUFI is part of MarFS, which is released under the [BSD License](LICENSE.txt).
 
+[![Build Status](https://travis-ci.com/mar-file-system/GUFI.svg?branch=master)](https://travis-ci.com/mar-file-system/GUFI)
+
 ## Documentation
 Please see [README](README) and the [docs directory](docs) for documentation
 
 ## Dependencies
 
-### Programs
+### Build Tools
 - Modern C compiler
 - Modern C++ compiler
 - CMake 3

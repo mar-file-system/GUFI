@@ -108,4 +108,4 @@ add_executable(googletests bf.cpp utils.cpp)
 add_dependencies(googletests GUFI)
 target_link_libraries(googletests gtest gtest_main ${COMMON_LIBRARIES})
 
-add_test(NAME googletests COMMAND googletests DEPENDS GUFI)
+add_test(NAME googletests COMMAND googletests)

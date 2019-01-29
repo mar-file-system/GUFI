@@ -1,46 +1,191 @@
 language: c
 sudo: false
 
-branches:
-    only:
-        - gufi_find
+matrix:
+    include:
+        - os: linux
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                  packages:
+                      - cmake
+                      - g++-7
+                      - libattr1-dev
+                      - libfuse-dev
+                      - npm
+                  update: true
+          env:
+              - C_COMPILER=gcc-7
+              - CXX_COMPILER=g++-7
+        - os: linux
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                  packages:
+                      - cmake
+                      - g++-8
+                      - libattr1-dev
+                      - libfuse-dev
+                      - npm
+                  update: true
+          env:
+              - C_COMPILER=gcc-8
+              - CXX_COMPILER=g++-8
+        - os: linux
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                      - llvm-toolchain-xenial-7
+                  packages:
+                      - cmake
+                      - clang-7
+                      - libattr1-dev
+                      - libfuse-dev
+                      - npm
+                  update: true
+          env:
+              - C_COMPILER=clang-7
+              - CXX_COMPILER=clang++-7
 
-os:
-    - linux
-    - osx
+        # macOS 10.12
+        - os: osx
+          osx_image: xcode9.2
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@7
+                      - mysql
+                      - npm
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-7
+              - CXX_COMPILER=g++-7
+              - FORMULAE=gcc@7
+        - os: osx
+          osx_image: xcode9.2
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@8
+                      - mysql
+                      - npm
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-8
+              - CXX_COMPILER=g++-8
+              - FORMULAE=gcc@8
+        - os: osx
+          osx_image: xcode9.2
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - llvm@7
+                      - mysql
+                      - npm
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=clang
+              - CXX_COMPILER=clang++
+              - FORMULAE=llvm@7
 
-env:
-    - NIGHTLY=nightly.tar.gz
+        # macOS 10.13
+        - os: osx
+          osx_image: xcode10.1
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@7
+                      - mysql
+                      - npm
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-7
+              - CXX_COMPILER=g++-7
+              - FORMULAE=gcc@7
+        - os: osx
+          osx_image: xcode10.1
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@8
+                      - mysql
+                      - npm
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-8
+              - CXX_COMPILER=g++-8
+              - FORMULAE=gcc@8
+        - os: osx
+          osx_image: xcode10.1
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - llvm@7
+                      - mysql
+                      - npm
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=clang
+              - CXX_COMPILER=clang++
+              - FORMULAE=llvm@7
 
-compiler:
-    - gcc
-    - clang
+before_install:
+    # get a newer version of libsqlite3-dev than the one provided by xenial (must be at least version 3.13)
+    # this ppa is not allowed through addons, so it has to be added manually
+    - if [[ "$TRAVIS_OS_NAME" = "linux" ]]; then sudo add-apt-repository ppa:jonathonf/backports -y; fi
+    - if [[ "$TRAVIS_OS_NAME" = "linux" ]]; then sudo apt-get update -qq; fi
+    - if [[ "$TRAVIS_OS_NAME" = "linux" ]]; then sudo apt-get install libsqlite3-dev -y; fi
 
-addons:
-    apt:
-        packages:
-            - cmake
-            - libsqlite3-dev
-            - libfuse-dev
-            - npm
+    # get osxfuse from homebrew/cask
+    - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then brew tap homebrew/cask; fi
+    - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then brew cask install osxfuse; fi
+    # use the compiler installed by brew
+    - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then export PATH="$(brew --prefix $FORMULAE)/bin:$PATH"; fi
+    # use the sqlite3 install by brew
+    - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then export PKG_CONFIG_PATH="$(brew --prefix sqlite3)/lib/pkgconfig:$PKG_CONFIG_PATH"; fi
 
 script:
+    - export CC="${C_COMPILER}"
+    - export CXX="${CXX_COMPILER}"
+    - export GTEST_COLOR=1
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Debug ..
     - make
-    - make test
-    - test/generatetree testdir
-    - test/runtests testdir testdir.gufi
-    - test/verifyknowntree
-    - test/googletest/test
+    - ctest --verbose
 
-after_success:
-    # https://www.npmjs.com/package/travis-deploy-once
-    - npm install -g travis-deploy-once
-    - tar -czf "${NIGHTLY}" $(git ls-tree --full-tree --name-only -r HEAD | grep -v ${NIGHTLY})
+# after_success:
+#     # https://www.npmjs.com/package/travis-deploy-once
+#     - npm install -g travis-deploy-once
 
-deploy:
-    provider: script
-    script: travis-deploy-once nightly.sh
-    on:
-        branch: master
-        condition: "${TRAVIS_EVENT_TYPE}" = "cron"
-        tags: false
+# deploy:
+#     provider: script
+#     script: travis-deploy-once contrib/nightly.sh gary.tar
+#     on:
+#         branch: master
+#         condition: "${TRAVIS_EVENT_TYPE}" = "cron"
+#         tags: false

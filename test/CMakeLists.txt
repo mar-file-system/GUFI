@@ -112,15 +112,9 @@ foreach(SCRIPT
   configure_file(${SCRIPT} ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} COPYONLY)
 endforeach()
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTDIR test/testdir)
-execute_process(
-  COMMAND ${CMAKE_COMMAND} -E remove_directory ${TESTDIR}
-  COMMAND ${CMAKE_COMMAND} -E remove_directory ${TESTDIR}.gufi
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${TESTDIR}
-  COMMAND ${CMAKE_COMMAND} -E tar "xf" testdir.tar -C ${TESTDIR}
-)
-add_test(NAME runtests COMMAND test/runtests ${TESTDIR} ${TESTDIR}.gufi WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+# # create an empty directory and extract testdir.tar into it for runtests
+set(TESTDIR ${CMAKE_CURRENT_BINARY_DIR}/testdir)
+add_test(NAME runtests COMMAND ${CMAKE_CURRENT_BINARY_DIR}/runtests "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar" "${TESTDIR}" "${TESTDIR}.gufi" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_test(NAME verifyknowntree COMMAND verifyknowntree)
 

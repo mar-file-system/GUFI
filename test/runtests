@@ -78,22 +78,27 @@ SCRIPT="$(dirname $BASH_SOURCE)" # Must be at the top
 
 
 function usage() {
-    echo "$0 dir GUFI_tree"
+    echo "Usage: $0 tar dir GUFI_tree"
 }
 
-if [[ "$#" -lt "2" ]]; then
+if [[ "$#" -lt "3" ]]; then
     usage
     exit 1
 fi
 
-TEST="$1"
-COPY="$2"
+TAR="$1"
+TEST="$2"
+COPY="$3"
 
 function cleanup {
     rm -rf "$COPY"
 }
 
 trap cleanup EXIT
+
+rm -rf $TEST
+mkdir $TEST
+tar -xf $TAR -C $TEST
 
 # example
 $SCRIPT/runbfwi $TEST $COPY

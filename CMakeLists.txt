@@ -135,7 +135,13 @@ ExternalProject_Add(sqlite3-pcre
 )
 
 # create the GUFI library, which contains all of the common source files
-set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/sqlite3-pcre.so")
+# provide the right PCRE library name
+if (UNIX AND NOT APPLE AND NOT CYGWIN)
+  set(PCRE_EXT "so")
+elseif(APPLE)
+  set(PCRE_EXT "dylib")
+endif()
+set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/sqlite3-pcre.${PCRE_EXT}")
 set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI C-Thread-Pool)
@@ -198,51 +204,75 @@ build_and_install(bin TRUE ${BIN_SOURCES})
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
 build_and_install(bin FALSE ${MISC_SOURCES})
 
-# only build bffuse and bfresultfuse if FUSE is found
-pkg_search_module(FUSE fuse)
-set(FUSE_SOURCES bffuse.c bfresultfuse.c)
-if (FUSE_FOUND)
+# search for FUSE on Linux, and OSXFUSE on OSX
+if (UNIX AND NOT APPLE AND NOT CYGWIN)
+  pkg_search_module(FUSE fuse)
   message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
   message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
+
+  set(MY_FUSE_FOUND YES)
+  set(MY_FUSE_CFLAGS ${FUSE_CFLAGS})
+  set(MY_FUSE_LDFLAGS ${FUSE_LDFLAGS})
+elseif (APPLE)
+  pkg_search_module(OSXFUSE osxfuse)
+
+  message(STATUS "OSXFUSE headers located in ${OSXFUSE_INCLUDEDIR}")
+  message(STATUS "OSXFUSE libraries located in ${OSXFUSE_LIBDIR}")
+
+  set(MY_FUSE_FOUND YES)
+  set(MY_FUSE_CFLAGS ${OSXFUSE_CFLAGS})
+  set(MY_FUSE_LDFLAGS ${OSXFUSE_LDFLAGS})
+endif()
+
+# only build bffuse and bfresultfuse if FUSE is found
+if (MY_FUSE_FOUND)
+  # remove the semicolons that get added
+  string(REPLACE ";" " " MY_FUSE_CFLAGS "${MY_FUSE_CFLAGS}")
+  string(REPLACE ";" " " MY_FUSE_LDFLAGS "${MY_FUSE_LDFLAGS}")
 
   # create the bffuse executable
   add_executable(bffuse bffuse.c)
   add_dependencies(bffuse ${COMMON_DEPENDENCIES})
-  set_target_properties(bffuse PROPERTIES COMPILE_FLAGS -D_FILE_OFFSET_BITS=64)
-  target_link_libraries(bffuse ${COMMON_LIBRARIES} fuse)
+  set_target_properties(bffuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
+  target_link_libraries(bffuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
   # create the bfresultfuse executable
   add_executable(bfresultfuse bfresultfuse.c)
   add_dependencies(bfresultfuse ${COMMON_DEPENDENCIES})
-  set_target_properties(bfresultfuse PROPERTIES COMPILE_FLAGS -D_FILE_OFFSET_BITS=64)
-  target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} fuse)
+  set_target_properties(bfresultfuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
+  target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
   # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/bin
   install(TARGETS bffuse bfresultfuse DESTINATION bin)
 else()
   message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
 endif()
+set(FUSE_SOURCES bffuse.c bfresultfuse.c)
 
 # tell CMake to search the contrib directory for FindMYSQL.cmake and mysql-config.cmake
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/contrib)
 
 # only build bfmi if MySQL is found
 pkg_search_module(MYSQL mysql)
-set(MYSQL_SOURCES bfmi.c)
 if (MYSQL_FOUND)
   message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
   message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
 
+  string(REPLACE ";" " " MYSQL_CFLAGS "${MYSQL_CFLAGS}")
+  string(REPLACE ";" " " MYSQL_LDFLAGS "${MYSQL_LDFLAGS}")
+
   # create the bfmi executable
   add_executable(bfmi bfmi.c)
   add_dependencies(bfmi ${COMMON_DEPENDENCIES})
-  target_link_libraries(bfmi ${COMMON_LIBRARIES} mysql)
+  set_target_properties(bfmi PROPERTIES COMPILE_FLAGS "${MYSQL_CFLAGS}")
+  target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LDFLAGS})
 
   # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
   install(TARGETS bfmi DESTINATION bin)
 else()
   message(STATUS "MySQL not found. Not building bfmi.")
 endif()
+set(MYSQL_SOURCES bfmi.c)
 
 # copy and install scripts that act like binaries
 set(SCRIPTS example_run gufi_find gufi_stats gufi_ls query_builder.py)
@@ -278,7 +308,6 @@ set(OTHER_FILES
   gpfs-scan-listnew.c
   modu.c
   mygpfs.h
-  nightly.sh
   runtsm
   triell.c)
 set(PATHS

@@ -194,13 +194,13 @@ mkdir ${ROOT}
 # generate tree
 cd ${ROOT}
 touch empty_file
-truncate --size=1K 1KB
-truncate --size=1M 1MB
+truncate -s 1K 1KB
+truncate -s 1M 1MB
 touch "unusual, name?#"
 touch .hidden
 touch repeat_name
 ln -f -s $(realpath 1KB) file_symlink
-touch -d "1970-01-01 00:00:00" old_file
+touch -amt 197001010000.00 old_file
 
 mkdir directory
 cd directory
