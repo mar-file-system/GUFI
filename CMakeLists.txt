@@ -292,6 +292,8 @@ add_subdirectory(test)
 
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
+
+# collect all files into variables
 set(SOURCES ${GUFI_SOURCES} ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
@@ -316,5 +318,23 @@ set(PATHS
   docs
   include
   scripts
-  test)
-add_custom_target(gary ALL COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/gary.tar" ${PATHS} ${SOURCES} ${HEADERS} ${SCRIPTS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  test
+  C-Thread-Pool
+  sqlite3-pcre
+  googletest)
+
+# timestamp
+execute_process(COMMAND date +%Y-%m-%d OUTPUT_VARIABLE TODAY)
+string(REGEX REPLACE "\n$" "" TODAY "${TODAY}")
+
+# set the output nemae
+set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi-${TODAY}.tar")
+
+# generate the tarball
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
+                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
+                       COMMAND ${CMAKE_COMMAND} -E tar "cf" ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${SCRIPTS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest)
