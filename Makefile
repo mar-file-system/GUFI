@@ -30,6 +30,7 @@ LIBFILES = bf structq dbutils utils
 
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
 CFLAGS += -std=gnu11
+LDFLAGS += -lpthread
 ifneq ($(DEBUG),)
    CFLAGS   += -g -O0 -DDEBUG
    CXXFLAGS += -g -O0 -DDEBUG
@@ -113,17 +114,17 @@ thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
 
 %.o: %.c $(LIB_H)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
+	$(CC) -DPCRE=sqlite-pcre/pcre.so $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
 
 
 
 # --- apps
 
 %: %.c libgufi.a
-	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
+	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) -o $@ -L. $< -lgufi $(LIBS) $(LDFLAGS)
 
 %: %.cpp libgufi.a
-	$(CXX) $(CXXFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) $(LDFLAGS) -o $@ -L. $< $(LIBS)
+	$(CXX) $(CXXFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) -o $@ -L. $< -lgufi $(LIBS) $(LDFLAGS)
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
 %.mysql:

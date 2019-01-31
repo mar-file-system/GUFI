@@ -169,12 +169,12 @@ TEST(parse_cmd_line, positional) {
     EXPECT_EQ(in.suspectfile,        0);
     EXPECT_EQ(in.stride,             0);
     EXPECT_EQ(in.infile,             0);
-    EXPECT_EQ(in.min_level,          0);
-    EXPECT_EQ(in.max_level,          -1);
+    EXPECT_EQ(in.min_level,          (size_t) 0);
+    EXPECT_EQ(in.max_level,          (size_t) -1);
     EXPECT_STREQ(in.intermediate,    "SELECT * FROM entries;");
     EXPECT_STREQ(in.aggregate,       "SELECT * FROM entries;");
-    EXPECT_EQ(in.intermediate_count, in.maxthreads * 4 + 1);
-    EXPECT_EQ(in.intermediate_skip,  1);
+    EXPECT_EQ(in.intermediate_count, (size_t) (in.maxthreads * 4 + 1));
+    EXPECT_EQ(in.intermediate_skip,  (size_t) 1);
     EXPECT_EQ(in.aggregate_or_print, AGGREGATE);
 }
 
@@ -251,7 +251,7 @@ TEST(INSTALL_UINT, too_small) {
     snprintf(buf, 10, "%zu", src);
     INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT too small test");
     EXPECT_EQ(retval, -1);
-    EXPECT_EQ(dst, 0);
+    EXPECT_EQ(dst, (std::size_t) 0);
 }
 
 TEST(INSTALL_UINT, too_big) {
