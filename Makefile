@@ -1,17 +1,47 @@
+CC?=cc
+CXX?=c++
+CFLAGS?=
+CXXFLAGS?=-std=c++11
+LDFLAGS?=-lpthread
+
+PCRE_CFLAGS     ?= $(shell pkg-config --cflags libpcre)
+PCRE_LDFLAGS    ?= $(shell pkg-config --libs   libpcre)
+
+SQLITE3_CFLAGS  ?= $(shell pkg-config --cflags sqlite3)
+SQLITE3_LDFLAGS ?= $(shell pkg-config --libs   sqlite3)
+
+# different fuse libs for OSX/Linux
+ifeq ($(UNAME_S), Darwin)
+	FUSE_PKG = osxfuse
+else
+	FUSE_PKG = fuse
+endif
+
+FUSE_CFLAGS   ?= $(shell pkg-config --cflags $(FUSE_PKG))
+FUSE_LDFLAGS  ?= $(shell pkg-config --libs   $(FUSE_PKG))
+
+MYSQL_CFLAGS  ?= $(shell mysql_config --include)
+MYSQL_LDFLAGS ?= $(shell mysql_config --libs_r)
+
+MAKEFILE_PATH         = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SQLITE3_PCRE_PATH    ?= $(MAKEFILE_PATH)/sqlite3-pcre
+SQLITE3_PCRE_CFLAGS  ?= -I$(SQLITE3_PCRE_PATH) $(SQLITE3_CFLAGS) $(PCRE_CFLAGS)
+SQLITE3_PCRE_LDFLAGS ?= -L$(SQLITE3_PCRE_PATH) -lsqlite3-pcre $(SQLITE3_LDFLAGS) $(PCRE_LDFLAGS)
+SQLITE3_PCRE_LIB     ?= $(SQLITE3_PCRE_PATH)/libsqlite3-pcre.a
+
+GTEST_SRC            ?= $(realpath googletest)
+GTEST_BUILD_DIR      ?= $(GTEST_SRC)/build
+GTEST_INSTALL_DIR    ?= $(GTEST_SRC)/install
+
 DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 
+
 # TOOLS = querydb querydbn make_testdirs dbdump
-TOOLS = querydb querydbn make_testdirs make_testtree sqlite3-pcre/pcre.so
+TOOLS = querydb querydbn make_testdirs make_testtree
 
-
-.PHONY: sqlite3-pcre googletest test
-
-SQLITE3_PCRE      ?= sqlite3-pcre
-GTEST_SRC         ?= $(realpath googletest)
-GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
-GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
+.PHONY: C-Thread-Pool sqlite3-pcre googletest test
 
 all:   bfw tools
 
@@ -20,27 +50,24 @@ mysql: $(BFW_MYSQL)
 dfw:   $(DFW)
 tools: $(TOOLS)
 
-$(SQLITE3_PCRE)/pcre.so:
-	$(MAKE) -C $(SQLITE3_PCRE)
+# export all variables into submakes
+export
+
+$(SQLITE3_PCRE_LIB): $(SQLITE3_PCRE_PATH)/pcre.c $(SQLITE3_PCRE_PATH)/pcre.h
+	$(MAKE) -C sqlite3-pcre libsqlite3-pcre.a
+
+CFLAGS  += $(SQLITE3_PCRE_CFLAGS)
+LDFLAGS += $(SQLITE3_PCRE_LDFLAGS)
 
 # putils.c was assimilated into utils.c
 LIBFILES = bf structq dbutils utils
 
-
-
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
-CFLAGS += -std=gnu11
-LDFLAGS += -lpthread
 ifneq ($(DEBUG),)
-   CFLAGS   += -g -O0 -DDEBUG
-   CXXFLAGS += -g -O0 -DDEBUG
+   CFLAGS += -g -O0 -DDEBUG
 else
-   CFLAGS   += -O3
-   CXXFLAGS += -O3
+   CFLAGS += -O3
 endif
-
-
-
 
 # --- DARWIN
 UNAME_S = $(shell uname -s)
@@ -48,53 +75,24 @@ ifeq ($(UNAME_S), Darwin)
 	CFLAGS += -D_DARWIN_C_SOURCE
 endif
 
-
-
-# --- SQL
 # this is invoked in a recursive build, for bfmi.mysql
 # (see target "%.mysql")
 # bfmi currently uses *both* sqlite3 and mysql!
 ifeq ($(MYSQL),)
 	LIBFILES += dbutils
 else
-	INCS += $(shell mysql_config --include)
-	LIBS += $(shell mysql_config --libs_r)
+	CFLAGS  += $(MYSQL_CFLAGS)
+	LDFLAGS += $(MYSQL_LDFLAGS)
 endif
-
-# We always need sqlite
-# Set env-var PKG_CONFIG_PATH to your install
-CFLAGS   += $(shell pkg-config --cflags      sqlite3)
-CXXFLAGS += $(shell pkg-config --cflags      sqlite3)
-LDFLAGS  += $(shell pkg-config --libs-only-L sqlite3)
-LIBS     += $(shell pkg-config --libs-only-l sqlite3)
-
-
-
-# --- FUSE
-# different fuse libs for OSX/Linux
-ifeq ($(UNAME_S), Darwin)
-	FUSE_PKG = osxfuse
-else
-	FUSE_PKG = fuse
-endif
-
 
 ifneq ($(FUSE),)
-	CFLAGS   += $(shell pkg-config --cflags      $(FUSE_PKG))
-	CXXFLAGS += $(shell pkg-config --cflags      $(FUSE_PKG))
-	LDFLAGS  += $(shell pkg-config --libs-only-L $(FUSE_PKG))
-	LIBS     += $(shell pkg-config --libs-only-l $(FUSE_PKG))
+	CFLAGS  += $(FUSE_CFLAGS)
+	LDFLAGS += $(FUSE_LDFLAGS)
 endif
 
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
-
-
-# --- library
-
-libgufi.a: $(LIB_O) thpool.o
-	ar -rs $@ $^
 
 # NOTE
 #
@@ -106,25 +104,28 @@ libgufi.a: $(LIB_O) thpool.o
 #    gcc example.c thpool.c -D THPOOL_DEBUG -pthread -o example
 #
 # That's fine if you are compiling an aplication in one shot, but it fails
-# for the case of building a .o that is part of a library.  Thus, we have a
-# git submodule from a forked version of the repo, which we have modified
-# to allow this.
+# for the case of building a .o that is part of a library.  Thus, we have
+# a forked version of the repo, which we have modified to allow this.
 
 thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
+	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 
-%.o: %.c $(LIB_H)
-	$(CC) -DPCRE=sqlite-pcre/pcre.so $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -pthread
+%.o: %.c $(LIB_H) $(SQLITE3_PCRE_LIB)
+	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 
+# --- library
 
+libgufi.a: $(LIB_O) thpool.o
+	ar -rs $@ $^
 
 # --- apps
 
 %: %.c libgufi.a
-	$(CC) $(CFLAGS) $(INCS) $(CPPFLAGS) -o $@ -L. $< -lgufi $(LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ -L. $< -lgufi $(LDFLAGS)
 
-%: %.cpp libgufi.a
-	$(CXX) $(CXXFLAGS) -std=c++11 $(INCS) $(CPPFLAGS) -o $@ -L. $< -lgufi $(LIBS) $(LDFLAGS)
+%: %.cpp libgufi.a $(SQLITE3_PCRE_LIB)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ -L. $< -lgufi $(LDFLAGS)
+
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
 %.mysql:
@@ -136,8 +137,14 @@ TEST_PRODUCTS = test/testout.* test/testdirdup test/outdb* test/outq.* test/core
 $(GTEST_INSTALL_DIR):
 	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) .. && $(MAKE) -j install
 
-test: $(GTEST_INSTALL_DIR)
+test_prereqs: all $(GTEST_INSTALL_DIR)
 	$(MAKE) -C test
+
+test: test_prereqs
+	test/runtests test/testdir.tar test/testdir test/testdir.gufi
+	test/gufitest.py all
+	test/verifyknowntree
+	test/googletest/test
 
 clean_test:
 	rm -rf $(TEST_PRODUCTS)
@@ -152,5 +159,5 @@ clean:
 	@ # for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
 	@ # final "echo" is so sub-shell will return success
 	@ (for F in `ls *.c* | sed -e 's/\.c.*$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
-	rm -f $(SQLITE3_PCRE)/pcre.so
 	rm -rf $(GTEST_BUILD_DIR) $(GTEST_INSTALL_DIR)
+	$(MAKE) -C sqlite3-pcre clean

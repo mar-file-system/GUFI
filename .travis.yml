@@ -14,11 +14,27 @@ matrix:
                       - g++-7
                       - libattr1-dev
                       - libfuse-dev
-                      - npm
                   update: true
           env:
               - C_COMPILER=gcc-7
               - CXX_COMPILER=g++-7
+              - BUILD=cmake
+        - os: linux
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                  packages:
+                      - cmake
+                      - g++-7
+                      - libattr1-dev
+                      - libfuse-dev
+                  update: true
+          env:
+              - C_COMPILER=gcc-7
+              - CXX_COMPILER=g++-7
+              - BUILD=make
         - os: linux
           dist: xenial
           addons:
@@ -30,11 +46,27 @@ matrix:
                       - g++-8
                       - libattr1-dev
                       - libfuse-dev
-                      - npm
                   update: true
           env:
               - C_COMPILER=gcc-8
               - CXX_COMPILER=g++-8
+              - BUILD=cmake
+        - os: linux
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                  packages:
+                      - cmake
+                      - g++-8
+                      - libattr1-dev
+                      - libfuse-dev
+                  update: true
+          env:
+              - C_COMPILER=gcc-8
+              - CXX_COMPILER=g++-8
+              - BUILD=make
         - os: linux
           dist: xenial
           addons:
@@ -47,11 +79,28 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
-                      - npm
                   update: true
           env:
               - C_COMPILER=clang-7
               - CXX_COMPILER=clang++-7
+              - BUILD=cmake
+        - os: linux
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                      - llvm-toolchain-xenial-7
+                  packages:
+                      - cmake
+                      - clang-7
+                      - libattr1-dev
+                      - libfuse-dev
+                  update: true
+          env:
+              - C_COMPILER=clang-7
+              - CXX_COMPILER=clang++-7
+              - BUILD=make
 
         # macOS 10.12
         - os: osx
@@ -62,13 +111,29 @@ matrix:
                       - cmake
                       - gcc@7
                       - mysql
-                      - npm
                       - sqlite3
                       - truncate
                   update: true
           env:
               - C_COMPILER=gcc-7
               - CXX_COMPILER=g++-7
+              - BUILD=cmake
+              - FORMULAE=gcc@7
+        - os: osx
+          osx_image: xcode9.2
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@7
+                      - mysql
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-7
+              - CXX_COMPILER=g++-7
+              - BUILD=make
               - FORMULAE=gcc@7
         - os: osx
           osx_image: xcode9.2
@@ -78,13 +143,29 @@ matrix:
                       - cmake
                       - gcc@8
                       - mysql
-                      - npm
                       - sqlite3
                       - truncate
                   update: true
           env:
               - C_COMPILER=gcc-8
               - CXX_COMPILER=g++-8
+              - BUILD=cmake
+              - FORMULAE=gcc@8
+        - os: osx
+          osx_image: xcode9.2
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@8
+                      - mysql
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-8
+              - CXX_COMPILER=g++-8
+              - BUILD=make
               - FORMULAE=gcc@8
         - os: osx
           osx_image: xcode9.2
@@ -94,13 +175,29 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
-                      - npm
                       - sqlite3
                       - truncate
                   update: true
           env:
               - C_COMPILER=clang
               - CXX_COMPILER=clang++
+              - BUILD=cmake
+              - FORMULAE=llvm@7
+        - os: osx
+          osx_image: xcode9.2
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - llvm@7
+                      - mysql
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=clang
+              - CXX_COMPILER=clang++
+              - BUILD=make
               - FORMULAE=llvm@7
 
         # macOS 10.13
@@ -112,13 +209,29 @@ matrix:
                       - cmake
                       - gcc@7
                       - mysql
-                      - npm
                       - sqlite3
                       - truncate
                   update: true
           env:
               - C_COMPILER=gcc-7
               - CXX_COMPILER=g++-7
+              - BUILD=cmake
+              - FORMULAE=gcc@7
+        - os: osx
+          osx_image: xcode10.1
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@7
+                      - mysql
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-7
+              - CXX_COMPILER=g++-7
+              - BUILD=make
               - FORMULAE=gcc@7
         - os: osx
           osx_image: xcode10.1
@@ -128,13 +241,29 @@ matrix:
                       - cmake
                       - gcc@8
                       - mysql
-                      - npm
                       - sqlite3
                       - truncate
                   update: true
           env:
               - C_COMPILER=gcc-8
               - CXX_COMPILER=g++-8
+              - BUILD=cmake
+              - FORMULAE=gcc@8
+        - os: osx
+          osx_image: xcode10.1
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - gcc@8
+                      - mysql
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=gcc-8
+              - CXX_COMPILER=g++-8
+              - BUILD=make
               - FORMULAE=gcc@8
         - os: osx
           osx_image: xcode10.1
@@ -144,13 +273,29 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
-                      - npm
                       - sqlite3
                       - truncate
                   update: true
           env:
               - C_COMPILER=clang
               - CXX_COMPILER=clang++
+              - BUILD=cmake
+              - FORMULAE=llvm@7
+        - os: osx
+          osx_image: xcode10.1
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - llvm@7
+                      - mysql
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=clang
+              - CXX_COMPILER=clang++
+              - BUILD=make
               - FORMULAE=llvm@7
 
 before_install:
@@ -165,18 +310,20 @@ before_install:
     - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then brew cask install osxfuse; fi
     # use the compiler installed by brew
     - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then export PATH="$(brew --prefix $FORMULAE)/bin:$PATH"; fi
-    # use the sqlite3 install by brew
+    # use the sqlite3 installed by brew
     - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then export PKG_CONFIG_PATH="$(brew --prefix sqlite3)/lib/pkgconfig:$PKG_CONFIG_PATH"; fi
 
 script:
     - export CC="${C_COMPILER}"
     - export CXX="${CXX_COMPILER}"
     - export GTEST_COLOR=1
+    - if [[ "$BUILD" = "cmake" ]]; then export CTEST_OUTPUT_ON_FAILURE=1; fi
     - mkdir build
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Debug ..
+    - if [[ "$BUILD" = "make" ]]; then make gary; cd ..; tar -xf build/gufi-$(date +%Y-%m-%d).tar C-Thread-Pool sqlite3-pcre googletest; fi
     - make
-    - ctest --verbose
+    - make test
 
 # after_success:
 #     # https://www.npmjs.com/package/travis-deploy-once
@@ -187,5 +334,5 @@ script:
 #     script: travis-deploy-once contrib/nightly.sh gary.tar
 #     on:
 #         branch: master
-#         condition: "${TRAVIS_EVENT_TYPE}" = "cron"
+#         condition: ("${TRAVIS_EVENT_TYPE}" = "cron") && ("${TRAVIS_JOB_NUMBER}" = *.1)
 #         tags: false

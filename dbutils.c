@@ -81,16 +81,10 @@ OF SUCH DAMAGE.
 #include <pwd.h>
 #include <grp.h>
 #include <uuid/uuid.h>
+#include "pcre.h"
 
 #include "dbutils.h"
 #include "bf.h"
-
-#ifndef PCRE
-#error The PCRE macro has not been defined
-#endif
-
-#define STR_HELPER(x) #x
-#define TOSTR(x) STR_HELPER(x)
 
 char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
             "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
@@ -265,7 +259,7 @@ exit(9);
     // Load a regular expression extension
     //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) ||
-        (sqlite3_load_extension(db, TOSTR(PCRE), NULL, NULL)                   != SQLITE_OK)) {
+        (sqlite3_auto_extension(sqlite3_extension_init)                        != SQLITE_OK)) {
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;
@@ -310,6 +304,15 @@ int rawquerydb(const char *name,
      out = stdout;
      if (in.outfile > 0)
         out = gts.outfd[ptid];
+
+     if (in.dodelim == 0)
+       sprintf(ffielddelim,"|");
+
+     if (in.dodelim == 1)
+       sprintf(ffielddelim,"%s",fielddelim);
+
+     if (in.dodelim == 2)
+       sprintf(ffielddelim,"%s",in.delim);
 
      while (*sqlstmt) {
        // WARNING: passing length-arg that is longer than SQL text
@@ -1019,7 +1022,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     if ((sqlite3_open_v2(name, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
         //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                          != SQLITE_OK) || // enable extension loading
-        (sqlite3_load_extension(aggregate, TOSTR(PCRE), NULL, &err_msg)                                        != SQLITE_OK) || // load sqlite3-pcre
+        (sqlite3_auto_extension(sqlite3_extension_init)                                                        != SQLITE_OK) ||
         (addqueryfuncs(aggregate)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
         (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                   != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
         (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                   != SQLITE_OK) || // create the aggregate table

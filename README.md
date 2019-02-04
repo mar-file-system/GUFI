@@ -15,8 +15,8 @@ Please see [README](README) and the [docs directory](docs) for documentation
 - CMake 3
 
 ### Libraries
-- sqlite3
-- pcre
+- sqlite3 (at least version 3.13)
+- pcre (version 1, not 2)
 - C-Thread-Pool (downloaded by CMake)
 - sqlite3-pcre (downloaded by CMake)
 - Google Test (downloaded by CMake)
@@ -33,5 +33,3 @@ make
 make install
 ```
 Note: `-DCMAKE_INSTALL_PREFIX=<PATH>` is almost always required because
-CMake will install `C-Thread-Pool` and `sqlite3-pcre` at build time, and
-will try to install into `/usr/local` if a path is not provided.

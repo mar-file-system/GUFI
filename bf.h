@@ -160,6 +160,7 @@ struct input {
    int  printheader;
    int  printrows;
    int  helped;               // support parsing of per-app sub-options
+   int  dodelim;
    char delim[2];
    int  doxattrs;
    int  buildindex;

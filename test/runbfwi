@@ -166,7 +166,7 @@ echo $CLEAN_GUFI
 $CLEAN_GUFI
 
 echo $BFWI -n 2 -xP $DEST $SOURCE
-$BFWI -n 1 -xP $DEST $SOURCE
+$BFWI -n 2 -xP $DEST $SOURCE
 
 
 

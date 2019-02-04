@@ -127,58 +127,68 @@ struct globalthreadstate gts = {0};
 
 
 int printits(struct work *pwork,int ptid) {
+  char  ffielddelim[2];
   FILE * out;
 
   out = stdout;
   if (in.outfile > 0)
      out = gts.outfd[ptid];
 
-  fprintf(out,"%s%s",pwork->name,in.delim);
+  if (in.dodelim == 0) {
+    sprintf(ffielddelim," ");
+  }
+  if (in.dodelim == 2) {
+    sprintf(ffielddelim,"%s",fielddelim);
+  }
+  if (in.dodelim == 1) {
+    sprintf(ffielddelim,"%s",in.delim);
+  }
 
-  if (!strncmp(pwork->type,"l",1)) fprintf(out,"l%s",in.delim);
-  if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",in.delim);
-  if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",in.delim);
+  fprintf(out,"%s%s",pwork->name,ffielddelim);
 
-  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino, in.delim);
-  fprintf(out, "%lld%s",           pwork->pinode,         in.delim);
-  fprintf(out, "%d%s",             pwork->statuso.st_mode, in.delim);
-  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink, in.delim);
-  fprintf(out, "%d%s",             pwork->statuso.st_uid, in.delim);
-  fprintf(out, "%d%s",             pwork->statuso.st_gid, in.delim);
-  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size, in.delim);
-  fprintf(out, "%"STAT_bsize"%s",  pwork->statuso.st_blksize, in.delim);
-  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks, in.delim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_atime, in.delim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_mtime, in.delim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_ctime, in.delim);
-  fprintf(out, "%d%s",             pwork->suspect, in.delim);
+  if (!strncmp(pwork->type,"l",1)) fprintf(out,"l%s",ffielddelim);
+  if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",ffielddelim);
+  if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",ffielddelim);
+
+  fprintf(out, "%lld%s", pwork->statuso.st_ino, ffielddelim);
+  /* moved this to end because we would like to use this for input to bfwi load from file */
+  //fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_mode, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_nlink, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_uid, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_gid, ffielddelim);
+  fprintf(out, "%lld%s", pwork->statuso.st_size, ffielddelim);
+  fprintf(out, "%d%s",   pwork->statuso.st_blksize, ffielddelim);
+  fprintf(out, "%lld%s", pwork->statuso.st_blocks, ffielddelim);
+  fprintf(out, "%ld%s",  pwork->statuso.st_atime, ffielddelim);
+  fprintf(out, "%ld%s",  pwork->statuso.st_mtime, ffielddelim);
+  fprintf(out, "%ld%s",  pwork->statuso.st_ctime, ffielddelim);
 
 /* we need this field even if its not populated for bfwi load from file */
 /*
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s%s", pwork->linkname,in.delim;
+    fprintf(out, "%s%s", pwork->linkname,ffielddelim);
   }
 */
-  fprintf(out, "%s%s", pwork->linkname,in.delim);
+  fprintf(out, "%s%s", pwork->linkname,ffielddelim);
 
 /* we need this field even if its not populated for bfwi load from file */
 /*
   if (pwork->xattrs > 0) {
     //printf("xattr: ");
-    fprintf(out,"%s%s",pwork->xattr,in.delim);
+    fprintf(out,"%s%s",pwork->xattr,ffielddelim);
   }
 */
-  fprintf(out,"%s%s",pwork->xattr,in.delim);
+  fprintf(out,"%s%s",pwork->xattr,ffielddelim);
 
   /* this one is for create tiem which posix doesnt have */
-  fprintf(out,"%s", in.delim);
+  fprintf(out,"%s", ffielddelim);
   /* moved this to end because we would like to use this for input to bfwi load from file */
-  fprintf(out, "%lld%s", pwork->pinode,         in.delim);
-  fprintf(out, "%d%s",  pwork->suspect, in.delim);
+  fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
+  fprintf(out, "%d%s",  pwork->suspect, ffielddelim);
   fprintf(out,"\n");
   return 0;
 }
-
 
 int pullxattrs( const char *name, char *bufx) {
     char buf[MAXXATTR];

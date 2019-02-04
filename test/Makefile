@@ -4,6 +4,8 @@ SUBDIRECTORIES=googletest
 
 all: $(SUBDIRECTORIES)
 
+export
+
 $(SUBDIRECTORIES):
 	$(MAKE) -C $@
 

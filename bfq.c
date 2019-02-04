@@ -566,10 +566,10 @@ int main(int argc, char *argv[])
 
          fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
          fprintf(stderr, "Queries performed:                              %d\n",     thread_count + in.intermediate_count + 1);
-         fprintf(stderr, "Time to aggregate into intermediate databases:  %Les\n", intermediate_time);
-         fprintf(stderr, "Time to aggregate into final databases:         %Les\n", aggregate_time);
-         fprintf(stderr, "Time to print:                                  %Les\n", output_time);
-         fprintf(stderr, "Time to complete all:                           %Les\n", intermediate_time + aggregate_time + output_time);
+         fprintf(stderr, "Time to aggregate into intermediate databases:  %.2Lfs\n", intermediate_time);
+         fprintf(stderr, "Time to aggregate into final databases:         %.2Lfs\n", aggregate_time);
+         fprintf(stderr, "Time to print:                                  %.2Lfs\n", output_time);
+         fprintf(stderr, "Time to complete all:                           %.2Lfs\n", intermediate_time + aggregate_time + output_time);
 #endif
 
          closedb(aggregate);

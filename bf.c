@@ -124,8 +124,8 @@ void print_help(const char* prog_name,
       case 'd': printf("  -d <delim>         delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]); break;
       case 'i': printf("  -i <input_dir>     input directory path\n"); break;
       case 't': printf("  -t <to_dir>        build GUFI-tree (under) here\n"); break;
-      case 'o': printf("  -o <out_fname>     output file (one-per-thread, with thread-id suffix)\n"); break;
-      case 'O': printf("  -O <out_DB>        output DB\n"); break;
+      case 'o': printf("  -o <out_fname>     output file (one-per-thread, with thread-id suffix), implies -e 1\n"); break;
+      case 'O': printf("  -O <out_DB>        output DB, implies -e 1\n"); break;
       case 'I': printf("  -I <SQL_init>      SQL init\n"); break;
       case 'T': printf("  -T <SQL_tsum>      SQL for tree-summary table\n"); break;
       case 'S': printf("  -S <SQL_sum>       SQL for summary table\n"); break;
@@ -147,7 +147,7 @@ void print_help(const char* prog_name,
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
-      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating\n"); break;
+      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -165,6 +165,7 @@ void show_input(struct input* in, int retval) {
    printf("in.writetsum          = %d\n",    in->writetsum);
    printf("in.buildindex         = %d\n",    in->buildindex);
    printf("in.maxthreads         = %d\n",    in->maxthreads);
+   printf("in.dodelim     = %d\n",   in->dodelim);
    printf("in.delim              = '%s'\n",  in->delim);
    printf("in.name               = '%s'\n",  in->name);
    printf("in.outfile            = %d\n",    in->outfile);
@@ -294,16 +295,19 @@ int parse_cmd_line(int         argc,
 
       case 'd':
          if (optarg[0] == 'x') {
-            in->delim[0] = fielddelim[0];
+             in->dodelim = 2;
+             in->delim[0] = fielddelim[0];
          }
          else {
-            in->delim[0] = optarg[0];
+             in->dodelim = 1;
+             in->delim[0] = optarg[0];
          }
          break;
 
       case 'o':
          in->outfile = 1;
          INSTALL_STR(in->outfilen, optarg, MAXPATH, "-o");
+         in->aggregate_or_print = PRINT;
          break;
 
       case 'O':

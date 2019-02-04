@@ -97,19 +97,18 @@ find_package(Threads REQUIRED)
 # load the ExternalProject module
 include(ExternalProject)
 
-# download, build, and install C-Thread-Pool
-# installation needs to happen here so that the executables
-# have a fixed dynamic library location to link to
-set(thpool_PREFIX ${CMAKE_INSTALL_PREFIX}/C-Thread-Pool)
+# download and build C-Thread-Pool
+set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
 ExternalProject_Add(C-Thread-Pool
   GIT_REPOSITORY    https://github.com/jti-lanl/C-Thread-Pool.git
   GIT_TAG           lanl
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
-  CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${thpool_PREFIX}
+  STEP_TARGETS      build
+  INSTALL_COMMAND   true
 )
-include_directories(${thpool_PREFIX}/include)             # -Ipath/to/C-Thread-Pool/include
-link_directories(${thpool_PREFIX}/lib)                    # -Lpath/to/C-Thread-Pool/lib
+include_directories(${thpool_PREFIX})                     # -Ipath/to/C-Thread-Pool/include
+link_directories(${thpool_PREFIX}/C-Thread-Pool-build)    # -Lpath/to/C-Thread-Pool/lib
 
 # set the install rpath so the executables that link
 # against C-Thread-Pool can find it after being installed
@@ -122,34 +121,28 @@ link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/li
 message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
 message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
 
-# download, build, and install sqlite3-pcre
-# installation needs to happen here so that the executables
-# have a fixed path to load sqlite3-pcre from
-set(pcre_PREFIX     ${CMAKE_INSTALL_PREFIX}/sqlite3-pcre)
+# download and build sqlite3-pcre
+set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/src/sqlite3-pcre)
 ExternalProject_Add(sqlite3-pcre
   GIT_REPOSITORY    https://github.com/mar-file-system/sqlite3-pcre.git
   GIT_TAG           master
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
-  CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${pcre_PREFIX}
+  STEP_TARGETS      build
+  INSTALL_COMMAND   true
 )
+include_directories(${pcre_PREFIX})                       # -Ipath/to/sqlite3-pcre/include
+link_directories(${pcre_PREFIX}-build)                    # -Lpath/to/sqlite3-pcre/lib
 
 # create the GUFI library, which contains all of the common source files
-# provide the right PCRE library name
-if (UNIX AND NOT APPLE AND NOT CYGWIN)
-  set(PCRE_EXT "so")
-elseif(APPLE)
-  set(PCRE_EXT "dylib")
-endif()
-set_source_files_properties(dbutils.c PROPERTIES COMPILE_FLAGS "-DPCRE=${pcre_PREFIX}/sqlite3-pcre.${PCRE_EXT}")
 set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
-add_dependencies(GUFI C-Thread-Pool)
+add_dependencies(GUFI C-Thread-Pool sqlite3-pcre)
 install(TARGETS GUFI DESTINATION lib)
 
 # pack common values into variables
-set(COMMON_DEPENDENCIES GUFI C-Thread-Pool)
-set(COMMON_LIBRARIES GUFI sqlite3 thpool Threads::Threads)
+set(COMMON_DEPENDENCIES GUFI C-Thread-Pool sqlite3-pcre)
+set(COMMON_LIBRARIES GUFI sqlite3 ${pcre_PREFIX}-build/libsqlite3-pcre.a pcre ${thpool_PREFIX}/C-Thread-Pool-build/libthpool.a Threads::Threads)
 
 # This function builds executables using the
 # provided file names (SOURCE is an optional
@@ -337,4 +330,5 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY
                        COMMAND ${CMAKE_COMMAND} -E tar "cf" ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${SCRIPTS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest)
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
+                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)

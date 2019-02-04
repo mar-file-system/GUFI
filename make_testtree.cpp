@@ -318,7 +318,7 @@ struct ThreadArgs {
 
     static std::mutex mutex;
     static std::size_t files;            // runtime sum of file counts (so summing stats is not necessary)
-    static off_t size;                   // runtime sum of file sizes (so summing stats is not necessary)
+    static off_t size;                   // runtime sum of file sizes  (so summing stats is not necessary)
     struct Stats {
         Stats(const std::string &name, const std::size_t files, const std::size_t depth, const bool leaf, const std::list <off_t> &sizes)
             : name(name),
@@ -723,6 +723,7 @@ std::ostream &print_help(std::ostream &stream, const char *argv0) {
                   << "\n        --stat-rate ms          How often to print timed statistics, in milliseconds   (Default: "  << s.stat_rate << ", 0 cancels)"
                   << "\n        --progress-rate ms      How often to print progress, in milliseconds           (Default: "  << s.progress_rate << ", 0 cancels)"
                   << "\n        --dry-run               Runs without creating the GUFI tree                    (Default: "  << s.dryrun << ")"
+                  << "\n"
                   << "\n    directory                   The directory to put the generated tree into"
                   << "\n";
 }
@@ -992,20 +993,32 @@ int main(int argc, char *argv[]) {
     std::mutex print_mutex;
 
     // set up timed stats thread
-    LoopedThread timed_stats(settings.stat_rate, ThreadArgs::timed_stats.mutex, [&settings, &print_mutex](){
-            std::lock_guard <std::mutex> print_lock(print_mutex);
-            std::cout << ThreadArgs::timed_stats << " since the last stat collection " << settings.stat_rate << " ms ago" << std::endl;
-            ThreadArgs::timed_stats.clear();
-        });
+    struct timespec prev = {};
+    clock_gettime(CLOCK_MONOTONIC, &prev);
+    LoopedThread timed_stats(settings.stat_rate, ThreadArgs::timed_stats.mutex, [&settings, &print_mutex, &prev](){
+            {
+                std::lock_guard <std::mutex> print_lock(print_mutex);
+                struct timespec now = {};
+                clock_gettime(CLOCK_MONOTONIC, &now);
+                std::cout << ThreadArgs::timed_stats << " since the last stat collection " << elapsed(prev, now) << "s ago" << std::endl;
+                prev = now;
+            }
 
-    // set up timed stats thread
-    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex](){
-            std::lock_guard <std::mutex> print_lock(print_mutex);
-            std::cout << "Progress: " << ThreadArgs::files << " files in " << ThreadArgs::stats.size() << " directories" << std::endl;
+            ThreadArgs::timed_stats.clear();
         });
 
     struct timespec start = {};
     clock_gettime(CLOCK_MONOTONIC, &start);
+
+    // set up progress thread
+    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex, &start, &pool](){
+            std::lock_guard <std::mutex> print_lock(print_mutex);
+
+            struct timespec now = {};
+            clock_gettime(CLOCK_MONOTONIC, &now);
+
+            std::cout << "Progress: " << ThreadArgs::stats.size() << " directories with " << ThreadArgs::files << " files in " << elapsed(start, now) << " seconds. " << thpool_num_threads_working(pool) << " threads running" << std::endl;
+        });
 
     // push each subdirectory generation into the thread pool
     for(std::size_t offset = 0; offset < settings.users; offset++) {

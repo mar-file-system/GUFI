@@ -182,11 +182,11 @@ static void processdir(void * passv)
     struct dirent *entry;
     char lpatho[MAXPATH];
     int mytid;
-    sqlite3 *db;
+    sqlite3 *db = NULL;
     char *records;
     struct sum summary;
-    sqlite3_stmt *res;
-    sqlite3_stmt *reso;
+    sqlite3_stmt *res = NULL;
+    sqlite3_stmt *reso = NULL;
     char dbpath[MAXPATH];
     int transcnt;
     int loop;

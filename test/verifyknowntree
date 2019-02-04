@@ -2,8 +2,10 @@
 
 set -e
 
+ORIGIN="$(dirname $(realpath $0))"
+
 # go to the root GUFI directory
-cd "$(dirname $(dirname $0))"
+cd "$(dirname ${ORIGIN})"
 
 # generate a directory
 root="$(mktemp -d XXXXXXXXXX)"
@@ -18,7 +20,7 @@ function cleanup {
 trap cleanup EXIT
 
 # create the original tree
-test/generatetree -d "${src}"
+${ORIGIN}/generatetree -d "${src}"
 
 # read it into GUFI
 ./bfwi -t "${dst}" "${src}" 2>/dev/null
@@ -32,7 +34,6 @@ set +e
 error=0
 
 # get the uid and gid
-UID="$(id -u)"
 GID="$(id -g)"
 
 # compare files
