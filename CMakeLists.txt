@@ -77,8 +77,8 @@ cmake_minimum_required(VERSION 3.0.0)
 project(GUFI LANGUAGES C CXX)
 
 # define the DEBUG macro when building in debug mode
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
 
 # enable C++11
 set(CMAKE_CXX_STANDARD 11)

@@ -322,7 +322,7 @@ script:
     - cmake -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Debug ..
     - if [[ "$BUILD" = "make" ]]; then make gary; cd ..; tar -xf build/gufi-$(date +%Y-%m-%d).tar C-Thread-Pool sqlite3-pcre googletest; fi
     - make DEBUG=1
-    - if [[ "$BUILD" = "cmake" ]]; then ctest --vebose; fi
+    - if [[ "$BUILD" = "cmake" ]]; then ctest --verbose; fi
     - if [[ "$BUILD" = "make" ]]; then make test; fi
 
 # after_success:
