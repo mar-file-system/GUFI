@@ -259,7 +259,7 @@ exit(9);
     // Load a regular expression extension
     //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) ||
-        (sqlite3_auto_extension(sqlite3_extension_init)                        != SQLITE_OK)) {
+        (sqlite3_auto_extension((void (*) (void)) sqlite3_extension_init)      != SQLITE_OK)) { // load the sqlite3-pcre extension
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;
@@ -1022,7 +1022,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     if ((sqlite3_open_v2(name, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
         //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                          != SQLITE_OK) || // enable extension loading
-        (sqlite3_auto_extension(sqlite3_extension_init)                                                        != SQLITE_OK) ||
+        (sqlite3_auto_extension((void (*) (void)) sqlite3_extension_init)                                      != SQLITE_OK) || // load the sqlite3-pcre extension
         (addqueryfuncs(aggregate)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
         (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                   != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
         (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                   != SQLITE_OK) || // create the aggregate table
