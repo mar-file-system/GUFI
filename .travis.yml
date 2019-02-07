@@ -298,7 +298,7 @@ matrix:
               - BUILD=make
               - FORMULAE=llvm@7
 
-before_install:
+install:
     # get a newer version of libsqlite3-dev than the one provided by xenial (must be at least version 3.13)
     # this ppa is not allowed through addons, so it has to be added manually
     - if [[ "$TRAVIS_OS_NAME" = "linux" ]]; then sudo add-apt-repository ppa:jonathonf/backports -y; fi
@@ -320,19 +320,21 @@ script:
     - mkdir build
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Debug ..
-    - if [[ "$BUILD" = "make" ]]; then make gary; cd ..; tar -xf build/gufi-$(date +%Y-%m-%d).tar C-Thread-Pool sqlite3-pcre googletest; fi
+    - if [[ "$BUILD" = "make" ]]; then make gary; cd ..; tar -xf build/gufi.tar.gz C-Thread-Pool sqlite3-pcre googletest; fi
     - make DEBUG=1
     - if [[ "$BUILD" = "cmake" ]]; then ctest --verbose; fi
     - if [[ "$BUILD" = "make" ]]; then make test; fi
 
-# after_success:
-#     # https://www.npmjs.com/package/travis-deploy-once
-#     - npm install -g travis-deploy-once
+after_success:
+    - make gary
+    - mv gufi.tar.gz ..
+    - cd ..
 
-# deploy:
-#     provider: script
-#     script: travis-deploy-once contrib/nightly.sh gary.tar
-#     on:
-#         branch: master
-#         condition: ("${TRAVIS_EVENT_TYPE}" = "cron") && ("${TRAVIS_JOB_NUMBER}" = *.1)
-#         tags: false
+deploy:
+    provider: script
+    skip-cleanup: true
+    script: bash contrib/nightly.sh "${TRAVIS_BRANCH}" gufi.tar.gz
+    on:
+        branch: master
+        condition: ("${TRAVIS_EVENT_TYPE}" = "cron") && ("${TRAVIS_JOB_NUMBER}" = *.1)
+        tags: false
