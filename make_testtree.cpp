@@ -395,6 +395,11 @@ sqlite3 *open_and_create_tables(const std::string &name){
         std::cerr << "Could not turn journal_mode off " << sqlite3_errmsg(db) << std::endl;
     }
 
+    // try to get an exclusive lock
+    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Could not turn journal_mode off " << sqlite3_errmsg(db) << std::endl;
+    }
+
     // // try increasing the page size
     // if (sqlite3_exec(db, "PRAGMA page_size = 16777216", nullptr, nullptr, nullptr) != SQLITE_OK) {
     //     std::cerr << "Could not change page size" << sqlite3_errmsg(db) << std::endl;
