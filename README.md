@@ -32,4 +32,3 @@ cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
 make
 make install
 ```
-Note: `-DCMAKE_INSTALL_PREFIX=<PATH>` is almost always required because
