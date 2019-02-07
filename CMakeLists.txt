@@ -242,11 +242,17 @@ else()
 endif()
 set(FUSE_SOURCES bffuse.c bfresultfuse.c)
 
-# tell CMake to search the contrib directory for FindMYSQL.cmake and mysql-config.cmake
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/contrib)
+# serch for MySQL using the built in FindMYSQL
+pkg_search_module(MYSQL mysql)
+if (NOT MYSQL_FOUND)
+  # tell CMake to search the contrib directory for FindMYSQL.cmake and mysql-config.cmake
+  set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib ${CMAKE_MODULE_PATH})
+
+  # try again
+  pkg_search_module(MYSQL mysql)
+endif()
 
 # only build bfmi if MySQL is found
-pkg_search_module(MYSQL mysql)
 if (MYSQL_FOUND)
   message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
   message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
@@ -266,6 +272,23 @@ else()
   message(STATUS "MySQL not found. Not building bfmi.")
 endif()
 set(MYSQL_SOURCES bfmi.c)
+
+# search for DB2
+pkg_search_module(DB2 db2)
+if (DB2_FOUND)
+  message(STATUS "DB2 headers located in ${DB2_INCLUDEDIR}")
+  message(STATUS "DB2 libraries located in ${DB2_LIBDIR}")
+
+  string(REPLACE ";" " " DB2_CFLAGS "${DB2_CFLAGS}")
+  string(REPLACE ";" " " DB2_LDFLAGS "${DB2_LDFLAGS}")
+
+  # create the executable
+
+  # install the DB2 binarys in ${CMAKE_INSTALL_PREFIX}/bin
+else()
+  message(STATUS "DB2 not found.")
+endif()
+set(DB2_SOURCES)
 
 # copy and install scripts that act like binaries
 set(SCRIPTS example_run gufi_find gufi_stats gufi_ls query_builder.py)
@@ -287,7 +310,7 @@ add_subdirectory(test)
 # build tarball out of ${CMAKE_SOURCE_DIR}
 
 # collect all files into variables
-set(SOURCES ${GUFI_SOURCES} ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES})
+set(SOURCES ${GUFI_SOURCES} ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
   .gitignore

@@ -541,7 +541,7 @@ void sub_help() {
 int main(int argc, char *argv[])
 {
      //char nameo[MAXPATH];
-     struct work mywork;
+     struct work mywork = {};
      int i;
 
      // process input args - all programs share the common 'struct input',

@@ -16,8 +16,11 @@ $(GTEST_INSTALL_DIR):
 	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) ..
 	$(MAKE) -C $(GTEST_BUILD_DIR) install
 
-$(TARGET): $(OBJ) ../../libgufi.a
-	$(CXX) $(CFLAGS) $(filter-out ../../libgufi.a, $^) $(LDFLAGS) -o $@
+$(TARGET): $(OBJ) ../../libgufi.a ../../libthpool.a
+	$(CXX) $(CFLAGS) $(filter-out ../../libgufi.a ../libthpool.a, $^) $(LDFLAGS) -o $@
+
+../../%:
+	$(MAKE) -C ../..
 
 %.o: %.c $(GTEST_INSTALL_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@

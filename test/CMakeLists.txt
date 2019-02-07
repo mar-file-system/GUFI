@@ -116,7 +116,7 @@ endforeach()
 set(TESTDIR ${CMAKE_CURRENT_BINARY_DIR}/testdir)
 add_test(NAME runtests COMMAND ${CMAKE_CURRENT_BINARY_DIR}/runtests "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar" "${TESTDIR}" "${TESTDIR}.gufi" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_test(NAME gufitest COMMAND gufitest.py all)
+add_test(NAME gufitest COMMAND ${CMAKE_CURRENT_BINARY_DIR}/gufitest.py all WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_test(NAME verifyknowntree COMMAND verifyknowntree)
 

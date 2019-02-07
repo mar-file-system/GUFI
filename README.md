@@ -16,7 +16,7 @@ Please see [README](README) and the [docs directory](docs) for documentation
 
 ### Libraries
 - sqlite3 (at least version 3.13)
-- pcre (version 1, not 2)
+- pcre (not pcre2)
 - C-Thread-Pool (downloaded by CMake)
 - sqlite3-pcre (downloaded by CMake)
 - Google Test (downloaded by CMake)

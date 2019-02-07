@@ -107,24 +107,24 @@ LIB_H = $(addsuffix .h,$(LIBFILES))
 # for the case of building a .o that is part of a library.  Thus, we have
 # a forked version of the repo, which we have modified to allow this.
 
-thpool.o: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
-	$(CC) $(CFLAGS) -c -o $@ $< -pthread
+libthpool.a: C-Thread-Pool/thpool.c C-Thread-Pool/thpool.h
+	$(CC) $(CFLAGS) -static -c -o $@ $< -pthread
 
 %.o: %.c $(LIB_H) $(SQLITE3_PCRE_LIB)
 	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 
 # --- library
 
-libgufi.a: $(LIB_O) thpool.o
+libgufi.a: $(LIB_O)
 	ar -rs $@ $^
 
 # --- apps
 
-%: %.c libgufi.a
-	$(CC) $(CFLAGS) -o $@ -L. $< -lgufi $(LDFLAGS)
+%: %.c libgufi.a libthpool.a
+	$(CC) $(CFLAGS) -o $@ -L. $< -lgufi -lthpool $(LDFLAGS)
 
-%: %.cpp libgufi.a $(SQLITE3_PCRE_LIB)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ -L. $< -lgufi $(LDFLAGS)
+%: %.cpp libgufi.a $(SQLITE3_PCRE_LIB) libthpool.a
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ -L. $< -lgufi -lthpool $(LDFLAGS)
 
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
