@@ -144,7 +144,7 @@ void *scout(void * param) {
     //incrthread(); /* add one thread so the others wait for the scout */
     finfile=fopen(in.name,"r");
     if (finfile == NULL) {
-      fprintf(stderr,"Cant open up the input file %s\n",in.name);
+        fprintf(stderr,"Cant open up the input file %s\n",in.name);
       exit(-1); /* not the best way out i suppose */
     }
     //printf("reading input file now\n");
@@ -373,7 +373,7 @@ int processinit(void * myworkin) {
      struct work * mywork = myworkin;
      int i;
      char outfn[MAXPATH];
-     FILE *finfile;
+     FILE *finfile = NULL;
      char linein[MAXPATH+MAXPATH+MAXPATH];
      long long int foffset;
 
@@ -389,7 +389,7 @@ int processinit(void * myworkin) {
 
      //open up the input file if needed
      if (in.infile > 0) {
-       //finfile=fopen(in.name,"r");
+       finfile=fopen(in.name,"r");
        if (finfile == NULL) {
          fprintf(stderr,"Cant open up the input file %s\n",in.name);
          exit(-1); /* not the best way out i suppose */

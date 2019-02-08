@@ -10,6 +10,7 @@ matrix:
                   sources:
                       - ubuntu-toolchain-r-test
                   packages:
+                      - attr
                       - cmake
                       - g++-7
                       - libattr1-dev
@@ -26,6 +27,7 @@ matrix:
                   sources:
                       - ubuntu-toolchain-r-test
                   packages:
+                      - attr
                       - cmake
                       - g++-7
                       - libattr1-dev
@@ -42,6 +44,7 @@ matrix:
                   sources:
                       - ubuntu-toolchain-r-test
                   packages:
+                      - attr
                       - cmake
                       - g++-8
                       - libattr1-dev
@@ -58,6 +61,7 @@ matrix:
                   sources:
                       - ubuntu-toolchain-r-test
                   packages:
+                      - attr
                       - cmake
                       - g++-8
                       - libattr1-dev
@@ -75,6 +79,7 @@ matrix:
                       - ubuntu-toolchain-r-test
                       - llvm-toolchain-xenial-7
                   packages:
+                      - attr
                       - cmake
                       - clang-7
                       - libattr1-dev
@@ -92,6 +97,7 @@ matrix:
                       - ubuntu-toolchain-r-test
                       - llvm-toolchain-xenial-7
                   packages:
+                      - attr
                       - cmake
                       - clang-7
                       - libattr1-dev

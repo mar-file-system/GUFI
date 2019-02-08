@@ -40,7 +40,7 @@ GTEST_BUILD_DIR      ?= $(GTEST_SRC)/build
 GTEST_INSTALL_DIR    ?= $(GTEST_SRC)/install
 
 DFW       = dfw
-BFW       = bfwi bfti bfq bfwreaddirplus2db
+BFW       = bfwi bfti bfq bfwreaddirplus2db $(DFW)
 BFW_MYSQL = bfmi.mysql
 
 
@@ -53,7 +53,7 @@ all:   bfw tools
 
 bfw:   $(BFW)
 mysql: $(BFW_MYSQL)
-dfw:   $(DFW)
+# dfw:   $(DFW)
 tools: $(TOOLS)
 
 # export all variables into submakes
@@ -148,7 +148,7 @@ test_prereqs: all $(GTEST_INSTALL_DIR)
 
 test: test_prereqs
 	test/runtests test/testdir.tar test/testdir test/testdir.gufi
-	test/gufitest.py all
+	cd test && ./gufitest.py all
 	test/verifyknowntree
 	test/googletest/test
 

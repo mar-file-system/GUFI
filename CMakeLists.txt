@@ -291,14 +291,17 @@ endif()
 set(DB2_SOURCES)
 
 # copy and install scripts that act like binaries
-set(SCRIPTS example_run gufi_find gufi_stats gufi_ls query_builder.py)
-foreach(SCRIPT ${SCRIPTS})
-  # copy the scropt into the build directory for easy access
-  configure_file(${CMAKE_SOURCE_DIR}/${SCRIPT} ${CMAKE_BINARY_DIR}/${SCRIPT} COPYONLY)
+set(TOOLS example_run gufi_find gufi_stats gufi_ls query_builder.py)
+foreach(TOOL ${TOOLS})
+  # copy the tool into the build directory for easy access
+  configure_file(${CMAKE_SOURCE_DIR}/${TOOL} ${CMAKE_BINARY_DIR}/${TOOL} COPYONLY)
 
-  # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${SCRIPT} DESTINATION bin)
+  # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
+  install(PROGRAMS ${TOOL} DESTINATION bin)
 endforeach()
+
+# copy the scripts directory into ${CMAKE_BINARY_DIR}
+file(COPY scripts DESTINATION ${CMAKE_BINARY_DIR})
 
 # enable "make test"
 enable_testing()
@@ -349,7 +352,7 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
-                       COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${SCRIPTS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                       COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
