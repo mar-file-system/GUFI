@@ -251,7 +251,7 @@ static void processdir(void * passv)
                         sqlite3_free(err);
                     }
                     else {
-                        rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printdir, mytid);
+                        rawquerydb(passmywork->name, 0, db, in.sqlent, 1, 0, in.printing, mytid);
                     }
                     //printf("entries ran %s on %s returned recs %d len of in.sqlent %lu\n",
                     //       in.sqlent,passmywork->name,recs,strlen(in.sqlent));
