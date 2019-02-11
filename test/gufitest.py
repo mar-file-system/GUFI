@@ -10,7 +10,7 @@ import string
 
 tdir=os.getcwd()
 sdir="%s/../scripts" % (tdir)
-gdir=""
+gdir=".."
 mtmp="/tmp"
 funcout="/tmp/gufitestfuncout"
 top="/tmp/gufitest"
@@ -28,6 +28,26 @@ fcnt=0
 xcnt=0
 fsz=0
 
+# From Stack Overflow
+# https://stackoverflow.com/a/377028
+# by Jay (https://stackoverflow.com/users/20840/jay)
+def which(program):
+    import os
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
 def wipe():
  print "wiping test tree"
  os.system('rm -rf %s' % (top))
@@ -41,7 +61,8 @@ def gtfromwalk(mt,st,tt):
  os.chdir('%s' % (tt))
  print "creating a gufi tree from walk at %s from %s" % (mt,st)
  os.system('mkdir %s/%s' % (top,mt))
- os.system('xattr -c %s/%s' % (top,mt))
+ if which("xattr"):
+  os.system('xattr -c %s/%s' % (top,mt))
  os.system('%s/%s/bfwi -n 2 -x -b -t %s %s' % (tdir,gdir,mt,st))
  os.chdir('%s' % (mwd))
 
@@ -57,6 +78,7 @@ def mkbfqout(tt,outf,ti):
  mwd=os.getcwd()
  os.chdir('%s' % (tt))
  os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/%s %s'  % (tdir,gdir,top,outf,ti))
+ os.system('sort -o %s/%s.0 %s/%s.0' % (top,outf,top,outf))
  os.chdir('%s' % (mwd))
 
 def mksrctree():
@@ -96,7 +118,11 @@ def mksrctree():
  fsz=fsz+7
  os.system('echo cheese >> %s/d0/d02/d020/f0200' % (top))
  fsz=fsz+7
- os.system('xattr -w cheese cheddar %s/d0/d00/d000/f0000' % (top))
+ # try to run xattr if it is available
+ if which("xattr"):
+    os.system('xattr -w cheese cheddar %s/d0/d00/d000/f0000' % (top))
+ elif which("attr"):
+    os.system('attr -s cheese -V cheddar %s/d0/d00/d000/f0000' % (top))
  xcnt+=1
  os.system('ln -s %s/d0/d00/f000 %s/d0/d01/flinkd0d00f000' % (top,top))
  lcnt+=1
@@ -392,7 +418,7 @@ def cincr3modf():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end incremental test
 ################################### test cincr3modf end ########################################
 ################################### test cincr3deld ############################################
@@ -416,7 +442,7 @@ def cincr3deld():
  cmd=exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end incremental test
 ################################### test cincr3deld end ########################################
 ################################### test cincr3movd ############################################
@@ -440,7 +466,7 @@ def cincr3movd():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end incremental test
 ################################### test cincr3movd end ########################################
 ################################### test cincr3addd ############################################
@@ -467,7 +493,7 @@ def cincr3addd():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end incremental test
 ################################### test cincr3addd end ########################################
 ################################### test cincr3adddelmovdf ############################################
@@ -499,7 +525,7 @@ def cincr3adddelmovdf():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end incremental test
 ################################### test cincr3adddelmovdf end ########################################
 ################################### test cincr2modf ############################################
@@ -531,7 +557,7 @@ def cincr2modf():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end incremental test
 ################################### test cincr2modf end ########################################
 ################################### test cflatloaddfw ############################################
@@ -548,7 +574,7 @@ def cflatloaddfw():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
 ################################### testcflatloaddfw end ############################################
 ################################## test cflatloadfinddfw ############################################
 def cflatloadfinddfw():
@@ -564,7 +590,7 @@ def cflatloadfinddfw():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
 ################################## test cflatloadfinddfw end ######################################
 ################################### test cflatloadbfwi ############################################
 def cflatloadbfwi():
@@ -580,7 +606,7 @@ def cflatloadbfwi():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
 ################################### test cflatloadbfwi end ############################################
 ################################### test cbfqbftiquerydbn ############################################
 def cbfqbftiquerydbn():
@@ -607,7 +633,7 @@ def cbfqbftiquerydbn():
  exit_code = os.WEXITSTATUS(cmd)
  exitcd=exitcd+exit_code
  if (exitcd!=0):
-   exit()
+   exit(exitcd)
  ############################
  # do some bfq tests now
  print "testing bfq tot dirs %d tot files %d tot bytes %d tot files with xattrs %d tot links %d" % (dcnt,fcnt,fsz,xcnt,lcnt)
@@ -647,13 +673,14 @@ def cbfqbftiquerydbn():
  ###### end num dir test #####
  ###### num link test #####
  print "+++++++++ test to see if gufi agrees totxattrs=%d" % (xcnt)
- os.system('%s/%s/bfq -n1 -Pp -a -S "select name from vsummarydir where length(xattrs)>0;" -E "select name from entries where length(xattrs)>0;" -o %s %s'  % (tdir,gdir,of,'gt/d0'))
- numl = sum(1 for line in open(oft))
- if (numl != xcnt):
-  print "xattr count missmatch xcnt %d numl %d" % (xcnt,numl)
-  exit()
- else:
-  print "xattr count match xcnt %d numl %d" % (xcnt,numl)
+ if which("xattr"):
+  os.system('%s/%s/bfq -n1 -Pp -a -S "select name from vsummarydir where length(xattrs)>0;" -E "select name from entries where length(xattrs)>0;" -o %s %s'  % (tdir,gdir,of,'gt/d0'))
+  numl = sum(1 for line in open(oft))
+  if (numl != xcnt):
+   print "xattr count missmatch xcnt %d numl %d" % (xcnt,numl)
+   exit()
+  else:
+   print "xattr count match xcnt %d numl %d" % (xcnt,numl)
  ###### end num dir test #####
  ###### sum of file sizes test uses querydbn #####/os
  print "+++++++++ test to see if bfq creating output db per thread and use querydbn to aggregate total size=%d" % (fsz)
@@ -704,7 +731,7 @@ def cbfwiinsrc():
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end cbfwiinsrc
 ################################### test  cbfwiinsrc end ########################################
 ################################### test cbfwrp2dbfullinsrc ############################################
@@ -715,15 +742,16 @@ def cbfwrp2dbfullinsrc():
  gfullafter()
  # wait until incremental time
  time.sleep(1)
- # make a full gufi tree and put it right in the source tree using bfwreaddirplus2db -b marking every dir suspect
- os.system('%s/%s/bfwreaddirplus2db -n 2 -Y -b -x d0'  % (tdir,gdir))
+ # make a full gufi tree and put it right in the source tree using bfwreaddirplus2db -b full everything will not have db and be suspect so dont need -Y
+ #os.system('%s/%s/bfwreaddirplus2db -n 2 -Y -b -x d0'  % (tdir,gdir))
+ os.system('%s/%s/bfwreaddirplus2db -n 2 -b -x d0'  % (tdir,gdir))
  mkbfqout('.','fullinsrc','d0')
  print "++++++++++ comparing bfq from in src tree gufi and bfq from from not in src gufi tree "
  cmd=os.system('cmp %s/fullbfqoutafter.0 %s/fullinsrc.0' % (top,top))
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end  cbfwrp2dbfullinsrc
 ################################### test  cbfwrp2dbfullinsrc end ########################################
 ################################### test cbfwrdp2dbincrinsrc ############################################
@@ -754,22 +782,25 @@ def cbfwrdp2dbincrinsrc():
  # we also cant compare the totals in the directory record in the summary table because it will be off by that database file that
  # we removed with the query excluding those files - the totals are still in the summary record
  os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries where name!=\'db.db\';" -S "select path(),name,type,inode,linkname,xattrs from vsummarydir;" -a -o %s/%s %s'  % (tdir,gdir,top,'fullbfqoutafternodbname','d0'))
+ os.system('sort -o %s/%s.0 %s/%s.0' % (top,'fullbfqoutafternodbname',top,'fullbfqoutafternodbname'))
  os.chdir('%s' % (mwd))
  # get time when the full original gufi was made
  fo = open("fulltime", "rb")
  itt = fo.read(12);
  it = itt.rstrip()
  fo.close()
- # make a incremental gufi tree update and put it right in the source tree using bfwreaddirplus2db -b with suspect mode 3
- os.system('%s/%s/bfwreaddirplus2db -n 2 -A 3 -b -c %s -x d0'  % (tdir,gdir,it))
+ # make a incremental gufi tree update and put it right in the source tree using bfwreaddirplus2db -b with suspect mode 3 dont need -c as it will use ctime of db
+ #os.system('%s/%s/bfwreaddirplus2db -n 2 -A 3 -b -c %s -x d0'  % (tdir,gdir,it))
+ os.system('%s/%s/bfwreaddirplus2db -n 2 -A 3 -b -x d0'  % (tdir,gdir))
  # do a bfq of the incrementally updated in src tree gufi again exclude totals from the summary record so it will match
  os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries where name!=\'db.db\';" -S "select path(),name,type,inode,linkname,xattrs from vsummarydir;" -a -o %s/%s %s'  % (tdir,gdir,top,'incrinsrc','d0'))
+ os.system('sort -o %s/%s.0 %s/%s.0' % (top,'incrinsrc',top,'incrinsrc'))
  print "++++++++++ comparing bfq from in src tree gufi incremental  and bfq from from not in src gufi tree full "
  cmd=os.system('cmp %s/fullbfqoutafternodbname.0 %s/incrinsrc.0' % (top,top))
  exit_code = os.WEXITSTATUS(cmd)
  print "---------- test %s done result %d" % (testn,exit_code)
  if (exit_code!=0):
-   exit()
+   exit(exit_code)
  #end ccbfwrdp2dbincrinsrc
 ################################### test  cbfwrdp2dbincrinsrc end ########################################
 
@@ -781,7 +812,7 @@ def flines(fl,normlines,testnorm,exitnotnorm):
   if (outlines!=normlines):
    print "suspect: test out in %s lines %d normal lines %d" % (fl,outlines,normlines)
    if (exitnotnorm):
-    exit()
+    exit(exitnotnorm)
   else:
    print "good: test out in %s lines %d normal lines %d" % (fl,outlines,normlines)
  return outlines
@@ -809,7 +840,7 @@ def fbfti():
 ################################### func fbfwi ############################################
 def fbfwi():
  testf='fbwfi'
- normlines=305
+ normlines=306
  testfull='%s/%s' % (funcout,testf)
  testn="functional bfwi"
  cleanstart(testn,1)
@@ -908,10 +939,10 @@ def fuserfilespacehogusesummary():
  os.system('%s/userfilespacehogusesummary %s %s > %s' % (sdir,'gt/d0','2',testfull))
  outlines=flines(testfull,normlines,1,1)
 ################################### func fuserfilespacehogusesummary end ############################################
-################################### func fuidgidummary ############################################
+################################### func fuidgidsummary ############################################
 def fuidgidsummary():
  testf='fuidgidsummary'
- normlines=80
+ normlines=324
  testfull='%s/%s' % (funcout,testf)
  testn="functional uidgidsummary"
  cleanstart(testn,1)
@@ -919,8 +950,8 @@ def fuidgidsummary():
  os.system('%s/deluidgidsummaryrecs %s' % (sdir,'gt/d0'))
  os.system('%s/generategidsummary %s' % (sdir,'gt/d0'))
  os.system('%s/generateuidsummary %s' % (sdir,'gt/d0'))
- os.system('%s/%s/bfq -S "select epath(),uid,totfiles,totsize from summary where rectype=1;" -Pp -n 1 %s > %s' % (tdir,gdir,'gt/d0',testfull))
- os.system('%s/%s/bfq -S "select epath(),gid,totfiles,totsize from summary where rectype=2;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
+ os.system('%s/%s/bfq -e 1 -S "select epath(),uid,totfiles,totsize from summary where rectype=1;" -Pp -n 1 %s > %s' % (tdir,gdir,'gt/d0',testfull))
+ os.system('%s/%s/bfq -e 1 -S "select epath(),gid,totfiles,totsize from summary where rectype=2;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
  outlines=flines(testfull,normlines,1,1)
 ################################### func fuidgidummary end ############################################
 ################################### func foldbigfiles ##########################################
@@ -956,16 +987,16 @@ def flisttablesdb():
 ################################### func fgenuidgidsummaryavoidentriesscan ##########################################
 def fgenuidgidsummaryavoidentriesscan():
  testf='fgenuidgidsummaryavoidentriesscan'
- normlines=129
+ normlines=167
  testfull='%s/%s' % (funcout,testf)
  testn="functional genuidgidsummaryavoidentriesscan"
  cleanstart(testn,1)
  os.system('%s/deluidgidsummaryrecs %s > %s' % (sdir,'gt/d0',testfull))
  os.system('%s/genuidsummaryavoidentriesscan %s >> %s' % (sdir,'gt/d0',testfull))
  os.system('%s/gengidsummaryavoidentriesscan %s >> %s' % (sdir,'gt/d0',testfull))
- os.system('%s/%s/bfq -S "select epath(),uid,gid,totfiles,totsize from summary where rectype=0;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
- os.system('%s/%s/bfq -S "select epath(),uid,totfiles,totsize from summary where rectype=1;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
- os.system('%s/%s/bfq -S "select epath(),gid,totfiles,totsize from summary where rectype=2;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
+ os.system('%s/%s/bfq -e 1 -S "select epath(),uid,gid,totfiles,totsize from summary where rectype=0;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
+ os.system('%s/%s/bfq -e 1 -S "select epath(),uid,totfiles,totsize from summary where rectype=1;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
+ os.system('%s/%s/bfq -e 1 -S "select epath(),gid,totfiles,totsize from summary where rectype=2;" -Pp -n 1 %s >> %s' % (tdir,gdir,'gt/d0',testfull))
  outlines=flines(testfull,normlines,1,1)
 ################################### func fgenuidgidsummaryavoidentriesscan end ############################################
 
@@ -1048,151 +1079,152 @@ if len(sys.argv) > 1:
  print "Primary argument is %s" % (sys.argv[1])
  if (sys.argv[1] == 'all'):
   runall()
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'allc'):
   runallc()
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'allf'):
+  os.system('mkdir %s' % (funcout))
   runallf()
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cincr3modf'):
   cincr3modf()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cincr3deld'):
   cincr3deld()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cincr3movd'):
   cincr3movd()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cincr3addd'):
   cincr3addd()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cincr3adddelmovdf'):
   cincr3adddelmovdf()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cincr2modf'):
   cincr2modf()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cflatloaddfw'):
   cflatloaddfw()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cflatloadfinddfw'):
   cflatloadfinddfw()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cflatloadbfwi'):
   cflatloadbfwi()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cbfqbftiquerydbn'):
   cbfqbftiquerydbn()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cbfwiinsrc'):
   cbfwiinsrc()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cbfwrp2dbfullinsrc'):
   cbfwrp2dbfullinsrc()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'cbfwrdp2dbincrinsrc'):
   cbfwrdp2dbincrinsrc()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fbfq'):
   os.system('mkdir %s' % (funcout))
   fbfq()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fbfti'):
   os.system('mkdir %s' % (funcout))
   fbfti()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fbfwi'):
   os.system('mkdir %s' % (funcout))
   fbfwi()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fdfw'):
   os.system('mkdir %s' % (funcout))
   fdfw()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fquerydb'):
   os.system('mkdir %s' % (funcout))
   fquerydb()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fbfwreaddirplus2db'):
   os.system('mkdir %s' % (funcout))
   fbfwreaddirplus2db()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fquerydbn'):
   os.system('mkdir %s' % (funcout))
   fquerydbn()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fgroupfilespacehog'):
   os.system('mkdir %s' % (funcout))
   fgroupfilespacehog()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fgroupfilespacehogusesummary'):
   os.system('mkdir %s' % (funcout))
   fgroupfilespacehogusesummary()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fuserfilespacehog'):
   os.system('mkdir %s' % (funcout))
   fuserfilespacehog()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fuserfilespacehogusesummary'):
   os.system('mkdir %s' % (funcout))
   fuserfilespacehogusesummary()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fuidgidsummary'):
   os.system('mkdir %s' % (funcout))
   fuidgidsummary()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'foldbigfiles'):
   os.system('mkdir %s' % (funcout))
   foldbigfiles()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'flistschemadb'):
   os.system('mkdir %s' % (funcout))
   flistschemadb()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'flisttablesdb'):
   os.system('mkdir %s' % (funcout))
   flisttablesdb()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  elif (sys.argv[1] == 'fgenuidgidsummaryavoidentriesscan'):
   os.system('mkdir %s' % (funcout))
   fgenuidgidsummaryavoidentriesscan()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
-  exit()
+  exit(0)
  else:
   print "argument invalid %s" % (sys.argv[1])
   usage()
-  exit()
+  exit(0)
 
 else:
  print "argument required"
  usage()
- exit()
+ exit(1)

@@ -301,6 +301,8 @@ static void processdir(void * passv)
     int lookup;
     struct stat st;
     int rc;
+    int locsuspecttime;
+    struct stat sst;
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
@@ -316,6 +318,20 @@ static void processdir(void * passv)
 
     sprintf(passmywork->type,"%s","d");
     passmywork->suspect=in.suspectd;
+    /* if we are putting the gufi tree into the source tree we can modify the suspecttime to be the ctime of the gufi db */
+    /* this way we will just be looking at dirs or files that have changed since the gufi db was last updated */
+    locsuspecttime=in.suspecttime;
+    if (in.buildinindir == 1) {
+      locsuspecttime=0;
+      sprintf(dbpath,"%s/%s",passmywork->name,DBNAME);
+      rc=lstat(dbpath,&sst);
+      if (rc == 0) {
+        locsuspecttime=sst.st_ctime;
+      } else {
+        passmywork->suspect=1;
+      }
+      //printf("in processdir setting suspecttime: set to %d rc from stat %d\n",locsuspecttime,rc);
+    }
 
     /* if we are not looking for suspect directories we should just put the directory at the top of all the dirents */
     if (in.outdb > 0) {
@@ -344,19 +360,12 @@ static void processdir(void * passv)
            if (in.suspectmethod > 1) {
              /* ????? we would add a stat call on the directory here and compare mtime and ctime with the last run time provided */
              /* and mark the dir suspect if mtime or ctime are >= provided last run time */
-/*
-             st.st_ctime=0;
-             st.st_mtime=0;
-             lstat(passmywork->name,&st);
-             if (st.st_ctime >= in.suspecttime) passmywork->suspect=1;
-             if (st.st_mtime >= in.suspecttime) passmywork->suspect=1;
-*/
              // needed to fill in passmywork status structure
              passmywork->statuso.st_ctime=0;
              passmywork->statuso.st_mtime=0;
              lstat(passmywork->name,&passmywork->statuso);
-             if (passmywork->statuso.st_ctime >= in.suspecttime) passmywork->suspect=1;
-             if (passmywork->statuso.st_mtime >= in.suspecttime) passmywork->suspect=1;
+             if (passmywork->statuso.st_ctime >= locsuspecttime) passmywork->suspect=1;
+             if (passmywork->statuso.st_mtime >= locsuspecttime) passmywork->suspect=1;
            }
          }
     }
@@ -458,8 +467,8 @@ static void processdir(void * passv)
               st.st_ctime=0;
               st.st_mtime=0;
               lstat(qwork.name,&st);
-              if (st.st_ctime >= in.suspecttime) passmywork->suspect=1;
-              if (st.st_mtime >= in.suspecttime) passmywork->suspect=1;
+              if (st.st_ctime >= locsuspecttime) passmywork->suspect=1;
+              if (st.st_mtime >= locsuspecttime) passmywork->suspect=1;
             }
           }
           if (in.outfile > 0) {
