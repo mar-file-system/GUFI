@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
      clock_gettime(CLOCK_MONOTONIC, &intermediate_end);
 
      if (in.aggregate_or_print == PRINT) {
-         fprintf(stderr, "Time to query and print: %Les\n", elapsed(&intermediate_start, &intermediate_end));
+         fprintf(stderr, "Time to query and print: %.2Lfs\n", elapsed(&intermediate_start, &intermediate_end));
      }
 #endif
 
