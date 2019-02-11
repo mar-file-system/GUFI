@@ -186,11 +186,27 @@ int processinit(void * myworkin) {
 int processfin() {
 
      sqlite3 *tdb;
+     struct stat smt;
+     int rc;
+     char dbpath[MAXPATH];
+     struct utimbuf utimeStruct;
+
+     sprintf(dbpath,"%s/%s",in.name,DBNAME);
+     rc=1;
+     rc=lstat(dbpath,&smt);
      if (in.writetsum) {
         if (! (tdb = opendb(in.name,3,1)))
            return -1;
         inserttreesumdb(in.name,tdb,&sumout,0,0,0);
         closedb(tdb);
+     }
+     if (rc==0) {
+        utimeStruct.actime  = smt.st_atime;
+        utimeStruct.modtime = smt.st_mtime;
+        if(utime(dbpath, &utimeStruct) != 0) { 
+           fprintf(stderr,"ERROR: utime failed with error number: %d on %s\n", errno,dbpath);
+           exit(1);
+        }
      }
 
      printf("totals: \n");

@@ -318,7 +318,7 @@ static void processdir(void * passv)
 
     sprintf(passmywork->type,"%s","d");
     passmywork->suspect=in.suspectd;
-    /* if we are putting the gufi tree into the source tree we can modify the suspecttime to be the ctime of the gufi db */
+    /* if we are putting the gufi tree into the source tree we can modify the suspecttime to be the mtime of the gufi db */
     /* this way we will just be looking at dirs or files that have changed since the gufi db was last updated */
     locsuspecttime=in.suspecttime;
     if (in.buildinindir == 1) {
@@ -326,7 +326,7 @@ static void processdir(void * passv)
       sprintf(dbpath,"%s/%s",passmywork->name,DBNAME);
       rc=lstat(dbpath,&sst);
       if (rc == 0) {
-        locsuspecttime=sst.st_ctime;
+        locsuspecttime=sst.st_mtime;
       } else {
         passmywork->suspect=1;
       }

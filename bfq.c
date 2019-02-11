@@ -94,6 +94,7 @@ OF SUCH DAMAGE.
 #include <time.h>
 #endif
 #include <unistd.h>
+#include <utime.h>
 
 #include <pwd.h>
 #include <grp.h>
@@ -147,6 +148,22 @@ static void processdir(void * passv)
     char shortname[MAXPATH];
     char endname[MAXPATH];
 
+    // keep track of the mtime and atime
+    struct utimbuf dbtime = {};
+    if (in.keep_matime) {
+        char name[MAXSQL];
+        snprintf(name, MAXSQL, "%s/%s", passmywork->name, DBNAME);
+
+        struct stat st;
+        if (lstat(name, &st) != 0) {
+            perror("stat");
+            return;
+        }
+
+        dbtime.actime  = st.st_atime;
+        dbtime.modtime = st.st_mtime;
+    }
+
     // open directory
     if (!(dir = opendir(passmywork->name)))
        goto out_free; // return NULL;
@@ -173,6 +190,7 @@ static void processdir(void * passv)
         if (!attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
             closedb(db);
             return;
+            /* goto out_dir; */
         }
     }
 
@@ -280,6 +298,15 @@ static void processdir(void * passv)
  out_dir:
     // close dir
     closedir(dir);
+
+    // restore mtime and atime
+    if (in.keep_matime) {
+        char name[MAXSQL];
+        snprintf(name, MAXSQL, "%s/%s", passmywork->name, DBNAME);
+        if (utime(name, &dbtime) != 0) {
+            perror("utime");
+        }
+    }
 
  out_free:
     // free the queue entry - this has to be here or there will be a leak
@@ -409,7 +436,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:v:w:G:J:e:", 1, "GUFI_tree ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:v:w:G:J:e:m:", 1, "GUFI_tree ...", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)

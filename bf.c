@@ -148,6 +148,7 @@ void print_help(const char* prog_name,
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
+      case 'm': printf("  -m                 Keep mtime and atime same on the database files"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -197,6 +198,7 @@ void show_input(struct input* in, int retval) {
    printf("in.intermediate_count = '%zu'\n", in->intermediate_count);
    printf("in.intermediate_skip  = '%zu'\n", in->intermediate_skip);
    printf("in.aggregate_or_print = '%d'\n",  in->aggregate_or_print);
+   printf("in.keep_matime        = '%d'\n",  in->keep_matime);
    printf("\n");
    printf("retval                = %d\n", retval);
    printf("\n");
@@ -239,6 +241,7 @@ int parse_cmd_line(int         argc,
    in->intermediate_count = in->maxthreads * 4 + 1;
    in->intermediate_skip  = 1;
    in->aggregate_or_print = AGGREGATE; // aggregate by default
+   in->keep_matime        = 0;         // default to not keeping mtime and atime
 
    int show   = 0;
    int retval = 0;
@@ -412,6 +415,10 @@ int parse_cmd_line(int         argc,
 
       case 'J':
          INSTALL_STR(in->intermediate, optarg, MAXSQL, "-J");
+         break;
+
+      case 'm':
+         in->keep_matime = 1;
          break;
 
       case '?':
