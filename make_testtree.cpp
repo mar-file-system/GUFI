@@ -226,7 +226,6 @@ struct Settings {
 
     std::ostream &print(std::ostream &stream) const {
         stream << "Tree properties:"
-               << "\n    Path:            " << top
                << "\n    Files:           " << files
                << "\n        Blocksize:   " << blocksize
                << "\n        Timestamps:  [" << time.min << ", " << time.max << "]"
@@ -247,6 +246,7 @@ struct Settings {
 
         stream << "\n"
                << "\nOutput properties:"
+               << "\n    Path:                   " << top
                << "\n    Path Separator:         " << path_separator
                << "\n    Leading Zeros:          " << leading_zeros
                << "\n    Database name:          " << db_name
@@ -992,7 +992,7 @@ int main(int argc, char *argv[]) {
     }
 
     // use this rng to generate seeds for other rngs
-    std::mt19937 gen(settings.seed);
+    std::minstd_rand gen(settings.seed);
 
     // mutex for preventing prints from overlapping
     std::mutex print_mutex;
@@ -1038,7 +1038,7 @@ int main(int argc, char *argv[]) {
         args->gid = settings.gid + offset;
         args->seed = gen();
 
-        thpool_add_work(pool, generatedir <std::knuth_b, std::mt19937, std::normal_distribution <double> >, args);
+        thpool_add_work(pool, generatedir <std::knuth_b, std::minstd_rand, std::normal_distribution <double> >, args);
     }
 
     thpool_wait(pool);
