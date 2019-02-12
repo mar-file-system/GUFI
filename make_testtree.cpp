@@ -397,13 +397,13 @@ sqlite3 *open_and_create_tables(const std::string &name){
 
     // try to get an exclusive lock
     if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", nullptr, nullptr, nullptr) != SQLITE_OK) {
-        std::cerr << "Could not turn journal_mode off " << sqlite3_errmsg(db) << std::endl;
+        std::cerr << "Could not set locking mode to exclusive " << sqlite3_errmsg(db) << std::endl;
     }
 
-    // // try increasing the page size
-    // if (sqlite3_exec(db, "PRAGMA page_size = 16777216", nullptr, nullptr, nullptr) != SQLITE_OK) {
-    //     std::cerr << "Could not change page size" << sqlite3_errmsg(db) << std::endl;
-    // }
+    // try increasing the page size
+    if (sqlite3_exec(db, "PRAGMA page_size = 16777216", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        std::cerr << "Could not change page size" << sqlite3_errmsg(db) << std::endl;
+    }
 
     // create tables
     if (!create_tables(db)) {
@@ -418,6 +418,13 @@ sqlite3 *open_and_create_tables(const std::string &name){
 // This function creates somewhat random file records for the current directory
 template <typename Generator>
 void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &sizes) {
+    {
+        std::lock_guard <std::mutex> lock(arg->mutex);
+        if (arg->files >= arg->settings->files) {
+            return;
+        }
+    }
+
     const std::string fullname = arg->path + arg->settings->path_separator + arg->settings->db_name;
 
     sqlite3 *on_disk = open_and_create_tables(fullname.c_str());
@@ -450,8 +457,13 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         size_rngs[i] = std::normal_distribution <double> (mean, stddev);
     }
 
+    // summary of what is in this directory
     struct sum summary;
     zeroit(&summary);
+
+    // local statistics variables
+    off_t curr_size = 0;
+    std::list <off_t> curr_sizes;
 
     // prepare to insert entries
     sqlite3_stmt *res = nullptr;
@@ -501,30 +513,45 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         work.ossint3 = rng(gen);
         work.ossint4 = rng(gen);
 
+        // add this data to the summary
         sumit(&summary, &work);
 
+        // insert the row
         insertdbgo(&work, on_disk, res);
 
-        {
-            std::lock_guard <std::mutex> lock(ThreadArgs::mutex);
-            arg->size += work.statuso.st_size;
-            sizes.push_back(work.statuso.st_size);
-        }
-
-        // collect timed stats
-        {
-            std::lock_guard <std::mutex> lock(ThreadArgs::timed_stats.mutex);
-            ThreadArgs::timed_stats.files++;
-        }
+        // store stats in local variables first
+        // to prevent lock contention and
+        // because nothing is inserted until
+        // the transaction ends
+        curr_size += work.statuso.st_size;
+        curr_sizes.push_back(work.statuso.st_size);
     }
 
-    sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
-
+    // complete the transaction
+    const int rc = sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
     insertdbfin(on_disk, res);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Error completing transaction" << std::endl;
+        sqlite3_close(on_disk);
+        return;
+    }
+
+    // collect timed stats
+    {
+        std::lock_guard <std::mutex> lock(ThreadArgs::timed_stats.mutex);
+        ThreadArgs::timed_stats.files++;
+    }
+
+    // collect individual stats
+    {
+        std::lock_guard <std::mutex> lock(ThreadArgs::mutex);
+        arg->size += curr_size;
+        sizes.insert(sizes.end(),
+                     std::make_move_iterator(curr_sizes.begin()),
+                     std::make_move_iterator(curr_sizes.end()));
+    }
 
     // summarize this directory
-    std::size_t bucket = bucket_rng(gen);
-
     struct work work;
 
     snprintf(work.name, MAXPATH, "%s", arg->path.c_str());
@@ -539,7 +566,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     work.statuso.st_nlink = 1;
     work.statuso.st_uid = arg->uid;
     work.statuso.st_gid = arg->gid;
-    work.statuso.st_size = static_cast <std::size_t> (size_rngs[bucket](gen));
+    work.statuso.st_size = curr_size;
     work.statuso.st_blksize = rng(gen);
     work.statuso.st_blocks = rng(gen);
     work.statuso.st_ctime = time_rng(gen);
