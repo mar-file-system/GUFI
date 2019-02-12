@@ -97,7 +97,6 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     //struct dirent *entry;
     char path[MAXPATH];
     char lpath[MAXPATH];
-    long long int ppin;
     struct stat st;
     char type[2];
     int xattrs;
@@ -130,19 +129,19 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
       bzero(lpath,sizeof(lpath));
       bzero(type,sizeof(type));
       //printf("%lld d ", level);
-      sprintf(type,"f");
+      SNPRINTF(type,2,"f");
       if (S_ISDIR(st.st_mode)) {
-        sprintf(type,"d");
+        SNPRINTF(type,2,"d");
       }
       if (S_ISLNK(st.st_mode)) {
-        sprintf(type,"l");
+        SNPRINTF(type,2,"l");
       }
       if (loader>0) {
         if (S_ISDIR(st.st_mode)) {
-          sprintf(sortf,"%s%s%s",name,in.delim,type);
+          SNPRINTF(sortf,MAXPATH,"%s%s%s",name,in.delim,type);
         } else {
           shortpath(name,beginpath,endpath);
-          sprintf(sortf,"%s%s%s",beginpath,in.delim,type);
+          SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in.delim,type);
         }
         printload(name,&st,type,lpath,xattrs,xattr,pin,sortf,stdout);
       } else {
@@ -161,7 +160,6 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
       }
     }
 
-    ppin=pin;
     while ((entry = (readdir(dir)))) {
        int len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
        path[len] = 0;
@@ -186,7 +184,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
         if (S_ISDIR(st.st_mode) ) {
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
-            sprintf(type,"d");
+            SNPRINTF(type,2,"d");
             //printf("inwhile d %s %lld %lld\n", name, entry->d_ino, ppin);
             listdir(path, pin, entry, entry->d_ino, statit, xattrit,loader);
         } else {
@@ -194,10 +192,10 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
             bzero(lpath,sizeof(lpath));
             //if (entry->d_type == DT_REG) {
             if (S_ISREG(st.st_mode)) {
-               sprintf(type,"f");
+               SNPRINTF(type,2,"f");
             }
             if (S_ISLNK(st.st_mode)) {
-               sprintf(type,"l");
+               SNPRINTF(type,2,"l");
                if (statit) readlink(path,lpath,MAXPATH);
             }
             if (statit+xattrit > 0) {
@@ -206,17 +204,17 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
               //printf("readlink %s %s\n",path,lpath);
               if (loader>0) {
                 if (S_ISDIR(st.st_mode)) {
-                  sprintf(sortf,"%s%s%s",path,in.delim,type);
+                  SNPRINTF(sortf,MAXPATH,"%s%s%s",path,in.delim,type);
                 } else {
                   shortpath(path,beginpath,endpath);
-                  sprintf(sortf,"%s%s%s",beginpath,in.delim,type);
+                  SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in.delim,type);
                 }
                 printload(path,&st,type,lpath,xattrs,xattr,pin,sortf,stdout);
               } else {
                 printit(path,&st,type,lpath,xattrs,xattr,1,pin);
               }
             } else {
-              printf("%s %s %lld %lld\n",type, path, entry->d_ino,pin);
+              printf("%s %s %"STAT_ino" %lld\n",type, path, entry->d_ino,pin);
             }
         }
     }
@@ -238,7 +236,7 @@ void helpme() {
 
 int main(int argc, char **argv)
 {
-    struct dirent *entries;
+    struct dirent *entries = NULL;
     struct stat status;
     int statit;
     int xattrit;

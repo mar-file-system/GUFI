@@ -101,7 +101,7 @@ OF SUCH DAMAGE.
 #include <dbutils.h>
 
 char globalmnt[MAXPATH];
-int  globalmntlen;
+size_t  globalmntlen;
 char globaldbname[MAXPTHREAD][MAXPATH];
 int  globaldbs;
 //sqlite3 *globaldb;
@@ -110,7 +110,7 @@ char globalview[MAXSQL];
 struct stat globalst;
 
 int att(sqlite3 *indb) {
-        sqlite3 *db;
+        sqlite3 *db = NULL;
         int i;
         char indbname[MAXPATH];
         char qat[MAXSQL];
@@ -119,11 +119,10 @@ int att(sqlite3 *indb) {
         char sqlu[MAXSQL];
         char up[MAXSQL];
 
-        bzero(sqlu,sizeof(sqlu));
-        sprintf(sqlu,"create temp view %s as ",globalview);
+        SNPRINTF(sqlu,MAXSQL,"create temp view %s as ",globalview);
         i=0;
         while (i<globaldbs) {
-          sprintf(qat,"ATTACH \'%s\' as mdb%d;",globaldbname[i],i);
+          SNPRINTF(qat,MAXSQL,"ATTACH \'%s\' as mdb%d;",globaldbname[i],i);
           //printf("ATTACH \'%s\' as mdb%d;\n",globaldbname[i],i);
           rc=sqlite3_exec(indb, qat,0, 0, &err_msg);
           if (rc != SQLITE_OK) {
@@ -131,11 +130,11 @@ int att(sqlite3 *indb) {
             sqlite3_close(db);
             exit(9);
           }
-          sprintf(up,"select * from mdb%d.%s",i,globaltab);
+          SNPRINTF(up,MAXSQL,"select * from mdb%d.%s",i,globaltab);
           strcat(sqlu,up);
           if (globaldbs > 1) {
             if (i < (globaldbs-1)) {
-              sprintf(up," union all ");
+              SNPRINTF(up,MAXSQL," union all ");
               strcat(sqlu,up);
             }
             i++;
@@ -154,7 +153,7 @@ static int gufir_getattr(const char *path, struct stat *stbuf) {
         sqlite3_stmt    *res;
         const char   *tail;
         int rec_count;
-        char sqlstmt[1024];
+        char sqlstmt[MAXSQL];
         char *p;
         char shortpathc[MAXPATH];
         char endpath[MAXPATH];
@@ -197,7 +196,7 @@ static int gufir_getattr(const char *path, struct stat *stbuf) {
           }
           att(mydb);
           shortpath(path,shortpathc,endpath);
-          sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
+          SNPRINTF(sqlstmt,MAXSQL,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
           rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "SQL error on query: %s name %s \n",sqlstmt,path);
@@ -235,12 +234,12 @@ static int gufir_getattr(const char *path, struct stat *stbuf) {
 }
 
 static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t offset, struct fuse_file_info *fi) {
-        int i;
+        size_t i;
         int rc;
         sqlite3_stmt    *res;
         const char      *tail;
         int rec_count;
-        char sqlstmt[1024];
+        char sqlstmt[MAXSQL];
         char *p;
         char shortpathc[MAXPATH];
         struct dirent des;
@@ -276,7 +275,7 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off
             des.d_ino=globalst.st_ino;
             des.d_type = DT_DIR ;
             /* pull the next level directory out of the globalmnt as the only entry in the directory being readdird */
-            sprintf(shortpathc,"%s",p+1);
+            SNPRINTF(shortpathc,MAXPATH,"%s",p+1);
             for(i = 0; i <= strlen(shortpathc); i++) {
   		if(shortpathc[i] == '/')
 		{
@@ -284,7 +283,7 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off
 			break;
  		}
             }
-            sprintf(des.d_name,"%s",shortpathc);
+            SNPRINTF(des.d_name,256,"%s",shortpathc);
             //fprintf(stderr,"readdir path less than smallest db %s %s\n",path,globalmnt);
             //fprintf(stderr,"readdir uid %ul gid %ul ctime %ld\n",stbuc.st_uid,stbuc.st_gid,stbuc.st_ctime);
 
@@ -298,7 +297,7 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off
         } else {
           /* input path is equal to or longer than the shortest db path meaning we should just look up for an exact match */
 
-          sprintf(sqlstmt,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks,name,type from %s where fullpath='%s';",globalview,path);
+          SNPRINTF(sqlstmt,MAXSQL,"select mode,nlink,inode,uid,gid,size,atime,mtime,ctime,blksize,blocks,name,type from %s where fullpath='%s';",globalview,path);
           rc = sqlite3_open("", &mydb);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,path,sqlite3_errmsg(mydb));
@@ -331,8 +330,8 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off
             stbuc.st_ctime=sqlite3_column_int64(res,8);
             stbuc.st_blksize=sqlite3_column_int64(res,9);
             stbuc.st_blocks=sqlite3_column_int64(res,10);
-            sprintf(des.d_name,"%s",(const char *)sqlite3_column_text(res,11));
-            sprintf(ttype,"%s",(const char *)sqlite3_column_text(res,12));
+            SNPRINTF(des.d_name,256,"%s",(const char *)sqlite3_column_text(res,11));
+            SNPRINTF(ttype,2,"%s",(const char *)sqlite3_column_text(res,12));
             des.d_ino=stbuc.st_ino;
             if (!strncmp(ttype,"d",1)) des.d_type = DT_DIR;
             if (!strncmp(ttype,"f",1)) des.d_type = DT_REG;
@@ -351,22 +350,15 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off
 }
 
 static int gufir_access(const char *path, int mask) {
-	int res;
-
-        res=0;
 	return 0;
 }
 
 static int gufir_statfs(const char *path, struct statvfs *stbuf) {
-        int i;
         int rc;
         sqlite3_stmt    *res;
         const char      *tail;
         int rec_count;
-        char sqlstmt[1024];
-        char *p;
-        char shortpathc[MAXPATH];
-        struct stat stbuc;
+        char sqlstmt[MAXSQL];
         sqlite3 *mydb;
         int bsize=512;
         long long int totbytes;
@@ -386,7 +378,7 @@ static int gufir_statfs(const char *path, struct statvfs *stbuf) {
         //shortpath(path,shortpathc,endpath);
         totbytes=0;
         totfiles=0;
-        sprintf(sqlstmt,"select sum(size),count(*)from %s where type='f';",globalview);
+        SNPRINTF(sqlstmt,MAXSQL,"select sum(size),count(*)from %s where type='f';",globalview);
         rc = sqlite3_prepare_v2(mydb,sqlstmt, MAXSQL, &res, &tail);
         if (rc != SQLITE_OK) {
           fprintf(stderr, "statvfs SQL error on query: %s name %s \n",sqlstmt,path);
@@ -431,7 +423,7 @@ static int gufir_getxattr(const char *path, const char *name, char *value, size_
         const char      *tail;
         int     error = 0;
         int rec_count;
-        char sqlstmt[1024];
+        char sqlstmt[MAXSQL];
         char *p;
         char shortpathc[MAXPATH];
         char endpath[MAXPATH];
@@ -458,7 +450,7 @@ static int gufir_getxattr(const char *path, const char *name, char *value, size_
         } else {
 
           shortpath(path,shortpathc,endpath);
-          sprintf(sqlstmt,"select xattrs from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
+          SNPRINTF(sqlstmt,MAXSQL,"select xattrs from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
           rc = sqlite3_open("", &mydb);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,path,sqlite3_errmsg(mydb));
@@ -477,7 +469,7 @@ static int gufir_getxattr(const char *path, const char *name, char *value, size_
           while (sqlite3_step(res) == SQLITE_ROW) {
             //printf("in sql step loop %s\n",sqlite3_column_text(res,0));
             //ncols=sqlite3_column_count(res);
-            sprintf(txattr,"%s",sqlite3_column_text(res,0));
+            SNPRINTF(txattr,MAXXATTR,"%s",sqlite3_column_text(res,0));
             //printf("getxattr found %s",txattr);
             rec_count++;
             break;
@@ -506,14 +498,14 @@ static int gufir_listxattr(const char *path, char *list, size_t size) {
         const char      *tail;
         int     error = 0;
         int rec_count;
-        char sqlstmt[1024];
+        char sqlstmt[MAXSQL];
         char *p;
         char shortpathc[MAXPATH];
         char endpath[MAXPATH];
         char txattr[MAXXATTR];
         sqlite3 *mydb;
 
-        sprintf(myattr,"xattrs");
+        SNPRINTF(myattr,256,"xattrs");
         /* if they call with zero size tell them how big it will be padded by 1 */
         if (size==0) return (strlen(myattr)+1);
         //printf("in listxattrs %s\n",path);
@@ -533,7 +525,7 @@ static int gufir_listxattr(const char *path, char *list, size_t size) {
         } else {
 
           shortpath(path,shortpathc,endpath);
-          sprintf(sqlstmt,"select xattrs from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
+          SNPRINTF(sqlstmt,MAXSQL,"select xattrs from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
           rc = sqlite3_open("", &mydb);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,path,sqlite3_errmsg(mydb));
@@ -552,7 +544,7 @@ static int gufir_listxattr(const char *path, char *list, size_t size) {
           while (sqlite3_step(res) == SQLITE_ROW) {
             //printf("in sql step loop %s\n",sqlite3_column_text(res,0));
             //ncols=sqlite3_column_count(res);
-            sprintf(txattr,"%s",sqlite3_column_text(res,0));
+            SNPRINTF(txattr,MAXXATTR,"%s",sqlite3_column_text(res,0));
             //printf("getxattr found %s",txattr);
             rec_count++;
             break;
@@ -579,7 +571,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
         sqlite3_stmt    *res;
         const char      *tail;
         int rec_count;
-        char sqlstmt[1024];
+        char sqlstmt[MAXSQL];
         char *p;
         char shortpathc[MAXPATH];
         char endpath[MAXPATH];
@@ -602,7 +594,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
         } else {
 
           shortpath(path,shortpathc,endpath);
-          sprintf(sqlstmt,"select linkname from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
+          SNPRINTF(sqlstmt,MAXSQL,"select linkname from %s where fullpath='%s' and name='%s';",globalview,shortpathc,endpath);
           rc = sqlite3_open("", &mydb);
           if (rc != SQLITE_OK) {
             fprintf(stderr, "getattr SQL error on open: %s name %s err %s\n",sqlstmt,path,sqlite3_errmsg(mydb));
@@ -621,7 +613,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
           while (sqlite3_step(res) == SQLITE_ROW) {
             //printf("in sql step loop %s\n",sqlite3_column_text(res,0));
             //ncols=sqlite3_column_count(res);
-            sprintf(treadlink,"%s",sqlite3_column_text(res,0));
+            SNPRINTF(treadlink,MAXPATH,"%s",sqlite3_column_text(res,0));
             //printf("readlink found %s",treadlink);
             rec_count++;
             break;
@@ -668,17 +660,17 @@ int main(int argc, char *argv[]) {
         globaldbs=atoi(argv[argc-1]);
         argc--;
         // next to last arg has to be base path/name of db files
-        sprintf(indbname,"%s",argv[argc-1]);
+        SNPRINTF(indbname,MAXPATH,"%s",argv[argc-1]);
         argc--;
         // next to next to last arg has to be the table name in the db
-        sprintf(globaltab,"%s",argv[argc-1]);
+        SNPRINTF(globaltab,MAXSQL,"%s",argv[argc-1]);
         argc--;
 
-        sprintf(globalview,"v%s",globaltab);
+        SNPRINTF(globalview,MAXSQL,"v%s",globaltab);
 
         i=0;
         while (i<globaldbs) {
-          sprintf(globaldbname[i],"%s.%d",indbname,i);
+          SNPRINTF(globaldbname[i],MAXPATH,"%s.%d",indbname,i);
           i++;
         }
         //sqlite3_initialize();
@@ -694,7 +686,7 @@ int main(int argc, char *argv[]) {
         }
         att(mydb);
 
-        sprintf(sqlu,"select fullpath,length(fullpath) as pl from %s where type=\"d\" order by pl limit 1;",globalview);
+        SNPRINTF(sqlu,MAXSQL,"select fullpath,length(fullpath) as pl from %s where type=\"d\" order by pl limit 1;",globalview);
         rc = sqlite3_prepare_v2(mydb, sqlu, MAXSQL, &res, &tail);
         if (rc != SQLITE_OK) {
           fprintf(stderr, "SQL error on finding global path query: %s err %s\n",sqlu,sqlite3_errmsg(mydb));
@@ -705,7 +697,7 @@ int main(int argc, char *argv[]) {
           exit(-1);
         }
         globalmntlen=0;
-        sprintf(globalmnt,"%s",sqlite3_column_text(res,0));
+        SNPRINTF(globalmnt,MAXPATH,"%s",sqlite3_column_text(res,0));
         globalmntlen  = sqlite3_column_int64(res, 1);
         sqlite3_finalize(res);
         closedb(mydb);
@@ -715,12 +707,12 @@ int main(int argc, char *argv[]) {
           exit(-1);
         }
         if (globalmntlen <1) {
-          fprintf(stderr,"path from query resulted in length < 1 %d %s\n",globalmntlen,globalmnt);
+          fprintf(stderr,"path from query resulted in length < 1 %zu %s\n",globalmntlen,globalmnt);
           exit(-1);
         }
         //fprintf(stderr,"path from query resulted in %d %s\n",globalmntlen,globalmnt);
 
-        getwd(cwd);
+        getcwd(cwd, MAXPATH);
         stat(cwd,&globalst);
 
 	return fuse_main(argc, argv, &gufir_oper, NULL);

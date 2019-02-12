@@ -115,11 +115,9 @@ int main(int argc, char *argv[])
    char name[MAXPATH];
    char dbname[MAXPATH];
    char rsqlstmt[MAXSQL];
-   struct stat statuso;
    int rc;
    sqlite3 *db;
    int recs;
-   struct sum sumout;
    int dirsummary = 0;
    int numdbs = 0;
    int i;
@@ -128,7 +126,7 @@ int main(int argc, char *argv[])
    char sqlu[MAXSQL];
    char sqlat[MAXSQL];
    char tabnam[MAXPATH];
-   char up[MAXPATH];
+   char up[MAXSQL];
    char *err_msg = 0;
 
    // sprintf(name,"%s",argv[1]);
@@ -169,7 +167,7 @@ int main(int argc, char *argv[])
 
 
    //printf("processing query name %s  numb dbs %d\n",name, numdbs);
-   sprintf(dbname,"%s",name);
+   SNPRINTF(dbname,MAXPATH,"%s",name);
    db = opendb(name,5,0);
 
    // add query funcs to get path() uidtouser() gidtogroup()
@@ -178,19 +176,17 @@ int main(int argc, char *argv[])
    // just zero out the global path so path() for this query is useless
    bzero(gps[0].gpath,sizeof(gps[0].gpath));
 
-   bzero(sqlu,sizeof(sqlu));
-   sprintf(sqlu,"create temp view v%s as ",tabnam);
-   bzero(up,sizeof(up));
+   SNPRINTF(sqlu,MAXSQL,"create temp view v%s as ",tabnam);
    i=0;
    while (i < numdbs) {
-      sprintf(dbnam,"%s.%d",name,i);
-      sprintf(dbn,"%s%d",name,i);
+      SNPRINTF(dbnam,MAXPATH,"%s.%d",name,i);
+      SNPRINTF(dbn,MAXPATH,"%s%d",name,i);
       if (i != (numdbs-1))
-         sprintf(up,"select * from %s.%s union all ",dbn,tabnam);
+         SNPRINTF(up,MAXSQL,"select * from %s.%s union all ",dbn,tabnam);
       else
-         sprintf(up,"select * from %s.%s;",dbn,tabnam);
+         SNPRINTF(up,MAXSQL,"select * from %s.%s;",dbn,tabnam);
       strcat(sqlu,up);
-      sprintf(sqlat,"ATTACH \'%s\' as %s",dbnam,dbn);
+      SNPRINTF(sqlat,MAXSQL,"ATTACH \'%s\' as %s",dbnam,dbn);
       //printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {
@@ -218,11 +214,11 @@ int main(int argc, char *argv[])
 
    i=0;
    while (i < numdbs) {
-      sprintf(dbnam,"%s.%d",name,i);
-      sprintf(dbn,"%s%d",name,i);
+      SNPRINTF(dbnam,MAXPATH,"%s.%d",name,i);
+      SNPRINTF(dbn,MAXPATH,"%s%d",name,i);
 
       //detachdb(dbnam,db,dbn);
-      sprintf(sqlat,"DETACH %s",dbn);
+      SNPRINTF(sqlat,MAXSQL,"DETACH %s",dbn);
       rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
       if (rc != SQLITE_OK) {
          fprintf(stderr, "Cannot detach database: %s/%s %s\n", name, DBNAME,sqlite3_errmsg(db));

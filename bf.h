@@ -282,7 +282,7 @@ struct work {
    char          osstext2[MAXXATTR];
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
-   int           aggregate_id;
+   size_t        aggregate_id;
 };
 
 extern char xattrdelim[];

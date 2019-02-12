@@ -5,7 +5,9 @@
 #include <gtest/gtest.h>
 
 extern "C" {
+
 #include "utils.h"
+
 }
 
 TEST(Trie, create_cleanup) {
@@ -161,7 +163,7 @@ TEST(summary, sumit_file) {
     struct work pwork;
     memset(&pwork, 0, sizeof(pwork));
 
-    snprintf(pwork.type, 2, "%s", "f");
+    SNPRINTF(pwork.type, 2, "%s", "f");
     pwork.statuso.st_uid    = dist(gen);
     pwork.statuso.st_gid    = dist(gen);
     pwork.statuso.st_size   = dist(gen);
@@ -223,7 +225,7 @@ TEST(summary, sumit_link) {
     struct work pwork;
     memset(&pwork, 0, sizeof(pwork));
 
-    snprintf(pwork.type, 2, "%s", "l");
+    SNPRINTF(pwork.type, 2, "%s", "l");
     pwork.statuso.st_uid    = dist(gen);
     pwork.statuso.st_gid    = dist(gen);
     pwork.statuso.st_size   = dist(gen);

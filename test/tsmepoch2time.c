@@ -1,9 +1,9 @@
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <time.h>
 
 int main(int argc, char **argv)
 {
-    time_t     now;
     struct tm  ts;
     char       buf[80];
 

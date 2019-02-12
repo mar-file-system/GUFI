@@ -104,15 +104,8 @@ OF SUCH DAMAGE.
 static void processdir(void * passv)
 {
     struct work *passmywork = passv;
-    struct work qwork;
     DIR *dir;
-    struct dirent *entry;
     int mytid;
-    char *records;
-    struct sum summary;
-    sqlite3_stmt *res;
-    sqlite3_stmt *reso;
-    char dbpath[MAXPATH];
     sqlite3 *db;
     struct sum sumin;
     int recs;
@@ -126,7 +119,7 @@ static void processdir(void * passv)
     if (!(dir = opendir(passmywork->name)))
        goto out_free; // return NULL;
 
-    sprintf(passmywork->type,"%s","d");
+    SNPRINTF(passmywork->type,2,"%s","d");
     if (in.printing || in.printdir) {
       printits(passmywork,mytid);
     }
@@ -146,8 +139,6 @@ static void processdir(void * passv)
        closedb(db);
     }
 
-
- out_dir:
     // close dir
     closedir(dir);
 
@@ -166,7 +157,7 @@ int processinit(void * myworkin) {
      struct work * mywork = myworkin;
 
      // process input directory and put it on the queue
-     sprintf(mywork->name,"%s",in.name);
+     SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
      lstat(in.name,&mywork->statuso);
      if (access(in.name, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
@@ -191,7 +182,7 @@ int processfin() {
      char dbpath[MAXPATH];
      struct utimbuf utimeStruct;
 
-     sprintf(dbpath,"%s/%s",in.name,DBNAME);
+     SNPRINTF(dbpath,MAXPATH,"%s/%s",in.name,DBNAME);
      rc=1;
      rc=lstat(dbpath,&smt);
      if (in.writetsum) {
@@ -203,7 +194,7 @@ int processfin() {
      if (rc==0) {
         utimeStruct.actime  = smt.st_atime;
         utimeStruct.modtime = smt.st_mtime;
-        if(utime(dbpath, &utimeStruct) != 0) { 
+        if(utime(dbpath, &utimeStruct) != 0) {
            fprintf(stderr,"ERROR: utime failed with error number: %d on %s\n", errno,dbpath);
            exit(1);
         }
@@ -251,7 +242,6 @@ int main(int argc, char *argv[])
 {
      //char nameo[MAXPATH];
      struct work mywork;
-     int i;
 
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.

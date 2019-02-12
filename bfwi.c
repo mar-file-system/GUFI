@@ -113,8 +113,8 @@ void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
 
     //printf("in parsetowork delim %s inpline %s\n",inpdelim,inpline);
     inpline[strlen(inpline)-1]= '\0';
-    p=inpline; q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->name,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1), sprintf(pinwork->type,"%s",p);
+    p=inpline; q=strstr(p,inpdelim); memset(q, 0, 1); SNPRINTF(pinwork->name,MAXPATH,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); SNPRINTF(pinwork->type,2,"%s",p);
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_ino=atol(p);
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_mode=atol(p);
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_nlink=atol(p);
@@ -126,8 +126,8 @@ void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_atime=atol(p);
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_mtime=atol(p);
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->statuso.st_ctime=atol(p);
-    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->linkname,"%s",p);
-    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); sprintf(pinwork->xattr,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); SNPRINTF(pinwork->linkname,MAXPATH,"%s",p);
+    p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); SNPRINTF(pinwork->xattr,MAXXATTR,"%s",p);
     p=q+1;     q=strstr(p,inpdelim); memset(q, 0, 1); pinwork->crtime=atol(p);
 
 }
@@ -154,7 +154,7 @@ void *scout(void * param) {
           //printf("got input line %s\n",linein);
           parsetowork (in.delim, linein, mywork );
           //printf("%s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-          fgetpos(finfile,&foffset);
+          fgetpos(finfile,(fpos_t *) &foffset);
           if (!strncmp("d",mywork->type,1)) {
              mywork->pinode=0;
              //printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
@@ -191,7 +191,6 @@ static void processdir(void * passv)
     int transcnt;
     int loop;
     char plinein[MAXPATH+MAXPATH+MAXPATH];
-    long long int pos;
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
@@ -210,12 +209,12 @@ static void processdir(void * passv)
       //   goto out_dir; // return NULL;
     } else {
       /* seek to the fileslinks following the directory in my fopened file */
-      fsetpos(gin[mytid],&passmywork->offset);
+        fsetpos(gin[mytid], (fpos_t *) &passmywork->offset);
       //fgetpos(gin[mytid],&pos);
       //printf("position set for tid %d position %lld\n",mytid,pos);
     }
 
-    sprintf(passmywork->type,"%s","d");
+    SNPRINTF(passmywork->type,2,"%s","d");
     if (in.printing > 0 || in.printdir > 0) {
       printits(passmywork,mytid);
     }
@@ -264,7 +263,7 @@ static void processdir(void * passv)
             if (strcmp(entry->d_name, DBNAME) == 0)
                continue;
           }
-          sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
+          SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
           lstat(qwork.name, &qwork.statuso);
           qwork.xattrs=0;
           if (in.doxattrs > 0) {
@@ -301,9 +300,9 @@ static void processdir(void * passv)
               bzero(lpatho,sizeof(lpatho));
               readlink(qwork.name,lpatho,MAXPATH);
               //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
-              sprintf(qwork.linkname,"%s",lpatho);
+              SNPRINTF(qwork.linkname,MAXPATH,"%s",lpatho);
             }
-            sprintf(qwork.type,"%s","l");
+            SNPRINTF(qwork.type,2,"%s","l");
             if (in.printing > 0) {
               printits(&qwork,mytid);
             }
@@ -318,7 +317,7 @@ static void processdir(void * passv)
               }
             }
         } else if (S_ISREG(qwork.statuso.st_mode) ) {
-            sprintf(qwork.type,"%s","f");
+            SNPRINTF(qwork.type,2,"%s","f");
             if (in.printing > 0) {
               printits(&qwork,mytid);
             }
@@ -344,7 +343,7 @@ static void processdir(void * passv)
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
-      sprintf(dbpath, "%s/%s/DBNAME", in.nameto,passmywork->name);
+      SNPRINTF(dbpath, MAXPATH, "%s/%s/DBNAME", in.nameto,passmywork->name);
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
@@ -374,14 +373,12 @@ int processinit(void * myworkin) {
      int i;
      char outfn[MAXPATH];
      FILE *finfile = NULL;
-     char linein[MAXPATH+MAXPATH+MAXPATH];
-     long long int foffset;
 
      //open up the output files if needed
      if (in.outfile > 0) {
        i=0;
        while (i < in.maxthreads) {
-         sprintf(outfn,"%s.%d",in.outfilen,i);
+         SNPRINTF(outfn,MAXPATH,"%s.%d",in.outfilen,i);
          gts.outfd[i]=fopen(outfn,"w");
          i++;
        }
@@ -445,7 +442,7 @@ int processinit(void * myworkin) {
        pthread_create(&gtid,NULL,scout,&in.name);
      } else { /* no input file we are walking*/
        // process input directory and put it on the queue
-       sprintf(mywork->name,"%s",in.name);
+       SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
        lstat(in.name, &mywork->statuso);
        if (access(in.name, R_OK | X_OK)) {
           fprintf(stderr, "couldn't access input dir '%s': %s\n",
@@ -513,7 +510,7 @@ int validate_inputs() {
       in.buildindex = 1;        // you're welcome
    }
 
-   sprintf(expathtst,"%s/%s",in.nameto,in.name);
+   SNPRINTF(expathtst,MAXPATH,"%s/%s",in.nameto,in.name);
    realpath(expathtst,expathout);
    //printf("expathtst: %s expathout %s\n",expathtst,expathout);
    realpath(in.name,expathin);
@@ -542,7 +539,6 @@ int main(int argc, char *argv[])
 {
      //char nameo[MAXPATH];
      struct work mywork = {};
-     int i;
 
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.

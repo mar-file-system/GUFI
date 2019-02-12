@@ -85,7 +85,7 @@ OF SUCH DAMAGE.
 #include <errno.h>
 
 // Usage:
-// 
+//
 //    make_testdirs -d <n_dirs> -f <n_files> dirname
 //
 // create <n_dirs> directories directly under <dirname>.  Each directory
@@ -106,7 +106,7 @@ void usage(const char* progname) {
 }
 
 
-                                   
+
 int make_it(const char* dir,
             unsigned    n_dirs,
             unsigned    n_files) {
@@ -114,11 +114,11 @@ int make_it(const char* dir,
    unsigned int rand_state;
 
    char subdir_path[MAX_PATHNAME];
-   int  subdir;
+   unsigned  subdir;
    for (subdir=0; subdir<n_dirs; ++subdir) {
-      int rc = snprintf(subdir_path, MAX_PATHNAME, "%s/dir%05d", dir, subdir);
+      int rc = snprintf(subdir_path, MAX_PATHNAME, "%s/dir%05u", dir, subdir);
       if ((rc < 0) || (rc >= MAX_PATHNAME)) {
-         fprintf(stderr, "snprintf('%s/dir%05d') failed: %s\n", dir, subdir, strerror(errno));
+         fprintf(stderr, "snprintf('%s/dir%05u') failed: %s\n", dir, subdir, strerror(errno));
          exit(-1);
       }
 
@@ -135,11 +135,11 @@ int make_it(const char* dir,
       }
 
       char file_path[MAX_PATHNAME];
-      int  file;
+      unsigned  file;
       for (file=0; file<n_files; ++file) {
-         int rc = snprintf(file_path, MAX_PATHNAME, "%s/file%05d", subdir_path, file);
+         int rc = snprintf(file_path, MAX_PATHNAME, "%s/file%05u", subdir_path, file);
          if ((rc < 0) || (rc >= MAX_PATHNAME)) {
-            fprintf(stderr, "snprintf('%s/file%05d') failed: %s\n", subdir_path, file, strerror(errno));
+            fprintf(stderr, "snprintf('%s/file%05u') failed: %s\n", subdir_path, file, strerror(errno));
             exit(-1);
          }
 
@@ -179,8 +179,8 @@ int main (int argc, char* argv[]) {
          err = 1;                                  \
       }                                            \
    } while (0)
-        
-  
+
+
    while ((! err)
           && (ch = getopt(argc, argv, "hd:f:")) != -1) {
 
@@ -221,7 +221,7 @@ int main (int argc, char* argv[]) {
    }
 
    dir = argv[optind++];
-  
+
 
 
    unsigned seed = 0;

@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 
 
 #include "bf.h"
+#include "utils.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -88,9 +89,9 @@ char xattrdelim[] = "\x1F";     // ASCII Unit Separator
 char fielddelim[] = "\x1E";     // ASCII Record Separator
 
 
-struct globalpathstate gps[MAXPTHREAD] = {0};
+struct globalpathstate gps[MAXPTHREAD] = {};
 
-struct input in = {0};
+struct input in = {};
 
 
 
@@ -235,9 +236,9 @@ int parse_cmd_line(int         argc,
    in->infile             = 0;         // default infile being used
    in->min_level          = 0;         // default to the top
    in->max_level          = -1;        // default to all the way down
-   snprintf(in->sqlent, MAXSQL, "SELECT * FROM entries;");
-   snprintf(in->intermediate, MAXSQL, "SELECT * FROM entries;");
-   snprintf(in->aggregate, MAXSQL, "SELECT * FROM entries;");
+   SNPRINTF(in->sqlent, MAXSQL, "SELECT * FROM entries;");
+   SNPRINTF(in->intermediate, MAXSQL, "SELECT * FROM entries;");
+   SNPRINTF(in->aggregate, MAXSQL, "SELECT * FROM entries;");
    in->intermediate_count = in->maxthreads * 4 + 1;
    in->intermediate_skip  = 1;
    in->aggregate_or_print = AGGREGATE; // aggregate by default
@@ -386,8 +387,18 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'e':
-          INSTALL_INT(in->aggregate_or_print, optarg, 0, 1, "-e");
-          break;
+         {
+            int aggregate_or_print = 0;
+            INSTALL_INT(aggregate_or_print, optarg, 0, 1, "-e");
+
+            if (aggregate_or_print == 0) {
+               in->aggregate_or_print = AGGREGATE;
+            }
+            else if (aggregate_or_print == 1) {
+               in->aggregate_or_print = PRINT;
+            }
+         }
+         break;
 
       case 'v':
           INSTALL_UINT(in->intermediate_count, optarg, (size_t) 1, (size_t) -1, "-v");

@@ -3,12 +3,16 @@ GTEST_INSTALL_DIR ?= ../../googletest/install
 
 CC?=gcc
 CXX?=g++
-CFLAGS=-Wall -std=c++11 -g3 -O0 -I../.. -I$(GTEST_INSTALL_DIR)/include/
+CFLAGS=-std=c++11 -g3 -O0 -I../.. -I$(GTEST_INSTALL_DIR)/include/
 LDFLAGS=-L../.. -lgufi -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -lpthread
 
 TARGET=test
 TESTS=bf utils
 OBJ=$(addsuffix .o, $(TESTS))
+
+ifneq ($(DEBUG),)
+	CFLAGS +=-Wall
+endif
 
 all: $(GTEST_INSTALL_DIR) $(TARGET)
 

@@ -154,7 +154,7 @@ static void processdir(void * passv)
     //    return NULL;
     //if (!(entry = readdir(dir)))
     //    return NULL;
-    sprintf(passmywork->type,"%s","d");
+    SNPRINTF(passmywork->type,2,"%s","d");
     // print?
     if (in.printing > 0 || in.printdir > 0) {
       printits(passmywork,mytid);
@@ -172,7 +172,7 @@ static void processdir(void * passv)
        startdb(db);
     }
 
-    sprintf(myinsql,"select name, type, n.id, n.parent_id, mode, uid, gid, size, last_access, last_mod, last_mdchange, blocks, nlink, replace(replace(replace(replace(replace(replace(replace(replace(n.id,\":\",\"\"),\"0x\",\"\"),\"a\",\"10\"),\"b\",\"11\"),\"c\",\"12\"),\"d\",\"13\"),\"e\",\"14\"),\"f\",\"15\") from entries e left join names n on n.id=e.id  where parent_id = \'%s\'",passmywork->pinodec);
+    SNPRINTF(myinsql,MAXSQL,"select name, type, n.id, n.parent_id, mode, uid, gid, size, last_access, last_mod, last_mdchange, blocks, nlink, replace(replace(replace(replace(replace(replace(replace(replace(n.id,\":\",\"\"),\"0x\",\"\"),\"a\",\"10\"),\"b\",\"11\"),\"c\",\"12\"),\"d\",\"13\"),\"e\",\"14\"),\"f\",\"15\") from entries e left join names n on n.id=e.id  where parent_id = \'%s\'",passmywork->pinodec);
     //printf("select name, type, n.id, n.parent_id, mode, uid, gid, size, last_access, last_mod, last_mdchange, blocks, nlink, replace(replace(replace(replace(replace(replace(replace(replace(n.id,\":\",\"\"),\"0x\",\"\"),\"a\",\"10\"),\"b\",\"11\"),\"c\",\"12\"),\"d\",\"13\"),\"e\",\"14\"),\"f\",\"15\") from entries e left join names n on n.id=e.id  where parent_id = \'%s\'\n",passmywork->pinodec);
     if(mysql_execute_sql(&msn.mysql[mytid],myinsql)!=0) {
       printf( "select  %s failed\n", mysql_error(&msn.mysql[mytid]));
@@ -187,21 +187,21 @@ static void processdir(void * passv)
       while ((lrow = mysql_fetch_row(lresult))) {
         //printf("fetching row\n");
         entry = &myentry;
-        sprintf(ltchar,"%s",lrow[0]);  sprintf(qwork.name,"%s/%s", passmywork->name,ltchar);
-        sprintf(ltchar,"%s",lrow[1]);  sprintf(qwork.type, "%1s", ltchar);
-        sprintf(ltchar,"%s",lrow[2]);  /* this is char inode*/ sprintf(lpinodec,"%s",ltchar); /* the inode becomes the pinodec */
-        sprintf(ltchar,"%s",lrow[3]);  /* this is the character pinode*/
-        sprintf(ltchar,"%s",lrow[4]);  qwork.statuso.st_mode = atol(ltchar);
-        sprintf(ltchar,"%s",lrow[5]);  lmypasswd = getpwnam(ltchar); qwork.statuso.st_uid = lmypasswd->pw_uid;
-        sprintf(ltchar,"%s",lrow[6]);  lmygrp = getgrnam(ltchar); qwork.statuso.st_gid = lmygrp->gr_gid;
-        sprintf(ltchar,"%s",lrow[7]);  qwork.statuso.st_size = atol(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[0]);  SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name,ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[1]);  SNPRINTF(qwork.type, 2, "%1s", ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[2]);  /* this is char inode*/ SNPRINTF(lpinodec,"%s",ltchar); /* the inode becomes the pinodec */
+        SNPRINTF(ltchar,128,"%s",lrow[3]);  /* this is the character pinode*/
+        SNPRINTF(ltchar,128,"%s",lrow[4]);  qwork.statuso.st_mode = atol(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[5]);  lmypasswd = getpwnam(ltchar); qwork.statuso.st_uid = lmypasswd->pw_uid;
+        SNPRINTF(ltchar,128,"%s",lrow[6]);  lmygrp = getgrnam(ltchar); qwork.statuso.st_gid = lmygrp->gr_gid;
+        SNPRINTF(ltchar,128,"%s",lrow[7]);  qwork.statuso.st_size = atol(ltchar);
                                        qwork.statuso.st_blksize= 4096; /* dont have blocksize yet */
-        sprintf(ltchar,"%s",lrow[8]);  qwork.statuso.st_atime = atol(ltchar);
-        sprintf(ltchar,"%s",lrow[9]);  qwork.statuso.st_mtime = atol(ltchar);
-        sprintf(ltchar,"%s",lrow[10]); qwork.statuso.st_ctime = atol(ltchar);
-        sprintf(ltchar,"%s",lrow[11]); qwork.statuso.st_blocks= atoll(ltchar);
-        sprintf(ltchar,"%s",lrow[12]); qwork.statuso.st_nlink = atol(ltchar);
-        sprintf(ltchar,"%s",lrow[13]); qwork.statuso.st_ino = atoll(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[8]);  qwork.statuso.st_atime = atol(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[9]);  qwork.statuso.st_mtime = atol(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[10]); qwork.statuso.st_ctime = atol(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[11]); qwork.statuso.st_blocks= atoll(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[12]); qwork.statuso.st_nlink = atol(ltchar);
+        SNPRINTF(ltchar,128,"%s",lrow[13]); qwork.statuso.st_ino = atoll(ltchar);
         memset(qwork.linkname, 0, sizeof(qwork.linkname)); /* dont have linkname yet */
         memset(qwork.xattr, 0, sizeof(qwork.xattr));
         /* need to get xattre right here */
@@ -214,7 +214,7 @@ static void processdir(void * passv)
         if (!strncmp(qwork.type,"d",1)) {
             if (strcmp(qwork.name, ".") == 0 || strcmp(qwork.name, "..") == 0)
                 continue;
-            sprintf(qwork.pinodec,"%s",lpinodec);
+            SNPRINTF(qwork.pinodec,128,"%s",lpinodec);
             // this pushes the dir onto queue - pushdir does locking around queue update
             pushdir(&qwork);
         } else if (!strncmp(qwork.type,"l",1)) {
@@ -262,7 +262,7 @@ static void processdir(void * passv)
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
-      sprintf(dbpath, "%s/%s/DBNAME", in.nameto,passmywork->name);
+      SNPRINTF(dbpath, MAXPATH, "%s/%s/DBNAME", in.nameto,passmywork->name);
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
@@ -289,7 +289,7 @@ int processinit(void * myworkin) {
      if (in.outfile > 0) {
        i=0;
        while (i < in.maxthreads) {
-         sprintf(outfn,"%s.%d",in.outfilen,i);
+         SNPRINTF(outfn,MAXPATH,"%s.%d",in.outfilen,i);
          gts.outfd[i]=fopen(outfn,"w");
          i++;
        }

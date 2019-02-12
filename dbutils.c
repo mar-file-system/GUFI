@@ -155,28 +155,26 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
   return db;
 }
 
-
 // sqlite3_exec(db, tsql, 0, 0, &err_msg);
-#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)              \
-   do {                                                     \
-      rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);          \
-      if (rc != SQLITE_OK ) {                               \
-         printf("%s:%d SQL error [%s]: '%s'\nSQL: %s",      \
-                __FILE__, __LINE__, #SQL, *(ERRMSG), SQL);  \
-         sqlite3_free(*(ERRMSG));                           \
-         sqlite3_close(DB);                                 \
-                                                            \
-         /* Gary debugging */                               \
-         printf("trying  %s\n",dbn);                        \
-         printf("trying  %s\n",vssqldir);                   \
-         sprintf(deb,"ls -l %s/%s",in.nameto,name);         \
-         system(deb);                                       \
-         exit(9);                                           \
-                                                            \
-         return NULL;                                       \
-      }                                                     \
-   } while (0)
-
+#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)                  \
+    do {                                                        \
+        rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);            \
+        if (rc != SQLITE_OK ) {                                 \
+            printf("%s:%d SQL error [%s]: '%s'\nSQL: %s",       \
+                   __FILE__, __LINE__, #SQL, *(ERRMSG), SQL);   \
+            sqlite3_free(*(ERRMSG));                            \
+            sqlite3_close(DB);                                  \
+                                                                \
+            /* Gary debugging */                                \
+            printf("trying  %s\n",dbn);                         \
+            printf("trying  %s\n",vssqldir);                    \
+            SNPRINTF(deb,MAXPATH,"ls -l %s/%s",in.nameto,name); \
+            system(deb);                                        \
+            exit(9);                                            \
+                                                                \
+            return NULL;                                        \
+        }                                                       \
+    } while (0)
 
 sqlite3 * opendb(const char *name, int openwhat, int createtables)
 {
@@ -223,7 +221,7 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
         sqlite3_free(err_msg);
         sqlite3_close(db);
 printf("trying to open %s\n",dbn);
-sprintf(deb,"ls -l %s/%s",in.nameto,name);
+SNPRINTF(deb,MAXPATH,"ls -l %s/%s",in.nameto,name);
 system(deb);
 exit(9);
         return NULL;
@@ -282,21 +280,16 @@ int rawquerydb(const char *name,
      sqlite3_stmt *res;
      int           error     = 0;
      int           rec_count = 0;
-     const char   *errMSG;
      const char   *tail;
-     int           ncols;
-     int           cnt;
-     int           lastsql;
      //char   lsqlstmt[MAXSQL];
      //char   prefix[MAXPATH];
      //char   shortname[MAXPATH];
      //char  *pp;
 
-     int           i;
      FILE *        out;
      char          ffielddelim[2];
 
-     if (! sqlstmt) {
+     if (!sqlstmt) {
         fprintf(stderr, "SQL was empty\n");
         return -1;
      }
@@ -306,13 +299,13 @@ int rawquerydb(const char *name,
         out = gts.outfd[ptid];
 
      if (in.dodelim == 0)
-       sprintf(ffielddelim,"|");
+       SNPRINTF(ffielddelim,2,"|");
 
      if (in.dodelim == 1)
-       sprintf(ffielddelim,"%s",fielddelim);
+       SNPRINTF(ffielddelim,2,"%s",fielddelim);
 
      if (in.dodelim == 2)
-       sprintf(ffielddelim,"%s",in.delim);
+       SNPRINTF(ffielddelim,2,"%s",in.delim);
 
      while (*sqlstmt) {
        // WARNING: passing length-arg that is longer than SQL text
@@ -370,16 +363,15 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
 {
      sqlite3_stmt    *res;
      int     error = 0;
-     const char      *errMSG;
      const char      *tail;
      char sqlstmt[MAXSQL];
      //struct sum sumin;
 
      if (ts) {
-       sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize "
+       SNPRINTF(sqlstmt,MAXSQL,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize "
                "from treesummary where rectype=0;");
      } else {
-       sprintf(sqlstmt,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
+         SNPRINTF(sqlstmt,MAXSQL,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
                "from summary where rectype=0;;");
      }
 
@@ -450,7 +442,7 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
 
 int startdb(sqlite3 *db)
 {
-    char *err_msg = 0;
+    char *err_msg = NULL;
     int rc;
     rc = sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err_msg);
     if (rc != SQLITE_OK) printf("begin transaction issue %s\n",sqlite3_errmsg(db));
@@ -460,8 +452,7 @@ int startdb(sqlite3 *db)
 
 int stopdb(sqlite3 *db)
 {
-    char *err_msg = 0;
-    int rc;
+    char *err_msg = NULL;
     sqlite3_exec(db,"END TRANSACTION",NULL, NULL, &err_msg);
     sqlite3_free(err_msg);
     return 0;
@@ -469,7 +460,6 @@ int stopdb(sqlite3 *db)
 
 int closedb(sqlite3 *db)
 {
-    char *err_msg = 0;
     if (sqlite3_close(db) != SQLITE_OK) {
       printf("closedb issue %s\n", sqlite3_errmsg(db));
       exit(9);
@@ -479,11 +469,7 @@ int closedb(sqlite3 *db)
 
 int insertdbfin(sqlite3 *db,sqlite3_stmt *res)
 {
-    char *err_msg = 0;
-    int rc;
-
     sqlite3_finalize(res);
-
     return 0;
 }
 
@@ -491,7 +477,6 @@ sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
 {
     char *err_msg = 0;
     // char sqlstmt[MAXSQL];
-    int rc;
     const char *tail;
     int error;
     sqlite3_stmt *reso;
@@ -518,7 +503,6 @@ sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res)
 {
     char *err_msg = 0;
     // char sqlstmt[MAXSQL];
-    int rc;
     const char *tail;
     int error;
     sqlite3_stmt *reso;
@@ -543,9 +527,6 @@ sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res)
 
 int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
 {
-    char *err_msg = 0;
-    char sqlstmt[MAXSQL];
-    int rc;
     int error;
     char *zname;
     char *ztype;
@@ -555,7 +536,6 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     char *zosstext2;
     int len=0;;
     const char *shortname;
-    int i;
     int found;
     int cnt;
 
@@ -632,13 +612,9 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
 
 int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
 {
-    char *err_msg = 0;
-    char sqlstmt[MAXSQL];
-    int rc;
     int error;
     char *zname;
     char *ztype;
-    int i;
 
     zname = sqlite3_mprintf("%q",pwork->name);
     ztype = sqlite3_mprintf("%q",pwork->type);
@@ -672,7 +648,7 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     int len=0;
     const char *shortname;
     int depth;
-    int i;
+    size_t i;
     int rectype;
 
     rectype=0; // directory summary record type
@@ -712,7 +688,7 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
     char *zlinkname = sqlite3_mprintf("%q",pwork->linkname);
     char *zxattr    = sqlite3_mprintf("%q",pwork->xattr);
 
-    sprintf(sqlstmt,"INSERT INTO summary VALUES "
+    SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
             "(\'%s\', \'%s\', "
             "%"STAT_ino", %d, %"STAT_nlink", %d, %d, %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
             "\'%s\', \'%s\', "
@@ -794,14 +770,11 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid)
 {
-    int cnt;
-    int found;
     char *err_msg = 0;
     char sqlstmt[MAXSQL];
     int rc;
-    int len=0;;
     int depth;
-    int i;
+    size_t i;
 
     depth=0;
     i=0;
@@ -809,7 +782,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
       if (!strncmp(name+i,"/",1)) depth++;
       i++;
     }
-    sprintf(sqlstmt,"INSERT INTO treesummary VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+    SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO treesummary VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
        su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
 
     rc = sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg);
@@ -830,7 +803,7 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
     if (argc == 1) {
         const unsigned char *text = sqlite3_value_text(argv[0]);
         //printf("uidtouser %d %s\n",argc,text);
-        sprintf(fname,"%s",text);
+        SNPRINTF(fname,256,"%s",text);
         fuid=atoi(fname);
         fmypasswd = getpwuid(fuid);
         if (fmypasswd != NULL) {
@@ -849,7 +822,7 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     if (argc == 1) {
         const unsigned char *text = sqlite3_value_text(argv[0]);
         //printf("gidtouser %d %s\n",argc,text);
-        sprintf(fgroup,"%s",text);
+        SNPRINTF(fgroup,256,"%s",text);
         fgid=atoi(fgroup);
         fmygroup = getgrgid(fgid);
         if (fmygroup != NULL) {
@@ -892,10 +865,8 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     int fmode;
     char tmode[64];
     if (argc == 1) {
-        const unsigned char *text = sqlite3_value_text(argv[0]);
-        sprintf(tmode,"%s",text);
-        fmode=atoi(tmode);
-        sprintf(tmode,"----------");
+        fmode = sqlite3_value_int(argv[0]);
+        SNPRINTF(tmode,64,"----------");
         if (fmode &  S_IFDIR) tmode[0] = 'd';
         if (fmode &  S_IRUSR) tmode[1] = 'r';
         if (fmode &  S_IWUSR) tmode[2] = 'w';
@@ -990,7 +961,7 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
 sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query) {
     // copy and sanitize query
     char buf[MAXSQL];
-    snprintf(buf, MAXSQL, "%s", query);
+    SNPRINTF(buf, MAXSQL, "%s", query);
 
     // find the first clause after FROM
     // more clauses are probably needed
@@ -1009,13 +980,13 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     }
 
     // there is no need to modify the query, since the entries table is empty (but will generate a NULL row, which will be removed)
-    snprintf(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, buf);
+    SNPRINTF(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, buf);
     if (after_from) {
         *after_from = af;
     }
 
     char alter[MAXSQL];
-    snprintf(alter, MAXSQL, "ALTER TABLE %s RENAME TO entries;", attach_name);
+    SNPRINTF(alter, MAXSQL, "ALTER TABLE %s RENAME TO entries;", attach_name);
 
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;

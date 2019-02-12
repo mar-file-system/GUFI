@@ -86,7 +86,7 @@ LIBFILES = bf structq dbutils utils
 
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
 ifneq ($(DEBUG),)
-   CFLAGS += -g -O0 -DDEBUG
+   CFLAGS += -Wall -g -O0 -DDEBUG
 else
    CFLAGS += -O3
 endif

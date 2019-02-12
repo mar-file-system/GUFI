@@ -98,6 +98,7 @@ extern "C" {
 
 #include "bf.h"
 #include "dbutils.h"
+#include "utils.h"
 
 }
 
@@ -486,12 +487,12 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
         struct work work;
 
-        snprintf(work.name, MAXPATH, "%s", s.str().c_str());
-        snprintf(work.type, 2, "f");
+        SNPRINTF(work.name, MAXPATH, "%s", s.str().c_str());
+        SNPRINTF(work.type, 2, "f");
         work.linkname[0] = '\0';
-        snprintf(work.xattr, MAXPATH, "xattr %zu", i);
-        snprintf(work.osstext1, MAXXATTR, "osstext1 %zu", i);
-        snprintf(work.osstext2, MAXXATTR, "osstext2 %zu", i);
+        SNPRINTF(work.xattr, MAXPATH, "xattr %zu", i);
+        SNPRINTF(work.osstext1, MAXXATTR, "osstext1 %zu", i);
+        SNPRINTF(work.osstext2, MAXXATTR, "osstext2 %zu", i);
 
         work.statuso.st_ino = rng(gen);
         work.statuso.st_mode = 0777;
@@ -554,12 +555,12 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     // summarize this directory
     struct work work;
 
-    snprintf(work.name, MAXPATH, "%s", arg->path.c_str());
-    snprintf(work.type, 2, "d");
+    SNPRINTF(work.name, MAXPATH, "%s", arg->path.c_str());
+    SNPRINTF(work.type, 2, "d");
     work.linkname[0] = '\0';
-    snprintf(work.xattr, MAXPATH, "xattr");
-    snprintf(work.osstext1, MAXXATTR, "osstext1");
-    snprintf(work.osstext2, MAXXATTR, "osstext2");
+    SNPRINTF(work.xattr, MAXPATH, "xattr");
+    SNPRINTF(work.osstext1, MAXXATTR, "osstext1");
+    SNPRINTF(work.osstext2, MAXXATTR, "osstext2");
 
     work.statuso.st_ino = rng(gen);
     work.statuso.st_mode = 0775;
@@ -1027,7 +1028,7 @@ int main(int argc, char *argv[]) {
     // set up timed stats thread
     struct timespec prev = {};
     clock_gettime(CLOCK_MONOTONIC, &prev);
-    LoopedThread timed_stats(settings.stat_rate, ThreadArgs::timed_stats.mutex, [&settings, &print_mutex, &prev](){
+    LoopedThread timed_stats(settings.stat_rate, ThreadArgs::timed_stats.mutex, [&print_mutex, &prev](){
             {
                 std::lock_guard <std::mutex> print_lock(print_mutex);
                 struct timespec now = {};

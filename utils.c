@@ -100,7 +100,7 @@ struct sum sumout;
 pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // global variable to hold per thread state
-struct globalthreadstate gts = {0};
+struct globalthreadstate gts = {};
 
 
 
@@ -135,13 +135,13 @@ int printits(struct work *pwork,int ptid) {
      out = gts.outfd[ptid];
 
   if (in.dodelim == 0) {
-    sprintf(ffielddelim," ");
+    SNPRINTF(ffielddelim,2," ");
   }
   if (in.dodelim == 2) {
-    sprintf(ffielddelim,"%s",fielddelim);
+    SNPRINTF(ffielddelim,2,"%s",fielddelim);
   }
   if (in.dodelim == 1) {
-    sprintf(ffielddelim,"%s",in.delim);
+    SNPRINTF(ffielddelim,2,"%s",in.delim);
   }
 
   fprintf(out,"%s%s",pwork->name,ffielddelim);
@@ -150,19 +150,19 @@ int printits(struct work *pwork,int ptid) {
   if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",ffielddelim);
   if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",ffielddelim);
 
-  fprintf(out, "%lld%s", pwork->statuso.st_ino, ffielddelim);
+  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino, ffielddelim);
   /* moved this to end because we would like to use this for input to bfwi load from file */
   //fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_mode, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_nlink, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_uid, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_gid, ffielddelim);
-  fprintf(out, "%lld%s", pwork->statuso.st_size, ffielddelim);
-  fprintf(out, "%d%s",   pwork->statuso.st_blksize, ffielddelim);
-  fprintf(out, "%lld%s", pwork->statuso.st_blocks, ffielddelim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_atime, ffielddelim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_mtime, ffielddelim);
-  fprintf(out, "%ld%s",  pwork->statuso.st_ctime, ffielddelim);
+  fprintf(out, "%d%s",             pwork->statuso.st_mode, ffielddelim);
+  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink, ffielddelim);
+  fprintf(out, "%d%s",             pwork->statuso.st_uid, ffielddelim);
+  fprintf(out, "%d%s",             pwork->statuso.st_gid, ffielddelim);
+  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size, ffielddelim);
+  fprintf(out, "%"STAT_bsize"%s",  pwork->statuso.st_blksize, ffielddelim);
+  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks, ffielddelim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_atime, ffielddelim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_mtime, ffielddelim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_ctime, ffielddelim);
 
 /* we need this field even if its not populated for bfwi load from file */
 /*
@@ -184,8 +184,8 @@ int printits(struct work *pwork,int ptid) {
   /* this one is for create tiem which posix doesnt have */
   fprintf(out,"%s", ffielddelim);
   /* moved this to end because we would like to use this for input to bfwi load from file */
-  fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
-  fprintf(out, "%d%s",  pwork->suspect, ffielddelim);
+  fprintf(out, "%lld%s", pwork->pinode, ffielddelim);
+  fprintf(out, "%d%s", pwork->suspect, ffielddelim);
   fprintf(out,"\n");
   return 0;
 }
@@ -194,7 +194,7 @@ int pullxattrs( const char *name, char *bufx) {
     char buf[MAXXATTR];
     char bufv[MAXXATTR];
     char * key;
-    int keylen;
+    size_t keylen;
     ssize_t buflen;
     ssize_t bufvlen;
     char *bufxp;
@@ -433,7 +433,7 @@ int mkpath(char* file_path, mode_t mode) {
   char* p;
   char sp[MAXPATH];
 
-  sprintf(sp,"%s", file_path);
+  SNPRINTF(sp,MAXPATH,"%s", file_path);
   for (p=strchr(file_path+1, '/'); p; p=strchr(p+1, '/')) {
     //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
@@ -457,7 +457,7 @@ int dupdir(struct work *pwork)
     char topath[MAXPATH];
     int rc;
 
-    sprintf(topath,"%s/%s",in.nameto,pwork->name);
+    SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,pwork->name);
     //printf("mkdir %s\n",topath);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     //rc = mkdir(topath,pwork->statuso.st_mode | S_IWRITE);
@@ -531,12 +531,12 @@ int gettid() {
 int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
-     int i;
+     size_t i;
      int slashfound;
 
      *endname = 0;              // in case there's no '/'
      i=0;
-     sprintf(prefix,"%s",name);
+     SNPRINTF(prefix,MAXPATH,"%s",name);
      i=strlen(prefix);
      pp=prefix+i;
      //printf("cutting name down %s len %d\n",prefix,i);
@@ -603,10 +603,6 @@ int processdirs(DirFunc dir_fn) {
 }
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
-  char buf[MAXXATTR];
-  char bufv[MAXXATTR];
-  char * xattrp;
-  int cnt;
   if (!printing) return 0;
   if (!strncmp(type,"l",1)) printf("l ");
   if (!strncmp(type,"f",1)) printf("f ");
@@ -628,8 +624,6 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   printf("%ld ",            status->st_mtime);
   printf("%ld ",            status->st_ctime);
 
-  cnt = 0;
-  xattrp=xattr;
   if (xattrs > 0) {
     printf("xattr: %s",xattr);
 /*
@@ -649,29 +643,23 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
 }
 
 int printload(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,long long pinode,char *sortf,FILE *of) {
-  char buf[MAXXATTR];
-  char bufv[MAXXATTR];
-  char  ffielddelim[2];
-  char * xattrp;
-  int cnt;
-
   fprintf(of,"%s%s", name,in.delim);
   if (!strncmp(type,"l",1)) fprintf(of,"l%s",in.delim);
   if (!strncmp(type,"f",1)) fprintf(of,"f%s",in.delim);
   if (!strncmp(type,"d",1)) fprintf(of,"d%s",in.delim);
-  fprintf(of,"%lld%s", status->st_ino,in.delim);
+  fprintf(of,"%"STAT_ino"%s",    status->st_ino,in.delim);
   //fprintf(of,"%lld%s", pinode,in.delim);
-  fprintf(of,"%d%s",status->st_mode,in.delim);
-  fprintf(of,"%d%s",status->st_nlink,in.delim);
-  fprintf(of,"%d%s", status->st_uid,in.delim);
-  fprintf(of,"%d%s", status->st_gid,in.delim);
-  fprintf(of,"%lld%s", status->st_size,in.delim);
-  fprintf(of,"%d%s", status->st_blksize,in.delim);
-  fprintf(of,"%lld%s", status->st_blocks,in.delim);
-  fprintf(of,"%ld%s", status->st_atime,in.delim);
-  fprintf(of,"%ld%s", status->st_mtime,in.delim);
-  fprintf(of,"%ld%s", status->st_ctime,in.delim);
-  fprintf(of,"%s%s",linkname,in.delim);
+  fprintf(of,"%d%s",             status->st_mode,in.delim);
+  fprintf(of,"%"STAT_nlink"%s",  status->st_nlink,in.delim);
+  fprintf(of,"%d%s",             status->st_uid,in.delim);
+  fprintf(of,"%d%s",             status->st_gid,in.delim);
+  fprintf(of,"%"STAT_size"%s",   status->st_size,in.delim);
+  fprintf(of,"%"STAT_bsize"%s",  status->st_blksize,in.delim);
+  fprintf(of,"%"STAT_blocks"%s", status->st_blocks,in.delim);
+  fprintf(of,"%ld%s",            status->st_atime,in.delim);
+  fprintf(of,"%ld%s",            status->st_mtime,in.delim);
+  fprintf(of,"%ld%s",            status->st_ctime,in.delim);
+  fprintf(of,"%s%s",             linkname,in.delim);
   if (xattrs > 0) {
     fprintf(of,"%s%s",xattr,in.delim);
   } else {
@@ -862,7 +850,7 @@ size_t descend(struct work *passmywork, DIR *dir,
 
             struct work qwork;
             memset(&qwork, 0, sizeof(qwork));
-            snprintf(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
+            SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
             qwork.pinode=passmywork->statuso.st_ino;
             qwork.level = next_level;
 

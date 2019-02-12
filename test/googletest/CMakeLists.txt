@@ -76,6 +76,9 @@
 # https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
 cmake_minimum_required(VERSION 3.0.0)
 
+# turn off GoogleTest installation
+set(INSTALL_GTEST OFF)
+
 # GoogleTest
 configure_file(${CMAKE_SOURCE_DIR}/contrib/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .

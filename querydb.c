@@ -109,7 +109,6 @@ int main(int argc, char *argv[])
      char dbname[MAXPATH];
      char rsqlstmt[MAXSQL];
      struct stat statuso;
-     int printpath = 0;
      int rc;
      sqlite3 *db;
      int recs;
@@ -159,7 +158,7 @@ int main(int argc, char *argv[])
      }
 
      // assure we have access to the DB
-     sprintf(dbname,"%s/%s",name,DBNAME);
+     SNPRINTF(dbname,MAXPATH,"%s/%s",name,DBNAME);
      rc=lstat(dbname,&statuso);
      if (rc != 0) {
         printf("ERROR:  db %s: %s\n", dbname, strerror(errno));
@@ -179,11 +178,11 @@ int main(int argc, char *argv[])
      //printf("shortpath out shortname %s end name %s\n",shortname, endname);
 
      // per-thread
-     sprintf(gps[0].gepath,"%s",endname);
+     SNPRINTF(gps[0].gepath,MAXPATH,"%s",endname);
      if (dirsummary)
-        sprintf(gps[0].gpath,"%s",shortname);
+        SNPRINTF(gps[0].gpath,MAXPATH,"%s",shortname);
      else
-        sprintf(gps[0].gpath,"%s",name);
+        SNPRINTF(gps[0].gpath,MAXPATH,"%s",name);
 
      recs=rawquerydb(name, dirsummary, db, rsqlstmt, in.printing, in.printheader, in.printrows, 0);
      if (recs >= 0)

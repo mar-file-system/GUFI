@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 
 extern "C" {
+
 #include "bf.h"
+#include "utils.h"
+
 }
 
 TEST(parse_cmd_line, flags) {
@@ -202,7 +205,7 @@ TEST(INSTALL_INT, good) {
     int dst = 0;
 
     char buf[10];
-    snprintf(buf, 10, "%d", src);
+    SNPRINTF(buf, 10, "%d", src);
     INSTALL_INT(dst, buf, -1024, 1024, "INSTALL_INT good test");
     EXPECT_EQ(retval, 0);
     EXPECT_EQ(src, dst);
@@ -214,7 +217,7 @@ TEST(INSTALL_INT, too_small) {
     int dst = 0;
 
     char buf[10];
-    snprintf(buf, 10, "%d", src);
+    SNPRINTF(buf, 10, "%d", src);
     INSTALL_INT(dst, buf, -1024, 1024, "INSTALL_INT too small test");
     EXPECT_EQ(retval, -1);
 }
@@ -225,7 +228,7 @@ TEST(INSTALL_INT, too_big) {
     int dst = 0;
 
     char buf[10];
-    snprintf(buf, 10, "%d", src);
+    SNPRINTF(buf, 10, "%d", src);
     INSTALL_INT(dst, buf, -1024, 1024, "INSTALL_INT too big test");
     EXPECT_EQ(retval, -1);
 }
@@ -236,7 +239,7 @@ TEST(INSTALL_UINT, good) {
     std::size_t dst = 0;
 
     char buf[10];
-    snprintf(buf, 10, "%zu", src);
+    SNPRINTF(buf, 10, "%zu", src);
     INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT good test");
     EXPECT_EQ(retval, 0);
     EXPECT_EQ(src, dst);
@@ -248,7 +251,7 @@ TEST(INSTALL_UINT, too_small) {
     std::size_t dst = 0;
 
     char buf[10];
-    snprintf(buf, 10, "%zu", src);
+    SNPRINTF(buf, 10, "%zu", src);
     INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT too small test");
     EXPECT_EQ(retval, -1);
     EXPECT_EQ(dst, (std::size_t) 0);
@@ -260,7 +263,7 @@ TEST(INSTALL_UINT, too_big) {
     std::size_t dst = 0;
 
     char buf[10];
-    snprintf(buf, 10, "%zu", src);
+    SNPRINTF(buf, 10, "%zu", src);
     INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT too big test");
     EXPECT_EQ(retval, -1);
     EXPECT_EQ(src, dst);

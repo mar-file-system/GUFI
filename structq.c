@@ -92,7 +92,7 @@ int qent = 0;
 
 void delQueue()
 {
-      struct Node *temp, *var=rear;
+      struct Node *var=rear;
       if(var==rear)
       {
              rear = rear->next;
@@ -106,7 +106,7 @@ void delQueue()
 
 void delQueuenofree()
 {
-      struct Node *temp, *var=rear;
+      struct Node *var=rear;
       if(var==rear)
       {
              rear = rear->next;

@@ -125,7 +125,7 @@ int searchmyll(long long int lull, int lutype) {
      if (headd==NULL) return 0;
      if (lull < glsuspectdmin) return 0;
      if (lull > glsuspectdmax) return 0;
-     sprintf(lut,"%lld",lull);
+     SNPRINTF(lut,CHAR_SIZE,"%lld",lull);
      ret=searchll(headd,lut);
      //printf("in searchmyll search dir %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headd,lut);  this is not thread safe
@@ -134,7 +134,7 @@ int searchmyll(long long int lull, int lutype) {
      if (headfl==NULL) return 0;
      if (lull < glsuspectflmin) return 0;
      if (lull > glsuspectflmax) return 0;
-     sprintf(lut,"%lld",lull);
+     SNPRINTF(lut,CHAR_SIZE,"%lld",lull);
      ret=searchll(headfl,lut);
      //printf("in searchmyll search fl %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headfl,lut); this is not thread safe
@@ -149,20 +149,16 @@ int reprocessdir(void * passv, DIR *dir)
     struct work *passmywork = passv;
     struct work qwork;
     //DIR *dir;
-    struct dirent *entry;
-    int mytid;
-    sqlite3 *db;
-    char *records;
+    struct dirent *entry = NULL;
+    sqlite3 *db = NULL;
+    char *records = NULL;
     char lpatho[MAXPATH];
     struct sum summary;
-    sqlite3_stmt *res;
-    sqlite3_stmt *reso;
+    sqlite3_stmt *res = NULL;
+    sqlite3_stmt *reso = NULL;
     char dbpath[MAXPATH];
     int transcnt;
     int loop;
-    char plinein[MAXPATH+MAXPATH+MAXPATH];
-    long long int pos;
-    int rc;
 
     // rewind the directory
     rewinddir(dir);
@@ -172,7 +168,7 @@ int reprocessdir(void * passv, DIR *dir)
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
     bzero(passmywork->xattr,sizeof(passmywork->xattr));
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
-    sprintf(passmywork->type,"d");
+    SNPRINTF(passmywork->type,2,"d");
     if (in.doxattrs > 0) {
        passmywork->xattrs=0;
        passmywork->xattrs=pullxattrs(passmywork->name,passmywork->xattr);
@@ -180,11 +176,11 @@ int reprocessdir(void * passv, DIR *dir)
 
 
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir
-    sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
+    SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in.nameto,passmywork->statuso.st_ino);
     if (in.buildinindir == 1) {
-      sprintf(dbpath,"%s/%s",passmywork->name,DBNAME);
+      SNPRINTF(dbpath,MAXPATH,"%s/%s",passmywork->name,DBNAME);
     } else {
-      sprintf(dbpath,"%s/%lld",in.nameto,passmywork->statuso.st_ino);
+        SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in.nameto,passmywork->statuso.st_ino);
     }
 
     /* if we are building a gufi in the src tree and the suspect mode is not zero then we need to wipe it out first */
@@ -223,7 +219,7 @@ int reprocessdir(void * passv, DIR *dir)
         qwork.pinode=passmywork->statuso.st_ino;
         //if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         //   continue;
-        sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
+        SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
         lstat(qwork.name, &qwork.statuso);
         qwork.xattrs=0;
         if (in.doxattrs > 0) {
@@ -238,8 +234,8 @@ int reprocessdir(void * passv, DIR *dir)
             // its a link so get the linkname
             bzero(lpatho,sizeof(lpatho));
             readlink(qwork.name,lpatho,MAXPATH);
-            sprintf(qwork.linkname,"%s",lpatho);
-            sprintf(qwork.type,"l");
+            SNPRINTF(qwork.linkname,MAXPATH,"%s",lpatho);
+            SNPRINTF(qwork.type,2,"l");
             //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
             sumit(&summary,&qwork);
             insertdbgo(&qwork,db,res);
@@ -250,7 +246,7 @@ int reprocessdir(void * passv, DIR *dir)
               transcnt=0;
             }
         } else if (S_ISREG(qwork.statuso.st_mode) ) {
-            sprintf(qwork.type,"%s","f");
+            SNPRINTF(qwork.type,2,"%s","f");
             sumit(&summary,&qwork);
             insertdbgo(&qwork,db,res);
             transcnt++;
@@ -285,13 +281,7 @@ static void processdir(void * passv)
     struct work qwork;
     DIR *dir;
     struct dirent *entry;
-    char lpatho[MAXPATH];
     int mytid;
-    sqlite3 *db;
-    char *records;
-    struct sum summary;
-    sqlite3_stmt *res;
-    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     char sortf[MAXPATH];
     int transcnt;
@@ -316,14 +306,14 @@ static void processdir(void * passv)
     if (!(entry = readdir(dir)))
        goto out_dir; // return NULL;
 
-    sprintf(passmywork->type,"%s","d");
+    SNPRINTF(passmywork->type,2,"%s","d");
     passmywork->suspect=in.suspectd;
     /* if we are putting the gufi tree into the source tree we can modify the suspecttime to be the mtime of the gufi db */
     /* this way we will just be looking at dirs or files that have changed since the gufi db was last updated */
     locsuspecttime=in.suspecttime;
     if (in.buildinindir == 1) {
       locsuspecttime=0;
-      sprintf(dbpath,"%s/%s",passmywork->name,DBNAME);
+      SNPRINTF(dbpath,MAXPATH,"%s/%s",passmywork->name,DBNAME);
       rc=lstat(dbpath,&sst);
       if (rc == 0) {
         locsuspecttime=sst.st_mtime;
@@ -379,8 +369,8 @@ static void processdir(void * passv)
       }
       //fprintf(stderr,"threadd %d inode %lld file %d\n",mytid,passmywork->statuso.st_ino,tooutfile);
       /* only directories are here so sortf is set to the directory full pathname */
-      sprintf(sortf,"%s",passmywork->name);
-      fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim,sortf,in.delim);
+      SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
+      fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim,sortf,in.delim);
       if (in.stride > 0) {
         pthread_mutex_unlock(&outfile_mutex[todb]);
       }
@@ -401,7 +391,7 @@ static void processdir(void * passv)
                continue;
         }
         bzero(&qwork,sizeof(qwork));
-        sprintf(qwork.name,"%s/%s", passmywork->name, entry->d_name);
+        SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
         qwork.pinode=passmywork->statuso.st_ino;
         qwork.statuso.st_ino=entry->d_ino;
         qwork.suspect=in.suspectfl;
@@ -409,15 +399,15 @@ static void processdir(void * passv)
         //if (S_ISDIR(qwork.statuso.st_mode) ) {
         if (entry->d_type==DT_DIR) {
             if (!access(qwork.name, R_OK | X_OK)) {
-                sprintf(qwork.type,"d");
+                SNPRINTF(qwork.type,2,"d");
                 // this pushes the dir onto queue - pushdir does locking around queue update
                 pushdir(&qwork);
             }
         } else if (entry->d_type==DT_LNK) {
-            sprintf(qwork.type,"%s","l");
+            SNPRINTF(qwork.type,2,"%s","l");
             wentry=1;
         } else if (entry->d_type==DT_REG) {
-            sprintf(qwork.type,"%s","f");
+            SNPRINTF(qwork.type,2,"%s","f");
             wentry=1;
         }
         if (wentry==1) {
@@ -480,8 +470,8 @@ static void processdir(void * passv)
             }
             //fprintf(stderr,"threadf %d inode %lld file %d\n",mytid,qwork.statuso.st_ino,tooutfile);
             /* since this is a file or link, we need the path to the file or link without the name as the sortf */
-            sprintf(sortf,"%s",passmywork->name);
-            fprintf(gts.outfd[tooutfile],"%s%s%lld%s%lld%s%s%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim,sortf,in.delim);
+            SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
+            fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim,sortf,in.delim);
             if (in.stride > 0) {
               pthread_mutex_unlock(&outfile_mutex[todb]);
             }
@@ -545,10 +535,9 @@ int processinit(void * myworkin) {
 
      struct work * mywork = myworkin;
      int i;
-     sqlite3_stmt *reso;
-     sqlite3_stmt *res;
+     sqlite3_stmt *reso = NULL;
      char outdbn[MAXPATH];
-     FILE *isf;
+     FILE *isf = NULL;
      char incsuspect[24];
      char incsuspecttype[2];
      long long int testll;
@@ -613,7 +602,7 @@ int processinit(void * myworkin) {
      if (in.outdb > 0) {
        i=0;
        while (i < in.maxthreads) {
-         sprintf(outdbn,"%s.%d",in.outdbn,i);
+           SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
          gts.outdbd[i]=opendb(outdbn,7,1);
          global_res[i]=insertdbprepr(gts.outdbd[i],reso);
          if (in.stride > 0) {
@@ -629,7 +618,7 @@ int processinit(void * myworkin) {
      if (in.outfile > 0) {
        i=0;
        while (i < in.maxthreads) {
-         sprintf(outfn,"%s.%d",in.outfilen,i);
+         SNPRINTF(outfn,MAXPATH,"%s.%d",in.outfilen,i);
          //fprintf(stderr,"init opening %s.%d",in.outfilen,i);
          gts.outfd[i]=fopen(outfn,"w");
          if (in.stride > 0) {
@@ -642,7 +631,7 @@ int processinit(void * myworkin) {
      }
 
      // process input directory and put it on the queue
-     sprintf(mywork->name,"%s",in.name);
+     SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
      lstat(in.name, &mywork->statuso);
      if (access(in.name, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
@@ -694,10 +683,6 @@ int i;
 
 // This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb
 int validate_inputs() {
-   char expathin[MAXPATH];
-   char expathout[MAXPATH];
-   char expathtst[MAXPATH];
-
    if (in.buildindex && in.nameto[0]) {
       fprintf(stderr, "In bfwreaddirplus2db building an index '-b' the index must go into the src tree\n");
       fprintf(stderr, "and -t means you are specifying a parking lot directory for gufi directory db's to be put under their znumber\n");
@@ -708,7 +693,7 @@ int validate_inputs() {
    if (in.buildindex) {
      fprintf(stderr,"You are putting the index dbs in input directory\n");
      in.buildinindir = 1;
-     sprintf(in.nameto,"%s",in.name);
+     SNPRINTF(in.nameto,MAXPATH,"%s",in.name);
    }
    return 0;
 
@@ -723,8 +708,6 @@ int main(int argc, char *argv[])
 {
      //char nameo[MAXPATH];
      struct work mywork;
-     int i;
-     sqlite3 *dbo;
      struct stat st;
      int rc;
 
