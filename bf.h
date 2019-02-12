@@ -192,6 +192,7 @@ struct input {
    size_t intermediate_count;
    size_t intermediate_skip;
    ShowResults_t aggregate_or_print;
+   int keep_matime;
 };
 extern struct input in;
 

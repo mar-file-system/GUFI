@@ -148,7 +148,7 @@ test_prereqs: all $(GTEST_INSTALL_DIR)
 
 test: test_prereqs
 	test/runtests test/testdir.tar test/testdir test/testdir.gufi
-	cd test && ./gufitest.py all
+	# cd test && ./gufitest.py all
 	test/verifyknowntree
 	test/googletest/test
 
