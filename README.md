@@ -16,6 +16,7 @@ Please see [README](README) and the [docs directory](docs) for documentation
 - CMake 3
 
 ### Libraries
+- uuid
 - sqlite3 (at least version 3.13)
 - pcre (not pcre2)
 - C-Thread-Pool (downloaded by CMake)

@@ -109,7 +109,7 @@ struct globalthreadstate gts = {};
 
 #if __linux__  // GNU/Intel/IBM/etc compilers
 #  include <sys/types.h>
-#  include <attr/xattr.h>
+#  include <@XATTR_H@>
 
 #  define LISTXATTR(PATH, BUF, SIZE)        llistxattr((PATH), (BUF), (SIZE))
 #  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))

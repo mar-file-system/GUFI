@@ -74,7 +74,7 @@
 
 
 # https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 2.8.0)
 
 # turn off GoogleTest installation
 set(INSTALL_GTEST OFF)
