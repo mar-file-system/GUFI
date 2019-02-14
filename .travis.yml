@@ -333,13 +333,11 @@ script:
 
 after_success:
     - make gary
-    - mv gufi.tar.gz ..
-    - cd ..
 
 deploy:
     provider: script
     skip-cleanup: true
-    script: bash contrib/nightly.sh "${TRAVIS_BRANCH}" gufi.tar.gz
+    script: bash ../contrib/nightly.sh "${TRAVIS_BRANCH}" gufi.tar.gz ..
     on:
         branch: master
         condition: ("${TRAVIS_EVENT_TYPE}" = "cron") && ("${TRAVIS_JOB_NUMBER}" = *.1)

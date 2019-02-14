@@ -2,14 +2,14 @@
 
 set -e
 
-if [[ "$@" -lt 2 ]]; then
-    echo "Syntax: $0 branch path [path ...]"
+if [[ "$@" -lt 3 ]]; then
+    echo "Syntax: $0 branch file destination"
     exit 1
 fi
 
 BRANCH="$1"
-shift
-PATHS="$@"
+FILE="$2"
+DEST="$3"
 
 # https://gist.github.com/willprice/e07efd73fb7f13f917ea
 
@@ -23,8 +23,8 @@ git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
 
 # Add the tarball and commit
 git checkout "${BRANCH}"
-git add ${PATHS}
-git commit --all --message "Travis CI Nightly Build Tarball Upload $(date)" --message "[ci skip]"
+mv ${FILE} ${DEST}
+git commit --all --message "Travis CI Tarball Upload $(date)" --message "[ci skip]"
 
 # Upload the tarball
 git push origin "${BRANCH}"
