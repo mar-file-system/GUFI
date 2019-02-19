@@ -2,7 +2,7 @@
 
 set -e
 
-if [[ "$@" -lt 3 ]]; then
+if [[ "$#" -lt 3 ]]; then
     echo "Syntax: $0 branch file destination"
     exit 1
 fi
