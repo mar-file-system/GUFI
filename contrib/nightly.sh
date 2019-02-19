@@ -2,14 +2,15 @@
 
 set -e
 
-if [[ "$#" -lt 3 ]]; then
-    echo "Syntax: $0 branch file destination"
+SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
+
+if [[ "$#" -lt 2 ]]; then
+    echo "Syntax: $0 file destination"
     exit 1
 fi
 
-BRANCH="$1"
-FILE="$2"
-DEST="$3"
+FILE="$1"
+DEST="$2"
 
 # https://gist.github.com/willprice/e07efd73fb7f13f917ea
 
@@ -22,9 +23,12 @@ git remote rm origin
 git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
 
 # Add the tarball and commit
-git checkout "${BRANCH}"
+git checkout "${TRAVIS_BRANCH}"
 mv ${FILE} ${DEST}
 git commit --all --message "Travis CI Tarball Upload $(date)" --message "[ci skip]"
 
 # Upload the tarball
-git push origin "${BRANCH}"
+git push origin "${TRAVIS_BRANCH}"
+
+# email everyone about the update
+${SCRIPT_PATH}/email.sh "gufi-lanl@lanl.gov"
