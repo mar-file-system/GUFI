@@ -13,9 +13,10 @@ Please see [README](README) and the [docs directory](docs) for documentation
 ### Build Tools
 - Modern C compiler
 - Modern C++ compiler
-- CMake 3
+- CMake 2.8
 
 ### Libraries
+- uuid
 - sqlite3 (at least version 3.13)
 - pcre (not pcre2)
 - C-Thread-Pool (downloaded by CMake)

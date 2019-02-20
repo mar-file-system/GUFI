@@ -118,6 +118,7 @@ matrix:
                       - cmake
                       - gcc@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -134,6 +135,7 @@ matrix:
                       - cmake
                       - gcc@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -150,6 +152,7 @@ matrix:
                       - cmake
                       - gcc@8
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -166,6 +169,7 @@ matrix:
                       - cmake
                       - gcc@8
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -182,6 +186,7 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -198,6 +203,7 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -216,6 +222,7 @@ matrix:
                       - cmake
                       - gcc@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -232,6 +239,7 @@ matrix:
                       - cmake
                       - gcc@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -248,6 +256,7 @@ matrix:
                       - cmake
                       - gcc@8
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -264,6 +273,7 @@ matrix:
                       - cmake
                       - gcc@8
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -280,6 +290,7 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
@@ -296,6 +307,7 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
+                      - ossp-uuid
                       - sqlite3
                       - truncate
                   update: true
