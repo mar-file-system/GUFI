@@ -11,8 +11,8 @@ Please see [README](README) and the [docs directory](docs) for documentation
 ## Dependencies
 
 ### Build Tools
-- Modern C compiler
-- Modern C++ compiler
+- C compiler with C99 support
+- C++ compiler with C++11 support
 - CMake 2.8
 
 ### Libraries
@@ -25,6 +25,10 @@ Please see [README](README) and the [docs directory](docs) for documentation
 - FUSE (optional)
 - MySQL (optional)
 - db2 (optional)
+
+### Others
+- lsb_release (on Linux)
+- xattr support (optional)
 
 ## Build
 ```

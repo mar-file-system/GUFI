@@ -22,7 +22,9 @@ function ppde {
 # ppde yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
 
 # # install extra packages
-# ppde yum -y install cmake git make redhat-lsb-core tcl wget
+# ppde yum -y install cmake make redhat-lsb-core rh-git29 tcl wget
+# # ppde update-alternatives --install /usr/bin/git git /opt/rh/rh-git29/root/usr/libexec/git-core/git 10
+# ppde ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     VERSIONN="${C_COMPILER##*-}"
@@ -67,4 +69,6 @@ fi
 ppde chown -R travis /GUFI
 
 # build and test GUFI
-docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && PKG_CONFIG_PATH=\"/tmp/sqlite3/lib:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
+docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && mkdir -p build/googletest-download && cd build/googletest-download && cp ../../contrib/cmake/CMakeLists.txt.in CMakeLists.txt && cmake -G \"Unix Makefiles\" . && pwd && ls && cmake --build . && mv googletest-src .. && mv googletest-build .."
+
+# docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"

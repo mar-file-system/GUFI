@@ -6,18 +6,7 @@ set -e
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 cd ${SCRIPT_PATH}/../..
 
-function ppde {
-    docker exec "${TRAVIS_JOB_NUMBER}" "$@"
-}
-
-docker container stop $(docker container ls -aq) || true
-docker container rm   $(docker container ls -aq) || true
-
-# get the image
-docker pull "${DOCKER_IMAGE}"
-
-# start container
-docker run -it -d --name "${TRAVIS_JOB_NUMBER}" -v $(realpath .):/GUFI -w /GUFI "${DOCKER_IMAGE}" bash
+. ${SCRIPT_PATH}/start_docker.sh
 
 # remove unnecessary repositories
 ppde bash -c "zypper repos | grep Yes | cut -f2 -d '|' | xargs zypper removerepo"
