@@ -114,12 +114,25 @@ matrix:
           dist: xenial
           addons:
               apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                      - llvm-toolchain-xenial-7
                   packages:
+                      - attr
                       - bsd-mailx
+                      - cmake
+                      - clang-7
+                      - libattr1-dev
+                      - libfuse-dev
+                      - lsb-release
+                      - uuid-dev
+                  update: true
+          script:
+            - true
           deploy:
               provider: script
               skip-cleanup: true
-              script: bash contrib/travis/deploy.sh gufi.tar.gz
+              script: bash contrib/travis/deploy.sh
               on:
                   branch: master
                   condition: ("${TRAVIS_EVENT_TYPE}" = "cron")
@@ -132,12 +145,25 @@ matrix:
           dist: xenial
           addons:
               apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                      - llvm-toolchain-xenial-7
                   packages:
+                      - attr
                       - bsd-mailx
+                      - cmake
+                      - clang-7
+                      - libattr1-dev
+                      - libfuse-dev
+                      - lsb-release
+                      - uuid-dev
+                  update: true
+          script:
+            - true
           deploy:
               provider: script
               skip-cleanup: true
-              script: bash contrib/travis/deploy.sh gufi.tar.gz
+              script: bash contrib/travis/deploy.sh
               on:
                   all_branches: true
                   condition: ("${TRAVIS_EVENT_TYPE}" = "api")

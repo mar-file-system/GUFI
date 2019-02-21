@@ -6,12 +6,20 @@ set -e
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 cd ${SCRIPT_PATH}/../..
 
-if [[ "$#" -lt 1 ]]; then
-    echo "Syntax: $0 file"
-    exit 1
-fi
+# get a newer version of libsqlite3-dev than the one provided by xenial (must be at least version 3.13)
+# this ppa is not allowed through addons, so it has to be added manually
+sudo add-apt-repository ppa:jonathonf/backports -y
+sudo apt-get update
+sudo apt-get install libsqlite3-dev -y
 
-FILE="$1"
+# make the tarball
+mkdir build
+cd build
+cmake ..
+make gary
+cd ..
+
+TARBALL=gufi.tar.gz
 
 # https://gist.github.com/willprice/e07efd73fb7f13f917ea
 
@@ -23,21 +31,14 @@ git config --global user.email "travis@travis-ci.org"
 git remote rm origin
 git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
 
-# build the tarball
-mkdir build
-cd build
-make gary
-
 # move to the target branch
 git checkout "${TRAVIS_BRANCH}"
 
 # move the tarball into the target branch
-mv "${FILE}" ..
-
-cd ..
+mv "build/${TARBALL}" "${TARBALL}"
 
 # Add the tarball and commit
-git add "${FILE}"
+git add "${TARBALL}"
 git commit --all --message "Travis CI Tarball Upload $(date)" --message "${TRAVIS_COMMIT}" --message "[ci skip]"
 
 # Upload the tarball
