@@ -115,7 +115,7 @@ matrix:
           addons:
               apt:
                   packages:
-                      - bsd-mail
+                      - bsd-mailx
           deploy:
               provider: script
               skip-cleanup: true
@@ -133,7 +133,7 @@ matrix:
           addons:
               apt:
                   packages:
-                      - bsd-mail
+                      - bsd-mailx
           deploy:
               provider: script
               skip-cleanup: true
