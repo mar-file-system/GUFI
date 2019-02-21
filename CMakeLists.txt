@@ -74,13 +74,7 @@
 
 
 cmake_minimum_required(VERSION 2.8.0)
-
-project(GUFI C)
-
-# require C99
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)
+project(GUFI C CXX)
 
 # define the DEBUG macro when building in debug mode
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
@@ -116,6 +110,12 @@ find_package(Threads REQUIRED)
 # load the ExternalProject module
 include(ExternalProject)
 
+pkg_search_module(UUID REQUIRED uuid)
+include_directories(AFTER SYSTEM ${UUID_INCLUDE_DIRS})    # -Ipath/to/uuid/include
+link_directories(${UUID_LIBRARY_DIRS})                    # -Lpath/to/uuid/lib
+message(STATUS "Uuid headers located in ${UUID_INCLUDEDIR}")
+message(STATUS "Uuid libraries located in ${UUID_LIBDIR}")
+
 # download and build C-Thread-Pool
 set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
 ExternalProject_Add(C-Thread-Pool
@@ -133,6 +133,11 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
 
 # search for sqlite3 installation
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
+if (SQLITE3_VERSION VERSION_LESS 3.13)
+  message(FATAL_ERROR "GUFI requires sqlite3 3.13+. Got ${SQLITE3_VERSION}")
+endif()
+include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
+link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
 message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
 message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
 
@@ -147,16 +152,44 @@ ExternalProject_Add(sqlite3-pcre
   INSTALL_COMMAND   true
 )
 
-# pack common values into variables
-set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX}) # -I these paths
-set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${thpool_PREFIX}/C-Thread-Pool-build/libthpool.a Threads::Threads)
+# everyone includes (-I) these paths, whether or not they need them
+set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
+include_directories(${COMMON_INCLUDES})
+
+# utils.c needs an include path change in OpenSUSE
+if (UNIX AND NOT APPLE AND NOT CYGWIN)
+  # https://stackoverflow.com/a/41592428
+  find_program(LSB_RELEASE_EXE lsb_release)
+  if (LSB_RELEASE_EXE STREQUAL "LSB_RELEASE_EXE-NOTFOUND")
+    message(FATAL_ERROR "${LSB_RELEASE_EXE}: ${LSB_RELEASE_RESULT}")
+  endif()
+
+  # get the flavor of the operating system
+  execute_process(COMMAND "${LSB_RELEASE_EXE}" -is
+    OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  # if the OS is OpenSUSE, replace the xattr include
+  if (LSB_RELEASE_ID_SHORT STREQUAL "openSUSE")
+    set(XATTR_H "sys/xattr.h")
+  else()
+    set(XATTR_H "attr/xattr.h")
+  endif()
+  configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c @ONLY)
+else()
+  configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c COPYONLY)
+endif()
+include_directories(${CMAKE_BINARY_DIR}) # dfw includes utils.c for some reason, so ${CMAKE_BINARY_DIR} needs to be included
 
 # create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
-add_library(GUFI STATIC ${GUFI_SOURCES})
-target_include_directories(GUFI PUBLIC ${COMMON_INCLUDES})
-add_dependencies(GUFI C-Thread-Pool sqlite3-pcre sqlite3 pcre)
+set(GUFI_SOURCES bf.c dbutils.c structq.c)
+add_library(GUFI STATIC ${GUFI_SOURCES} ${CMAKE_BINARY_DIR}/utils.c)
+add_dependencies(GUFI C-Thread-Pool sqlite3-pcre)
 install(TARGETS GUFI DESTINATION lib)
+
+# set of libraries needed by the final binaries
+set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${thpool_PREFIX}/C-Thread-Pool-build/libthpool.a Threads::Threads m)
 
 # This function builds executables using the
 # provided file names (SOURCE is an optional
@@ -184,7 +217,6 @@ function(build_and_install PATH LINK_GUFI)
 
     # link GUFI libraries if needed
     if (LINK_GUFI)
-      target_include_directories(${TARGET} INTERFACE ${COMMON_INCLUDES})
       target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
     endif()
 
@@ -209,6 +241,7 @@ if (CMAKE_CXX_COMPILER)
   set(BIN_SOURCES ${BIN_SOURCES} make_testtree.cpp)
 endif()
 
+# build the main binaries
 build_and_install(bin TRUE ${BIN_SOURCES})
 
 # build binaries that do not need to link with GUFI
@@ -263,8 +296,8 @@ pkg_search_module(MYSQL mysql)
 if (NOT MYSQL_FOUND)
   message(STATUS "MySQL not found with default search. Trying again with custom search.")
 
-  # tell CMake to search the contrib directory for FindMYSQL.cmake and mysql-config.cmake
-  set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib ${CMAKE_MODULE_PATH})
+  # tell CMake to search the contrib/cmake directory for FindMYSQL.cmake and mysql-config.cmake
+  set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 
   # try again
   pkg_search_module(MYSQL mysql)
@@ -329,11 +362,14 @@ add_subdirectory(test)
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
 
+# create a copy of utils.c with that includes attr/xattr.h for copying into the tarball
+set(XATTR_H "attr/xattr.h")
+configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c.osx @ONLY)
+
 # collect all files into variables
-set(SOURCES ${GUFI_SOURCES} ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
+set(SOURCES ${GUFI_SOURCES} utils.c ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
-  .gitignore
   CMakeLists.txt
   INSTALL
   LICENSE.txt
@@ -349,7 +385,6 @@ set(OTHER_FILES
   runtsm
   triell.c)
 set(PATHS
-  .git
   contrib
   docs
   include
@@ -363,7 +398,8 @@ set(PATHS
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
 # generate the tarball
-add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/utils.c.osx ${CMAKE_SOURCE_DIR}/utils.c
+                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
@@ -373,4 +409,6 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
-                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/utils.c
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/utils.c.osx
+                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/utils.c.osx)
