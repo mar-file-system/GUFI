@@ -76,39 +76,41 @@
 # https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
 cmake_minimum_required(VERSION 2.8.0)
 
-# turn off GoogleTest installation
-set(INSTALL_GTEST OFF)
+include(CheckLanguage)
 
-# GoogleTest
-configure_file(${CMAKE_SOURCE_DIR}/contrib/cmake/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
+if (CMAKE_CXX_COMPILER)
+  # turn off GoogleTest installation
+  unset(INSTALL_GTEST CACHE)
+
+  # GoogleTest
+  configure_file(${CMAKE_SOURCE_DIR}/contrib/cmake/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+  if(result)
+    message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
+  if(result)
     message(FATAL_ERROR "Build step for googletest failed: ${result}")
+  endif()
+
+  # Prevent overriding the parent project's compiler/linker
+  # settings on Windows
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+  # Add googletest directly to our build. This defines
+  # the gtest and gtest_main targets.
+  add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
+    ${CMAKE_BINARY_DIR}/googletest-build)
+
+  message( STATUS "GTest source dir: " ${gtest_SOURCE_DIR})
+
+  add_executable(googletests bf.cpp utils.cpp)
+  target_include_directories(googletests INTERFACE ${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+  target_link_libraries(googletests gtest gtest_main ${COMMON_LIBRARIES})
+
+  add_test(NAME googletests COMMAND googletests)
 endif()
-
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
-                 ${CMAKE_BINARY_DIR}/googletest-build)
-
-message( STATUS "GTest source dir: " ${gtest_SOURCE_DIR})
-
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-
-add_executable(googletests bf.cpp utils.cpp)
-add_dependencies(googletests GUFI)
-target_link_libraries(googletests gtest gtest_main ${COMMON_LIBRARIES})
-
-add_test(NAME googletests COMMAND googletests)
