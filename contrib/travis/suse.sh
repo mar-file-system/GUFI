@@ -2,6 +2,10 @@
 
 set -e
 
+# start at repository root
+SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
+cd ${SCRIPT_PATH}/../..
+
 function ppde {
     docker exec "${TRAVIS_JOB_NUMBER}" "$@"
 }
@@ -60,4 +64,4 @@ ppde useradd travis -m -s /sbin/nologin || true
 ppde chown -R travis /GUFI
 
 # build and test GUFI
-docker exec --env C_COMPILER="${SUSE_C_COMPILER}" --env CXX_COMPILER="${SUSE_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && contrib/build_and_test.sh"
+docker exec --env C_COMPILER="${SUSE_C_COMPILER}" --env CXX_COMPILER="${SUSE_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && ${SCRIPT_PATH}/build_and_test.sh"

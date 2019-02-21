@@ -6,160 +6,7 @@ stages:
 
 matrix:
     include:
-        - stage: build_and_test
-          os: linux
-          sudo: true
-          dist: xenial
-          services: docker
-          env:
-            - C_COMPILER=gcc-7
-            - CXX_COMPILER=g++-7
-            - BUILD=cmake
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/suse.sh
-        - stage: build_and_test
-          os: linux
-          sudo: true
-          dist: xenial
-          services: docker
-          env:
-            - C_COMPILER=gcc-7
-            - CXX_COMPILER=g++-7
-            - BUILD=make
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/suse.sh
-        - stage: build_and_test
-          os: linux
-          sudo: true
-          dist: xenial
-          services: docker
-          env:
-            - C_COMPILER=gcc-8
-            - CXX_COMPILER=g++-8
-            - BUILD=cmake
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/suse.sh
-        - stage: build_and_test
-          os: linux
-          sudo: true
-          dist: xenial
-          services: docker
-          env:
-            - C_COMPILER=gcc-8
-            - CXX_COMPILER=g++-8
-            - BUILD=make
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/suse.sh
-        - stage: build_and_test
-          os: linux
-          sudo: true
-          dist: xenial
-          services: docker
-          env:
-            - C_COMPILER=clang-7
-            - CXX_COMPILER=clang++-7
-            - BUILD=cmake
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/suse.sh
-        - stage: build_and_test
-          os: linux
-          sudo: true
-          dist: xenial
-          services: docker
-          env:
-            - C_COMPILER=clang-7
-            - CXX_COMPILER=clang++-7
-            - BUILD=make
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/suse.sh
-        - stage: build_and_test
-          os: linux
-          sudo: false
-          dist: xenial
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                  packages:
-                      - attr
-                      - cmake
-                      - g++-7
-                      - libattr1-dev
-                      - libfuse-dev
-                      - lsb-release
-                      - uuid-dev
-                  update: true
-          env:
-              - C_COMPILER=gcc-7
-              - CXX_COMPILER=g++-7
-              - BUILD=cmake
-          script: contrib/xenial.sh
-        - stage: build_and_test
-          os: linux
-          sudo: false
-          dist: xenial
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                  packages:
-                      - attr
-                      - cmake
-                      - g++-7
-                      - libattr1-dev
-                      - libfuse-dev
-                      - lsb-release
-                      - uuid-dev
-                  update: true
-          env:
-              - C_COMPILER=gcc-7
-              - CXX_COMPILER=g++-7
-              - BUILD=make
-          script: contrib/xenial.sh
-        - stage: build_and_test
-          os: linux
-          sudo: false
-          dist: xenial
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                  packages:
-                      - attr
-                      - cmake
-                      - g++-8
-                      - libattr1-dev
-                      - libfuse-dev
-                      - lsb-release
-                      - uuid-dev
-                  update: true
-          env:
-              - C_COMPILER=gcc-8
-              - CXX_COMPILER=g++-8
-              - BUILD=cmake
-          script: contrib/xenial.sh
-        - stage: build_and_test
-          os: linux
-          sudo: false
-          dist: xenial
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                  packages:
-                      - attr
-                      - cmake
-                      - g++-8
-                      - libattr1-dev
-                      - libfuse-dev
-                      - lsb-release
-                      - uuid-dev
-                  update: true
-          env:
-              - C_COMPILER=gcc-8
-              - CXX_COMPILER=g++-8
-              - BUILD=make
-          script: contrib/xenial.sh
+        # Ubuntu Xenial
         - stage: build_and_test
           os: linux
           sudo: false
@@ -182,233 +29,41 @@ matrix:
               - C_COMPILER=clang-7
               - CXX_COMPILER=clang++-7
               - BUILD=cmake
-          script: contrib/xenial.sh
+          script: contrib/travis/xenial.sh
+
+        # OpenSUSE 12.3 + Tumbleweed Repo
         - stage: build_and_test
           os: linux
-          sudo: false
+          sudo: true
           dist: xenial
           addons:
               apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - llvm-toolchain-xenial-7
-                  packages:
-                      - attr
-                      - cmake
-                      - clang-7
-                      - libattr1-dev
-                      - libfuse-dev
-                      - lsb-release
-                      - uuid-dev
-                  update: true
+                  update: false
+          services: docker
           env:
-              - C_COMPILER=clang-7
-              - CXX_COMPILER=clang++-7
-              - BUILD=make
-          script: contrib/xenial.sh
+            - C_COMPILER=clang-7
+            - CXX_COMPILER=clang++-7
+            - BUILD=cmake
+            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
+          script: contrib/travis/suse.sh
 
-        # macOS 10.12
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode9.2
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-7
-              - CXX_COMPILER=g++-7
-              - BUILD=cmake
-              - FORMULAE=gcc@7
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode9.2
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-7
-              - CXX_COMPILER=g++-7
-              - BUILD=make
-              - FORMULAE=gcc@7
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode9.2
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@8
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-8
-              - CXX_COMPILER=g++-8
-              - BUILD=cmake
-              - FORMULAE=gcc@8
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode9.2
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@8
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-8
-              - CXX_COMPILER=g++-8
-              - BUILD=make
-              - FORMULAE=gcc@8
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode9.2
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - llvm@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=clang
-              - CXX_COMPILER=clang++
-              - BUILD=cmake
-              - FORMULAE=llvm@7
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode9.2
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - llvm@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=clang
-              - CXX_COMPILER=clang++
-              - BUILD=make
-              - FORMULAE=llvm@7
-          script: contrib/osx.sh
+        # # CentOS 7
+        # - stage: build_and_test
+        #   os: linux
+        #   sudo: true
+        #   dist: xenial
+        #   addons:
+        #       apt:
+        #           update: false
+        #   services: docker
+        #   env:
+        #     - C_COMPILER=clang
+        #     - CXX_COMPILER=clang++
+        #     - BUILD=cmake
+        #     - DOCKER_IMAGE=centos
+        #   script: contrib/travis/centos7.sh
 
-        # macOS 10.13
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-7
-              - CXX_COMPILER=g++-7
-              - BUILD=cmake
-              - FORMULAE=gcc@7
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-7
-              - CXX_COMPILER=g++-7
-              - BUILD=make
-              - FORMULAE=gcc@7
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@8
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-8
-              - CXX_COMPILER=g++-8
-              - BUILD=cmake
-              - FORMULAE=gcc@8
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - gcc@8
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=gcc-8
-              - CXX_COMPILER=g++-8
-              - BUILD=make
-              - FORMULAE=gcc@8
+        # macOS 10.13 CMake
         - stage: build_and_test
           os: osx
           osx_image: xcode10.1
@@ -428,28 +83,31 @@ matrix:
               - CXX_COMPILER=clang++
               - BUILD=cmake
               - FORMULAE=llvm@7
-          script: contrib/osx.sh
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - llvm@7
-                      - mysql
-                      - ossp-uuid
-                      - sqlite3
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=clang
-              - CXX_COMPILER=clang++
-              - BUILD=make
-              - FORMULAE=llvm@7
-          script: contrib/osx.sh
+          script: contrib/travis/osx.sh
 
+        # macOS 10.13 make
+        - stage: build_and_test
+          os: osx
+          osx_image: xcode10.1
+          sudo: false
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - llvm@7
+                      - mysql
+                      - ossp-uuid
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=clang
+              - CXX_COMPILER=clang++
+              - BUILD=make
+              - FORMULAE=llvm@7
+          script: contrib/travis/osx.sh
+
+        # Deploy cron jobs
         - stage: deploy
           os: linux
           sudo: false
@@ -461,12 +119,13 @@ matrix:
           deploy:
               provider: script
               skip-cleanup: true
-              script: bash contrib/deploy.sh gufi.tar.gz
+              script: bash contrib/travis/deploy.sh gufi.tar.gz
               on:
                   branch: master
                   condition: ("${TRAVIS_EVENT_TYPE}" = "cron")
                   tags: false
 
+        # manually triggered deploy
         - stage: deploy
           os: linux
           sudo: false
@@ -478,7 +137,7 @@ matrix:
           deploy:
               provider: script
               skip-cleanup: true
-              script: bash contrib/deploy.sh gufi.tar.gz
+              script: bash contrib/travis/deploy.sh gufi.tar.gz
               on:
                   all_branches: true
                   condition: ("${TRAVIS_EVENT_TYPE}" = "api")

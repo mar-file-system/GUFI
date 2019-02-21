@@ -80,7 +80,7 @@ cmake_minimum_required(VERSION 2.8.0)
 set(INSTALL_GTEST OFF)
 
 # GoogleTest
-configure_file(${CMAKE_SOURCE_DIR}/contrib/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)
+configure_file(${CMAKE_SOURCE_DIR}/contrib/cmake/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )

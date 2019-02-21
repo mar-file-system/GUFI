@@ -4,7 +4,7 @@ set -e
 
 # start at repository root
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-cd ${SCRIPT_PATH}
+cd ${SCRIPT_PATH}/../..
 
 if [[ "$#" -lt 1 ]]; then
     echo "Syntax: $0 file"

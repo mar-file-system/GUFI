@@ -280,8 +280,8 @@ set(FUSE_SOURCES bffuse.c bfresultfuse.c)
 # serch for MySQL using the built in FindMYSQL
 pkg_search_module(MYSQL mysql)
 if (NOT MYSQL_FOUND)
-  # tell CMake to search the contrib directory for FindMYSQL.cmake and mysql-config.cmake
-  set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib ${CMAKE_MODULE_PATH})
+  # tell CMake to search the contrib/cmake directory for FindMYSQL.cmake and mysql-config.cmake
+  set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 
   # try again
   pkg_search_module(MYSQL mysql)
