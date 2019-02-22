@@ -6,25 +6,24 @@ set -e
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 cd ${SCRIPT_PATH}/../..
 
-function ppde {
-    docker exec "${TRAVIS_JOB_NUMBER}" "$@"
-}
+. ${SCRIPT_PATH}/start_docker.sh
 
-# . ${SCRIPT_PATH}/start_docker.sh
+# instsall Extra Packages for Enterprise Linux (EPEL)
+ppde yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-# # instsall Extra Packages for Enterprise Linux (EPEL)
-# ppde yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+# install The Software Collections ( SCL ) Repository
+ppde yum -y install centos-release-scl
 
-# # install The Software Collections ( SCL ) Repository
-# ppde yum -y install centos-release-scl
+# install libraries
+ppde yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
 
-# # install libraries
-# ppde yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
+# install extra packages
+ppde yum -y install cmake3 make redhat-lsb-core rh-git29 tcl wget
 
-# # install extra packages
-# ppde yum -y install cmake make redhat-lsb-core rh-git29 tcl wget
-# # ppde update-alternatives --install /usr/bin/git git /opt/rh/rh-git29/root/usr/libexec/git-core/git 10
-# ppde ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
+# create symlinks
+ppde ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
+ppde ln -sf /usr/bin/cmake3 /usr/bin/cmake
+ppde ln -sf /usr/bin/ctest3 /usr/bin/ctest
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     VERSIONN="${C_COMPILER##*-}"
@@ -56,19 +55,17 @@ else
     exit 1
 fi
 
-# # install the compilers
-# ppde yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
+# install the compilers
+ppde yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
 
-# # install SQLite
-# ppde wget -nc https://www.sqlite.org/2019/sqlite-autoconf-3270100.tar.gz
-# ppde tar -xzf sqlite-autoconf-3270100.tar.gz
-# ppde bash -c "cd sqlite-autoconf-3270100 && mkdir build && cd build && CC=${CENTOS_C_COMPILER} ../configure --prefix=/tmp/sqlite3 && make -j && make sqlite3.c && make -j install"
+# install SQLite 3.27
+ppde wget -nc https://www.sqlite.org/2019/sqlite-autoconf-3270100.tar.gz
+ppde tar -xzf sqlite-autoconf-3270100.tar.gz
+ppde bash -c "cd sqlite-autoconf-3270100 && mkdir build && cd build && CC=${CENTOS_C_COMPILER} ../configure --prefix=/tmp/sqlite3 && make -j && make sqlite3.c && make -j install"
 
-# # add the travis user
-# ppde useradd travis -m -s /sbin/nologin || true
+# add the travis user
+ppde useradd travis -m -s /sbin/nologin || true
 ppde chown -R travis /GUFI
 
 # build and test GUFI
-docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && mkdir -p build/googletest-download && cd build/googletest-download && cp ../../contrib/cmake/CMakeLists.txt.in CMakeLists.txt && cmake -G \"Unix Makefiles\" . && pwd && ls && cmake --build . && mv googletest-src .. && mv googletest-build .."
-
-# docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
+docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && LD_LIBRARY_PATH=\"/opt/rh/httpd24/root/usr/lib64/:$(printenv LD_LIBRARY_PATH)\" PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
