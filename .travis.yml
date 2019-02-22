@@ -47,21 +47,21 @@ matrix:
             - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
           script: contrib/travis/suse.sh
 
-        # # CentOS 7
-        # - stage: build_and_test
-        #   os: linux
-        #   sudo: true
-        #   dist: xenial
-        #   addons:
-        #       apt:
-        #           update: false
-        #   services: docker
-        #   env:
-        #     - C_COMPILER=clang
-        #     - CXX_COMPILER=clang++
-        #     - BUILD=cmake
-        #     - DOCKER_IMAGE=centos
-        #   script: contrib/travis/centos7.sh
+        # CentOS 7
+        - stage: build_and_test
+          os: linux
+          sudo: true
+          dist: xenial
+          addons:
+              apt:
+                  update: false
+          services: docker
+          env:
+            - C_COMPILER=clang
+            - CXX_COMPILER=clang++
+            - BUILD=cmake
+            - DOCKER_IMAGE=centos
+          script: contrib/travis/centos7.sh
 
         # macOS 10.13 CMake
         - stage: build_and_test
