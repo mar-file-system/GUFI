@@ -225,7 +225,7 @@ if __name__=='__main__':
         entries, intermediate, aggregate = BFQ_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
 
         # create the bfq command
-        bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+        bfq_cmd = [os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bfq'),
                    '-n', str(args.threads),
                    '-p', '-P']
 

@@ -198,7 +198,7 @@ if __name__=='__main__':
     rc = 0
     for path in args.GUFI_tree:
         # create the bfq command
-        bfq_cmd = ['{}/bfq'.format(os.path.dirname(os.path.realpath(__file__))),
+        bfq_cmd = [os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bfq'),
                    '-p', '-P',
                    '-E', first_query,
                    '-G', second_query,

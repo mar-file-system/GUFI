@@ -329,7 +329,7 @@ if __name__=='__main__':
                                           args.num_results)
 
     # create the bfq command
-    bfq_cmd = ['./bfq',
+    bfq_cmd = [os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bfq'),
                '-p', '-P',
                '-e', ['0', '1'][args.no_aggregate],
                '-n', str(args.threads),
