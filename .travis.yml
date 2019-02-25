@@ -1,5 +1,8 @@
 language: c
 
+git:
+    depth: 1
+
 stages:
     - build_and_test
     - deploy
@@ -29,8 +32,6 @@ matrix:
               - C_COMPILER=clang-7
               - CXX_COMPILER=clang++-7
               - BUILD=cmake
-          git:
-              depth: 1
           script: contrib/travis/xenial.sh
 
         # OpenSUSE 12.3 + Tumbleweed Repo
@@ -47,8 +48,6 @@ matrix:
             - CXX_COMPILER=clang++-7
             - BUILD=cmake
             - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          git:
-              depth: 1
           script: contrib/travis/suse.sh
 
         # CentOS 7
@@ -65,8 +64,6 @@ matrix:
             - CXX_COMPILER=clang++
             - BUILD=cmake
             - DOCKER_IMAGE=centos
-          git:
-              depth: 1
           script: contrib/travis/centos7.sh
 
         # macOS 10.13 CMake
@@ -89,8 +86,6 @@ matrix:
               - CXX_COMPILER=clang++
               - BUILD=cmake
               - FORMULAE=llvm@7
-          git:
-              depth: 1
           script: contrib/travis/osx.sh
 
         # macOS 10.13 make
@@ -113,8 +108,6 @@ matrix:
               - CXX_COMPILER=clang++
               - BUILD=make
               - FORMULAE=llvm@7
-          git:
-              depth: 1
           script: contrib/travis/osx.sh
 
         # Upload a tarball if the job was triggered by cron
@@ -137,8 +130,6 @@ matrix:
                       - lsb-release
                       - uuid-dev
                   update: true
-          git:
-              depth: 1
           script:
             - true
           deploy:
@@ -170,8 +161,6 @@ matrix:
                       - lsb-release
                       - uuid-dev
                   update: true
-          git:
-              depth: 1
           script:
             - true
           deploy:
