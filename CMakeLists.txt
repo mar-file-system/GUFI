@@ -74,7 +74,10 @@
 
 
 cmake_minimum_required(VERSION 2.8.0)
-project(GUFI C CXX)
+project(GUFI C)
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # define the DEBUG macro when building in debug mode
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
