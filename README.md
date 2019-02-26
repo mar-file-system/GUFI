@@ -9,23 +9,24 @@ LA-CC-15-039
 Please see [README](README) and the [docs directory](docs) for documentation
 
 ## Dependencies
+| Build Tools                     |  Comments  |
+| :------------------------------ | :--------: |
+| C compiler with C99 support     |            |
+| C++ compiler with C++11 support | optional   |
+| CMake 3.0+                      |            |
 
-### Build Tools
-- C compiler with C99 support
-- C++ compiler with C++11 support
-- CMake 3.0+
-
-### Libraries
-- uuid
-- xattr.h
-- sqlite3 (at least version 3.13)
-- pcre (not pcre2)
-- C-Thread-Pool (downloaded by CMake)
-- sqlite3-pcre (downloaded by CMake)
-- Google Test (downloaded by CMake)
-- FUSE (optional)
-- MySQL (optional)
-- db2 (optional)
+| Libraries     | Comments            |
+| :------------ | :-----------------: |
+| uuid          |                     |
+| xattr.h       | Just the header     |
+| sqlite3       | 3.13+               |
+| pcre          | Not pcre2           |
+| C-Thread-Pool | Downloaded by CMake |
+| sqlite3-pcre  | Downloaded by CMake |
+| Google Test   | Downloaded by CMake |
+| FUSE          | optional            |
+| MySQL         | optional            |
+| db2           | optional            |
 
 ## Build
 ```
