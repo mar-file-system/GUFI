@@ -13,7 +13,8 @@ Please see [README](README) and the [docs directory](docs) for documentation
 | :------------------------------ | :--------: |
 | C compiler with C99 support     |            |
 | C++ compiler with C++11 support | optional   |
-| CMake 3.0+                      |            |
+| CMake                           | 3.0+       |
+| pkg-config                      |            |
 
 | Libraries     | Comments            |
 | :------------ | :-----------------: |
@@ -36,3 +37,5 @@ cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
 make
 make install
 ```
+
+If cmake is not available, the [tarball](https://github.com/mar-file-system/GUFI/raw/master/gufi.tar.gz) can be built by running `make` in the extraction directory.

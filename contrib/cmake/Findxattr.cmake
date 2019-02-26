@@ -19,6 +19,7 @@ find_path(SYS_XATTR
   NAMES sys/xattr.h
   PATHS ${CMAKE_INCLUDE_PATH})
 
+# attr takes precedence over sys
 if (NOT ATTR_XATTR STREQUAL "ATTR_XATTR-NOTFOUND")
   set(XATTR_HEADER "attr")
   set(XATTR_INCLUDE_DIR ${ATTR_XATTR})
