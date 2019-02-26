@@ -47,7 +47,7 @@ matrix:
             - CXX_COMPILER=clang++-7
             - BUILD=cmake
             - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/travis/suse.sh
+          script: contrib/travis/suse12.3.sh
 
         # CentOS 7
         - stage: build_and_test
