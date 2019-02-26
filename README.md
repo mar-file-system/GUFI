@@ -13,7 +13,7 @@ Please see [README](README) and the [docs directory](docs) for documentation
 ### Build Tools
 - C compiler with C99 support
 - C++ compiler with C++11 support
-- CMake 2.8
+- CMake 3.0+
 
 ### Libraries
 - uuid

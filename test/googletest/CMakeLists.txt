@@ -74,7 +74,7 @@
 
 
 # https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
-cmake_minimum_required(VERSION 2.8.0)
+cmake_minimum_required(VERSION 3.0.0)
 
 include(CheckLanguage)
 
