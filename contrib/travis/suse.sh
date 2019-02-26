@@ -20,7 +20,7 @@ ppde zypper --non-interactive --no-gpg-checks update
 ppde zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel sqlite3-devel
 
 # install extra packages
-ppde zypper --non-interactive install binutils cmake git libgcc_s1 lsb-release sqlite3
+ppde zypper --non-interactive install binutils cmake git libgcc_s1 sqlite3
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"

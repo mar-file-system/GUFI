@@ -25,7 +25,6 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
-                      - lsb-release
                       - uuid-dev
                   update: true
           env:
@@ -127,7 +126,6 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
-                      - lsb-release
                       - uuid-dev
                   update: true
           script:
@@ -158,7 +156,6 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
-                      - lsb-release
                       - uuid-dev
                   update: true
           script:

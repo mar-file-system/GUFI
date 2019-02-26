@@ -17,6 +17,7 @@ Please see [README](README) and the [docs directory](docs) for documentation
 
 ### Libraries
 - uuid
+- xattr.h
 - sqlite3 (at least version 3.13)
 - pcre (not pcre2)
 - C-Thread-Pool (downloaded by CMake)
@@ -25,10 +26,6 @@ Please see [README](README) and the [docs directory](docs) for documentation
 - FUSE (optional)
 - MySQL (optional)
 - db2 (optional)
-
-### Others
-- lsb_release (on Linux)
-- xattr support (optional)
 
 ## Build
 ```

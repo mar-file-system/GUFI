@@ -102,6 +102,13 @@ endif()
 # need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
 
+# tell CMake to search the contrib/cmake directory cmake modules
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
+
+# need xattr.h
+find_package(xattr REQUIRED XATTR)
+message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
+
 # need uuid
 pkg_search_module(UUID REQUIRED uuid)
 message(STATUS "UUID headers located in ${UUID_INCLUDEDIR}")
@@ -112,12 +119,6 @@ find_package(Threads REQUIRED)
 
 # load the ExternalProject module
 include(ExternalProject)
-
-pkg_search_module(UUID REQUIRED uuid)
-include_directories(AFTER SYSTEM ${UUID_INCLUDE_DIRS})    # -Ipath/to/uuid/include
-link_directories(${UUID_LIBRARY_DIRS})                    # -Lpath/to/uuid/lib
-message(STATUS "Uuid headers located in ${UUID_INCLUDEDIR}")
-message(STATUS "Uuid libraries located in ${UUID_LIBDIR}")
 
 # download and build C-Thread-Pool
 set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
@@ -156,34 +157,15 @@ ExternalProject_Add(sqlite3-pcre
 )
 
 # everyone includes (-I) these paths, whether or not they need them
-set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
+set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR} ${XATTR_INCLUDEDIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
 include_directories(${COMMON_INCLUDES})
 
+# dfw includes utils.c for some reason, so ${CMAKE_BINARY_DIR} needs to be included
+include_directories(${CMAKE_BINARY_DIR})
+
 # utils.c needs an include path change in OpenSUSE
-if (UNIX AND NOT APPLE AND NOT CYGWIN)
-  # https://stackoverflow.com/a/41592428
-  find_program(LSB_RELEASE_EXE lsb_release)
-  if (LSB_RELEASE_EXE STREQUAL "LSB_RELEASE_EXE-NOTFOUND")
-    message(FATAL_ERROR "${LSB_RELEASE_EXE}: ${LSB_RELEASE_RESULT}")
-  endif()
-
-  # get the flavor of the operating system
-  execute_process(COMMAND "${LSB_RELEASE_EXE}" -is
-    OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-
-  # if the OS is OpenSUSE, replace the xattr include
-  if (LSB_RELEASE_ID_SHORT STREQUAL "openSUSE")
-    set(XATTR_H "sys/xattr.h")
-  else()
-    set(XATTR_H "attr/xattr.h")
-  endif()
-  configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c @ONLY)
-else()
-  configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c COPYONLY)
-endif()
-include_directories(${CMAKE_BINARY_DIR}) # dfw includes utils.c for some reason, so ${CMAKE_BINARY_DIR} needs to be included
+set(XATTR_H "${XATTR_HEADER}")
+configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c @ONLY)
 
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES bf.c dbutils.c structq.c)
@@ -294,19 +276,8 @@ else()
 endif()
 set(FUSE_SOURCES bffuse.c bfresultfuse.c)
 
-# serch for MySQL using the built in FindMYSQL
-pkg_search_module(MYSQL mysql)
-if (NOT MYSQL_FOUND)
-  message(STATUS "MySQL not found with default search. Trying again with custom search.")
-
-  # tell CMake to search the contrib/cmake directory for FindMYSQL.cmake and mysql-config.cmake
-  set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
-
-  # try again
-  pkg_search_module(MYSQL mysql)
-endif()
-
 # only build bfmi if MySQL is found
+pkg_search_module(MYSQL mysql)
 if (MYSQL_FOUND)
   message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
   message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
@@ -365,10 +336,6 @@ add_subdirectory(test)
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
 
-# create a copy of utils.c with that includes attr/xattr.h for copying into the tarball
-set(XATTR_H "attr/xattr.h")
-configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c.osx @ONLY)
-
 # collect all files into variables
 set(SOURCES ${GUFI_SOURCES} utils.c ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
@@ -401,7 +368,7 @@ set(PATHS
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
 # generate the tarball
-add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/utils.c.osx ${CMAKE_SOURCE_DIR}/utils.c
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/utils.c ${CMAKE_SOURCE_DIR}/utils.c
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
@@ -413,5 +380,4 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/util
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/utils.c
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/utils.c.osx
-                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/utils.c.osx)
+                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/utils.c)

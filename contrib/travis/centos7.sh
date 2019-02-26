@@ -18,7 +18,7 @@ ppde yum -y install centos-release-scl
 ppde yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
 
 # install extra packages
-ppde yum -y install cmake3 make redhat-lsb-core rh-git29 tcl wget
+ppde yum -y install cmake3 make rh-git29 tcl wget
 
 # create symlinks
 ppde ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
