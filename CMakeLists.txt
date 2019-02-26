@@ -122,7 +122,7 @@ message(STATUS "Uuid libraries located in ${UUID_LIBDIR}")
 # download and build C-Thread-Pool
 set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
 ExternalProject_Add(C-Thread-Pool
-  GIT_REPOSITORY    https://github.com/jti-lanl/C-Thread-Pool.git
+  GIT_REPOSITORY    https://github.com/mar-file-system/C-Thread-Pool.git
   GIT_TAG           lanl
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
