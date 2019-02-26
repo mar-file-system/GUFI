@@ -76,6 +76,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(GUFI C)
 
+# Require C99
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
