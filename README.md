@@ -38,4 +38,4 @@ make
 make install
 ```
 
-If cmake is not available, the [tarball](https://github.com/mar-file-system/GUFI/raw/master/gufi.tar.gz) can be built by running `make` in the extraction directory.
+If cmake is not available, the [tarball](https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz) can be built by running `make` in the extraction directory.

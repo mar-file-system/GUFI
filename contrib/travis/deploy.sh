@@ -25,24 +25,28 @@ TARBALL=gufi.tar.gz
 
 # Create a Travis CI git user
 git config --global user.name  "Travis CI Builder"
-git config --global user.email "travis@travis-ci.org"
+git config --global user.email "travis@travis-ci.com"
 
 # update the origin to include the personal access token
 git remote rm origin
 git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
 
-# move to the target branch
-git checkout "${TRAVIS_BRANCH}"
+# move to the tarball branch
+git fetch --all --prune
+git checkout tarball
 
 # move the tarball into the target branch
 mv "build/${TARBALL}" "${TARBALL}"
 
 # Add the tarball and commit
 git add "${TARBALL}"
-git commit --all --message "Travis CI Tarball Upload $(date)" --message "${TRAVIS_COMMIT}" --message "[ci skip]"
+git commit --message "Travis CI Tarball Upload (${TRAVIS_EVENT_TYPE}) $(date)" --message "${TRAVIS_BRANCH} ${TRAVIS_COMMIT}" --message "[ci skip]"
 
 # Upload the tarball
-git push origin "${TRAVIS_BRANCH}"
+git push origin tarball
+
+# copy the email script from the original branch since the tarball branch does not have it
+git checkout "${TRAVIS_BRANCH}" -- ${SCRIPT_PATH}/email.sh
 
 # email everyone about the update
 ${SCRIPT_PATH}/email.sh "gufi-lanl@lanl.gov"
