@@ -130,7 +130,7 @@ def build_where(args):
         where += ['gid == {}'.format(args.gid)]
 
     if args.group is not None:
-        where += ['gid == {}'.format(qb.get_gid(args.group))]
+        where += ['gid == {}'.format(args.group)]
 
     # if args.ilname is not None:
 
@@ -203,7 +203,7 @@ def build_where(args):
     # if args.used is not None:
 
     if args.user is not None:
-        where += ['uid == {}'.format(qb.get_uid(args.user))]
+        where += ['uid == {}'.format(args.user)]
 
     # if args.wholename is not None:
 
@@ -307,12 +307,17 @@ if __name__=='__main__':
     # create the find command
     find = qb.find_dir(args.root, [os.path.normpath(path) for path in args.GUFI_tree])
     find_out, find_err = find.communicate()
+
+    # check for data in stdout, not the return code of find
     if len(find_out) == 0:
+        # if there are errors, print them
         if len(find_err):
-            print 'Error: find returned: {}\n{}'.format(os.strerror(find.returncode), find_err)
+            sys.stderr.write('Error: find returned: {}\n{}\n'.format(os.strerror(find.returncode), find_err))
+        # otherwise, nothing was found
         else:
-            print 'Error: No directories found'
+            sys.stderr.write('Error: No directories found\n')
         sys.exit(find.returncode)
+    # if there is data and errors, ignore the errors
 
     initial = qb.build_query(build_select(args),
                              ['entries'],
@@ -331,7 +336,7 @@ if __name__=='__main__':
     # create the bfq command
     bfq_cmd = [os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bfq'),
                '-p', '-P',
-               '-e', ['0', '1'][args.no_aggregate],
+               '-e', str(int(args.no_aggregate)),
                '-n', str(args.threads),
                '-E', initial,
                '-J', intermediate,
