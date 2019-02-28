@@ -1,7 +1,7 @@
 language: c
 
 git:
-    depth: 1
+    depth: 5
 
 stages:
     - build_and_test
