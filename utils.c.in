@@ -567,26 +567,21 @@ int shortpath(const char *name, char *nameout, char *endname) {
 
 int processdirs(DirFunc dir_fn) {
 
-     int myqent;
      struct work * workp;
      int thread_count = 0;
 
      // loop over queue entries and running threads and do all work until
      // running threads zero and queue empty
-     myqent=0;
-     //runningthreads=0;
      while (1) {
-        //printf("%d,%d|",runningthreads,myqent);
-        myqent=getqent();
         if (runningthreads == 0) {
-          if (myqent == 0) {
+          if (getqent() == 0) {
             break;
           }
         }
         if (runningthreads < in.maxthreads) {
-          if (myqent > 0) {
-            // we have to lock around all queue ops
-            pthread_mutex_lock(&queue_mutex);
+          // we have to lock around all queue ops
+          pthread_mutex_lock(&queue_mutex);
+          if (addrqent() > 0) {
             workp=addrcurrents();
             incrthread();
 
@@ -596,8 +591,8 @@ int processdirs(DirFunc dir_fn) {
             thpool_add_work(mythpool, dir_fn, (void *)workp);
             thread_count++;
             delQueuenofree();
-            pthread_mutex_unlock(&queue_mutex);
           }
+          pthread_mutex_unlock(&queue_mutex);
         }
      }
 
