@@ -25,6 +25,7 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
+                      - libpcre3-dev
                       - uuid-dev
                   update: true
           env:
@@ -77,6 +78,7 @@ matrix:
         #               - llvm@7
         #               - mysql
         #               - ossp-uuid
+        #               - pcre
         #               - sqlite3
         #               - truncate
         #           update: true
@@ -99,6 +101,7 @@ matrix:
                       - llvm@7
                       - mysql
                       - ossp-uuid
+                      - pcre
                       - sqlite3
                       - truncate
                   update: true
@@ -126,6 +129,7 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
+                      - libpcre3-dev
                       - uuid-dev
                   update: true
           script:
@@ -156,6 +160,7 @@ matrix:
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
+                      - libpcre3-dev
                       - uuid-dev
                   update: true
           script:
