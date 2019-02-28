@@ -116,6 +116,11 @@ LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
 
+# utils.c.in requires a pattern to be replaced
+# and is included by dfw.c, so the file needs to exist
+utils.c: utils.c.in
+	sed -e 's/@XATTR_H@/attr\/xattr.h/g' $< > $@
+
 %.o: %.c $(LIB_H) $(SQLITE3_PCRE_LIB)
 	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 

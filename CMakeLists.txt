@@ -337,12 +337,8 @@ add_subdirectory(test)
 # define "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
 
-# A copy of utils.c include attr/xattr.h needs to be created for the tarball
-set(XATTR_H "attr/xattr.h")
-configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c.osx @ONLY)
-
 # collect all files into variables
-set(SOURCES ${GUFI_SOURCES} ${CMAKE_SOURCE_DIR}/utils.c ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
+set(SOURCES ${GUFI_SOURCES} utils.c.in ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
 set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
   CMakeLists.txt
@@ -373,8 +369,7 @@ set(PATHS
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
 # generate the tarball
-add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/utils.c.osx ${CMAKE_SOURCE_DIR}/utils.c
-                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
@@ -384,6 +379,4 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/util
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/utils.c
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/utils.c.osx
-                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/utils.c.osx)
+                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
