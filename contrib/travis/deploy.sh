@@ -39,8 +39,9 @@ git checkout tarball
 mv "build/${TARBALL}" "${TARBALL}"
 
 # Add the tarball and commit
+DATE="$(date)"
 git add "${TARBALL}"
-git commit --message "Travis CI Tarball Upload (${TRAVIS_EVENT_TYPE}) $(date)" --message "${TRAVIS_BRANCH} ${TRAVIS_COMMIT}" --message "[ci skip]"
+git commit --message "Travis CI Tarball Upload (${TRAVIS_EVENT_TYPE}) ${DATE}" --message "${TRAVIS_BRANCH} ${TRAVIS_COMMIT}" --message "[ci skip]"
 
 # Upload the tarball
 git push origin tarball
@@ -49,4 +50,4 @@ git push origin tarball
 git checkout "${TRAVIS_BRANCH}" -- ${SCRIPT_PATH}/email.sh
 
 # email everyone about the update
-${SCRIPT_PATH}/email.sh "gufi-lanl@lanl.gov"
+${SCRIPT_PATH}/email.sh "${DATE}" "gufi-lanl@lanl.gov"
