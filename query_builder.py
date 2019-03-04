@@ -78,6 +78,8 @@ import argparse
 import grp
 import multiprocessing
 import os
+import pwd
+import re
 import subprocess
 import sys
 
@@ -85,88 +87,107 @@ import sys
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
 # to make sure input fits certain criteria
 # https://stackoverflow.com/a/14117511
-def check_positive(value):
+def get_positive(value):
     '''Make sure the value is a positive integer.'''
     ivalue = int(value)
     if ivalue <= 0:
          raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
     return ivalue
 
-def check_non_negative(value):
+def get_non_negative(value):
     '''Make sure the value is a non-negative integer.'''
     ivalue = int(value)
     if ivalue < 0:
          raise argparse.ArgumentTypeError("%s is an invalid non-negative int value" % value)
     return ivalue
 
-def check_char(value):
+def get_char(value):
     '''Make sure the value is a single character.'''
     if len(value) != 1:
         raise argparse.ArgumentTypeError("%s is not a character" % value)
     return value
 
-def check_bool(value):
+def get_bool(value):
     '''Make sure the value is 'true' or 'false'.'''
     if value == 'true':
         return true
     elif value == 'false':
         return false
     raise argparse.ArgumentTypeError("%s is not a valid boolean string" % value)
-# ###############################################
+
+def get_size(value):
+    '''Make sure the value matches [+/-]n[bcwkMG].'''
+    if not re.match('^[+-]?[0-9]+[bcwkMG]?$', value):
+        raise argparse.ArgumentTypeError("%s is not a valid size" % value)
+    return value
 
 def get_uid(uid_str):
     '''
-    Attempts to convert the input string into a uid
-    by calling GNU id. If GNU id fails, the 'uid_str'
-    will be attempted to be converted to an integer.
-    If the conversion fails, or if the resulting value
-    is less than 0, it is considered an error and will
-    return None.
+    Attempts to convert a string into an integer
 
     Args:
-        uid_str: A string uid, or username
+        uid_str: An integer stored as a string
 
     Returns:
-        An int that is an uid, or None
+        An int that is an uid
     '''
 
-    if type(uid_str) != str:
-        raise argparse.ArgumentTypeError("%s is not a valid id value" % uid_str)
+    uid = int(uid_str)
+    try:
+        return pwd.getpwuid(int(uid_str)).pw_uid
+    except:
+        return uid
 
-    uid_proc = subprocess.Popen(['id', '-u', uid_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    uid_out, uid_err = uid_proc.communicate()
-    uid = None
-    if uid_proc.returncode == 0:
-        uid = int(uid_out.split()[0])
-    else:
-        try:
-            uid = int(uid)
-        except ValueError:
-            raise argparse.ArgumentTypeError("%s is not a valid id value" % uid_str)
+def get_user(user):
+    '''
+    Attempts to convert the input string into a uid
 
-        if uid < 0:
-            raise argparse.ArgumentTypeError("%s is not a valid id value" % uid_str)
+    Args:
+        user: A string uid, or username
 
-    return uid
+    Returns:
+        An int that is an uid
+    '''
 
-def get_gid(group_str):
+    try:
+        # use the string as a username
+        return pwd.getpwnam(user).pw_uid
+    except:
+        return get_uid(user)
+
+def get_gid(grp_str):
     '''
     Attempts to convert the input string to a gid.
-    If that fails, tries to convert the string into
-    a positive integer.
+
+    Args:
+        group_str: A number stored as a string
+
+    Returns:
+        An int that is a gid
+    '''
+
+    gid = int(grp_str)
+    try:
+        return grp.getgruid(int(grp_str)).gr_gid
+    except:
+        return gid
+
+def get_group(grp):
+    '''
+    Attempts to convert the input string to a gid.
 
     Args:
         group_str: A string gid or group name
 
     Returns:
-        An int that is a gid, or None
+        An int that is a gid
     '''
-    gid = None
+
     try:
-        gid = grp.getgrnam(group_str).gr_gid
+        return grp.getgrnam(grp).gr_gid
     except:
-        gid = int(group_str)
-    return gid
+        return get_gid(grp)
+# ###############################################
 
 def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None, extra = None):
     '''
@@ -193,7 +214,7 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
     '''
 
     if not select or not len(select) or not tables or not len(tables):
-        return None
+        return ""
 
     query = 'SELECT {} FROM {}'.format(', '.join(select), ', '.join(tables))
 
@@ -214,7 +235,7 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
 
     return query + ';'
 
-def find_dir(root, paths, out=subprocess.PIPE, err=subprocess.PIPE):
+def find_dir(root, paths, wholenames, out=subprocess.PIPE, err=subprocess.PIPE):
     '''
     Calls GNU find to try to find paths that match the given patterns
 
@@ -227,7 +248,7 @@ def find_dir(root, paths, out=subprocess.PIPE, err=subprocess.PIPE):
         This value should be waited on with communcate.
     '''
 
-    find_cmd = ['find', root, '-type', 'd'] + ' -o -path *'.join([''] + paths).split()[1:]
+    find_cmd = ['find', root, '-type', 'd'] + (' -o -path '.join([''] + paths) + ' -o -wholename '.join([''] + wholenames)).split()[1:]
     return subprocess.Popen(find_cmd, stdout=out, stderr=err)
 
 def cpus():

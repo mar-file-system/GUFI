@@ -84,7 +84,7 @@
 # |---- directory/
 #       |---- executable
 #       |---- readonly
-#       |---- writeonly
+#       |---- writable
 #       |---- subdirectory/
 #             |---- directory_symlink -> subdirectory
 #             |---- (optional) <gid>_gid_directory/
@@ -205,11 +205,11 @@ touch -amt 197001010000.00 old_file
 mkdir directory
 cd directory
 touch executable
-chmod +x executable
+chmod 777 executable
 touch readonly
-chmod -wx readonly
-touch writeonly
-chmod -rx writeonly
+chmod 444 readonly
+touch writable
+chmod 666 writable
 mkdir subdirectory
 
 cd subdirectory

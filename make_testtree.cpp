@@ -130,6 +130,7 @@ struct Settings {
           files(750000000),
           uid(0),
           gid(0),
+          permissions(0777),
           path_separator('/'),
           leading_zeros(0),
           db_name("db.db"),
@@ -227,13 +228,14 @@ struct Settings {
 
     std::ostream &print(std::ostream &stream) const {
         stream << "Tree properties:"
-               << "\n    Files:           " << files
-               << "\n        Blocksize:   " << blocksize
+               << "\n    Files:           "  << files
+               << "\n        Blocksize:   "  << blocksize
                << "\n        Timestamps:  [" << time.min << ", " << time.max << "]"
-               << "\n    Users:           " << users
+               << "\n    Users:           "  << users
                << "\n    Subdirectories:  [" << subdirs.min << ", " << subdirs.max << "]"
-               << "\n    Set UID if able: " << std::boolalpha << chown
-               << "\n    Set GID if able: " << std::boolalpha << chgrp;
+               << "\n    Set UID if able: "  << std::boolalpha << chown
+               << "\n    Set GID if able: "  << std::boolalpha << chgrp
+               << "\n    Permissions:     0" << std::oct << permissions << std::dec;
 
         stream << "\n    File Count Buckets:";
         for(Bucket const & count: file_count) {
@@ -272,6 +274,7 @@ struct Settings {
     std::size_t files;                   // count
     uid_t uid;                           // starting uid
     gid_t gid;                           // starting gid
+    std::size_t permissions;             // permissions to set each file
 
     char        path_separator;          // '/'
     std::size_t leading_zeros;           // for filling file/directory names
@@ -495,7 +498,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         SNPRINTF(work.osstext2, MAXXATTR, "osstext2 %zu", i);
 
         work.statuso.st_ino = rng(gen);
-        work.statuso.st_mode = 0777;
+        work.statuso.st_mode = (arg->settings->permissions > 0777)?(rng(gen) & 0777):arg->settings->permissions;
         work.statuso.st_nlink = 1;
         work.statuso.st_uid = arg->uid;
         work.statuso.st_gid = arg->gid;
@@ -734,6 +737,7 @@ std::ostream &print_help(std::ostream &stream, const char *argv0) {
                   << "\n        --files n               Number of files in the tree                            (Default: "  << s.files << ")"
                   << "\n        --uid uid               Set the starting uid                                   (Default: "  << s.uid << ")"
                   << "\n        --gid gid               Set the starting gid                                   (Default: "  << s.gid << ")"
+                  << "\n        --permissions perm      Set the permissions of each file to this mode          (Default: "  << s.permissions << ", greater than 0777 sets random)"
                   << "\n        --path-separator c      Character that separates path sections                 (Default: '" << s.path_separator << "') "
                   << "\n        --leading-zeros n       Number of leading zeros in names                       (Default: "  << s.leading_zeros <<")"
                   << "\n        --db-name name          Name of each database file                             (Default: "  << s.db_name << ")"
@@ -813,6 +817,7 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
     int i = 1;
     while (i < argc) {
         const std::string args(argv[i++]);
+        std::cout << args << " " << (args == "--permissions") << std::endl;
         if ((args == "--help") || (args == "-h")) {
             return help = true;
         }
@@ -820,6 +825,19 @@ bool parse_args(int argc, char *argv[], Settings &settings, bool &help) {
         PARSE_VALUE ("files",           files,             "file count")
         PARSE_VALUE ("uid",             uid,               "uid")
         PARSE_VALUE ("gid",             gid,               "gid")
+        else if (args == "--permissions") {
+            if (i >= argc) {
+                return false;
+            }
+
+            if (!(std::stringstream(argv[i]) >> std::oct >> settings.permissions)) {
+                std::cerr << "Bad permissions: " <<
+                    argv[i] << std::endl;
+                return false;
+            }
+
+            i++;
+        }
         PARSE_VALUE ("path-separator",  path_separator,    "path separator")
         PARSE_VALUE ("leading-zeros",   leading_zeros,     "leading zero count")
         PARSE_VALUE ("db-name",         db_name,           "db name")

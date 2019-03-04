@@ -240,7 +240,7 @@ static void processdir(void * passv)
                 SNPRINTF(gps[mytid].gpath,MAXPATH,"%s",shortname);
                 //printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath);
                 realpath(passmywork->name,gps[mytid].gfpath);
-                recs = rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, in.printdir, mytid);
+                recs = rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, 0, mytid);
                 //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
             } else {
                 recs = 1;
