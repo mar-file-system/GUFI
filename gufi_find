@@ -350,7 +350,7 @@ if __name__=='__main__':
             sys.stderr.write('Error: find returned: {}\n{}\n'.format(os.strerror(find.returncode), find_err))
         # otherwise, nothing was found
         else:
-            sys.stderr.write('Error: No directories found\n')
+            sys.stderr.write('Error: No directories found while searching in "{}" for "{}"\n'.format(getattr(args, 'starting-point'), ' '.join([os.path.normpath(path) for path in args.path] + [os.path.normpath(path) for path in args.wholename])))
         sys.exit(find.returncode)
     # if there is data and errors, ignore the errors
 

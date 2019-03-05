@@ -201,15 +201,12 @@ touch .hidden
 touch repeat_name
 ln -f -s $(realpath 1KB) file_symlink
 touch -amt 197001010000.00 old_file
-
 mkdir directory
+
 cd directory
 touch executable
-chmod 777 executable
 touch readonly
-chmod 444 readonly
 touch writable
-chmod 666 writable
 mkdir subdirectory
 
 cd subdirectory
@@ -241,3 +238,14 @@ if [[ (! -z "${uid}") && (! -z "${gid}") ]]; then
     sudo chown "${uid}" "${uid}_uid_${gid}_gid_directory"
     sudo chgrp "${gid}" "${uid}_uid_${gid}_gid_directory"
 fi
+
+# go back to the top
+cd ../..
+
+# force set all file permissions to 444
+find . -type f -exec chmod 444 -- '{}' \;
+
+# update individual file permissions
+chmod 777 directory/executable
+chmod 444 directory/readonly
+chmod 666 directory/writable
