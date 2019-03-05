@@ -45,40 +45,40 @@ GID="$(id -g)"
 
 # compare files
 echo "Compare files"
-diff <(./gufi_find "${root}" -path "${dst}" -type "f" --select "path() || '/' || name as name, type, mode, nlink, uid, gid, size, linkname" | sort) <(
+diff <(./gufi_find "${root}" -path "${dst}" -type "f" --select "path() || '/' || name as name, type, nlink, uid, gid, size, linkname" | sort) <(
     (
-        echo "${dst}/1KB|f|33060|1|${UID}|${GID}|1024||"
-        echo "${dst}/1MB|f|33060|1|${UID}|${GID}|1048576||"
-        echo "${dst}/directory/executable|f|33279|1|${UID}|${GID}|0||"
-        echo "${dst}/directory/readonly|f|33060|1|${UID}|${GID}|0||"
-        echo "${dst}/directory/subdirectory/repeat_name|f|33060|1|${UID}|${GID}|0||"
-        echo "${dst}/directory/writable|f|33206|1|${UID}|${GID}|0||"
-        echo "${dst}/empty_file|f|33060|1|${UID}|${GID}|0||"
-        echo "${dst}/.hidden|f|33060|1|${UID}|${GID}|0||"
-        echo "${dst}/old_file|f|33060|1|${UID}|${GID}|0||"
-        echo "${dst}/repeat_name|f|33060|1|${UID}|${GID}|0||"
-        echo "${dst}/unusual, name?#|f|33060|1|${UID}|${GID}|0||"
+        echo "${dst}/1KB|f|1|${UID}|${GID}|1024||"
+        echo "${dst}/1MB|f|1|${UID}|${GID}|1048576||"
+        echo "${dst}/directory/executable|f|1|${UID}|${GID}|0||"
+        echo "${dst}/directory/readonly|f|1|${UID}|${GID}|0||"
+        echo "${dst}/directory/subdirectory/repeat_name|f|1|${UID}|${GID}|0||"
+        echo "${dst}/directory/writable|f|1|${UID}|${GID}|0||"
+        echo "${dst}/empty_file|f|1|${UID}|${GID}|0||"
+        echo "${dst}/.hidden|f|1|${UID}|${GID}|0||"
+        echo "${dst}/old_file|f|1|${UID}|${GID}|0||"
+        echo "${dst}/repeat_name|f|1|${UID}|${GID}|0||"
+        echo "${dst}/unusual, name?#|f|1|${UID}|${GID}|0||"
     ) | sort) && echo "No Differences"
 error=$(($error + $?))
 
 # compare files and symlinks
 echo
 echo "Compare files and symlinks"
-diff <(./gufi_find "${root}" -path "${dst}" --select "path() || '/' || name as name, type, mode, nlink, uid, gid, linkname" | sort) <(
+diff <(./gufi_find "${root}" -path "${dst}" --select "path() || '/' || name as name, type, nlink, uid, gid, linkname" | sort) <(
     (
-        echo "${dst}/1KB|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/1MB|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/directory/executable|f|33279|1|${UID}|${GID}||"
-        echo "${dst}/directory/readonly|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/directory/subdirectory/directory_symlink|l|41471|1|${UID}|${GID}|$(realpath ${src})/directory/subdirectory|"
-        echo "${dst}/directory/subdirectory/repeat_name|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/directory/writable|f|33206|1|${UID}|${GID}||"
-        echo "${dst}/empty_file|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/file_symlink|l|41471|1|${UID}|${GID}|$(realpath ${src})/1KB|"
-        echo "${dst}/.hidden|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/old_file|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/repeat_name|f|33060|1|${UID}|${GID}||"
-        echo "${dst}/unusual, name?#|f|33060|1|${UID}|${GID}||"
+        echo "${dst}/1KB|f|1|${UID}|${GID}||"
+        echo "${dst}/1MB|f|1|${UID}|${GID}||"
+        echo "${dst}/directory/executable|f|1|${UID}|${GID}||"
+        echo "${dst}/directory/readonly|f|1|${UID}|${GID}||"
+        echo "${dst}/directory/subdirectory/directory_symlink|l|1|${UID}|${GID}|$(realpath ${src})/directory/subdirectory|"
+        echo "${dst}/directory/subdirectory/repeat_name|f|1|${UID}|${GID}||"
+        echo "${dst}/directory/writable|f|1|${UID}|${GID}||"
+        echo "${dst}/empty_file|f|1|${UID}|${GID}||"
+        echo "${dst}/file_symlink|l|1|${UID}|${GID}|$(realpath ${src})/1KB|"
+        echo "${dst}/.hidden|f|1|${UID}|${GID}||"
+        echo "${dst}/old_file|f|1|${UID}|${GID}||"
+        echo "${dst}/repeat_name|f|1|${UID}|${GID}||"
+        echo "${dst}/unusual, name?#|f|1|${UID}|${GID}||"
     ) | sort) && echo "No Differences"
 error=$(($error + $?))
 
