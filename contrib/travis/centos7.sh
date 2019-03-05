@@ -8,33 +8,33 @@ cd ${SCRIPT_PATH}/../..
 
 . ${SCRIPT_PATH}/start_docker.sh
 
-# instsall Extra Packages for Enterprise Linux (EPEL)
-ppde yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+# install Extra Packages for Enterprise Linux (EPEL)
+de yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 # install The Software Collections ( SCL ) Repository
-ppde yum -y install centos-release-scl
+de yum -y install centos-release-scl
 
 # install libraries
-ppde yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
+de yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
 
 # install extra packages
-ppde yum -y install cmake3 make rh-git29 tcl wget
+de yum -y install cmake3 make rh-git29 tcl wget
 
 # create symlinks
-ppde ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
-ppde ln -sf /usr/bin/cmake3 /usr/bin/cmake
-ppde ln -sf /usr/bin/ctest3 /usr/bin/ctest
+de ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
+de ln -sf /usr/bin/cmake3 /usr/bin/cmake
+de ln -sf /usr/bin/ctest3 /usr/bin/ctest
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     VERSIONN="${C_COMPILER##*-}"
     C_PACKAGE="devtoolset-${VERSION}"
     CENTOS_C_COMPILER="gcc-${VERSION}"
-    ppde update-alternatives --install /usr/bin/gcc-${VERSION} gcc-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/gcc 10
+    de update-alternatives --install /usr/bin/gcc-${VERSION} gcc-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/gcc 10
 elif [[ "${C_COMPILER}" = clang ]]; then
     # llvm-toolset-7 installs clang-5.0
     C_PACKAGE="llvm-toolset-7"
     CENTOS_C_COMPILER="clang-5.0"
-    ppde update-alternatives --install /usr/bin/clang-5.0 clang-5.0 /opt/rh/llvm-toolset-7/root/usr/bin/clang-5.0 10
+    de update-alternatives --install /usr/bin/clang-5.0 clang-5.0 /opt/rh/llvm-toolset-7/root/usr/bin/clang-5.0 10
 else
     echo "Unknown C compiler: ${C_COMPILER}"
     exit 1
@@ -44,28 +44,28 @@ if [[ "${CXX_COMPILER}" = g++-* ]]; then
     VERSION="${CXX_COMPILER##*-}"
     CXX_PACKAGE="devtoolset-${VERSION}-gcc-c++"
     CENTOS_CXX_COMPILER="g++-${VERSION}"
-    ppde update-alternatives --install /usr/bin/g++-${VERSION} g++-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/g++ 10
+    de update-alternatives --install /usr/bin/g++-${VERSION} g++-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/g++ 10
 elif [[ "${CXX_COMPILER}" = clang++ ]]; then
     # llvm-toolset-7 installs clang-5.0
     CXX_PACKAGE="llvm-toolset-7"
     CENTOS_CXX_COMPILER="clang++"
-    ppde update-alternatives --install /usr/bin/clang++ clang++ /opt/rh/llvm-toolset-7/root/usr/bin/clang++ 10
+    de update-alternatives --install /usr/bin/clang++ clang++ /opt/rh/llvm-toolset-7/root/usr/bin/clang++ 10
 else
     echo "Unknown C++ compiler: ${CXX_COMPILER}"
     exit 1
 fi
 
 # install the compilers
-ppde yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
+de yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
 
 # install SQLite 3.27
-ppde wget -nc https://www.sqlite.org/2019/sqlite-autoconf-3270100.tar.gz
-ppde tar -xzf sqlite-autoconf-3270100.tar.gz
-ppde bash -c "cd sqlite-autoconf-3270100 && mkdir build && cd build && CC=${CENTOS_C_COMPILER} ../configure --prefix=/tmp/sqlite3 && make -j && make sqlite3.c && make -j install"
+de wget -nc https://www.sqlite.org/2019/sqlite-autoconf-3270100.tar.gz
+de tar -xzf sqlite-autoconf-3270100.tar.gz
+de bash -c "cd sqlite-autoconf-3270100 && mkdir build && cd build && CC=${CENTOS_C_COMPILER} ../configure --prefix=/tmp/sqlite3 && make -j && make sqlite3.c && make -j install"
 
 # add the travis user
-ppde useradd travis -m -s /sbin/nologin || true
-ppde chown -R travis /GUFI
+de useradd travis -m -s /sbin/nologin || true
+de chown -R travis /GUFI
 
 # build and test GUFI
 docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && LD_LIBRARY_PATH=\"/opt/rh/httpd24/root/usr/lib64/:$(printenv LD_LIBRARY_PATH)\" PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
