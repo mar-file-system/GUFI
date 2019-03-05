@@ -6,6 +6,19 @@ set -e
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 cd ${SCRIPT_PATH}/../..
 
+# update refs
+git fetch --all --prune
+
+# if this commit is the latest
+set +e
+git diff --quiet --cached "origin/${TRAVIS_BRANCH}"
+IS_HEAD=$?
+set -e
+if [[ "${IS_HEAD}" -ne 0 ]]; then
+    echo "No need to deploy"
+    exit 0
+fi
+
 # get a newer version of libsqlite3-dev than the one provided by xenial (must be at least version 3.13)
 # this ppa is not allowed through addons, so it has to be added manually
 sudo add-apt-repository ppa:jonathonf/backports -y
@@ -32,7 +45,6 @@ git remote rm origin
 git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
 
 # move to the tarball branch
-git fetch --all --prune
 git checkout tarball
 
 # move the tarball into the target branch
