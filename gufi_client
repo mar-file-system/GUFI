@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+
+import argparse
+import getpass
+import os
+import pwd
+import sys
+
+# command line argument aliases of available tools
+# assumes that all of the tools are installed under the same directory
+# a prefix will be prepended onto the selected tool
+TOOLS  = {
+    'find'  : 'gufi_find',
+    'ls'    : 'gufi_ls',
+    'stats' : 'gufi_stats',
+}
+
+def parse_args(args = None):
+    '''
+    Create an argument parser and return the parsed arguments
+    '''
+
+    def check_username(username):
+        return pwd.getpwnam(username).pw_name
+
+    def check_port(port):
+        if type(port) != int:
+            port = int(port)
+
+        if (0 < port) and (port < 65536):
+            return port
+
+        raise argparse.ArgumentTypeError("Invalid Port: {}".format(port))
+
+    parser = argparse.ArgumentParser(description='gufi_find_client')
+    parser.add_argument('--username',    dest='username',    type=check_username, default=getpass.getuser(),                             help='Username (not UID)')
+    parser.add_argument('-p', '--port',  dest='port',        type=check_port,     default=22,                                            help='SSH port')
+    parser.add_argument('--known_hosts', dest='known_hosts', type=str,            default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
+    parser.add_argument('--hostkey',     dest='hostkey',     type=str,            default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
+    parser.add_argument('--paramiko',    dest='paramiko',    type=str,                                                                   help='Location of paramiko on this machine')
+    parser.add_argument('hostname',                          type=str,                                                                   help='GUFI server')
+    parser.add_argument('gufi_install',                      type=str,                                                                   help='Install prefix of GUFI on remote')
+    parser.add_argument('gufi_tree',                         type=str,                                                                   help='GUFI tree path')
+    parser.add_argument('tool',                              type=str,            choices=TOOLS.keys(),                                  help='GUFI tool to use')
+    parser.add_argument('args',                              nargs='*',           default=[],                                            help='Arguments to pass to the GUFI tool')
+
+    if args is None:
+        args = sys.argv[1:]
+
+    return parser.parse_args(args)
+
+def contact_server(args):
+    '''
+    Given a set of arguments, attempt to connect to a remote host and run the command
+    '''
+    try:
+        ssh = paramiko.client.SSHClient()
+
+        # load known server host keys
+        for known_hosts in args.known_hosts:
+            ssh.load_system_host_keys(os.path.expanduser(known_hosts))
+
+        # connect to the server
+        ssh.connect(hostname=args.hostname,
+                    port=args.port,
+                    username=args.username,
+                    hostkey=paramiko.opensshkey.load_pubkey_from_file(args.hostkey))
+
+        # run the command
+        _, stdout, stderr = ssh.exec_command(os.path.join(args.gufi_install, TOOLS[args.tool]) +  # command
+                                             ' ' + ' '.join(args.args) +                          # options
+                                             ' ' + args.gufi_tree)                                # gufi_tree
+        try:
+            sys.stdout.write(stdout.read())
+            sys.stderr.write(stderr.read())
+        except Exception as e:
+            sys.stderr.write(e)
+    finally:
+        ssh.close()
+
+if __name__  == '__main__':
+    args = parse_args()
+
+    if args.paramiko is not None:
+        sys.path.append(args.paramiko)
+    import paramiko
+
+    contact_server(args)

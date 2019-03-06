@@ -129,7 +129,7 @@ ExternalProject_Add(C-Thread-Pool
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
   STEP_TARGETS      build
-  INSTALL_COMMAND   true
+  INSTALL_COMMAND   ""
 )
 
 # set the install rpath so the executables that link
@@ -154,7 +154,7 @@ ExternalProject_Add(sqlite3-pcre
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
   STEP_TARGETS      build
-  INSTALL_COMMAND   true
+  INSTALL_COMMAND   ""
 )
 
 # everyone includes (-I) these paths, whether or not they need them
@@ -315,8 +315,29 @@ else()
 endif()
 set(DB2_SOURCES)
 
+# list of scripts that act as tools
+set(TOOLS example_run gufi_client gufi_find gufi_stats gufi_ls query_builder.py)
+
+set(PARAMIKO OFF CACHE BOOL "Whether or not to download and install paramiko")
+if (PARAMIKO)
+  # download paramiko
+  set(PARAMIKO_PREFIX ${CMAKE_BINARY_DIR}/src)
+  ExternalProject_Add(paramiko
+    GIT_REPOSITORY    https://github.com/paramiko/paramiko.git
+    GIT_TAG           cf7d49d66f3b1fbc8b0853518a54050182b3b5eb
+    GIT_SHALLOW       1
+    PREFIX            ${CMAKE_BINARY_DIR}/
+    PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ""
+    INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/paramiko ${CMAKE_INSTALL_PREFIX}/paramiko
+  )
+
+  # add gufi_client.in to the list of tools
+  set(TOOLS ${TOOLS} gufi_client)
+endif()
+
 # copy and install scripts that act like binaries
-set(TOOLS example_run gufi_find gufi_stats gufi_ls query_builder.py)
 foreach(TOOL ${TOOLS})
   # copy the tool into the build directory for easy access
   configure_file(${CMAKE_SOURCE_DIR}/${TOOL} ${CMAKE_BINARY_DIR}/${TOOL} COPYONLY)
