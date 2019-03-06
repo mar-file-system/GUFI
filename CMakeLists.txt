@@ -151,7 +151,7 @@ endif()
 # against C-Thread-Pool can find it after being installed
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
 
-# search for sqlite3 installation
+# Find SQLite3
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 if (SQLITE3_VERSION VERSION_LESS 3.13)
   message(FATAL_ERROR "GUFI requires sqlite3 3.13+. Got ${SQLITE3_VERSION}")
@@ -183,84 +183,7 @@ elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
   )
 endif()
 
-# everyone includes (-I) these paths, whether or not they need them
-set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR} ${XATTR_INCLUDEDIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
-include_directories(${COMMON_INCLUDES})
-
-# dfw includes utils.c for some reason, so ${CMAKE_BINARY_DIR} needs to be included
-include_directories(${CMAKE_BINARY_DIR})
-
-# utils.c needs an include path change in OpenSUSE
-set(XATTR_H "${XATTR_HEADER}")
-configure_file(${CMAKE_SOURCE_DIR}/utils.c.in ${CMAKE_BINARY_DIR}/utils.c @ONLY)
-
-# create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c structq.c)
-add_library(GUFI STATIC ${GUFI_SOURCES} ${CMAKE_BINARY_DIR}/utils.c)
-add_dependencies(GUFI C-Thread-Pool sqlite3-pcre)
-install(TARGETS GUFI DESTINATION lib)
-
-# set of libraries needed by the final binaries
-set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${thpool_PREFIX}/C-Thread-Pool-build/libthpool.a Threads::Threads m)
-
-# This function builds executables using the
-# provided file names (SOURCE is an optional
-# argument, so it does not show up in the
-# arguments list).
-#
-# PATH is the installation directory.
-#
-# There will be duplicate targets if two files
-# share the same name.
-#
-# ex:
-#     build_and_install(bin TRUE file1.c file2.cpp)
-#        -> compiles file1.c into file1
-#        -> compiles file2.cpp into file2
-#        -> installs file1 and file2 into bin
-#
-function(build_and_install PATH LINK_GUFI)
-  foreach(SOURCE ${ARGN})
-    # get the filename only (no path or extension)
-    string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
-
-    # create the target for building the executable
-    add_executable(${TARGET} ${SOURCE})
-
-    # link GUFI libraries if needed
-    if (LINK_GUFI)
-      target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
-    endif()
-
-    # install the executable
-    install(TARGETS ${TARGET} DESTINATION ${PATH})
-  endforeach()
-endfunction()
-
-# build and install the binaries that need to link with GUFI
-set(BIN_SOURCES
-  bfq.c
-  bfti.c
-  bfwi.c
-  bfwreaddirplus2db.c
-  dfw.c
-  make_testdirs.c
-  querydb.c
-  querydbn.c)
-
-# add C++ sources if C++ support is available
-if (CMAKE_CXX_COMPILER)
-  set(BIN_SOURCES ${BIN_SOURCES} make_testtree.cpp)
-endif()
-
-# build the main binaries
-build_and_install(bin TRUE ${BIN_SOURCES})
-
-# build binaries that do not need to link with GUFI
-set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install(bin FALSE ${MISC_SOURCES})
-
-# search for FUSE on Linux, and OSXFUSE on OSX
+# search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
   pkg_search_module(FUSE fuse)
   message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
@@ -280,66 +203,33 @@ elseif (APPLE)
   set(MY_FUSE_LDFLAGS ${OSXFUSE_LDFLAGS})
 endif()
 
-# only build bffuse and bfresultfuse if FUSE is found
-if (MY_FUSE_FOUND)
-  # remove the semicolons that get added
-  string(REPLACE ";" " " MY_FUSE_CFLAGS "${MY_FUSE_CFLAGS}")
-  string(REPLACE ";" " " MY_FUSE_LDFLAGS "${MY_FUSE_LDFLAGS}")
-
-  # create the bffuse executable
-  add_executable(bffuse bffuse.c)
-  set_target_properties(bffuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
-  target_link_libraries(bffuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
-
-  # create the bfresultfuse executable
-  add_executable(bfresultfuse bfresultfuse.c)
-  set_target_properties(bfresultfuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
-  target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
-
-  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS bffuse bfresultfuse DESTINATION bin)
-else()
-  message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
-endif()
-set(FUSE_SOURCES bffuse.c bfresultfuse.c)
-
-# only build bfmi if MySQL is found
+# Find MySQL
 pkg_search_module(MYSQL mysql)
 if (MYSQL_FOUND)
   message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
   message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
-
-  string(REPLACE ";" " " MYSQL_CFLAGS "${MYSQL_CFLAGS}")
-  string(REPLACE ";" " " MYSQL_LDFLAGS "${MYSQL_LDFLAGS}")
-
-  # create the bfmi executable
-  add_executable(bfmi bfmi.c)
-  set_target_properties(bfmi PROPERTIES COMPILE_FLAGS "${MYSQL_CFLAGS}")
-  target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LDFLAGS})
-
-  # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS bfmi DESTINATION bin)
 else()
   message(STATUS "MySQL not found. Not building bfmi.")
 endif()
-set(MYSQL_SOURCES bfmi.c)
 
-# search for DB2
+# Find DB2
 pkg_search_module(DB2 db2)
 if (DB2_FOUND)
   message(STATUS "DB2 headers located in ${DB2_INCLUDEDIR}")
   message(STATUS "DB2 libraries located in ${DB2_LIBDIR}")
-
-  string(REPLACE ";" " " DB2_CFLAGS "${DB2_CFLAGS}")
-  string(REPLACE ";" " " DB2_LDFLAGS "${DB2_LDFLAGS}")
-
-  # create the executable
-
-  # install the DB2 binarys in ${CMAKE_INSTALL_PREFIX}/bin
 else()
   message(STATUS "DB2 not found.")
 endif()
-set(DB2_SOURCES)
+
+# everyone includes (-I) these paths, whether or not they need them
+set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR}/include ${XATTR_INCLUDEDIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
+include_directories(${COMMON_INCLUDES})
+
+# set of libraries needed by the final binaries
+set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${thpool_PREFIX}/C-Thread-Pool-build/libthpool.a Threads::Threads m)
+
+# tell CMake to look at the src directory
+add_subdirectory(src)
 
 # list of scripts that act as tools
 set(TOOLS example_run gufi_client gufi_find gufi_stats gufi_ls query_builder.py)
@@ -398,8 +288,6 @@ add_subdirectory(test)
 # build tarball out of ${CMAKE_SOURCE_DIR}
 
 # collect all files into variables
-set(SOURCES ${GUFI_SOURCES} utils.c.in ${BIN_SOURCES} ${MISC_SOURCES} ${FUSE_SOURCES} ${MYSQL_SOURCES} ${DB2_SOURCES})
-set(HEADERS bf.h dbutils.h mygpfs.h structq.h utils.h)
 set(OTHER_FILES
   CMakeLists.txt
   INSTALL
@@ -409,17 +297,13 @@ set(OTHER_FILES
   README
   README.md
   TBD.txt
-  gpfs-scan-listnew-out.c
-  gpfs-scan-listnew.c
-  modu.c
-  mygpfs.h
-  runtsm
-  triell.c)
+  runtsm)
 set(PATHS
   contrib
   docs
   include
   scripts
+  src
   test
   C-Thread-Pool
   sqlite3-pcre
@@ -435,8 +319,23 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
-                       COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                       COMMAND ${CMAKE_COMMAND} -E tar czf ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
                        DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
+
+# test the tarball
+set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
+
+add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
+
+add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar xf ${TARBALL_NAME}
+                             COMMAND make
+                             COMMAND make test
+                             WORKING_DIRECTORY ${TARBALL_TEST_DIR}
+                             DEPENDS gary make_tarball_dir)
+
+add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
+                            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                            DEPENDS build_gary)

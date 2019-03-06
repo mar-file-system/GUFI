@@ -1,9 +1,9 @@
 #!/usr/bin/python
-## get subprocess module 
-## get os module 
-## get time module 
+## get subprocess module
+## get os module
+## get time module
 import subprocess
-import os 
+import os
 import time
 
 tdir=os.getcwd()
@@ -20,7 +20,7 @@ dirs1=[0,1,2]
 dirs2=[0,1,2]
 files=[0,1,2]
 
-# initialize a src tree, make a full gufi tree, do a bfq in case we want to compare with the full at initial state 
+# initialize a src tree, make a full gufi tree, do a bfq in case we want to compare with the full at initial state
 def ginit():
  print "initializing a tree, full gufi tree, and full tree snap"
  # clean up and make initial directories
@@ -49,11 +49,11 @@ def ginit():
  os.chdir(top)
 
  # create a gufi tree
- os.system('%s/%s/bfwi -n 2 -x -b -t gt d0' % (tdir,gdir)) 
+ os.system('%s/%s/bfwi -n 2 -x -b -t gt d0' % (tdir,gdir))
 
  # this is just for testing - make a bfq output to compare with if we want to - leave out atime as it may change
  os.chdir(topgt)
- os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/fullbfqout d0'  % (tdir,gdir,top)) 
+ os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/fullbfqout d0'  % (tdir,gdir,top))
 
  os.chdir(top)
 
@@ -69,11 +69,11 @@ def gfullafter():
  os.system('%s/%s/bfwi -n 2 -d \'|\' -x -Pp -o %s/load d0' % (tdir,gdir,top))
  os.system('cat %s/load.0 %s/load.1 > %s/load.out ' % (top,top,top ))
  os.chdir(top)
- os.system('%s/%s/bfwi -n 2 -d \'|\' -x -b -t %s -u %s/load.out' % (tdir,gdir,fa,top)) 
+ os.system('%s/%s/bfwi -n 2 -d \'|\' -x -b -t %s -u %s/load.out' % (tdir,gdir,fa,top))
  print "created gufi with bfwi output"
  os.chdir(topfullafter)
  #leave out atime
- os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/fullbfqoutafter d0'  % (tdir,gdir,top)) 
+ os.system('%s/%s/bfq -n1 -Pp -E "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from entries;" -S "select path(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,ctime,linkname,xattrs from vsummarydir;" -a -o %s/fullbfqoutafter d0'  % (tdir,gdir,top))
  os.chdir(top)
 
 
@@ -92,10 +92,10 @@ time.sleep(1)
 
 # do a full gufi tree from bfwi flat file output and a bfq on it to compare with the original bfwi walk created gufi
 gfullafter()
-# wait 
+# wait
 time.sleep(1)
 print "++++++++++ comparing fulbfq to  fullafter, original bfwi walk produced gufi and bfwi flat file loaded with bfwi produced gufi"
-#you have to sort these as bfq will walk in entry order and bfwi will produce a gufi in some order and it might be a different order using different modes 
+#you have to sort these as bfq will walk in entry order and bfwi will produce a gufi in some order and it might be a different order using different modes
 os.system('sort -o %s/fullbfqout.srt %s/fullbfqout.0' % (top,top))
 os.system('sort -o %s/fullbfqoutafter.srt %s/fullbfqoutafter.0' % (top,top))
 cmd=os.system('cmp %s/fullbfqout.srt %s/fullbfqoutafter.srt' % (top,top))

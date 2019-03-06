@@ -76,7 +76,6 @@
 
 SCRIPT="$(dirname $BASH_SOURCE)" # Must be at the top
 
-
 function usage() {
     echo "Usage: $0 tar dir GUFI_tree"
 }

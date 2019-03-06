@@ -1,45 +1,32 @@
-GTEST_BUILD_DIR   ?= ../../googletest/build
-GTEST_INSTALL_DIR ?= ../../googletest/install
+GTEST_SRC         ?= $(realpath ../../googletest)
+GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
+GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
 
-CC?=gcc
-CXX?=g++
-CFLAGS?=-std=c++11 -g3 -O0
-LDFLAGS?=
+CFLAGS            += -I$(realpath ../..)
+LDFLAGS           += -L$(realpath ../..) -lgufi
 
-CFLAGS+=-I../.. -I$(GTEST_INSTALL_DIR)/include/
-LDFLAGS+=-L../.. -lgufi -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -lpthread
-
-TARGET=test
 TESTS=bf utils
 OBJ=$(addsuffix .o, $(TESTS))
 
-ifneq ($(DEBUG),)
-	CFLAGS +=-Wall
-endif
+TARGET=test
+
+.PHONY: $(TARGET)
 
 all: $(GTEST_INSTALL_DIR) $(TARGET)
 
 $(GTEST_INSTALL_DIR):
-	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) ..
-	$(MAKE) -C $(GTEST_BUILD_DIR) install
+	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) .. &> /dev/null
+	$(MAKE) -C $(GTEST_BUILD_DIR) install &> /dev/null
 
 $(TARGET): $(OBJ)
-	$(CXX) $(CFLAGS) $^ $(LDFLAGS) -o $@
-
-../../%:
-	$(MAKE) -C ../..
-
-%.o: %.c $(GTEST_INSTALL_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.o: %.cc $(GTEST_INSTALL_DIR)
-	$(CXX) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) $^ $(LDFLAGS) -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -o $@
 
 %.o: %.cpp $(GTEST_INSTALL_DIR)
-	$(CXX) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS)  -I$(GTEST_INSTALL_DIR)/include -c $< -o $@
 
 run: $(TARGET)
-	./$<
+	./$(TARGET)
 
 clean:
 	rm -rf $(OBJ) $(TARGET)
+	rm -rf $(GTEST_BUILD_DIR) $(GTEST_INSTALL_DIR)

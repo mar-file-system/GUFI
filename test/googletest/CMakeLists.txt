@@ -80,7 +80,10 @@ include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
   # turn off GoogleTest installation
-  unset(INSTALL_GTEST CACHE)
+  set(INSTALL_GTEST OFF PARENT_SCOPE)
+
+  # don't build GoogleMock
+  set(BUILD_GMOCK OFF PARENT_SCOPE)
 
   # GoogleTest
   configure_file(${CMAKE_SOURCE_DIR}/contrib/cmake/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)

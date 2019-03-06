@@ -1,15 +1,28 @@
-SUBDIRECTORIES=googletest
-
-.PHONY: $(SUBDIRECTORIES)
-
-all: $(SUBDIRECTORIES)
-
 export
 
+SUBDIRECTORIES=googletest
+
+TESTS         = runtests verifyknowntree $(SUBDIRECTORIES)
+
+# these are trashable files and dirs produced by the test/run* tests
+TEST_PRODUCTS = testout.* testdirdup outdb* outq.* core.*
+
+.PHONY: $(SUBDIRECTORIES) $(TESTS)
+
+all: $(TESTS) $(SUBDIRECTORIES)
+
 $(SUBDIRECTORIES):
-	$(MAKE) -C $@
+	$(MAKE) -C $@ run
+
+runtests: runbfwi runbfti runbfq runquerydb testdir.tar
+	./$@ testdir.tar testdir testdir.gufi
+	rm -rf testdir
+
+verifyknowntree:
+	./$@
 
 clean-%:
 	$(MAKE) -C $* clean
 
 clean: $(addprefix clean-, $(SUBDIRECTORIES))
+	rm -rf $(TEST_PRODUCTS)

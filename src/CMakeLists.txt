@@ -1,5 +1,3 @@
-#!/bin/bash -e
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -72,81 +70,118 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
+
+
+
+cmake_minimum_required(VERSION 3.0.0)
+
+# dfw includes utils.c for some reason, so ${CMAKE_BINARY_DIR}/src needs to be included
+include_directories(${CMAKE_BINARY_DIR}/src)
+
+# utils.c needs an include path change in OpenSUSE
+set(XATTR_H "${XATTR_HEADER}")
+configure_file(${CMAKE_SOURCE_DIR}/src/utils.c.in ${CMAKE_BINARY_DIR}/src/utils.c @ONLY)
+
+# create the GUFI library, which contains all of the common source files
+set(GUFI_SOURCES bf.c dbutils.c structq.c)
+add_library(GUFI STATIC ${GUFI_SOURCES} ${CMAKE_BINARY_DIR}/src/utils.c)
+add_dependencies(GUFI C-Thread-Pool sqlite3-pcre)
+install(TARGETS GUFI DESTINATION lib)
+
+# This function builds executables using the
+# provided file names (SOURCE is an optional
+# argument, so it does not show up in the
+# arguments list).
 #
+# PATH is the installation directory.
 #
+# There will be duplicate targets if two files
+# share the same name.
 #
-
-SCRIPT="$BASH_SOURCE" # Must be at the top
-
-# check if the executables are here, or in src
-if [[ -f src/bfwi && -x src/bfwi ]]; then
-    SRC="src"
-else
-    SRC=""
-fi
-
-DIR=`dirname $SCRIPT`
-BFTI=$DIR/../${SRC}/bfti
-
-
-usage() {
-    PROG=$1
-    echo "Usage: $PROG  <GUFI_tree>"
-    exit -1
-}
-
-
-GUFI=$1
-
-if (( $# != 1 )); then
-    usage $0
-elif [ ! -d $GUFI ]; then
-    usage $0
-elif [ ! -e $GUFI/db.db ]; then
-    echo "$GUFI/db.db does not exist.  Need the root of a GUFI tree."
-    exit -1
-fi
-
-
-
-# Usage: bfti [options] GUFI_tree
-# options:
-#   -h              help
-#   -H              show assigned input values (debugging)
-#   -P              print directories as they are encountered
-#   -n <threads>    number of threads
-#   -s              generate tree-summary table (in top-level DB)
+# ex:
+#     build_and_install(bin TRUE file1.c file2.cpp)
+#        -> compiles file1.c into file1
+#        -> compiles file2.cpp into file2
+#        -> installs file1 and file2 into bin
 #
-# GUFI_tree         path to GUFI tree-dir
-#
+function(build_and_install PATH LINK_GUFI)
+  foreach(SOURCE ${ARGN})
+    # get the filename only (no path or extension)
+    string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
 
+    # create the target for building the executable
+    add_executable(${TARGET} ${SOURCE})
 
+    # link GUFI libraries if needed
+    if (LINK_GUFI)
+      target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+    endif()
 
-echo
-echo "-- tree index to screen (no changes to DB)"
-$BFTI -n 2 -P  $GUFI
+    # install the executable
+    install(TARGETS ${TARGET} DESTINATION ${PATH})
+  endforeach()
+endfunction()
 
-echo
-echo "-- tree index to db (initialize and populate summary table)"
-$BFTI -n 2 -Ps $GUFI
+# build and install the binaries that need to link with GUFI
+set(SOURCES
+  bfq.c
+  bfti.c
+  bfwi.c
+  bfwreaddirplus2db.c
+  dfw.c
+  make_testdirs.c
+  querydb.c
+  querydbn.c)
 
+# add C++ sources if C++ support is available
+if (CMAKE_CXX_COMPILER)
+  set(SOURCES ${SOURCES} make_testtree.cpp)
+endif()
 
+# build the main binaries
+build_and_install(bin TRUE ${SOURCES})
 
+# build binaries that do not need to link with GUFI
+set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
+build_and_install(bin FALSE ${MISC_SOURCES})
 
-# Usage: querydb [options] [-s] DB_path SQL
-# options:
-#   -h              help
-#   -H              show assigned input values (debugging)
-#   -N              print column-names (header) for DB results
-#   -V              print column-values (rows) for DB results
-#
-#   DB_path         path to dir containinng db.db.*
-#   SQL             arbitrary SQL on DB
-#
+# only build bffuse and bfresultfuse if FUSE is found
+if (MY_FUSE_FOUND)
+  # remove the semicolons that get added
+  string(REPLACE ";" " " MY_FUSE_CFLAGS "${MY_FUSE_CFLAGS}")
+  string(REPLACE ";" " " MY_FUSE_LDFLAGS "${MY_FUSE_LDFLAGS}")
 
-# echo
-# echo "querydb show treesummary contents"
-# `dirname $BFTI`/querydb -NV $GUFI "select * from treesummary;"
-echo
-echo "-- show treesummary contents"
-sqlite3 -line $GUFI/db.db "select * from treesummary;"
+  # create the bffuse executable
+  add_executable(bffuse bffuse.c)
+  set_target_properties(bffuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
+  target_link_libraries(bffuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
+
+  # create the bfresultfuse executable
+  add_executable(bfresultfuse bfresultfuse.c)
+  set_target_properties(bfresultfuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
+  target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
+
+  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/bin
+  install(TARGETS bffuse bfresultfuse DESTINATION bin)
+endif()
+
+# only build bfmi if MySQL is found
+if (MYSQL_FOUND)
+  string(REPLACE ";" " " MYSQL_CFLAGS "${MYSQL_CFLAGS}")
+  string(REPLACE ";" " " MYSQL_LDFLAGS "${MYSQL_LDFLAGS}")
+
+  # create the bfmi executable
+  add_executable(bfmi bfmi.c)
+  set_target_properties(bfmi PROPERTIES COMPILE_FLAGS "${MYSQL_CFLAGS}")
+  target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LDFLAGS})
+
+  # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
+  install(TARGETS bfmi DESTINATION bin)
+endif()
+
+# only build db2 sources if db2 is found
+pkg_search_module(DB2 db2)
+if (DB2_FOUND)
+  string(REPLACE ";" " " DB2_CFLAGS "${DB2_CFLAGS}")
+  string(REPLACE ";" " " DB2_LDFLAGS "${DB2_LDFLAGS}")
+endif()
