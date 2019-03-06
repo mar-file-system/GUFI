@@ -73,111 +73,22 @@ OF SUCH DAMAGE.
 
 
 
-Installation instructions for the Grand Unified File-Index (GUFI).
+bfresultfuse - fuse daemon to read the output of a properly formed bfq query with output dbs and present it as a fuse mount point
 
-Please pardon the dust!  We have ongoing efforts that are developing on
-Ubuntu Xenial, OpenSUSE 12.3, OSX, CentOS (7.5), and Fedora.
+Usage: bfresultfuse -s mountpoint  tablename_from_bfq_query inputdb number_of_inputdbs
+options:
+  -s                           tells fuse to run single threaded - this has only been tested in single thread mode
+   mountpoint                  directory on which you want the fuse mounted
+   tablename_from_bfq_query    this fuse daemon takes the output of a bfq query which produced output db's (one per thread) as input to the fuse
+                               the query must be formed properly to have the right fields/order in the output dbs
+                               see test/runbfqforfuse as how to run bfq to produce output dbs suitable for input into this fuse daemon
+                               this is the output table name in the output dbs from the bfq run
+   inputdb                     base name for output dbs of bfq query used as input to this fuse (basename.threadnum)
+   number_of_inputdbs          this is how many threads you ran on the bfq to produce the output dbs to tell the fuse how many dbs there are to union
 
-Meanwhile, we have not yet completed our automated regression-testing.
-Please let us know, if you have trouble.  (Details would
-be appreciated; what OS you were using, what you tried, what went wrong.)
-
-Thanks!
-
-
-
-(0) Initial set-up and installation
-
-# install build tools
-A C compiler with C99 support
-[optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
-CMake 3.0+
-Make
-pkg-config
-
-# install packages (see platform-specific caveats, below)
-install uuid, xattr, sqlite3 (3.13+), pcre (1)
-[optional] install mysql
-[optional] install fuse      (osxfuse on OSX)
-[optional] install db2
-
-# packages that are downloaded by CMake:
-sqlite3-pcre
-C-Thread-Pool
-GoogleTest
-
-# clone GUFI
-git clone https://github.com/mar-file-system/GUFI.git
-cd GUFI
-
-
-(1) ========== CentOS 7.5
-
-(1.1) submodule googletest build fails for cmake < 3.0
-
-CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
-  No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
-Call Stack (most recent call first):
-  /usr/share/cmake/Modules/CMakePackageConfigHelpers.cmake:152 (write_basic_config_version_file)
-  googletest/CMakeLists.txt:96 (write_basic_package_version_file)
-
-See: https://github.com/google/googletest/issues/1786
-
---- FIX:
-[as root]
-yum install epel-release
-yum remove cmake
-yum install cmake3
-ln -s /usr/bin/cmake3 /usr/bin/cmake
-
-
-
-(1.2) our build of test/googletest fails
-
--- WORK-AROUND
-disable the C++ compiler when calling cmake ('CXX=false cmake')
-
-
-
-(1.3) compile fails for sqlite3 3.7.17 (CentOS 7.5), works for sqlite3 3.14.2 (Fedora)
-
--- FIX:
-
-Upgrade to newer version.  There is no newer version available through yum repos, so do this:
-
-download sqlite-autoconf-xxxxx.tar.gz [https://www.sqlite.org/download.html]
-tar -xzf sqlite-autoconf-XXXXXXX.tar.gz
-cd sqlite-autoconf-xxxxx
-./configure --prefix=$SQLITE_INSTALL_PREFIX
-make
-make install
-export PKG_CONFIG_PATH=$SQLITE_INSTALL_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH
-
-This will allow the 'pkg-config' commands in the makefile to find this newer version.
-
-If CMake continues to find the old sqlite installtion, delete the previously generated CMake files, such as CMakeCache.txt.
-
-
-
-(3) ========== Building and installing with CMake
-
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
-make
-make install
-
-(3.1) Special configurations options
-
-Set the environment variable CXX=false to disable building C++ code
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
-Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
-
-
-
-(4) ========== Building and installing with make
-
-If cmake is not available, the tarball found at
-https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
-can be built by running `make` in the extraction directory.
+Flow:
+This is a fuse daemon that honors
+getattr, readdir, readlink, access, getxattr, listxattr
+meaning you can only run commands that use the implicated posix calls against this mount point like
+ls, stat, find, etc.  you can not run file ops like open/read/write/close etc. so no cat or the like
+it issues queries into the inputdbs to respond to these fuse requests

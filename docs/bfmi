@@ -73,111 +73,55 @@ OF SUCH DAMAGE.
 
 
 
-Installation instructions for the Grand Unified File-Index (GUFI).
+bfmi - walk robinhood mysql db and list tree and/or create output gufi tree
 
-Please pardon the dust!  We have ongoing efforts that are developing on
-Ubuntu Xenial, OpenSUSE 12.3, OSX, CentOS (7.5), and Fedora.
-
-Meanwhile, we have not yet completed our automated regression-testing.
-Please let us know, if you have trouble.  (Details would
-be appreciated; what OS you were using, what you tried, what went wrong.)
-
-Thanks!
-
-
-
-(0) Initial set-up and installation
-
-# install build tools
-A C compiler with C99 support
-[optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
-CMake 3.0+
-Make
-pkg-config
-
-# install packages (see platform-specific caveats, below)
-install uuid, xattr, sqlite3 (3.13+), pcre (1)
-[optional] install mysql
-[optional] install fuse      (osxfuse on OSX)
-[optional] install db2
-
-# packages that are downloaded by CMake:
-sqlite3-pcre
-C-Thread-Pool
-GoogleTest
-
-# clone GUFI
-git clone https://github.com/mar-file-system/GUFI.git
-cd GUFI
+# Usage: bfmi [options] robin_in
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -p              print file-names
+#   -n <threads>    number of threads
+#   -d <delim>      delimiter (one char)  [use 'x' for 0x1E]
+#   -x              pull xattrs from source file-sys into GUFI
+#   -P              print directories as they are encountered
+#   -b              build GUFI index tree
+#   -t <to_dir>     dir GUFI-tree should be built
+#   -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+#
+# robin_in          file containing custom RobinHood parameters
+#                      example contents:
+#                      /path  - top dir-path (RH doesnt have a name for the root)
+#                      0x200004284:0x11:0x0 - fid of the root
+#                      20004284110          - inode of root
+#                      16877                - mode of root
+#                      1500000000           - atime=mtime=ctime of root
+#                      localhost            - host of mysql
+#                      ggrider              - user of mysql
+#                      mypassword           - password for user of mysql
+#                      institutes           - name of db of mysql
+#
+# future options:
+#   -U              create by user summary record
+#   -G              create by group summary record
+#
 
 
-(1) ========== CentOS 7.5
-
-(1.1) submodule googletest build fails for cmake < 3.0
-
-CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
-  No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
-Call Stack (most recent call first):
-  /usr/share/cmake/Modules/CMakePackageConfigHelpers.cmake:152 (write_basic_config_version_file)
-  googletest/CMakeLists.txt:96 (write_basic_package_version_file)
-
-See: https://github.com/google/googletest/issues/1786
-
---- FIX:
-[as root]
-yum install epel-release
-yum remove cmake
-yum install cmake3
-ln -s /usr/bin/cmake3 /usr/bin/cmake
-
-
-
-(1.2) our build of test/googletest fails
-
--- WORK-AROUND
-disable the C++ compiler when calling cmake ('CXX=false cmake')
-
-
-
-(1.3) compile fails for sqlite3 3.7.17 (CentOS 7.5), works for sqlite3 3.14.2 (Fedora)
-
--- FIX:
-
-Upgrade to newer version.  There is no newer version available through yum repos, so do this:
-
-download sqlite-autoconf-xxxxx.tar.gz [https://www.sqlite.org/download.html]
-tar -xzf sqlite-autoconf-XXXXXXX.tar.gz
-cd sqlite-autoconf-xxxxx
-./configure --prefix=$SQLITE_INSTALL_PREFIX
-make
-make install
-export PKG_CONFIG_PATH=$SQLITE_INSTALL_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH
-
-This will allow the 'pkg-config' commands in the makefile to find this newer version.
-
-If CMake continues to find the old sqlite installtion, delete the previously generated CMake files, such as CMakeCache.txt.
-
-
-
-(3) ========== Building and installing with CMake
-
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
-make
-make install
-
-(3.1) Special configurations options
-
-Set the environment variable CXX=false to disable building C++ code
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
-Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
-
-
-
-(4) ========== Building and installing with make
-
-If cmake is not available, the tarball found at
-https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
-can be built by running `make` in the extraction directory.
+Flow:
+open robinhood input file that has how to communicate with mysql and info
+ about root directory
+root directory is put on a queue
+output file(s) are opened one per thread
+mysql connections are made, on for each thread
+threads are started
+loop assigning work (directories) from queue to threads
+each thread processes a directory by querying all records with parentid=id
+ for that directory
+  if directory put it on the queue and duplicate the directory if making a gufi
+  if link or file print it to screen or out file
+      and build an entries table with entries and keep a sum for the directory
+  close directory
+  write directory summary table
+end
+close output files if needed
+close mysql connections
+you can end up with an output file per thread

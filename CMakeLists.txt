@@ -232,7 +232,7 @@ set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${
 add_subdirectory(src)
 
 # list of scripts that act as tools
-set(TOOLS example_run gufi_client gufi_find gufi_stats gufi_ls query_builder.py)
+set(TOOLS gufi_client gufi_find gufi_stats gufi_ls query_builder.py)
 
 set(PARAMIKO OFF CACHE BOOL "Whether or not to download and install paramiko")
 if (PARAMIKO)
@@ -275,8 +275,8 @@ foreach(TOOL ${TOOLS})
   install(PROGRAMS ${TOOL} DESTINATION bin)
 endforeach()
 
-# copy the scripts directory into ${CMAKE_BINARY_DIR}
-file(COPY scripts DESTINATION ${CMAKE_BINARY_DIR})
+# # copy the scripts directory into ${CMAKE_BINARY_DIR}
+# file(COPY scripts DESTINATION ${CMAKE_BINARY_DIR})
 
 # enable "make test"
 enable_testing()
@@ -301,9 +301,9 @@ set(OTHER_FILES
 set(PATHS
   contrib
   docs
+  examples
   include
-  scripts
-  src
+  # scripts
   test
   C-Thread-Pool
   sqlite3-pcre

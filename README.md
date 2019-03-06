@@ -5,35 +5,8 @@ LA-CC-15-039
 
 [![Build Status](https://travis-ci.com/mar-file-system/GUFI.svg?branch=master)](https://travis-ci.com/mar-file-system/GUFI)
 
-## Documentation
-Please see [README](README) and the [docs directory](docs) for documentation
-
-## Contact
-gufi-lanl@lanl.gov
-
-## Dependencies
-| Build Tools                     |  Comments           |
-| :------------------------------ | :-----------------: |
-| C compiler with C99 support     |                     |
-| C++ compiler with C++11 support | optional            |
-| CMake                           | 3.0+                |
-| pkg-config                      |                     |
-
-| Libraries                       | Comments            |
-| :------------------------------ | :-----------------: |
-| uuid                            |                     |
-| xattr.h                         | Just the header     |
-| sqlite3                         | 3.13+               |
-| pcre                            | Not pcre2           |
-| C-Thread-Pool                   | Downloaded by CMake |
-| sqlite3-pcre                    | Downloaded by CMake |
-| Google Test                     | Downloaded by CMake |
-| FUSE                            | optional            |
-| MySQL                           | optional            |
-| db2                             | optional            |
-
-## Build
-```
+## Build and Install
+```bash
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
@@ -41,4 +14,9 @@ make
 make install
 ```
 
-If cmake is not available, the [tarball](https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz) can be built by running `make` in the extraction directory.
+For the dependency list, detailed build and install instructions, and common issues, please see [INSTALL](INSTALL).
+
+## [Documentation](docs/README.md)
+
+## Contact
+gufi-lanl@lanl.gov

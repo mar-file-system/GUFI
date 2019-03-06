@@ -73,111 +73,46 @@ OF SUCH DAMAGE.
 
 
 
-Installation instructions for the Grand Unified File-Index (GUFI).
+dfw - depth first walk of tree using readdir, or readdir/stat, or
+      readdir/xattr or readdir/stat/xattr based on passed-in flags,
+      just writes output to stdout
 
-Please pardon the dust!  We have ongoing efforts that are developing on
-Ubuntu Xenial, OpenSUSE 12.3, OSX, CentOS (7.5), and Fedora.
+dfw - dfw depth first file system tree walk printing:
+      path, type, stat info, linkname
+      optionally if asked for xattrs
+      syntax dfw -s -x -h -d -l directorytowalk (or file to print info on)
+      -s stat everything - otherwise this is just a readdirplus walk
+      -x get xattrs
+      -d delimiter (one char)  [use 'x' for 0x1E]
+      -D dont traverse/descend the tree, just stat this directory or file
+      -l print in loader format (only works if -x and -s are provided
+      -h help
 
-Meanwhile, we have not yet completed our automated regression-testing.
-Please let us know, if you have trouble.  (Details would
-be appreciated; what OS you were using, what you tried, what went wrong.)
+if you run with no options, this is just a readdirplus walk and print
 
-Thanks!
+if you run with -s it stats everything and prints
 
+if you run with -x it pulls xattr info and prints that
 
+If you us -s -x -d '|' -l  in conjunction (using any delimiter you wish)
+dfw will print out a record suitable for sorting and then loading using bfwi -u option which loads/builds a gufi tree from a flat file
+the file format for bfwi -u is director then all the files and links for that directory, then another directory etc.
+the record format is pathname,normal attrs, linkname, xattrs  and must be delimited by something unique from the data
+the output of dfw in this use mode puts 2 sort fields on the end of the records (which can be left in the file as bfwi -u will ignore them)
+the sort records are path (the directory full pathname for a directory or just the directory path for a file/link (field 17), and type (field 18) )
+To get the proper order you need to sort the file using the following method or similar
+sort -t '|' -k17,17 -k18,18 -o sortedoutputfile outputfromdfw
+this sortedoutputfile can be used in bfwi -u as the input file to create a gufi tree from
+dfw does not have sqlite or cthreads calls so it should be easier to build this on a computer, run to get the output file and move the output file
+to a machine for bfwi to be used to load into a gufi tree
 
-(0) Initial set-up and installation
-
-# install build tools
-A C compiler with C99 support
-[optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
-CMake 3.0+
-Make
-pkg-config
-
-# install packages (see platform-specific caveats, below)
-install uuid, xattr, sqlite3 (3.13+), pcre (1)
-[optional] install mysql
-[optional] install fuse      (osxfuse on OSX)
-[optional] install db2
-
-# packages that are downloaded by CMake:
-sqlite3-pcre
-C-Thread-Pool
-GoogleTest
-
-# clone GUFI
-git clone https://github.com/mar-file-system/GUFI.git
-cd GUFI
-
-
-(1) ========== CentOS 7.5
-
-(1.1) submodule googletest build fails for cmake < 3.0
-
-CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
-  No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
-Call Stack (most recent call first):
-  /usr/share/cmake/Modules/CMakePackageConfigHelpers.cmake:152 (write_basic_config_version_file)
-  googletest/CMakeLists.txt:96 (write_basic_package_version_file)
-
-See: https://github.com/google/googletest/issues/1786
-
---- FIX:
-[as root]
-yum install epel-release
-yum remove cmake
-yum install cmake3
-ln -s /usr/bin/cmake3 /usr/bin/cmake
+Normally you would pass dfw the name of a directory and it would walk the tree, but since the input is a pathname, it could a pathname be to a file
+If its a pathname to a file, dfw will just print info about that file.  This enables you to use something like
+find path -exec dfw -s -x -d '|' -l -D {} \; which will print information about files that are found using the find command and make a suitable file for loading
+into gufi using bfwi -u or other uses.  Notice the use of -D which tells dfw to not descend into the tree, just stat this pathname and print,
+because find will be traversing or whatever you ask it to do.
 
 
-
-(1.2) our build of test/googletest fails
-
--- WORK-AROUND
-disable the C++ compiler when calling cmake ('CXX=false cmake')
-
-
-
-(1.3) compile fails for sqlite3 3.7.17 (CentOS 7.5), works for sqlite3 3.14.2 (Fedora)
-
--- FIX:
-
-Upgrade to newer version.  There is no newer version available through yum repos, so do this:
-
-download sqlite-autoconf-xxxxx.tar.gz [https://www.sqlite.org/download.html]
-tar -xzf sqlite-autoconf-XXXXXXX.tar.gz
-cd sqlite-autoconf-xxxxx
-./configure --prefix=$SQLITE_INSTALL_PREFIX
-make
-make install
-export PKG_CONFIG_PATH=$SQLITE_INSTALL_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH
-
-This will allow the 'pkg-config' commands in the makefile to find this newer version.
-
-If CMake continues to find the old sqlite installtion, delete the previously generated CMake files, such as CMakeCache.txt.
-
-
-
-(3) ========== Building and installing with CMake
-
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
-make
-make install
-
-(3.1) Special configurations options
-
-Set the environment variable CXX=false to disable building C++ code
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
-Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
-
-
-
-(4) ========== Building and installing with make
-
-If cmake is not available, the tarball found at
-https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
-can be built by running `make` in the extraction directory.
+Flow:
+if input is a file/link then stat/pull xattrs and print,
+if input is a directory then single threaded depth first walk, using readdir+, or stat depending on input parms and optionally get xattrs, write output to stdout

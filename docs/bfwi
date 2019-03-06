@@ -73,111 +73,59 @@ OF SUCH DAMAGE.
 
 
 
-Installation instructions for the Grand Unified File-Index (GUFI).
+bfwi - breadth first walk of input tree to list the tree, or create a GUFI index-tree
 
-Please pardon the dust!  We have ongoing efforts that are developing on
-Ubuntu Xenial, OpenSUSE 12.3, OSX, CentOS (7.5), and Fedora.
+Usage: bfwi [options] input_dir
+options:
+  -h              help
+  -H              show assigned input values (debugging)
+  -p              print files as they are encountered
+  -n <threads>    number of threads
+  -d <delim>      delimiter (one char)
+  -x              pull xattrs from source file-sys into GUFI
+  -P              print directories as they are encountered
+  -b              build GUFI index tree
+  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
+  -D              dont descend in the tree (make a single gufi db at one level of the tree
+  -t <to_dir>     place to put gufi tree (remember it will put the top of the src directory in this to_dir directory
+  -u              input mode is from a file so input is a file not a dir
+future options:
+  -U              create by user summary per directory
+  -G              create by group summary per directory
 
-Meanwhile, we have not yet completed our automated regression-testing.
-Please let us know, if you have trouble.  (Details would
-be appreciated; what OS you were using, what you tried, what went wrong.)
+If -P -p and -x are used in conjunction with -o  to create an output file per thread
+the format of the files created make it so that you can run bfwi again against one or all of them concantenated) with the -u option
 
-Thanks!
-
-
-
-(0) Initial set-up and installation
-
-# install build tools
-A C compiler with C99 support
-[optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
-CMake 3.0+
-Make
-pkg-config
-
-# install packages (see platform-specific caveats, below)
-install uuid, xattr, sqlite3 (3.13+), pcre (1)
-[optional] install mysql
-[optional] install fuse      (osxfuse on OSX)
-[optional] install db2
-
-# packages that are downloaded by CMake:
-sqlite3-pcre
-C-Thread-Pool
-GoogleTest
-
-# clone GUFI
-git clone https://github.com/mar-file-system/GUFI.git
-cd GUFI
-
-
-(1) ========== CentOS 7.5
-
-(1.1) submodule googletest build fails for cmake < 3.0
-
-CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
-  No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
-Call Stack (most recent call first):
-  /usr/share/cmake/Modules/CMakePackageConfigHelpers.cmake:152 (write_basic_config_version_file)
-  googletest/CMakeLists.txt:96 (write_basic_package_version_file)
-
-See: https://github.com/google/googletest/issues/1786
-
---- FIX:
-[as root]
-yum install epel-release
-yum remove cmake
-yum install cmake3
-ln -s /usr/bin/cmake3 /usr/bin/cmake
+Flow:
+input is either a directory to walk or a file that is formatted properly for input using the -u option
+file format is directory then files/links in that directory following the directory record
+record format is pathname, type, stat info, linkname, xattrs   delimited.
+input directory is put on a queue
+output file(s) are opened one per thread
+threads are started
+loop assigning work (directories) from queue to threads
+each thread lists the directory readdir/stat and xattr if called for
+  if directory put it on the queue and duplicate the directory if making a gufi
+  if link or file print it to screen or out file
+      and build an entries table with entries and keep a sum for the directory
+  close directory
+  write directory summary table
+end
+close output files if needed
+you can end up with an output file per thread
 
 
 
-(1.2) our build of test/googletest fails
+Location of GUFI-tree:
 
--- WORK-AROUND
-disable the C++ compiler when calling cmake ('CXX=false cmake')
+    bfwi will re-create the dir-path of <input_dir> underneath <to_dir>.
+    For example, if <input_dir> is /a/b/c and <to_dir> is /q/r/s, the GUFI-tree will
+    be created at /q/r/s/a/b/c.
 
+    This would be the path to provide to other commands that take a
+    GUFI-tree as input.  We have debated whether the GUFI-tree should just
+    be build at /q/r/s/c.  That may come in a future release.  We're open
+    to discussion.
 
-
-(1.3) compile fails for sqlite3 3.7.17 (CentOS 7.5), works for sqlite3 3.14.2 (Fedora)
-
--- FIX:
-
-Upgrade to newer version.  There is no newer version available through yum repos, so do this:
-
-download sqlite-autoconf-xxxxx.tar.gz [https://www.sqlite.org/download.html]
-tar -xzf sqlite-autoconf-XXXXXXX.tar.gz
-cd sqlite-autoconf-xxxxx
-./configure --prefix=$SQLITE_INSTALL_PREFIX
-make
-make install
-export PKG_CONFIG_PATH=$SQLITE_INSTALL_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH
-
-This will allow the 'pkg-config' commands in the makefile to find this newer version.
-
-If CMake continues to find the old sqlite installtion, delete the previously generated CMake files, such as CMakeCache.txt.
-
-
-
-(3) ========== Building and installing with CMake
-
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
-make
-make install
-
-(3.1) Special configurations options
-
-Set the environment variable CXX=false to disable building C++ code
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
-Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
-
-
-
-(4) ========== Building and installing with make
-
-If cmake is not available, the tarball found at
-https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
-can be built by running `make` in the extraction directory.
+    If you are putting your GUFI-tree index right into the source tree, you must follow the same syntax where input_dir is the top of the src tree and -t to dir is the directory above the source tree.  This keeps the same syntax for where you want your gufi tree built.
+Bfwi will recognize that the to dir and input dir are the same real paths and if so will save some work on creating output directories, setting the mode of the output directories, and will ignore the database file (DBNAME defined in bf.h default db.db) when building the index.  This way indexes built in the source tree and in another tree will create the exact same index.

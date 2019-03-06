@@ -1,0 +1,143 @@
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+NOTE:
+-----
+
+GUFI uses the C-Thread-Pool library.  The original version, written by
+Johan Hanssen Seferidis, is found at
+https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+released under the MIT License.  LANS, LLC added functionality to the
+original work.  The original work, plus LANS, LLC added functionality is
+found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+License.  The MIT License can be found at
+https://opensource.org/licenses/MIT.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+
+
+bfq - breadth first walk of a GUFI tree.  We optionally perform queries
+    against the tree-summary, the directory-summary, and/or the directory
+    contents tables, per directory encountered (obeys POSIX permissions for
+    access to directory info).  You supply your own SQL statements for
+    tree, summary, and entries, and select AND/OR logic between
+    tree/directory/entry queries.  The traversal can write its output to
+    stdout, one file per thread, or one database output per thread. SQL
+    init allows you to run an SQL statement per thread associated to the
+    output db before starting the walk, and an SQL statement per thread on
+    the output db after the walk.
+    there is also a mode that will take input from a file instead of getting info from a walk/stat
+    the file must have the appropriate fields delimited by a delimiter provided and it should
+    have a line for dir and lines for files/links in that dir and then another dir and then files/links
+    the file does not have to be in tree order, it just must have all files/links associated with a dir
+    immediately after that dir
+
+# Usage: ./bfq [options] GUFI_tree ...
+# options:
+#   -h                 help
+#   -H                 show assigned input values (debugging)
+#   -T <SQL_tsum>      SQL for tree-summary table
+#   -S <SQL_sum>       SQL for summary table
+#   -E <SQL_ent>       SQL for entries table
+#   -P                 print directories as they are encountered
+#   -a                 AND/OR (SQL query combination)
+#   -p                 print file-names
+#   -n <threads>       number of threads
+#   -o <out_fname>     output file (one-per-thread, with thread-id suffix), implies -e 1
+#   -d <delim>         delimiter (one char)  [use 'x' for 0x1E]
+#   -O <out_DB>        output DB, implies -e 1
+#   -I <SQL_init>      SQL init
+#   -F <SQL_fin>       SQL cleanup
+#   -y <min level>     minimum level to go down
+#   -z <max level>     maximum level to go down
+#   -v <count>         number of intermediate databases to use (preferrably prime)
+#   -w <count>         number of intermediate databases to skip when selecting (should be primitive root of intermediate database count, or 1)
+#   -G <SQL_aggregate> SQL for aggregated results (deaults to "SELECT * FROM entries")
+#   -J <SQL_interm>    SQL for intermediate results (deaults to "SELECT * FROM entries")
+#   -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)
+#   -m                 Keep mtime and atime same on the database files
+# GUFI_tree         find GUFI index-tree here
+# 
+
+
+Flow:
+input directory is put on a queue
+output file(s) are opened one per thread if needed
+output dbs are opened if needed one per thread
+if init SQL provided run once per thread
+threads are started
+loop assigning work (directories) from queue to threads
+each thread lists the directory and queries the gufi tables for that directory
+  if directory put it on the queue
+  if treesql input run query on treesummary table
+  and/or applied on whether to continue
+  if dirsql input run query on summary table - if printdir - print, if output to db do that
+  and/or applied on whether to continue
+  if entsql input run query on entries table - if print - print, if output to db to that
+  close directory
+end
+close output files if needed
+if fin SQL provided run that per thread
+close outputdb
+you can end up with an output file per thread and/or a dbfile per thread
+If you are reading the input from a file instead of a treewalk, the file
+must have a record for dir immediately followed by files and links in that dir
+but beyond that it doesnt have to be in any order. In this input file mode
+the info is read from this file and not gotten from a walk/stat activity
