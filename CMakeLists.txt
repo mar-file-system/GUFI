@@ -124,7 +124,7 @@ include(ExternalProject)
 # download and build C-Thread-Pool
 set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
 ExternalProject_Add(C-Thread-Pool
-  GIT_REPOSITORY    https://github.com/mar-file-system/C-Thread-Pool.git
+  GIT_REPOSITORY    git@github.com:mar-file-system/C-Thread-Pool.git
   GIT_TAG           lanl
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
@@ -149,7 +149,7 @@ message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
 # download and build sqlite3-pcre
 set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/src/sqlite3-pcre)
 ExternalProject_Add(sqlite3-pcre
-  GIT_REPOSITORY    https://github.com/mar-file-system/sqlite3-pcre.git
+  GIT_REPOSITORY    git@github.com:mar-file-system/sqlite3-pcre.git
   GIT_TAG           master
   GIT_SHALLOW       1
   PREFIX            ${CMAKE_BINARY_DIR}/
