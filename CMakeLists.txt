@@ -121,16 +121,31 @@ find_package(Threads REQUIRED)
 # load the ExternalProject module
 include(ExternalProject)
 
+# Allow the user to chose to use HTTPS or SSH
+set(GIT_DL_METHOD HTTPS CACHE STRING "Use HTTPS or SSH to download git repositories")
+string(TOLOWER "${GIT_DL_METHOD}" GIT_DL_METHOD)
+
 # download and build C-Thread-Pool
 set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
-ExternalProject_Add(C-Thread-Pool
-  GIT_REPOSITORY    git@github.com:mar-file-system/C-Thread-Pool.git
-  GIT_TAG           lanl
-  GIT_SHALLOW       1
-  PREFIX            ${CMAKE_BINARY_DIR}/
-  STEP_TARGETS      build
-  INSTALL_COMMAND   ""
-)
+if ("${GIT_DL_METHOD}" STREQUAL "https")
+  ExternalProject_Add(C-Thread-Pool
+    GIT_REPOSITORY    https://github.com/mar-file-system/C-Thread-Pool.git
+    GIT_TAG           lanl
+    GIT_SHALLOW       1
+    PREFIX            ${CMAKE_BINARY_DIR}/
+    STEP_TARGETS      build
+    INSTALL_COMMAND   ""
+  )
+elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
+  ExternalProject_Add(C-Thread-Pool
+    GIT_REPOSITORY    git@github.com:mar-file-system/C-Thread-Pool.git
+    GIT_TAG           lanl
+    GIT_SHALLOW       1
+    PREFIX            ${CMAKE_BINARY_DIR}/
+    STEP_TARGETS      build
+    INSTALL_COMMAND   ""
+  )
+endif()
 
 # set the install rpath so the executables that link
 # against C-Thread-Pool can find it after being installed
@@ -148,14 +163,25 @@ message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
 
 # download and build sqlite3-pcre
 set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/src/sqlite3-pcre)
-ExternalProject_Add(sqlite3-pcre
-  GIT_REPOSITORY    git@github.com:mar-file-system/sqlite3-pcre.git
-  GIT_TAG           master
-  GIT_SHALLOW       1
-  PREFIX            ${CMAKE_BINARY_DIR}/
-  STEP_TARGETS      build
-  INSTALL_COMMAND   ""
-)
+if ("${GIT_DL_METHOD}" STREQUAL "https")
+  ExternalProject_Add(sqlite3-pcre
+    GIT_REPOSITORY    https://github.com/mar-file-system/sqlite3-pcre.git
+    GIT_TAG           master
+    GIT_SHALLOW       1
+    PREFIX            ${CMAKE_BINARY_DIR}/
+    STEP_TARGETS      build
+    INSTALL_COMMAND   ""
+  )
+elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
+  ExternalProject_Add(sqlite3-pcre
+    GIT_REPOSITORY    git@github.com:mar-file-system/sqlite3-pcre.git
+    GIT_TAG           master
+    GIT_SHALLOW       1
+    PREFIX            ${CMAKE_BINARY_DIR}/
+    STEP_TARGETS      build
+    INSTALL_COMMAND   ""
+  )
+endif()
 
 # everyone includes (-I) these paths, whether or not they need them
 set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR} ${XATTR_INCLUDEDIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
