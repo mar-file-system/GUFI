@@ -381,9 +381,38 @@ int tsumit (struct sum *sumin,struct sum *smout) {
   smout->totfiles += sumin->totfiles;
   smout->totlinks += sumin->totlinks;
 
+  if (sumin->totfiles > 0) {
+    if (smout->setit == 0) {
+      smout->minuid=sumin->minuid;
+      smout->maxuid=sumin->maxuid;
+      smout->mingid=sumin->mingid;
+      smout->maxgid=sumin->maxgid;
+      smout->minsize=sumin->minsize;
+      smout->maxsize=sumin->maxsize;
+      smout->minctime=sumin->minctime;
+      smout->maxctime=sumin->maxctime;
+      smout->minmtime=sumin->minmtime;
+      smout->maxmtime=sumin->maxmtime;
+      smout->minatime=sumin->minatime;
+      smout->maxatime=sumin->maxatime;
+      smout->minblocks=sumin->minblocks;
+      smout->maxblocks=sumin->maxblocks;
+      smout->mincrtime=sumin->mincrtime;
+      smout->maxcrtime=sumin->maxcrtime;
+      smout->minossint1=sumin->minossint1;
+      smout->maxossint1=sumin->maxossint1;
+      smout->minossint2=sumin->minossint2;
+      smout->maxossint2=sumin->maxossint2;
+      smout->minossint3=sumin->minossint3;
+      smout->maxossint3=sumin->maxossint3;
+      smout->minossint4=sumin->minossint4;
+      smout->maxossint4=sumin->maxossint4;
+      smout->setit=1;
+    }
+
   /* only set these mins and maxes if there are files in the directory
      otherwise mins are all zero */
-  if (sumin->totfiles > 0) {
+  //if (sumin->totfiles > 0) {
     if (sumin->minuid < smout->minuid) smout->minuid=sumin->minuid;
     if (sumin->maxuid > smout->maxuid) smout->maxuid=sumin->maxuid;
     if (sumin->mingid < smout->mingid) smout->mingid=sumin->mingid;
