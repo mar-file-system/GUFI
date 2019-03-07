@@ -95,6 +95,8 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "dbutils.h"
 
+extern int errno;
+
 void sub_help() {
    printf("DB_path           path to dir containinng %s.*\n",DBNAME);
    printf("SQL               arbitrary SQL on DB\n");

@@ -84,6 +84,8 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <errno.h>
 
+extern int errno;
+
 // Usage:
 //
 //    make_testdirs -d <n_dirs> -f <n_files> dirname

@@ -87,6 +87,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "structq.h"
 
+extern int errno;
 
 // --- threading
 threadpool mythpool;

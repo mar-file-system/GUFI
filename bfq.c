@@ -106,6 +106,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 // #include "putils.h"
 
+extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 

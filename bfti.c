@@ -99,6 +99,8 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "dbutils.h"
 
+extern int errno;
+
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 static void processdir(void * passv)

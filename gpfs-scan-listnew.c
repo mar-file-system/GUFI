@@ -5,6 +5,8 @@
 
 #include <gpfs.h>
 
+extern int errno;
+
 /* Scan inodes in the gpfs mount point */
 int proc_inodes(char *pathp,char *intime)
 {
