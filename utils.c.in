@@ -584,13 +584,13 @@ int processdirs(DirFunc dir_fn) {
           if (addrqent() > 0) {
             workp=addrcurrents();
             incrthread();
+            delQueuenofree();
 
             // this takes this entry off the queue but does NOT free the
             // buffer, that has to be done in dir_fn(), something like:
             // "free(((struct work*)workp)->freeme)"
             thpool_add_work(mythpool, dir_fn, (void *)workp);
             thread_count++;
-            delQueuenofree();
           }
           pthread_mutex_unlock(&queue_mutex);
         }
