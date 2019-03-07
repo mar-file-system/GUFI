@@ -66,28 +66,28 @@ matrix:
             - DOCKER_IMAGE=centos
           script: contrib/travis/centos7.sh
 
-        # # macOS 10.13 CMake
-        # - stage: build_and_test
-        #   os: osx
-        #   osx_image: xcode10.1
-        #   sudo: false
-        #   addons:
-        #       homebrew:
-        #           packages:
-        #               - cmake
-        #               - llvm@7
-        #               - mysql
-        #               - ossp-uuid
-        #               - pcre
-        #               - sqlite3
-        #               - truncate
-        #           update: true
-        #   env:
-        #       - C_COMPILER=clang
-        #       - CXX_COMPILER=clang++
-        #       - BUILD=cmake
-        #       - FORMULAE=llvm@7
-        #   script: contrib/travis/osx.sh
+        # macOS 10.13 CMake
+        - stage: build_and_test
+          os: osx
+          osx_image: xcode10.1
+          sudo: false
+          addons:
+              homebrew:
+                  packages:
+                      - cmake
+                      - llvm@7
+                      - mysql
+                      - ossp-uuid
+                      - pcre
+                      - sqlite3
+                      - truncate
+                  update: true
+          env:
+              - C_COMPILER=clang
+              - CXX_COMPILER=clang++
+              - BUILD=cmake
+              - FORMULAE=llvm@7
+          script: contrib/travis/osx.sh
 
         # macOS 10.13 make
         - stage: build_and_test

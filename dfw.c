@@ -91,6 +91,8 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "utils.c"
 
+extern int errno;
+
 void listdir(const char *name, long long int level, struct dirent *entry, long long int pin, int statit, int xattrit,int loader )
 {
     DIR *dir;

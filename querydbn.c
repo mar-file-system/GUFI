@@ -99,6 +99,8 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "dbutils.h"
 
+extern int errno;
+
 void sub_help() {
    printf("  -s              dir-summary (currently-unused internal functionality)\n");
    // printf("  -N <DB_count>   query DBs written by multiple threads (\n");}
