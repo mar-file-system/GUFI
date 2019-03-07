@@ -167,7 +167,7 @@ void show_input(struct input* in, int retval) {
    printf("in.writetsum          = %d\n",    in->writetsum);
    printf("in.buildindex         = %d\n",    in->buildindex);
    printf("in.maxthreads         = %d\n",    in->maxthreads);
-   printf("in.dodelim     = %d\n",   in->dodelim);
+   printf("in.dodelim            = %d\n",    in->dodelim);
    printf("in.delim              = '%s'\n",  in->delim);
    printf("in.name               = '%s'\n",  in->name);
    printf("in.outfile            = %d\n",    in->outfile);
@@ -195,13 +195,13 @@ void show_input(struct input* in, int retval) {
    printf("in.min_level          = %zu\n",   in->min_level);
    printf("in.max_level          = %zu\n",   in->max_level);
    printf("in.aggregate          = '%s'\n",  in->aggregate);
-   printf("in.intermediate       = '%s'n",   in->intermediate);
-   printf("in.intermediate_count = '%zu'\n", in->intermediate_count);
-   printf("in.intermediate_skip  = '%zu'\n", in->intermediate_skip);
-   printf("in.aggregate_or_print = '%d'\n",  in->aggregate_or_print);
-   printf("in.keep_matime        = '%d'\n",  in->keep_matime);
+   printf("in.intermediate       = '%s'\n",  in->intermediate);
+   printf("in.intermediate_count = %zu\n",   in->intermediate_count);
+   printf("in.intermediate_skip  = %zu\n",   in->intermediate_skip);
+   printf("in.aggregate_or_print = %d\n",    in->aggregate_or_print);
+   printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("\n");
-   printf("retval                = %d\n", retval);
+   printf("retval                = %d\n",    retval);
    printf("\n");
 }
 
@@ -236,9 +236,6 @@ int parse_cmd_line(int         argc,
    in->infile             = 0;         // default infile being used
    in->min_level          = 0;         // default to the top
    in->max_level          = -1;        // default to all the way down
-   SNPRINTF(in->sqlent, MAXSQL, "SELECT * FROM entries;");
-   SNPRINTF(in->intermediate, MAXSQL, "SELECT * FROM entries;");
-   SNPRINTF(in->aggregate, MAXSQL, "SELECT * FROM entries;");
    in->intermediate_count = in->maxthreads * 4 + 1;
    in->intermediate_skip  = 1;
    in->aggregate_or_print = AGGREGATE; // aggregate by default

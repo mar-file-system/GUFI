@@ -174,8 +174,8 @@ TEST(parse_cmd_line, positional) {
     EXPECT_EQ(in.infile,             0);
     EXPECT_EQ(in.min_level,          (size_t) 0);
     EXPECT_EQ(in.max_level,          (size_t) -1);
-    EXPECT_STREQ(in.intermediate,    "SELECT * FROM entries;");
-    EXPECT_STREQ(in.aggregate,       "SELECT * FROM entries;");
+    EXPECT_STREQ(in.intermediate,    "");
+    EXPECT_STREQ(in.aggregate,       "");
     EXPECT_EQ(in.intermediate_count, (size_t) (in.maxthreads * 4 + 1));
     EXPECT_EQ(in.intermediate_skip,  (size_t) 1);
     EXPECT_EQ(in.aggregate_or_print, AGGREGATE);
