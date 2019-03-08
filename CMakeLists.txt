@@ -293,17 +293,14 @@ set(OTHER_FILES
   INSTALL
   LICENSE.txt
   Makefile
-  NOTES.txt
-  README
-  README.md
-  TBD.txt
-  runtsm)
+  README.md)
 set(PATHS
   contrib
   docs
   examples
   include
   # scripts
+  src
   test
   C-Thread-Pool
   sqlite3-pcre
@@ -326,7 +323,7 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/
                            DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/src/utils.c)
 
 # generate the tarball
-add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar czf ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                                  DEPENDS cp_files)
 
 add_custom_target(rm_files COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/utils.c
@@ -345,14 +342,14 @@ add_custom_target(gary DEPENDS rm_files)
 # test the tarball
 set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
 
-add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
+add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${TARBALL_TEST_DIR}")
 
-add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar xf ${TARBALL_NAME}
+add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${TARBALL_NAME}"
                              COMMAND make
                              COMMAND make test
-                             WORKING_DIRECTORY ${TARBALL_TEST_DIR}
+                             WORKING_DIRECTORY "${TARBALL_TEST_DIR}"
                              DEPENDS gary make_tarball_dir)
 
-add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
+add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory "${TARBALL_TEST_DIR}"
                             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                             DEPENDS build_gary)

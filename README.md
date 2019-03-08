@@ -1,9 +1,27 @@
 # Grand Unified File-Index (GUFI)
 
+[![Build Status](https://travis-ci.com/mar-file-system/GUFI.svg?branch=master)](https://travis-ci.com/mar-file-system/GUFI)
+
 GUFI is part of MarFS, which is released under the [BSD License](LICENSE.txt).
 LA-CC-15-039
 
-[![Build Status](https://travis-ci.com/mar-file-system/GUFI.svg?branch=master)](https://travis-ci.com/mar-file-system/GUFI)
+Initial development was done at LANL via an internal git-hosting service.
+As of rev 0.1.0, we have moved GUFI to GitHub:
+
+    https://github.com/mar-file-system/GUFI
+
+We invite anyone to contribute suggestions, new features, bug-reports,
+bug-fixes, feature-requests, etc, through GitHub:
+
+    https://github.com/mar-file-system/GUFI/issues
+
+All bug-reports, issues, requests, etc, should go through GitHub.
+We will attempt to respond to requests, but we can't make promises about
+the level of resources that will be dedicated to GUFI maintenance.
+
+See other components of MarFS at:
+
+    https://github.com/mar-file-system
 
 ## Build and Install
 ```bash

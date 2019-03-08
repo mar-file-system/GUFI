@@ -2,36 +2,13 @@
 This directory contains documentation on what GUFI is, how this repository is structured,
 how to build GUFI, and how to run GUFI.
 
-## Development
-
-Initial development was done at LANL via an internal git-hosting service.
-As of rev 0.1.0, we are moving GUFI to github:
-
-    https://github.com/mar-file-system/GUFI
-
-We invite anyone to contribute suggestions, new features, bug-reports,
-bug-fixes, feature-requests, etc, through github:
-
-    https://github.com/mar-file-system/GUFI/issues
-
-All bug-reports, issues, requests, etc, should go through github.
-We will attempt to respond to requests, but we can't make promises about
-the level of resources that will be dedicated to GUFI maintenance.
-
-For other conversations about GUFI, there is:
-
-    gufi-lanl@lanl.gov
-
-See other components of MarFS at:
-
-    https://github.com/mar-file-system.
-
 ## Directory Structure
 - [contrib](/contrib)   - Contains support files (cmake package finders, Travis CI scripts, etc.)
 - [docs](/docs)         - The documentation (you are here)
 - [examples](/examples) - Scripts showing how to run GUFI to perform various tasks
 - [include](/include)   - Headers
 - [scripts](/scripts)   - Scripts that will be installed
+- [src](/src)           - Source code for GUFI and executables
 - [test](/test)         - GUFI tests
 
 ## Full Documentation
@@ -58,6 +35,7 @@ Please see [INSTALL](/INSTALL).
 
 ## [Running GUFI](/examples)
 - [deluidgidsummaryrecs](/examples/deluidgidsummaryrecs)
+- [diffreadirplusdb](/examples/diffreadirplusdb)
 - [example_run](/examples/example_run)
 - [generategidsummary](/examples/generategidsummary)
 - [generateuidsummary](/examples/generateuidsummary)
@@ -68,6 +46,7 @@ Please see [INSTALL](/INSTALL).
 - [listschemadb](/examples/listschemadb)
 - [listtablesdb](/examples/listtablesdb)
 - [oldbigfiles](/examples/oldbigfiles)
+- [runtsm](/examples/runtsm)
 - [userfilespacehog](/examples/userfilespacehog)
 - [userfilespacehogusesummary](/examples/userfilespacehogusesummary)
 

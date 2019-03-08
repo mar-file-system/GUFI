@@ -243,7 +243,7 @@ fi
 cd ../..
 
 # force set all file permissions to 444
-find . -type f -exec chmod 444 -- '{}' \;
+find . -type f -exec chmod 444 '{}' \;
 
 # update individual file permissions
 chmod 777 directory/executable
