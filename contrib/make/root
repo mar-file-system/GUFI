@@ -3,6 +3,7 @@ CXX                  ?= c++
 CFLAGS               ?=
 CXXFLAGS             ?= -std=c++11
 LDFLAGS              ?=
+LIB                   = GUFI
 
 CFLAGS               += -I$(realpath include)
 CXXFLAGS             += -I$(realpath include)

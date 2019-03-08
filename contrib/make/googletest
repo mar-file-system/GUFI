@@ -3,7 +3,7 @@ GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
 GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
 
 CFLAGS            += -I$(realpath ../..)
-LDFLAGS           += -L$(realpath ../..) -lgufi
+LDFLAGS           += -L$(realpath ../..) -l$(LIB)
 
 TESTS=bf utils
 OBJ=$(addsuffix .o, $(TESTS))

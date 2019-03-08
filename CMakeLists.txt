@@ -312,18 +312,35 @@ set(PATHS
 # set the output nemae
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
+add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/utils.c ${CMAKE_SOURCE_DIR}/src/utils.c
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/src ${CMAKE_SOURCE_DIR}/src/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
+                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
+                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
+                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
+                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
+                           DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/src/utils.c)
+
 # generate the tarball
-add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
-                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
-                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
-                       COMMAND ${CMAKE_COMMAND} -E tar czf ${TARBALL_NAME} ${PATHS} ${SOURCES} ${HEADERS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
-                       DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
+add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar czf ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                                 DEPENDS cp_files)
+
+add_custom_target(rm_files COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/utils.c
+                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
+                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
+                           DEPENDS create_tarball)
+
+# the actual target
+add_custom_target(gary DEPENDS rm_files)
 
 # test the tarball
 set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")

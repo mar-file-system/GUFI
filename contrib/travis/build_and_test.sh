@@ -8,14 +8,14 @@ export GTEST_COLOR=1
 
 mkdir -p build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Debug ..
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 
 # use files from the generated tar
 if  [[ "${BUILD}" = "make" ]]; then
     make gary
-    cp utils.c ..
-    cd ..
-    tar -xf build/gufi.tar.gz C-Thread-Pool sqlite3-pcre googletest
+    mkdir tarball
+    tar -xvf gufi.tar.gz -C tarball
+    cd tarball
 fi
 
 make DEBUG=1
