@@ -3,7 +3,7 @@ LIBFILES = bf structq dbutils utils
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
-LIB_A = ../libgufi.a
+LIB_A = ../lib$(LIB).a
 
 # executables
 DFW       = dfw
@@ -30,10 +30,10 @@ $(LIB_A): $(LIB_O)
 # --- apps
 
 ../%: %.c $(LIB_A) $(SQLITE3_PCRE_LIB) $(THPOOL_LIB)
-	$(CC) $(CFLAGS) -o $@ -L.. $< -lgufi $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $< -L.. -l$(LIB) $(LDFLAGS)
 
 ../%: %.cpp $(LIB_A) $(SQLITE3_PCRE_LIB) $(THPOOL_LIB)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ -L.. $< -lgufi $(LDFLAGS)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $< -L.. -l$(LIB) $(LDFLAGS)
 
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
