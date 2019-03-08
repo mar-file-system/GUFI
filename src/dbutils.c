@@ -86,6 +86,8 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "bf.h"
 
+extern int errno;
+
 char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
             "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
 

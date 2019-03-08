@@ -101,6 +101,7 @@ OF SUCH DAMAGE.
 #include <bf.h>
 #include <dbutils.h>
 
+extern int errno;
 char globalmnt[MAXPATH];
 int  globalmntlen;
 char globaldbname[MAXPTHREAD][MAXPATH];

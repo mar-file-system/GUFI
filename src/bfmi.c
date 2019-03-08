@@ -102,6 +102,9 @@ OF SUCH DAMAGE.
 #include <pwd.h>
 #include <grp.h>
 #include "mysql.h"
+
+extern int errno;
+
 struct mysqlinput {
    char  dbuser[50];
    char  dbpasswd[50];

@@ -9,6 +9,13 @@
 
 find_package(PkgConfig)
 
+# OSX Frameworks have a non-compatible version of xattr.h
+# exclude OSX Frameworks from the search path for this package
+if(APPLE)
+  set(XATTR_CMAKE_FIND_FRAMEWORK "${CMAKE_FIND_FRAMEWORK}")
+  set(CMAKE_FIND_FRAMEWORK "NEVER")
+endif()
+
 # normal location
 find_path(ATTR_XATTR
   NAMES attr/xattr.h
@@ -37,8 +44,10 @@ find_path(XATTR_LIB_DIR
 include(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set XATTR_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args(XATTR DEFAULT_MSG
-                                  XATTR_HEADER XATTR_INCLUDE_DIR)
+#find_package_handle_standard_args(XATTR DEFAULT_MSG
+#                                  XATTR_HEADER XATTR_INCLUDE_DIR)
+find_package_handle_standard_args(XATTR
+                                  REQUIRED_VARS XATTR_HEADER XATTR_INCLUDE_DIR)
 
 mark_as_advanced(XATTR_INCLUDE_DIR)
 
@@ -47,3 +56,8 @@ set(XATTR_INCLUDEDIR "${XATTR_INCLUDE_DIR}")
 
 unset(XATTR_LIB_DIR)
 unset(XATTR_INCLUDE_DIR)
+
+# Restore previous OSX frameworks search setting
+if(APPLE)
+  set(CMAKE_FIND_FRAMEWORK "${XATTR_CMAKE_FIND_FRAMEWORK}")
+endif()

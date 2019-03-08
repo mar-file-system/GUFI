@@ -99,6 +99,8 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "dbutils.h"
 
+extern int errno;
+
 /* used to allow all threads to open up the input file if there is one */
 FILE *gin[MAXPTHREAD];
 
