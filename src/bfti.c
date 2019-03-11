@@ -111,6 +111,7 @@ static void processdir(void * passv)
     sqlite3 *db;
     struct sum sumin;
     int recs;
+    int trecs;
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
@@ -127,16 +128,27 @@ static void processdir(void * passv)
     }
 
     // push subdirectories into the queue
-    descend(passmywork, dir, in.max_level,
-            NULL, NULL);
+    //descend(passmywork, dir, in.max_level,
+    //        NULL, NULL);
 
     if ((db=opendb(passmywork->name,3,0))) {
        zeroit(&sumin);
-       querytsdb(passmywork->name,&sumin,db,&recs,0);
+
+       trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
+       if (trecs<1) {
+         // push subdirectories into the queue
+         descend(passmywork, dir, in.max_level,NULL,NULL);
+         querytsdb(passmywork->name,&sumin,db,&recs,0);
+       } else {
+         querytsdb(passmywork->name,&sumin,db,&recs,1);
+         //printf("using treesummary %s\n",passmywork->name);
+       }
+
+       //querytsdb(passmywork->name,&sumin,db,&recs,0);
        tsumit(&sumin,&sumout);
 
-       //printf("after tsumit %s minuid %d maxuid %d maxsize %d totfiles %d totsubdirs %d\n",
-       //       mywork->name,sumout.minuid,sumout.maxuid,sumout.maxsize,
+       //printf("after tsumit %s dminuid %lld dmaxuid %lld minuid %lld maxuid %lld maxsize %lld totfiles %lld totsubdirs %lld\n",
+       //       passmywork->name,sumin.minuid,sumin.maxuid,sumout.minuid,sumout.maxuid,sumout.maxsize,
        //       sumout.totfiles,sumout.totsubdirs);
        closedb(db);
     }

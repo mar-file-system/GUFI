@@ -434,6 +434,12 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
        sumin->maxsubdirlinks = sqlite3_column_int64(res,40 );
        sumin->maxsubdirsize  = sqlite3_column_int64(res,41 );
      }
+     else {
+       sumin->totsubdirs     = 0;
+       sumin->maxsubdirfiles = 0;
+       sumin->maxsubdirlinks = 0;
+       sumin->maxsubdirsize  = 0;
+     }
 
      //printf("tsdb: totfiles %d totlinks %d minuid %d\n",
      //       sumin->totfiles,sumin->totlinks,sumin->minuid);

@@ -374,10 +374,18 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 
   pthread_mutex_lock(&sum_mutex);
 
-  smout->totsubdirs++;
-  if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->totfiles;
-  if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->totlinks;
-  if (sumin->totsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->totsize;
+  /* if sumin totsubdirs is > 0 we are summing a treesummary not a dirsummary */
+  if (sumin->totsubdirs > 0) {
+    smout->totsubdirs=smout->totsubdirs+sumin->totsubdirs;
+    if (sumin->maxsubdirfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->maxsubdirfiles;
+    if (sumin->maxsubdirlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->maxsubdirlinks;
+    if (sumin->maxsubdirsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->maxsubdirsize;
+  } else {
+    smout->totsubdirs++;
+    if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->totfiles;
+    if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->totlinks;
+    if (sumin->totsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->totsize;
+  }
 
   smout->totfiles += sumin->totfiles;
   smout->totlinks += sumin->totlinks;
