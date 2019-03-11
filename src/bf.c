@@ -85,6 +85,9 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 
 
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 char xattrdelim[] = "\x1F";     // ASCII Unit Separator
 char fielddelim[] = "\x1E";     // ASCII Record Separator
 
