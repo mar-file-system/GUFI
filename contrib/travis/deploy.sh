@@ -6,9 +6,6 @@ set -e
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 cd ${SCRIPT_PATH}/../..
 
-# update refs
-git fetch --all --prune
-
 # if this commit is the latest
 set +e
 git diff --quiet --cached "origin/${TRAVIS_BRANCH}"
@@ -43,6 +40,11 @@ git config --global user.email "travis@travis-ci.com"
 # update the origin to include the personal access token
 git remote rm origin
 git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
+
+# https://stackoverflow.com/a/27393574
+# update refs
+git remote set-branches origin '*'
+git fetch -v
 
 # move to the tarball branch
 git checkout tarball
