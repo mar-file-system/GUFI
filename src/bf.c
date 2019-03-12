@@ -239,9 +239,9 @@ int parse_cmd_line(int         argc,
    in->infile             = 0;         // default infile being used
    in->min_level          = 0;         // default to the top
    in->max_level          = -1;        // default to all the way down
-   SNPRINTF(in->sqlent,       MAXSQL, "");
-   SNPRINTF(in->intermediate, MAXSQL, "");
-   SNPRINTF(in->aggregate,    MAXSQL, "");
+   memset(in->sqlent,       0, MAXSQL);
+   memset(in->intermediate, 0, MAXSQL);
+   memset(in->aggregate,    0, MAXSQL);
    in->intermediate_count = in->maxthreads * 4 + 1;
    in->intermediate_skip  = 1;
    in->aggregate_or_print = AGGREGATE; // aggregate by default

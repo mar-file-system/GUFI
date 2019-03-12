@@ -37,9 +37,10 @@ def parse_args(args = None):
     parser.add_argument('-p', '--port',  dest='port',        type=check_port,     default=22,                                            help='SSH port')
     parser.add_argument('--known_hosts', dest='known_hosts', type=str,            default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
     parser.add_argument('--hostkey',     dest='hostkey',     type=str,            default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
+    parser.add_argument('--bfq',         dest='bfq',         type=str,                                                                   help='Location of bfq on remote')
     parser.add_argument('--paramiko',    dest='paramiko',    type=str,                                                                   help='Location of paramiko on this machine')
     parser.add_argument('hostname',                          type=str,                                                                   help='GUFI server')
-    parser.add_argument('gufi_install',                      type=str,                                                                   help='Install prefix of GUFI on remote')
+    parser.add_argument('gufi_install',                      type=str,                                                                   help='GUFI binaries directory on remote')
     parser.add_argument('gufi_tree',                         type=str,                                                                   help='GUFI tree path')
     parser.add_argument('tool',                              type=str,            choices=TOOLS.keys(),                                  help='GUFI tool to use')
     parser.add_argument('args',                              nargs='*',           default=[],                                            help='Arguments to pass to the GUFI tool')
@@ -67,9 +68,11 @@ def contact_server(args):
                     hostkey=paramiko.opensshkey.load_pubkey_from_file(args.hostkey))
 
         # run the command
-        _, stdout, stderr = ssh.exec_command(os.path.join(args.gufi_install, TOOLS[args.tool]) +  # command
-                                             ' ' + ' '.join(args.args) +                          # options
-                                             ' ' + args.gufi_tree)                                # gufi_tree
+        cmd = os.path.join(args.gufi_install, 'scripts', TOOLS[args.tool]) + ' ' + ' '.join(args.args) + ' ' + args.gufi_tree
+        if args.bfq is not None:
+            cmd += ' --bfq ' + args.bfq
+        _, stdout, stderr = ssh.exec_command(cmd)
+
         try:
             sys.stdout.write(stdout.read())
             sys.stderr.write(stderr.read())

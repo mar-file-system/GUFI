@@ -231,52 +231,8 @@ set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${
 # tell CMake to look at the src directory
 add_subdirectory(src)
 
-# list of scripts that act as tools
-set(TOOLS gufi_client gufi_find gufi_stats gufi_ls query_builder.py)
-
-set(PARAMIKO OFF CACHE BOOL "Whether or not to download and install paramiko")
-if (PARAMIKO)
-  # download paramiko
-  set(PARAMIKO_PREFIX ${CMAKE_BINARY_DIR}/src)
-  if ("${GIT_DL_METHOD}" STREQUAL "https")
-    ExternalProject_Add(paramiko
-      GIT_REPOSITORY    https://github.com/paramiko/paramiko.git
-      GIT_TAG           cf7d49d66f3b1fbc8b0853518a54050182b3b5eb
-      GIT_SHALLOW       1
-      PREFIX            ${CMAKE_BINARY_DIR}/
-      PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND     ""
-      INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/paramiko ${CMAKE_INSTALL_PREFIX}/paramiko
-    )
-  elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
-    ExternalProject_Add(paramiko
-      GIT_REPOSITORY    git@github.com:paramiko/paramiko.git
-      GIT_TAG           cf7d49d66f3b1fbc8b0853518a54050182b3b5eb
-      GIT_SHALLOW       1
-      PREFIX            ${CMAKE_BINARY_DIR}/
-      PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND     ""
-      INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/paramiko ${CMAKE_INSTALL_PREFIX}/paramiko
-    )
-  endif()
-
-  # add gufi_client.in to the list of tools
-  set(TOOLS ${TOOLS} gufi_client)
-endif()
-
-# copy and install scripts that act like binaries
-foreach(TOOL ${TOOLS})
-  # copy the tool into the build directory for easy access
-  configure_file(${CMAKE_SOURCE_DIR}/${TOOL} ${CMAKE_BINARY_DIR}/${TOOL} COPYONLY)
-
-  # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${TOOL} DESTINATION bin)
-endforeach()
-
-# # copy the scripts directory into ${CMAKE_BINARY_DIR}
-# file(COPY scripts DESTINATION ${CMAKE_BINARY_DIR})
+# process the scripts directory
+add_subdirectory(scripts)
 
 # enable "make test"
 enable_testing()
@@ -299,7 +255,7 @@ set(PATHS
   docs
   examples
   include
-  # scripts
+  scripts
   src
   test
   C-Thread-Pool
@@ -312,6 +268,7 @@ set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/utils.c ${CMAKE_SOURCE_DIR}/src/utils.c
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/src ${CMAKE_SOURCE_DIR}/src/Makefile
+                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/scripts ${CMAKE_SOURCE_DIR}/scripts/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
@@ -326,18 +283,17 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/
 add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                                  DEPENDS cp_files)
 
-add_custom_target(rm_files COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/utils.c
-                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
-                           DEPENDS create_tarball)
-
 # the actual target
-add_custom_target(gary DEPENDS rm_files)
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/utils.c
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
+                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
+                       DEPENDS create_tarball)
 
 # test the tarball
 set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
@@ -345,7 +301,7 @@ set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
 add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${TARBALL_TEST_DIR}")
 
 add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${TARBALL_NAME}"
-                             COMMAND make
+                             COMMAND make DEBUG=1
                              COMMAND make test
                              WORKING_DIRECTORY "${TARBALL_TEST_DIR}"
                              DEPENDS gary make_tarball_dir)

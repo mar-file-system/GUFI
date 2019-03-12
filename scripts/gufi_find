@@ -395,12 +395,22 @@ if __name__=='__main__':
     bfq_cmd = [args.bfq,
                '-p', '-P',
                '-e', str(int(args.no_aggregate)),
-               '-n', str(args.threads),
-               '-T', tsummary,
-               '-S', summary,
-               '-E', initial,
-               '-J', intermediate,
-               '-G', final] + find_out.split()
+               '-n', str(args.threads)]
+
+    if len(tsummary):
+        bfq_cmd += ['-T', tsummary]
+
+    if len(summary):
+        bfq_cmd += ['-S', summary]
+
+    if len(initial):
+        bfq_cmd += ['-E', initial]
+
+    if len(intermediate):
+        bfq_cmd += ['-J', intermediate]
+
+    if len(final):
+        bfq_cmd += ['-G', final]
 
     if args.delim:
         bfq_cmd += ['-d', args.delim]
@@ -417,7 +427,7 @@ if __name__=='__main__':
     if args.mindepth:
         bfq_cmd += ['-y', str(args.mindepth)]
 
-    bfq = subprocess.Popen(bfq_cmd)
-    bfq.communicate() # block until bfq finishes
+    bfq = subprocess.Popen(bfq_cmd + find_out.split()) # positional arguments must appear after flags
+    bfq.communicate()                                  # block until bfq finishes
 
     sys.exit(bfq.returncode)

@@ -77,6 +77,7 @@ export
 
 all: $(THPOOL_LIB) $(SQLITE3_PCRE_LIB)
 	$(MAKE) -C src
+	$(MAKE) -C scripts
 
 # NOTE
 #

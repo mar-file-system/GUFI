@@ -2,6 +2,9 @@
 This directory contains documentation on what GUFI is, how this repository is structured,
 how to build GUFI, and how to run GUFI.
 
+## Full Documentation
+The full documentation can be found at [GUFI.docx](GUFI.docx).
+
 ## Directory Structure
 - [contrib](/contrib)   - Contains support files (cmake package finders, Travis CI scripts, etc.)
 - [docs](/docs)         - The documentation (you are here)
@@ -10,9 +13,6 @@ how to build GUFI, and how to run GUFI.
 - [scripts](/scripts)   - Scripts that will be installed
 - [src](/src)           - Source code for GUFI and executables
 - [test](/test)         - GUFI tests
-
-## Full Documentation
-The full documentation can be found at [GUFI.docx](GUFI.docx).
 
 ## How To Build and Install
 Please see [INSTALL](/INSTALL).
