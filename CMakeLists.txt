@@ -112,7 +112,7 @@ endif()
 
 # Re-link installed executables to use the installed libraries
 set(CMAKE_SKIP_BUILD_RPATH TRUE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
@@ -189,7 +189,7 @@ include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/in
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
 message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
 message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBRARY_DIRS}")
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${SQLITE3_LIBRARY_DIRS})
+set(CMAKE_INSTALL_RPATH "${SQLITE3_LIBRARY_DIRS}")
 
 # download and build sqlite3-pcre
 pkg_search_module(PCRE REQUIRED libpcre)
