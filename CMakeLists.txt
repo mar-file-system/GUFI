@@ -88,17 +88,31 @@ include(CheckLanguage)
 check_language(CXX)
 if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
+  
+  # GCC prior to 4.9.3 doesn't have full standard support
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.3)
+    set(CMAKE_CXX_COMPILER FALSE)
+    message(STATUS "Require GNU C++ version 4.9.3 or greater: Not compiling C++ sources")
+  elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.9)
+    set(CMAKE_CXX_COMPILER FALSE)
+    message(STATUS "Require Clang version 3.9 or greater: not compiling C++ sources")
+  else()
+    # enable C++11
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
 
-  # enable C++11
-  set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-  set(CMAKE_CXX_EXTENSIONS OFF)
-
-  # define the DEBUG macro when building in debug mode
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
+    # define the DEBUG macro when building in debug mode
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
+  endif()
 else()
+  set(CMAKE_CXX_COMPILER FALSE)
   message(STATUS "Not compiling C++ sources")
 endif()
+
+# Re-link installed executables to use the installed libraries
+set(CMAKE_SKIP_BUILD_RPATH TRUE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
 # need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
@@ -109,11 +123,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 # need xattr.h
 find_package(xattr REQUIRED XATTR)
 message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
-
-# need uuid
-pkg_search_module(UUID REQUIRED uuid)
-message(STATUS "UUID headers located in ${UUID_INCLUDEDIR}")
-message(STATUS "UUID libraries located in ${UUID_LIBDIR}")
 
 # need pthread
 find_package(Threads REQUIRED)
@@ -147,10 +156,6 @@ elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
   )
 endif()
 
-# set the install rpath so the executables that link
-# against C-Thread-Pool can find it after being installed
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
-
 # Find SQLite3
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 if (SQLITE3_VERSION VERSION_LESS 3.13)
@@ -159,9 +164,11 @@ endif()
 include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
 message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
-message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
+message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBRARY_DIRS}")
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${SQLITE3_LIBRARY_DIRS})
 
 # download and build sqlite3-pcre
+pkg_search_module(PCRE REQUIRED libpcre)
 set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/src/sqlite3-pcre)
 if ("${GIT_DL_METHOD}" STREQUAL "https")
   ExternalProject_Add(sqlite3-pcre
