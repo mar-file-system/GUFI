@@ -120,9 +120,33 @@ find_package(PkgConfig REQUIRED)
 # tell CMake to search the contrib/cmake directory cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 
-# need xattr.h
+# Detect and handle xattr.h platform specifics
 find_package(xattr REQUIRED XATTR)
 message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
+if (XATTR_ATTR_XATTR_HEADER)
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+endif()
+if (XATTR_SYS_XATTR_HEADER)
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+endif()
+if (APPLE)
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+else()
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+endif()   
+   
 
 # need pthread
 find_package(Threads REQUIRED)
@@ -298,8 +322,10 @@ enable_testing()
 # recurse down into the test subdirectory
 add_subdirectory(test)
 
-# define "make gary"
+#
+# Define commands and tools for "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
+#
 
 # collect all files into variables
 set(OTHER_FILES
@@ -323,8 +349,7 @@ set(PATHS
 # set the output nemae
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
-add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/utils.c ${CMAKE_SOURCE_DIR}/src/utils.c
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
+add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/src ${CMAKE_SOURCE_DIR}/src/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
@@ -334,14 +359,13 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
-                           DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/src/utils.c)
+                           DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
 
 # generate the tarball
 add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                                  DEPENDS cp_files)
 
-add_custom_target(rm_files COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/utils.c
-                           COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
+add_custom_target(rm_files COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
                            COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
                            COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
                            COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile

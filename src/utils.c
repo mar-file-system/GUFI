@@ -84,6 +84,7 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "config.h"
 #include "utils.h"
 #include "structq.h"
 
@@ -104,30 +105,6 @@ pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // global variable to hold per thread state
 struct globalthreadstate gts = {};
-
-
-
-
-
-
-#if __linux__  // GNU/Intel/IBM/etc compilers
-#  include <sys/types.h>
-#  include <@XATTR_H@>
-
-#  define LISTXATTR(PATH, BUF, SIZE)        llistxattr((PATH), (BUF), (SIZE))
-#  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))
-#  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0)
-
-#else  // was: BSDXATTRS  (OSX)
-#  include <sys/xattr.h>
-
-#  define LISTXATTR(PATH, BUF, SIZE)        listxattr((PATH), (BUF), (SIZE), XATTR_NOFOLLOW)
-#  define GETXATTR(PATH, KEY, BUF, SIZE)    getxattr((PATH), (KEY), (BUF), (SIZE), 0, XATTR_NOFOLLOW)
-#  define SETXATTR(PATH, KEY, VALUE, SIZE)  setxattr((PATH), (KEY), (VALUE), (SIZE), 0, 0)
-#endif
-
-
-
 
 int printits(struct work *pwork,int ptid) {
   char  ffielddelim[2];
