@@ -97,7 +97,7 @@ pkg-config
 truncate (with the '-s' option available)
 
 # install packages (see platform-specific caveats, below)
-install uuid, xattr, sqlite3 (3.13+), pcre (1)
+install xattr, sqlite3 (3.13+), pcre (1)
 [optional] install mysql
 [optional] install fuse      (osxfuse on OSX)
 [optional] install db2

@@ -19,10 +19,10 @@ $(GTEST_INSTALL_DIR):
 	$(MAKE) -C $(GTEST_BUILD_DIR) install &> /dev/null
 
 $(TARGET): $(OBJ)
-	$(CXX) $(CFLAGS) $^ $(LDFLAGS) -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -o $@
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -o $@
 
 %.o: %.cpp $(GTEST_INSTALL_DIR)
-	$(CXX) $(CFLAGS)  -I$(GTEST_INSTALL_DIR)/include -c $< -o $@
+	$(CXX) $(CXXFLAGS)  -I$(GTEST_INSTALL_DIR)/include -c $< -o $@
 
 run: $(TARGET)
 	./$(TARGET)

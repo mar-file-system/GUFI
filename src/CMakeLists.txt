@@ -75,16 +75,9 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# dfw includes utils.c for some reason, so ${CMAKE_BINARY_DIR}/src needs to be included
-include_directories(${CMAKE_BINARY_DIR}/src)
-
-# utils.c needs an include path change in OpenSUSE
-set(XATTR_H "${XATTR_HEADER}")
-configure_file(${CMAKE_SOURCE_DIR}/src/utils.c.in ${CMAKE_BINARY_DIR}/src/utils.c @ONLY)
-
 # create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c structq.c)
-add_library(GUFI STATIC ${GUFI_SOURCES} ${CMAKE_BINARY_DIR}/src/utils.c)
+set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
+add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI C-Thread-Pool sqlite3-pcre)
 install(TARGETS GUFI DESTINATION lib)
 

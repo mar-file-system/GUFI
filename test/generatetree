@@ -194,8 +194,8 @@ mkdir ${ROOT}
 # generate tree
 cd ${ROOT}
 touch empty_file
-truncate -s 1K 1KB
-truncate -s 1M 1MB
+truncate -s 1024 1KB
+truncate -s 1048576 1MB
 touch "unusual, name?#"
 touch .hidden
 touch repeat_name

@@ -87,30 +87,8 @@ OF SUCH DAMAGE.
 #include "C-Thread-Pool/thpool.h"
 #include <sqlite3.h>
 
+#include "config.h"
 #include "bf.h"
-
-// members of struct stat have sizes that vary between OSX/Linux
-#ifdef __APPLE__
-#  define STAT_ino    "llu"
-#  define STAT_nlink  "hu"
-#  define STAT_size   "lld"
-#  define STAT_bsize  "d"
-#  define STAT_blocks "lld"
-
-// typedef uint32_t  STAT_size_t;
-//#  define STAT_size_t  uint32_t
-
-#else
-#  define STAT_ino    "lu"
-#  define STAT_nlink  "lu"
-#  define STAT_size   "ld"
-#  define STAT_bsize  "ld"
-#  define STAT_blocks "ld"
-
-// typedef size_t    STAT_size_t;
-//#  define STAT_size_t  size_t
-
-#endif
 
 #define SNPRINTF(STR, N, FMT, ...)                                                   \
     do {                                                                             \

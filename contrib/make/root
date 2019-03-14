@@ -40,6 +40,7 @@ SQLITE3_PCRE_LDFLAGS ?= -L$(SQLITE3_PCRE_PATH) -lsqlite3-pcre $(SQLITE3_LDFLAGS)
 SQLITE3_PCRE_LIB     ?= $(SQLITE3_PCRE_PATH)/libsqlite3-pcre.a
 
 CFLAGS               += $(THPOOL_CFLAGS)  $(SQLITE3_PCRE_CFLAGS)
+CXXFLAGS             += $(THPOOL_CFLAGS)  $(SQLITE3_PCRE_CFLAGS)
 LDFLAGS              += $(THPOOL_LDFLAGS) $(SQLITE3_PCRE_LDFLAGS)
 
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
@@ -52,7 +53,9 @@ endif
 # --- DARWIN
 UNAME_S = $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
-	CFLAGS += -D_DARWIN_C_SOURCE
+	CFLAGS += -D_DARWIN_C_SOURCE -DCONFIG_SYS_XATTR_H -DCONFIG_DARWIN_XATTRS
+else
+    CFLAGS += -DCONFIG_ATTR_XATTR_H -DCONFIG_GNU_XATTRS
 endif
 
 # this is invoked in a recursive build, for bfmi.mysql

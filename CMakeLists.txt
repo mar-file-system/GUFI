@@ -89,16 +89,30 @@ check_language(CXX)
 if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
 
-  # enable C++11
-  set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-  set(CMAKE_CXX_EXTENSIONS OFF)
+  # GCC prior to 4.9.3 doesn't have full standard support
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.3)
+    set(CMAKE_CXX_COMPILER FALSE)
+    message(STATUS "Require GNU C++ version 4.9.3 or greater: Not compiling C++ sources")
+  elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.9)
+    set(CMAKE_CXX_COMPILER FALSE)
+    message(STATUS "Require Clang version 3.9 or greater: not compiling C++ sources")
+  else()
+    # enable C++11
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
 
-  # define the DEBUG macro when building in debug mode
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
+    # define the DEBUG macro when building in debug mode
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
+  endif()
 else()
+  set(CMAKE_CXX_COMPILER FALSE)
   message(STATUS "Not compiling C++ sources")
 endif()
+
+# Re-link installed executables to use the installed libraries
+set(CMAKE_SKIP_BUILD_RPATH TRUE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
@@ -106,14 +120,33 @@ find_package(PkgConfig REQUIRED)
 # tell CMake to search the contrib/cmake directory cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 
-# need xattr.h
+# Detect and handle xattr.h platform specifics
 find_package(xattr REQUIRED XATTR)
 message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
+if (XATTR_ATTR_XATTR_HEADER)
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_ATTR_XATTR_H")
+endif()
+if (XATTR_SYS_XATTR_HEADER)
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_SYS_XATTR_H")
+endif()
+if (APPLE)
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_DARWIN_XATTRS")
+else()
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
+endif()
 
-# need uuid
-pkg_search_module(UUID REQUIRED uuid)
-message(STATUS "UUID headers located in ${UUID_INCLUDEDIR}")
-message(STATUS "UUID libraries located in ${UUID_LIBDIR}")
 
 # need pthread
 find_package(Threads REQUIRED)
@@ -147,10 +180,6 @@ elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
   )
 endif()
 
-# set the install rpath so the executables that link
-# against C-Thread-Pool can find it after being installed
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${thpool_PREFIX}/lib)
-
 # Find SQLite3
 pkg_search_module(SQLITE3 REQUIRED sqlite3)
 if (SQLITE3_VERSION VERSION_LESS 3.13)
@@ -159,9 +188,11 @@ endif()
 include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
 link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
 message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
-message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBDIR}")
+message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBRARY_DIRS}")
+set(CMAKE_INSTALL_RPATH "${SQLITE3_LIBRARY_DIRS}")
 
 # download and build sqlite3-pcre
+pkg_search_module(PCRE REQUIRED libpcre)
 set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/src/sqlite3-pcre)
 if ("${GIT_DL_METHOD}" STREQUAL "https")
   ExternalProject_Add(sqlite3-pcre
@@ -186,21 +217,28 @@ endif()
 # search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
   pkg_search_module(FUSE fuse)
-  message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
-  message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
+  if (FUSE_FOUND)
+    message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
+    message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
 
-  set(MY_FUSE_FOUND YES)
-  set(MY_FUSE_CFLAGS ${FUSE_CFLAGS})
-  set(MY_FUSE_LDFLAGS ${FUSE_LDFLAGS})
+    set(MY_FUSE_FOUND YES)
+    set(MY_FUSE_CFLAGS ${FUSE_CFLAGS})
+    set(MY_FUSE_LDFLAGS ${FUSE_LDFLAGS})
+  endif()
 elseif (APPLE)
   pkg_search_module(OSXFUSE osxfuse)
+  if (OSXFUSE_FOUND)
+    message(STATUS "OSXFUSE headers located in ${OSXFUSE_INCLUDEDIR}")
+    message(STATUS "OSXFUSE libraries located in ${OSXFUSE_LIBDIR}")
 
-  message(STATUS "OSXFUSE headers located in ${OSXFUSE_INCLUDEDIR}")
-  message(STATUS "OSXFUSE libraries located in ${OSXFUSE_LIBDIR}")
+    set(MY_FUSE_FOUND YES)
+    set(MY_FUSE_CFLAGS ${OSXFUSE_CFLAGS})
+    set(MY_FUSE_LDFLAGS ${OSXFUSE_LDFLAGS})
+  endif()
+endif()
 
-  set(MY_FUSE_FOUND YES)
-  set(MY_FUSE_CFLAGS ${OSXFUSE_CFLAGS})
-  set(MY_FUSE_LDFLAGS ${OSXFUSE_LDFLAGS})
+if (NOT MY_FUSE_FOUND)
+  message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
 endif()
 
 # Find MySQL
@@ -240,8 +278,10 @@ enable_testing()
 # recurse down into the test subdirectory
 add_subdirectory(test)
 
-# define "make gary"
+#
+# Define commands and tools for "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}
+#
 
 # collect all files into variables
 set(OTHER_FILES
@@ -265,8 +305,7 @@ set(PATHS
 # set the output nemae
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
-add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/utils.c ${CMAKE_SOURCE_DIR}/src/utils.c
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
+add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/src ${CMAKE_SOURCE_DIR}/src/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/scripts ${CMAKE_SOURCE_DIR}/scripts/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
@@ -277,15 +316,14 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
-                           DEPENDS C-Thread-Pool sqlite3-pcre test/googletest ${CMAKE_BINARY_DIR}/src/utils.c)
+                           DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
 
 # generate the tarball
 add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                                  DEPENDS cp_files)
 
 # the actual target
-add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/utils.c
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
@@ -298,14 +336,15 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/sr
 # test the tarball
 set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
 
-add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${TARBALL_TEST_DIR}")
+add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
+                                   COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
 
-add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${TARBALL_NAME}"
+add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
                              COMMAND make DEBUG=1
                              COMMAND make test
-                             WORKING_DIRECTORY "${TARBALL_TEST_DIR}"
+                             WORKING_DIRECTORY ${TARBALL_TEST_DIR}
                              DEPENDS gary make_tarball_dir)
 
-add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory "${TARBALL_TEST_DIR}"
+add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
                             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                             DEPENDS build_gary)

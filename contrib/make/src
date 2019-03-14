@@ -14,11 +14,6 @@ TARGETS   = $(LIB_A) $(addprefix ../,$(DFW) $(BFW) $(TOOLS))
 
 all: $(TARGETS)
 
-# utils.c.in requires a pattern to be replaced
-# and is included by dfw.c, so the file needs to exist
-utils.c: utils.c.in
-	sed -e 's/@XATTR_H@/attr\/xattr.h/g' $< > $@
-
 %.o: %.c $(LIB_H)
 	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 
