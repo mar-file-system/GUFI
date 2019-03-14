@@ -34,21 +34,21 @@ matrix:
               - BUILD=cmake
           script: contrib/travis/xenial.sh
 
-        # # OpenSUSE 12.3 + Tumbleweed Repo
-        # - stage: build_and_test
-        #   os: linux
-        #   sudo: true
-        #   dist: xenial
-        #   addons:
-        #       apt:
-        #           update: false
-        #   services: docker
-        #   env:
-        #     - C_COMPILER=clang-7
-        #     - CXX_COMPILER=clang++-7
-        #     - BUILD=cmake
-        #     - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-        #   script: contrib/travis/suse12.3.sh
+        # OpenSUSE 12.3 + Tumbleweed Repo
+        - stage: build_and_test
+          os: linux
+          sudo: true
+          dist: xenial
+          addons:
+              apt:
+                  update: false
+          services: docker
+          env:
+            - C_COMPILER=clang-7
+            - CXX_COMPILER=clang++-7
+            - BUILD=cmake
+            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
+          script: contrib/travis/suse12.3.sh
 
         # CentOS 7
         - stage: build_and_test
