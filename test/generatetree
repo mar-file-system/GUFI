@@ -93,7 +93,7 @@
 #             |---- (optional) <uid>_uid_<gid>_gid_file
 #             |---- (optional) <uid>_uid_directory/
 #             |---- (optional) <uid>_uid_file
-#             |---- repeate_name
+#             |---- repeat_name
 # |---- empty_file
 # |---- file_symlink -> 1KB
 # |---- .hidden
