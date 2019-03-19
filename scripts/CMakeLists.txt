@@ -91,7 +91,7 @@ if (PARAMIKO)
       PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
       CONFIGURE_COMMAND ""
       BUILD_COMMAND     ""
-      INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/paramiko ${CMAKE_INSTALL_PREFIX}/paramiko
+      INSTALL_COMMAND   ""
     )
   elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
     ExternalProject_Add(paramiko
@@ -102,12 +102,15 @@ if (PARAMIKO)
       PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
       CONFIGURE_COMMAND ""
       BUILD_COMMAND     ""
-      INSTALL_COMMAND   ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/paramiko ${CMAKE_INSTALL_PREFIX}/paramiko
+      INSTALL_COMMAND   ""
     )
   endif()
 
   # add gufi_client to the list of tools
   set(TOOLS ${TOOLS} gufi_client)
+
+  # add the paramiko source for installing
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/src/paramiko DESTINATION ${CMAKE_INSTALL_PREFIX}/paramiko)
 endif()
 
 # copy and install scripts that act like binaries
