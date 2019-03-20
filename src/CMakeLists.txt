@@ -78,7 +78,7 @@ cmake_minimum_required(VERSION 3.0.0)
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
-add_dependencies(GUFI C-Thread-Pool sqlite3-pcre)
+add_dependencies(GUFI install_dependencies)
 install(TARGETS GUFI DESTINATION lib)
 
 # This function builds executables using the

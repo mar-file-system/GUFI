@@ -86,35 +86,63 @@ Thanks!
 
 
 
-(0) Initial set-up and installation
+(0) Set up
 
 # install build tools
 A C compiler with C99 support
 [optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
 CMake 3.0+
+Git LFS
 Make
 pkg-config
 truncate (with the '-s' option available)
 
 # install packages (see platform-specific caveats, below)
-install xattr, sqlite3 (3.13+), pcre (1)
-[optional] install mysql
-[optional] install fuse      (osxfuse on OSX)
-[optional] install db2
+xattr
+pcre (1)
+[optional] mysql
+[optional] fuse      (osxfuse on OSX)
+[optional] db2
+
+# packages that are downloaded and built through a script
+# locations for these packages can be provided (single prefix)
+# in order to avoid downloading them
+C-Thread-Pool
+sqlite3
+sqlite3-pcre
 
 # packages that are downloaded by CMake:
-sqlite3-pcre
-C-Thread-Pool
 GoogleTest
 
 # clone GUFI
-git clone https://github.com/mar-file-system/GUFI.git
+git lfs clone https://github.com/mar-file-system/GUFI.git
 cd GUFI
 
+(2) ========== Build and install with CMake
 
-(1) ========== CentOS 7.5
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
+make
+make install
 
-(1.1) submodule googletest build fails for cmake < 3.0
+(2.1) Special configurations options
+
+Set the environment variable CXX=false to disable building C++ code
+Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
+Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
+Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
+
+(3) ========== Build and install with make
+
+If cmake is not available, the tarball found at
+https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
+can be built by running `make` in the extraction directory.
+This tarball is generated through CMake with the command "make gary".
+
+(4) Known build issuses
+
+(4.1) (CentOS) submodule googletest build fails for cmake < 3.0
 
 CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
   No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
@@ -131,54 +159,7 @@ yum remove cmake
 yum install cmake3
 ln -s /usr/bin/cmake3 /usr/bin/cmake
 
-
-
-(1.2) our build of test/googletest fails
+(4.2) our build of test/googletest fails
 
 -- WORK-AROUND
 disable the C++ compiler when calling cmake ('CXX=false cmake')
-
-
-
-(1.3) compile fails for sqlite3 3.7.17 (CentOS 7.5), works for sqlite3 3.14.2 (Fedora)
-
--- FIX:
-
-Upgrade to newer version.  There is no newer version available through yum repos, so do this:
-
-download sqlite-autoconf-xxxxx.tar.gz [https://www.sqlite.org/download.html]
-tar -xzf sqlite-autoconf-XXXXXXX.tar.gz
-cd sqlite-autoconf-xxxxx
-./configure --prefix=$SQLITE_INSTALL_PREFIX
-make
-make install
-export PKG_CONFIG_PATH=$SQLITE_INSTALL_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH
-
-This will allow the 'pkg-config' commands in the makefile to find this newer version.
-
-If CMake continues to find the old sqlite installtion, delete the previously generated CMake files, such as CMakeCache.txt.
-
-
-
-(3) ========== Building and installing with CMake
-
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
-make
-make install
-
-(3.1) Special configurations options
-
-Set the environment variable CXX=false to disable building C++ code
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
-Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
-
-
-
-(4) ========== Building and installing with make
-
-If cmake is not available, the tarball found at
-https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
-can be built by running `make` in the extraction directory.

@@ -26,7 +26,7 @@ matrix:
                       - libattr1-dev
                       - libfuse-dev
                       - libpcre3-dev
-                      - uuid-dev
+                      - wget
                   update: true
           env:
               - C_COMPILER=clang-7
@@ -77,9 +77,7 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
-                      - ossp-uuid
                       - pcre
-                      - sqlite3
                       - truncate
                   update: true
           env:
@@ -100,9 +98,7 @@ matrix:
                       - cmake
                       - llvm@7
                       - mysql
-                      - ossp-uuid
                       - pcre
-                      - sqlite3
                       - truncate
                   update: true
           env:
@@ -130,7 +126,6 @@ matrix:
         #               - libattr1-dev
         #               - libfuse-dev
         #               - libpcre3-dev
-        #               - uuid-dev
         #           update: true
         #   script:
         #     - true
@@ -161,7 +156,6 @@ matrix:
                       - libattr1-dev
                       - libfuse-dev
                       - libpcre3-dev
-                      - uuid-dev
                   update: true
           script:
             - true

@@ -23,11 +23,14 @@ See other components of MarFS at:
 
     https://github.com/mar-file-system
 
-## Build and Install
+## Download
+[Git LFS](https://git-lfs.github.com/) is needed to download this repository.
+
+## Quick Start
 ```bash
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
+cmake ..
 make
 make install
 ```

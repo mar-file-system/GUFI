@@ -94,7 +94,7 @@ char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
 char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode,@suspect);";
 
 char *esql = // "DROP TABLE IF EXISTS entries;"
-            "CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+            "CREATE TABLE IF NOT EXISTS entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
 
 char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
 
@@ -158,24 +158,24 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
 }
 
 // sqlite3_exec(db, tsql, 0, 0, &err_msg);
-#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)                  \
-    do {                                                        \
-        rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);            \
-        if (rc != SQLITE_OK ) {                                 \
-            printf("%s:%d SQL error [%s]: '%s'\nSQL: %s",       \
-                   __FILE__, __LINE__, #SQL, *(ERRMSG), SQL);   \
-            sqlite3_free(*(ERRMSG));                            \
-            sqlite3_close(DB);                                  \
-                                                                \
-            /* Gary debugging */                                \
-            printf("trying  %s\n",dbn);                         \
-            printf("trying  %s\n",vssqldir);                    \
-            SNPRINTF(deb,MAXPATH,"ls -l %s/%s",in.nameto,name); \
-            system(deb);                                        \
-            exit(9);                                            \
-                                                                \
-            return NULL;                                        \
-        }                                                       \
+#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)                       \
+    do {                                                             \
+        rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);                 \
+        if (rc != SQLITE_OK ) {                                      \
+            fprintf(stderr, "%s:%d SQL error [%s]: '%s'\nSQL: %s",   \
+                    __FILE__, __LINE__, #SQL, *(ERRMSG), SQL);       \
+            sqlite3_free(*(ERRMSG));                                 \
+            sqlite3_close(DB);                                       \
+                                                                     \
+            /* Gary debugging */                                     \
+            printf("trying  %s\n",dbn);                              \
+            printf("trying  %s\n",vssqldir);                         \
+            SNPRINTF(deb,MAXPATH,"ls -l %s/%s",in.nameto,name);      \
+            system(deb);                                             \
+            exit(9);                                                 \
+                                                                     \
+            return NULL;                                             \
+        }                                                            \
     } while (0)
 
 sqlite3 * opendb(const char *name, int openwhat, int createtables)

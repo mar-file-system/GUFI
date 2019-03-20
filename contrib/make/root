@@ -2,7 +2,7 @@ CC                   ?= cc
 CXX                  ?= c++
 CFLAGS               ?=
 CXXFLAGS             ?= -std=c++11
-LDFLAGS              ?=
+LDFLAGS              ?= -ldl -lm
 LIB                   = GUFI
 
 CFLAGS               += -I$(realpath include)
@@ -10,9 +10,6 @@ CXXFLAGS             += -I$(realpath include)
 
 PCRE_CFLAGS          ?= $(shell pkg-config --cflags libpcre)
 PCRE_LDFLAGS         ?= $(shell pkg-config --libs   libpcre)
-
-SQLITE3_CFLAGS       ?= $(shell pkg-config --cflags sqlite3)
-SQLITE3_LDFLAGS      ?= $(shell pkg-config --libs   sqlite3)
 
 # different fuse libs for OSX/Linux
 ifeq ($(UNAME_S), Darwin)
@@ -29,19 +26,29 @@ MYSQL_LDFLAGS        ?= $(shell mysql_config --libs_r)
 
 MAKEFILE_PATH         = $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-THPOOL_PATH          ?= $(MAKEFILE_PATH)/C-Thread-Pool
-THPOOL_CFLAGS        ?= -I$(realpath $(MAKEFILE_PATH))
-THPOOL_LDFLAGS       ?= -L$(THPOOL_PATH) -lthpool -pthread
-THPOOL_LIB           ?= $(THPOOL_PATH)/libthpool.a
+DEP_DOWNLOAD_PATH    ?= $(MAKEFILE_PATH)/contrib/deps
+DEP_BUILD_PATH       ?= $(MAKEFILE_PATH)/deps/build
+DEP_INSTALL_PATH     ?= $(MAKEFILE_PATH)/deps/install
 
-SQLITE3_PCRE_PATH    ?= $(MAKEFILE_PATH)/sqlite3-pcre
+THPOOL_PATH          ?= $(DEP_INSTALL_PATH)/C-Thread-Pool
+THPOOL_CFLAGS        ?= -I$(THPOOL_PATH)/include
+THPOOL_LDFLAGS       ?= -pthread
+THPOOL_LIB           ?= $(THPOOL_PATH)/lib/libthpool.a
+
+SQLITE3_PATH         ?= $(DEP_INSTALL_PATH)/sqlite3
+SQLITE3_CFLAGS       ?= -I$(SQLITE3_PATH)/include
+SQLITE3_LDFLAGS      ?=
+SQLITE3_LIB          ?= $(SQLITE3_PATH)/lib/libsqlite3.a
+
+SQLITE3_PCRE_PATH    ?= $(DEP_INSTALL_PATH)/sqlite3-pcre
 SQLITE3_PCRE_CFLAGS  ?= -I$(SQLITE3_PCRE_PATH) $(SQLITE3_CFLAGS) $(PCRE_CFLAGS)
-SQLITE3_PCRE_LDFLAGS ?= -L$(SQLITE3_PCRE_PATH) -lsqlite3-pcre $(SQLITE3_LDFLAGS) $(PCRE_LDFLAGS)
+SQLITE3_PCRE_LDFLAGS ?= $(PCRE_LDFLAGS)
 SQLITE3_PCRE_LIB     ?= $(SQLITE3_PCRE_PATH)/libsqlite3-pcre.a
 
 CFLAGS               += $(THPOOL_CFLAGS)  $(SQLITE3_PCRE_CFLAGS)
 CXXFLAGS             += $(THPOOL_CFLAGS)  $(SQLITE3_PCRE_CFLAGS)
 LDFLAGS              += $(THPOOL_LDFLAGS) $(SQLITE3_PCRE_LDFLAGS)
+STATIC_DEPS           = ${THPOOL_LIB} ${SQLITE3_PCRE_LIB} ${SQLITE3_LIB}
 
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
 ifneq ($(DEBUG),)
@@ -77,35 +84,21 @@ ifneq ($(FUSE),)
 	LDFLAGS += $(FUSE_LDFLAGS)
 endif
 
-.PHONY: C-Thread-Pool sqlite3-pcre googletest
+.PHONY: googletest
 
 # let sub-makefiles use these variables
 export
 
-all: $(THPOOL_LIB) $(SQLITE3_PCRE_LIB)
+all: $(STATIC_DEPS)
 	$(MAKE) -C src
 	$(MAKE) -C scripts
 
-# NOTE
-#
-# We're now using the C-Thread-Pool library
-# (https://github.com/Pithikos/C-Thread-Pool). thpool.h from that "library"
-# provides an incomplete definition of struct thpool_.  The developers
-# suggest compiling like so:
-#
-#    gcc example.c thpool.c -D THPOOL_DEBUG -pthread -o example
-#
-# That's fine if you are compiling an aplication in one shot, but it fails
-# for the case of building a .o that is part of a library.  Thus, we have
-# a forked version of the repo, which we have modified to allow this.
-
-$(THPOOL_LIB): $(THPOOL_PATH)/thpool.c $(THPOOL_PATH)/thpool.h
-	$(CC) $(CFLAGS) -static -c -o $@ $< -pthread
-
-$(SQLITE3_PCRE_LIB): $(SQLITE3_PCRE_PATH)/pcre.c $(SQLITE3_PCRE_PATH)/pcre.h
-	$(MAKE) -C sqlite3-pcre libsqlite3-pcre.a
+$(STATIC_DEPS): contrib/deps/install_deps.sh
+	mkdir -p "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
+	contrib/deps/install_deps.sh "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
 
 clean:
+	$(MAKE) -C "$(DEP_BUILD_PATH)"
 	$(MAKE) -C src clean
 
 test: all

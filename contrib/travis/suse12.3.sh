@@ -17,10 +17,10 @@ de zypper ar -f -c http://download.opensuse.org/tumbleweed/repo/oss tumbleweed-o
 de zypper --non-interactive --no-gpg-checks update
 
 # install libraries
-de zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel sqlite3-devel
+de zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
 
 # install extra packages
-de zypper --non-interactive install binutils cmake git libgcc_s1 sqlite3
+de zypper --non-interactive install binutils cmake git libgcc_s1 patch
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"

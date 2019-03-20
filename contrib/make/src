@@ -10,11 +10,12 @@ DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
 TOOLS     = querydb querydbn make_testdirs make_testtree
-TARGETS   = $(LIB_A) $(addprefix ../,$(DFW) $(BFW) $(TOOLS))
+TARGETS   = $(addprefix ../,$(DFW) $(BFW) $(TOOLS))
 
 all: $(TARGETS)
 
 %.o: %.c $(LIB_H)
+	echo $(STATIC_DEPS)
 	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 
 # --- library
@@ -24,11 +25,11 @@ $(LIB_A): $(LIB_O)
 
 # --- apps
 
-../%: %.c $(LIB_A) $(SQLITE3_PCRE_LIB) $(THPOOL_LIB)
-	$(CC) $(CFLAGS) -o $@ $< -L.. -l$(LIB) $(LDFLAGS)
+../%: %.c $(LIB_A) $(STATIC_DEPS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-../%: %.cpp $(LIB_A) $(SQLITE3_PCRE_LIB) $(THPOOL_LIB)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $< -L.. -l$(LIB) $(LDFLAGS)
+../%: %.cpp $(LIB_A) $(STATIC_DEPS)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above
@@ -43,5 +44,3 @@ clean:
 	@ # for F in `ls *.c | sed -e 's/\.c$//'`; do [ -f $F ] && rm $F; done
 	@ # final "echo" is so sub-shell will return success
 	@ (for F in `ls *.c* | sed -e 's/\.c.*$$//'`; do [ -f $$F ] && (echo rm $$F; rm $$F); done; echo done > /dev/null)
-	if [[ -d $(THPOOL_PATH) ]]; then rm -f ${THPOOL_LIB}; fi
-	if [[ -d $(SQLITE3_PCRE_PATH) ]]; then $(MAKE) -C $(SQLITE3_PCRE_PATH) clean; fi

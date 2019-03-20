@@ -2,8 +2,8 @@ GTEST_SRC         ?= $(realpath ../../googletest)
 GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
 GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
 
-CFLAGS            += -I$(realpath ../..)
-LDFLAGS           += -L$(realpath ../..) -l$(LIB)
+CXXFLAGS          +=
+LDFLAGS           +=
 
 TESTS=bf utils
 OBJ=$(addsuffix .o, $(TESTS))
@@ -18,7 +18,7 @@ $(GTEST_INSTALL_DIR):
 	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) .. &> /dev/null
 	$(MAKE) -C $(GTEST_BUILD_DIR) install &> /dev/null
 
-$(TARGET): $(OBJ)
+$(TARGET): $(OBJ) $(realpath ../..)/libGUFI.a $(STATIC_DEPS)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -o $@
 
 %.o: %.cpp $(GTEST_INSTALL_DIR)

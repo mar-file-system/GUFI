@@ -228,7 +228,7 @@ int parse_cmd_line(int         argc,
                    struct input *in) {
 
    in->maxthreads         = 1;         // don't default to zero threads
-   in->delim[0]           = '|';
+   SNPRINTF(in->delim, sizeof(in->delim), "|");
    in->dontdescend        = 0;         // default to descend
    in->buildinindir       = 0;         // default to not building db in input dir
    in->suspectd           = 0;

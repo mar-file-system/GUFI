@@ -465,21 +465,18 @@ int mkpath(char* file_path, mode_t mode) {
     *p='/';
   }
   //printf("mkpath mkdir sp %s\n",sp);
-  mkdir(sp,mode);
-  return 0;
+  return mkdir(sp,mode | S_IRWXU);
 }
 
 int dupdir(struct work *pwork)
 {
     char topath[MAXPATH];
-    int rc;
 
     SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,pwork->name);
     //printf("mkdir %s\n",topath);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     //rc = mkdir(topath,pwork->statuso.st_mode | S_IWRITE);
-    rc = mkdir(topath,pwork->statuso.st_mode | S_IRWXU);
-    if (rc != 0) {
+    if (mkdir(topath,pwork->statuso.st_mode | S_IRWXU) != 0) {
       //perror("mkdir");
       if (errno == ENOENT) {
         //printf("calling mkpath on %s\n",topath);

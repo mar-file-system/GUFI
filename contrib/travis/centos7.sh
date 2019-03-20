@@ -8,17 +8,14 @@ cd ${SCRIPT_PATH}/../..
 
 . ${SCRIPT_PATH}/start_docker.sh
 
-# install Extra Packages for Enterprise Linux (EPEL)
-de yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-
-# install The Software Collections ( SCL ) Repository
-de yum -y install centos-release-scl
+# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections ( SCL ) Repository
+de yum -y install epel-release centos-release-scl
 
 # install libraries
 de yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
 
 # install extra packages
-de yum -y install cmake3 make rh-git29 tcl wget
+de yum -y install cmake3 make patch rh-git29 tcl wget
 
 # create symlinks
 de ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
@@ -57,11 +54,6 @@ fi
 
 # install the compilers
 de yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
-
-# install SQLite 3.27
-de wget -nc https://www.sqlite.org/2019/sqlite-autoconf-3270100.tar.gz
-de tar -xzf sqlite-autoconf-3270100.tar.gz
-de bash -c "cd sqlite-autoconf-3270100 && mkdir build && cd build && CC=${CENTOS_C_COMPILER} ../configure --prefix=/tmp/sqlite3 && make -j && make sqlite3.c && make -j install"
 
 # add the travis user
 de useradd travis -m -s /sbin/nologin || true

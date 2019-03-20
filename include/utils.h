@@ -90,13 +90,14 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "bf.h"
 
-#define SNPRINTF(STR, N, FMT, ...)                                                   \
-    do {                                                                             \
-        const int n = snprintf(STR, N, FMT, ##__VA_ARGS__);                          \
-        if (n >= N) {                                                                \
-            fprintf(stderr, "%s:%d Warning: Message %s "                             \
-                    "was truncated to %d characters\n", __FILE__, __LINE__, FMT, n); \
-        }                                                                            \
+#define SNPRINTF(STR, N, FMT, ...)                                      \
+    do {                                                                \
+        const int n = snprintf(STR, N, FMT, ##__VA_ARGS__);             \
+        if (n >= N) {                                                   \
+            fprintf(stderr, "%s:%d Warning: Message %s "                \
+                    "was truncated to %d characters: \"" FMT "\"\n",    \
+                    __FILE__, __LINE__, FMT, n, ##__VA_ARGS__);         \
+        }                                                               \
     } while (0)
 
 /* this block is for the triell */

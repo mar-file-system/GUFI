@@ -32,7 +32,7 @@ def parse_args(args = None):
 
         raise argparse.ArgumentTypeError("Invalid Port: {}".format(port))
 
-    parser = argparse.ArgumentParser(description='gufi_find_client')
+    parser = argparse.ArgumentParser(description='gufi_client')
     parser.add_argument('--username',    dest='username',    type=get_username, default=getpass.getuser(),                             help='Username (not UID)')
     parser.add_argument('-p', '--port',  dest='port',        type=get_port,     default=22,                                            help='SSH port')
     parser.add_argument('--known_hosts', dest='known_hosts', type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')

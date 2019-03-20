@@ -5,10 +5,12 @@ set -e
 export CC="${C_COMPILER}"
 export CXX="${CXX_COMPILER}"
 export GTEST_COLOR=1
+export DEP_PATH="/tmp"
+export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DSTATIC_DEP_INSTALL_PREFIX="${DEP_PATH}" ..
 
 # use files from the generated tar
 if  [[ "${BUILD}" = "make" ]]; then

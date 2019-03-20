@@ -397,11 +397,11 @@ if __name__=='__main__':
                '-e', str(int(args.no_aggregate)),
                '-n', str(args.threads)]
 
-    if len(tsummary):
-        bfq_cmd += ['-T', tsummary]
+    # if len(tsummary):
+    #     bfq_cmd += ['-T', tsummary]
 
-    if len(summary):
-        bfq_cmd += ['-S', summary]
+    # if len(summary):
+    #     bfq_cmd += ['-S', summary]
 
     if len(initial):
         bfq_cmd += ['-E', initial]

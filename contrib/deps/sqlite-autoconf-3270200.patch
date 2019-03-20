@@ -1,0 +1,13 @@
+diff --git a/sqlite3.c b/sqlite3.c
+index b43c73d..558ae1a 100644
+--- a/sqlite3.c
++++ b/sqlite3.c
+@@ -32356,7 +32356,7 @@ SQLITE_PRIVATE const char *sqlite3OpcodeName(int i){
+ /*
+ ** Maximum supported path-length.
+ */
+-#define MAX_PATHNAME 512
++#define MAX_PATHNAME 16384
+ 
+ /*
+ ** Maximum supported symbolic links

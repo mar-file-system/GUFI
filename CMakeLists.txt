@@ -157,61 +157,18 @@ include(ExternalProject)
 set(GIT_DL_METHOD HTTPS CACHE STRING "Use HTTPS or SSH to download git repositories")
 string(TOLOWER "${GIT_DL_METHOD}" GIT_DL_METHOD)
 
-# download and build C-Thread-Pool
-set(thpool_PREFIX ${CMAKE_BINARY_DIR}/src)
-if ("${GIT_DL_METHOD}" STREQUAL "https")
-  ExternalProject_Add(C-Thread-Pool
-    GIT_REPOSITORY    https://github.com/mar-file-system/C-Thread-Pool.git
-    GIT_TAG           lanl
-    GIT_SHALLOW       1
-    PREFIX            ${CMAKE_BINARY_DIR}/
-    STEP_TARGETS      build
-    INSTALL_COMMAND   ""
-  )
-elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
-  ExternalProject_Add(C-Thread-Pool
-    GIT_REPOSITORY    git@github.com:mar-file-system/C-Thread-Pool.git
-    GIT_TAG           lanl
-    GIT_SHALLOW       1
-    PREFIX            ${CMAKE_BINARY_DIR}/
-    STEP_TARGETS      build
-    INSTALL_COMMAND   ""
-  )
-endif()
-
-# Find SQLite3
-pkg_search_module(SQLITE3 REQUIRED sqlite3)
-if (SQLITE3_VERSION VERSION_LESS 3.13)
-  message(FATAL_ERROR "GUFI requires sqlite3 3.13+. Got ${SQLITE3_VERSION}")
-endif()
-include_directories(AFTER SYSTEM ${SQLITE3_INCLUDE_DIRS}) # -Ipath/to/sqlite3/include
-link_directories(${SQLITE3_LIBRARY_DIRS})                 # -Lpath/to/sqlite3/lib
-message(STATUS "SQLite3 headers located in ${SQLITE3_INCLUDEDIR}")
-message(STATUS "SQLite3 libraries located in ${SQLITE3_LIBRARY_DIRS}")
-set(CMAKE_INSTALL_RPATH "${SQLITE3_LIBRARY_DIRS}")
-
-# download and build sqlite3-pcre
+# need PCRE for linking only
 pkg_search_module(PCRE REQUIRED libpcre)
-set(pcre_PREFIX     ${CMAKE_BINARY_DIR}/src/sqlite3-pcre)
-if ("${GIT_DL_METHOD}" STREQUAL "https")
-  ExternalProject_Add(sqlite3-pcre
-    GIT_REPOSITORY    https://github.com/mar-file-system/sqlite3-pcre.git
-    GIT_TAG           master
-    GIT_SHALLOW       1
-    PREFIX            ${CMAKE_BINARY_DIR}/
-    STEP_TARGETS      build
-    INSTALL_COMMAND   ""
-  )
-elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
-  ExternalProject_Add(sqlite3-pcre
-    GIT_REPOSITORY    git@github.com:mar-file-system/sqlite3-pcre.git
-    GIT_TAG           master
-    GIT_SHALLOW       1
-    PREFIX            ${CMAKE_BINARY_DIR}/
-    STEP_TARGETS      build
-    INSTALL_COMMAND   ""
-  )
-endif()
+# if (NOT EXISTS PCRE_STATIC_LIBS)
+#   message(FATAL_ERROR "Could not find static library files for libpcre.")
+# endif()
+
+# download and build C-Thread-Pool, sqlite3, and sqlite3-pcre
+# they will be linked statically
+set(STATIC_DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of statically linked dependency sources"  PATH)
+set(STATIC_DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of statically linked dependency builds"   PATH)
+set(STATIC_DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of statically linked dependency binaries" PATH)
+add_custom_target(install_dependencies COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh "${STATIC_DEP_DOWNLOAD_PREFIX}" "${STATIC_DEP_BUILD_PREFIX}" "${STATIC_DEP_INSTALL_PREFIX}")
 
 # search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
@@ -259,11 +216,24 @@ else()
 endif()
 
 # everyone includes (-I) these paths, whether or not they need them
-set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR}/include ${XATTR_INCLUDEDIR} ${UUID_INCLUDEDIR} ${SQLITE3_INCLUDEDIR} ${pcre_PREFIX} ${thpool_PREFIX})
+set(COMMON_INCLUDES
+  ${CMAKE_SOURCE_DIR}/include
+  ${XATTR_INCLUDEDIR}
+  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3/include
+  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3-pcre
+  ${STATIC_DEP_INSTALL_PREFIX}/C-Thread-Pool/include)
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries
-set(COMMON_LIBRARIES GUFI ${pcre_PREFIX}-build/libsqlite3-pcre.a sqlite3 pcre ${thpool_PREFIX}/C-Thread-Pool-build/libthpool.a Threads::Threads m)
+set(COMMON_LIBRARIES
+  GUFI
+  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
+  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
+  pcre
+  ${STATIC_DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
+  Threads::Threads
+  m
+  dl)
 
 # tell CMake to look at the src directory
 add_subdirectory(src)
@@ -297,8 +267,6 @@ set(PATHS
   scripts
   src
   test
-  C-Thread-Pool
-  sqlite3-pcre
   googletest)
 
 # set the output nemae
@@ -309,13 +277,9 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/scripts ${CMAKE_SOURCE_DIR}/scripts/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/C-Thread-Pool ${CMAKE_SOURCE_DIR}/C-Thread-Pool
-                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/src/sqlite3-pcre ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool/.git
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre/.git
                            COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
-                           DEPENDS C-Thread-Pool sqlite3-pcre test/googletest)
+                           DEPENDS test/googletest)
 
 # generate the tarball
 add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -327,8 +291,6 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Ma
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/C-Thread-Pool
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/sqlite3-pcre
                        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
                        DEPENDS create_tarball)
 
@@ -339,7 +301,7 @@ add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory 
                                    COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
 
 add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
-                             COMMAND make DEBUG=1
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} make DEBUG=1
                              COMMAND make test
                              WORKING_DIRECTORY ${TARBALL_TEST_DIR}
                              DEPENDS gary make_tarball_dir)

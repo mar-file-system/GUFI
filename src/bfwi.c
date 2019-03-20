@@ -150,9 +150,8 @@ void *scout(void * param) {
       exit(-1); /* not the best way out i suppose */
     }
     //printf("reading input file now\n");
-    memset(linein, 0, sizeof(linein));
     //sleep(5);
-    while (fgets (linein, sizeof(linein), finfile) !=NULL ) {
+    while (fgets (linein, sizeof(linein), finfile) != NULL) {
           //printf("got input line %s\n",linein);
           parsetowork (in.delim, linein, mywork );
           //printf("%s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
@@ -164,7 +163,6 @@ void *scout(void * param) {
              mywork->offset=foffset;
              pushdir(mywork);
           }
-          memset(linein, 0, sizeof(linein));
     }
     fclose(finfile);
     //sleep(5);
@@ -250,7 +248,7 @@ static void processdir(void * passv)
         } else {
           /* get the next record */
           memset(plinein, 0, sizeof(plinein));
-          if (fgets (plinein, sizeof(plinein), gin[mytid]) ==NULL ) break;
+          if (fgets (plinein, sizeof(plinein), gin[mytid]) == NULL) break;
           //printf("tid %d got line %s\n",mytid,plinein);
         }
 
@@ -269,7 +267,7 @@ static void processdir(void * passv)
           lstat(qwork.name, &qwork.statuso);
           qwork.xattrs=0;
           if (in.doxattrs > 0) {
-            bzero(qwork.xattr,sizeof(qwork.xattr));
+            memset(qwork.xattr,0,sizeof(qwork.xattr));
             qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
           }
         } else {
@@ -299,7 +297,7 @@ static void processdir(void * passv)
             // its a link so get the linkname
             if (in.infile == 0) {
               /* if its infile we have to get this elsewhere */
-              bzero(lpatho,sizeof(lpatho));
+              memset(lpatho,0,sizeof(lpatho));
               readlink(qwork.name,lpatho,MAXPATH);
               //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
               SNPRINTF(qwork.linkname,MAXPATH,"%s",lpatho);
@@ -345,7 +343,7 @@ static void processdir(void * passv)
       insertsumdb(db,passmywork,&summary);
       closedb(db);
 
-      SNPRINTF(dbpath, MAXPATH, "%s/%s/DBNAME", in.nameto,passmywork->name);
+      SNPRINTF(dbpath, MAXPATH, "%s/%s/" DBNAME, in.nameto,passmywork->name);
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
@@ -455,8 +453,8 @@ int processinit(void * myworkin) {
           fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
           return 1;
        }
-       bzero(mywork->xattr,sizeof(mywork->xattr));
-       bzero(mywork->linkname,sizeof(mywork->linkname));
+       memset(mywork->xattr,0,sizeof(mywork->xattr));
+       memset(mywork->linkname,0,sizeof(mywork->linkname));
        if (in.doxattrs > 0) {
          mywork->xattrs=0;
          mywork->xattrs=pullxattrs(in.name,mywork->xattr);
