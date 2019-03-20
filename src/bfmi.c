@@ -271,11 +271,11 @@ static void processdir(void * passv)
       free(records);
     }
 
-    // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
-
     // one less thread running
     decrthread();
+
+    // free the queue entry - this has to be here or there will be a leak
+    free(passmywork->freeme);
 
     // return NULL;
 }
