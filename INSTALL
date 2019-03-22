@@ -132,6 +132,11 @@ Set the environment variable CXX=false to disable building C++ code
 Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
 Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
 Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
+Set the CMake variable STATIC_DEP_DOWNLOAD_PREFIX to select a location to find the downloads for the statically linked libraries.
+    If the expected files are found, they will not be downloaded.
+Set the CMake variable STATIC_DEP_BUILD_DIR_PREFIX to select a location to build the statically linked libraries.
+Set the CMake variable STATIC_DEP_INSTALL_PREFIX to select the location to install the libraries.
+    If the libraries are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
 
 (3) ========== Build and install with make
 

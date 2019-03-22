@@ -108,6 +108,7 @@ function(build_and_install PATH LINK_GUFI)
     # link GUFI libraries if needed
     if (LINK_GUFI)
       target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+      add_dependencies(${TARGET} GUFI)
     endif()
 
     # install the executable
