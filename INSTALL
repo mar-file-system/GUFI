@@ -92,7 +92,6 @@ Thanks!
 A C compiler with C99 support
 [optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
 CMake 3.0+
-Git LFS
 Make
 pkg-config
 truncate (with the '-s' option available)

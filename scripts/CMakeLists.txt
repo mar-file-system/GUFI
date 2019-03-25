@@ -78,34 +78,8 @@ cmake_minimum_required(VERSION 3.0.0)
 # list of scripts that act as tools
 set(TOOLS gufi_find gufi_stats gufi_ls query_builder.py)
 
-set(PARAMIKO OFF CACHE BOOL "Whether or not to download and install paramiko")
+set(PARAMIKO OFF CACHE BOOL "Whether or not to install paramiko")
 if (PARAMIKO)
-  # download paramiko
-  set(PARAMIKO_PREFIX ${CMAKE_BINARY_DIR}/src)
-  if ("${GIT_DL_METHOD}" STREQUAL "https")
-    ExternalProject_Add(paramiko
-      GIT_REPOSITORY    https://github.com/paramiko/paramiko.git
-      GIT_TAG           cf7d49d66f3b1fbc8b0853518a54050182b3b5eb
-      GIT_SHALLOW       1
-      PREFIX            ${CMAKE_BINARY_DIR}/
-      PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND     ""
-      INSTALL_COMMAND   ""
-    )
-  elseif ("${GIT_DL_METHOD}" STREQUAL "ssh")
-    ExternalProject_Add(paramiko
-      GIT_REPOSITORY    git@github.com:paramiko/paramiko.git
-      GIT_TAG           cf7d49d66f3b1fbc8b0853518a54050182b3b5eb
-      GIT_SHALLOW       1
-      PREFIX            ${CMAKE_BINARY_DIR}/
-      PATCH_COMMAND     git apply ${CMAKE_SOURCE_DIR}/contrib/paramiko-cf7d49d-hostbased.patch
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND     ""
-      INSTALL_COMMAND   ""
-    )
-  endif()
-
   # add gufi_client to the list of tools
   set(TOOLS ${TOOLS} gufi_client)
 

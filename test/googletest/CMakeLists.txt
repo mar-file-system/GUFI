@@ -79,41 +79,9 @@ cmake_minimum_required(VERSION 3.0.0)
 include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
-  # turn off GoogleTest installation
-  set(INSTALL_GTEST OFF PARENT_SCOPE)
-
-  # don't build GoogleMock
-  set(BUILD_GMOCK OFF PARENT_SCOPE)
-
-  # GoogleTest
-  configure_file(${CMAKE_SOURCE_DIR}/contrib/cmake/CMakeLists.txt.in ${CMAKE_BINARY_DIR}/googletest-download/CMakeLists.txt)
-  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-  if(result)
-    message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-  endif()
-  execute_process(COMMAND ${CMAKE_COMMAND} --build .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-  if(result)
-    message(FATAL_ERROR "Build step for googletest failed: ${result}")
-  endif()
-
-  # Prevent overriding the parent project's compiler/linker
-  # settings on Windows
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-  # Add googletest directly to our build. This defines
-  # the gtest and gtest_main targets.
-  add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
-    ${CMAKE_BINARY_DIR}/googletest-build)
-
-  message( STATUS "GTest source dir: " ${gtest_SOURCE_DIR})
-
   add_executable(googletests bf.cpp utils.cpp)
-  target_include_directories(googletests INTERFACE ${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-  target_link_libraries(googletests gtest gtest_main ${COMMON_LIBRARIES})
+  target_include_directories(googletests INTERFACE ${DEP_INSTALL_PREFIX}/googletest/include)
+  target_link_libraries(googletests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 
   add_test(NAME googletests COMMAND googletests)
 endif()

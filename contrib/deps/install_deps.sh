@@ -5,6 +5,11 @@ SCRIPT_PATH="$(realpath $(dirname ${BASH_SOURCE[0]}))"
 
 set -e
 
+if [[ "$#" -lt 3 ]]; then
+    echo "Syntax: $0 download_dir build_dir install_dir"
+    exit 1
+fi
+
 # dependency download path
 DOWNLOAD="$(realpath $1)"
 mkdir -p "${DOWNLOAD}"
@@ -16,70 +21,22 @@ mkdir -p "${BUILD}"
 INSTALL="$(realpath $3)"
 mkdir -p "${INSTALL}"
 
-# build and install C-Thread-Pool
-thpool_tarball="${DOWNLOAD}/C-Thread-Pool.tar.gz"
-if [[ ! -f "${thpool_tarball}" ]]; then
-    wget https://github.com/mar-file-system/C-Thread-Pool/archive/lanl.tar.gz -O "${thpool_tarball}"
-fi
+export SCRIPT_PATH
+export DOWNLOAD
+export BUILD
+export INSTALL
 
-thpool_name="C-Thread-Pool"
-thpool_prefix="${INSTALL}/${thpool_name}"
-if [[ ! -d "${thpool_prefix}" ]]; then
-    if [[ ! -d "${thpool_tarball}" ]]; then
-        tar -xf "${thpool_tarball}" -C "${BUILD}"
-    fi
-    cd "${BUILD}/C-Thread-Pool-lanl"
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        cmake .. -DCMAKE_INSTALL_PREFIX="${thpool_prefix}"
-    fi
-    make
-    make install
-fi
+echo "Installing C-Thread-Pool"
+. ${SCRIPT_PATH}/thpool.sh
 
-# build and install sqlite3
-sqlite3_tarball="${DOWNLOAD}/sqlite-autoconf-3270200.tar.gz"
-if [[ ! -f "${sqlite3_tarball}" ]]; then
-    wget https://www.sqlite.org/2019/sqlite-autoconf-3270200.tar.gz -O "${sqlite3_tarball}"
-fi
+echo "Installing SQLite3"
+. ${SCRIPT_PATH}/sqlite3.sh
 
-sqlite3_name="sqlite3"
-sqlite3_prefix="${INSTALL}/${sqlite3_name}"
-if [[ ! -d "${sqlite3_prefix}" ]]; then
-    if [[ ! -d "${BUILD}/sqlite-autoconf-3270200" ]]; then
-        tar -xf "${sqlite3_tarball}" -C "${BUILD}"
-    fi
-    cd "${BUILD}/sqlite-autoconf-3270200"
-    patch < "${SCRIPT_PATH}/sqlite-autoconf-3270200.patch"
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        ../configure --prefix="${sqlite3_prefix}"
-    fi
-    make
-    make install
-fi
+echo "Installing SQLITE3 PCRE"
+. ${SCRIPT_PATH}/sqlite3_pcre.sh
 
-# build and install sqlite3-pcre
-pcre_tarball="${DOWNLOAD}/sqlite3-pcre.tar.gz"
-if [[ ! -f "${pcre_tarball}" ]]; then
-    wget https://github.com/mar-file-system/sqlite3-pcre/archive/master.tar.gz -O "${pcre_tarball}"
-fi
+echo "Installing GoogleTest"
+. ${SCRIPT_PATH}/googletest.sh
 
-pcre_name="sqlite3-pcre"
-pcre_prefix="${INSTALL}/${pcre_name}"
-if [[ ! -d "${pcre_prefix}" ]]; then
-    export PKG_CONFIG_PATH="${sqlite3_prefix}/lib/pkgconfig:${PKG_CONFIG_PATH}"
-    if [[ ! -d "${BUILD}/sqlite3-pcre-master" ]]; then
-        tar -xf "${pcre_tarball}" -C "${BUILD}"
-    fi
-    cd "${BUILD}/sqlite3-pcre-master"
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        cmake .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
-    fi
-    make
-    make install
-fi
+echo "Installing Paramiko"
+. ${SCRIPT_PATH}/paramiko.sh

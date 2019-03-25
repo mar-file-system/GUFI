@@ -163,12 +163,11 @@ pkg_search_module(PCRE REQUIRED libpcre)
 #   message(FATAL_ERROR "Could not find static library files for libpcre.")
 # endif()
 
-# download and build C-Thread-Pool, sqlite3, and sqlite3-pcre
-# they will be linked statically
-set(STATIC_DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of statically linked dependency sources"  PATH)
-set(STATIC_DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of statically linked dependency builds"   PATH)
-set(STATIC_DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of statically linked dependency binaries" PATH)
-add_custom_target(install_dependencies COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh "${STATIC_DEP_DOWNLOAD_PREFIX}" "${STATIC_DEP_BUILD_PREFIX}" "${STATIC_DEP_INSTALL_PREFIX}")
+# download and build all non-system dependencies
+set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of dependency sources"  PATH)
+set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of dependency builds"   PATH)
+set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of dependency binaries" PATH)
+add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
@@ -219,21 +218,23 @@ endif()
 set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include
   ${XATTR_INCLUDEDIR}
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3/include
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3-pcre
-  ${STATIC_DEP_INSTALL_PREFIX}/C-Thread-Pool/include)
+  ${DEP_INSTALL_PREFIX}/sqlite3/include
+  ${DEP_INSTALL_PREFIX}/sqlite3-pcre
+  ${DEP_INSTALL_PREFIX}/C-Thread-Pool/include)
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries
 set(COMMON_LIBRARIES
   GUFI
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
+  ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
+  ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
   pcre
-  ${STATIC_DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
+  ${DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
   Threads::Threads
   m
   dl)
+
+# set(STATIC_LIBRARIES)
 
 # tell CMake to look at the src directory
 add_subdirectory(src)
@@ -277,8 +278,6 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/scripts ${CMAKE_SOURCE_DIR}/scripts/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
                            DEPENDS test/googletest)
 
 # generate the tarball
@@ -291,7 +290,6 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Ma
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
                        DEPENDS create_tarball)
 
 # test the tarball
