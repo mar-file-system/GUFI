@@ -11,20 +11,20 @@ if [[ "$#" -lt 3 ]]; then
 fi
 
 # dependency download path
-DOWNLOAD="$(realpath $1)"
-mkdir -p "${DOWNLOAD}"
+DOWNLOAD_DIR="$(realpath $1)"
+mkdir -p "${DOWNLOAD_DIR}"
 
-BUILD="$(realpath $2)"
-mkdir -p "${BUILD}"
+BUILD_DIR="$(realpath $2)"
+mkdir -p "${BUILD_DIR}"
 
 # dependency install path
-INSTALL="$(realpath $3)"
-mkdir -p "${INSTALL}"
+INSTALL_DIR="$(realpath $3)"
+mkdir -p "${INSTALL_DIR}"
 
 export SCRIPT_PATH
-export DOWNLOAD
-export BUILD
-export INSTALL
+export DOWNLOAD_DIR
+export BUILD_DIR
+export INSTALL_DIR
 
 echo "Installing C-Thread-Pool"
 . ${SCRIPT_PATH}/thpool.sh

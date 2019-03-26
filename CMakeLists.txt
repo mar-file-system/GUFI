@@ -234,8 +234,6 @@ set(COMMON_LIBRARIES
   m
   dl)
 
-# set(STATIC_LIBRARIES)
-
 # tell CMake to look at the src directory
 add_subdirectory(src)
 

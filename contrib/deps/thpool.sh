@@ -6,18 +6,16 @@ set -e
 # Assume all paths exist
 
 thpool_name="C-Thread-Pool"
-thpool_prefix="${INSTALL}/${thpool_name}"
+thpool_prefix="${INSTALL_DIR}/${thpool_name}"
 if [[ ! -d "${thpool_prefix}" ]]; then
-    thpool_build="${BUILD}/C-Thread-Pool-lanl"
+    thpool_build="${BUILD_DIR}/C-Thread-Pool-lanl"
     if [[ ! -d "${thpool_build}" ]]; then
-        thpool_tarball="${DOWNLOAD}/C-Thread-Pool.tar.gz"
+        thpool_tarball="${DOWNLOAD_DIR}/C-Thread-Pool.tar.gz"
         if [[ ! -f "${thpool_tarball}" ]]; then
             wget https://github.com/mar-file-system/C-Thread-Pool/archive/lanl.tar.gz -O "${thpool_tarball}"
         fi
-    fi
 
-    if [[ ! -d "${thpool_build}" ]]; then
-        tar -xf "${thpool_tarball}" -C "${BUILD}"
+        tar -xf "${thpool_tarball}" -C "${BUILD_DIR}"
     fi
 
     cd "${thpool_build}"
