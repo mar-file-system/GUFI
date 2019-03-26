@@ -59,14 +59,16 @@ if __name__=='__main__':
         nl = True
         out = []
         for idx,column in enumerate(line.split(args.in_delim)):
-            if idx == 0: # path
+            #path and linkname
+            if idx in [0,13]: # path
                 anon = anonymize(column, hash=Hashes[args.hash])
                 if len(anon) > 490:
                     nl = False
                     break
                 else:
                     out += [anon]
-            elif idx in [5,6,13]:
+            #leave in case we anony ints
+            elif idx in []:
                 anon = anonymize(column, hash=Hashes[args.hash])
                 # convert numeric columns back to numbers
                 try:
