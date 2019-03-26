@@ -78,7 +78,6 @@ cmake_minimum_required(VERSION 3.0.0)
 # list of scripts that act as tools
 set(TOOLS gufi_find gufi_stats gufi_ls query_builder.py)
 
-set(PARAMIKO OFF CACHE BOOL "Whether or not to install paramiko")
 if (PARAMIKO)
   # add gufi_client to the list of tools
   set(TOOLS ${TOOLS} gufi_client)

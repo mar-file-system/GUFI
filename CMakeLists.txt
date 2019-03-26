@@ -153,10 +153,6 @@ find_package(Threads REQUIRED)
 # load the ExternalProject module
 include(ExternalProject)
 
-# Allow the user to chose to use HTTPS or SSH
-set(GIT_DL_METHOD HTTPS CACHE STRING "Use HTTPS or SSH to download git repositories")
-string(TOLOWER "${GIT_DL_METHOD}" GIT_DL_METHOD)
-
 # need PCRE for linking only
 pkg_search_module(PCRE REQUIRED libpcre)
 # if (NOT EXISTS PCRE_STATIC_LIBS)
@@ -167,7 +163,15 @@ pkg_search_module(PCRE REQUIRED libpcre)
 set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of dependency sources"  PATH)
 set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of dependency builds"   PATH)
 set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of dependency binaries" PATH)
-add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
+set(PARAMIKO            OFF                                CACHE  BOOL "Whether or not to install paramiko")
+set(DEP_OPTIONS "")
+if (CMAKE_CXX_COMPILER)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
+endif()
+if (PARAMIKO)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --paramiko)
+endif()
+add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)

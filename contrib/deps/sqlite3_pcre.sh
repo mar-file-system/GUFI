@@ -11,7 +11,6 @@ ${SCRIPT_PATH}/sqlite3.sh
 pcre_name="sqlite3-pcre"
 pcre_prefix="${INSTALL_DIR}/${pcre_name}"
 if [[ ! -d "${pcre_prefix}" ]]; then
-    export PKG_CONFIG_PATH="${INSTALL}/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
     pcre_build="${BUILD_DIR}/sqlite3-pcre-master"
     if [[ ! -d "${pcre_build}" ]]; then
         pcre_tarball="${DOWNLOAD_DIR}/sqlite3-pcre.tar.gz"
@@ -26,6 +25,7 @@ if [[ ! -d "${pcre_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
+        export PKG_CONFIG_PATH="${INSTALL_DIR}/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
         cmake .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
     fi
     make
