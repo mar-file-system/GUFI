@@ -5,7 +5,7 @@ SCRIPT_PATH="$(realpath $(dirname ${BASH_SOURCE[0]}))"
 
 set -e
 
-CXX="false"
+BUILD_CXX="false"
 PARAMIKO="false"
 
 # https://stackoverflow.com/a/14203146
@@ -17,7 +17,7 @@ key="$1"
 
 case $key in
     --cxx)
-    CXX="true"
+    BUILD_CXX="true"
     shift # past argument
     ;;
     --paramiko)
@@ -62,7 +62,7 @@ echo "Installing SQLite3"
 echo "Installing SQLITE3 PCRE"
 . ${SCRIPT_PATH}/sqlite3_pcre.sh
 
-if [[ "${CXX}" == "true" ]]; then
+if [[ "${BUILD_CXX}" == "true" ]]; then
     echo "Installing GoogleTest"
     . ${SCRIPT_PATH}/googletest.sh
 fi

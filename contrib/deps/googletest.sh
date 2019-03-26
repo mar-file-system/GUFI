@@ -22,7 +22,7 @@ if [[ ! -d "${googletest_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        cmake .. -DCMAKE_INSTALL_PREFIX="${googletest_prefix}" #-DBUILD_GMOCK=OFF
+        cmake .. -DCMAKE_INSTALL_PREFIX="${googletest_prefix}" -DBUILD_GMOCK=OFF
     fi
     make
     make install
