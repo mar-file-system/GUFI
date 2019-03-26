@@ -81,7 +81,7 @@ import sys
 
 import query_builder as qb
 
-BFQ_EXEC = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bfq')
+BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "src", 'bfq')
 
 def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''
