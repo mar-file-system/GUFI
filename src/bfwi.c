@@ -75,24 +75,24 @@ OF SUCH DAMAGE.
 
 
 
-#include <unistd.h>
-#include <sys/types.h>
+#include <ctype.h>
 #include <dirent.h>
-#include <stdio.h>
-#include <string.h>
+#include <errno.h>
+#include <float.h>
+#include <pthread.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
-#include <utime.h>
+#include <sys/types.h>
 #include <sys/xattr.h>
-#include <sqlite3.h>
-#include <ctype.h>
-#include <errno.h>
-#include <pthread.h>
+#include <time.h>
+#include <unistd.h>
+#include <utime.h>
 
 #include <pwd.h>
 #include <grp.h>
-//#include <uuid/uuid.h>
 
 #include "bf.h"
 #include "structq.h"
@@ -134,12 +134,25 @@ void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
 
 }
 
+double diff(struct timespec start, struct timespec end) {
+    return (((end.tv_sec * 1e9) + end.tv_nsec) - ((start.tv_sec * 1e9) + start.tv_nsec)) / 1e9;
+}
+
 void *scout(void * param) {
     char *ret;
     FILE *finfile;
     char linein[MAXPATH+MAXPATH+MAXPATH];
     long long int foffset;
     struct work * mywork;
+
+    struct timespec total_start, total_end;
+    struct timespec parse_start, parse_end;
+    struct timespec queue_start, queue_end;
+    double total = 0;
+    double parse = 0;
+    double queue = 0;
+
+    clock_gettime(CLOCK_MONOTONIC, &total_start);
 
     mywork=malloc(sizeof(struct work));
     //printf("in scout arg %s\n",param);
@@ -152,25 +165,115 @@ void *scout(void * param) {
     //printf("reading input file now\n");
     //sleep(5);
     while (fgets (linein, sizeof(linein), finfile) != NULL) {
-          //printf("got input line %s\n",linein);
-          parsetowork (in.delim, linein, mywork );
-          //printf("%s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-          fgetpos(finfile,(fpos_t *) &foffset);
-          if (!strncmp("d",mywork->type,1)) {
-             mywork->pinode=0;
-             //printf("pushing %s %s %llu %d %d %d %d %llu %d %llu %lu %lu %lu\n",mywork->name,mywork->type,mywork->statuso.st_ino,mywork->statuso.st_mode,mywork->statuso.st_nlink,mywork->statuso.st_uid,mywork->statuso.st_gid,mywork->statuso.st_size,mywork->statuso.st_blksize,mywork->statuso.st_blocks,mywork->statuso.st_atime,mywork->statuso.st_mtime,mywork->statuso.st_ctime);
-             //printf("foffsett %lld\n",foffset);
-             mywork->offset=foffset;
-             pushdir(mywork);
-          }
+
+        clock_gettime(CLOCK_MONOTONIC, &parse_start);
+
+        //printf("got input line %s\n",linein);
+        parsetowork (in.delim, linein, mywork );
+        clock_gettime(CLOCK_MONOTONIC, &parse_end);
+        parse += diff(parse_start, parse_end);
+
+        fgetpos(finfile,(fpos_t *) &foffset);
+
+        clock_gettime(CLOCK_MONOTONIC, &queue_start);
+        if (!strncmp("d",mywork->type,1)) {
+            mywork->pinode=0;
+            mywork->offset=foffset;
+            pushdir(mywork);
+        }
+        clock_gettime(CLOCK_MONOTONIC, &queue_end);
+        queue += diff(queue_start, queue_end);
     }
     fclose(finfile);
     //sleep(5);
     decrthread(); /* take one thread away so others can finish */
     ret=(char *) malloc(20);
     strcpy(ret, "scout finished");
+    clock_gettime(CLOCK_MONOTONIC, &total_end);
+    total = diff(total_start, total_end);
+
+    fprintf(stderr, "%f %f %f\n", total, parse, queue);
+
     pthread_exit(ret);
 }
+
+/* /\* */
+/* ** This function is used to load the contents of a database file on disk */
+/* ** into the "main" database of open database connection pInMemory, or */
+/* ** to save the current contents of the database opened by pInMemory into */
+/* ** a database file on disk. pInMemory is probably an in-memory database, */
+/* ** but this function will also work fine if it is not. */
+/* ** */
+/* ** Parameter zFilename points to a nul-terminated string containing the */
+/* ** name of the database file on disk to load from or save to. If parameter */
+/* ** isSave is non-zero, then the contents of the file zFilename are */
+/* ** overwritten with the contents of the database opened by pInMemory. If */
+/* ** parameter isSave is zero, then the contents of the database opened by */
+/* ** pInMemory are replaced by data loaded from the file zFilename. */
+/* ** */
+/* ** If the operation is successful, SQLITE_OK is returned. Otherwise, if */
+/* ** an error occurs, an SQLite error code is returned. */
+/* *\/ */
+/* int loadOrSaveDb(sqlite3 *pInMemory, const char *zFilename, int isSave){ */
+/*     int rc;                   /\* Function return code *\/ */
+/*     sqlite3 *pFile;           /\* Database connection opened on zFilename *\/ */
+/*     sqlite3_backup *pBackup;  /\* Backup object used to copy data *\/ */
+/*     sqlite3 *pTo;             /\* Database to copy to (pFile or pInMemory) *\/ */
+/*     sqlite3 *pFrom;           /\* Database to copy from (pFile or pInMemory) *\/ */
+
+/*     /\* Open the database file identified by zFilename. Exit early if this fails */
+/*     ** for any reason. *\/ */
+/*     rc = sqlite3_open(zFilename, &pFile); */
+/*     if( rc==SQLITE_OK ){ */
+
+/*         /\* If this is a 'load' operation (isSave==0), then data is copied */
+/*         ** from the database file just opened to database pInMemory. */
+/*         ** Otherwise, if this is a 'save' operation (isSave==1), then data */
+/*         ** is copied from pInMemory to pFile.  Set the variables pFrom and */
+/*         ** pTo accordingly. *\/ */
+/*         pFrom = (isSave ? pInMemory : pFile); */
+/*         pTo   = (isSave ? pFile     : pInMemory); */
+
+/*         /\* Set up the backup procedure to copy from the "main" database of */
+/*         ** connection pFile to the main database of connection pInMemory. */
+/*         ** If something goes wrong, pBackup will be set to NULL and an error */
+/*         ** code and message left in connection pTo. */
+/*         ** */
+/*         ** If the backup object is successfully created, call backup_step() */
+/*         ** to copy data from pFile to pInMemory. Then call backup_finish() */
+/*         ** to release resources associated with the pBackup object.  If an */
+/*         ** error occurred, then an error code and message will be left in */
+/*         ** connection pTo. If no error occurred, then the error code belonging */
+/*         ** to pTo is set to SQLITE_OK. */
+/*         *\/ */
+/*         pBackup = sqlite3_backup_init(pTo, "main", pFrom, "main"); */
+/*         if( pBackup ){ */
+/*             (void)sqlite3_backup_step(pBackup, -1); */
+/*             (void)sqlite3_backup_finish(pBackup); */
+/*         } */
+/*         rc = sqlite3_errcode(pTo); */
+/*     } */
+
+/*     /\* Close the database connection opened on database file zFilename */
+/*     ** and return the result of this function. *\/ */
+/*     (void)sqlite3_close(pFile); */
+/*     return rc; */
+/* } */
+
+
+/* struct stats { */
+/*     double total; */
+/*     double open; */
+/*     double table; */
+/*     double insert; */
+/* }; */
+
+/* struct minmax { */
+/*     struct stats min; */
+/*     struct stats max; */
+/* }; */
+
+/* struct minmax minmaxstats[MAXPTHREAD]; */
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
@@ -186,17 +289,27 @@ static void processdir(void * passv)
     char *records;
     struct sum summary;
     sqlite3_stmt *res = NULL;
-    sqlite3_stmt *reso = NULL;
     char dbpath[MAXPATH];
     int transcnt;
-    int loop;
     char plinein[MAXPATH+MAXPATH+MAXPATH];
+    /* int dupdirectory = 0; */
+
+    struct timespec total_start, total_end;
+    struct timespec opendb_start, opendb_end;
+    struct timespec table_start, table_end;
+    struct timespec insert_start, insert_end;
+    /* struct timespec dump_start, dump_end; */
+    double opendb_time = 0;
+    double table_time = 0;
+    /* double dump_time = 0; */
+    clock_gettime(CLOCK_MONOTONIC, &total_start);
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
     mytid=0;
     //if (in.outfile > 0) mytid=gettid();
     mytid=gettid();
+
 
     //if (in.infile > 0) return;
     //printf("in processdir tid %d passin name %s type %s offset %lld\n",mytid,passmywork->name,passmywork->type,passmywork->offset);
@@ -228,20 +341,34 @@ static void processdir(void * passv)
        records=malloc(MAXRECS);
        memset(records, 0, MAXRECS);
        zeroit(&summary);
-       if (!(db = opendb(passmywork->name,4,1)))
+
+       clock_gettime(CLOCK_MONOTONIC, &opendb_start);
+       if (!(db = opendb(passmywork->name,4,0))) {
+       /* if (!(db = opendb(":memory:",4,0))) { */
           goto out_dir;
-       res=insertdbprep(db,reso);
+       }
+       clock_gettime(CLOCK_MONOTONIC, &opendb_end);
+       opendb_time += diff(opendb_start, opendb_end);
+
+       /* // create tables separately to detect when it fails (database already exists) */
+       /* dupdirectory = (create_tables(passmywork->name, 4, db) != 0); */
+       clock_gettime(CLOCK_MONOTONIC, &table_start);
+       create_tables(passmywork->name, 4, db);
+       /* create_tables(":memory:", 4, db); */
+       clock_gettime(CLOCK_MONOTONIC, &table_end);
+       table_time += diff(table_start, table_end);
+
+       res=insertdbprep(db,NULL);
        startdb(db);
     }
 
     //printf("tid %d made db\n",mytid);
     // loop over dirents, if link push it on the queue, if file or link
     // print it, fill up qwork structure for each
+    clock_gettime(CLOCK_MONOTONIC, &insert_start);
     transcnt = 0;
-    loop=1;
     //do {
-    while (loop == 1) {
-
+    while (1) {
         if (in.infile == 0) {
           /* get the next dirent */
           if (!(entry = readdir(dir))) break;
@@ -291,7 +418,7 @@ static void processdir(void * passv)
               qwork.offset=pos;
               pushdir(&qwork);
 */
-              loop=0;
+              break;
             }
         } else if (S_ISLNK(qwork.statuso.st_mode) ) {
             // its a link so get the linkname
@@ -334,6 +461,7 @@ static void processdir(void * passv)
         }
     //} while ((entry = (readdir(dir))));
     }
+    clock_gettime(CLOCK_MONOTONIC, &insert_end);
 
     if (in.buildindex > 0) {
       stopdb(db);
@@ -341,9 +469,17 @@ static void processdir(void * passv)
 
       // this i believe has to be after we close off the entries transaction
       insertsumdb(db,passmywork,&summary);
-      closedb(db);
 
       SNPRINTF(dbpath, MAXPATH, "%s/%s/" DBNAME, in.nameto,passmywork->name);
+
+      /* clock_gettime(CLOCK_MONOTONIC, &dump_start); */
+      /* if (loadOrSaveDb(db, dbpath, 1) != SQLITE_OK) { */
+      /*     fprintf(stderr, "Error writing to %s\n", dbpath); */
+      /* } */
+      /* clock_gettime(CLOCK_MONOTONIC, &dump_end); */
+
+      closedb(db);
+
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
@@ -361,7 +497,48 @@ static void processdir(void * passv)
 
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
+    clock_gettime(CLOCK_MONOTONIC, &total_end);
 
+    double total_time = diff(total_start, total_end);
+    double insert_time = diff(insert_start, insert_end) / transcnt;
+
+    /* if (total_time > minmaxstats[mytid].max.total) { */
+    /*     minmaxstats[mytid].max.total = total_time; */
+    /* } */
+
+    /* if (opendb_time > minmaxstats[mytid].max.open) { */
+    /*     minmaxstats[mytid].max.open = opendb_time; */
+    /* } */
+
+    /* if (table_time > minmaxstats[mytid].max.table) { */
+    /*     minmaxstats[mytid].max.table = table_time; */
+    /* } */
+
+    /* if (transcnt) { */
+    /*     if (insert_time > minmaxstats[mytid].max.insert) { */
+    /*         minmaxstats[mytid].max.insert = insert_time; */
+    /*     } */
+    /* } */
+
+    /* if (total_time < minmaxstats[mytid].min.total) { */
+    /*     minmaxstats[mytid].min.total = total_time; */
+    /* } */
+
+    /* if (opendb_time < minmaxstats[mytid].min.open) { */
+    /*     minmaxstats[mytid].min.open = opendb_time; */
+    /* } */
+
+    /* if (table_time < minmaxstats[mytid].min.table) { */
+    /*     minmaxstats[mytid].min.table = table_time; */
+    /* } */
+
+    /* if (transcnt) { */
+    /*     if (insert_time < minmaxstats[mytid].min.insert) { */
+    /*         minmaxstats[mytid].min.insert = insert_time; */
+    /*     } */
+    /* } */
+
+    fprintf(stdout, "%f, %f, %f, %f\n", total_time, opendb_time, table_time, insert_time);
     /// return NULL;
 }
 
@@ -392,8 +569,18 @@ int processinit(void * myworkin) {
          exit(-1); /* not the best way out i suppose */
        }
        i=0;
+       /* memset(&minmaxstats, 0, sizeof(minmaxstats)); */
        while (i < in.maxthreads) {
          gin[i]=fopen(in.name,"r");
+         /* minmaxstats[i].min.total  =  DBL_MAX; */
+         /* minmaxstats[i].min.open   =  DBL_MAX; */
+         /* minmaxstats[i].min.table  =  DBL_MAX; */
+         /* minmaxstats[i].min.insert =  DBL_MAX; */
+         /* minmaxstats[i].max.total   = -DBL_MAX; */
+         /* minmaxstats[i].max.open    = -DBL_MAX; */
+         /* minmaxstats[i].max.table   = -DBL_MAX; */
+         /* minmaxstats[i].max.insert  = -DBL_MAX; */
+
          i++;
        }
        /* loop through reading the input file and putting the directories found on the queue */
@@ -490,6 +677,62 @@ int processfin() {
        //printf("retval=%s\n",retval);
      }
 
+     /* struct minmax final; */
+     /* final.min.total  =  DBL_MAX; */
+     /* final.min.open   =  DBL_MAX; */
+     /* final.min.table  =  DBL_MAX; */
+     /* final.min.insert =  DBL_MAX; */
+     /* final.max.total   = -DBL_MAX; */
+     /* final.max.open    = -DBL_MAX; */
+     /* final.max.table   = -DBL_MAX; */
+     /* final.max.insert  = -DBL_MAX; */
+
+     /* printf("Total Min, Total Max, Open Min, Open Max, Table Min, Table Max, Insert Min, Insert Max\n"); */
+     /* for(i = 0; i < in.maxthreads; i++) { */
+     /*     printf("%f, %f, %f, %f, %f, %f, %f, %f\n", */
+     /*            minmaxstats[i].min.total,  minmaxstats[i].max.total, */
+     /*            minmaxstats[i].min.open,   minmaxstats[i].max.open, */
+     /*            minmaxstats[i].min.table,  minmaxstats[i].max.table, */
+     /*            minmaxstats[i].min.insert, minmaxstats[i].max.insert); */
+
+     /*     if (minmaxstats[i].max.total > final.max.total) { */
+     /*         final.max.total = minmaxstats[i].max.total; */
+     /*     } */
+
+     /*     if (minmaxstats[i].max.open > final.max.open) { */
+     /*         final.max.open = minmaxstats[i].max.open; */
+     /*     } */
+
+     /*     if (minmaxstats[i].max.table > final.max.table) { */
+     /*         final.max.table = minmaxstats[i].max.table; */
+     /*     } */
+
+     /*     if (minmaxstats[i].max.insert > final.max.insert) { */
+     /*         final.max.insert = minmaxstats[i].max.insert; */
+     /*     } */
+
+     /*     if (minmaxstats[i].min.total < final.min.total) { */
+     /*         final.min.total = minmaxstats[i].min.total; */
+     /*     } */
+
+     /*     if (minmaxstats[i].min.open < final.min.open) { */
+     /*         final.min.open = minmaxstats[i].min.open; */
+     /*     } */
+
+     /*     if (minmaxstats[i].min.table < final.min.table) { */
+     /*         final.min.table = minmaxstats[i].min.table; */
+     /*     } */
+
+     /*     if (minmaxstats[i].min.insert < final.min.insert) { */
+     /*         final.min.insert = minmaxstats[i].min.insert; */
+     /*     } */
+     /* } */
+
+     /* printf("\n%f, %f, %f, %f, %f, %f, %f, %f\n", */
+     /*        final.min.total,  final.max.total, */
+     /*        final.min.open,   final.max.open, */
+     /*        final.min.table,  final.max.table, */
+     /*        final.min.insert, final.max.insert); */
      return 0;
 }
 

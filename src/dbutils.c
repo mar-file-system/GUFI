@@ -80,7 +80,6 @@ OF SUCH DAMAGE.
 
 #include <pwd.h>
 #include <grp.h>
-#include <uuid/uuid.h>
 #include "pcre.h"
 
 #include "dbutils.h"
@@ -94,12 +93,12 @@ char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
 char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode,@suspect);";
 
 char *esql = // "DROP TABLE IF EXISTS entries;"
-            "CREATE TABLE IF NOT EXISTS entries(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+            "CREATE TABLE entries(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode INT64);";
 
-char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
+char *esqli = "INSERT INTO entries VALUES (NULL,@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2,@pinode);";
 
 char *ssql = "DROP TABLE IF EXISTS summary;"
-             "CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
+             "CREATE TABLE summary(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
 
 char *tsql = "DROP TABLE IF EXISTS treesummary;"
              "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
@@ -157,36 +156,61 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
   return db;
 }
 
-// sqlite3_exec(db, tsql, 0, 0, &err_msg);
-#define SQLITE3_EXEC(DB, SQL, FN, ARG, ERRMSG)                       \
-    do {                                                             \
-        rc = sqlite3_exec(DB, SQL, FN, ARG, ERRMSG);                 \
-        if (rc != SQLITE_OK ) {                                      \
-            fprintf(stderr, "%s:%d SQL error [%s]: '%s'\nSQL: %s",   \
-                    __FILE__, __LINE__, #SQL, *(ERRMSG), SQL);       \
-            sqlite3_free(*(ERRMSG));                                 \
-            sqlite3_close(DB);                                       \
-                                                                     \
-            /* Gary debugging */                                     \
-            printf("trying  %s\n",dbn);                              \
-            printf("trying  %s\n",vssqldir);                         \
-            SNPRINTF(deb,MAXPATH,"ls -l %s/%s",in.nameto,name);      \
-            system(deb);                                             \
-            exit(9);                                                 \
-                                                                     \
-            return NULL;                                             \
-        }                                                            \
-    } while (0)
+static int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args) {
+    char *err_msg = NULL;
+    const int rc = sqlite3_exec(db, sql, callback, args, &err_msg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "%s:%d SQL error while executing '%s' on %s: '%s' (%d)\n",
+                __FILE__, __LINE__, sql_name, name, err_msg, rc);
+        sqlite3_free(err_msg);
+    }
+    return rc;
+}
+
+int create_tables(const char *name, const int openwhat, sqlite3 *db) {
+    if (openwhat==1 || openwhat==4 || openwhat==8) {
+        if (create_table_wrapper(name, db, "esql",         esql,         NULL, NULL) != SQLITE_OK) {
+            return -1;
+        }
+    }
+
+    if (openwhat==3) {
+        if ((create_table_wrapper(name, db, "tsql",        tsql,        NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vtssqldir",   vtssqldir,   NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vtssqluser",  vtssqluser,  NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup, NULL, NULL) != SQLITE_OK)) {
+            return -1;
+        }
+    }
+
+    if (openwhat==2 || openwhat==4 || openwhat==8) {
+        if ((create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+            return -1;
+        }
+    }
+
+    if (openwhat==7) {
+        if (create_table_wrapper(name, db, "rsql",         rsql,        NULL, NULL) != SQLITE_OK) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
 
 sqlite3 * opendb(const char *name, int openwhat, int createtables)
 {
-    sqlite3 *db = NULL;
-    char *err_msg = 0;
+    sqlite3 * db = NULL;
+    char *err_msg = NULL;
     char dbn[MAXPATH];
-    int rc;
-    char deb[MAXPATH];
 
-    sqlite3_snprintf(MAXSQL, dbn,"%s/%s", name, DBNAME);
+    /* sqlite3_snprintf(MAXSQL, dbn, "%s", name); */
+
+    sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME);
     if (createtables) {
        if (openwhat != 3)
           sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
@@ -194,12 +218,12 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
           sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
     else {
-       if (openwhat == 6)
-          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
        if (openwhat == 5)
           sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+       else
+       // if (openwhat == 6)
+          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
     }
-
 
     //    // The current codebase is not intended to handle incremental updates.
     //    // When initializing a DB, we always expect it not to already exist,
@@ -212,61 +236,43 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     //       }
     //    }
 
-    //printf("sqlite3_open %s\n",dbn);
-    rc = sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL);
-    if (rc != SQLITE_OK) {
-       sleep(2);
-       rc = sqlite3_open(dbn, &db);
-    }
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db),rc);
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-printf("trying to open %s\n",dbn);
-SNPRINTF(deb,MAXPATH,"ls -l %s/%s",in.nameto,name);
-system(deb);
-exit(9);
+    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
         return NULL;
     }
 
-    //printf("sqlite3_open %s openwhat %d\n",dbn,openwhat);
-    if (createtables) {
-       //printf("sqlite3_open %s openwhat %d creating tables\n",dbn,openwhat);
-       if (openwhat==1 || openwhat==4 || openwhat==8)
-          //printf("esql: %s \n", dbn);
-          SQLITE3_EXEC(db, esql, 0, 0, &err_msg);
-          //printf("esql: %s %s \n", dbn, sqlite3_errmsg(db));
+    /* // try to turn sychronization off */
+    /* if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
 
-       if (openwhat==3) {
-          SQLITE3_EXEC(db, tsql, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vtssqldir, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vtssqluser, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vtssqlgroup, 0, 0, &err_msg);
-       }
-       if (openwhat==2 || openwhat==4 || openwhat==8) {
-          SQLITE3_EXEC(db, ssql, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vssqldir, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vssqluser, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vssqlgroup, 0, 0, &err_msg);
-          SQLITE3_EXEC(db, vesql, 0, 0, &err_msg);
-          //printf("vesql: %s %s \n", dbn, sqlite3_errmsg(db));
-       }
-       if (openwhat==7) {
-          SQLITE3_EXEC(db, rsql, 0, 0, &err_msg);
-       }
+    /* // try to turn journaling off */
+    /* if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    /* // try to get an exclusive lock */
+    /* if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    /* // try increasing the page size */
+    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    if (createtables) {
+        if (create_tables(dbn, openwhat, db) != 0) {
+            fprintf(stderr, "Cannot create tables: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+            sqlite3_close(db);
+            return NULL;
+        }
     }
 
-    // Load a regular expression extension
-    //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) ||
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
         (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
         fprintf(stderr, "Unable to load regex extension\n");
+        sqlite3_free(err_msg);
         sqlite3_close(db);
         db = NULL;
     }
-    //#endif
 
-    //printf("returning from opendb ok\n");
     return db;
 }
 
@@ -547,12 +553,6 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     int found;
     int cnt;
 
-
-//    sprintf(sqlstmt,"INSERT INTO entries VALUES (\'%s\', \'%s\',%lld, %d, %d, %d, %d, %lld, %d, %lld, %ld, %ld, %ld, \'%s\', \'%s\');",zname,ztype,st->st_ino,st->st_mode,st->st_nlink,st->st_uid,st->st_gid,st->st_size,st->st_blksize,st->st_blocks,st->st_atime,st->st_mtime,st->st_ctime,zlinkname,zbufo);
-/*
-CREATE TABLE entries(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlink INT, uid INT, gid INT, size INT, blksize INT, blocks INT, atime INT, mtime INT, ctime INT, linkname TEXT, xattrs TEXT, crtime INT, ossint1 INT, ossint2 INT, ossint3 INT, ossint4 INT, osstext1 TEXT, osstext2 TEXT);";
-char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
-*/
     shortname=pwork->name;
     len=strlen(pwork->name);
     cnt=0;
@@ -601,6 +601,7 @@ char *esqli = "INSERT INTO entries VALUES (@name,@type,@inode,@mode,@nlink,@uid,
     sqlite3_bind_int64(res,20,pwork->ossint4);
     error=sqlite3_bind_text(res,21,zosstext1,-1,SQLITE_STATIC);
     error=sqlite3_bind_text(res,22,zosstext1,-1,SQLITE_STATIC);
+    sqlite3_bind_int64(res,23,pwork->pinode);
     error=sqlite3_step(res);
     sqlite3_free(zname);
     sqlite3_free(ztype);
@@ -697,7 +698,7 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
     char *zxattr    = sqlite3_mprintf("%q",pwork->xattr);
 
     SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
-            "(\'%s\', \'%s\', "
+            "(NULL, \'%s\', \'%s\', "
             "%"STAT_ino", %d, %"STAT_nlink", %d, %d, %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
             "\'%s\', \'%s\', "
             "%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld);",

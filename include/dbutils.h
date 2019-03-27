@@ -106,6 +106,8 @@ sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
 
 sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 
+int create_tables(const char *name, const int openwhat, sqlite3 *db);
+
 sqlite3 * opendb(const char *name, int openwhat, int createtables);
 
 int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
