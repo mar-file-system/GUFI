@@ -248,7 +248,7 @@ def find_dir(root, paths, wholenames, out=subprocess.PIPE, err=subprocess.PIPE):
         This value should be waited on with communcate.
     '''
 
-    find_cmd = ['find', root, '-type', 'd'] + (' -o -path '.join([''] + paths) + ' -o -wholename '.join([''] + wholenames)).split()[1:]
+    find_cmd = ['find', root, '-type', 'd'] + (' -o -path '.join([''] + paths) + ' -o -wholename '.join([''] + wholenames)).split()[1:] + ['-prune']
     return subprocess.Popen(find_cmd, stdout=out, stderr=err)
 
 def cpus():
