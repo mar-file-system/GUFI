@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from base64 import b64encode, b64decode
+from base64 import urlsafe_b64encode, urlsafe_b64decode
 from binascii import hexlify, unhexlify
 import argparse
 import hashlib
@@ -43,7 +43,7 @@ def anonymize(string,                                # the data to hash
     Converts the hash into Base64 to make it printable characters only
     Recombines the chunks with path separators
     '''
-    return sep.join(['' if part == '' else b64encode(hash((salt(part, args) if salt else "") + part).digest()) for part in string.split(sep)])
+    return sep.join(['' if part == '' else urlsafe_b64encode(hash((salt(part, args) if salt else "") + part).digest()) for part in string.split(sep)])
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Column Anonymizer: Read from stdin. Output to stdout.')
@@ -71,11 +71,7 @@ if __name__=='__main__':
             elif idx in []:
                 anon = anonymize(column, hash=Hashes[args.hash])
                 # convert numeric columns back to numbers
-                try:
-                    col = int(column)
-                    out += [str(int(hexlify(b64decode(anon)), 16))]
-                except:
-                    out += [anon]
+                out += [str(int(hexlify(urlsafe_b64decode(anon)), 16))]
             else:
                 out += [column]
         if nl:
