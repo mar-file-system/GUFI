@@ -124,25 +124,21 @@ int printits(struct work *pwork,int ptid) {
     SNPRINTF(ffielddelim,2,"%s",in.delim);
   }
 
-  fprintf(out,"%s%s",pwork->name,ffielddelim);
-
-  if (!strncmp(pwork->type,"l",1)) fprintf(out,"l%s",ffielddelim);
-  if (!strncmp(pwork->type,"f",1)) fprintf(out,"f%s",ffielddelim);
-  if (!strncmp(pwork->type,"d",1)) fprintf(out,"d%s",ffielddelim);
-
-  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino, ffielddelim);
+  fprintf(out, "%s%s",             pwork->name,               ffielddelim);
+  fprintf(out, "%c%s",             pwork->type[0],            ffielddelim);
+  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino,     ffielddelim);
   /* moved this to end because we would like to use this for input to bfwi load from file */
   //fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
-  fprintf(out, "%d%s",             pwork->statuso.st_mode, ffielddelim);
-  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink, ffielddelim);
-  fprintf(out, "%d%s",             pwork->statuso.st_uid, ffielddelim);
-  fprintf(out, "%d%s",             pwork->statuso.st_gid, ffielddelim);
-  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size, ffielddelim);
+  fprintf(out, "%d%s",             pwork->statuso.st_mode,    ffielddelim);
+  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink,   ffielddelim);
+  fprintf(out, "%d%s",             pwork->statuso.st_uid,     ffielddelim);
+  fprintf(out, "%d%s",             pwork->statuso.st_gid,     ffielddelim);
+  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size,    ffielddelim);
   fprintf(out, "%"STAT_bsize"%s",  pwork->statuso.st_blksize, ffielddelim);
-  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks, ffielddelim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_atime, ffielddelim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_mtime, ffielddelim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_ctime, ffielddelim);
+  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks,  ffielddelim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_atime,   ffielddelim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_mtime,   ffielddelim);
+  fprintf(out, "%ld%s",            pwork->statuso.st_ctime,   ffielddelim);
 
 /* we need this field even if its not populated for bfwi load from file */
 /*
@@ -481,9 +477,7 @@ int dupdir(struct work *pwork)
       if (errno == ENOENT) {
         //printf("calling mkpath on %s\n",topath);
         mkpath(topath,pwork->statuso.st_mode);
-      } else if (errno == EEXIST) {
-        return 0;
-      } else {
+      } else if (errno != EEXIST) {
         return 1;
       }
     }
