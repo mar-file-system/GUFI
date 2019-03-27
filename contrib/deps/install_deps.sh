@@ -5,6 +5,18 @@ SCRIPT_PATH="$(realpath $(dirname ${BASH_SOURCE[0]}))"
 
 set -e
 
+#Call the right cmake binary
+if [ -x "$(command -v cmake)" ]
+ then
+  CMAKE=$(command -v cmake)
+elif [ -x "$(command -v cmake3)" ]
+ then
+  CMAKE=$(command -v cmake3)
+else
+  echo "No cmake available!"
+  exit 0
+fi
+
 BUILD_CXX="false"
 PARAMIKO="false"
 
@@ -52,6 +64,7 @@ export SCRIPT_PATH
 export DOWNLOAD_DIR
 export BUILD_DIR
 export INSTALL_DIR
+export CMAKE
 
 echo "Installing C-Thread-Pool"
 . ${SCRIPT_PATH}/thpool.sh

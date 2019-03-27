@@ -22,7 +22,7 @@ if [[ ! -d "${thpool_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        cmake .. -DCMAKE_INSTALL_PREFIX="${thpool_prefix}"
+        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${thpool_prefix}"
     fi
     make
     make install

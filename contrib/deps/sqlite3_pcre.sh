@@ -26,7 +26,7 @@ if [[ ! -d "${pcre_prefix}" ]]; then
     cd build
     if [[ ! -f Makefile ]]; then
         export PKG_CONFIG_PATH="${INSTALL_DIR}/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
-        cmake .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
+        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
     fi
     make
     make install
