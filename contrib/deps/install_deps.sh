@@ -3,6 +3,22 @@
 # get where this script is
 SCRIPT_PATH="$(realpath $(dirname ${BASH_SOURCE[0]}))"
 
+#Call the right cmake binary
+#!/bin/bash
+
+#Call the right cmake binary
+if [ -x "$(command -v cmake)" ]
+ then
+  CMAKE=$(command -v cmake)
+elif [ -x "$(command -v cmake3)" ]
+ then
+  CMAKE=$(command -v cmake3)
+else
+  echo "No cmake available!"
+  exit 0
+fi
+
+
 set -e
 
 # dependency download path
@@ -32,7 +48,7 @@ if [[ ! -d "${thpool_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        cmake .. -DCMAKE_INSTALL_PREFIX="${thpool_prefix}"
+        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${thpool_prefix}"
     fi
     make
     make install
@@ -78,7 +94,7 @@ if [[ ! -d "${pcre_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        cmake .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
+        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
     fi
     make
     make install
