@@ -144,11 +144,10 @@ double diff(struct timespec start, struct timespec end) {
 }
 
 void *scout(void * param) {
-    char *ret;
     FILE *finfile;
     char linein[MAXPATH+MAXPATH+MAXPATH];
     long long int foffset;
-    struct work * mywork;
+    struct work mywork;
 
     /* struct timespec total_start, total_end; */
     /* struct timespec parse_start, parse_end; */
@@ -159,13 +158,13 @@ void *scout(void * param) {
 
     /* clock_gettime(CLOCK_MONOTONIC, &total_start); */
 
-    mywork=malloc(sizeof(struct work));
+    /* mywork=malloc(sizeof(struct work)); */
     //printf("in scout arg %s\n",param);
     //incrthread(); /* add one thread so the others wait for the scout */
     finfile=fopen(in.name,"r");
     if (finfile == NULL) {
         fprintf(stderr,"Cant open up the input file %s\n",in.name);
-      exit(-1); /* not the best way out i suppose */
+        exit(-1); /* not the best way out i suppose */
     }
     //printf("reading input file now\n");
     //sleep(5);
@@ -174,17 +173,17 @@ void *scout(void * param) {
         /* clock_gettime(CLOCK_MONOTONIC, &parse_start); */
 
         //printf("got input line %s\n",linein);
-        parsetowork (in.delim, linein, mywork );
+        parsetowork (in.delim, linein, &mywork );
         /* clock_gettime(CLOCK_MONOTONIC, &parse_end); */
         /* parse += diff(parse_start, parse_end); */
 
         fgetpos(finfile,(fpos_t *) &foffset);
 
         /* clock_gettime(CLOCK_MONOTONIC, &queue_start); */
-        if (!strncmp("d",mywork->type,1)) {
-            mywork->pinode=0;
-            mywork->offset=foffset;
-            pushdir(mywork);
+        if (!strncmp("d",mywork.type,1)) {
+            mywork.pinode=0;
+            mywork.offset=foffset;
+            pushdir(&mywork);
         }
         /* clock_gettime(CLOCK_MONOTONIC, &queue_end); */
         /* queue += diff(queue_start, queue_end); */
@@ -192,14 +191,12 @@ void *scout(void * param) {
     fclose(finfile);
     //sleep(5);
     decrthread(); /* take one thread away so others can finish */
-    ret=(char *) malloc(20);
-    strcpy(ret, "scout finished");
     /* clock_gettime(CLOCK_MONOTONIC, &total_end); */
     /* total = diff(total_start, total_end); */
 
     /* fprintf(stderr, "%f %f %f\n", total, parse, queue); */
 
-    pthread_exit(ret);
+    pthread_exit("scout finished");
 }
 
 #ifdef MEMORY
@@ -300,7 +297,6 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db = NULL;
-    /* char *records; */
     struct sum summary;
     sqlite3_stmt *res = NULL;
     char dbpath[MAXPATH];
@@ -352,8 +348,6 @@ static void processdir(void * passv)
          dupdir(passmywork);
          //printf("tid %d made dir %s\n",mytid,passmywork->name);
        }
-       /* records=malloc(MAXRECS); */
-       /* memset(records, 0, MAXRECS); */
        zeroit(&summary);
 
        char dbname[MAXPATH];
@@ -513,7 +507,6 @@ static void processdir(void * passv)
 
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
-      /* free(records); */
     }
 
  out_dir:
