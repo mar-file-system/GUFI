@@ -3,8 +3,7 @@
 # get where this script is
 SCRIPT_PATH="$(realpath $(dirname ${BASH_SOURCE[0]}))"
 
-#Call the right cmake binary
-#!/bin/bash
+set -e
 
 #Call the right cmake binary
 if [ -x "$(command -v cmake)" ]
@@ -18,84 +17,70 @@ else
   exit 0
 fi
 
+BUILD_CXX="false"
+PARAMIKO="false"
 
-set -e
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    --cxx)
+    BUILD_CXX="true"
+    shift # past argument
+    ;;
+    --paramiko)
+    PARAMIKO="true"
+    shift # past argument
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+if [[ "$#" -lt 3 ]]; then
+    echo "Syntax: $0 download_dir build_dir install_dir"
+    exit 1
+fi
 
 # dependency download path
-DOWNLOAD="$(realpath $1)"
-mkdir -p "${DOWNLOAD}"
+DOWNLOAD_DIR="$(realpath $1)"
+mkdir -p "${DOWNLOAD_DIR}"
 
-BUILD="$(realpath $2)"
-mkdir -p "${BUILD}"
+BUILD_DIR="$(realpath $2)"
+mkdir -p "${BUILD_DIR}"
 
 # dependency install path
-INSTALL="$(realpath $3)"
-mkdir -p "${INSTALL}"
+INSTALL_DIR="$(realpath $3)"
+mkdir -p "${INSTALL_DIR}"
 
-# build and install C-Thread-Pool
-thpool_tarball="${DOWNLOAD}/C-Thread-Pool.tar.gz"
-if [[ ! -f "${thpool_tarball}" ]]; then
-    wget https://github.com/mar-file-system/C-Thread-Pool/archive/lanl.tar.gz -O "${thpool_tarball}"
+export SCRIPT_PATH
+export DOWNLOAD_DIR
+export BUILD_DIR
+export INSTALL_DIR
+export CMAKE
+
+echo "Installing C-Thread-Pool"
+. ${SCRIPT_PATH}/thpool.sh
+
+echo "Installing SQLite3"
+. ${SCRIPT_PATH}/sqlite3.sh
+
+echo "Installing SQLITE3 PCRE"
+. ${SCRIPT_PATH}/sqlite3_pcre.sh
+
+if [[ "${BUILD_CXX}" == "true" ]]; then
+    echo "Installing GoogleTest"
+    . ${SCRIPT_PATH}/googletest.sh
 fi
 
-thpool_name="C-Thread-Pool"
-thpool_prefix="${INSTALL}/${thpool_name}"
-if [[ ! -d "${thpool_prefix}" ]]; then
-    if [[ ! -d "${thpool_tarball}" ]]; then
-        tar -xf "${thpool_tarball}" -C "${BUILD}"
-    fi
-    cd "${BUILD}/C-Thread-Pool-lanl"
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${thpool_prefix}"
-    fi
-    make
-    make install
-fi
-
-# build and install sqlite3
-sqlite3_tarball="${DOWNLOAD}/sqlite-autoconf-3270200.tar.gz"
-if [[ ! -f "${sqlite3_tarball}" ]]; then
-    wget https://www.sqlite.org/2019/sqlite-autoconf-3270200.tar.gz -O "${sqlite3_tarball}"
-fi
-
-sqlite3_name="sqlite3"
-sqlite3_prefix="${INSTALL}/${sqlite3_name}"
-if [[ ! -d "${sqlite3_prefix}" ]]; then
-    if [[ ! -d "${BUILD}/sqlite-autoconf-3270200" ]]; then
-        tar -xf "${sqlite3_tarball}" -C "${BUILD}"
-    fi
-    cd "${BUILD}/sqlite-autoconf-3270200"
-    patch < "${SCRIPT_PATH}/sqlite-autoconf-3270200.patch"
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        ../configure --prefix="${sqlite3_prefix}"
-    fi
-    make
-    make install
-fi
-
-# build and install sqlite3-pcre
-pcre_tarball="${DOWNLOAD}/sqlite3-pcre.tar.gz"
-if [[ ! -f "${pcre_tarball}" ]]; then
-    wget https://github.com/mar-file-system/sqlite3-pcre/archive/master.tar.gz -O "${pcre_tarball}"
-fi
-
-pcre_name="sqlite3-pcre"
-pcre_prefix="${INSTALL}/${pcre_name}"
-if [[ ! -d "${pcre_prefix}" ]]; then
-    export PKG_CONFIG_PATH="${sqlite3_prefix}/lib/pkgconfig:${PKG_CONFIG_PATH}"
-    if [[ ! -d "${BUILD}/sqlite3-pcre-master" ]]; then
-        tar -xf "${pcre_tarball}" -C "${BUILD}"
-    fi
-    cd "${BUILD}/sqlite3-pcre-master"
-    mkdir -p build
-    cd build
-    if [[ ! -f Makefile ]]; then
-        $CMAKE .. -DCMAKE_INSTALL_PREFIX="${pcre_prefix}"
-    fi
-    make
-    make install
+if [[ "${PARAMIKO}" == "true" ]]; then
+    echo "Installing Paramiko"
+    . ${SCRIPT_PATH}/paramiko.sh
 fi

@@ -81,7 +81,7 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # define the DEBUG macro when building in debug mode
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall -D_XOPEN_SRC")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall -D_XOPEN_SRC -pg")
 
 # only enable C++ if support is found
 include(CheckLanguage)
@@ -153,22 +153,25 @@ find_package(Threads REQUIRED)
 # load the ExternalProject module
 include(ExternalProject)
 
-# Allow the user to chose to use HTTPS or SSH
-set(GIT_DL_METHOD HTTPS CACHE STRING "Use HTTPS or SSH to download git repositories")
-string(TOLOWER "${GIT_DL_METHOD}" GIT_DL_METHOD)
-
 # need PCRE for linking only
 pkg_search_module(PCRE REQUIRED libpcre)
 # if (NOT EXISTS PCRE_STATIC_LIBS)
 #   message(FATAL_ERROR "Could not find static library files for libpcre.")
 # endif()
 
-# download and build C-Thread-Pool, sqlite3, and sqlite3-pcre
-# they will be linked statically
-set(STATIC_DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of statically linked dependency sources"  PATH)
-set(STATIC_DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of statically linked dependency builds"   PATH)
-set(STATIC_DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of statically linked dependency binaries" PATH)
-add_custom_target(install_dependencies COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh "${STATIC_DEP_DOWNLOAD_PREFIX}" "${STATIC_DEP_BUILD_PREFIX}" "${STATIC_DEP_INSTALL_PREFIX}")
+# download and build all non-system dependencies
+set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of dependency sources"  PATH)
+set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of dependency builds"   PATH)
+set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of dependency binaries" PATH)
+set(PARAMIKO            OFF                                CACHE  BOOL "Whether or not to install paramiko")
+set(DEP_OPTIONS "")
+if (CMAKE_CXX_COMPILER)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
+endif()
+if (PARAMIKO)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --paramiko)
+endif()
+add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
@@ -219,18 +222,18 @@ endif()
 set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include
   ${XATTR_INCLUDEDIR}
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3/include
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3-pcre
-  ${STATIC_DEP_INSTALL_PREFIX}/C-Thread-Pool/include)
+  ${DEP_INSTALL_PREFIX}/sqlite3/include
+  ${DEP_INSTALL_PREFIX}/sqlite3-pcre
+  ${DEP_INSTALL_PREFIX}/C-Thread-Pool/include)
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries
 set(COMMON_LIBRARIES
   GUFI
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
-  ${STATIC_DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
+  ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
+  ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
   pcre
-  ${STATIC_DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
+  ${DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
   Threads::Threads
   m
   dl)
@@ -266,8 +269,7 @@ set(PATHS
   include
   scripts
   src
-  test
-  googletest)
+  test)
 
 # set the output nemae
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
@@ -277,8 +279,6 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/scripts ${CMAKE_SOURCE_DIR}/scripts/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/googletest-src ${CMAKE_SOURCE_DIR}/googletest
-                           COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest/.git
                            DEPENDS test/googletest)
 
 # generate the tarball
@@ -291,7 +291,6 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Ma
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/googletest
                        DEPENDS create_tarball)
 
 # test the tarball

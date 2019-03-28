@@ -92,14 +92,13 @@ Thanks!
 A C compiler with C99 support
 [optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
 CMake 3.0+
-Git LFS
 Make
 pkg-config
 truncate (with the '-s' option available)
 
 # install packages (see platform-specific caveats, below)
 xattr
-pcre (1)
+pcre (version 1)
 [optional] mysql
 [optional] fuse      (osxfuse on OSX)
 [optional] db2
@@ -108,14 +107,13 @@ pcre (1)
 # locations for these packages can be provided (single prefix)
 # in order to avoid downloading them
 C-Thread-Pool
+GoogleTest
+paramiko
 sqlite3
 sqlite3-pcre
 
-# packages that are downloaded by CMake:
-GoogleTest
-
 # clone GUFI
-git lfs clone https://github.com/mar-file-system/GUFI.git
+git clone https://github.com/mar-file-system/GUFI.git
 cd GUFI
 
 (2) ========== Build and install with CMake
@@ -128,15 +126,14 @@ make install
 
 (2.1) Special configurations options
 
-Set the environment variable CXX=false to disable building C++ code
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on
+Set the environment variable CXX=false to disable building C++ code.
+Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on.
 Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable GIT_DL_METHOD=https or ssh in case downloading with one does not work
-Set the CMake variable STATIC_DEP_DOWNLOAD_PREFIX to select a location to find the downloads for the statically linked libraries.
+Set the CMake variable DEP_DOWNLOAD_PREFIX to select a location to find downloaded dependencies.
     If the expected files are found, they will not be downloaded.
-Set the CMake variable STATIC_DEP_BUILD_DIR_PREFIX to select a location to build the statically linked libraries.
-Set the CMake variable STATIC_DEP_INSTALL_PREFIX to select the location to install the libraries.
-    If the libraries are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
+Set the CMake variable DEP_BUILD_DIR_PREFIX to select a location to build the dependencies.
+Set the CMake variable DEP_INSTALL_PREFIX to select the location to install the dependencies.
+    If the dependencies are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
 
 (3) ========== Build and install with make
 

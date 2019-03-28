@@ -23,9 +23,6 @@ See other components of MarFS at:
 
     https://github.com/mar-file-system
 
-## Download
-[Git LFS](https://git-lfs.github.com/) is needed to download this repository.
-
 ## Quick Start
 ```bash
 mkdir build

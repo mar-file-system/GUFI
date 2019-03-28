@@ -1,6 +1,6 @@
-GTEST_SRC         ?= $(realpath ../../googletest)
-GTEST_BUILD_DIR   ?= $(GTEST_SRC)/build
-GTEST_INSTALL_DIR ?= $(GTEST_SRC)/install
+GTEST_PREFIX      ?= $(realpath ../../deps/)
+GTEST_BUILD_DIR   ?= $(GTEST_PREFIX)/build/googletest
+GTEST_INSTALL_DIR ?= $(GTEST_PREFIX)/install/googletest
 
 CXXFLAGS          +=
 LDFLAGS           +=
@@ -12,21 +12,16 @@ TARGET=test
 
 .PHONY: $(TARGET)
 
-all: $(GTEST_INSTALL_DIR) $(TARGET)
-
-$(GTEST_INSTALL_DIR):
-	mkdir -p $(GTEST_BUILD_DIR) && cd $(GTEST_BUILD_DIR) && cmake -DCMAKE_INSTALL_PREFIX=$(GTEST_INSTALL_DIR) .. &> /dev/null
-	$(MAKE) -C $(GTEST_BUILD_DIR) install &> /dev/null
+all: $(TARGET)
 
 $(TARGET): $(OBJ) $(realpath ../..)/libGUFI.a $(STATIC_DEPS)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -o $@
 
-%.o: %.cpp $(GTEST_INSTALL_DIR)
-	$(CXX) $(CXXFLAGS)  -I$(GTEST_INSTALL_DIR)/include -c $< -o $@
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -I$(GTEST_INSTALL_DIR)/include -c $< -o $@
 
 run: $(TARGET)
 	./$(TARGET)
 
 clean:
 	rm -rf $(OBJ) $(TARGET)
-	rm -rf $(GTEST_BUILD_DIR) $(GTEST_INSTALL_DIR)

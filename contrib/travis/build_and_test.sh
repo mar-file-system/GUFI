@@ -10,7 +10,7 @@ export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug -DSTATIC_DEP_INSTALL_PREFIX="${DEP_PATH}" ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DDEP_INSTALL_PREFIX="${DEP_PATH}" ..
 
 # use files from the generated tar
 if  [[ "${BUILD}" = "make" ]]; then
