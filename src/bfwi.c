@@ -74,16 +74,17 @@ OF SUCH DAMAGE.
 */
 
 
-
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <float.h>
 #include <pthread.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
@@ -106,6 +107,10 @@ FILE *gin[MAXPTHREAD];
 
 pthread_t gtid;
 pthread_attr_t gattr;
+
+// template database file variables
+const char templatename[] = "tmp.db";
+size_t templatesize = 0; // this is really a constant that is set at runtime
 
 void parsetowork (char * inpdelim, char * inpline, void * inpwork ) {
 
@@ -145,14 +150,14 @@ void *scout(void * param) {
     long long int foffset;
     struct work * mywork;
 
-    struct timespec total_start, total_end;
-    struct timespec parse_start, parse_end;
-    struct timespec queue_start, queue_end;
-    double total = 0;
-    double parse = 0;
-    double queue = 0;
+    /* struct timespec total_start, total_end; */
+    /* struct timespec parse_start, parse_end; */
+    /* struct timespec queue_start, queue_end; */
+    /* double total = 0; */
+    /* double parse = 0; */
+    /* double queue = 0; */
 
-    clock_gettime(CLOCK_MONOTONIC, &total_start);
+    /* clock_gettime(CLOCK_MONOTONIC, &total_start); */
 
     mywork=malloc(sizeof(struct work));
     //printf("in scout arg %s\n",param);
@@ -166,37 +171,38 @@ void *scout(void * param) {
     //sleep(5);
     while (fgets (linein, sizeof(linein), finfile) != NULL) {
 
-        clock_gettime(CLOCK_MONOTONIC, &parse_start);
+        /* clock_gettime(CLOCK_MONOTONIC, &parse_start); */
 
         //printf("got input line %s\n",linein);
         parsetowork (in.delim, linein, mywork );
-        clock_gettime(CLOCK_MONOTONIC, &parse_end);
-        parse += diff(parse_start, parse_end);
+        /* clock_gettime(CLOCK_MONOTONIC, &parse_end); */
+        /* parse += diff(parse_start, parse_end); */
 
         fgetpos(finfile,(fpos_t *) &foffset);
 
-        clock_gettime(CLOCK_MONOTONIC, &queue_start);
+        /* clock_gettime(CLOCK_MONOTONIC, &queue_start); */
         if (!strncmp("d",mywork->type,1)) {
             mywork->pinode=0;
             mywork->offset=foffset;
             pushdir(mywork);
         }
-        clock_gettime(CLOCK_MONOTONIC, &queue_end);
-        queue += diff(queue_start, queue_end);
+        /* clock_gettime(CLOCK_MONOTONIC, &queue_end); */
+        /* queue += diff(queue_start, queue_end); */
     }
     fclose(finfile);
     //sleep(5);
     decrthread(); /* take one thread away so others can finish */
     ret=(char *) malloc(20);
     strcpy(ret, "scout finished");
-    clock_gettime(CLOCK_MONOTONIC, &total_end);
-    total = diff(total_start, total_end);
+    /* clock_gettime(CLOCK_MONOTONIC, &total_end); */
+    /* total = diff(total_start, total_end); */
 
-    fprintf(stderr, "%f %f %f\n", total, parse, queue);
+    /* fprintf(stderr, "%f %f %f\n", total, parse, queue); */
 
     pthread_exit(ret);
 }
 
+#ifdef MEMORY
 /* /\* */
 /* ** This function is used to load the contents of a database file on disk */
 /* ** into the "main" database of open database connection pInMemory, or */
@@ -259,7 +265,7 @@ void *scout(void * param) {
 /*     (void)sqlite3_close(pFile); */
 /*     return rc; */
 /* } */
-
+#endif
 
 /* struct stats { */
 /*     double total; */
@@ -277,8 +283,16 @@ void *scout(void * param) {
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
+size_t active_threads = 0;
+pthread_mutex_t active_threads_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static void processdir(void * passv)
 {
+    /* pthread_mutex_lock(&active_threads_mutex); */
+    /* active_threads++; */
+    /* fprintf(stderr, "%zu\n", active_threads); */
+    /* pthread_mutex_unlock(&active_threads_mutex); */
+
     struct work *passmywork = passv;
     struct work qwork;
     DIR *dir;
@@ -286,7 +300,7 @@ static void processdir(void * passv)
     char lpatho[MAXPATH];
     int mytid;
     sqlite3 *db = NULL;
-    char *records;
+    /* char *records; */
     struct sum summary;
     sqlite3_stmt *res = NULL;
     char dbpath[MAXPATH];
@@ -294,15 +308,15 @@ static void processdir(void * passv)
     char plinein[MAXPATH+MAXPATH+MAXPATH];
     /* int dupdirectory = 0; */
 
-    struct timespec total_start, total_end;
-    struct timespec opendb_start, opendb_end;
-    struct timespec table_start, table_end;
-    struct timespec insert_start, insert_end;
-    /* struct timespec dump_start, dump_end; */
-    double opendb_time = 0;
-    double table_time = 0;
-    /* double dump_time = 0; */
-    clock_gettime(CLOCK_MONOTONIC, &total_start);
+    /* struct timespec total_start, total_end; */
+    /* struct timespec opendb_start, opendb_end; */
+    /* struct timespec table_start, table_end; */
+    /* struct timespec insert_start, insert_end; */
+    /* /\* struct timespec dump_start, dump_end; *\/ */
+    /* double opendb_time = 0; */
+    /* double table_time = 0; */
+    /* /\* double dump_time = 0; *\/ */
+    /* clock_gettime(CLOCK_MONOTONIC, &total_start); */
 
     // get thread id so we can get access to thread state we need to keep
     // until the thread ends
@@ -338,25 +352,41 @@ static void processdir(void * passv)
          dupdir(passmywork);
          //printf("tid %d made dir %s\n",mytid,passmywork->name);
        }
-       records=malloc(MAXRECS);
-       memset(records, 0, MAXRECS);
+       /* records=malloc(MAXRECS); */
+       /* memset(records, 0, MAXRECS); */
        zeroit(&summary);
 
-       clock_gettime(CLOCK_MONOTONIC, &opendb_start);
-       if (!(db = opendb(passmywork->name,4,0))) {
+       char dbname[MAXPATH];
+       sqlite3_snprintf(MAXSQL, dbname, "%s/%s/%s", in.nameto, passmywork->name, DBNAME);
+
+       // ignore errors here
+       const int template = open(templatename, O_RDONLY);
+       const int new_db = open(dbname, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRWXG | S_IWGRP | S_IROTH | S_IROTH);
+       const ssize_t sf = sendfile(new_db, template, NULL, templatesize);
+       lseek(new_db, 0, SEEK_SET);
+       close(template);
+       close(new_db);
+
+       if (sf == -1) {
+           fprintf(stderr, "Could not copy template file\n");
+           goto out_dir;
+       }
+
+       /* clock_gettime(CLOCK_MONOTONIC, &opendb_start); */
+       if (!(db = opendb(dbname,4,0))) {
        /* if (!(db = opendb(":memory:",4,0))) { */
           goto out_dir;
        }
-       clock_gettime(CLOCK_MONOTONIC, &opendb_end);
-       opendb_time += diff(opendb_start, opendb_end);
+       /* clock_gettime(CLOCK_MONOTONIC, &opendb_end); */
+       /* opendb_time += diff(opendb_start, opendb_end); */
 
        /* // create tables separately to detect when it fails (database already exists) */
        /* dupdirectory = (create_tables(passmywork->name, 4, db) != 0); */
-       clock_gettime(CLOCK_MONOTONIC, &table_start);
-       create_tables(passmywork->name, 4, db);
+       /* clock_gettime(CLOCK_MONOTONIC, &table_start); */
+       /* create_tables(passmywork->name, 4, db); */
        /* create_tables(":memory:", 4, db); */
-       clock_gettime(CLOCK_MONOTONIC, &table_end);
-       table_time += diff(table_start, table_end);
+       /* clock_gettime(CLOCK_MONOTONIC, &table_end); */
+       /* table_time += diff(table_start, table_end); */
 
        res=insertdbprep(db,NULL);
        startdb(db);
@@ -365,7 +395,7 @@ static void processdir(void * passv)
     //printf("tid %d made db\n",mytid);
     // loop over dirents, if link push it on the queue, if file or link
     // print it, fill up qwork structure for each
-    clock_gettime(CLOCK_MONOTONIC, &insert_start);
+    /* clock_gettime(CLOCK_MONOTONIC, &insert_start); */
     transcnt = 0;
     //do {
     while (1) {
@@ -461,7 +491,7 @@ static void processdir(void * passv)
         }
     //} while ((entry = (readdir(dir))));
     }
-    clock_gettime(CLOCK_MONOTONIC, &insert_end);
+    /* clock_gettime(CLOCK_MONOTONIC, &insert_end); */
 
     if (in.buildindex > 0) {
       stopdb(db);
@@ -472,17 +502,18 @@ static void processdir(void * passv)
 
       SNPRINTF(dbpath, MAXPATH, "%s/%s/" DBNAME, in.nameto,passmywork->name);
 
+      #ifdef MEMORY
       /* clock_gettime(CLOCK_MONOTONIC, &dump_start); */
       /* if (loadOrSaveDb(db, dbpath, 1) != SQLITE_OK) { */
       /*     fprintf(stderr, "Error writing to %s\n", dbpath); */
       /* } */
       /* clock_gettime(CLOCK_MONOTONIC, &dump_end); */
-
+      #endif
       closedb(db);
 
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
-      free(records);
+      /* free(records); */
     }
 
  out_dir:
@@ -497,10 +528,10 @@ static void processdir(void * passv)
 
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
-    clock_gettime(CLOCK_MONOTONIC, &total_end);
+    /* clock_gettime(CLOCK_MONOTONIC, &total_end); */
 
-    double total_time = diff(total_start, total_end);
-    double insert_time = diff(insert_start, insert_end) / transcnt;
+    /* double total_time = diff(total_start, total_end); */
+    /* double insert_time = diff(insert_start, insert_end) / transcnt; */
 
     /* if (total_time > minmaxstats[mytid].max.total) { */
     /*     minmaxstats[mytid].max.total = total_time; */
@@ -538,8 +569,13 @@ static void processdir(void * passv)
     /*     } */
     /* } */
 
-    fprintf(stdout, "%f, %f, %f, %f\n", total_time, opendb_time, table_time, insert_time);
+    /* fprintf(stdout, "%f, %f, %f, %f\n", total_time, opendb_time, table_time, insert_time); */
     /// return NULL;
+
+    /* pthread_mutex_lock(&active_threads_mutex); */
+    /* active_threads--; */
+    /* fprintf(stderr, "%zu\n",active_threads); */
+    /* pthread_mutex_unlock(&active_threads_mutex); */
 }
 
 
@@ -804,6 +840,26 @@ int main(int argc, char *argv[])
      if (validate_inputs())
         return -1;
 
+     // create the initial database file to copy from
+     sqlite3 * templatedb = NULL;
+     if (sqlite3_open_v2(templatename, &templatedb, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+         fprintf(stderr, "Cannot open database: %s %s rc %d\n", templatename, sqlite3_errmsg(templatedb), sqlite3_errcode(templatedb));
+         return 1;
+     }
+     create_tables(templatename, 4, templatedb);
+     closedb(templatedb);
+     int templatefd = -1;
+     if ((templatefd = open(templatename, O_RDONLY)) == -1) {
+         fprintf(stderr, "Could not open template file\n");
+         return 1;
+     }
+
+     templatesize = lseek(templatefd, 0, SEEK_END);
+     close(templatefd);
+     if (templatesize == (off_t) -1) {
+         fprintf(stderr, "failed to lseek\n");
+         return 1;
+     }
 
      // start threads and loop watching threads needing work and queue size
      // - this always stays in main right here
@@ -834,5 +890,8 @@ int main(int argc, char *argv[])
      // clean up threads and exit
      thpool_wait(mythpool);
      thpool_destroy(mythpool);
+
+     // remove the template file
+     remove(templatename);
      return 0;
 }

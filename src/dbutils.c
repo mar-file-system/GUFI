@@ -208,22 +208,26 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     char *err_msg = NULL;
     char dbn[MAXPATH];
 
-    /* sqlite3_snprintf(MAXSQL, dbn, "%s", name); */
+    sqlite3_snprintf(MAXSQL, dbn, "%s", name);
 
-    sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME);
-    if (createtables) {
-       if (openwhat != 3)
-          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
-       if (openwhat==7 || openwhat==8)
-          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
-    }
-    else {
-       if (openwhat == 5)
-          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
-       else
-       // if (openwhat == 6)
-          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
-    }
+    #ifdef ORIGINAL
+    /* sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
+
+    /* sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME); */
+    /* if (createtables) { */
+    /*    if (openwhat != 3) */
+    /*       sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
+    /*    if (openwhat==7 || openwhat==8) */
+    /*       sqlite3_snprintf(MAXSQL, dbn, "%s", name); */
+    /* } */
+    /* else { */
+    /*    if (openwhat == 5) */
+    /*       sqlite3_snprintf(MAXSQL, dbn, "%s", name); */
+    /*    else */
+    /*    // if (openwhat == 6) */
+    /*       sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
+    /* } */
+    #endif
 
     //    // The current codebase is not intended to handle incremental updates.
     //    // When initializing a DB, we always expect it not to already exist,
@@ -254,7 +258,7 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     /* } */
 
     /* // try increasing the page size */
-    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* if (sqlite3_exec(db, "PRAGMA page_size = 4194304", NULL, NULL, NULL) != SQLITE_OK) { */
     /* } */
 
     if (createtables) {
