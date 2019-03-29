@@ -81,6 +81,13 @@ add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 install(TARGETS GUFI DESTINATION lib)
 
+#If the GPFS library exists, build the gpfs scan tool
+if(GPFS_LIB)
+  include_directories("/usr/lpp/mmfs/include")
+  add_executable(gpfs-scan-tool gpfs-scan-tool.c)
+  target_link_libraries(gpfs-scan-tool ${GPFS_LIB} ${COMMON_LIBRARIES})
+endif() 
+
 # This function builds executables using the
 # provided file names (SOURCE is an optional
 # argument, so it does not show up in the

@@ -209,6 +209,14 @@ else()
   message(STATUS "MySQL not found. Not building bfmi.")
 endif()
 
+# Find GPFS
+find_library(GPFS_LIB gpfs PATH "/usr/lpp/mmfs/lib")
+if(GPFS_LIB)
+  message(STATUS "GPFS libraries found; building gpfs-scan-tool")
+else()
+  message(STATUS "GPFS libraries not found; not building gpfs-scan-tool")
+endif()
+
 # Find DB2
 pkg_search_module(DB2 db2)
 if (DB2_FOUND)
