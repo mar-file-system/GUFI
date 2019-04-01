@@ -245,20 +245,20 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
         return NULL;
     }
 
-    /* // try to turn sychronization off */
-    /* if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    // try to turn sychronization off
+    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    }
 
-    /* // try to turn journaling off */
-    /* if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    // try to turn journaling off
+    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    }
 
-    /* // try to get an exclusive lock */
-    /* if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    // try to get an exclusive lock
+    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
+    }
 
     /* // try increasing the page size */
-    /* if (sqlite3_exec(db, "PRAGMA page_size = 4194304", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
     /* } */
 
     if (createtables) {
