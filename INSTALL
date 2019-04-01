@@ -94,6 +94,7 @@ A C compiler with C99 support
 CMake 3.0+
 Make
 pkg-config
+realpath
 truncate (with the '-s' option available)
 
 # install packages (see platform-specific caveats, below)
