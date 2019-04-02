@@ -299,9 +299,9 @@ static void processdir(void * passv)
     sqlite3 *db = NULL;
     struct sum summary;
     sqlite3_stmt *res = NULL;
-    char dbpath[MAXPATH];
     int transcnt;
     char plinein[MAXPATH+MAXPATH+MAXPATH];
+    char dbname[MAXPATH];
     /* int dupdirectory = 0; */
 
     /* struct timespec total_start, total_end; */
@@ -350,7 +350,6 @@ static void processdir(void * passv)
        }
        zeroit(&summary);
 
-       char dbname[MAXPATH];
        sqlite3_snprintf(MAXSQL, dbname, "%s/%s/%s", in.nameto, passmywork->name, DBNAME);
 
        // ignore errors here
@@ -494,8 +493,6 @@ static void processdir(void * passv)
       // this i believe has to be after we close off the entries transaction
       insertsumdb(db,passmywork,&summary);
 
-      SNPRINTF(dbpath, MAXPATH, "%s/%s/" DBNAME, in.nameto,passmywork->name);
-
       #ifdef MEMORY
       /* clock_gettime(CLOCK_MONOTONIC, &dump_start); */
       /* if (loadOrSaveDb(db, dbpath, 1) != SQLITE_OK) { */
@@ -505,8 +502,8 @@ static void processdir(void * passv)
       #endif
       closedb(db);
 
-      chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
-      chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
+      chown(dbname, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
+      chmod(dbname, passmywork->statuso.st_mode | S_IRUSR);
     }
 
  out_dir:
@@ -652,6 +649,7 @@ int processinit(void * myworkin) {
        }
        fclose(finfile);
 ***/
+       fclose(finfile);
        //pthread_attr_init(&gattr);
        //printf("starting scout\n");
        incrthread(); /* add one thread so the others wait for the scout */
