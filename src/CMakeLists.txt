@@ -121,6 +121,7 @@ set(SOURCES
   bfq.c
   bfti.c
   bfwi.c
+  bfwi_ingest.cpp
   bfwreaddirplus2db.c
   dfw.c
   make_testdirs.c
