@@ -83,7 +83,6 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <time.h>
 
 #include "config.h"
 #include "utils.h"
@@ -570,17 +569,10 @@ int shortpath(const char *name, char *nameout, char *endname) {
 }
 
 
-// FKA "putils.c"
-static double diff(struct timespec start, struct timespec end) {
-    return (((end.tv_sec * 1e9) + end.tv_nsec) - ((start.tv_sec * 1e9) + start.tv_nsec)) / 1e9;
-}
-
 int processdirs(DirFunc dir_fn) {
 
      struct work * workp;
      int thread_count = 0;
-     /* struct timespec lock_start, lock_end; */
-     /* struct timespec unlock_start, unlock_end; */
 
      // loop over queue entries and running threads and do all work until
      // running threads zero and queue empty
@@ -592,9 +584,7 @@ int processdirs(DirFunc dir_fn) {
         }
         if (runningthreads < in.maxthreads) {
           // we have to lock around all queue ops
-          /* clock_gettime(CLOCK_MONOTONIC, &lock_start); */
           pthread_mutex_lock(&queue_mutex);
-          /* clock_gettime(CLOCK_MONOTONIC, &lock_end); */
           if (addrqent() > 0) {
             workp=addrcurrents();
             incrthread();
@@ -606,11 +596,7 @@ int processdirs(DirFunc dir_fn) {
             thpool_add_work(mythpool, dir_fn, (void *)workp);
             thread_count++;
           }
-          /* clock_gettime(CLOCK_MONOTONIC, &unlock_start); */
           pthread_mutex_unlock(&queue_mutex);
-          /* clock_gettime(CLOCK_MONOTONIC, &unlock_end); */
-          /* fprintf(stderr, "lock: %f %f\n", diff(lock_start, lock_end), diff(unlock_start, unlock_end)); */
-
         }
      }
 

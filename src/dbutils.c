@@ -208,37 +208,33 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     char *err_msg = NULL;
     char dbn[MAXPATH];
 
-    sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+    sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
 
-    #ifdef ORIGINAL
-    /* sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
+    sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME);
+    if (createtables) {
+       if (openwhat != 3)
+          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+       if (openwhat==7 || openwhat==8)
+          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+    }
+    else {
+       if (openwhat == 5)
+          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+       else
+       // if (openwhat == 6)
+          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+    }
 
-    /* sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME); */
-    /* if (createtables) { */
-    /*    if (openwhat != 3) */
-    /*       sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
-    /*    if (openwhat==7 || openwhat==8) */
-    /*       sqlite3_snprintf(MAXSQL, dbn, "%s", name); */
-    /* } */
-    /* else { */
-    /*    if (openwhat == 5) */
-    /*       sqlite3_snprintf(MAXSQL, dbn, "%s", name); */
-    /*    else */
-    /*    // if (openwhat == 6) */
-    /*       sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
-    /* } */
-    #endif
-
-    //    // The current codebase is not intended to handle incremental updates.
-    //    // When initializing a DB, we always expect it not to already exist,
-    //    // and populate from scratch, from the source tree.
-    //    if (createtables) {
-    //       struct stat st;
-    //       if (! lstat(dbn, &st)) {
-    //          fprintf(stderr, "Database: %s already exists\n", dbn);
-    //          return NULL;
-    //       }
-    //    }
+       // The current codebase is not intended to handle incremental updates.
+       // When initializing a DB, we always expect it not to already exist,
+       // and populate from scratch, from the source tree.
+       if (createtables) {
+          struct stat st;
+          if (! lstat(dbn, &st)) {
+             fprintf(stderr, "Database: %s already exists\n", dbn);
+             return NULL;
+          }
+       }
 
     if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
