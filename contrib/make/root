@@ -95,7 +95,7 @@ all: $(STATIC_DEPS)
 
 $(STATIC_DEPS): contrib/deps/install_deps.sh
 	mkdir -p "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
-	contrib/deps/install_deps.sh "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
+	contrib/deps/install_deps.sh --cxx --paramiko "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
 
 clean:
 	$(MAKE) -C "$(DEP_BUILD_PATH)"
