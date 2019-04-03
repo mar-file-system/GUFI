@@ -7,19 +7,18 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
 #include <vector>
 
-#ifdef  __APPLE__
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#define SENDFILE(out_fd, in_fd, offset, count) sendfile(out_fd, in_fd, offset, &count, NULL, 0);
-#else
-#include <sys/sendfile.h>
-#define SENDFILE(out_fd, in_fd, offset, count) sendfile(out_fd, in_fd, &offset, count)
+// #ifdef DEBUG
+// #undef DEBUG
+// #endif
+
+#ifndef PRINT_STAGE
+// #define PRINT_STAGE
 #endif
 
 #ifdef DEBUG
@@ -100,6 +99,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     int tid = 0;
     char line[MAXLINE];
     char delim[2] = {'\x1e', '\x00'};
+    std::size_t count = 0;
 
     while (file.getline(line, MAXLINE)) {
         // parse
@@ -107,13 +107,17 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         parsetowork(delim, line, work.get());
 
         if (work->type[0] == 'd') {
+            count++;
+
             work->pinode=0;
             work->offset=file.tellg();
 
             // put on queues
-            std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
-            consumers[tid].first.queue.push_back(work);
-            consumers[tid].first.cv.notify_all();
+            {
+                std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
+                consumers[tid].first.queue.push_back(work);
+                consumers[tid].first.cv.notify_all();
+            }
 
             // round robin
             tid++;
@@ -133,19 +137,20 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
     #endif
 
+    std::cout << "Dirs: " << count << std::endl;
+
     return;
 }
 
-std::atomic_int creating(0);
+std::atomic_int duping(0);
 std::atomic_int copying(0);
 std::atomic_int opening(0);
+std::atomic_int waiting(0);
 std::atomic_int processing(0);
+std::mutex mutex;
 
 // create the initial database file to copy from
 static off_t create_template(const char * templatename) {
-    creating++;
-    std::cout << "start creating template " << creating << std::endl;
-
     sqlite3 * templatedb = NULL;
     if (sqlite3_open_v2(templatename, &templatedb, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s rc %d\n", templatename, sqlite3_errmsg(templatedb), sqlite3_errcode(templatedb));
@@ -168,22 +173,24 @@ static off_t create_template(const char * templatename) {
         return -1;
     }
 
-    creating--;
-    std::cout << "end   creating template " << creating << std::endl;
-
     return templatesize;
 }
 
 // copy the template file instead of creating a new database and new tables for each work item
-static int copy_template(const char * src, const char * dst, std::size_t size) {
-    copying++;
-    std::cout << "start copying " << copying << std::endl;
+static int copy_template(const char * src, const char * dst, off_t size) {
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        copying++;
+        std::cout << "copy:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " processing: " << processing << std::endl;
+    }
+    #endif
 
     // ignore errors here
     const int src_db = open(src, O_RDONLY);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRWXG | S_IWGRP | S_IROTH | S_IROTH);
     off_t offset = 0;
-    const ssize_t sf = SENDFILE(dst_db, src_db, offset, size);
+    const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
     lseek(dst_db, 0, SEEK_SET);
     close(src_db);
     close(dst_db);
@@ -193,62 +200,66 @@ static int copy_template(const char * src, const char * dst, std::size_t size) {
         return -1;
     }
 
-    copying--;
-    std::cout << "end   copying " << copying << std::endl;
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        copying--;
+    }
+    #endif
 
     return 0;
 }
 
 static sqlite3 * opendb(const char *name)
 {
-    opening++;
-    std::cout << "start opening " << opening << std::endl;
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        opening++;
+        std::cout << "open:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " processing: " << processing << std::endl;
+    }
+    #endif
 
-    sqlite3 * db = NULL;
-    char *err_msg = NULL;
     char dbn[MAXPATH];
-
     snprintf(dbn, MAXSQL, "%s", name);
 
-    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+    sqlite3 * db = NULL;
+    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
         return NULL;
     }
 
-    // try to turn sychronization off
-    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    // don't try to mess with db settings; they take too long to run
+
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        opening--;
     }
-
-    // try to turn journaling off
-    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    }
-
-    // try to get an exclusive lock
-    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
-    }
-
-    /* // try increasing the page size */
-    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
-
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
-        (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
-        fprintf(stderr, "Unable to load regex extension\n");
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-        db = NULL;
-    }
-
-    opening--;
-    std::cout << "end   opening " << opening << std::endl;
+    #endif
 
     return db;
 }
 
 // process the work under one directory (no recursion)
 static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & trace) {
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        duping++;
+        std::cout << "duping:   duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " processing: " << processing << std::endl;
+    }
+    #endif
+
     // create the directory
     dupdir(w.get());
+
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        duping--;
+    }
+    #endif
 
     // create the database name
     char dbname[MAXPATH];
@@ -262,11 +273,16 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
     // process the work
     sqlite3 * db = nullptr;
     if ((db = opendb(dbname))) {
+        #ifdef PRINT_STAGE
+        {
+            std::lock_guard <std::mutex> lock(mutex);
+            processing++;
+            std::cout << "process:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " processing: " << processing << std::endl;
+        }
+        #endif
+
         // struct sum summary;
         // zeroit(&summary);
-
-        processing++;
-        std::cout << "start processing " << processing << std::endl;
 
         sqlite3_stmt * res = insertdbprep(db, NULL);
         startdb(db);
@@ -311,8 +327,12 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
         chown(dbname, w->statuso.st_uid, w->statuso.st_gid);
         chmod(dbname, w->statuso.st_mode | S_IRUSR);
 
-        processing--;
-        std::cout << "end   processing " << processing << std::endl;
+        #ifdef PRINT_STAGE
+        {
+            std::lock_guard <std::mutex> lock(mutex);
+            processing--;
+        }
+        #endif
     }
 
     return db;
@@ -331,46 +351,76 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
     while (scouting || tw.queue.size()) {
         std::list <std::shared_ptr <struct work> > dirs;
         {
-#ifdef DEBUG
-            std::chrono::high_resolution_clock::time_point wait_start = std::chrono::high_resolution_clock::now();
-#endif
-            // wait for work
+            // #ifdef DEBUG
+            // std::chrono::high_resolution_clock::time_point wait_start = std::chrono::high_resolution_clock::now();
+            // #endif
+
+            #ifdef PRINT_STAGE
+            {
+                std::lock_guard <std::mutex> lock(mutex);
+                waiting++;
+                std::cout << "wait:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " processing: " << processing << std::endl;
+            }
+            #endif
+
             std::unique_lock <std::mutex> lock(tw.mutex);
+
+            // wait for work
             while (scouting && !tw.queue.size()) {
                 tw.cv.wait(lock);
             }
-#ifdef DEBUG
-            std::chrono::high_resolution_clock::time_point wait_end = std::chrono::high_resolution_clock::now();
-            std::cerr << "Thread " << tw.id << " waited for " << std::chrono::duration_cast <std::chrono::nanoseconds> (wait_end - wait_start).count() / 1e9 << " seconds. Got " << tw.queue.size() << std::endl;
-#endif
+
+            #ifdef PRINT_STAGE
+            {
+                std::lock_guard <std::mutex> lock(mutex);
+                waiting--;
+            }
+            #endif
+
+            // #ifdef DEBUG
+            // std::chrono::high_resolution_clock::time_point wait_end = std::chrono::high_resolution_clock::now();
+            // std::cerr << "Thread " << tw.id << " waited for " << std::chrono::duration_cast <std::chrono::nanoseconds> (wait_end - wait_start).count() / 1e9 << " seconds. Queued: " << tw.queue.size() << std::endl;
+            // #endif
 
             if (!scouting && !tw.queue.size()) {
                 break;
             }
+
+            // // take single work item
+            // dirs.push_back(tw.queue.front());
+            // tw.queue.pop_front();
 
             // take all work
             dirs = std::move(tw.queue);
             tw.queue.clear();
         }
 
+        // #ifdef DEBUG
+        // std::chrono::high_resolution_clock::time_point process_start = std::chrono::high_resolution_clock::now();
+        // #endif
+
         // process all work
         for(std::shared_ptr <struct work> const & dir : dirs) {
             processed += processdir(dir, trace);
         }
+
+        // #ifdef DEBUG
+        // std::chrono::high_resolution_clock::time_point process_end = std::chrono::high_resolution_clock::now();
+        // std::cerr << "Thread " << tw.id << " processed for " << std::chrono::duration_cast <std::chrono::nanoseconds> (process_end - process_start).count() / 1e9 << " seconds." << std::endl;
+        // #endif
     }
 
     return processed;
 }
 
 static bool processinit(std::thread & scout, std::atomic_bool & scouting, const char * filename, State & state) {
-    scout = std::thread(scout_function, std::ref(scouting), filename, std::ref(state));
-
-    // should probably check if scouting == true here
-
+    scouting = true;
     for(int i = 0; i < in.maxthreads; i++) {
         state[i].first.id = i;
         state[i].second = std::thread(worker_function, std::ref(scouting), std::ref(state[i].first));
     }
+
+    scout = std::thread(scout_function, std::ref(scouting), filename, std::ref(state));
 
     return true;
 }

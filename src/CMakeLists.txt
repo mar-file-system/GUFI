@@ -86,7 +86,7 @@ if(GPFS_LIB)
   include_directories("/usr/lpp/mmfs/include")
   add_executable(gpfs-scan-tool gpfs-scan-tool.c)
   target_link_libraries(gpfs-scan-tool ${GPFS_LIB} ${COMMON_LIBRARIES})
-endif() 
+endif()
 
 # This function builds executables using the
 # provided file names (SOURCE is an optional
@@ -128,7 +128,6 @@ set(SOURCES
   bfq.c
   bfti.c
   bfwi.c
-  bfwi_ingest.cpp
   bfwreaddirplus2db.c
   dfw.c
   make_testdirs.c
@@ -137,7 +136,10 @@ set(SOURCES
 
 # add C++ sources if C++ support is available
 if (CMAKE_CXX_COMPILER)
-  set(SOURCES ${SOURCES} make_testtree.cpp)
+  set(SOURCES
+    ${SOURCES}
+    make_testtree.cpp
+    bfwi_ingest.cpp)
 endif()
 
 # build the main binaries
