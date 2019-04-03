@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <thread>
 #include <vector>
+#include <unistd.h>
 
 // #ifdef DEBUG
 // #undef DEBUG
@@ -38,6 +39,7 @@ extern "C" {
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH
 
 static const char templatename[] = "tmp.db";
+static int templatefd = -1;    // this is really a constant that is set at runtime
 static off_t templatesize = 0; // this is really a constant that is set at runtime
 
 // basically thread args
@@ -150,34 +152,34 @@ std::atomic_int processing(0);
 std::mutex mutex;
 
 // create the initial database file to copy from
-static off_t create_template(const char * templatename) {
-    sqlite3 * templatedb = NULL;
-    if (sqlite3_open_v2(templatename, &templatedb, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s rc %d\n", templatename, sqlite3_errmsg(templatedb), sqlite3_errcode(templatedb));
+static off_t create_template(const char * name) {
+    sqlite3 * db = NULL;
+    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
         return -1;
     }
 
-    create_tables(templatename, 4, templatedb);
-    closedb(templatedb);
+    create_tables(name, 4, db);
+    closedb(db);
 
-    int templatefd = -1;
-    if ((templatefd = open(templatename, O_RDONLY)) == -1) {
+    if ((templatefd = open(name, O_RDONLY)) == -1) {
         fprintf(stderr, "Could not open template file\n");
         return -1;
     }
 
     templatesize = lseek(templatefd, 0, SEEK_END);
-    close(templatefd);
     if (templatesize == (off_t) -1) {
         fprintf(stderr, "failed to lseek\n");
-        return -1;
     }
+
+    // no need for the file to remain on the filesystem
+    remove(name);
 
     return templatesize;
 }
 
 // copy the template file instead of creating a new database and new tables for each work item
-static int copy_template(const char * src, const char * dst, off_t size) {
+static int copy_template(const int src_fd, const char * dst, off_t size) {
     #ifdef PRINT_STAGE
     {
         std::lock_guard <std::mutex> lock(mutex);
@@ -187,11 +189,10 @@ static int copy_template(const char * src, const char * dst, off_t size) {
     #endif
 
     // ignore errors here
-    const int src_db = open(src, O_RDONLY);
+    const int src_db = dup(src_fd);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRWXG | S_IWGRP | S_IROTH | S_IROTH);
     off_t offset = 0;
     const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
-    lseek(dst_db, 0, SEEK_SET);
     close(src_db);
     close(dst_db);
 
@@ -266,7 +267,7 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
     SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, w->name);
 
     // copy the template file
-    if (copy_template(templatename, dbname, templatesize)) {
+    if (copy_template(templatefd, dbname, templatesize)) {
         return false;
     }
 
@@ -510,7 +511,8 @@ int main(int argc, char * argv[]) {
 
     const bool spawned_threads = processinit(scout, scouting, in.name, state);
     processfin(scout, state, spawned_threads);
-    remove(templatename);
+
+    close(templatefd);
 
     #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
