@@ -169,7 +169,7 @@ static int create_table_wrapper(const char *name, sqlite3 * db, const char * sql
 
 int create_tables(const char *name, const int openwhat, sqlite3 *db) {
     if (openwhat==1 || openwhat==4 || openwhat==8) {
-        if (create_table_wrapper(name, db, "esql",         esql,         NULL, NULL) != SQLITE_OK) {
+        if (create_table_wrapper(name, db, "esql",         esql,        NULL, NULL) != SQLITE_OK)  {
             return -1;
         }
     }
@@ -208,33 +208,21 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     char *err_msg = NULL;
     char dbn[MAXPATH];
 
-    /* sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME); */
+    // sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
 
     sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME);
     if (createtables) {
-       if (openwhat != 3)
-          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
-       if (openwhat==7 || openwhat==8)
-          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+        if (openwhat != 3)
+            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+        if (openwhat==7 || openwhat==8)
+            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
     else {
-       if (openwhat == 5)
-          sqlite3_snprintf(MAXSQL, dbn, "%s", name);
-       else
-       // if (openwhat == 6)
-          sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+        if (openwhat == 6)
+            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+        if (openwhat == 5)
+            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
-
-    //   // The current codebase is not intended to handle incremental updates.
-    //   // When initializing a DB, we always expect it not to already exist,
-    //   // and populate from scratch, from the source tree.
-    //   if (createtables) {
-    //      struct stat st;
-    //      if (! lstat(dbn, &st)) {
-    //         fprintf(stderr, "Database: %s already exists\n", dbn);
-    //         return NULL;
-    //      }
-    //   }
 
     if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
