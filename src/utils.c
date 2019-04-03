@@ -605,9 +605,7 @@ int processdirs(DirFunc dir_fn) {
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
   if (!printing) return 0;
-  if (!strncmp(type,"l",1)) printf("l ");
-  if (!strncmp(type,"f",1)) printf("f ");
-  if (!strncmp(type,"d",1)) printf("d ");
+  printf("%c ", type[0]);
 
   printf("%s ", name);
   if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
@@ -644,10 +642,8 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
 }
 
 int printload(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,long long pinode,char *sortf,FILE *of) {
-  fprintf(of,"%s%s", name,in.delim);
-  if (!strncmp(type,"l",1)) fprintf(of,"l%s",in.delim);
-  if (!strncmp(type,"f",1)) fprintf(of,"f%s",in.delim);
-  if (!strncmp(type,"d",1)) fprintf(of,"d%s",in.delim);
+  fprintf(of,"%s%s",             name,in.delim);
+  fprintf(of,"%c%s",             type[0],in.delim);
   fprintf(of,"%"STAT_ino"%s",    status->st_ino,in.delim);
   //fprintf(of,"%lld%s", pinode,in.delim);
   fprintf(of,"%d%s",             status->st_mode,in.delim);
