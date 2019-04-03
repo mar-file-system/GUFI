@@ -7,11 +7,24 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
 #include <vector>
+
+#ifdef  __APPLE__
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#define SENDFILE(out_fd, in_fd, offset, count) sendfile(out_fd, in_fd, offset, &count, NULL, 0);
+#else
+#include <sys/sendfile.h>
+#define SENDFILE(out_fd, in_fd, offset, count) sendfile(out_fd, in_fd, &offset, count)
+#endif
+
+#ifdef DEBUG
+#include <chrono>
+#endif
 
 extern "C" {
 
@@ -19,6 +32,7 @@ extern "C" {
 #include "structq.h"
 #include "utils.h"
 #include "dbutils.h"
+#include "pcre.h"
 
 }
 
@@ -72,6 +86,10 @@ void parsetowork (char * delim, char * line, struct work * pinwork ) {
 
 // Read ahead to figure out where files under directories start
 void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
+    #ifdef DEBUG
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    #endif
+
     // figure out whether or not this function is running
     std::ifstream file(filename, std::ios::binary);
     if (!(scouting = (bool) file)) {
@@ -110,42 +128,62 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         consumers[i].first.cv.notify_all();
     }
 
+    #ifdef DEBUG
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
+    #endif
+
     return;
 }
 
+std::atomic_int creating(0);
+std::atomic_int copying(0);
+std::atomic_int opening(0);
+std::atomic_int processing(0);
+
 // create the initial database file to copy from
 static off_t create_template(const char * templatename) {
-     sqlite3 * templatedb = NULL;
-     if (sqlite3_open_v2(templatename, &templatedb, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
-         fprintf(stderr, "Cannot open database: %s %s rc %d\n", templatename, sqlite3_errmsg(templatedb), sqlite3_errcode(templatedb));
-         return -1;
-     }
+    creating++;
+    std::cout << "start creating template " << creating << std::endl;
 
-     create_tables(templatename, 4, templatedb);
-     closedb(templatedb);
+    sqlite3 * templatedb = NULL;
+    if (sqlite3_open_v2(templatename, &templatedb, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", templatename, sqlite3_errmsg(templatedb), sqlite3_errcode(templatedb));
+        return -1;
+    }
 
-     int templatefd = -1;
-     if ((templatefd = open(templatename, O_RDONLY)) == -1) {
-         fprintf(stderr, "Could not open template file\n");
-         return -1;
-     }
+    create_tables(templatename, 4, templatedb);
+    closedb(templatedb);
 
-     templatesize = lseek(templatefd, 0, SEEK_END);
-     close(templatefd);
-     if (templatesize == (off_t) -1) {
-         fprintf(stderr, "failed to lseek\n");
-         return -1;
-     }
+    int templatefd = -1;
+    if ((templatefd = open(templatename, O_RDONLY)) == -1) {
+        fprintf(stderr, "Could not open template file\n");
+        return -1;
+    }
 
-     return templatesize;
+    templatesize = lseek(templatefd, 0, SEEK_END);
+    close(templatefd);
+    if (templatesize == (off_t) -1) {
+        fprintf(stderr, "failed to lseek\n");
+        return -1;
+    }
+
+    creating--;
+    std::cout << "end   creating template " << creating << std::endl;
+
+    return templatesize;
 }
 
 // copy the template file instead of creating a new database and new tables for each work item
 static int copy_template(const char * src, const char * dst, std::size_t size) {
+    copying++;
+    std::cout << "start copying " << copying << std::endl;
+
     // ignore errors here
     const int src_db = open(src, O_RDONLY);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRWXG | S_IWGRP | S_IROTH | S_IROTH);
-    const ssize_t sf = sendfile(dst_db, src_db, NULL, size);
+    off_t offset = 0;
+    const ssize_t sf = SENDFILE(dst_db, src_db, offset, size);
     lseek(dst_db, 0, SEEK_SET);
     close(src_db);
     close(dst_db);
@@ -155,7 +193,56 @@ static int copy_template(const char * src, const char * dst, std::size_t size) {
         return -1;
     }
 
+    copying--;
+    std::cout << "end   copying " << copying << std::endl;
+
     return 0;
+}
+
+static sqlite3 * opendb(const char *name)
+{
+    opening++;
+    std::cout << "start opening " << opening << std::endl;
+
+    sqlite3 * db = NULL;
+    char *err_msg = NULL;
+    char dbn[MAXPATH];
+
+    snprintf(dbn, MAXSQL, "%s", name);
+
+    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+        return NULL;
+    }
+
+    // try to turn sychronization off
+    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    }
+
+    // try to turn journaling off
+    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    }
+
+    // try to get an exclusive lock
+    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
+    }
+
+    /* // try increasing the page size */
+    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
+        (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
+        fprintf(stderr, "Unable to load regex extension\n");
+        sqlite3_free(err_msg);
+        sqlite3_close(db);
+        db = NULL;
+    }
+
+    opening--;
+    std::cout << "end   opening " << opening << std::endl;
+
+    return db;
 }
 
 // process the work under one directory (no recursion)
@@ -174,9 +261,12 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
 
     // process the work
     sqlite3 * db = nullptr;
-    if ((db = opendb(dbname, 4, 0))) {
+    if ((db = opendb(dbname))) {
         // struct sum summary;
         // zeroit(&summary);
+
+        processing++;
+        std::cout << "start processing " << processing << std::endl;
 
         sqlite3_stmt * res = insertdbprep(db, NULL);
         startdb(db);
@@ -220,6 +310,9 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
         // ignore errors
         chown(dbname, w->statuso.st_uid, w->statuso.st_gid);
         chmod(dbname, w->statuso.st_mode | S_IRUSR);
+
+        processing--;
+        std::cout << "end   processing " << processing << std::endl;
     }
 
     return db;
@@ -238,11 +331,18 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
     while (scouting || tw.queue.size()) {
         std::list <std::shared_ptr <struct work> > dirs;
         {
+#ifdef DEBUG
+            std::chrono::high_resolution_clock::time_point wait_start = std::chrono::high_resolution_clock::now();
+#endif
             // wait for work
             std::unique_lock <std::mutex> lock(tw.mutex);
             while (scouting && !tw.queue.size()) {
                 tw.cv.wait(lock);
             }
+#ifdef DEBUG
+            std::chrono::high_resolution_clock::time_point wait_end = std::chrono::high_resolution_clock::now();
+            std::cerr << "Thread " << tw.id << " waited for " << std::chrono::duration_cast <std::chrono::nanoseconds> (wait_end - wait_start).count() / 1e9 << " seconds. Got " << tw.queue.size() << std::endl;
+#endif
 
             if (!scouting && !tw.queue.size()) {
                 break;
@@ -328,6 +428,10 @@ void sub_help() {
 }
 
 int main(int argc, char * argv[]) {
+    #ifdef DEBUG
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    #endif
+
     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:Du", 1, "input_dir", &in);
     if (in.helped)
         sub_help();
@@ -357,6 +461,11 @@ int main(int argc, char * argv[]) {
     const bool spawned_threads = processinit(scout, scouting, in.name, state);
     processfin(scout, state, spawned_threads);
     remove(templatename);
+
+    #ifdef DEBUG
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::cerr << "main finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
+    #endif
 
     return 0;
 }
