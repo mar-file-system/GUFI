@@ -445,9 +445,7 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
 int startdb(sqlite3 *db)
 {
     char *err_msg = NULL;
-    int rc;
-    rc = sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err_msg);
-    if (rc != SQLITE_OK) printf("begin transaction issue %s\n",sqlite3_errmsg(db));
+    if (sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err_msg) != SQLITE_OK) printf("begin transaction issue %s\n",sqlite3_errmsg(db));
     sqlite3_free(err_msg);
     return 0;
 }
@@ -480,12 +478,12 @@ sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
     char *err_msg = 0;
     // char sqlstmt[MAXSQL];
     const char *tail;
-    int error;
+    int error = SQLITE_OK;
     sqlite3_stmt *reso;
 
     /*******  this is a bit dangerous, as all the records need to be written
               to the db, plus some time for the OS to write to disk ****/
-    error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg);
+    /* error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg); */
     if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",
                   error,sqlite3_errmsg(db));
@@ -511,7 +509,7 @@ sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res)
 
     /*******  this is a bit dangerous, as all the records need to be written
               to the db, plus some time for the OS to write to disk ****/
-    error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg);
+    /* error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg); */
     if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",
                   error,sqlite3_errmsg(db));
