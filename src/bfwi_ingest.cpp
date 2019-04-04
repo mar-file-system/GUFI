@@ -64,6 +64,7 @@ typedef std::vector <WorkPair> State;
 int duping(0);
 int copying(0);
 int opening(0);
+int settings(0);
 int waiting(0);
 // int processing(0);
 int prepping(0);
@@ -184,15 +185,29 @@ static off_t create_template(int & fd) {
     return lseek(fd, 0, SEEK_END);
 }
 
-// copy the template file instead of creating a new database and new tables for each work item
-static int copy_template(const int src_fd, const char * dst, off_t size) {
+static inline void incr(int & var) {
     #ifdef PRINT_STAGE
     {
         std::lock_guard <std::mutex> lock(mutex);
-        copying++;
-        std::cout << "copy:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
+        var++;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
     }
     #endif
+}
+
+static inline void decr(int & var) {
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        var--;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+    }
+    #endif
+}
+
+// copy the template file instead of creating a new database and new tables for each work item
+static int copy_template(const int src_fd, const char * dst, off_t size) {
+    incr(copying);
 
     // ignore errors here
     const int src_db = dup(src_fd);
@@ -207,78 +222,47 @@ static int copy_template(const int src_fd, const char * dst, off_t size) {
         return -1;
     }
 
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        copying--;
-        std::cout << "copy:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-    }
-    #endif
-
+    decr(copying);
     return 0;
 }
 
 static sqlite3 * opendb(const char *name)
 {
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        opening++;
-        std::cout << "open:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-    }
-    #endif
-
     char dbn[MAXPATH];
     snprintf(dbn, MAXSQL, "%s", name);
 
+    incr(opening);
     sqlite3 * db = NULL;
     if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
     }
+    decr(opening);
 
-    // try to turn sychronization off
-    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    }
+    incr(settings);
+    // // try to turn sychronization off
+    // if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    // }
 
-    // try to turn journaling off
-    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    }
+    // // try to turn journaling off
+    // if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    // }
 
-    // try to get an exclusive lock
-    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
-    }
-
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        opening--;
-        std::cout << "open:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-    }
-    #endif
+    // // try to get an exclusive lock
+    // if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
+    // }
+    decr(settings);
 
     return db;
 }
 
 // process the work under one directory (no recursion)
 static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & trace) {
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        duping++;
-        std::cout << "duping:   duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-    }
-    #endif
+    incr(duping);
 
     // create the directory
     dupdir(w.get());
 
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        duping--;
-        std::cout << "duping:   duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-    }
-    #endif
+    decr(duping);
 
     // create the database name
     char dbname[MAXPATH];
@@ -292,47 +276,18 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
     // process the work
     sqlite3 * db = nullptr;
     if ((db = opendb(dbname))) {
-        // #ifdef PRINT_STAGE
-        // {
-        //     std::lock_guard <std::mutex> lock(mutex);
-        //     processing++;
-        //     std::cout << "process:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        // }
-        // #endif
+        // incr(processing);
 
         // struct sum summary;
         // zeroit(&summary);
 
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            prepping++;
-            std::cout << "prepping:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
+        incr(prepping);
         sqlite3_stmt * res = insertdbprep(db, NULL);
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            prepping--;
-            std::cout << "prepping:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            bt++;
-            std::cout << "begin_transaction:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        #endif
-        }
+        decr(prepping);
+
+        incr(bt);
         startdb(db);
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            bt--;
-            std::cout << "begin_transaction:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
+        decr(bt);
 
         // move the trace file to the offet
         trace.seekg(w->offset);
@@ -344,22 +299,10 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
                 break;
             }
 
-            #ifdef PRINT_STAGE
-            {
-                std::lock_guard <std::mutex> lock(mutex);
-                parsing++;
-                std::cout << "parsing:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-            }
-            #endif
+            incr(parsing);
             struct work row;
             parsetowork(in.delim, line, &row);
-            #ifdef PRINT_STAGE
-            {
-                std::lock_guard <std::mutex> lock(mutex);
-                parsing--;
-                std::cout << "parsing:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-            }
-            #endif
+            decr(parsing);
 
             if (row.type[0] != 'd') {
                 break;
@@ -368,22 +311,10 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
             // // update summary table
             // sumit(&summary,&row);
 
-            #ifdef PRINT_STAGE
-            {
-                std::lock_guard <std::mutex> lock(mutex);
-                inserting++;
-                std::cout << "inserting:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-            }
-            #endif
+            incr(inserting);
             // add row to bulk insert
             insertdbgo(&row,db,res);
-            #ifdef PRINT_STAGE
-            {
-                std::lock_guard <std::mutex> lock(mutex);
-                inserting--;
-                std::cout << "inserting:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-            }
-            #endif
+            decr(inserting);
 
             rows++;
             if (rows > 100000) {
@@ -393,79 +324,27 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
             }
         }
 
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            et++;
-            std::cout << "end_transaction:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
+        incr(et);
         stopdb(db);
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            et--;
-            std::cout << "end_transaction:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            unprep++;
-            std::cout << "unprep:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
+        decr(et);
+
+        incr(unprep);
         insertdbfin(db, res);
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            unprep--;
-            std::cout << "unprep:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        }
-        #endif
+        decr(unprep);
+
         // insertsumdb(db, w.get(), &summary);
 
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            closing++;
-            std::cout << "unprep:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
-        }
-        #endif
+        incr(closing);
         closedb(db); // don't set to nullptr
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            closing--;
-            std::cout << "unprep:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
-        }
-        #endif
+        decr(closing);
 
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            perm++;
-            std::cout << "unprep:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
-        }
-        #endif
+        incr(perm);
         // ignore errors
         chown(dbname, w->statuso.st_uid, w->statuso.st_gid);
         chmod(dbname, w->statuso.st_mode | S_IRUSR);
-        #ifdef PRINT_STAGE
-        {
-            std::lock_guard <std::mutex> lock(mutex);
-            perm--;
-            std::cout << "unprep:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
-        }
-        #endif
+        decr(perm);
 
-        // #ifdef PRINT_STAGE
-        // {
-        //     std::lock_guard <std::mutex> lock(mutex);
-        //     processing--;
-        //     std::cout << "process:  duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-        // }
-        // #endif
+        // decr(processing);
     }
 
     return db;
@@ -488,13 +367,7 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
             // std::chrono::high_resolution_clock::time_point wait_start = std::chrono::high_resolution_clock::now();
             // #endif
 
-            #ifdef PRINT_STAGE
-            {
-                std::lock_guard <std::mutex> lock(mutex);
-                waiting++;
-                std::cout << "wait:     duping: " << duping << " copying: " << copying << " opening: " << opening << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << std::endl;
-            }
-            #endif
+            incr(waiting);
 
             std::unique_lock <std::mutex> lock(tw.mutex);
 
@@ -503,12 +376,7 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
                 tw.cv.wait(lock);
             }
 
-            #ifdef PRINT_STAGE
-            {
-                std::lock_guard <std::mutex> lock(mutex);
-                waiting--;
-            }
-            #endif
+            decr(waiting);
 
             // #ifdef DEBUG
             // std::chrono::high_resolution_clock::time_point wait_end = std::chrono::high_resolution_clock::now();
