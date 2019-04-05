@@ -475,19 +475,9 @@ int insertdbfin(sqlite3 *db,sqlite3_stmt *res)
 
 sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
 {
-    char *err_msg = 0;
-    // char sqlstmt[MAXSQL];
     const char *tail;
     int error = SQLITE_OK;
     sqlite3_stmt *reso;
-
-    /*******  this is a bit dangerous, as all the records need to be written
-              to the db, plus some time for the OS to write to disk ****/
-    /* error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg); */
-    if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",
-                  error,sqlite3_errmsg(db));
-    }
 
     // WARNING: passing length-arg that is longer than SQL text
     error= sqlite3_prepare_v2(db, esqli, MAXSQL, &reso, &tail);
@@ -501,19 +491,9 @@ sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
 
 sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res)
 {
-    char *err_msg = 0;
-    // char sqlstmt[MAXSQL];
     const char *tail;
-    int error;
+    int error = SQLITE_OK;
     sqlite3_stmt *reso;
-
-    /*******  this is a bit dangerous, as all the records need to be written
-              to the db, plus some time for the OS to write to disk ****/
-    /* error=sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, &err_msg); */
-    if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on insertdbprep setting sync off: error %d err %s\n",
-                  error,sqlite3_errmsg(db));
-    }
 
     // WARNING: passing length-arg that is longer than SQL text
     error= sqlite3_prepare_v2(db, rsqli, MAXSQL, &reso, &tail);

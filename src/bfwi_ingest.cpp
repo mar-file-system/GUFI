@@ -60,7 +60,6 @@ struct ThreadWork {
 typedef std::pair <ThreadWork, std::thread> WorkPair;
 typedef std::vector <WorkPair> State;
 
-
 int duping(0);
 int copying(0);
 int opening(0);
@@ -117,20 +116,56 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     int tid = 0;
     char line[MAXLINE];
     char delim[2] = {'\x1e', '\x00'};
-    std::size_t count = 0;
+    std::size_t count = 1;
 
-    while (file.getline(line, MAXLINE)) {
+    // if the first line is not a directory, insert work for root
+    // otherwise, just sit on the directory until the next one is found
+    std::shared_ptr <struct work> work = std::make_shared <struct work> ();
+    file.getline(line, MAXLINE);
+    parsetowork(delim, line, work.get());
+    if (work->type[0] == 'f') {
+        count++;
+
+        SNPRINTF(work->name, MAXPATH, "/");
+        work->pinode = 0;
+        work->offset = file.tellg();
+        work->has_entries = 1;
+
+        std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
+        consumers[tid].first.queue.push_back(work);
+        consumers[tid].first.cv.notify_all();
+
+        // round robin
+        tid++;
+        tid %= in.maxthreads;
+    }
+
+    while (true) {
+        // get starting offset
+        std::ostream::streampos starting_offset = file.tellg();
+
+        if (!file.getline(line, MAXLINE)) {
+            break;
+        }
+
+        std::shared_ptr <struct work> next  = std::make_shared <struct work> ();
+
         // parse
-        std::shared_ptr <struct work> work = std::make_shared <struct work> ();
-        parsetowork(delim, line, work.get());
+        parsetowork(delim, line, next.get());
 
-        if (work->type[0] == 'd') {
+        // keep directories
+        if (next->type[0] == 'd') {
             count++;
 
-            work->pinode=0;
-            work->offset=file.tellg();
+            // if the previous work's starting offset is the same as this
+            // currrent row's starting offset, the previous work does not
+            // any file entries
+            work->has_entries = (work -> offset != starting_offset);
 
-            // put on queues
+            next->pinode = 0;
+            next->offset = file.tellg();
+
+            // put the previous work on the queue
             {
                 std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
                 consumers[tid].first.queue.push_back(work);
@@ -140,7 +175,17 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             // round robin
             tid++;
             tid %= in.maxthreads;
+
+            work = std::move(next);
         }
+    }
+
+    // insert the last work item
+    {
+        work->has_entries = (work -> offset != file.tellg());
+        std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
+        consumers[tid].first.queue.push_back(work);
+        consumers[tid].first.cv.notify_all();
     }
 
     scouting = false;
@@ -271,6 +316,11 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize)) {
         return false;
+    }
+
+    // don't bother opening the database file if there are no entries
+    if (!w->has_entries) {
+        return true;
     }
 
     // process the work
