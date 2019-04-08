@@ -19,7 +19,7 @@
 // #endif
 
 #ifndef PRINT_STAGE
-#define PRINT_STAGE
+// #define PRINT_STAGE
 #endif
 
 #ifdef DEBUG
@@ -76,7 +76,7 @@ int closing(0);
 int perm(0);
 std::mutex mutex;
 
-void parsetowork (char * delim, char * line, struct work * pinwork ) {
+void parsetowork (char * delim, char * line, struct work * pinwork) {
     char *p;
     char *q;
 
@@ -128,7 +128,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
 
         SNPRINTF(work->name, MAXPATH, "/");
         work->pinode = 0;
-        work->offset = file.tellg();
+        work->offset = 0;
         work->has_entries = 1;
 
         std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
@@ -160,8 +160,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             // if the previous work's starting offset is the same as this
             // currrent row's starting offset, the previous work does not
             // any file entries
-            work->has_entries = (work -> offset != starting_offset);
-
+            work->has_entries = (work->offset != starting_offset);
             next->pinode = 0;
             next->offset = file.tellg();
 
@@ -263,7 +262,7 @@ static int copy_template(const int src_fd, const char * dst, off_t size) {
     close(dst_db);
 
     if (sf == -1) {
-        fprintf(stderr, "Could not copy template file\n");
+        fprintf(stderr, "Could not copy template file to %s\n", dst);
         return -1;
     }
 
@@ -284,28 +283,40 @@ static sqlite3 * opendb(const char *name)
     decr(opening);
 
     incr(settings);
-    // // try to turn sychronization off
-    // if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    // }
+    // try to turn sychronization off
+    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    }
 
-    // // try to turn journaling off
-    // if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    // }
+    // try to turn journaling off
+    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+    }
 
-    // // try to get an exclusive lock
-    // if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
-    // }
+    // try to store temp_store in memory
+    if (sqlite3_exec(db, "PRAGMA temp_store = 2", NULL, NULL, NULL) != SQLITE_OK) {
+    }
+
+    // try to increase the page size
+    if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
+    }
+
+    // try to increase the cache size
+    if (sqlite3_exec(db, "PRAGMA cache_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
+    }
+
+    // try to get an exclusive lock
+    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
+    }
     decr(settings);
 
     return db;
 }
 
 // process the work under one directory (no recursion)
-static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & trace) {
+static bool processdir(struct work * w, std::ifstream & trace) {
     incr(duping);
 
     // create the directory
-    dupdir(w.get());
+    dupdir(w);
 
     decr(duping);
 
@@ -324,8 +335,8 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
     }
 
     // process the work
-    sqlite3 * db = nullptr;
-    if ((db = opendb(dbname))) {
+    sqlite3 * db = opendb(dbname);
+    if (db) {
         // incr(processing);
 
         // struct sum summary;
@@ -354,15 +365,16 @@ static bool processdir(const std::shared_ptr <struct work> & w, std::ifstream & 
             parsetowork(in.delim, line, &row);
             decr(parsing);
 
-            if (row.type[0] != 'd') {
+            // stop on directories, since files are listed first
+            if (row.type[0] == 'd') {
                 break;
             }
 
             // // update summary table
             // sumit(&summary,&row);
 
-            incr(inserting);
             // add row to bulk insert
+            incr(inserting);
             insertdbgo(&row,db,res);
             decr(inserting);
 
@@ -451,8 +463,8 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
         // #endif
 
         // process all work
-        for(std::shared_ptr <struct work> const & dir : dirs) {
-            processed += processdir(dir, trace);
+        for(std::shared_ptr <struct work> & dir : dirs) {
+            processed += processdir(dir.get(), trace);
         }
 
         // #ifdef DEBUG

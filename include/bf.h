@@ -86,7 +86,7 @@ OF SUCH DAMAGE.
 #define MAXXATTR 1024
 #define MAXSQL 2048
 #define MAXRECS 100000
-#define MAXPTHREAD 100
+#define MAXPTHREAD 200
 #define MAXSTRIDE 1000000000   // maximum records per stripe
 #define DBNAME "db.db"
 
