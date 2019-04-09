@@ -329,11 +329,13 @@ static bool processdir(struct work * w) {
 
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize)) {
+        delete w;
         return false;
     }
 
     // don't open the database file if there is nothing to insert
     if (!w->head) {
+        delete w;
         return true;
     }
 
