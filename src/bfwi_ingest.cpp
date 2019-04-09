@@ -18,7 +18,7 @@
 // #endif
 
 #ifndef PRINT_STAGE
-#define PRINT_STAGE
+// #define PRINT_STAGE
 #endif
 
 #ifdef DEBUG
@@ -63,6 +63,7 @@ int settings(0);
 int waiting(0);
 int prepping(0);
 int bt(0);
+int parsing(0);
 int inserting(0);
 int et(0);
 int unprep(0);
@@ -94,7 +95,7 @@ void parsetowork (char * delim, char * line, struct work * pinwork) {
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
 }
 
-// Reads the input file and distributes the contents to the threads
+// Read ahead to figure out where files under directories start
 void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
     #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
@@ -130,13 +131,20 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         memset(root, 0, sizeof(struct work));
 
         SNPRINTF(root->name, MAXPATH, "/");
-        root->head = work;
-        root->tail = work;
+        root->offset = 0;
+        root->has_entries = 1;
 
         work = root;
     }
 
-    while (file.getline(line, MAXLINE)) {
+    while (true) {
+        // get starting offset
+        std::ostream::streampos starting_offset = file.tellg();
+
+        if (!file.getline(line, MAXLINE)) {
+            break;
+        }
+
         struct work * next = new struct work;
         memset(next, 0, sizeof(struct work));
 
@@ -146,6 +154,9 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         // push directories onto queues
         if (next->type[0] == 'd') {
             count++;
+
+            work->has_entries = (work->offset != starting_offset);
+            next->offset = file.tellg();
 
             // put the previous work on the queue
             {
@@ -160,20 +171,11 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
 
             work = next;
         }
-        else {
-            // store the file entry in the directory entry
-            if (work->tail) {
-                work->tail->next = next;
-            }
-            else {
-                work->head = next;
-            }
-            work->tail = next;
-        }
     }
 
     // insert the last work item
     {
+        work->has_entries = (work->offset != file.tellg());
         std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
         consumers[tid].first.queue.push_back(work);
         consumers[tid].first.cv.notify_all();
@@ -227,7 +229,7 @@ static inline void incr(int & var) {
     {
         std::lock_guard <std::mutex> lock(mutex);
         var++;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
     }
     #endif
 }
@@ -237,7 +239,7 @@ static inline void decr(int & var) {
     {
         std::lock_guard <std::mutex> lock(mutex);
         var--;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
     }
     #endif
 }
@@ -312,7 +314,7 @@ static sqlite3 * opendb(const char *name)
 
 // process the work under one directory (no recursion)
 // also deletes w
-static bool processdir(struct work * w) {
+static bool processdir(struct work * w, std::ifstream & trace) {
     // might want to skip this check
     if (!w) {
         return false;
@@ -333,8 +335,8 @@ static bool processdir(struct work * w) {
         return false;
     }
 
-    // don't open the database file if there is nothing to insert
-    if (!w->head) {
+    // don't bother opening the database file if there is nothing to insert
+    if (!w->has_entries) {
         delete w;
         return true;
     }
@@ -353,19 +355,33 @@ static bool processdir(struct work * w) {
         startdb(db);
         decr(bt);
 
+        // move the trace file to the offet
+        trace.seekg(w->offset);
+
         std::size_t rows = 0;
-        while (w->head) {
-            // add row to bulk insert
-            incr(inserting);
-            insertdbgo(w->head,db,res);
-            decr(inserting);
+        while (true) {
+            char line[MAXLINE];
+            if (!trace.getline(line, MAXLINE)) {
+                break;
+            }
+
+            incr(parsing);
+            struct work row;
+            parsetowork(in.delim, line, &row);
+            decr(parsing);
+
+            // stop on directories, since files are listed first
+            if (row.type[0] == 'd') {
+                break;
+            }
 
             // // update summary table
             // sumit(&summary,w->head);
 
-            struct work * next = w->head->next;
-            delete w->head;
-            w->head = next;
+            // add row to bulk insert
+            incr(inserting);
+            insertdbgo(&row,db,res);
+            decr(inserting);
 
             rows++;
             if (rows > 100000) {
@@ -403,6 +419,13 @@ static bool processdir(struct work * w) {
 
 // consumer of work
 static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw) {
+    std::ifstream trace(in.name, std::ios::binary);
+    if (!trace) {
+        std::cerr << "Could not open " << in.name << ". Thread not running." << std::endl;
+        // possibly move queued work into anther thread's queue?
+        return 0;
+    }
+
     std::size_t processed = 0;
     while (scouting || tw.queue.size()) {
         std::list <struct work *> dirs;
@@ -446,7 +469,7 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
 
         // process all work
         for(struct work * dir : dirs) {
-            processed += processdir(dir);
+            processed += processdir(dir, trace);
         }
 
         // #ifdef DEBUG

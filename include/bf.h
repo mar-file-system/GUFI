@@ -282,15 +282,8 @@ struct work {
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
    size_t        aggregate_id;
-
-   // file information
-   struct work * head;
-   struct work * tail;
-   struct work * next;
+   int           has_entries;
 };
-
-
-
 
 extern char xattrdelim[];
 extern char fielddelim[];
