@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <list>
-#include <memory>
 #include <mutex>
 #include <sys/sendfile.h>
 #include <sys/stat.h>
@@ -19,7 +18,7 @@
 // #endif
 
 #ifndef PRINT_STAGE
-// #define PRINT_STAGE
+#define PRINT_STAGE
 #endif
 
 #ifdef DEBUG
@@ -29,10 +28,8 @@
 extern "C" {
 
 #include "bf.h"
-#include "structq.h"
 #include "utils.h"
 #include "dbutils.h"
-#include "pcre.h"
 
 }
 
@@ -51,8 +48,7 @@ struct ThreadWork {
     {}
 
     int id;
-    // shared_ptr because valgrind doesn't seem to like std::move-ing pointers
-    std::list <std::shared_ptr <struct work> > queue;
+    std::list <struct work *> queue;
     std::mutex mutex;
     std::condition_variable cv;
 };
@@ -65,10 +61,8 @@ int copying(0);
 int opening(0);
 int settings(0);
 int waiting(0);
-// int processing(0);
 int prepping(0);
 int bt(0);
-int parsing(0);
 int inserting(0);
 int et(0);
 int unprep(0);
@@ -100,7 +94,7 @@ void parsetowork (char * delim, char * line, struct work * pinwork) {
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
 }
 
-// Read ahead to figure out where files under directories start
+// Reads the input file and distributes the contents to the threads
 void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
     #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
@@ -118,51 +112,40 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     char delim[2] = {'\x1e', '\x00'};
     std::size_t count = 1;
 
-    // if the first line is not a directory, insert work for root
-    // otherwise, just sit on the directory until the next one is found
-    std::shared_ptr <struct work> work = std::make_shared <struct work> ();
-    file.getline(line, MAXLINE);
-    parsetowork(delim, line, work.get());
+    struct work * work = new struct work;
+    memset(work, 0, sizeof(struct work));
+    if (!file.getline(line, MAXLINE)) {
+        delete work;
+        return;
+    }
+
+    parsetowork(delim, line, work);
+
+    // if the first line is not a directory, create work for root
+    // and moved the parsed data under it
     if (work->type[0] == 'f') {
         count++;
 
-        SNPRINTF(work->name, MAXPATH, "/");
-        work->pinode = 0;
-        work->offset = 0;
-        work->has_entries = 1;
+        struct work * root = new struct work;
+        memset(root, 0, sizeof(struct work));
 
-        std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
-        consumers[tid].first.queue.push_back(work);
-        consumers[tid].first.cv.notify_all();
+        SNPRINTF(root->name, MAXPATH, "/");
+        root->head = work;
+        root->tail = work;
 
-        // round robin
-        tid++;
-        tid %= in.maxthreads;
+        work = root;
     }
 
-    while (true) {
-        // get starting offset
-        std::ostream::streampos starting_offset = file.tellg();
-
-        if (!file.getline(line, MAXLINE)) {
-            break;
-        }
-
-        std::shared_ptr <struct work> next  = std::make_shared <struct work> ();
+    while (file.getline(line, MAXLINE)) {
+        struct work * next = new struct work;
+        memset(next, 0, sizeof(struct work));
 
         // parse
-        parsetowork(delim, line, next.get());
+        parsetowork(delim, line, next);
 
-        // keep directories
+        // push directories onto queues
         if (next->type[0] == 'd') {
             count++;
-
-            // if the previous work's starting offset is the same as this
-            // currrent row's starting offset, the previous work does not
-            // any file entries
-            work->has_entries = (work->offset != starting_offset);
-            next->pinode = 0;
-            next->offset = file.tellg();
 
             // put the previous work on the queue
             {
@@ -175,13 +158,22 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             tid++;
             tid %= in.maxthreads;
 
-            work = std::move(next);
+            work = next;
+        }
+        else {
+            // store the file entry in the directory entry
+            if (work->tail) {
+                work->tail->next = next;
+            }
+            else {
+                work->head = next;
+            }
+            work->tail = next;
         }
     }
 
     // insert the last work item
     {
-        work->has_entries = (work -> offset != file.tellg());
         std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
         consumers[tid].first.queue.push_back(work);
         consumers[tid].first.cv.notify_all();
@@ -194,12 +186,13 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         consumers[i].first.cv.notify_all();
     }
 
+    std::lock_guard <std::mutex> lock(mutex);
+
     #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
     #endif
 
-    std::lock_guard <std::mutex> lock(mutex);
     std::cerr << "Dirs: " << count << std::endl;
 
     return;
@@ -234,7 +227,7 @@ static inline void incr(int & var) {
     {
         std::lock_guard <std::mutex> lock(mutex);
         var++;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
     }
     #endif
 }
@@ -244,7 +237,7 @@ static inline void decr(int & var) {
     {
         std::lock_guard <std::mutex> lock(mutex);
         var--;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
     }
     #endif
 }
@@ -285,26 +278,32 @@ static sqlite3 * opendb(const char *name)
     incr(settings);
     // try to turn sychronization off
     if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+        std::cerr << "Could not turn off synchronization" << std::endl;
     }
 
     // try to turn journaling off
     if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+        std::cerr << "Could not turn off journaling" << std::endl;
     }
 
     // try to store temp_store in memory
     if (sqlite3_exec(db, "PRAGMA temp_store = 2", NULL, NULL, NULL) != SQLITE_OK) {
+        std::cerr << "Could not set temporary storage to in-memory" << std::endl;
     }
 
     // try to increase the page size
     if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
+        std::cerr << "Could not set page size" << std::endl;
     }
 
     // try to increase the cache size
     if (sqlite3_exec(db, "PRAGMA cache_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
+        std::cerr << "Could not set cache size" << std::endl;
     }
 
     // try to get an exclusive lock
     if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
+        std::cerr << "Could not set locking mode" << std::endl;
     }
     decr(settings);
 
@@ -312,12 +311,16 @@ static sqlite3 * opendb(const char *name)
 }
 
 // process the work under one directory (no recursion)
-static bool processdir(struct work * w, std::ifstream & trace) {
-    incr(duping);
+// also deletes w
+static bool processdir(struct work * w) {
+    // might want to skip this check
+    if (!w) {
+        return false;
+    }
 
     // create the directory
+    incr(duping);
     dupdir(w);
-
     decr(duping);
 
     // create the database name
@@ -329,16 +332,14 @@ static bool processdir(struct work * w, std::ifstream & trace) {
         return false;
     }
 
-    // don't bother opening the database file if there are no entries
-    if (!w->has_entries) {
+    // don't open the database file if there is nothing to insert
+    if (!w->head) {
         return true;
     }
 
     // process the work
     sqlite3 * db = opendb(dbname);
     if (db) {
-        // incr(processing);
-
         // struct sum summary;
         // zeroit(&summary);
 
@@ -350,33 +351,19 @@ static bool processdir(struct work * w, std::ifstream & trace) {
         startdb(db);
         decr(bt);
 
-        // move the trace file to the offet
-        trace.seekg(w->offset);
-
         std::size_t rows = 0;
-        while (true) {
-            char line[MAXLINE];
-            if (!trace.getline(line, MAXLINE)) {
-                break;
-            }
-
-            incr(parsing);
-            struct work row;
-            parsetowork(in.delim, line, &row);
-            decr(parsing);
-
-            // stop on directories, since files are listed first
-            if (row.type[0] == 'd') {
-                break;
-            }
-
-            // // update summary table
-            // sumit(&summary,&row);
-
+        while (w->head) {
             // add row to bulk insert
             incr(inserting);
-            insertdbgo(&row,db,res);
+            insertdbgo(w->head,db,res);
             decr(inserting);
+
+            // // update summary table
+            // sumit(&summary,w->head);
+
+            struct work * next = w->head->next;
+            delete w->head;
+            w->head = next;
 
             rows++;
             if (rows > 100000) {
@@ -394,36 +381,29 @@ static bool processdir(struct work * w, std::ifstream & trace) {
         insertdbfin(db, res);
         decr(unprep);
 
-        // insertsumdb(db, w.get(), &summary);
+        // insertsumdb(db, w, &summary);
 
         incr(closing);
         closedb(db); // don't set to nullptr
         decr(closing);
 
-        incr(perm);
         // ignore errors
+        incr(perm);
         chown(dbname, w->statuso.st_uid, w->statuso.st_gid);
         chmod(dbname, w->statuso.st_mode | S_IRUSR);
         decr(perm);
-
-        // decr(processing);
     }
+
+    delete w;
 
     return db;
 }
 
 // consumer of work
 static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw) {
-    std::ifstream trace(in.name, std::ios::binary);
-    if (!trace) {
-        std::cerr << "Could not open " << in.name << ". Thread not running." << std::endl;
-        // possibly move queued work into anther thread's queue?
-        return 0;
-    }
-
     std::size_t processed = 0;
     while (scouting || tw.queue.size()) {
-        std::list <std::shared_ptr <struct work> > dirs;
+        std::list <struct work *> dirs;
         {
             // #ifdef DEBUG
             // std::chrono::high_resolution_clock::time_point wait_start = std::chrono::high_resolution_clock::now();
@@ -463,8 +443,8 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
         // #endif
 
         // process all work
-        for(std::shared_ptr <struct work> & dir : dirs) {
-            processed += processdir(dir.get(), trace);
+        for(struct work * dir : dirs) {
+            processed += processdir(dir);
         }
 
         // #ifdef DEBUG

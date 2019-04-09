@@ -86,7 +86,7 @@ OF SUCH DAMAGE.
 #define MAXXATTR 1024
 #define MAXSQL 2048
 #define MAXRECS 100000
-#define MAXPTHREAD 200
+#define MAXPTHREAD 1000
 #define MAXSTRIDE 1000000000   // maximum records per stripe
 #define DBNAME "db.db"
 
@@ -260,7 +260,6 @@ typedef enum {
    CLOSE_DB  = 0x04,
 } CleanUpTasks;
 
-
 struct work {
    size_t        level;
    char          name[MAXPATH];
@@ -283,8 +282,15 @@ struct work {
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
    size_t        aggregate_id;
-   int           has_entries;
+
+   // file information
+   struct work * head;
+   struct work * tail;
+   struct work * next;
 };
+
+
+
 
 extern char xattrdelim[];
 extern char fielddelim[];
