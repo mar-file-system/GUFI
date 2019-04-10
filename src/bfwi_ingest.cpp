@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <sys/sendfile.h>
 #include <sys/stat.h>
@@ -38,6 +39,21 @@ extern "C" {
 static int templatefd = -1;    // this is really a constant that is set at runtime
 static off_t templatesize = 0; // this is really a constant that is set at runtime
 
+// The C++ committee forgot this in C++11
+template <typename T, typename ...Args>
+std::unique_ptr <T> make_unique(Args&& ...args) {
+    return std::unique_ptr <T> (new T(std::forward <Args> (args)...));
+}
+
+typedef std::unique_ptr<struct work> Row;
+Row new_row() {
+    return make_unique <struct work> ();
+}
+
+void delete_row(Row & row) {
+    // no-op until Row is changed back to a raw pointer
+}
+
 // basically thread args
 struct ThreadWork {
     ThreadWork()
@@ -48,7 +64,7 @@ struct ThreadWork {
     {}
 
     int id;
-    std::list <struct work *> queue;
+    std::list <Row> queue;
     std::mutex mutex;
     std::condition_variable cv;
 };
@@ -113,28 +129,28 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     char delim[2] = {'\x1e', '\x00'};
     std::size_t count = 1;
 
-    struct work * work = new struct work;
-    memset(work, 0, sizeof(struct work));
+    Row work = new_row();
+    memset(work.get(), 0, sizeof(struct work));
     if (!file.getline(line, MAXLINE)) {
-        delete work;
+        delete_row(work);
         return;
     }
 
-    parsetowork(delim, line, work);
+    parsetowork(delim, line, work.get());
 
     // if the first line is not a directory, create work for root
     // and moved the parsed data under it
     if (work->type[0] == 'f') {
         count++;
 
-        struct work * root = new struct work;
-        memset(root, 0, sizeof(struct work));
+        Row root = new_row();
+        memset(root.get(), 0, sizeof(struct work));
 
         SNPRINTF(root->name, MAXPATH, "/");
         root->offset = 0;
         root->has_entries = 1;
 
-        work = root;
+        work = std::move(root);
     }
 
     while (true) {
@@ -145,11 +161,11 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             break;
         }
 
-        struct work * next = new struct work;
-        memset(next, 0, sizeof(struct work));
+        Row next = new_row();
+        memset(next.get(), 0, sizeof(struct work));
 
         // parse
-        parsetowork(delim, line, next);
+        parsetowork(delim, line, next.get());
 
         // push directories onto queues
         if (next->type[0] == 'd') {
@@ -161,7 +177,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             // put the previous work on the queue
             {
                 std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
-                consumers[tid].first.queue.push_back(work);
+                consumers[tid].first.queue.emplace_back(std::move(work));
                 consumers[tid].first.cv.notify_all();
             }
 
@@ -169,7 +185,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             tid++;
             tid %= in.maxthreads;
 
-            work = next;
+            work = std::move(next);
         }
     }
 
@@ -177,7 +193,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     {
         work->has_entries = (work->offset != file.tellg());
         std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
-        consumers[tid].first.queue.push_back(work);
+        consumers[tid].first.queue.emplace_back(std::move(work));
         consumers[tid].first.cv.notify_all();
     }
 
@@ -314,7 +330,7 @@ static sqlite3 * opendb(const char *name)
 
 // process the work under one directory (no recursion)
 // also deletes w
-static bool processdir(struct work * w, std::ifstream & trace) {
+static bool processdir(Row & w, std::ifstream & trace) {
     // might want to skip this check
     if (!w) {
         return false;
@@ -322,7 +338,7 @@ static bool processdir(struct work * w, std::ifstream & trace) {
 
     // create the directory
     incr(duping);
-    dupdir(w);
+    dupdir(w.get());
     decr(duping);
 
     // create the database name
@@ -331,13 +347,13 @@ static bool processdir(struct work * w, std::ifstream & trace) {
 
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize)) {
-        delete w;
+        delete_row(w);
         return false;
     }
 
     // don't bother opening the database file if there is nothing to insert
     if (!w->has_entries) {
-        delete w;
+        delete_row(w);
         return true;
     }
 
@@ -412,7 +428,7 @@ static bool processdir(struct work * w, std::ifstream & trace) {
         decr(perm);
     }
 
-    delete w;
+    delete_row(w);
 
     return db;
 }
@@ -428,7 +444,7 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
 
     std::size_t processed = 0;
     while (scouting || tw.queue.size()) {
-        std::list <struct work *> dirs;
+        std::list <Row> dirs;
         {
             // #ifdef DEBUG
             // std::chrono::high_resolution_clock::time_point wait_start = std::chrono::high_resolution_clock::now();
@@ -468,7 +484,7 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
         // #endif
 
         // process all work
-        for(struct work * dir : dirs) {
+        for(Row & dir : dirs) {
             processed += processdir(dir, trace);
         }
 
