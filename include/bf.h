@@ -264,7 +264,7 @@ struct work {
    size_t        level;
    char          name[MAXPATH];
    char          type[2];
-   char          nameto[MAXPATH];
+   // char          nameto[MAXPATH];
    char          linkname[MAXPATH];
    struct stat   statuso;
    long long int pinode;

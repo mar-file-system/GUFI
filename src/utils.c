@@ -452,7 +452,7 @@ int mkpath(char* file_path, mode_t mode) {
     *p='\0';
     //printf("mkpath mkdir file_path %s\n", file_path);
     //if (mkdir(file_path, mode)==-1) {
-    if (mkdir(file_path, mode | S_IRWXU)==-1) {
+    if (mkdir(file_path, mode)==-1) {
       if (errno!=EEXIST) {
          *p='/';
          return -1;
@@ -472,7 +472,7 @@ int dupdir(struct work *pwork)
     //printf("mkdir %s\n",topath);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     //rc = mkdir(topath,pwork->statuso.st_mode | S_IWRITE);
-    if (mkdir(topath,pwork->statuso.st_mode | S_IRWXU) != 0) {
+    if (mkdir(topath,pwork->statuso.st_mode) != 0) {
       //perror("mkdir");
       if (errno == ENOENT) {
         //printf("calling mkpath on %s\n",topath);

@@ -177,7 +177,7 @@ static void processdir(void * passv)
       SNPRINTF(name, MAXSQL, "%s/%s", passmywork->name, DBNAME);
       attachdb(name, db, "tree");
     } else {
-        db = opendb(passmywork->name, 1, 0);
+      db = opendb(passmywork->name, 1, 0);
     }
 
     if (in.aggregate_or_print == AGGREGATE) {
@@ -259,7 +259,7 @@ static void processdir(void * passv)
                     if (in.aggregate_or_print == AGGREGATE) {
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, NULL, NULL, &err) != SQLITE_OK) {
-                            fprintf(stderr, "Error: %s\n", err);
+                            fprintf(stderr, "Error: %s \"%s\"\n", err, in.sqlent);
                         }
 
                         sqlite3_free(err);

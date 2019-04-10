@@ -116,14 +116,13 @@ def total_space(args, *ignored):
 def total_files(args, *ignored):
     _, where = build(args)
     entries      = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    intermediate = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
-    return entries, intermediate, intermediate
+    aggregate    = qb.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    return entries, None, aggregate
 
 def directory_count(args, order = ''):
     _, where = build(args)
-    entries        = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    aggregate      = qb.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
-
+    entries      = qb.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    aggregate    = qb.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
     return entries, None, aggregate
 
 def get_leaf_dirs(path):
@@ -137,11 +136,10 @@ def leaf_count(args, order = ''):
 def total_in_leaf(args, *ignored):
     _, where = build(args)
     entries        = qb.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    intermediate   = qb.build_query(['count'],                 ['entries'], None, None, None, None, None)
-    aggregate      = qb.build_query(['TOTAL(count)'],          ['entries'], None, None, None, None, None)
+    intermediate   = qb.build_query(['count'],                 ['entries'], None,  None, None, None, None)
+    aggregate      = qb.build_query(['TOTAL(count)'],          ['entries'], None,  None, None, None, None)
 
     args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
-
     return entries, intermediate, aggregate
 
 def median_in_leaf(args, *ignored):
@@ -152,7 +150,6 @@ def median_in_leaf(args, *ignored):
     aggregate    = qb.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
 
     args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
-
     return entries, intermediate, aggregate
 
 def get_depth(path, sep = '/'):

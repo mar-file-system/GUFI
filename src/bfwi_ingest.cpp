@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <libgen.h>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -86,6 +87,26 @@ int unprep(0);
 int closing(0);
 std::mutex mutex;
 
+static inline void incr(int & var) {
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        var++;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
+    }
+    #endif
+}
+
+static inline void decr(int & var) {
+    #ifdef PRINT_STAGE
+    {
+        std::lock_guard <std::mutex> lock(mutex);
+        var--;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
+    }
+    #endif
+}
+
 void parsetowork (char * delim, char * line, struct work * pinwork) {
     char *p;
     char *q;
@@ -110,6 +131,30 @@ void parsetowork (char * delim, char * line, struct work * pinwork) {
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
 }
 
+// copy the template file instead of creating a new database and new tables for each work item
+// the ownership and permissions are set too
+static int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid) {
+    incr(copying);
+
+    // ignore errors here
+    const int src_db = dup(src_fd);
+    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    off_t offset = 0;
+    const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
+    fchown(dst_db, uid, gid);
+    // fchmod(dst_db, mode | S_IRUSR | S_IWUSR);
+    close(src_db);
+    close(dst_db);
+
+    if (sf == -1) {
+        fprintf(stderr, "Could not copy template file to %s\n", dst);
+        return -1;
+    }
+
+    decr(copying);
+    return 0;
+}
+
 // Read ahead to figure out where files under directories start
 void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
     #ifdef DEBUG
@@ -126,7 +171,8 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     int tid = 0;
     char line[MAXLINE];
     char delim[2] = {'\x1e', '\x00'};
-    std::size_t count = 1;
+    std::size_t file_count = 0;
+    std::size_t dir_count = 1; // always start with a directory
 
     Row work = new_row();
     memset(work.get(), 0, sizeof(struct work));
@@ -137,10 +183,45 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
 
     parsetowork(delim, line, work.get());
 
+    // set up some stuff using the first entry of the trace
+    {
+        char buf[MAXPATH];
+
+        // create the prefix of all of the paths
+        struct work prefix;
+        memset(&prefix, 0, sizeof(prefix));
+        SNPRINTF(buf, MAXPATH, "%s", work->name);
+        SNPRINTF(prefix.name, MAXPATH, "%s", dirname(buf));
+        prefix.statuso.st_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+        dupdir(&prefix);
+
+        // add empty databases to each prefix directory
+        char *curr = prefix.name + strlen(prefix.name);
+        while (curr != prefix.name) {
+            SNPRINTF(buf, MAXPATH, "%s/%s/" DBNAME, in.nameto, prefix.name);
+            copy_template(templatefd, buf, templatesize, 0, 0);
+
+            // find the next slash
+            while ((curr != prefix.name) && (*curr != '/')) {
+                curr--;
+            }
+
+            // remove consecutive slashes
+            while ((curr != prefix.name) && (*curr == '/')) {
+                *curr = '\0';
+                curr--;
+            }
+        }
+
+        // copy the template to the top level as well
+        SNPRINTF(buf, MAXPATH, "%s/" DBNAME, in.nameto);
+        copy_template(templatefd, buf, templatesize, 0, 0);
+    }
+
     // if the first line is not a directory, create work for root
     // and moved the parsed data under it
     if (work->type[0] == 'f') {
-        count++;
+        file_count++;
 
         Row root = new_row();
         memset(root.get(), 0, sizeof(struct work));
@@ -148,7 +229,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         SNPRINTF(root->name, MAXPATH, "/");
         root->offset = 0;
         root->has_entries = 1;
-
+        root->statuso.st_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
         work = std::move(root);
     }
 
@@ -168,7 +249,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
 
         // push directories onto queues
         if (next->type[0] == 'd') {
-            count++;
+            dir_count++;
 
             work->has_entries = (work->offset != starting_offset);
             next->offset = file.tellg();
@@ -185,6 +266,9 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             tid %= in.maxthreads;
 
             work = std::move(next);
+        }
+        else {
+            file_count++;
         }
     }
 
@@ -210,77 +294,11 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
     #endif
 
-    std::cerr << "Dirs: " << count << std::endl;
+    std::cerr << "Files: " << file_count << std::endl
+              << "Dirs:  " << dir_count << std::endl
+              << "Total: " << file_count + dir_count << std::endl;
 
     return;
-}
-
-// create the initial database file to copy from
-static off_t create_template(int & fd) {
-    static const char name[] = "tmp.db";
-
-    sqlite3 * db = nullptr;
-    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot create template database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
-        return -1;
-    }
-
-    create_tables(name, 4, db);
-    closedb(db);
-
-    if ((fd = open(name, O_RDONLY)) == -1) {
-        fprintf(stderr, "Could not open template file\n");
-        return -1;
-    }
-
-    // no need for the file to remain on the filesystem
-    remove(name);
-
-    return lseek(fd, 0, SEEK_END);
-}
-
-static inline void incr(int & var) {
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        var++;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
-    }
-    #endif
-}
-
-static inline void decr(int & var) {
-    #ifdef PRINT_STAGE
-    {
-        std::lock_guard <std::mutex> lock(mutex);
-        var--;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
-    }
-    #endif
-}
-
-// copy the template file instead of creating a new database and new tables for each work item
-// the ownership and permissions are set too
-static int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid, mode_t mode) {
-    incr(copying);
-
-    // ignore errors here
-    const int src_db = dup(src_fd);
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRWXG | S_IWGRP | S_IROTH | S_IROTH);
-    off_t offset = 0;
-    const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
-    fchown(dst_db, uid, gid);
-    fchmod(dst_db, mode | S_IRUSR | S_IWUSR);
-    close(src_db);
-    close(dst_db);
-
-    if (sf == -1) {
-        fprintf(stderr, "Could not copy template file to %s\n", dst);
-        return -1;
-    }
-
-    decr(copying);
-    return 0;
 }
 
 static sqlite3 * opendb(const char *name)
@@ -348,7 +366,7 @@ static bool processdir(Row & w, std::ifstream & trace) {
     SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, w->name);
 
     // copy the template file
-    if (copy_template(templatefd, dbname, templatesize, w->statuso.st_uid, w->statuso.st_gid, w->statuso.st_mode)) {
+    if (copy_template(templatefd, dbname, templatesize, w->statuso.st_uid, w->statuso.st_gid)) {
         delete_row(w);
         return false;
     }
@@ -514,6 +532,30 @@ static void processfin(std::thread & scout, State & state, const bool spawned_th
             wp.second.join();
         }
     }
+}
+
+// create the initial database file to copy from
+static off_t create_template(int & fd) {
+    static const char name[] = "tmp.db";
+
+    sqlite3 * db = nullptr;
+    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Cannot create template database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+        return -1;
+    }
+
+    create_tables(name, 4, db);
+    closedb(db);
+
+    if ((fd = open(name, O_RDONLY)) == -1) {
+        fprintf(stderr, "Could not open template file\n");
+        return -1;
+    }
+
+    // no need for the file to remain on the filesystem
+    remove(name);
+
+    return lseek(fd, 0, SEEK_END);
 }
 
 // This app allows users to do any of the following: (a) just walk the

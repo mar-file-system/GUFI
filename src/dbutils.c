@@ -211,6 +211,7 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     // sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
 
     sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME);
+
     if (createtables) {
         if (openwhat != 3)
             sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
