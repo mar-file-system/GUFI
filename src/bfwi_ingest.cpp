@@ -84,7 +84,6 @@ int inserting(0);
 int et(0);
 int unprep(0);
 int closing(0);
-int perm(0);
 std::mutex mutex;
 
 void parsetowork (char * delim, char * line, struct work * pinwork) {
@@ -245,7 +244,7 @@ static inline void incr(int & var) {
     {
         std::lock_guard <std::mutex> lock(mutex);
         var++;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
     }
     #endif
 }
@@ -255,13 +254,14 @@ static inline void decr(int & var) {
     {
         std::lock_guard <std::mutex> lock(mutex);
         var--;
-        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << " perm: " << perm << std::endl;
+        std::cout << "duping: " << duping << " copying: " << copying << " opening: " << opening << " settings: " << settings << " waiting: " << waiting << " prepping: " << prepping << " begin_transaction: " << bt << " parsing: " << parsing << " inserting: " << inserting << " end_transaction: " << et << " unprep: " << unprep << " closing: " << closing << std::endl;
     }
     #endif
 }
 
 // copy the template file instead of creating a new database and new tables for each work item
-static int copy_template(const int src_fd, const char * dst, off_t size) {
+// the ownership and permissions are set too
+static int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid, mode_t mode) {
     incr(copying);
 
     // ignore errors here
@@ -269,6 +269,8 @@ static int copy_template(const int src_fd, const char * dst, off_t size) {
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRWXG | S_IWGRP | S_IROTH | S_IROTH);
     off_t offset = 0;
     const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
+    fchown(dst_db, uid, gid);
+    fchmod(dst_db, mode | S_IRUSR | S_IWUSR);
     close(src_db);
     close(dst_db);
 
@@ -346,7 +348,7 @@ static bool processdir(Row & w, std::ifstream & trace) {
     SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, w->name);
 
     // copy the template file
-    if (copy_template(templatefd, dbname, templatesize)) {
+    if (copy_template(templatefd, dbname, templatesize, w->statuso.st_uid, w->statuso.st_gid, w->statuso.st_mode)) {
         delete_row(w);
         return false;
     }
@@ -420,12 +422,6 @@ static bool processdir(Row & w, std::ifstream & trace) {
         incr(closing);
         closedb(db); // don't set to nullptr
         decr(closing);
-
-        // ignore errors
-        incr(perm);
-        chown(dbname, w->statuso.st_uid, w->statuso.st_gid);
-        chmod(dbname, w->statuso.st_mode | S_IRUSR);
-        decr(perm);
     }
 
     delete_row(w);
@@ -597,6 +593,9 @@ int main(int argc, char * argv[]) {
     processfin(scout, state, spawned_threads);
 
     close(templatefd);
+
+    // set top level permissions
+    chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
