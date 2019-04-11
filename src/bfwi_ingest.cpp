@@ -40,15 +40,30 @@ extern "C" {
 static int templatefd = -1;    // this is really a constant that is set at runtime
 static off_t templatesize = 0; // this is really a constant that is set at runtime
 
+// Data stored during first pass of input file
+struct first {
+    first()
+        : first_delim(std::string::npos),
+          line(),
+          offset(-1),
+          has_entries(false)
+    {}
+
+    std::string::size_type first_delim;
+    std::string line;
+    off_t offset;
+    bool has_entries;
+};
+
 // The C++ committee forgot this in C++11
 template <typename T, typename ...Args>
 std::unique_ptr <T> make_unique(Args&& ...args) {
     return std::unique_ptr <T> (new T(std::forward <Args> (args)...));
 }
 
-typedef std::unique_ptr<struct work> Row;
+typedef std::unique_ptr <struct first> Row;
 Row new_row() {
-    return make_unique <struct work> ();
+    return make_unique <struct first> ();
 }
 
 void delete_row(Row & row) {
@@ -107,6 +122,10 @@ static inline void decr(int & var) {
     #endif
 }
 
+void parsetowork (const char delim, Row & work) {
+    work->first_delim = work->line.find(delim);
+}
+
 void parsetowork (char * delim, char * line, struct work * pinwork) {
     char *p;
     char *q;
@@ -142,7 +161,6 @@ static int copy_template(const int src_fd, const char * dst, off_t size, uid_t u
     off_t offset = 0;
     const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
     fchown(dst_db, uid, gid);
-    // fchmod(dst_db, mode | S_IRUSR | S_IWUSR);
     close(src_db);
     close(dst_db);
 
@@ -169,86 +187,97 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     }
 
     int tid = 0;
-    char line[MAXLINE];
     char delim[2] = {'\x1e', '\x00'};
     std::size_t file_count = 0;
     std::size_t dir_count = 1; // always start with a directory
 
     Row work = new_row();
-    memset(work.get(), 0, sizeof(struct work));
-    if (!file.getline(line, MAXLINE)) {
+    if (!std::getline(file, work->line)) {
         delete_row(work);
         return;
     }
 
-    parsetowork(delim, line, work.get());
+    parsetowork(delim[0], work);
 
-    // set up some stuff using the first entry of the trace
-    {
-        char buf[MAXPATH];
-
-        // create the prefix of all of the paths
-        struct work prefix;
-        memset(&prefix, 0, sizeof(prefix));
-        SNPRINTF(buf, MAXPATH, "%s", work->name);
-        SNPRINTF(prefix.name, MAXPATH, "%s", dirname(buf));
-        prefix.statuso.st_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
-        dupdir(&prefix);
-
-        // add empty databases to each prefix directory
-        char *curr = prefix.name + strlen(prefix.name);
-        while (curr != prefix.name) {
-            SNPRINTF(buf, MAXPATH, "%s/%s/" DBNAME, in.nameto, prefix.name);
-            copy_template(templatefd, buf, templatesize, 0, 0);
-
-            // find the next slash
-            while ((curr != prefix.name) && (*curr != '/')) {
-                curr--;
-            }
-
-            // remove consecutive slashes
-            while ((curr != prefix.name) && (*curr == '/')) {
-                *curr = '\0';
-                curr--;
-            }
-        }
-
-        // copy the template to the top level as well
-        SNPRINTF(buf, MAXPATH, "%s/" DBNAME, in.nameto);
-        copy_template(templatefd, buf, templatesize, 0, 0);
-    }
+    // create the prefix of all of the paths using the first line
+    struct work prefix;
+    memset(&prefix, 0, sizeof(prefix));
+    char buf[MAXPATH];
+    SNPRINTF(buf, MAXPATH, "%s", work->line.substr(0, work->first_delim).c_str());
+    SNPRINTF(prefix.name, MAXPATH, "%s", dirname(buf));
+    prefix.statuso.st_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+    dupdir(&prefix);
 
     // if the first line is not a directory, create work for root
     // and moved the parsed data under it
-    if (work->type[0] == 'f') {
+    if (work->line[work->first_delim + 1] == 'f') {
         file_count++;
 
+        // there should be a function to generate this
         Row root = new_row();
-        memset(root.get(), 0, sizeof(struct work));
+        root->line = std::string(prefix.name) + in.delim
+            + "d" + in.delim
+            + "0" + in.delim
+            + std::to_string(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) + in.delim
+            + "1" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + "0" + in.delim
+            + in.delim
+            + in.delim
+            + "0" + in.delim
+            + "\n";
 
-        SNPRINTF(root->name, MAXPATH, "/");
+        root->first_delim = strlen(prefix.name);
         root->offset = 0;
         root->has_entries = 1;
-        root->statuso.st_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
         work = std::move(root);
     }
+
+    // add empty databases to each prefix directory
+    // has to happen after previous block because prefix.name is modified
+    char *curr = prefix.name + strlen(prefix.name);
+    while (curr != prefix.name) {
+        SNPRINTF(buf, MAXPATH, "%s/%s/" DBNAME, in.nameto, prefix.name);
+        copy_template(templatefd, buf, templatesize, 0, 0);
+
+        // find the next slash
+        while ((curr != prefix.name) && (*curr != '/')) {
+            curr--;
+        }
+
+        // remove consecutive slashes
+        while ((curr != prefix.name) && (*curr == '/')) {
+            *curr = '\0';
+            curr--;
+        }
+    }
+
+    // copy the template to the top level as well
+    SNPRINTF(buf, MAXPATH, "%s/" DBNAME, in.nameto);
+    copy_template(templatefd, buf, templatesize, 0, 0);
 
     while (true) {
         // get starting offset
         std::ostream::streampos starting_offset = file.tellg();
 
-        if (!file.getline(line, MAXLINE)) {
+        Row next = new_row();
+
+        if (!std::getline(file, next->line)) {
             break;
         }
 
-        Row next = new_row();
-        memset(next.get(), 0, sizeof(struct work));
-
         // parse
-        parsetowork(delim, line, next.get());
+        parsetowork(delim[0], next);
 
         // push directories onto queues
-        if (next->type[0] == 'd') {
+        if (next->line[next->first_delim + 1] == 'd') {
             dir_count++;
 
             work->has_entries = (work->offset != starting_offset);
@@ -356,17 +385,23 @@ static bool processdir(Row & w, std::ifstream & trace) {
         return false;
     }
 
+    // parse the directory data
+    struct work dir;
+    char line[MAXLINE] = {0};
+    memcpy(line, w->line.c_str(), w->line.size());
+    parsetowork(in.delim, line, &dir);
+
     // create the directory
     incr(duping);
-    dupdir(w.get());
+    dupdir(&dir);
     decr(duping);
 
     // create the database name
     char dbname[MAXPATH];
-    SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, w->name);
+    SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, dir.name);
 
     // copy the template file
-    if (copy_template(templatefd, dbname, templatesize, w->statuso.st_uid, w->statuso.st_gid)) {
+    if (copy_template(templatefd, dbname, templatesize, dir.statuso.st_uid, dir.statuso.st_gid)) {
         delete_row(w);
         return false;
     }
