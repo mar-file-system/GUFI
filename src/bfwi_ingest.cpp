@@ -66,7 +66,7 @@ Row new_row() {
     return make_unique <struct first> ();
 }
 
-void delete_row(Row & row) {
+void delete_row(Row &) {
     // no-op until Row is changed back to a raw pointer
 }
 
@@ -122,7 +122,7 @@ static inline void decr(int & var) {
     #endif
 }
 
-void parsetowork (const char delim, Row & work) {
+void parsefirst (const char delim, Row & work) {
     work->first_delim = work->line.find(delim);
 }
 
@@ -173,31 +173,21 @@ static int copy_template(const int src_fd, const char * dst, off_t size, uid_t u
     return 0;
 }
 
-// Read ahead to figure out where files under directories start
-void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
-    #ifdef DEBUG
-    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-    #endif
-
-    // figure out whether or not this function is running
-    std::ifstream file(filename, std::ios::binary);
-    if (!(scouting = (bool) file)) {
-        std::cerr << "Could not open file " << filename << std::endl;
-        return;
+// the first line needs special processing
+// also creates directories and empty databases based on the first line's data
+Row handle_first_line(std::ifstream & file, std::size_t & file_count) {
+    // force the internal pointer to move to the beginning
+    if (!file.seekg(0)) {
+        return nullptr;
     }
-
-    int tid = 0;
-    char delim[2] = {'\x1e', '\x00'};
-    std::size_t file_count = 0;
-    std::size_t dir_count = 1; // always start with a directory
 
     Row work = new_row();
     if (!std::getline(file, work->line)) {
         delete_row(work);
-        return;
+        return nullptr;
     }
 
-    parsetowork(delim[0], work);
+    parsefirst(in.delim[0], work);
 
     // create the prefix of all of the paths using the first line
     struct work prefix;
@@ -208,7 +198,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     prefix.statuso.st_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
     dupdir(&prefix);
 
-    // if the first line is not a directory, create work for root
+    // if the first line is not a directory, create work for its root
     // and moved the parsed data under it
     if (work->line[work->first_delim + 1] == 'f') {
         file_count++;
@@ -218,7 +208,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         root->line = std::string(prefix.name) + in.delim
             + "d" + in.delim
             + "0" + in.delim
-            + std::to_string(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) + in.delim
+            + std::to_string(prefix.statuso.st_mode) + in.delim
             + "1" + in.delim
             + "0" + in.delim
             + "0" + in.delim
@@ -232,7 +222,6 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             + in.delim
             + "0" + in.delim
             + "\n";
-
         root->first_delim = strlen(prefix.name);
         root->offset = 0;
         root->has_entries = 1;
@@ -263,6 +252,31 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     SNPRINTF(buf, MAXPATH, "%s/" DBNAME, in.nameto);
     copy_template(templatefd, buf, templatesize, 0, 0);
 
+    return work;
+}
+
+// Read ahead to figure out where files under directories start
+void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+
+    // figure out whether or not this function is running
+    std::ifstream file(filename, std::ios::binary);
+    if (!(scouting = (bool) file)) {
+        std::cerr << "Could not open file " << filename << std::endl;
+        return;
+    }
+
+    int tid = 0;
+    std::size_t file_count = 0;
+    std::size_t dir_count = 1; // always start with a directory
+
+    // the first line needs special processing
+    Row work = handle_first_line(file, file_count);
+    if (!work) {
+        std::cerr << "Could not process first line of input file " << filename << std::endl;
+        return;
+    }
+
     while (true) {
         // get starting offset
         std::ostream::streampos starting_offset = file.tellg();
@@ -274,7 +288,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         }
 
         // parse
-        parsetowork(delim[0], next);
+        parsefirst(in.delim[0], next);
 
         // push directories onto queues
         if (next->line[next->first_delim + 1] == 'd') {
@@ -316,14 +330,11 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         consumers[i].first.cv.notify_all();
     }
 
-    std::lock_guard <std::mutex> lock(mutex);
-
-    #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-    std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
-    #endif
 
-    std::cerr << "Files: " << file_count << std::endl
+    std::lock_guard <std::mutex> lock(mutex);
+    std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl
+              << "Files: " << file_count << std::endl
               << "Dirs:  " << dir_count << std::endl
               << "Total: " << file_count + dir_count << std::endl;
 
@@ -386,10 +397,12 @@ static bool processdir(Row & w, std::ifstream & trace) {
     }
 
     // parse the directory data
+    incr(parsing);
     struct work dir;
     char line[MAXLINE] = {0};
     memcpy(line, w->line.c_str(), w->line.size());
     parsetowork(in.delim, line, &dir);
+    decr(parsing);
 
     // create the directory
     incr(duping);
@@ -636,9 +649,7 @@ void sub_help() {
 }
 
 int main(int argc, char * argv[]) {
-    #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-    #endif
 
     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:Du", 1, "input_dir", &in);
     if (in.helped)
@@ -674,10 +685,8 @@ int main(int argc, char * argv[]) {
     // set top level permissions
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-    #ifdef DEBUG
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::cerr << "main finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl;
-    #endif
 
     return 0;
 }
