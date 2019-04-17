@@ -6,7 +6,6 @@
 #include <iostream>
 #include <libgen.h>
 #include <list>
-#include <memory>
 #include <mutex>
 #include <sys/sendfile.h>
 #include <sys/stat.h>
@@ -55,19 +54,14 @@ struct first {
     bool has_entries;
 };
 
-// The C++ committee forgot this in C++11
-template <typename T, typename ...Args>
-std::unique_ptr <T> make_unique(Args&& ...args) {
-    return std::unique_ptr <T> (new T(std::forward <Args> (args)...));
-}
+typedef struct first * Row;
 
-typedef std::unique_ptr <struct first> Row;
 Row new_row() {
-    return make_unique <struct first> ();
+    return new struct first();
 }
 
-void delete_row(Row &) {
-    // no-op until Row is changed back to a raw pointer
+void delete_row(Row & row) {
+    delete row;
 }
 
 // basically thread args
@@ -226,7 +220,9 @@ Row handle_first_line(std::ifstream & file, std::size_t & file_count) {
         root->offset = 0;
         root->has_entries = 1;
 
-        work = std::move(root);
+        // swap work with root, since work is a file
+        delete_row(work);
+        work = root;
     }
 
     // add empty databases to each prefix directory
