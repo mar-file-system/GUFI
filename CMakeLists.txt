@@ -81,7 +81,7 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # define the DEBUG macro when building in debug mode
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall -D_XOPEN_SRC -pg")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall -D_XOPEN_SRC")
 
 # only enable C++ if support is found
 include(CheckLanguage)
@@ -160,10 +160,10 @@ pkg_search_module(PCRE REQUIRED libpcre)
 # endif()
 
 # download and build all non-system dependencies
-set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE "Location of dependency sources"  PATH)
-set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE "Location of dependency builds"   PATH)
-set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE "Location of dependency binaries" PATH)
-set(PARAMIKO            OFF                                CACHE  BOOL "Whether or not to install paramiko")
+set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH "Location of dependency sources")
+set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE PATH "Location of dependency builds")
+set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE PATH "Location of dependency binaries")
+set(PARAMIKO            OFF                                CACHE BOOL "Whether or not to install paramiko")
 set(DEP_OPTIONS "")
 if (CMAKE_CXX_COMPILER)
   set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
