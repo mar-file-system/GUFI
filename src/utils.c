@@ -443,11 +443,7 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 // also a dir), create the parent dirs all the way down.
 //
 int mkpath(char* file_path, mode_t mode) {
-  char* p;
-  char sp[MAXPATH];
-
-  SNPRINTF(sp,MAXPATH,"%s", file_path);
-  for (p=strchr(file_path+1, '/'); p; p=strchr(p+1, '/')) {
+  for (char* p=strchr(file_path+1, '/'); p; p=strchr(p+1, '/')) {
     //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
     //printf("mkpath mkdir file_path %s\n", file_path);
@@ -461,7 +457,7 @@ int mkpath(char* file_path, mode_t mode) {
     *p='/';
   }
   //printf("mkpath mkdir sp %s\n",sp);
-  return mkdir(sp,mode | S_IRWXU);
+  return mkdir(file_path,mode | S_IRWXU);
 }
 
 int dupdir(struct work *pwork)
