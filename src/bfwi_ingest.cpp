@@ -45,13 +45,13 @@ struct first {
         : first_delim(std::string::npos),
           line(),
           offset(-1),
-          has_entries(false)
+          entries(0)
     {}
 
     std::string::size_type first_delim;
     std::string line;
     off_t offset;
-    bool has_entries;
+    std::size_t entries;
 };
 
 typedef struct first * Row;
@@ -182,6 +182,7 @@ Row handle_first_line(std::ifstream & file, std::size_t & file_count) {
     }
 
     parsefirst(in.delim[0], work);
+    work->offset = file.tellg();
 
     // create the prefix of all of the paths using the first line
     struct work prefix;
@@ -192,41 +193,7 @@ Row handle_first_line(std::ifstream & file, std::size_t & file_count) {
     prefix.statuso.st_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
     dupdir(&prefix);
 
-    // if the first line is not a directory, create work for its root
-    // and moved the parsed data under it
-    if (work->line[work->first_delim + 1] == 'f') {
-        file_count++;
-
-        // there should be a function to generate this
-        Row root = new_row();
-        root->line = std::string(prefix.name) + in.delim
-            + "d" + in.delim
-            + "0" + in.delim
-            + std::to_string(prefix.statuso.st_mode) + in.delim
-            + "1" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + "0" + in.delim
-            + in.delim
-            + in.delim
-            + "0" + in.delim
-            + "\n";
-        root->first_delim = strlen(prefix.name);
-        root->offset = 0;
-        root->has_entries = 1;
-
-        // swap work with root, since work is a file
-        delete_row(work);
-        work = root;
-    }
-
     // add empty databases to each prefix directory
-    // has to happen after previous block because prefix.name is modified
     char *curr = prefix.name + strlen(prefix.name);
     while (curr != prefix.name) {
         SNPRINTF(buf, MAXPATH, "%s/%s/" DBNAME, in.nameto, prefix.name);
@@ -273,15 +240,12 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         return;
     }
 
-    while (true) {
-        // get starting offset
-        std::ostream::streampos starting_offset = file.tellg();
+    std::size_t empty = 0;
 
+    std::string line;
+    while (std::getline(file, line)) {
         Row next = new_row();
-
-        if (!std::getline(file, next->line)) {
-            break;
-        }
+        next->line = std::move(line);
 
         // parse
         parsefirst(in.delim[0], next);
@@ -290,7 +254,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         if (next->line[next->first_delim + 1] == 'd') {
             dir_count++;
 
-            work->has_entries = (work->offset != starting_offset);
+            empty += !work -> entries;
             next->offset = file.tellg();
 
             // put the previous work on the queue
@@ -304,16 +268,18 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
             tid++;
             tid %= in.maxthreads;
 
-            work = std::move(next);
+            work = next;
         }
         else {
+            work->entries++;
             file_count++;
+            delete_row(next);
         }
     }
 
     // insert the last work item
     {
-        work->has_entries = (work->offset != file.tellg());
+        empty += !work -> entries;
         std::lock_guard <std::mutex> lock(consumers[tid].first.mutex);
         consumers[tid].first.queue.emplace_back(std::move(work));
         consumers[tid].first.cv.notify_all();
@@ -331,7 +297,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     std::lock_guard <std::mutex> lock(mutex);
     std::cerr << "Scout finished in " << std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9 << " seconds"  << std::endl
               << "Files: " << file_count << std::endl
-              << "Dirs:  " << dir_count << std::endl
+              << "Dirs:  " << dir_count << " (" << empty << " empty)" << std::endl
               << "Total: " << file_count + dir_count << std::endl;
 
     return;
@@ -409,16 +375,17 @@ static bool processdir(Row & w, std::ifstream & trace) {
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, dir.name);
 
+    // don't bother doing anything if there is nothing to insert
+    // (the database file will not exist for empty directories)
+    if (!w->entries) {
+        delete_row(w);
+        return true;
+    }
+
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir.statuso.st_uid, dir.statuso.st_gid)) {
         delete_row(w);
         return false;
-    }
-
-    // don't bother opening the database file if there is nothing to insert
-    if (!w->has_entries) {
-        delete_row(w);
-        return true;
     }
 
     // process the work
