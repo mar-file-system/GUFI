@@ -82,7 +82,7 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <pthread.h>            // thpool.h expects us to do this
 
-#define MAXPATH 1024
+#define MAXPATH 4096
 #define MAXXATTR 1024
 #define MAXSQL 2048
 #define MAXRECS 100000
