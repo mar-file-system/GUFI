@@ -109,7 +109,7 @@ def build_where(args):
     '''Build the WHERE portion of the queries for the treesummary, summary, and entries tables.'''
     tsummary = []
     summary  = []
-    entries  = []
+    entries  = ['(uid == {}) or (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
         entries += ['({} - atime) / 60 == {}'.format(time.time(), args.amin)]
