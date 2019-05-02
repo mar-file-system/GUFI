@@ -154,6 +154,7 @@ static int copy_template(const int src_fd, const char * dst, off_t size, uid_t u
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     off_t offset = 0;
     const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
+    fchmod(dst_db, S_IRWXU | S_IRWXG | S_IRWXO);
     fchown(dst_db, uid, gid);
     close(src_db);
     close(dst_db);
