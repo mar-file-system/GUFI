@@ -168,57 +168,6 @@ static int copy_template(const int src_fd, const char * dst, off_t size, uid_t u
     return 0;
 }
 
-// the first line needs special processing
-// also creates directories and empty databases based on the first line's data
-Row handle_first_line(std::ifstream & file, std::size_t & file_count) {
-    // force the internal pointer to move to the beginning
-    if (!file.seekg(0)) {
-        return nullptr;
-    }
-
-    Row work = new_row();
-    if (!std::getline(file, work->line)) {
-        delete_row(work);
-        return nullptr;
-    }
-
-    parsefirst(in.delim[0], work);
-    work->offset = file.tellg();
-
-    // create the prefix of all of the paths using the first line
-    struct work prefix;
-    memset(&prefix, 0, sizeof(prefix));
-    char buf[MAXPATH];
-    SNPRINTF(buf, MAXPATH, "%s", work->line.substr(0, work->first_delim).c_str());
-    SNPRINTF(prefix.name, MAXPATH, "%s", dirname(buf));
-    prefix.statuso.st_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
-    dupdir(&prefix);
-
-    // add empty databases to each prefix directory
-    char *curr = prefix.name + strlen(prefix.name);
-    while (curr != prefix.name) {
-        SNPRINTF(buf, MAXPATH, "%s/%s/" DBNAME, in.nameto, prefix.name);
-        copy_template(templatefd, buf, templatesize, 0, 0);
-
-        // find the next slash
-        while ((curr != prefix.name) && (*curr != '/')) {
-            curr--;
-        }
-
-        // remove consecutive slashes
-        while ((curr != prefix.name) && (*curr == '/')) {
-            *curr = '\0';
-            curr--;
-        }
-    }
-
-    // copy the template to the top level as well
-    SNPRINTF(buf, MAXPATH, "%s/" DBNAME, in.nameto);
-    copy_template(templatefd, buf, templatesize, 0, 0);
-
-    return work;
-}
-
 // Read ahead to figure out where files under directories start
 void scout_function(std::atomic_bool & scouting, const char * filename, State & consumers) {
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
@@ -230,17 +179,18 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         return;
     }
 
-    int tid = 0;
-    std::size_t file_count = 0;
-    std::size_t dir_count = 1; // always start with a directory
-
-    // the first line needs special processing
-    Row work = handle_first_line(file, file_count);
-    if (!work) {
-        std::cerr << "Could not process first line of input file " << filename << std::endl;
+    Row work = new_row();
+    if (!std::getline(file, work->line)) {
+        delete_row(work);
         return;
     }
 
+    parsefirst(in.delim[0], work);
+    work->offset = file.tellg();
+
+    int tid = 0;
+    std::size_t file_count = 0;
+    std::size_t dir_count = 1; // always start with a directory
     std::size_t empty = 0;
 
     std::string line;
