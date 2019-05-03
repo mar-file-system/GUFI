@@ -10,11 +10,11 @@ def generate_level(out, parent, dir_count, file_count, current_level, max_level)
         return
 
     for d_name in xrange(dir_count):
-        out.write(parent + '/' + str(d_name) + '.d' + rs + 'd' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '\n')
+        out.write(parent + '/' + str(d_name) + '.d' + rs + 'd' + rs + '1' + rs + '16832' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '\n')
 
         # generate all files first
         for f_name in xrange(file_count):
-            out.write(parent + '/' + str(d_name) + '.d' + '/' + str(f_name) + '.f' + rs + 'f' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '\n')
+            out.write(parent + '/' + str(d_name) + '.d' + '/' + str(f_name) + '.f' + rs + 'f' + rs + '1' + rs + '33188' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '\n')
 
     for d_name in xrange(dir_count):
         # generate each directory with its children
