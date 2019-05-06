@@ -210,37 +210,37 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
 
     // sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
 
-    sqlite3_snprintf(MAXSQL, dbn, "%s/%s", name, DBNAME);
+    sqlite3_snprintf(MAXSQL, dbn, "%s/" DBNAME, name);
 
     if (createtables) {
         if (openwhat != 3)
-            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
         if (openwhat==7 || openwhat==8)
             sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
     else {
         if (openwhat == 6)
-            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
         if (openwhat == 5)
             sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
 
-    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+    if (sqlite3_open_v2(dbn, &db, /*SQLITE_OPEN_CREATE | */SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         return NULL;
     }
 
-    // try to turn sychronization off
-    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    }
+    /* // try to turn sychronization off */
+    /* if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
 
-    // try to turn journaling off
-    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-    }
+    /* // try to turn journaling off */
+    /* if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
 
-    // try to get an exclusive lock
-    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
-    }
+    /* // try to get an exclusive lock */
+    /* if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
 
     /* // try increasing the page size */
     /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
@@ -966,16 +966,16 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
 
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;
-    if ((sqlite3_open_v2(name, &aggregate, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) || // create the aggregate database
-        //#if 0 // commented out for DEBUGGING ONLY.  Don't commit this.
-        (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                          != SQLITE_OK) || // enable extension loading
-        (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                     != SQLITE_OK) || // load the sqlite3-pcre extension
-        (addqueryfuncs(aggregate)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
-        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                   != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
-        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                   != SQLITE_OK) || // create the aggregate table
-        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                  != SQLITE_OK) || // drop the entries table
-        (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                  != SQLITE_OK) || // rename the aggregate table to entries
-        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                 != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
+    if ((sqlite3_open_v2(name, &aggregate,
+                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX, NULL) != SQLITE_OK) || // create the aggregate database
+        (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                              != SQLITE_OK) || // enable extension loading
+        (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                         != SQLITE_OK) || // load the sqlite3-pcre extension
+        (addqueryfuncs(aggregate)                                                                                  != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
+        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                       != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
+        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                       != SQLITE_OK) || // create the aggregate table
+        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                      != SQLITE_OK) || // drop the entries table
+        (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                      != SQLITE_OK) || // rename the aggregate table to entries
+        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                     != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
         fprintf(stderr, "failed to create result aggregation database %s: %s: \"%s\"\n", name, err_msg, query);
         sqlite3_free(err_msg);
         sqlite3_close(aggregate);
