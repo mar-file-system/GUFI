@@ -1,4 +1,5 @@
 #include <climits>
+#include <cstdlib>
 #include <cstring>
 #include <random>
 
@@ -395,4 +396,181 @@ TEST(shortpath, directory) {
     EXPECT_EQ(shortpath(SRC "/", dst, endname), 0);
     EXPECT_STREQ(SRC, dst);
     EXPECT_STREQ("", endname);
+}
+
+TEST(dupdir, parentfirst) {
+    char parent[] = "/tmp/parent";
+    struct stat orig_parent_stat;
+    orig_parent_stat.st_mode = S_IRWXU; // 700
+    orig_parent_stat.st_uid = geteuid();
+    orig_parent_stat.st_gid = getegid();
+
+    char child[] = "/tmp/parent/child";
+    struct stat orig_child_stat;
+    orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
+    orig_child_stat.st_uid = geteuid();
+    orig_child_stat.st_gid = getegid();
+
+    // remove leftover directories
+    rmdir(child);
+    rmdir(parent);
+
+    ASSERT_EQ(dupdir(parent, &orig_parent_stat), 0);
+    ASSERT_EQ(dupdir(child,  &orig_child_stat),  0);
+
+    struct stat parent_stat;
+    struct stat child_stat;
+    ASSERT_EQ(stat(parent, &parent_stat), 0);
+    ASSERT_EQ(stat(child,  &child_stat),  0);
+
+    // clean up
+    EXPECT_EQ(rmdir(child),  0);
+    EXPECT_EQ(rmdir(parent), 0);
+
+    EXPECT_EQ(orig_parent_stat.st_mode | S_IFDIR, parent_stat.st_mode);
+    EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
+    EXPECT_EQ(orig_parent_stat.st_gid,            parent_stat.st_gid);
+
+    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR,  child_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_uid,             child_stat.st_uid);
+    EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
+}
+
+TEST(dupdir, childtfirst) {
+    char parent[] = "/tmp/parent";
+    struct stat orig_parent_stat;
+    orig_parent_stat.st_mode = S_IRWXU; // 700
+    orig_parent_stat.st_uid = geteuid();
+    orig_parent_stat.st_gid = getegid();
+
+    char child[] = "/tmp/parent/child";
+    struct stat orig_child_stat;
+    orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
+    orig_child_stat.st_uid = geteuid();
+    orig_child_stat.st_gid = getegid();
+
+    // remove leftover directories
+    rmdir(child);
+    rmdir(parent);
+
+    const mode_t prev_umask = umask(0);
+
+    ASSERT_EQ(dupdir(child,  &orig_child_stat),  0);
+
+    // parent path should have the same permissions as the child path
+    {
+        struct stat child_stat;
+        struct stat parent_stat;
+        ASSERT_EQ(stat(child,  &child_stat),  0);
+        ASSERT_EQ(stat(parent, &parent_stat), 0);
+
+        EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR, child_stat.st_mode);
+        EXPECT_EQ(orig_child_stat.st_uid,            child_stat.st_uid);
+        EXPECT_EQ(orig_child_stat.st_gid,            child_stat.st_gid);
+
+        EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR, parent_stat.st_mode);
+        EXPECT_EQ(orig_child_stat.st_uid,            parent_stat.st_uid);
+        EXPECT_EQ(orig_child_stat.st_gid,            parent_stat.st_gid);
+
+    }
+
+    ASSERT_EQ(dupdir(parent, &orig_parent_stat), 0);
+
+    struct stat parent_stat;
+    struct stat child_stat;
+    ASSERT_EQ(stat(parent, &parent_stat), 0);
+    ASSERT_EQ(stat(child,  &child_stat),  0);
+
+    // clean up
+    umask(prev_umask);
+    EXPECT_EQ(rmdir(child),  0);
+    EXPECT_EQ(rmdir(parent), 0);
+
+    EXPECT_EQ(orig_parent_stat.st_mode | S_IFDIR, parent_stat.st_mode);
+    EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
+    EXPECT_EQ(orig_parent_stat.st_gid,            parent_stat.st_gid);
+
+    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR,  child_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_uid,             child_stat.st_uid);
+    EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
+}
+
+TEST(mkpath, parentfirst) {
+    char parent[] = "/tmp/parent";
+    struct stat orig_parent_stat;
+    orig_parent_stat.st_mode = S_IRWXU; // 700
+    orig_parent_stat.st_uid = geteuid();
+    orig_parent_stat.st_gid = getegid();
+
+    char child[] = "/tmp/parent/child";
+    struct stat orig_child_stat;
+    orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
+    orig_child_stat.st_uid = geteuid();
+    orig_child_stat.st_gid = getegid();
+
+    // remove leftover directories
+    rmdir(child);
+    rmdir(parent);
+
+    const mode_t prev_umask = umask(0);
+    ASSERT_EQ(mkdir (parent, orig_parent_stat.st_mode), 0);
+    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode),  0);
+
+    struct stat parent_stat;
+    struct stat child_stat;
+    ASSERT_EQ(stat(parent, &parent_stat), 0);
+    ASSERT_EQ(stat(child,  &child_stat),  0);
+
+    // clean up
+    umask(prev_umask);
+    EXPECT_EQ(rmdir(child),  0);
+    EXPECT_EQ(rmdir(parent), 0);
+
+    EXPECT_EQ(orig_parent_stat.st_mode | S_IFDIR, parent_stat.st_mode);
+    EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
+    EXPECT_EQ(orig_parent_stat.st_gid,            parent_stat.st_gid);
+
+    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR,  child_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_uid,             child_stat.st_uid);
+    EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
+}
+
+TEST(mkpath, childfirst) {
+    char parent[] = "/tmp/parent";
+    struct stat orig_parent_stat;
+    orig_parent_stat.st_mode = S_IRWXU; // 700
+    orig_parent_stat.st_uid = geteuid();
+    orig_parent_stat.st_gid = getegid();
+
+    char child[] = "/tmp/parent/child";
+    struct stat orig_child_stat;
+    orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
+    orig_child_stat.st_uid = geteuid();
+    orig_child_stat.st_gid = getegid();
+
+    // remove leftover directories
+    rmdir(child);
+    rmdir(parent);
+
+    const mode_t prev_umask = umask(0);
+    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode),   0);
+    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode),  -1); // EEXISTS
+
+    struct stat parent_stat;
+    struct stat child_stat;
+    ASSERT_EQ(stat(parent, &parent_stat), 0);
+    ASSERT_EQ(stat(child,  &child_stat),  0);
+
+    // clean up
+    umask(prev_umask);
+    EXPECT_EQ(rmdir(child),  0);
+    EXPECT_EQ(rmdir(parent), 0);
+
+    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR, parent_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_uid,            parent_stat.st_uid);
+    EXPECT_EQ(orig_child_stat.st_gid,            parent_stat.st_gid);
+
+    EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR, child_stat.st_mode);
+    EXPECT_EQ(orig_child_stat.st_uid,            child_stat.st_uid);
+    EXPECT_EQ(orig_child_stat.st_gid,            child_stat.st_gid);
 }

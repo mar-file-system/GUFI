@@ -141,9 +141,9 @@ int tsumit (struct sum *sumin,struct sum *smout);
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(char* file_path, mode_t mode);
+int mkpath(char* path, mode_t mode);
 
-int dupdir(struct work *pwork);
+int dupdir(char* path, struct stat * stat);
 
 int incrthread();
 
@@ -164,6 +164,7 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
 typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
+int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * work_time);
 
 // Function used in processdir to decend into subdirectories.
 // The callback function is used to modify the qwork before

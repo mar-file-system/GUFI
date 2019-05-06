@@ -222,7 +222,9 @@ static void processdir(void * passv)
 
     if (in.buildindex > 0) {
        if (in.buildinindir == 0) {
-         dupdir(passmywork);
+         char topath[MAXPATH];
+         SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,passmywork->name);
+         dupdir(topath, &passmywork->statuso);
          //printf("tid %d made dir %s\n",mytid,passmywork->name);
        }
        records=malloc(MAXRECS);
@@ -261,6 +263,7 @@ static void processdir(void * passv)
              continue;
           if (in.buildinindir == 1) {
             if (strcmp(entry->d_name, DBNAME) == 0)
+                /* fprintf(stderr, "%s\n", entry->d_name); */
                continue;
           }
           SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);

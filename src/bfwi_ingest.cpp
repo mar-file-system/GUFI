@@ -319,7 +319,9 @@ static bool processdir(Row & w, std::ifstream & trace) {
 
     // create the directory
     incr(duping);
-    dupdir(&dir);
+    char topath[MAXPATH];
+    SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,dir.name);
+    dupdir(topath, &dir.statuso);
     decr(duping);
 
     // create the database name

@@ -442,13 +442,13 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(char* file_path, mode_t mode) {
-  for (char* p=strchr(file_path+1, '/'); p; p=strchr(p+1, '/')) {
+int mkpath(char* path, mode_t mode) {
+  for (char* p=strchr(path+1, '/'); p; p=strchr(p+1, '/')) {
     //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
     //printf("mkpath mkdir file_path %s\n", file_path);
     //if (mkdir(file_path, mode)==-1) {
-    if (mkdir(file_path, mode)==-1) {
+    if (mkdir(path, mode)==-1) {
       if (errno!=EEXIST) {
          *p='/';
          return -1;
@@ -457,27 +457,25 @@ int mkpath(char* file_path, mode_t mode) {
     *p='/';
   }
   //printf("mkpath mkdir sp %s\n",sp);
-  return mkdir(file_path,mode | S_IRWXU);
+  return mkdir(path,mode);
 }
 
-int dupdir(struct work *pwork)
+int dupdir(char * path, struct stat * stat)
 {
-    char topath[MAXPATH];
-
-    SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,pwork->name);
-    //printf("mkdir %s\n",topath);
+    //printf("mkdir %s\n",path);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
-    //rc = mkdir(topath,pwork->statuso.st_mode | S_IWRITE);
-    if (mkdir(topath,pwork->statuso.st_mode) != 0) {
+    //rc = mkdir(path,pwork->statuso.st_mode | S_IWRITE);
+    if (mkdir(path,stat->st_mode) != 0) {
       //perror("mkdir");
       if (errno == ENOENT) {
-        //printf("calling mkpath on %s\n",topath);
-        mkpath(topath,pwork->statuso.st_mode);
+        //printf("calling mkpath on %s\n",path);
+        mkpath(path, stat->st_mode);
       } else if (errno != EEXIST) {
         return 1;
       }
     }
-    chown(topath, pwork->statuso.st_uid,pwork->statuso.st_gid);
+    chmod(path, stat->st_mode);
+    chown(path, stat->st_uid, stat->st_gid);
     // we dont need to set xattrs/time on the gufi directory those are in the db
     // the gufi directory structure is there only to walk, not to provide
     // information, the information is in the db
@@ -592,6 +590,64 @@ int processdirs(DirFunc dir_fn) {
             thpool_add_work(mythpool, dir_fn, (void *)workp);
             thread_count++;
           }
+          pthread_mutex_unlock(&queue_mutex);
+        }
+     }
+
+     return thread_count;
+}
+
+#include <time.h>
+
+static long double elapsed(const struct timespec *start, const struct timespec *end) {
+    const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
+    const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
+    return e - s;
+}
+
+int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * work_time) {
+
+     struct work * workp;
+     int thread_count = 0;
+
+     // loop over queue entries and running threads and do all work until
+     // running threads zero and queue empty
+     while (1) {
+        if (runningthreads == 0) {
+          if (getqent() == 0) {
+            break;
+          }
+        }
+        if (runningthreads < in.maxthreads) {
+          // we have to lock around all queue ops
+    struct timespec acquire_mutex_start;
+    clock_gettime(CLOCK_MONOTONIC, &acquire_mutex_start);
+          pthread_mutex_lock(&queue_mutex);
+    struct timespec acquire_mutex_end;
+    clock_gettime(CLOCK_MONOTONIC, &acquire_mutex_end);
+    *acquire_mutex_time += elapsed(&acquire_mutex_start, &acquire_mutex_end);
+
+    struct timespec work_start;
+    clock_gettime(CLOCK_MONOTONIC, &work_start);
+
+          if (addrqent() > 0) {
+            workp=addrcurrents();
+            incrthread();
+            delQueuenofree();
+
+            // this takes this entry off the queue but does NOT free the
+            // buffer, that has to be done in dir_fn(), something like:
+            // "free(((struct work*)workp)->freeme)"
+            thpool_add_work(mythpool, dir_fn, (void *)workp);
+            thread_count++;
+          }
+
+    struct timespec work_end;
+    clock_gettime(CLOCK_MONOTONIC, &work_end);
+    *work_time += elapsed(&work_start, &work_end);
+
+
+
           pthread_mutex_unlock(&queue_mutex);
         }
      }
@@ -834,7 +890,7 @@ size_t descend(struct work *passmywork, DIR *dir,
         // queue, if file or link print it, fill up qwork structure for
         // each
         struct dirent *entry = NULL;
-        while ((entry = (readdir(dir)))) {
+        while ((entry = readdir(dir))) {
             const size_t len = strlen(entry->d_name);
             if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                 ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
@@ -844,16 +900,18 @@ size_t descend(struct work *passmywork, DIR *dir,
             struct work qwork;
             memset(&qwork, 0, sizeof(qwork));
             SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
-            qwork.pinode=passmywork->statuso.st_ino;
-            qwork.level = next_level;
-
-            if (callback && (callback(&qwork, args) != 0)) {
-                continue;
-            }
 
             lstat(qwork.name, &qwork.statuso);
             if (S_ISDIR(qwork.statuso.st_mode)) {
                 if (!access(qwork.name, R_OK | X_OK)) {
+                    qwork.pinode=passmywork->statuso.st_ino;
+                    qwork.level = next_level;
+                    qwork.type[0] = 'd';
+
+                    if (callback && (callback(&qwork, args) != 0)) {
+                        continue;
+                    }
+
                     // this is how the parent gets passed on
                     qwork.pinode = passmywork->statuso.st_ino;
                     // this pushes the dir onto queue - pushdir does locking around queue update
@@ -861,8 +919,8 @@ size_t descend(struct work *passmywork, DIR *dir,
                     pushed++;
                 }
                 else {
-                    fprintf(stderr, "couldn't access dir '%s': %s\n",
-                            qwork.name, strerror(errno));
+                    /* fprintf(stderr, "couldn't access dir '%s': %s\n", */
+                    /*         qwork.name, strerror(errno)); */
                 }
             }
         }
