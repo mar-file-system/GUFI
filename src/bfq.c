@@ -159,12 +159,40 @@ static int print_callback(void *out, int count, char **data, char **columns) {
     return 0;
 }
 
+long double total_opendir_time = 0;
+long double total_open_time = 0;
+long double total_attach_time = 0;
+long double total_descend_time = 0;
+long double total_pushdir_time = 0;
+long double total_exec_time = 0;
+long double total_detach_time = 0;
+long double total_close_time = 0;
+long double total_closedir_time = 0;
+pthread_mutex_t total_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Push the subdirectories in the current directory onto the queue
-static size_t descend2(struct work *passmywork, DIR *dir,
+static size_t descend2(struct work *passmywork,
                        const size_t max_level,
                        int (*callback)(struct work *, void *), void *args,
-                       long double *pushdir_time) {
-    if (!passmywork || !dir) {
+                       long double *opendir_time,
+                       long double *pushdir_time,
+                       long double *closedir_time) {
+    if (!passmywork) {
+        return 0;
+    }
+
+    // open directory
+    struct timespec opendir_start;
+    clock_gettime(CLOCK_MONOTONIC, &opendir_start);
+    DIR * dir = opendir(passmywork->name);
+    struct timespec opendir_end;
+    clock_gettime(CLOCK_MONOTONIC, &opendir_end);
+    *opendir_time = elapsed(&opendir_start, &opendir_end);
+    pthread_mutex_lock(&total_mutex);
+    total_opendir_time += *opendir_time;
+    pthread_mutex_unlock(&total_mutex);
+
+    if (!dir) {
         return 0;
     }
 
@@ -190,16 +218,16 @@ static size_t descend2(struct work *passmywork, DIR *dir,
             lstat(qwork.name, &qwork.statuso);
             if (S_ISDIR(qwork.statuso.st_mode)) {
                 if (!access(qwork.name, R_OK | X_OK)) {
-                    qwork.pinode=passmywork->statuso.st_ino;
                     qwork.level = next_level;
                     qwork.type[0] = 'd';
+
+                    // this is how the parent gets passed on
+                    qwork.pinode = passmywork->statuso.st_ino;
 
                     if (callback && (callback(&qwork, args) != 0)) {
                         continue;
                     }
 
-                    // this is how the parent gets passed on
-                    qwork.pinode = passmywork->statuso.st_ino;
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     struct timespec pushdir_start;
                     clock_gettime(CLOCK_MONOTONIC, &pushdir_start);
@@ -217,6 +245,17 @@ static size_t descend2(struct work *passmywork, DIR *dir,
         }
     }
 
+    // close dir
+    struct timespec closedir_start;
+    clock_gettime(CLOCK_MONOTONIC, &closedir_start);
+    closedir(dir);
+    struct timespec closedir_end;
+    clock_gettime(CLOCK_MONOTONIC, &closedir_end);
+    *closedir_time = elapsed(&closedir_start, &closedir_end);
+    pthread_mutex_lock(&total_mutex);
+    total_closedir_time += *closedir_time;
+    pthread_mutex_unlock(&total_mutex);
+
     return pushed;
 }
 
@@ -225,7 +264,6 @@ static size_t descend2(struct work *passmywork, DIR *dir,
 static void processdir(void * passv)
 {
     struct work *passmywork = passv;
-    DIR *dir;
     const int mytid = gettid();     // get thread id so we can get access to thread state we need to keep until the thread ends
     sqlite3 *db;
     int recs;
@@ -261,22 +299,12 @@ static void processdir(void * passv)
         struct stat st;
         if (lstat(name, &st) != 0) {
             perror("stat");
-            return;
+            goto out_free;
         }
 
         dbtime.actime  = st.st_atime;
         dbtime.modtime = st.st_mtime;
     }
-
-    // open directory
-    struct timespec opendir_start;
-    clock_gettime(CLOCK_MONOTONIC, &opendir_start);
-    if (!(dir = opendir(passmywork->name))) {
-        goto out_free; // return NULL;
-    }
-    struct timespec opendir_end;
-    clock_gettime(CLOCK_MONOTONIC, &opendir_end);
-    opendir_time = elapsed(&opendir_start, &opendir_end);
 
     /* SNPRINTF(passmywork->type, 2, "%s", "d"); */
     //if (in.printdir > 0) {
@@ -304,7 +332,7 @@ static void processdir(void * passv)
         SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) passmywork->aggregate_id);
         if (db && !attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
             closedb(db);
-            goto out_dir;
+            goto restore_time;
         }
     }
     struct timespec attach_end;
@@ -333,10 +361,10 @@ static void processdir(void * passv)
       }
       // this is an OR or we got a record back. go on to summary/entries
       // queries, if not done with this dir and all dirs below it
-    }
-    // this means that no tree table exists so assume we have to go on
-    if (recs < 0) {
-      recs=1;
+      // this means that no tree table exists so assume we have to go on
+      if (recs < 0) {
+        recs=1;
+      }
     }
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
@@ -349,9 +377,9 @@ static void processdir(void * passv)
         struct timespec descend_start;
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
         // push subdirectories into the queue
-        descend2(passmywork, dir, in.max_level,
+        descend2(passmywork, in.max_level,
                  set_aggregate_id, &aggregate_id_args,
-                 &pushdir_time);
+                 &opendir_time, &pushdir_time, &closedir_time);
         struct timespec descend_end;
         clock_gettime(CLOCK_MONOTONIC, &descend_end);
         descend_time = elapsed(&descend_start, &descend_end);
@@ -410,7 +438,7 @@ static void processdir(void * passv)
         // detach in-memory result aggregation database
         if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
             closedb(db);
-            return;
+            goto restore_time;
         }
     }
     struct timespec detach_end;
@@ -429,22 +457,10 @@ static void processdir(void * passv)
     clock_gettime(CLOCK_MONOTONIC, &close_end);
     close_time = elapsed(&close_start, &close_end);
 
- out_dir:
-    ;
-
-    // close dir
-    struct timespec closedir_start;
-    clock_gettime(CLOCK_MONOTONIC, &closedir_start);
-    closedir(dir);
-    struct timespec closedir_end;
-    clock_gettime(CLOCK_MONOTONIC, &closedir_end);
-    closedir_time = elapsed(&closedir_start, &closedir_end);
-
+  restore_time:
     // restore mtime and atime
     if (in.keep_matime) {
-        if (utime(name, &dbtime) != 0) {
-            perror("utime");
-        }
+        utime(name, &dbtime);
     }
 
  out_free:
@@ -452,6 +468,16 @@ static void processdir(void * passv)
     decrthread();
 
     /* fprintf(stderr, "%s %d %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf\n", passmywork->name, !!db, opendir_time, open_time, attach_time, descend_time - pushdir_time, pushdir_time, exec_time, detach_time, close_time, closedir_time); */
+
+    pthread_mutex_lock(&total_mutex);
+    total_open_time += open_time;
+    total_attach_time += attach_time;
+    total_descend_time += descend_time;
+    total_pushdir_time += pushdir_time;
+    total_exec_time += exec_time;
+    total_detach_time += detach_time;
+    total_close_time += close_time;
+    pthread_mutex_unlock(&total_mutex);
 
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
@@ -664,19 +690,24 @@ int main(int argc, char *argv[])
      clock_gettime(CLOCK_MONOTONIC, &intermediate_end);
 
      if (in.aggregate_or_print == PRINT) {
-         fprintf(stderr, "Queries performed:                              %d\n",         thread_count);
-         fprintf(stderr, "Time to query and print all:                    %.2Lfs\n",     elapsed(&intermediate_start, &intermediate_end));
-         /* fprintf(stderr, "Time to open databases:                             %.2Lfs\n", open_time); */
-         /* fprintf(stderr, "Time to attach intermediate databases:              %.2Lfs\n", attach_time); */
-         /* fprintf(stderr, "Time to query databases and print:                  %.2Lfs\n", query_time); */
-         /* fprintf(stderr, "Time to detach intermediate databases:              %.2Lfs\n", detach_time); */
-         /* fprintf(stderr, "Time to close databases:                            %.2Lfs\n", close_time); */
+         fprintf(stderr, "Queries performed:                              %d\n",     thread_count);
+         fprintf(stderr, "Real time:                                      %.2Lfs\n", elapsed(&intermediate_start, &intermediate_end));
+
+         fprintf(stderr, "Time to open directories:                           %.2Lfs\n", total_opendir_time);
+         fprintf(stderr, "Time to open databases:                             %.2Lfs\n", total_open_time);
+         fprintf(stderr, "Time to attach intermediate databases:              %.2Lfs\n", total_attach_time);
+         fprintf(stderr, "Time to descend:                                    %.2Lfs\n", total_descend_time - total_pushdir_time);
+         fprintf(stderr, "Time to pushdir:                                    %.2Lfs\n", total_pushdir_time);
+         fprintf(stderr, "Time to query databases and print:                  %.2Lfs\n", total_exec_time);
+         fprintf(stderr, "Time to detach intermediate databases:              %.2Lfs\n", total_detach_time);
+         fprintf(stderr, "Time to close databases:                            %.2Lfs\n", total_close_time);
+         fprintf(stderr, "Time to close directories:                          %.2Lfs\n", total_closedir_time);
      }
 #endif
 
      thpool_destroy(mythpool);
-     fprintf(stderr, "Time to acquire queue lock: %Lf\n", acquire_mutex_time);
-     fprintf(stderr, "Time to do processdir work: %Lf\n", work_time);
+     fprintf(stderr, "Time to acquire queue lock for popping work:        %.2Lf\n", acquire_mutex_time);
+     fprintf(stderr, "Time to do processdir work:                         %.2Lf\n", work_time);
 
      if (in.aggregate_or_print == AGGREGATE) {
          // prepend the intermediate database query with "INSERT INTO" to move
@@ -735,14 +766,18 @@ int main(int argc, char *argv[])
          fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
          fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.intermediate_count + 1));
          fprintf(stderr, "Time to do main work:                           %.2Lfs\n", intermediate_time);
-         /* fprintf(stderr, "Time to open databases:                             %.2Lfs\n", open_time); */
-         /* fprintf(stderr, "Time to attach intermediate databases:              %.2Lfs\n", attach_time); */
-         /* fprintf(stderr, "Time to insert into intermediate databases:         %.2Lfs\n", query_time); */
-         /* fprintf(stderr, "Time to detach intermediate databases:              %.2Lfs\n", detach_time); */
-         /* fprintf(stderr, "Time to close databases:                            %.2Lfs\n", close_time); */
+         fprintf(stderr, "    Time to open directories:                       %.2Lfs\n", total_opendir_time);
+         fprintf(stderr, "    Time to open databases:                         %.2Lfs\n", total_open_time);
+         fprintf(stderr, "    Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
+         fprintf(stderr, "    Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
+         fprintf(stderr, "    Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
+         fprintf(stderr, "    Time to query databases and print:              %.2Lfs\n", total_exec_time);
+         fprintf(stderr, "    Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
+         fprintf(stderr, "    Time to close databases:                        %.2Lfs\n", total_close_time);
+         fprintf(stderr, "    Time to close directories:                      %.2Lfs\n", total_closedir_time);
          fprintf(stderr, "Time to aggregate into final databases:         %.2Lfs\n", aggregate_time);
          fprintf(stderr, "Time to print:                                  %.2Lfs\n", output_time);
-         fprintf(stderr, "Time to complete all:                           %.2Lfs\n", intermediate_time + aggregate_time + output_time);
+         fprintf(stderr, "Real time:                                      %.2Lfs\n", intermediate_time + aggregate_time + output_time);
 #endif
 
          closedb(aggregate);

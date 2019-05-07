@@ -904,16 +904,16 @@ size_t descend(struct work *passmywork, DIR *dir,
             lstat(qwork.name, &qwork.statuso);
             if (S_ISDIR(qwork.statuso.st_mode)) {
                 if (!access(qwork.name, R_OK | X_OK)) {
-                    qwork.pinode=passmywork->statuso.st_ino;
                     qwork.level = next_level;
                     qwork.type[0] = 'd';
+
+                    // this is how the parent gets passed on
+                    qwork.pinode = passmywork->statuso.st_ino;
 
                     if (callback && (callback(&qwork, args) != 0)) {
                         continue;
                     }
 
-                    // this is how the parent gets passed on
-                    qwork.pinode = passmywork->statuso.st_ino;
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     pushdir(&qwork);
                     pushed++;
