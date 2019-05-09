@@ -87,6 +87,8 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
+const char * GUFI_SQLITE_VFS = "unix-none";
+
 char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
             "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
 
@@ -225,7 +227,7 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
             sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
 
-    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         return NULL;
     }
@@ -967,7 +969,8 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;
     if ((sqlite3_open_v2(name, &aggregate,
-                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX, NULL) != SQLITE_OK) || // create the aggregate database
+                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX,
+                         GUFI_SQLITE_VFS)                                                                          != SQLITE_OK) || // create the aggregate database
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                              != SQLITE_OK) || // enable extension loading
         (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                         != SQLITE_OK) || // load the sqlite3-pcre extension
         (addqueryfuncs(aggregate)                                                                                  != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
