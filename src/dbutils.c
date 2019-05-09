@@ -225,7 +225,7 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
             sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
 
-    if (sqlite3_open_v2(dbn, &db, /*SQLITE_OPEN_CREATE | */SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         return NULL;
     }

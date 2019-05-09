@@ -192,6 +192,8 @@ struct input {
    size_t intermediate_count;
    size_t intermediate_skip;
    ShowResults_t aggregate_or_print;
+   int (*print_callback)(void*,int,char**,char**);
+
    int keep_matime;
 };
 extern struct input in;

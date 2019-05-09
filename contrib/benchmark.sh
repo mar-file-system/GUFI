@@ -45,12 +45,12 @@ MOST_FILES="$(echo "${MOST_FILES}" | head -n 1 | awk -F'|' '{printf $1}')"
 
 echo
 echo "Number of files owned by user ${MOST_FILES} (gufi_find)"
-sudo -u \#"${MOST_FILES}" ${NUMACTL} ${GUFI_PREFIX}/gufi_find ${COMMON} --no-aggregate -uid ${MOST_FILES} ${GUFI_TREE} | wc -l
+sudo -u \#"${MOST_FILES}" ${NUMACTL} ${GUFI_PREFIX}/gufi_find ${COMMON} --no-aggregate ${GUFI_TREE} | wc -l
 
 echo
 echo "Number of files owned by user ${MOST_FILES} (gufi_stats)"
-sudo -u \#"${MOST_FILES}" ${NUMACTL} ${GUFI_PREFIX}/gufi_stats ${COMMON} --uid ${MOST_FILES} total-files ${GUFI_TREE}
+sudo -u \#"${MOST_FILES}" ${NUMACTL} ${GUFI_PREFIX}/gufi_stats ${COMMON} total-files ${GUFI_TREE}
 
 echo
 echo "Number of files owned by user ${MOST_FILES} larger than 1KB (gufi_find)"
-sudo -u \#"${MOST_FILES}" ${NUMACTL} ${GUFI_PREFIX}/gufi_find ${COMMON} --no-aggregate -uid ${MOST_FILES} -size=+1024c ${GUFI_TREE} | wc -l
+sudo -u \#"${MOST_FILES}" ${NUMACTL} ${GUFI_PREFIX}/gufi_find ${COMMON} --no-aggregate -size=+1024c ${GUFI_TREE} | wc -l

@@ -90,9 +90,6 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
-#ifdef DEBUG
-#include <time.h>
-#endif
 #include <unistd.h>
 #include <utime.h>
 
@@ -100,8 +97,14 @@ OF SUCH DAMAGE.
 #include "structq.h"
 #include "utils.h"
 #include "dbutils.h"
+#include "pcre.h"
+
+/* #ifdef DEBUG */
+/* #undef DEBUG */
+/* #endif */
 
 #ifdef DEBUG
+#include <time.h>
 long double elapsed(const struct timespec *start, const struct timespec *end) {
     const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
     const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
@@ -135,32 +138,11 @@ int set_aggregate_id(struct work *qwork, void *args) {
     return 0;
 }
 
-/* static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER; */
-static int print_callback(void *out, int count, char **data, char **columns) {
-    static char ffielddelim[2];
-    switch (in.dodelim) {
-        case 0:
-            SNPRINTF(ffielddelim,2,"|");
-            break;
-        case 1:
-            SNPRINTF(ffielddelim,2,"%s",fielddelim);
-            break;
-        case 2:
-            SNPRINTF(ffielddelim,2,"%s",in.delim);
-            break;
-    }
-
-    /* pthread_mutex_lock(&print_mutex); */
-    for(int i = 0; i < count; i++) {
-        fprintf((FILE *) out, "%s%s", data[i], ffielddelim);
-    }
-    fprintf((FILE *) out, "\n");
-    /* pthread_mutex_unlock(&print_mutex); */
-    return 0;
-}
-
+#ifdef DEBUG
 long double total_opendir_time = 0;
 long double total_open_time = 0;
+long double total_create_tables_time = 0;
+long double total_load_extension_time = 0;
 long double total_attach_time = 0;
 long double total_descend_time = 0;
 long double total_pushdir_time = 0;
@@ -169,30 +151,37 @@ long double total_detach_time = 0;
 long double total_close_time = 0;
 long double total_closedir_time = 0;
 pthread_mutex_t total_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 // Push the subdirectories in the current directory onto the queue
 static size_t descend2(struct work *passmywork,
                        const size_t max_level,
-                       int (*callback)(struct work *, void *), void *args,
+                       int (*callback)(struct work *, void *), void *args
+                       #ifdef DEBUG
+                       ,
                        long double *opendir_time,
                        long double *pushdir_time,
-                       long double *closedir_time) {
+                       long double *closedir_time
+                       #endif
+    ) {
     if (!passmywork) {
         return 0;
     }
 
     // open directory
+    #ifdef DEBUG
     struct timespec opendir_start;
     clock_gettime(CLOCK_MONOTONIC, &opendir_start);
+    #endif
     DIR * dir = opendir(passmywork->name);
+    #ifdef DEBUG
     struct timespec opendir_end;
     clock_gettime(CLOCK_MONOTONIC, &opendir_end);
     *opendir_time = elapsed(&opendir_start, &opendir_end);
-    pthread_mutex_lock(&total_mutex);
-    total_opendir_time += *opendir_time;
-    pthread_mutex_unlock(&total_mutex);
+    #endif
 
     if (!dir) {
+        fprintf(stderr, "Could not open %s: %d %s\n", passmywork->name, errno, strerror(errno));
         return 0;
     }
 
@@ -229,34 +218,137 @@ static size_t descend2(struct work *passmywork,
                     }
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
+                    #ifdef DEBUG
                     struct timespec pushdir_start;
                     clock_gettime(CLOCK_MONOTONIC, &pushdir_start);
+                    #endif
                     pushdir(&qwork);
+                    #ifdef DEBUG
                     struct timespec pushdir_end;
                     clock_gettime(CLOCK_MONOTONIC, &pushdir_end);
                     *pushdir_time += elapsed(&pushdir_start, &pushdir_end);
+                    #endif
                     pushed++;
                 }
-                else {
-                    /* fprintf(stderr, "couldn't access dir '%s': %s\n", */
-                    /*         qwork.name, strerror(errno)); */
-                }
+                /* else { */
+                /*     fprintf(stderr, "couldn't access dir '%s': %s\n", */
+                /*             qwork.name, strerror(errno)); */
+                /* } */
             }
+            /* else { */
+            /*     fprintf(stderr, "not a dir '%s': %s\n", */
+            /*             qwork.name, strerror(errno)); */
+            /* } */
         }
     }
 
     // close dir
+    #ifdef DEBUG
     struct timespec closedir_start;
     clock_gettime(CLOCK_MONOTONIC, &closedir_start);
+    #endif
     closedir(dir);
+    #ifdef DEBUG
     struct timespec closedir_end;
     clock_gettime(CLOCK_MONOTONIC, &closedir_end);
     *closedir_time = elapsed(&closedir_start, &closedir_end);
-    pthread_mutex_lock(&total_mutex);
-    total_closedir_time += *closedir_time;
-    pthread_mutex_unlock(&total_mutex);
+    #endif
 
     return pushed;
+}
+
+sqlite3 * opendb2(const char *name, int openwhat, int createtables
+                  #ifdef DEBUG
+                       , long double * open_time, long double * create_tables_time, long double * load_extension_time
+                  #endif
+    )
+{
+    sqlite3 * db = NULL;
+    char *err_msg = NULL;
+    char dbn[MAXPATH];
+
+    // sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+
+    sqlite3_snprintf(MAXSQL, dbn, "%s/" DBNAME, name);
+
+    if (createtables) {
+        if (openwhat != 3)
+            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
+        if (openwhat==7 || openwhat==8)
+            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+    }
+    else {
+        if (openwhat == 6)
+            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
+        if (openwhat == 5)
+            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+    }
+
+    #ifdef DEBUG
+    struct timespec open_start;
+    clock_gettime(CLOCK_MONOTONIC, &open_start);
+    #endif
+    if (sqlite3_open_v2(dbn, &db, /*SQLITE_OPEN_CREATE | */SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
+        return NULL;
+    }
+    #ifdef DEBUG
+    struct timespec open_end;
+    clock_gettime(CLOCK_MONOTONIC, &open_end);
+    *open_time = elapsed(&open_start, &open_end);
+    #endif
+
+    /* // try to turn sychronization off */
+    /* if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    /* // try to turn journaling off */
+    /* if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    /* // try to get an exclusive lock */
+    /* if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    /* // try increasing the page size */
+    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
+    #ifdef DEBUG
+    struct timespec create_tables_start;
+    clock_gettime(CLOCK_MONOTONIC, &create_tables_start);
+    #endif
+    if (createtables) {
+        if (create_tables(dbn, openwhat, db) != 0) {
+            fprintf(stderr, "Cannot create tables: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+            sqlite3_close(db);
+            return NULL;
+        }
+    }
+    #ifdef DEBUG
+    struct timespec create_tables_end;
+    clock_gettime(CLOCK_MONOTONIC, &create_tables_end);
+    *create_tables_time = elapsed(&create_tables_start, &create_tables_end);
+    #endif
+
+    #ifdef DEBUG
+    struct timespec load_extension_start;
+    clock_gettime(CLOCK_MONOTONIC, &load_extension_start);
+    #endif
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
+        (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
+        fprintf(stderr, "Unable to load regex extension\n");
+        sqlite3_free(err_msg);
+        sqlite3_close(db);
+        db = NULL;
+    }
+    #ifdef DEBUG
+    struct timespec load_extension_end;
+    clock_gettime(CLOCK_MONOTONIC, &load_extension_end);
+    *load_extension_time = elapsed(&load_extension_start, &load_extension_end);
+    #endif
+
+    return db;
 }
 
 // This becomes an argument to thpool_add_work(), so it must return void,
@@ -272,8 +364,6 @@ static void processdir(void * passv)
     char endname[MAXPATH];
 
     // only print if not aggregating and user wants to print
-    int (*callback)(void*,int,char**,char**) = (((in.aggregate_or_print == PRINT) && in.printing)?print_callback:NULL);
-
     // where to output to when printing
     FILE *out = stdout;
     if (in.outfile > 0) {
@@ -283,8 +373,11 @@ static void processdir(void * passv)
     char name[MAXSQL];
     SNPRINTF(name, MAXSQL, "%s/" DBNAME, passmywork->name);
 
+    #ifdef DEBUG
     long double opendir_time = 0;
     long double open_time = 0;
+    long double create_tables_time = 0;
+    long double load_extension_time = 0;
     long double attach_time = 0;
     long double descend_time = 0;
     long double pushdir_time = 0;
@@ -292,6 +385,7 @@ static void processdir(void * passv)
     long double detach_time = 0;
     long double close_time = 0;
     long double closedir_time = 0;
+    #endif
 
     // keep track of the mtime and atime
     struct utimbuf dbtime = {};
@@ -311,21 +405,22 @@ static void processdir(void * passv)
     //  printits(passmywork,mytid);
     //}
 
-    struct timespec open_start;
-    clock_gettime(CLOCK_MONOTONIC, &open_start);
     // if we have out db then we have that db open so we just attach the gufi db
     if (in.outdb > 0) {
       db = gts.outdbd[mytid];
       attachdb(name, db, "tree");
     } else {
-      db = opendb(passmywork->name, 1, 0);
+      db = opendb2(passmywork->name, 1, 0
+                   #ifdef DEBUG
+                   , &open_time, &create_tables_time, &load_extension_time
+                   #endif
+          );
     }
-    struct timespec open_end;
-    clock_gettime(CLOCK_MONOTONIC, &open_end);
-    open_time = elapsed(&open_start, &open_end);
 
+    #ifdef DEBUG
     struct timespec attach_start;
     clock_gettime(CLOCK_MONOTONIC, &attach_start);
+    #endif
     if (in.aggregate_or_print == AGGREGATE) {
         // attach in-memory result aggregation database
         char intermediate_name[MAXSQL];
@@ -335,9 +430,11 @@ static void processdir(void * passv)
             goto restore_time;
         }
     }
+    #ifdef DEBUG
     struct timespec attach_end;
     clock_gettime(CLOCK_MONOTONIC, &attach_end);
     attach_time = elapsed(&attach_start, &attach_end);
+    #endif
 
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
     if (db) {
@@ -374,15 +471,22 @@ static void processdir(void * passv)
         aggregate_id_args.skip = in.intermediate_skip;
         aggregate_id_args.count = in.intermediate_count;
 
+        #ifdef DEBUG
         struct timespec descend_start;
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
+        #endif
         // push subdirectories into the queue
         descend2(passmywork, in.max_level,
-                 set_aggregate_id, &aggregate_id_args,
-                 &opendir_time, &pushdir_time, &closedir_time);
+            set_aggregate_id, &aggregate_id_args
+            #ifdef DEBUG
+            , &opendir_time, &pushdir_time, &closedir_time
+            #endif
+            );
+        #ifdef DEBUG
         struct timespec descend_end;
         clock_gettime(CLOCK_MONOTONIC, &descend_end);
         descend_time = elapsed(&descend_start, &descend_end);
+        #endif
 
         if (db) {
             // only query this level if the min_level has been reached
@@ -415,15 +519,19 @@ static void processdir(void * passv)
                         SNPRINTF(gps[mytid].gpath,MAXPATH,"%s",passmywork->name);
                         realpath(passmywork->name,gps[mytid].gfpath);
 
+                        #ifdef DEBUG
                         struct timespec exec_start;
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
+                        #endif
                         char *err = NULL;
-                        if (sqlite3_exec(db, in.sqlent, callback, out, &err) != SQLITE_OK) {
+                        if (sqlite3_exec(db, in.sqlent, in.print_callback, out, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s \"%s\"\n", err, in.sqlent);
                         }
+                        #ifdef DEBUG
                         struct timespec exec_end;
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         exec_time = elapsed(&exec_start, &exec_end);
+                        #endif
 
                         sqlite3_free(err);
                     }
@@ -432,8 +540,10 @@ static void processdir(void * passv)
         }
     }
 
+    #ifdef DEBUG
     struct timespec detach_start;
     clock_gettime(CLOCK_MONOTONIC, &detach_start);
+    #endif
     if (in.aggregate_or_print == AGGREGATE) {
         // detach in-memory result aggregation database
         if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
@@ -441,21 +551,27 @@ static void processdir(void * passv)
             goto restore_time;
         }
     }
+    #ifdef DEBUG
     struct timespec detach_end;
     clock_gettime(CLOCK_MONOTONIC, &detach_end);
     detach_time = elapsed(&detach_start, &detach_end);
+    #endif
 
     // if we have an out db we just detach gufi db
+    #ifdef DEBUG
     struct timespec close_start;
     clock_gettime(CLOCK_MONOTONIC, &close_start);
+    #endif
     if (in.outdb > 0) {
       detachdb(name, db, "tree");
     } else {
       closedb(db);
     }
+    #ifdef DEBUG
     struct timespec close_end;
     clock_gettime(CLOCK_MONOTONIC, &close_end);
     close_time = elapsed(&close_start, &close_end);
+    #endif
 
   restore_time:
     // restore mtime and atime
@@ -467,17 +583,24 @@ static void processdir(void * passv)
     // one less thread running
     decrthread();
 
-    /* fprintf(stderr, "%s %d %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf\n", passmywork->name, !!db, opendir_time, open_time, attach_time, descend_time - pushdir_time, pushdir_time, exec_time, detach_time, close_time, closedir_time); */
+#ifdef DEBUG
+    /* fprintf(stderr, "%s %d %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf\n", passmywork->name, !!db, opendir_time, open_time, create_tables_time, load_extension_time, attach_time, descend_time - pushdir_time, pushdir_time, exec_time, detach_time, close_time, closedir_time); */
 
     pthread_mutex_lock(&total_mutex);
-    total_open_time += open_time;
-    total_attach_time += attach_time;
-    total_descend_time += descend_time;
-    total_pushdir_time += pushdir_time;
-    total_exec_time += exec_time;
-    total_detach_time += detach_time;
-    total_close_time += close_time;
+    total_opendir_time           += opendir_time;
+    total_open_time              += open_time;
+    total_create_tables_time     += create_tables_time;
+    total_load_extension_time    += load_extension_time;
+    total_attach_time            += attach_time;
+    total_descend_time           += descend_time;
+    total_opendir_time           += opendir_time;
+    total_pushdir_time           += pushdir_time;
+    total_closedir_time          += closedir_time;
+    total_exec_time              += exec_time;
+    total_detach_time            += detach_time;
+    total_close_time             += close_time;
     pthread_mutex_unlock(&total_mutex);
+#endif
 
     // free the queue entry - this has to be here or there will be a leak
     free(passmywork->freeme);
@@ -502,14 +625,13 @@ int processinit(void * myworkin) {
      }
 
      if (in.outdb > 0) {
-       int (*callback)(void*,int,char**,char**) = (((in.aggregate_or_print == PRINT) && in.printdir)?print_callback:NULL);
        i=0;
        while (i < in.maxthreads) {
          SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
          gts.outdbd[i]=opendb(outdbn,5,0);
          if (strlen(in.sqlinit) > 1) {
            char *err = NULL;
-           if (sqlite3_exec(gts.outdbd[i], in.sqlinit, callback, NULL, &err) != SQLITE_OK) {
+           if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, &err) != SQLITE_OK) {
              fprintf(stderr, "Error: %s\n", err);
            }
            sqlite3_free(err);
@@ -556,13 +678,12 @@ int processfin() {
 
      // close output dbs here
      if (in.outdb > 0) {
-       int (*callback)(void*,int,char**,char**) = (((in.aggregate_or_print == PRINT) && in.printdir)?print_callback:NULL);
        i=0;
        while (i < in.maxthreads) {
          closedb(gts.outdbd[i]);
          if (strlen(in.sqlfin) > 1) {
            char *err = NULL;
-           if (sqlite3_exec(gts.outdbd[i], in.sqlfin, callback, NULL, &err) != SQLITE_OK) {
+           if (sqlite3_exec(gts.outdbd[i], in.sqlfin, NULL, NULL, &err) != SQLITE_OK) {
              fprintf(stderr, "Error: %s\n", err);
            }
            sqlite3_free(err);
@@ -689,25 +810,25 @@ int main(int argc, char *argv[])
      struct timespec intermediate_end;
      clock_gettime(CLOCK_MONOTONIC, &intermediate_end);
 
+     fprintf(stderr, "Time to acquire queue lock for popping work:    %.2Lf\n", acquire_mutex_time);
+     fprintf(stderr, "Time to do processdir work:                     %.2Lf\n", work_time);
+
      if (in.aggregate_or_print == PRINT) {
+         fprintf(stderr, "Time to open directories:                       %.2Lfs\n", total_opendir_time);
+         fprintf(stderr, "Time to open databases:                         %.2Lfs\n", total_open_time);
+         fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
+         fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
+         fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
+         fprintf(stderr, "Time to sqlite3_exec (query and print):         %.2Lfs\n", total_exec_time);
+         fprintf(stderr, "Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
+         fprintf(stderr, "Time to close databases:                        %.2Lfs\n", total_close_time);
+         fprintf(stderr, "Time to close directories:                      %.2Lfs\n", total_closedir_time);
          fprintf(stderr, "Queries performed:                              %d\n",     thread_count);
          fprintf(stderr, "Real time:                                      %.2Lfs\n", elapsed(&intermediate_start, &intermediate_end));
-
-         fprintf(stderr, "Time to open directories:                           %.2Lfs\n", total_opendir_time);
-         fprintf(stderr, "Time to open databases:                             %.2Lfs\n", total_open_time);
-         fprintf(stderr, "Time to attach intermediate databases:              %.2Lfs\n", total_attach_time);
-         fprintf(stderr, "Time to descend:                                    %.2Lfs\n", total_descend_time - total_pushdir_time);
-         fprintf(stderr, "Time to pushdir:                                    %.2Lfs\n", total_pushdir_time);
-         fprintf(stderr, "Time to query databases and print:                  %.2Lfs\n", total_exec_time);
-         fprintf(stderr, "Time to detach intermediate databases:              %.2Lfs\n", total_detach_time);
-         fprintf(stderr, "Time to close databases:                            %.2Lfs\n", total_close_time);
-         fprintf(stderr, "Time to close directories:                          %.2Lfs\n", total_closedir_time);
      }
 #endif
 
      thpool_destroy(mythpool);
-     fprintf(stderr, "Time to acquire queue lock for popping work:        %.2Lf\n", acquire_mutex_time);
-     fprintf(stderr, "Time to do processdir work:                         %.2Lf\n", work_time);
 
      if (in.aggregate_or_print == AGGREGATE) {
          // prepend the intermediate database query with "INSERT INTO" to move
@@ -763,20 +884,22 @@ int main(int argc, char *argv[])
          const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
          const long double output_time = elapsed(&output_start, &output_end);
 
-         fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
-         fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.intermediate_count + 1));
          fprintf(stderr, "Time to do main work:                           %.2Lfs\n", intermediate_time);
-         fprintf(stderr, "    Time to open directories:                       %.2Lfs\n", total_opendir_time);
-         fprintf(stderr, "    Time to open databases:                         %.2Lfs\n", total_open_time);
-         fprintf(stderr, "    Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
-         fprintf(stderr, "    Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
-         fprintf(stderr, "    Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
-         fprintf(stderr, "    Time to query databases and print:              %.2Lfs\n", total_exec_time);
-         fprintf(stderr, "    Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
-         fprintf(stderr, "    Time to close databases:                        %.2Lfs\n", total_close_time);
-         fprintf(stderr, "    Time to close directories:                      %.2Lfs\n", total_closedir_time);
+         fprintf(stderr, "Time to open directories:                       %.2Lfs\n", total_opendir_time);
+         fprintf(stderr, "Time to open databases:                         %.2Lfs\n", total_open_time);
+         fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
+         fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
+         fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
+         fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
+         fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
+         fprintf(stderr, "Time to sqlite3_exec (query and insert)         %.2Lfs\n", total_exec_time);
+         fprintf(stderr, "Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
+         fprintf(stderr, "Time to close databases:                        %.2Lfs\n", total_close_time);
+         fprintf(stderr, "Time to close directories:                      %.2Lfs\n", total_closedir_time);
          fprintf(stderr, "Time to aggregate into final databases:         %.2Lfs\n", aggregate_time);
          fprintf(stderr, "Time to print:                                  %.2Lfs\n", output_time);
+         fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
+         fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.intermediate_count + 1));
          fprintf(stderr, "Real time:                                      %.2Lfs\n", intermediate_time + aggregate_time + output_time);
 #endif
 

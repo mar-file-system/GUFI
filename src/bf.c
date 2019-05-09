@@ -209,6 +209,32 @@ void show_input(struct input* in, int retval) {
 }
 
 
+static int print_callback(void *out, int count, char **data, char **columns) {
+    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+    static char ffielddelim[2];
+    switch (in.dodelim) {
+        case 0:
+            SNPRINTF(ffielddelim,2,"|");
+            break;
+        case 1:
+            SNPRINTF(ffielddelim,2,"%s",fielddelim);
+            break;
+        case 2:
+            SNPRINTF(ffielddelim,2,"%s",in.delim);
+            break;
+    }
+
+    if (out) {
+        pthread_mutex_lock(&print_mutex);
+        for(int i = 0; i < count; i++) {
+            fprintf((FILE *) out, "%s%s", data[i], ffielddelim);
+        }
+        fprintf((FILE *) out, "\n");
+        pthread_mutex_unlock(&print_mutex);
+    }
+    return 0;
+}
+
 // process command-line options
 //
 // <positional_args_help_str> is a string like "input_dir to_dir"
@@ -245,6 +271,7 @@ int parse_cmd_line(int         argc,
    in->intermediate_count = in->maxthreads * 4 + 1;
    in->intermediate_skip  = 1;
    in->aggregate_or_print = AGGREGATE; // aggregate by default
+   in->print_callback     = NULL;
    in->keep_matime        = 0;         // default to not keeping mtime and atime
 
    int show   = 0;
@@ -457,6 +484,9 @@ int parse_cmd_line(int         argc,
    if (in->aggregate_or_print != AGGREGATE) {
        in->intermediate_count = 0;
    }
+
+   in->print_callback = (((in->aggregate_or_print == PRINT) && in->printdir)?print_callback:NULL);
+
 
    // caller requires given number of positional args, after the options.
    // <optind> is the number of argv[] values that were recognized as options.
