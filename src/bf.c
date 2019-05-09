@@ -145,8 +145,6 @@ void print_help(const char* prog_name,
       case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
       case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
       case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
-      case 'v': printf("  -v <count>         number of intermediate databases to use (preferrably prime)\n"); break;
-      case 'w': printf("  -w <count>         number of intermediate databases to skip when selecting (should be primitive root of intermediate database count, or 1)\n"); break;
       case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
@@ -199,8 +197,6 @@ void show_input(struct input* in, int retval) {
    printf("in.max_level          = %zu\n",   in->max_level);
    printf("in.aggregate          = '%s'\n",  in->aggregate);
    printf("in.intermediate       = '%s'\n",  in->intermediate);
-   printf("in.intermediate_count = %zu\n",   in->intermediate_count);
-   printf("in.intermediate_skip  = %zu\n",   in->intermediate_skip);
    printf("in.aggregate_or_print = %d\n",    in->aggregate_or_print);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("\n");
@@ -268,8 +264,6 @@ int parse_cmd_line(int         argc,
    memset(in->sqlent,       0, MAXSQL);
    memset(in->intermediate, 0, MAXSQL);
    memset(in->aggregate,    0, MAXSQL);
-   in->intermediate_count = in->maxthreads * 4 + 1;
-   in->intermediate_skip  = 1;
    in->aggregate_or_print = AGGREGATE; // aggregate by default
    in->print_callback     = NULL;
    in->keep_matime        = 0;         // default to not keeping mtime and atime
@@ -430,14 +424,6 @@ int parse_cmd_line(int         argc,
          }
          break;
 
-      case 'v':
-          INSTALL_UINT(in->intermediate_count, optarg, (size_t) 1, (size_t) -1, "-v");
-          break;
-
-      case 'w':
-          INSTALL_UINT(in->intermediate_skip, optarg, (size_t) 1, (size_t) -1, "-w");
-          break;
-
       case 'y':
          INSTALL_UINT(in->min_level, optarg, (size_t) 0, (size_t) -1, "-y");
          break;
@@ -479,10 +465,6 @@ int parse_cmd_line(int         argc,
    // make sure min_level <= max_level
    if (retval == 0) {
        retval = -(in->min_level > in->max_level);
-   }
-
-   if (in->aggregate_or_print != AGGREGATE) {
-       in->intermediate_count = 0;
    }
 
    in->print_callback = (((in->aggregate_or_print == PRINT) && in->printdir)?print_callback:NULL);

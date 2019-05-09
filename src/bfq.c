@@ -120,25 +120,17 @@ extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
-struct aggregate_id_args {
-    ShowResults_t aggregate_or_print;
-    size_t id;
-    size_t skip;
-    size_t count;
-};
-
 // callback for setting qwork's aggregate_id
 int set_aggregate_id(struct work *qwork, void *args) {
     if (!qwork || !args) {
         return -1;
     }
 
-    struct aggregate_id_args *id_args = (struct aggregate_id_args *) args;
-    if (id_args->aggregate_or_print == AGGREGATE) {
-        id_args->id = (id_args->id + id_args->skip) % id_args->count;
+    size_t * id = (size_t *) args;
+    if (in.aggregate_or_print == AGGREGATE) {
+        qwork->aggregate_id  = (*id + 1) % in.maxthreads;
     }
 
-    qwork->aggregate_id = id_args->id;
     return 0;
 }
 
@@ -454,19 +446,13 @@ static void processdir(void * passv)
     }
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
-        struct aggregate_id_args aggregate_id_args;
-        aggregate_id_args.aggregate_or_print = in.aggregate_or_print;
-        aggregate_id_args.id = passmywork->aggregate_id;
-        aggregate_id_args.skip = in.intermediate_skip;
-        aggregate_id_args.count = in.intermediate_count;
-
         #ifdef DEBUG
         struct timespec descend_start;
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
         #endif
         // push subdirectories into the queue
         descend2(passmywork, dir, in.max_level,
-            set_aggregate_id, &aggregate_id_args
+            set_aggregate_id, &passmywork->aggregate_id
             #ifdef DEBUG
             , &pushdir_time
             #endif
@@ -523,9 +509,6 @@ static void processdir(void * passv)
                         #endif
 
                         sqlite3_free(err);
-                    }
-                    else {
-                        fprintf(stderr, "No entries query\n");
                     }
                 }
             }
@@ -741,8 +724,8 @@ int main(int argc, char *argv[])
              return -1;
          }
 
-         intermediates = malloc(sizeof(sqlite3 *) * in.intermediate_count);
-         for(size_t i = 0; i < in.intermediate_count; i++) {
+         intermediates = malloc(sizeof(sqlite3 *) * in.maxthreads);
+         for(size_t i = 0; i < in.maxthreads; i++) {
              char intermediate_name[MAXSQL];
              SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
              if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
@@ -762,7 +745,7 @@ int main(int argc, char *argv[])
      mythpool = thpool_init(in.maxthreads);
      if (thpool_null(mythpool)) {
         fprintf(stderr, "thpool_init() failed!\n");
-        for(size_t i = 0; i < in.intermediate_count; i++) {
+        for(size_t i = 0; i < in.maxthreads; i++) {
             closedb(intermediates[i]);
         }
         free(intermediates);
@@ -796,7 +779,7 @@ int main(int argc, char *argv[])
          // putting that directory on the queue
          struct work mywork;
          if (in.aggregate_or_print == AGGREGATE) {
-             mywork.aggregate_id = (aggregate_id + in.intermediate_skip) % in.intermediate_count;
+             mywork.aggregate_id = aggregate_id++ % in.maxthreads;
          }
          processinit(&mywork);
 
@@ -851,7 +834,7 @@ int main(int argc, char *argv[])
 #endif
 
          // aggregate the intermediate results
-         for(size_t i = 0; i < in.intermediate_count; i++) {
+         for(size_t i = 0; i < in.maxthreads; i++) {
              if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
                  (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
                  printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
@@ -864,7 +847,7 @@ int main(int argc, char *argv[])
 #endif
 
          // cleanup the intermediate databases outside of the timing (no need to detach)
-         for(size_t i = 0; i < in.intermediate_count; i++) {
+         for(size_t i = 0; i < in.maxthreads; i++) {
              sqlite3_close(intermediates[i]);
          }
          free(intermediates);
@@ -908,7 +891,7 @@ int main(int argc, char *argv[])
          fprintf(stderr, "Time to aggregate into final databases:         %.2Lfs\n", aggregate_time);
          fprintf(stderr, "Time to print:                                  %.2Lfs\n", output_time);
          fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
-         fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.intermediate_count + 1));
+         fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.maxthreads + 1));
          fprintf(stderr, "Real time:                                      %.2Lfs\n", intermediate_time + aggregate_time + output_time);
 #endif
 

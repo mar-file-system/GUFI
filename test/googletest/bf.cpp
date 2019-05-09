@@ -84,8 +84,6 @@ TEST(parse_cmd_line, options) {
     const std::string A = "-A"; const std::string A_arg = "1";
     const std::string c = "-c"; const std::string c_arg = "1";
     const std::string e = "-e"; const std::string e_arg = "0";
-    const std::string v = "-v"; const std::string v_arg = "1";
-    const std::string w = "-w"; const std::string w_arg = "1";
     const std::string y = "-y"; const std::string y_arg = "1";
     const std::string z = "-z"; const std::string z_arg = "1";
     const std::string G = "-G"; const std::string G_arg = "G arg";
@@ -109,8 +107,6 @@ TEST(parse_cmd_line, options) {
         A.c_str(), A_arg.c_str(),
         c.c_str(), c_arg.c_str(),
         e.c_str(), e_arg.c_str(),
-        v.c_str(), v_arg.c_str(),
-        w.c_str(), w_arg.c_str(),
         y.c_str(), y_arg.c_str(),
         z.c_str(), z_arg.c_str(),
         G.c_str(), G_arg.c_str(),
@@ -138,8 +134,6 @@ TEST(parse_cmd_line, options) {
     ASSERT_EQ(in.suspectmethod,       1);
     ASSERT_EQ(in.suspecttime,         1);
     ASSERT_EQ(in.aggregate_or_print,  0);
-    ASSERT_EQ(in.intermediate_count,  (std::size_t) 1);
-    ASSERT_EQ(in.intermediate_skip,   (std::size_t) 1);
     ASSERT_EQ(in.min_level,           (std::size_t) 1);
     ASSERT_EQ(in.max_level,           (std::size_t) 1);
     ASSERT_STREQ(in.aggregate,        G_arg.c_str());
@@ -176,8 +170,6 @@ TEST(parse_cmd_line, positional) {
     EXPECT_EQ(in.max_level,          (size_t) -1);
     EXPECT_STREQ(in.intermediate,    "");
     EXPECT_STREQ(in.aggregate,       "");
-    EXPECT_EQ(in.intermediate_count, (size_t) (in.maxthreads * 4 + 1));
-    EXPECT_EQ(in.intermediate_skip,  (size_t) 1);
     EXPECT_EQ(in.aggregate_or_print, AGGREGATE);
 }
 
