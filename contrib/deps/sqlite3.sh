@@ -23,7 +23,7 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        ../configure --prefix="${sqlite3_prefix}"
+        CFLAGS="-USQLITE_THREADSAFE -DSQLITE_THREADSAFE=0 -USQLITE_MAX_EXPR_DEPTH -DSQLITE_MAX_EXPR_DEPTH=0" ../configure --prefix="${sqlite3_prefix}"
     fi
     make
     make install
