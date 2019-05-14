@@ -248,6 +248,10 @@ sqlite3 * opendb(const char *name, int openwhat, int createtables)
     /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
     /* } */
 
+    /* // try increasing the cache size */
+    /* if (sqlite3_exec(db, "PRAGMA cache_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
+    /* } */
+
     if (createtables) {
         if (create_tables(dbn, openwhat, db) != 0) {
             fprintf(stderr, "Cannot create tables: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
@@ -969,7 +973,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
     sqlite3 *aggregate = NULL;
     char *err_msg = NULL;
     if ((sqlite3_open_v2(name, &aggregate,
-                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX,
+                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI,
                          GUFI_SQLITE_VFS)                                                                          != SQLITE_OK) || // create the aggregate database
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                              != SQLITE_OK) || // enable extension loading
         (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                         != SQLITE_OK) || // load the sqlite3-pcre extension
