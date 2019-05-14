@@ -261,8 +261,11 @@ static sqlite3 * opendb(const char *name)
 
     incr(opening);
     sqlite3 * db = NULL;
-    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+    // no need to create because the file should already exist
+    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+        decr(opening);
+        return NULL;
     }
     decr(opening);
 
@@ -503,7 +506,7 @@ static off_t create_template(int & fd) {
     static const char name[] = "tmp.db";
 
     sqlite3 * db = nullptr;
-    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
         fprintf(stderr, "Cannot create template database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
         return -1;
     }
