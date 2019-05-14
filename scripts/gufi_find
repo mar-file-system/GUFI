@@ -112,7 +112,8 @@ def build_where(args, root_uid = 0, root_gid = 0):
     entries  = []
 
     if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-        entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
+        entries  += ['(uid == {})'.format(os.getuid())]
+        # entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
         entries += ['({} - atime) / 60 == {}'.format(time.time(), args.amin)]
@@ -328,7 +329,7 @@ if __name__=='__main__':
     parser.add_argument('-mindepth',           metavar='levels',    dest='mindepth',      type=qb.get_non_negative,                     help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
 
     # # GNU find optional arguments
-    parser.add_argument('starting-point',      metavar='root',                            type=str,  nargs='?',      default=cwd,       help='top-most directory to search from')
+    parser.add_argument('starting-point',      metavar='root',                            type=str,  nargs='+',      default=cwd,       help='top-most directory to search from')
 
     # GUFI specific arguments
     parser.add_argument('--select',            metavar='cols',      dest='select',        type=str,                  default='*',       help='comma separated columns (default: *)')

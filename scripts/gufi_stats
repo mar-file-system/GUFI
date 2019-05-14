@@ -90,7 +90,8 @@ def build(args, root_uid = 0, root_gid = 0):
     where = []
 
     if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-        where += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
+        where  += ['(uid == {})'.format(os.getuid())]
+        # where  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.uid:
         where += ['uid == "{}"'.format(args.uid)]
