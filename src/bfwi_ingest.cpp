@@ -7,12 +7,32 @@
 #include <libgen.h>
 #include <list>
 #include <mutex>
-#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
 #include <vector>
 #include <unistd.h>
+
+// OSX's sendfile is slightly different
+#ifdef __APPLE__
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/uio.h>
+
+static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) {
+    off_t len = size;
+    return sendfile(src_fd, dst_fd, offset, &len, NULL, 0);
+}
+
+#else
+
+#include <sys/sendfile.h>
+
+static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) {
+    return sendfile(dst_fd, src_fd, &offset, size);
+}
+#endif
 
 // #ifdef DEBUG
 // #undef DEBUG
@@ -152,8 +172,7 @@ static int copy_template(const int src_fd, const char * dst, off_t size, uid_t u
     // ignore errors here
     const int src_db = dup(src_fd);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-    off_t offset = 0;
-    const ssize_t sf = sendfile(dst_db, src_db, &offset, size);
+    const ssize_t sf = gufi_sendfile(src_db, dst_db, 0, size);
     fchmod(dst_db, S_IRWXU | S_IRWXG | S_IRWXO);
     fchown(dst_db, uid, gid);
     close(src_db);
