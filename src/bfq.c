@@ -138,8 +138,7 @@ pthread_mutex_t total_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Push the subdirectories in the current directory onto the queue
 static size_t descend2(struct work *passmywork,
                        DIR * dir,
-                       const size_t max_level,
-                       int (*callback)(struct work *, void *), void *args
+                       const size_t max_level
                        #ifdef DEBUG
                        , long double *pushdir_time
                        #endif
@@ -182,10 +181,6 @@ static size_t descend2(struct work *passmywork,
 
                     // this is how the parent gets passed on
                     qwork.pinode = passmywork->statuso.st_ino;
-
-                    if (callback && (callback(&qwork, args) != 0)) {
-                        continue;
-                    }
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     #ifdef DEBUG
@@ -242,11 +237,19 @@ sqlite3 * opendb2(const char *name, int openwhat, int createtables
             sqlite3_snprintf(MAXSQL, dbn, "%s", name);
     }
 
+    int flags = SQLITE_OPEN_URI;
+    if (createtables) {
+        flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
+    }
+    else {
+        flags |= SQLITE_OPEN_READONLY;
+    }
+
     #ifdef DEBUG
     struct timespec open_start;
     clock_gettime(CLOCK_MONOTONIC, &open_start);
     #endif
-    if (sqlite3_open_v2(dbn, &db, /*SQLITE_OPEN_CREATE | */SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
+    if (sqlite3_open_v2(dbn, &db, flags, "unix-none") != SQLITE_OK) {
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         return NULL;
     }
@@ -437,8 +440,7 @@ static void processdir(void * passv)
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
         #endif
         // push subdirectories into the queue
-        descend2(passmywork, dir, in.max_level,
-                 NULL, NULL
+        descend2(passmywork, dir, in.max_level
                  #ifdef DEBUG
                  , &pushdir_time
                  #endif
