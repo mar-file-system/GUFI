@@ -235,7 +235,7 @@ void *proc_inodes (void *args) {
     // check to see if we are done with this batch
     // check to see if we are done with all batches
     if (iattrp == NULL) break;
-    if (iattrp->ia_inode > (seekp + stride)) {
+    if (iattrp->ia_inode >= (seekp + stride)) {
       bigmoves++;
       seekp=(bigmoves*totthreads*stride) + (mythread*stride);
       if (seekp <= maxinode) {
@@ -333,6 +333,7 @@ int validate_inputs(unsigned long long int intime) {
     printf(".lastrun doesn't exist, running a full\n");
   } else {
     printf(".lastrun exists, running incremental\n");
+    printf("Previous scan time was %llu\n", intime);
   }
   return 0;
 }
@@ -358,7 +359,7 @@ int main(int argc, char *argv[]) {
   int rc = NULL;
   char pastsec[11];
   char outfilename[1024];
-  time_t now = time(NULL);
+  time_t starttime;
   unsigned long long int intime;
   struct tm* timenow;
   gpfs_fssnap_handle_t *fsp = NULL;
@@ -394,8 +395,9 @@ int main(int argc, char *argv[]) {
   }
     if (validate_inputs(intime))
       return -1;
-  
-  timenow = localtime(&now);
+
+  starttime  = time(NULL); 
+  timenow = localtime(&starttime);
   strftime(outfilename,sizeof(outfilename),"scan-results-%Y-%m-%d_%H:%M",timenow);
 
   /* Open the file system mount */
@@ -447,7 +449,7 @@ int main(int argc, char *argv[]) {
   free(args);
   pthread_mutex_destroy(&lock);
   lastrun = fopen(".lastrun", "w");
-  fprintf(lastrun,"%lu",now);
+  fprintf(lastrun,"%lu",starttime);
   gpfs_free_fssnaphandle(fsp);
   fclose(lastrun);
   return rc;
