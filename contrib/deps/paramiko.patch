@@ -1,22 +1,25 @@
 diff --git a/demos/demo.py b/demos/demo.py
-index c9b0a5f..206f7d8 100755
+index c9b0a5f..b264486 100755
 --- a/demos/demo.py
 +++ b/demos/demo.py
-@@ -62,7 +62,7 @@ def agent_auth(transport, username):
+@@ -62,7 +62,8 @@ def agent_auth(transport, username):
  def manual_auth(username, hostname):
      default_auth = "p"
      auth = input(
 -        "Auth by (p)assword, (r)sa key, or (d)ss key? [%s] " % default_auth
-+        "Auth by (p)assword, (r)sa key, (d)ss key, or (h)ostbased? [%s] " % default_auth
++        "Auth by (p)assword, (r)sa key, (d)ss key, or (h)ostbased? [%s] "
++        % default_auth
      )
      if len(auth) == 0:
          auth = default_auth
-@@ -89,6 +89,13 @@ def manual_auth(username, hostname):
+@@ -89,6 +90,15 @@ def manual_auth(username, hostname):
              password = getpass.getpass("DSS key password: ")
              key = paramiko.DSSKey.from_private_key_file(path, password)
          t.auth_publickey(username, key)
 +    elif auth == "h":
-+        default_path = os.path.join(os.sep, "etc", "ssh", "ssh_host_rsa_key.pub")
++        default_path = os.path.join(
++            os.sep, "etc", "ssh", "ssh_host_rsa_key.pub"
++        )
 +        path = input("Host key [%s]: " % default_path)
 +        if len(path) == 0:
 +            path = default_path
@@ -34,30 +37,30 @@ index ebfa72a..36d4fa5 100644
  from paramiko.config import SSHConfig
  from paramiko.proxy import ProxyCommand
 +from paramiko.opensshkey import load_pubkey_from_file
-
+ 
  from paramiko.common import (
      AUTH_SUCCESSFUL,
 diff --git a/paramiko/auth_handler.py b/paramiko/auth_handler.py
-index 5c7d6be..a03ab07 100644
+index 5c7d6be..98684e9 100644
 --- a/paramiko/auth_handler.py
 +++ b/paramiko/auth_handler.py
 @@ -20,6 +20,8 @@
  `.AuthHandler`
  """
-
+ 
 +import getpass
 +import socket
  import weakref
  import time
-
+ 
 @@ -69,6 +71,7 @@ from paramiko.ssh_exception import (
      PartialAuthentication,
  )
  from paramiko.server import InteractiveQuery
 +from paramiko.keysign import Keysign
  from paramiko.ssh_gss import GSSAuth, GSS_EXCEPTIONS
-
-
+ 
+ 
 @@ -83,6 +86,7 @@ class AuthHandler(object):
          self.authenticated = False
          self.auth_event = None
@@ -69,12 +72,12 @@ index 5c7d6be..a03ab07 100644
 @@ -176,6 +180,17 @@ class AuthHandler(object):
          finally:
              self.transport.lock.release()
-
+ 
 +    def auth_hostbased(self, username, hostkey, event):
 +        self.transport.lock.acquire()
 +        try:
 +            self.auth_event = event
-+            self.auth_method = 'hostbased'
++            self.auth_method = "hostbased"
 +            self.username = username
 +            self.hostkey = hostkey
 +            self._request_auth()
@@ -87,17 +90,17 @@ index 5c7d6be..a03ab07 100644
 @@ -223,6 +238,24 @@ class AuthHandler(object):
              m.add_string(key)
          return m.asbytes()
-
+ 
 +    def _get_hostbased_session_blob(self, hostkey, service, username):
 +        m = Message()
 +        m.add_string(self.transport.session_id)
 +        m.add_byte(chr(MSG_USERAUTH_REQUEST))
 +        m.add_string(username)
 +        m.add_string(service)
-+        m.add_string('hostbased')
++        m.add_string("hostbased")
 +        m.add_string(hostkey.get_name())
 +        m.add_string(str(hostkey))
-+        m.add_string(self._get_local_name() + '.')
++        m.add_string(self._get_local_name() + ".")
 +        m.add_string(getpass.getuser())
 +        return str(m)
 +
@@ -109,24 +112,26 @@ index 5c7d6be..a03ab07 100644
      def wait_for_response(self, event):
          max_ts = None
          if self.transport.auth_timeout is not None:
-@@ -391,6 +424,15 @@ Error Message: {}
+@@ -391,6 +424,17 @@ Error Message: {}
                  kexgss.set_username(self.username)
                  mic_token = kexgss.ssh_get_mic(self.transport.session_id)
                  m.add_string(mic_token)
-+            elif self.auth_method == 'hostbased':
++            elif self.auth_method == "hostbased":
 +                m.add_string(self.hostkey.get_name())
 +                m.add_string(str(self.hostkey))
-+                m.add_string(self._get_local_name() + '.')
++                m.add_string(self._get_local_name() + ".")
 +                m.add_string(getpass.getuser())
 +                # this blob must be the same as the message (minus the sig)
-+                blob = self._get_hostbased_session_blob(self.hostkey, 'ssh-connection', self.username)
++                blob = self._get_hostbased_session_blob(
++                    self.hostkey, "ssh-connection", self.username
++                )
 +                sig = Keysign().sign(self.transport.sock, blob)
 +                m.add_string(sig)
              elif self.auth_method == "none":
                  pass
              else:
 diff --git a/paramiko/client.py b/paramiko/client.py
-index 6bf479d..029532f 100644
+index 6bf479d..1263515 100644
 --- a/paramiko/client.py
 +++ b/paramiko/client.py
 @@ -236,6 +236,7 @@ class SSHClient(ClosingContextManager):
@@ -140,17 +145,17 @@ index 6bf479d..029532f 100644
 @@ -265,6 +266,7 @@ class SSHClient(ClosingContextManager):
                  ``id_rsa-cert.pub``) the certificate will be loaded alongside
                  the private key and used for authentication.
-
+ 
 +            - Host-based authentication using the public key in C{hostkey}
              - Plain username/password auth, if a password was given
-
+ 
          If a private key requires a password to unlock it, and a password is
 @@ -310,7 +312,8 @@ class SSHClient(ClosingContextManager):
              for the SSH banner to be presented.
          :param float auth_timeout: an optional timeout (in seconds) to wait for
              an authentication response.
 -
-+        :param L{PKey} hostkey: the optional public key of the host to use for
++        :param PKey hostkey: the optional public key of the host to use for
 +            host-based authentication
          :raises:
              `.BadHostKeyException` -- if the server's host key could not be
@@ -161,7 +166,7 @@ index 6bf479d..029532f 100644
              passphrase,
 +            hostkey,
          )
-
+ 
      def close(self):
 @@ -601,6 +605,7 @@ class SSHClient(ClosingContextManager):
          gss_deleg_creds,
@@ -177,17 +182,17 @@ index 6bf479d..029532f 100644
                (if allowed).
 +            - Host-based authentication using the host key, if given.
              - Plain username/password auth, if a password was given.
-
+ 
          (The password might be needed to unlock a private key [if 'passphrase'
 @@ -737,6 +743,13 @@ class SSHClient(ClosingContextManager):
                  except (SSHException, IOError) as e:
                      saved_exception = e
-
+ 
 +        if not two_factor and hostkey is not None:
 +            try:
 +                self._transport.auth_hostbased(username, hostkey)
 +                return
-+            except SSHException, e:
++            except SSHException as e:
 +                saved_exception = e
 +
          if password is not None:
@@ -195,10 +200,10 @@ index 6bf479d..029532f 100644
                  self._transport.auth_password(username, password)
 diff --git a/paramiko/keysign.py b/paramiko/keysign.py
 new file mode 100644
-index 0000000..6317686
+index 0000000..d6ac01b
 --- /dev/null
 +++ b/paramiko/keysign.py
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,77 @@
 +# Copyright (C) 2014  Nicholas Mills <nlmills@g.clemson.edu>
 +#
 +# This file is part of paramiko.
@@ -218,19 +223,19 @@ index 0000000..6317686
 +# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
 +
 +import os.path
-+import socket
 +import subprocess
 +
 +import paramiko
 +
 +
 +class Keysign(object):
-+
-+    def __init__(self, keysign_path=''):
-+        candidate_paths = [keysign_path,
-+                           '/usr/libexec/ssh-keysign',
-+                           '/usr/lib64/ssh/ssh-keysign',
-+                           '/usr/libexec/openssh/ssh-keysign']
++    def __init__(self, keysign_path=""):
++        candidate_paths = [
++            keysign_path,
++            "/usr/libexec/ssh-keysign",
++            "/usr/lib64/ssh/ssh-keysign",
++            "/usr/libexec/openssh/ssh-keysign",
++        ]
 +
 +        match = None
 +        for path in candidate_paths:
@@ -239,7 +244,7 @@ index 0000000..6317686
 +                break
 +
 +        if match is None:
-+            ae = 'no ssh-keysign program found'
++            ae = "no ssh-keysign program found"
 +            raise paramiko.AuthenticationException(ae)
 +        self._keysign_path = match
 +
@@ -255,13 +260,15 @@ index 0000000..6317686
 +        reqm.add_string(str(request))
 +
 +        # Sign the request and test completion
-+        ksproc = subprocess.Popen([self._keysign_path],
-+                                  stdin=subprocess.PIPE,
-+                                  stdout=subprocess.PIPE,
-+                                  stderr=subprocess.PIPE)
++        ksproc = subprocess.Popen(
++            [self._keysign_path],
++            stdin=subprocess.PIPE,
++            stdout=subprocess.PIPE,
++            stderr=subprocess.PIPE,
++        )
 +        (so, se) = ksproc.communicate(str(reqm))
 +        if 0 != ksproc.returncode:
-+            ae = self._keysign_path + ' terminated with an error: ' + se
++            ae = self._keysign_path + " terminated with an error: " + se
 +            raise paramiko.AuthenticationException(ae)
 +
 +        # Send the response
@@ -269,17 +276,17 @@ index 0000000..6317686
 +        response = paramiko.Message(respm.get_string())
 +        respver = response.get_byte()
 +        if version != respver:
-+            ae = 'incompatible versions ' + version + ' != ' + respver
++            ae = "incompatible versions " + version + " != " + respver
 +            raise paramiko.AuthenticationException(ae)
 +        else:
 +            signature = response.get_string()
 +        return signature
 diff --git a/paramiko/opensshkey.py b/paramiko/opensshkey.py
 new file mode 100644
-index 0000000..bf6301c
+index 0000000..6dc9ea6
 --- /dev/null
 +++ b/paramiko/opensshkey.py
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,60 @@
 +# Copyright (C) 2014  Nicholas Mills <nlmills@g.clemson.edu>
 +#
 +# This file is part of paramiko.
@@ -303,25 +310,23 @@ index 0000000..bf6301c
 +import paramiko
 +
 +
-+_pubkey_types = {
-+    'ssh-rsa' : paramiko.RSAKey,
-+    'ssh-dss' : paramiko.DSSKey,
-+}
++_pubkey_types = {"ssh-rsa": paramiko.RSAKey, "ssh-dss": paramiko.DSSKey}
++
 +
 +def _load_pubkey_from_file(keyfile):
 +    line = keyfile.readline()
 +
 +    # skip over comments or blank lines
-+    while line[0] == '#' or line[0] == '\n':
++    while line[0] == "#" or line[0] == "\n":
 +        line = keyfile.readline()
 +
-+    # don't load what looks like a private key
-+    if line.startswith('-----BEGIN'):
++    # don"t load what looks like a private key
++    if line.startswith("-----BEGIN"):
 +        return None
 +
 +    # fields[0] = key type
 +    # fields[1] = base64-encoded key blob
-+    fields = line.strip().split(' ', 1)
++    fields = line.strip().split(" ", 1)
 +    if len(fields) != 2:
 +        return None
 +
@@ -330,37 +335,38 @@ index 0000000..bf6301c
 +
 +    return pubkey
 +
++
 +def load_pubkey_from_file(keyfile):
 +    try:
 +        if type(keyfile) is str:
-+            with open(keyfile, 'r') as f:
++            with open(keyfile, "r") as f:
 +                pubkey = _load_pubkey_from_file(f)
 +        else:
 +            pubkey = _load_pubkey_from_file(keyfile)
 +    except:
-+        raise paramiko.SSHException('error loading public key from file')
++        raise paramiko.SSHException("error loading public key from file")
 +
 +    return pubkey
 diff --git a/paramiko/transport.py b/paramiko/transport.py
-index f72eeba..4f8c801 100644
+index 25213b4..df843a9 100644
 --- a/paramiko/transport.py
 +++ b/paramiko/transport.py
-@@ -548,8 +548,9 @@ class Transport(threading.Thread, ClosingContextManager):
+@@ -562,8 +562,9 @@ class Transport(threading.Thread, ClosingContextManager):
          Otherwise an SSHException is raised.
-
+ 
          After a successful negotiation, you will usually want to authenticate,
 -        calling `auth_password <Transport.auth_password>` or
 -        `auth_publickey <Transport.auth_publickey>`.
 +        calling `auth_password <Transport.auth_password>`,
 +        `auth_publickey <Transport.auth_publickey>`, or
-+        `auth_hostbased <Transport.auth_hostbased>.
-
++        `auth_hostbased <Transport.auth_hostbased>`.
+ 
          .. note:: `connect` is a simpler method for connecting as a client.
-
-@@ -1506,6 +1507,53 @@ class Transport(threading.Thread, ClosingContextManager):
+ 
+@@ -1520,6 +1521,53 @@ class Transport(threading.Thread, ClosingContextManager):
              return []
          return self.auth_handler.wait_for_response(my_event)
-
+ 
 +    def auth_hostbased(self, username, hostkey, event=None):
 +        """
 +        Authenticate to the server using a host-based key.  The key is used to
@@ -385,7 +391,7 @@ index f72eeba..4f8c801 100644
 +            an event to trigger when the authentication attempt is complete
 +            (whether it was successful or not)
 +        :return:
-+            `list` of auth types permissible for the next stage of
++            list of auth types permissible for the next stage of
 +            authentication (normally empty)
 +
 +        :raises BadAuthenticationType: if public-key authentication isn't
@@ -396,7 +402,7 @@ index f72eeba..4f8c801 100644
 +        """
 +        if (not self.active) or (not self.initial_kex_done):
 +            # we should never try to authenticate unless we're on a secure link
-+            raise SSHException('No existing session')
++            raise SSHException("No existing session")
 +        if event is None:
 +            my_event = threading.Event()
 +        else:

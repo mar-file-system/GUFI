@@ -83,7 +83,7 @@ if (PARAMIKO)
   set(TOOLS ${TOOLS} gufi_client)
 
   # add the paramiko source for installing
-  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-cf7d49d66f3b1fbc8b0853518a54050182b3b5eb DESTINATION ${CMAKE_INSTALL_PREFIX}/paramiko)
+  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()
 
 # copy and install scripts that act like binaries
