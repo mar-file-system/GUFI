@@ -79,12 +79,12 @@ cmake_minimum_required(VERSION 3.0.0)
 set(TOOLS gufi_find gufi_stats gufi_ls query_builder.py)
 
 if (PARAMIKO)
-  # add gufi_client to the list of tools
-  set(TOOLS ${TOOLS} gufi_client)
-
   # add the paramiko source for installing
   # keep the trailing / to rename the directory
-  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION ${CMAKE_INSTALL_PREFIX}/paramiko)
+  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION paramiko COMPONENT Client)
+
+  # install gufi_client separately
+  install(PROGRAMS gufi_client DESTINATION bin COMPONENT Client)
 endif()
 
 # copy and install scripts that act like binaries
@@ -93,5 +93,5 @@ foreach(TOOL ${TOOLS})
   configure_file(${TOOL} ${TOOL} COPYONLY)
 
   # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${TOOL} DESTINATION bin)
+  install(PROGRAMS ${TOOL} DESTINATION bin COMPONENT Server)
 endforeach()

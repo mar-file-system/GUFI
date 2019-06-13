@@ -79,7 +79,7 @@ cmake_minimum_required(VERSION 3.0.0)
 set(GUFI_SOURCES bf.c dbutils.c structq.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
-install(TARGETS GUFI DESTINATION lib)
+install(TARGETS GUFI DESTINATION lib COMPONENT Server)
 
 #If the GPFS library exists, build the gpfs scan tool
 if(GPFS_LIB)
@@ -119,7 +119,7 @@ function(build_and_install PATH LINK_GUFI)
     endif()
 
     # install the executable
-    install(TARGETS ${TARGET} DESTINATION ${PATH})
+    install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
   endforeach()
 endfunction()
 
@@ -166,7 +166,7 @@ if (MY_FUSE_FOUND)
   target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
   # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS bffuse bfresultfuse DESTINATION bin)
+  install(TARGETS bffuse bfresultfuse DESTINATION bin COMPONENT Server)
 endif()
 
 # only build bfmi if MySQL is found
@@ -180,7 +180,7 @@ if (MYSQL_FOUND)
   target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LDFLAGS})
 
   # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS bfmi DESTINATION bin)
+  install(TARGETS bfmi DESTINATION bin COMPONENT Server)
 endif()
 
 # only build db2 sources if db2 is found

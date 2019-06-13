@@ -316,3 +316,27 @@ add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAM
 add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
                             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                             DEPENDS build_gary)
+
+# generate RPMs
+# These variables have to be set before include(CPack)
+set(CPACK_GENERATOR "RPM")
+set(CPACK_PACKAGE_VERSION_MAJOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_RPM_COMPONENT_INSTALL On)
+set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
+set(CPACK_RPM_PACKAGE_NAME "GUFI")
+set(CPACK_RPM_PACKAGE_VERSION "0.2.0")
+set(CPACK_RPM_PACKAGE_RELEASE 1)
+set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
+set(CPACK_RPM_PACKAGE_VENDOR "LANL")
+set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
+set(CPACK_RPM_PACKAGE_REQUIRES "gcc >= 4.8.5, python >= 2.7, cmake >= 3.0, pkgconfig >= 0.29.1, coreutils >= 8.25, libattr >= 2.4, pcre >= 8.41")
+set(CPACK_RPM_PACKAGE_SUGGESTS "gcc >= 4.9.3, gcc-c++ >= 4.9.3")
+set(CPACK_RPM_PACKAGE_RELOCATABLE On)
+set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
+if (PARAMIKO)
+  set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+endif()
+
+include(CPack)

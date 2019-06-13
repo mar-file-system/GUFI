@@ -97,9 +97,12 @@ pkg-config
 realpath
 truncate (with the '-s' option available)
 
-# install packages (see platform-specific caveats, below)
+# other tools
+Python 2.7
+
+# install libraries (see platform-specific caveats, below)
 xattr
-pcre (version 1)
+pcre                 (version 1)
 [optional] mysql
 [optional] fuse      (osxfuse on OSX)
 [optional] db2
@@ -110,7 +113,7 @@ pcre (version 1)
 C-Thread-Pool
 GoogleTest
 paramiko
-sqlite3
+sqlite3              (patched by GUFI)
 sqlite3-pcre
 
 # clone GUFI
@@ -121,20 +124,26 @@ cd GUFI
 
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=<PATH> ..
+cmake ..
 make
-make install
+make install  # install into <PATH>
+make package  # generate RPMs
 
-(2.1) Special configurations options
+(2.1) Configurations options
 
-Set the environment variable CXX=false to disable building C++ code.
-Set the CMake variable CMAKE_BUILD_TYPE=Debug to build with warnings turned on.
-Set the CMake variable PARAMIKO=ON to download and use paramiko through gufi_client
-Set the CMake variable DEP_DOWNLOAD_PREFIX to select a location to find downloaded dependencies.
-    If the expected files are found, they will not be downloaded.
-Set the CMake variable DEP_BUILD_DIR_PREFIX to select a location to build the dependencies.
-Set the CMake variable DEP_INSTALL_PREFIX to select the location to install the dependencies.
-    If the dependencies are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
+Environment:
+    - CXX=false to disable building C++ code.
+
+CMake (-D<VAR>=<VALUE>):
+    - CMAKE_INSTALL_PREFIX=<PATH> to install to a custom directory when running `make install`
+    - CMAKE_BUILD_TYPE=Debug to build with warnings turned on.
+    - PARAMIKO=ON to install paramiko and gufi_client
+    - DEP_DOWNLOAD_PREFIX=<PATH> to select a location to find downloaded dependencies.
+        If the expected files are found, they will not be downloaded.
+        The default path points to the bundled dependencies.
+    - DEP_BUILD_DIR_PREFIX=<PATH> to select a location to build the dependencies.
+    - DEP_INSTALL_PREFIX=<PATH> to select the location to install the dependencies.
+        If the dependencies are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
 
 (3) ========== Build and install with make
 
