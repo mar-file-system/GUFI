@@ -81,7 +81,8 @@ import os
 import pwd
 import sys
 
-INSTALL_PREFIX = "@INSTALL_PREFIX@"
+# get location of this file
+INSTALL_PREFIX = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 # command line argument aliases of available tools
 # assumes that all of the tools are installed under the same directory

@@ -82,7 +82,7 @@ import sys
 
 import query_builder as qb
 
-BFQ_EXEC = @INSTALL_PREFIX@/bin/bfq
+BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", 'bfq')
 
 def build(args, root_uid = 0, root_gid = 0):
     select = [args.select] if args.select else []

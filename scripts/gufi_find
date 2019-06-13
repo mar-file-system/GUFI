@@ -82,7 +82,7 @@ import time
 
 import query_builder as qb
 
-BFQ_EXEC = @INSTALL_PREFIX@/bin/bfq
+BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", 'bfq')
 
 SECONDS_PER_DAY = str(24 * 60 * 60)
 
