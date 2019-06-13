@@ -26,7 +26,6 @@ matrix:
                       - libattr1-dev
                       - libfuse-dev
                       - libpcre3-dev
-                      - wget
                   update: true
           env:
               - C_COMPILER=clang-7
@@ -66,47 +65,47 @@ matrix:
             - DOCKER_IMAGE=centos
           script: contrib/travis/centos7.sh
 
-        # macOS 10.13 CMake
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - llvm@7
-                      - mysql
-                      - pcre
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=clang
-              - CXX_COMPILER=clang++
-              - BUILD=cmake
-              - FORMULAE=llvm@7
-          script: contrib/travis/osx.sh
+        # # macOS 10.13 CMake
+        # - stage: build_and_test
+        #   os: osx
+        #   osx_image: xcode10.1
+        #   sudo: false
+        #   addons:
+        #       homebrew:
+        #           packages:
+        #               - cmake
+        #               - llvm@7
+        #               - mysql
+        #               - pcre
+        #               - truncate
+        #           update: true
+        #   env:
+        #       - C_COMPILER=clang
+        #       - CXX_COMPILER=clang++
+        #       - BUILD=cmake
+        #       - FORMULAE=llvm@7
+        #   script: contrib/travis/osx.sh
 
-        # macOS 10.13 make
-        - stage: build_and_test
-          os: osx
-          osx_image: xcode10.1
-          sudo: false
-          addons:
-              homebrew:
-                  packages:
-                      - cmake
-                      - llvm@7
-                      - mysql
-                      - pcre
-                      - truncate
-                  update: true
-          env:
-              - C_COMPILER=clang
-              - CXX_COMPILER=clang++
-              - BUILD=make
-              - FORMULAE=llvm@7
-          script: contrib/travis/osx.sh
+        # # macOS 10.13 make
+        # - stage: build_and_test
+        #   os: osx
+        #   osx_image: xcode10.1
+        #   sudo: false
+        #   addons:
+        #       homebrew:
+        #           packages:
+        #               - cmake
+        #               - llvm@7
+        #               - mysql
+        #               - pcre
+        #               - truncate
+        #           update: true
+        #   env:
+        #       - C_COMPILER=clang
+        #       - CXX_COMPILER=clang++
+        #       - BUILD=make
+        #       - FORMULAE=llvm@7
+        #   script: contrib/travis/osx.sh
 
         # # Upload a tarball if the job was triggered by cron
         # - stage: deploy
@@ -138,7 +137,36 @@ matrix:
         #           condition: ("${TRAVIS_EVENT_TYPE}" = "cron")
         #           tags: false
 
-        # Upload a tarball if the job was triggered by a user
+        # # Upload a tarball if the job was triggered by a user
+        # - stage: deploy
+        #   os: linux
+        #   sudo: false
+        #   dist: xenial
+        #   addons:
+        #       apt:
+        #           sources:
+        #               - ubuntu-toolchain-r-test
+        #               - llvm-toolchain-xenial-7
+        #           packages:
+        #               - attr
+        #               - bsd-mailx
+        #               - cmake
+        #               - clang-7
+        #               - libattr1-dev
+        #               - libfuse-dev
+        #               - libpcre3-dev
+        #           update: true
+        #   script:
+        #     - true
+        #   deploy:
+        #       provider: script
+        #       skip-cleanup: true
+        #       script: bash contrib/travis/deploy.sh
+        #       on:
+        #           all_branches: true
+        #           condition: ("${TRAVIS_EVENT_TYPE}" = "api")
+        #           tags: false
+
         - stage: deploy
           os: linux
           sudo: false
@@ -150,20 +178,23 @@ matrix:
                       - llvm-toolchain-xenial-7
                   packages:
                       - attr
-                      - bsd-mailx
                       - cmake
                       - clang-7
                       - libattr1-dev
                       - libfuse-dev
                       - libpcre3-dev
+                      - rpm
                   update: true
           script:
-            - true
+            - contrib/travis/xenial.sh
+            - cd build
+            - make package
           deploy:
-              provider: script
-              skip-cleanup: true
-              script: bash contrib/travis/deploy.sh
-              on:
-                  all_branches: true
-                  condition: ("${TRAVIS_EVENT_TYPE}" = "api")
-                  tags: false
+            provider: releases
+            api_key: $GH_TOKEN
+            file_glob: true
+            file: "*.rpm"
+            skip_cleanup: true
+            on:
+              tags: true
+              all_branches: true
