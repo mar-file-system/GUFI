@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 
@@ -81,7 +81,7 @@ import sys
 
 import query_builder as qb
 
-BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "src", 'bfq')
+BFQ_EXEC = @INSTALL_PREFIX@/bin/bfq
 
 def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''

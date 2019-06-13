@@ -83,14 +83,18 @@ if (PARAMIKO)
   set(TOOLS ${TOOLS} gufi_client)
 
   # add the paramiko source for installing
-  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master DESTINATION ${CMAKE_INSTALL_PREFIX})
+  # keep the trailing / to rename the directory
+  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION ${CMAKE_INSTALL_PREFIX}/paramiko)
 endif()
+
+# variable in scripts that will be replaced by the install prefix
+get_filename_component(INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} REALPATH)
 
 # copy and install scripts that act like binaries
 foreach(TOOL ${TOOLS})
   # copy the tool into the build directory for easy access
-  configure_file(${TOOL} ${TOOL} COPYONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${TOOL} ${CMAKE_CURRENT_BINARY_DIR}/${TOOL} @ONLY)
 
   # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${TOOL} DESTINATION bin)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${TOOL} DESTINATION bin)
 endforeach()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 
@@ -82,7 +82,7 @@ import time
 
 import query_builder as qb
 
-BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "src", 'bfq')
+BFQ_EXEC = @INSTALL_PREFIX@/bin/bfq
 
 SECONDS_PER_DAY = str(24 * 60 * 60)
 
@@ -111,9 +111,9 @@ def build_where(args, root_uid = 0, root_gid = 0):
     summary  = []
     entries  = []
 
-    if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-        entries  += ['(uid == {})'.format(os.getuid())]
-        # entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
+    # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
+    #     entries  += ['(uid == {})'.format(os.getuid())]
+    #     # entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
         entries += ['({} - atime) / 60 == {}'.format(time.time(), args.amin)]

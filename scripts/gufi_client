@@ -1,10 +1,87 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# -----
+# NOTE:
+# -----
+#
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
 
 import argparse
 import getpass
 import os
 import pwd
 import sys
+
+INSTALL_PREFIX = "@INSTALL_PREFIX@"
 
 # command line argument aliases of available tools
 # assumes that all of the tools are installed under the same directory
@@ -33,17 +110,17 @@ def parse_args(args = None):
         raise argparse.ArgumentTypeError("Invalid Port: {}".format(port))
 
     parser = argparse.ArgumentParser(description='gufi_client')
-    parser.add_argument('--username',    dest='username',    type=get_username, default=getpass.getuser(),                             help='Username (not UID)')
-    parser.add_argument('-p', '--port',  dest='port',        type=get_port,     default=22,                                            help='SSH port')
-    parser.add_argument('--known_hosts', dest='known_hosts', type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
-    parser.add_argument('--hostkey',     dest='hostkey',     type=str,          default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
-    parser.add_argument('--bfq',         dest='bfq',         type=str,                                                                 help='Location of bfq on remote')
-    parser.add_argument('--paramiko',    dest='paramiko',    type=str,                                                                 help='Location of paramiko on this machine')
-    parser.add_argument('hostname',                          type=str,                                                                 help='GUFI server')
-    parser.add_argument('gufi_install',                      type=str,                                                                 help='GUFI binaries directory on remote')
-    parser.add_argument('gufi_tree',                         type=str,                                                                 help='GUFI tree path')
-    parser.add_argument('tool',                              type=str,          choices=TOOLS.keys(),                                  help='GUFI tool to use')
-    parser.add_argument('args',                              nargs='*',         default=[],                                            help='Arguments to pass to the GUFI tool')
+    parser.add_argument('--username',     dest='username',     type=get_username, default=getpass.getuser(),                             help='Username (not UID)')
+    parser.add_argument('-p', '--port',   dest='port',         type=get_port,     default=22,                                            help='SSH port')
+    parser.add_argument('--known_hosts',  dest='known_hosts',  type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
+    parser.add_argument('--hostkey',      dest='hostkey',      type=str,          default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
+    parser.add_argument('--bfq',          dest='bfq',          type=str,                                                                 help='Location of bfq on remote')
+    parser.add_argument('--paramiko',     dest='paramiko',     type=str,          default=os.path.join(INSTALL_PREFIX, 'paramiko'),      help='Location of paramiko on this machine')
+    parser.add_argument('--gufi_bin',     dest='gufi_bin',     type=str,          default=os.path.join(INSTALL_PREFIX, 'bin'),           help='GUFI binaries directory on remote')
+    parser.add_argument('hostname',                            type=str,                                                                 help='GUFI server')
+    parser.add_argument('gufi_tree',                           type=str,                                                                 help='GUFI tree path')
+    parser.add_argument('tool',                                type=str,          choices=TOOLS.keys(),                                  help='GUFI tool to use')
+    parser.add_argument('args',                                nargs='*',         default=[],                                            help='Arguments to pass to the GUFI tool')
 
     if args is None:
         args = sys.argv[1:]
@@ -68,7 +145,7 @@ def contact_server(args):
                     hostkey=paramiko.opensshkey.load_pubkey_from_file(args.hostkey))
 
         # run the command
-        cmd = os.path.join(args.gufi_install, TOOLS[args.tool]) + ' ' + ' '.join(['"' + arg + '"' for arg in args.args])
+        cmd = os.path.join(args.gufi_bin, TOOLS[args.tool]) + ' ' + ' '.join(['"' + arg + '"' for arg in args.args])
         if args.bfq is not None:
             cmd += ' --bfq ' + args.bfq
 
@@ -85,8 +162,8 @@ def contact_server(args):
 if __name__  == '__main__':
     args = parse_args()
 
-    if args.paramiko is not None:
-        sys.path.append(args.paramiko)
+    # import paramiko from provided path
+    sys.path.append(args.paramiko)
     import paramiko
 
     contact_server(args)
