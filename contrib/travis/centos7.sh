@@ -15,7 +15,7 @@ de yum -y install epel-release centos-release-scl
 de yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
 
 # install extra packages
-de yum -y install cmake3 make patch rh-git29 tcl
+de yum -y install cmake3 make patch pkgconfig rh-git29 tcl
 
 # create symlinks
 de ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git

@@ -72,7 +72,7 @@ echo "Installing C-Thread-Pool"
 echo "Installing SQLite3"
 . ${SCRIPT_PATH}/sqlite3.sh
 
-echo "Installing SQLITE3 PCRE"
+echo "Installing SQLite3 PCRE"
 . ${SCRIPT_PATH}/sqlite3_pcre.sh
 
 if [[ "${BUILD_CXX}" == "true" ]]; then

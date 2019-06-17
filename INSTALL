@@ -106,6 +106,10 @@ pcre                 (version 1)
 [optional] mysql
 [optional] fuse      (osxfuse on OSX)
 [optional] db2
+[needed for paramiko] python-bcrypt
+[needed for paramiko] python-cryptography
+[needed for paramiko] python-pynacl
+[optional] rpmbuild
 
 # packages that are downloaded and built through a script
 # locations for these packages can be provided (single prefix)

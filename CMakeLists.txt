@@ -309,7 +309,7 @@ add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory 
 
 add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
                              COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} make DEBUG=1
-                             COMMAND make test
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} make test
                              WORKING_DIRECTORY ${TARBALL_TEST_DIR}
                              DEPENDS gary make_tarball_dir)
 
@@ -318,25 +318,42 @@ add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBA
                             DEPENDS build_gary)
 
 # generate RPMs
-# These variables have to be set before include(CPack)
-set(CPACK_GENERATOR "RPM")
+# these variables have to be set before include(CPack)
+
+# build tar.gz by default
+set(CPACK_GENERATOR "TGZ")
 set(CPACK_PACKAGE_VERSION_MAJOR "0")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "2")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
-set(CPACK_RPM_COMPONENT_INSTALL On)
-set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
-set(CPACK_RPM_PACKAGE_NAME "GUFI")
-set(CPACK_RPM_PACKAGE_VERSION "0.2.0")
-set(CPACK_RPM_PACKAGE_RELEASE 1)
-set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
-set(CPACK_RPM_PACKAGE_VENDOR "LANL")
-set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
-set(CPACK_RPM_PACKAGE_REQUIRES "gcc >= 4.8.5, python >= 2.7, cmake >= 3.0, pkgconfig >= 0.29.1, coreutils >= 8.25, libattr >= 2.4, pcre >= 8.41")
-set(CPACK_RPM_PACKAGE_SUGGESTS "gcc >= 4.9.3, gcc-c++ >= 4.9.3")
-set(CPACK_RPM_PACKAGE_RELOCATABLE On)
-set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
-if (PARAMIKO)
-  set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+
+# also build RPMs
+find_program(RPMBUILD rpmbuild)
+if (RPMBUILD)
+  execute_process(COMMAND ${RPMBUILD} --version
+    OUTPUT_VARIABLE RPMBUILD_VERSION)
+
+  set(CPACK_GENERATOR "RPM;${CPACK_GENERATOR}")
+  set(CPACK_RPM_COMPONENT_INSTALL On)
+  set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
+  set(CPACK_RPM_PACKAGE_NAME "GUFI")
+  set(CPACK_RPM_PACKAGE_VERSION "0.2.0")
+  set(CPACK_RPM_PACKAGE_RELEASE 1)
+  set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
+  set(CPACK_RPM_PACKAGE_VENDOR "LANL")
+  set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
+  set(CPACK_RPM_PACKAGE_REQUIRES "gcc >= 4.8.5, python >= 2.7, python < 3, cmake3 >= 3.0, pkgconfig >= 0.27.1, coreutils >= 8.20, libattr >= 2.4, pcre >= 8.30")
+  if (NOT ("${RPMBUILD_VERSION}" VERSION_LESS "4.13.0"))
+    set(CPACK_RPM_PACKAGE_SUGGESTS "gcc >= 4.9.3, gcc-c++ >= 4.9.3")
+  endif()
+  set(CPACK_RPM_PACKAGE_RELOCATABLE On)
+  set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
+
+  if (PARAMIKO)
+    # python libraries are probably installed through pip, and won't be found by rpm
+    # set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, python2-cryptography >= 2.0.0, python2-bcrypt >= 3.1.0, python2-pynacl >= 1.1.1")
+    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3")
+    set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+  endif()
 endif()
 
 include(CPack)

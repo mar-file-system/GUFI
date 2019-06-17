@@ -26,6 +26,7 @@ matrix:
                       - libattr1-dev
                       - libfuse-dev
                       - libpcre3-dev
+                      - pkg-config
                   update: true
           env:
               - C_COMPILER=clang-7
@@ -107,66 +108,37 @@ matrix:
         #       - FORMULAE=llvm@7
         #   script: contrib/travis/osx.sh
 
-        # # Upload a tarball if the job was triggered by cron
-        # - stage: deploy
-        #   os: linux
-        #   sudo: false
-        #   dist: xenial
-        #   addons:
-        #       apt:
-        #           sources:
-        #               - ubuntu-toolchain-r-test
-        #               - llvm-toolchain-xenial-7
-        #           packages:
-        #               - attr
-        #               - bsd-mailx
-        #               - cmake
-        #               - clang-7
-        #               - libattr1-dev
-        #               - libfuse-dev
-        #               - libpcre3-dev
-        #           update: true
-        #   script:
-        #     - true
-        #   deploy:
-        #       provider: script
-        #       skip-cleanup: true
-        #       script: bash contrib/travis/deploy.sh
-        #       on:
-        #           branch: master
-        #           condition: ("${TRAVIS_EVENT_TYPE}" = "cron")
-        #           tags: false
+        # Upload a tarball if the job was triggered by a user or cron
+        - stage: deploy
+          os: linux
+          sudo: false
+          dist: xenial
+          addons:
+              apt:
+                  sources:
+                      - ubuntu-toolchain-r-test
+                      - llvm-toolchain-xenial-7
+                  packages:
+                      - attr
+                      - bsd-mailx
+                      - cmake
+                      - clang-7
+                      - libattr1-dev
+                      - libfuse-dev
+                      - libpcre3-dev
+                  update: true
+          script:
+            - true
+          deploy:
+              provider: script
+              skip-cleanup: true
+              script: bash contrib/travis/deploy.sh
+              on:
+                  all_branches: true
+                  condition: (("${TRAVIS_EVENT_TYPE}" = "api") || ("${TRAVIS_EVENT_TYPE}" = "cron"))
+                  tags: false
 
-        # # Upload a tarball if the job was triggered by a user
-        # - stage: deploy
-        #   os: linux
-        #   sudo: false
-        #   dist: xenial
-        #   addons:
-        #       apt:
-        #           sources:
-        #               - ubuntu-toolchain-r-test
-        #               - llvm-toolchain-xenial-7
-        #           packages:
-        #               - attr
-        #               - bsd-mailx
-        #               - cmake
-        #               - clang-7
-        #               - libattr1-dev
-        #               - libfuse-dev
-        #               - libpcre3-dev
-        #           update: true
-        #   script:
-        #     - true
-        #   deploy:
-        #       provider: script
-        #       skip-cleanup: true
-        #       script: bash contrib/travis/deploy.sh
-        #       on:
-        #           all_branches: true
-        #           condition: ("${TRAVIS_EVENT_TYPE}" = "api")
-        #           tags: false
-
+        # Build and push release packages
         - stage: deploy
           os: linux
           sudo: false
@@ -183,6 +155,7 @@ matrix:
                       - libattr1-dev
                       - libfuse-dev
                       - libpcre3-dev
+                      - pkg-config
                       - rpm
                   update: true
           script:
@@ -193,7 +166,9 @@ matrix:
             provider: releases
             api_key: $GH_TOKEN
             file_glob: true
-            file: "*.rpm"
+            file:
+              - "*.rpm"
+              - "*.tar.gz"
             skip_cleanup: true
             on:
               tags: true
