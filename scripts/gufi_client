@@ -82,6 +82,7 @@ import pwd
 import sys
 
 # get location of this file
+# assumes both client and server were installed to directories with the same name on different machines
 INSTALL_PREFIX = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 # command line argument aliases of available tools
@@ -115,10 +116,9 @@ def parse_args(args = None):
     parser.add_argument('-p', '--port',   dest='port',         type=get_port,     default=22,                                            help='SSH port')
     parser.add_argument('--known_hosts',  dest='known_hosts',  type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
     parser.add_argument('--hostkey',      dest='hostkey',      type=str,          default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
-    parser.add_argument('--bfq',          dest='bfq',          type=str,                                                                 help='Location of bfq on remote')
-    parser.add_argument('--paramiko',     dest='paramiko',     type=str,          default=os.path.join(INSTALL_PREFIX, 'paramiko'),      help='Location of paramiko on this machine')
-    parser.add_argument('--gufi_bin',     dest='gufi_bin',     type=str,          default=os.path.join(INSTALL_PREFIX, 'bin'),           help='GUFI binaries directory on remote')
-    parser.add_argument('hostname',                            type=str,                                                                 help='GUFI server')
+    parser.add_argument('--paramiko',     dest='paramiko',     type=str,          default=os.path.join(INSTALL_PREFIX, 'paramiko'),      help='Location of paramiko on client machine')
+    parser.add_argument('--gufi_bin',     dest='gufi_bin',     type=str,          default=os.path.join(INSTALL_PREFIX, 'bin'),           help='GUFI binaries directory on server')
+    parser.add_argument('hostname',                            type=str,                                                                 help='GUFI server hostname')
     parser.add_argument('gufi_tree',                           type=str,                                                                 help='GUFI tree path')
     parser.add_argument('tool',                                type=str,          choices=TOOLS.keys(),                                  help='GUFI tool to use')
     parser.add_argument('args',                                nargs='*',         default=[],                                            help='Arguments to pass to the GUFI tool')
@@ -146,9 +146,7 @@ def contact_server(args):
                     hostkey=paramiko.opensshkey.load_pubkey_from_file(args.hostkey))
 
         # run the command
-        cmd = os.path.join(args.gufi_bin, TOOLS[args.tool]) + ' ' + ' '.join(['"' + arg + '"' for arg in args.args])
-        if args.bfq is not None:
-            cmd += ' --bfq ' + args.bfq
+        cmd = os.path.join(args.gufi_bin, TOOLS[args.tool]) + ' ' + ' '.join(['"' + arg + '"' for arg in args.args]) + ' --bfq ' + os.path.join(args.gufi_bin, 'bfq')
 
         _, stdout, stderr = ssh.exec_command(cmd + ' ' + args.gufi_tree)
 
