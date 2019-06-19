@@ -74,6 +74,14 @@
 
 
 cmake_minimum_required(VERSION 3.0.0)
+
+# don't allow in-source build
+get_filename_component(CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR} REALPATH)
+get_filename_component(CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR} REALPATH)
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "Refusing to build in source directory \"${CMAKE_SOURCE_DIR}\"")
+endif()
+
 project(GUFI VERSION 0.2.0 LANGUAGES C)
 
 # Require C99
@@ -356,5 +364,9 @@ if (PARAMIKO)
   set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh")
   set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
 endif()
+
+# generate source RPM
+set(CPACK_SOURCE_GENERATOR "RPM")
+set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.gitignore")
 
 include(CPack)
