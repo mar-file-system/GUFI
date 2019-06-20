@@ -63,7 +63,7 @@ matrix:
             - C_COMPILER=clang
             - CXX_COMPILER=clang++
             - BUILD=cmake
-            - DOCKER_IMAGE=centos
+            - DOCKER_IMAGE=centos:7
           script: contrib/travis/centos7.sh
 
         # # macOS 10.13 CMake
@@ -141,34 +141,27 @@ matrix:
         # Build and push release packages
         - stage: deploy
           os: linux
-          sudo: false
+          sudo: true
           dist: xenial
           addons:
               apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - llvm-toolchain-xenial-7
-                  packages:
-                      - attr
-                      - cmake
-                      - clang-7
-                      - libattr1-dev
-                      - libfuse-dev
-                      - libpcre3-dev
-                      - pkg-config
-                      - rpm
-                  update: true
+                  update: false
+          services: docker
+          env:
+            - C_COMPILER=clang
+            - CXX_COMPILER=clang++
+            - BUILD=cmake
+            - DOCKER_IMAGE=centos:7
           script:
-            - contrib/travis/xenial.sh
-            - cd build
-            - make package
+            - contrib/travis/centos7.sh
+            - docker exec "${TRAVIS_JOB_NUMBER}" yum install -y rpm-build
+            - docker exec "${TRAVIS_JOB_NUMBER}" make -C build package
           deploy:
             provider: releases
             api_key: $GH_TOKEN
             file_glob: true
             file:
-              - "*.rpm"
-              - "*.tar.gz"
+              - "build/*.rpm"
             skip_cleanup: true
             on:
               tags: true

@@ -8,14 +8,14 @@ cd ${SCRIPT_PATH}/../..
 
 . ${SCRIPT_PATH}/start_docker.sh
 
-# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections ( SCL ) Repository
+# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
 de yum -y install epel-release centos-release-scl
 
 # install libraries
-de yum -y install fuse-devel libattr-devel libuuid-devel mariadb-devel pcre-devel
+de yum -y install fuse-devel libattr1 pcre-devel
 
 # install extra packages
-de yum -y install cmake3 make patch pkgconfig rh-git29 tcl
+de yum -y install cmake3 make patch pkgconfig rh-git29
 
 # create symlinks
 de ln -sf /opt/rh/rh-git29/root/usr/libexec/git-core/git /usr/bin/git
@@ -60,4 +60,4 @@ de useradd travis -m -s /sbin/nologin || true
 de chown -R travis /GUFI
 
 # build and test GUFI
-docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && LD_LIBRARY_PATH=\"/opt/rh/httpd24/root/usr/lib64/:$(printenv LD_LIBRARY_PATH)\" PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
+docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && LD_LIBRARY_PATH=\"/opt/rh/httpd24/root/usr/lib64/:\$(printenv LD_LIBRARY_PATH)\" PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
