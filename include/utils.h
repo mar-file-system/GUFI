@@ -130,6 +130,8 @@ extern struct sum sumout;
 
 int printits(struct work *pwork,int ptid);
 
+int strIsBlank(const char *s);
+
 int pullxattrs( const char *name, char *bufx);
 
 int zeroit(struct sum *summary);

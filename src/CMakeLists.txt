@@ -139,6 +139,7 @@ if (CMAKE_CXX_COMPILER)
   set(SOURCES
     ${SOURCES}
     make_testtree.cpp
+    bfhi_ingest.cpp
     bfwi_ingest.cpp)
 endif()
 

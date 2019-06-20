@@ -166,6 +166,26 @@ int printits(struct work *pwork,int ptid) {
   return 0;
 }
 
+
+/**
+* Test a string to see if it has printable characters in it,
+* other than whitespace. If it does, then it is considered
+* NOT blank, and this function returns FALSE. Otherwise
+* TRUE (or 1) is returned - including if the argument is NULL.
+*
+* @param s	string to test
+*
+* @return FALSE (0) is returned if S has any character between '!' - '~'.
+*	Otherwise TRUE (1) is returned
+*/
+int strIsBlank(const char *s)
+{
+        for ( ; s && !isgraph(*s) && *s!='\0'; s++);
+        return (!s || *s=='\0') ? 1: 0;
+}
+
+
+
 int pullxattrs( const char *name, char *bufx) {
     char buf[MAXXATTR];
     char bufv[MAXXATTR];
