@@ -362,6 +362,7 @@ if (PARAMIKO)
   # set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, python2-cryptography >= 2.0.0, python2-bcrypt >= 3.1.0, python2-pynacl >= 1.1.1, openssh")
   set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh")
   set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+  set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/contrib/rpm/client_post_install.sh")
 endif()
 
 # generate source RPM
