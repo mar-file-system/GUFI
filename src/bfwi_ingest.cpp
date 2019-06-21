@@ -136,55 +136,17 @@ static inline void decr(int & var) {
     #endif
 }
 
-void parsefirst (const char delim, Row & work) {
+void parsefirst(const char delim, Row & work) {
     work->first_delim = work->line.find(delim);
 }
 
-void parsetowork (char * delim, char * line, struct work * pinwork) {
-    char *p;
-    char *q;
+void scout_cleanup(std::atomic_bool & scouting, State & consumers) {
+    scouting = false;
 
-    //printf("in parsetowork delim %s line %s\n",delim,line);
-    line[strlen(line)-1]= '\0';
-    p=line;    q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->name,MAXPATH,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->type,2,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_ino=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_mode=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_nlink=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_uid=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_gid=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_size=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_blksize=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_blocks=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_atime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_mtime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_ctime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->linkname,MAXPATH,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->xattr,MAXXATTR,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
-}
-
-// copy the template file instead of creating a new database and new tables for each work item
-// the ownership and permissions are set too
-static int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid) {
-    incr(copying);
-
-    // ignore errors here
-    const int src_db = dup(src_fd);
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-    const ssize_t sf = gufi_sendfile(src_db, dst_db, 0, size);
-    fchmod(dst_db, S_IRWXU | S_IRWXG | S_IRWXO);
-    fchown(dst_db, uid, gid);
-    close(src_db);
-    close(dst_db);
-
-    if (sf == -1) {
-        fprintf(stderr, "Could not copy template file to %s\n", dst);
-        return -1;
+    // release all condition variables
+    for(int i = 0; i < in.maxthreads; i++) {
+        consumers[i].first.cv.notify_all();
     }
-
-    decr(copying);
-    return 0;
 }
 
 // Read ahead to figure out where files under directories start
@@ -195,12 +157,17 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     std::ifstream file(filename, std::ios::binary);
     if (!(scouting = (bool) file)) {
         std::cerr << "Could not open file " << filename << std::endl;
+        scout_cleanup(scouting, consumers);
         return;
     }
 
+    // keep current directory while finding next directory
+    // in order to find out whether or not the current
+    // directory has files in it
     Row work = new_row();
     if (!std::getline(file, work->line)) {
         delete_row(work);
+        scout_cleanup(scouting, consumers);
         return;
     }
 
@@ -255,12 +222,7 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
         consumers[tid].first.cv.notify_all();
     }
 
-    scouting = false;
-
-    // release all condition variables
-    for(int i = 0; i < in.maxthreads; i++) {
-        consumers[i].first.cv.notify_all();
-    }
+    scout_cleanup(scouting, consumers);
 
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
 
@@ -273,7 +235,30 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     return;
 }
 
-static sqlite3 * opendb(const char *name)
+// copy the template file instead of creating a new database and new tables for each work item
+// the ownership and permissions are set too
+int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid) {
+    incr(copying);
+
+    // ignore errors here
+    const int src_db = dup(src_fd);
+    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    const ssize_t sf = gufi_sendfile(src_db, dst_db, 0, size);
+    fchmod(dst_db, S_IRWXU | S_IRWXG | S_IRWXO);
+    fchown(dst_db, uid, gid);
+    close(src_db);
+    close(dst_db);
+
+    if (sf == -1) {
+        fprintf(stderr, "Could not copy template file to %s\n", dst);
+        return -1;
+    }
+
+    decr(copying);
+    return 0;
+}
+
+sqlite3 * opendb(const char *name)
 {
     char dbn[MAXPATH];
     snprintf(dbn, MAXSQL, "%s", name);
@@ -323,9 +308,33 @@ static sqlite3 * opendb(const char *name)
     return db;
 }
 
+void parsetowork(char * delim, char * line, struct work * pinwork) {
+    char *p;
+    char *q;
+
+    //printf("in parsetowork delim %s line %s\n",delim,line);
+    line[strlen(line)-1]= '\0';
+    p=line;    q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->name,MAXPATH,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->type,2,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_ino=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_mode=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_nlink=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_uid=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_gid=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_size=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_blksize=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_blocks=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_atime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_mtime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_ctime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->linkname,MAXPATH,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->xattr,MAXXATTR,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
+}
+
 // process the work under one directory (no recursion)
 // also deletes w
-static bool processdir(Row & w, std::ifstream & trace) {
+bool processdir(Row & w, std::ifstream & trace) {
     // might want to skip this check
     if (!w) {
         return false;
@@ -434,7 +443,7 @@ static bool processdir(Row & w, std::ifstream & trace) {
 }
 
 // consumer of work
-static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw) {
+std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw) {
     std::ifstream trace(in.name, std::ios::binary);
     if (!trace) {
         std::cerr << "Could not open " << in.name << ". Thread not running." << std::endl;
@@ -497,7 +506,7 @@ static std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw)
     return processed;
 }
 
-static bool processinit(std::thread & scout, std::atomic_bool & scouting, const char * filename, State & state) {
+bool processinit(std::thread & scout, std::atomic_bool & scouting, const char * filename, State & state) {
     scouting = true;
 
     for(int i = 0; i < in.maxthreads; i++) {
@@ -510,7 +519,7 @@ static bool processinit(std::thread & scout, std::atomic_bool & scouting, const 
     return true;
 }
 
-static void processfin(std::thread & scout, State & state, const bool spawned_threads) {
+void processfin(std::thread & scout, State & state, const bool spawned_threads) {
     scout.join();
 
     if (spawned_threads) {
@@ -521,7 +530,7 @@ static void processfin(std::thread & scout, State & state, const bool spawned_th
 }
 
 // create the initial database file to copy from
-static off_t create_template(int & fd) {
+off_t create_template(int & fd) {
     static const char name[] = "tmp.db";
 
     sqlite3 * db = nullptr;
