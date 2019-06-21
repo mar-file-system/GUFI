@@ -1,6 +1,8 @@
 # Grand Unified File-Index (GUFI)
 
 [![Build Status](https://travis-ci.com/mar-file-system/GUFI.svg?branch=master)](https://travis-ci.com/mar-file-system/GUFI)
+[![Latest Release](https://img.shields.io/github/release/mar-file-system/GUFI.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mar-file-system/GUFI/latest/total.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
 
 GUFI is part of MarFS, which is released under the [BSD License](LICENSE.txt).
 LA-CC-15-039
