@@ -99,10 +99,10 @@ if (CMAKE_CXX_COMPILER)
 
   # GCC prior to 4.9.3 doesn't have full standard support
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.3)
-    set(CMAKE_CXX_COMPILER FALSE)
+    set(CMAKE_CXX_COMPILER false)
     message(STATUS "Require GNU C++ version 4.9.3 or greater: Not compiling C++ sources")
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.9)
-    set(CMAKE_CXX_COMPILER FALSE)
+    set(CMAKE_CXX_COMPILER false)
     message(STATUS "Require Clang version 3.9 or greater: not compiling C++ sources")
   else()
     # enable C++11
@@ -114,7 +114,7 @@ if (CMAKE_CXX_COMPILER)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
   endif()
 else()
-  set(CMAKE_CXX_COMPILER FALSE)
+  set(CMAKE_CXX_COMPILER false)
   message(STATUS "Not compiling C++ sources")
 endif()
 
@@ -325,8 +325,8 @@ add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory 
                                    COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
 
 add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} make DEBUG=1
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} make test
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" make DEBUG=1
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" make test
                              WORKING_DIRECTORY ${TARBALL_TEST_DIR}
                              DEPENDS gary make_tarball_dir)
 

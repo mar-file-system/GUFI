@@ -1,8 +1,10 @@
 export
 
+ifneq ("$(CXX)", "false")
 SUBDIRECTORIES=googletest
+endif
 
-TESTS         = runtests verifyknowntree $(SUBDIRECTORIES)
+TESTS = runtests verifyknowntree $(SUBDIRECTORIES)
 
 # these are trashable files and dirs produced by the test/run* tests
 TEST_PRODUCTS = testout.* testdirdup outdb* outq.* core.*

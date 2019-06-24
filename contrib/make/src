@@ -9,13 +9,15 @@ LIB_A = ../lib$(LIB).a
 DFW       = dfw
 BFW       = bfwi bfti bfq bfwreaddirplus2db
 BFW_MYSQL = bfmi.mysql
-TOOLS     = querydb querydbn make_testdirs make_testtree
-TARGETS   = $(addprefix ../,$(DFW) $(BFW) $(TOOLS))
+C_TOOLS   = querydb querydbn make_testdirs
+ifneq ("$(CXX)", "false")
+CXX_TOOLS = make_testtree
+endif
+TARGETS   = $(addprefix ../,$(DFW) $(BFW) $(C_TOOLS) $(CXX_TOOLS))
 
 all: $(TARGETS)
 
 %.o: %.c $(LIB_H)
-	echo $(STATIC_DEPS)
 	$(CC) $(CFLAGS) -c -o $@ $< -pthread
 
 # --- library
@@ -28,8 +30,10 @@ $(LIB_A): $(LIB_O)
 ../%: %.c $(LIB_A) $(STATIC_DEPS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+ifneq ("$(CXX)", "false")
 ../%: %.cpp $(LIB_A) $(STATIC_DEPS)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+endif
 
 # recursive make of the '%' part
 # recursive make will catch the ifneq ($(MYSQL),) ... above

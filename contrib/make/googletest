@@ -1,9 +1,7 @@
-GTEST_PREFIX      ?= $(realpath ../../deps/)
-GTEST_BUILD_DIR   ?= $(GTEST_PREFIX)/build/googletest
-GTEST_INSTALL_DIR ?= $(GTEST_PREFIX)/install/googletest
+GTEST_PREFIX ?= $(DEP_INSTALL_PREFIX)/googletest
 
-CXXFLAGS          +=
-LDFLAGS           +=
+CXXFLAGS     += -I$(GTEST_PREFIX)/include
+LDFLAGS      += -L$(GTEST_PREFIX)/lib -L$(GTEST_PREFIX)/lib64 -lgtest -lgtest_main
 
 TESTS=bf utils
 OBJ=$(addsuffix .o, $(TESTS))
@@ -14,11 +12,11 @@ TARGET=test
 
 all: $(TARGET)
 
-$(TARGET): $(OBJ) $(realpath ../..)/libGUFI.a $(STATIC_DEPS)
-	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -L$(GTEST_INSTALL_DIR)/lib -L$(GTEST_INSTALL_DIR)/lib64 -lgtest -lgtest_main -o $@
-
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -I$(GTEST_INSTALL_DIR)/include -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(TARGET): $(OBJ) $(realpath ../..)/libGUFI.a $(STATIC_DEPS)
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
 run: $(TARGET)
 	./$(TARGET)

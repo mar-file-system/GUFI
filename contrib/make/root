@@ -1,6 +1,6 @@
 CC                   ?= cc
 CXX                  ?= c++
-CFLAGS               ?=
+CFLAGS               ?= -std=gnu99
 CXXFLAGS             ?= -std=c++11
 LDFLAGS              ?= -ldl -lm
 LIB                   = GUFI
@@ -26,21 +26,21 @@ MYSQL_LDFLAGS        ?= $(shell mysql_config --libs_r)
 
 MAKEFILE_PATH         = $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-DEP_DOWNLOAD_PATH    ?= $(MAKEFILE_PATH)/contrib/deps
-DEP_BUILD_PATH       ?= $(MAKEFILE_PATH)/deps/build
-DEP_INSTALL_PATH     ?= $(MAKEFILE_PATH)/deps/install
+DEP_DOWNLOAD_PREFIX  ?= $(MAKEFILE_PATH)/contrib/deps
+DEP_BUILD_PREFIX     ?= $(MAKEFILE_PATH)/deps/build
+DEP_INSTALL_PREFIX   ?= $(MAKEFILE_PATH)/deps/install
 
-THPOOL_PATH          ?= $(DEP_INSTALL_PATH)/C-Thread-Pool
+THPOOL_PATH          ?= $(DEP_INSTALL_PREFIX)/C-Thread-Pool
 THPOOL_CFLAGS        ?= -I$(THPOOL_PATH)/include
 THPOOL_LDFLAGS       ?= -pthread
 THPOOL_LIB           ?= $(THPOOL_PATH)/lib/libthpool.a
 
-SQLITE3_PATH         ?= $(DEP_INSTALL_PATH)/sqlite3
+SQLITE3_PATH         ?= $(DEP_INSTALL_PREFIX)/sqlite3
 SQLITE3_CFLAGS       ?= -I$(SQLITE3_PATH)/include
 SQLITE3_LDFLAGS      ?=
 SQLITE3_LIB          ?= $(SQLITE3_PATH)/lib/libsqlite3.a
 
-SQLITE3_PCRE_PATH    ?= $(DEP_INSTALL_PATH)/sqlite3-pcre
+SQLITE3_PCRE_PATH    ?= $(DEP_INSTALL_PREFIX)/sqlite3-pcre
 SQLITE3_PCRE_CFLAGS  ?= -I$(SQLITE3_PCRE_PATH) $(SQLITE3_CFLAGS) $(PCRE_CFLAGS)
 SQLITE3_PCRE_LDFLAGS ?= $(PCRE_LDFLAGS)
 SQLITE3_PCRE_LIB     ?= $(SQLITE3_PCRE_PATH)/libsqlite3-pcre.a
@@ -94,11 +94,11 @@ all: $(STATIC_DEPS)
 	$(MAKE) -C scripts
 
 $(STATIC_DEPS): contrib/deps/install_deps.sh
-	mkdir -p "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
-	contrib/deps/install_deps.sh --cxx --paramiko "$(DEP_DOWNLOAD_PATH)" "$(DEP_BUILD_PATH)" "$(DEP_INSTALL_PATH)"
+	mkdir -p "$(DEP_DOWNLOAD_PREFIX)" "$(DEP_BUILD_PREFIX)" "$(DEP_INSTALL_PREFIX)"
+	contrib/deps/install_deps.sh --cxx --paramiko "$(DEP_DOWNLOAD_PREFIX)" "$(DEP_BUILD_PREFIX)" "$(DEP_INSTALL_PREFIX)"
 
 clean:
-	$(MAKE) -C "$(DEP_BUILD_PATH)"
+	$(MAKE) -C "$(DEP_BUILD_PREFIX)"
 	$(MAKE) -C src clean
 
 test: all
