@@ -88,7 +88,7 @@ Thanks!
 
 (0) Set up
 
-# install build tools
+# Environment
 A C compiler with C99 support
 [optional] A C++ compiler with C++11 support (g++ 4.9.3, clang++-3.9, or newer)
 CMake 3.0+
@@ -97,19 +97,18 @@ pkg-config
 realpath
 rpmbuild
 truncate (with the '-s' option available)
-
-# other tools
 Python 2.7
+[optional; needed to install latest Python libraries] pip
 
-# install libraries (see platform-specific caveats, below)
+# Libraries (see platform-specific caveats, below)
 xattr
 pcre                 (version 1)
 [optional] mysql
 [optional] fuse      (osxfuse on OSX)
 [optional] db2
-[needed for paramiko] python-bcrypt
-[needed for paramiko] python-cryptography
-[needed for paramiko] python-pynacl
+[optional; needed for paramiko] python-bcrypt
+[optional; needed for paramiko] python-cryptography
+[optional; needed for paramiko] python-pynacl
 
 # packages that are provided by GUFI
 # locations for these packages can be provided (single prefix) in order to avoid downloading them
@@ -123,7 +122,9 @@ sqlite3-pcre
 git clone https://github.com/mar-file-system/GUFI.git
 cd GUFI
 
-(2) ========== Build and install with CMake
+(2) ========== Build and Install
+
+(2.1) CMake
 
 mkdir build
 cd build
@@ -132,7 +133,7 @@ make
 make install  # install into <PATH>
 make package  # generate RPMs
 
-(2.1) Configurations options
+(2.1.1) Configurations options
 
 Environment:
     - CXX=false to disable building C++ code.
@@ -148,16 +149,20 @@ CMake (-D<VAR>=<VALUE>):
     - DEP_INSTALL_PREFIX=<PATH> to select the location to install the dependencies.
         If the dependencies are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
 
-(3) ========== Build and install with make
+(2.2) Make
 
 If cmake is not available, the tarball found at
 https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
 can be built by running `make` in the extraction directory.
 This tarball is generated through CMake with the command "make gary".
 
-(4) Known build issuses
+(2.3) RPM
+Prebuilt binaries can be installed with RPMs, which can be found at
+https://github.com/mar-file-system/GUFI/releases/latest
 
-(4.1) (CentOS) submodule googletest build fails for cmake < 3.0
+(3) Known build issuses
+
+(3.1) (CentOS) submodule googletest build fails for cmake < 3.0
 
 CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
   No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
@@ -174,7 +179,7 @@ yum remove cmake
 yum install cmake3
 ln -s /usr/bin/cmake3 /usr/bin/cmake
 
-(4.2) our build of test/googletest fails
+(3.2) our build of test/googletest fails
 
 -- WORK-AROUND
 disable the C++ compiler when calling cmake ('CXX=false cmake')
