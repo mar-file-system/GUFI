@@ -399,6 +399,7 @@ bool processdir(Row & w, std::ifstream & trace) {
             incr(parsing);
             struct work row;
             parsetowork(in.delim, line, &row);
+            row.pinode = dir.statuso.st_ino;
             decr(parsing);
 
             // stop on directories, since files are listed first
