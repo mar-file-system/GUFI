@@ -75,7 +75,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# don't allow in-source build
+# Don't allow in-source build
 get_filename_component(CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR} REALPATH)
 get_filename_component(CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR} REALPATH)
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -88,10 +88,13 @@ project(GUFI VERSION 0.2.0 LANGUAGES C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# define the DEBUG macro when building in debug mode
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall -D_XOPEN_SRC")
+# Need _XOPEN_SRC
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SRC")
 
-# only enable C++ if support is found
+# Define the DEBUG macro when building in debug mode
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
+
+# Only enable C++ if support is found
 include(CheckLanguage)
 check_language(CXX)
 if (CMAKE_CXX_COMPILER)
@@ -105,12 +108,15 @@ if (CMAKE_CXX_COMPILER)
     set(CMAKE_CXX_COMPILER false)
     message(STATUS "Require Clang version 3.9 or greater: not compiling C++ sources")
   else()
-    # enable C++11
+    # Require C++11
     set(CMAKE_CXX_STANDARD 11)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
 
-    # define the DEBUG macro when building in debug mode
+    # Need _XOPEN_SRC
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_XOPEN_SRC")
+
+    # Define the DEBUG macro when building in debug mode
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -Wall")
   endif()
 else()
@@ -122,10 +128,10 @@ endif()
 set(CMAKE_SKIP_BUILD_RPATH TRUE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
-# need the PkgConfig module for pkg_search_module
+# Need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
 
-# tell CMake to search the contrib/cmake directory cmake modules
+# Tell CMake to search the contrib/cmake directory cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 
 # Detect and handle xattr.h platform specifics
@@ -156,20 +162,20 @@ else()
    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DCONFIG_GNU_XATTRS")
 endif()
 
-# need pthread
+# Need pthread
 find_package(Threads REQUIRED)
 
-# load the ExternalProject module
+# Load the ExternalProject module
 include(ExternalProject)
 
-# need PCRE for linking only
+# Need PCRE for linking only
 pkg_search_module(PCRE REQUIRED libpcre)
 # if (NOT EXISTS PCRE_STATIC_LIBS)
 #   message(FATAL_ERROR "Could not find static library files for libpcre.")
 # endif()
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}")
 
-# download and build all non-system dependencies
+# Download and build all non-system dependencies
 set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH "Location of dependency sources")
 set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE PATH "Location of dependency builds")
 set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE PATH "Location of dependency binaries")
@@ -280,7 +286,7 @@ add_subdirectory(test)
 # build tarball out of ${CMAKE_SOURCE_DIR}
 #
 
-# collect all files into variables
+# Collect all files into variables
 set(OTHER_FILES
   CMakeLists.txt
   INSTALL
@@ -296,7 +302,7 @@ set(PATHS
   src
   test)
 
-# set the output nemae
+# Set the output nemae
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
 add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
@@ -306,11 +312,11 @@ add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/
                            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
                            DEPENDS test/googletest)
 
-# generate the tarball
+# Generate the tarball
 add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                                  DEPENDS cp_files)
 
-# the actual target
+# The actual target
 add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
@@ -318,7 +324,7 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Ma
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
                        DEPENDS create_tarball)
 
-# test the tarball
+# Test the tarball
 set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
 
 add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
@@ -334,16 +340,17 @@ add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBA
                             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                             DEPENDS build_gary)
 
-# these variables have to be set before include(CPack)
+#
+# Generate Packages
+#
+
+# These variables have to be set before include(CPack)
 set(CPACK_PACKAGE_VERSION_MAJOR ${GUFI_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${GUFI_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
 
-# generate RPMs
+# Generate RPMs
 find_program(RPMBUILD REQUIRED rpmbuild)
-execute_process(COMMAND ${RPMBUILD} --version
-  OUTPUT_VARIABLE RPMBUILD_VERSION)
-
 set(CPACK_GENERATOR "RPM")
 set(CPACK_RPM_COMPONENT_INSTALL On)
 set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
@@ -365,7 +372,7 @@ if (PARAMIKO)
   set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/contrib/rpm/client_post_install.sh")
 endif()
 
-# generate source RPM
+# Generate source RPM
 set(CPACK_SOURCE_GENERATOR "RPM")
 set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.gitignore")
 

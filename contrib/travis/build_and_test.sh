@@ -10,7 +10,7 @@ export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug -DDEP_INSTALL_PREFIX="${DEP_PATH}" -DPARAMIKO=On ..
+cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PATH}" -DPARAMIKO=On ..
 
 # use files from the generated tar
 if  [[ "${BUILD}" = "make" ]]; then
@@ -20,7 +20,7 @@ if  [[ "${BUILD}" = "make" ]]; then
     cd tarball
 fi
 
-make DEBUG=1
+make
 
 if [[ "${BUILD}" = "cmake" ]]; then
     ctest --verbose

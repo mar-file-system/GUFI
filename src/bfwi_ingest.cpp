@@ -352,12 +352,17 @@ bool processdir(Row & w, std::ifstream & trace) {
     incr(duping);
     char topath[MAXPATH];
     SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,dir.name);
-    dupdir(topath, &dir.statuso);
+    if (dupdir(topath, &dir.statuso)) {
+      const int err = errno;
+      fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));
+      delete_row(w);
+      return false;
+    }
     decr(duping);
 
     // create the database name
     char dbname[MAXPATH];
-    SNPRINTF(dbname, MAXPATH, "%s/%s/" DBNAME, in.nameto, dir.name);
+    SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, topath);
 
     // don't bother doing anything if there is nothing to insert
     // (the database file will not exist for empty directories)

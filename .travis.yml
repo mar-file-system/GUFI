@@ -15,23 +15,24 @@ matrix:
           sudo: false
           dist: xenial
           addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - llvm-toolchain-xenial-7
-                  packages:
-                      - attr
-                      - cmake
-                      - clang-7
-                      - libattr1-dev
-                      - libfuse-dev
-                      - libpcre3-dev
-                      - pkg-config
-                  update: true
+            apt:
+              sources:
+                - ubuntu-toolchain-r-test
+                - llvm-toolchain-xenial-7
+              packages:
+                - attr
+                - cmake
+                - clang-7
+                - libattr1-dev
+                - libfuse-dev
+                - libpcre3-dev
+                - pkg-config
+              update: true
           env:
-              - C_COMPILER=clang-7
-              - CXX_COMPILER=clang++-7
-              - BUILD=cmake
+            - C_COMPILER=clang-7
+            - CXX_COMPILER=clang++-7
+            - BUILD=cmake
+            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
           script: contrib/travis/xenial.sh
 
         # OpenSUSE 12.3 + Tumbleweed Repo
@@ -47,6 +48,7 @@ matrix:
             - C_COMPILER=clang-7
             - CXX_COMPILER=clang++-7
             - BUILD=cmake
+            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
             - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
           script: contrib/travis/suse12.3.sh
 
@@ -63,6 +65,7 @@ matrix:
             - C_COMPILER=clang
             - CXX_COMPILER=clang++
             - BUILD=cmake
+            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
             - DOCKER_IMAGE=centos:7
           script: contrib/travis/centos7.sh
 
@@ -114,29 +117,29 @@ matrix:
           sudo: false
           dist: xenial
           addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - llvm-toolchain-xenial-7
-                  packages:
-                      - attr
-                      - bsd-mailx
-                      - cmake
-                      - clang-7
-                      - libattr1-dev
-                      - libfuse-dev
-                      - libpcre3-dev
-                  update: true
+            apt:
+              sources:
+                - ubuntu-toolchain-r-test
+                - llvm-toolchain-xenial-7
+              packages:
+                - attr
+                - bsd-mailx
+                - cmake
+                - clang-7
+                - libattr1-dev
+                - libfuse-dev
+                - libpcre3-dev
+              update: true
           script:
             - true
           deploy:
-              provider: script
-              skip-cleanup: true
-              script: bash contrib/travis/deploy.sh
-              on:
-                  all_branches: true
-                  condition: (("${TRAVIS_EVENT_TYPE}" = "api") || ("${TRAVIS_EVENT_TYPE}" = "cron"))
-                  tags: false
+            provider: script
+            skip-cleanup: true
+            script: bash contrib/travis/deploy.sh
+            on:
+              tags: false
+              all_branches: true
+              condition: (("${TRAVIS_EVENT_TYPE}" = "api") || ("${TRAVIS_EVENT_TYPE}" = "cron"))
 
         # Build and push release packages
         - stage: deploy
@@ -144,13 +147,14 @@ matrix:
           sudo: true
           dist: xenial
           addons:
-              apt:
-                  update: false
+            apt:
+              update: false
           services: docker
           env:
             - C_COMPILER=clang
             - CXX_COMPILER=clang++
             - BUILD=cmake
+            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Release
             - DOCKER_IMAGE=centos:7
           script:
             - contrib/travis/centos7.sh
