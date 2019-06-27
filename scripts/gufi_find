@@ -209,9 +209,9 @@ def build_where(args, root_uid = 0, root_gid = 0):
             size = size[1:]
 
         unit = 'b'
-        if args.size[-1] in 'bcwkMG':
-            unit = args.size[-1]
-            size = args.size[:-1]
+        if size[-1] in 'bcwkMG':
+            unit = size[-1]
+            size = size[:-1]
 
         # compute the actual size
         size = int(size) * filesize[unit]
