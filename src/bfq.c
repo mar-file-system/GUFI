@@ -328,7 +328,7 @@ static void processdir(void * passv)
     // where to output to when printing
     FILE *out = stdout;
     if (in.outfile > 0) {
-        out = gts.outfd[mytid];
+       out = gts.outfd[mytid];
     }
 
     char name[MAXSQL];
@@ -587,25 +587,21 @@ static void processdir(void * passv)
     // return NULL;
 }
 
-int processinit(void * myworkin) {
-     struct work * mywork = myworkin;
-     int i;
-     char outfn[MAXPATH];
-     char outdbn[MAXPATH];
+int processinit(char ** names, int count) {
 
      //open up the output files if needed
      if (in.outfile > 0) {
-       i=0;
-       while (i < in.maxthreads) {
+       char outfn[MAXPATH];
+       for(int i=0; i < in.maxthreads; i++) {
          SNPRINTF(outfn,MAXPATH,"%s.%d",in.outfilen,i);
          gts.outfd[i]=fopen(outfn,"w");
-         i++;
        }
      }
 
+     //  ******  create and open output dbs here
      if (in.outdb > 0) {
-       i=0;
-       while (i < in.maxthreads) {
+       char outdbn[MAXPATH];
+       for(int i=0; i < in.maxthreads; i++) {
          SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
          gts.outdbd[i]=opendb(outdbn,5,0);
          if (strlen(in.sqlinit) > 1) {
@@ -615,29 +611,30 @@ int processinit(void * myworkin) {
            }
            sqlite3_free(err);
          }
-         i++;
        }
      }
 
-     //  ******  create and open output db's here
+     // enqueue all input paths
+     for(int i = 0; i < count; i++) {
+       struct work mywork;
 
-     // set the first mywork to be the root node
-     mywork->level = 0;
+       // check that the top level path is an accessible directory
+       SNPRINTF(mywork.name,MAXPATH,"%s",names[i]);
+       lstat(mywork.name,&mywork.statuso);
+       if (access(mywork.name, R_OK | X_OK)) {
+         fprintf(stderr, "couldn't access input dir '%s': %s\n",
+                 mywork.name, strerror(errno));
+         return 1;
+       }
+       if (!S_ISDIR(mywork.statuso.st_mode) ) {
+         fprintf(stderr,"input-dir '%s' is not a directory\n", mywork.name);
+         return 1;
+       }
 
-     // process input directory and put it on the queue
-     SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
-     lstat(in.name,&mywork->statuso);
-     if (access(in.name, R_OK | X_OK)) {
-        fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in.name, strerror(errno));
-        return 1;
+       // push the path onto the queue
+       mywork.level = 0;
+       pushdir(&mywork);
      }
-     if (!S_ISDIR(mywork->statuso.st_mode) ) {
-        fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
-        return 1;
-     }
-
-     pushdir(mywork);
      return 0;
 }
 
@@ -744,38 +741,25 @@ int main(int argc, char *argv[])
      clock_gettime(CLOCK_MONOTONIC, &intermediate_start);
 #endif
 
-     int thread_count = 0;
-
      long double acquire_mutex_time = 0;
      long double work_time = 0;
 
-     for(; idx < argc; idx++) {
-         // parse positional args, following the options
-         int retval = 0;
-         INSTALL_STR(in.name, argv[idx], MAXPATH, "GUFI_tree");
+     // process initialization, this is work done once the threads are up
+     // but not busy yet - this will be different for each instance of a bf
+     // program in this case we are stating the directory passed in and
+     // putting that directory on the queue
+     processinit(&argv[idx], argc - idx);
 
-         if (retval) {
-             break;
-         }
+     // processdirs - if done properly, this routine is common and does not
+     // have to be done per instance of a bf program loops through and
+     // processes all directories that enter the queue by farming the work
+     // out to the threadpool
+     const int thread_count = processdirs2(processdir, &acquire_mutex_time, &work_time);
 
-         // process initialization, this is work done once the threads are up
-         // but not busy yet - this will be different for each instance of a bf
-         // program in this case we are stating the directory passed in and
-         // putting that directory on the queue
-         struct work mywork;
-         processinit(&mywork);
-
-         // processdirs - if done properly, this routine is common and does not
-         // have to be done per instance of a bf program loops through and
-         // processes all directories that enter the queue by farming the work
-         // out to the threadpool
-         thread_count += processdirs2(processdir, &acquire_mutex_time, &work_time);
-
-         // processfin - this is work done after the threads are done working
-         // before they are taken down - this will be different for each
-         // instance of a bf program
-         processfin();
-     }
+     // processfin - this is work done after the threads are done working
+     // before they are taken down - this will be different for each
+     // instance of a bf program
+     processfin();
 
      // wait for all threads to stop before processing the aggregate data
      thpool_wait(mythpool);
