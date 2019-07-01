@@ -330,6 +330,7 @@ void parsetowork(char * delim, char * line, struct work * pinwork) {
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->linkname,MAXPATH,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->xattr,MAXXATTR,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->pinode=atol(p);
 }
 
 // process the work under one directory (no recursion)
@@ -413,6 +414,9 @@ bool processdir(Row & w, std::ifstream & trace) {
 
             // update summary table
             sumit(&summary,&row);
+
+            // dont't record pinode
+            row.pinode = 0;
 
             // add row to bulk insert
             incr(inserting);
