@@ -364,12 +364,12 @@ bool processdir(Row & w, std::ifstream & trace) {
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, topath);
 
-    // don't bother doing anything if there is nothing to insert
-    // (the database file will not exist for empty directories)
-    if (!w->entries) {
-        delete_row(w);
-        return true;
-    }
+    // // don't bother doing anything if there is nothing to insert
+    // // (the database file will not exist for empty directories)
+    // if (!w->entries) {
+    //     delete_row(w);
+    //     return true;
+    // }
 
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir.statuso.st_uid, dir.statuso.st_gid)) {
@@ -380,8 +380,8 @@ bool processdir(Row & w, std::ifstream & trace) {
     // process the work
     sqlite3 * db = opendb(dbname);
     if (db) {
-        // struct sum summary;
-        // zeroit(&summary);
+        struct sum summary;
+        zeroit(&summary);
 
         incr(prepping);
         sqlite3_stmt * res = insertdbprep(db, NULL);
@@ -394,7 +394,7 @@ bool processdir(Row & w, std::ifstream & trace) {
         // move the trace file to the offet
         trace.seekg(w->offset);
 
-        std::size_t rows = 0;
+        std::size_t row_count = 0;
         while (true) {
             char line[MAXLINE];
             if (!trace.getline(line, MAXLINE)) {
@@ -404,7 +404,6 @@ bool processdir(Row & w, std::ifstream & trace) {
             incr(parsing);
             struct work row;
             parsetowork(in.delim, line, &row);
-            row.pinode = dir.statuso.st_ino;
             decr(parsing);
 
             // stop on directories, since files are listed first
@@ -412,19 +411,19 @@ bool processdir(Row & w, std::ifstream & trace) {
                 break;
             }
 
-            // // update summary table
-            // sumit(&summary,w->head);
+            // update summary table
+            sumit(&summary,&row);
 
             // add row to bulk insert
             incr(inserting);
             insertdbgo(&row,db,res);
             decr(inserting);
 
-            rows++;
-            if (rows > 100000) {
+            row_count++;
+            if (row_count > 100000) {
                 stopdb(db);
                 startdb(db);
-                rows=0;
+                row_count=0;
             }
         }
 
@@ -436,7 +435,7 @@ bool processdir(Row & w, std::ifstream & trace) {
         insertdbfin(db, res);
         decr(unprep);
 
-        // insertsumdb(db, w, &summary);
+        insertsumdb(db, &dir, &summary);
 
         incr(closing);
         closedb(db); // don't set to nullptr
