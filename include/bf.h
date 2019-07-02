@@ -153,8 +153,11 @@ struct input {
    char name[MAXPATH];
    char nameto[MAXPATH];
    char sqltsum[MAXSQL];
+   size_t sqltsum_len;
    char sqlsum[MAXSQL];
+   size_t sqlsum_len;
    char sqlent[MAXSQL];
+   size_t sqlent_len;
    int  printdir;
    int  printing;
    int  printheader;
@@ -172,7 +175,9 @@ struct input {
    int  outdb;
    char outdbn[MAXPATH];
    char sqlinit[MAXSQL];
+   size_t sqlinit_len;
    char sqlfin[MAXSQL];
+   size_t sqlfin_len;
    int  insertdir;            // added for bfwreaddirplus2db
    int  insertfl;             // added for bfwreaddirplus2db
    int  dontdescend;          // added to allow single level directory operations

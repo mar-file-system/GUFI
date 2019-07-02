@@ -252,6 +252,11 @@ int parse_cmd_line(int         argc,
 
    in->maxthreads         = 1;         // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), "|");
+   in->sqlinit_len        = 0;
+   in->sqltsum_len        = 0;
+   in->sqlsum_len         = 0;
+   in->sqlent_len         = 0;
+   in->sqlfin_len         = 0;
    in->dontdescend        = 0;         // default to descend
    in->buildinindir       = 0;         // default to not building db in input dir
    in->suspectd           = 0;
@@ -356,22 +361,27 @@ int parse_cmd_line(int         argc,
 
       case 'I':               // SQL initializations
          INSTALL_STR(in->sqlinit, optarg, MAXSQL, "-I");
+         in->sqlinit_len = strlen(in->sqlinit);
          break;
 
       case 'T':               // SQL for tree-summary
          INSTALL_STR(in->sqltsum, optarg, MAXSQL, "-T");
+         in->sqltsum_len = strlen(in->sqltsum);
          break;
 
       case 'S':               // SQL for summary
          INSTALL_STR(in->sqlsum, optarg, MAXSQL, "-S");
+         in->sqlsum_len = strlen(in->sqlsum);
          break;
 
       case 'E':               // SQL for entries
          INSTALL_STR(in->sqlent, optarg, MAXSQL, "-E");
+         in->sqlent_len = strlen(in->sqlent);
          break;
 
       case 'F':               // SQL clean-up
          INSTALL_STR(in->sqlfin, optarg, MAXSQL, "-F");
+         in->sqlfin_len = strlen(in->sqlfin);
          break;
 
       case 'a':               // and/or

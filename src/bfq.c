@@ -416,7 +416,7 @@ static void processdir(void * passv)
 
     // if AND operation, and sqltsum is there, run a query to see if there is a match.
     // if this is OR, as well as no-sql-to-run, skip this query
-    if (strlen(in.sqltsum) > 1) {
+    if (in.sqltsum_len > 1) {
 
        if (in.andor == 0) {      // AND
          trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
@@ -459,7 +459,7 @@ static void processdir(void * passv)
                 // memset(endname, 0, sizeof(endname));
                 shortpath(passmywork->name,shortname,endname);
                 SNPRINTF(gps[mytid].gepath,MAXPATH,"%s",endname);
-                if (strlen(in.sqlsum) > 1) {
+                if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     // for directories we have to take off after the last slash
                     // and set the path so users can put path() in their queries
@@ -476,7 +476,7 @@ static void processdir(void * passv)
 
                 // if we have recs (or are running an OR) query the entries table
                 if (recs > 0) {
-                    if (strlen(in.sqlent) > 1) {
+                    if (in.sqlent_len > 1) {
                         // set the path so users can put path() in their queries
                         //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
                         SNPRINTF(gps[mytid].gpath,MAXPATH,"%s",passmywork->name);
@@ -604,7 +604,7 @@ int processinit(char ** names, int count) {
        for(int i=0; i < in.maxthreads; i++) {
          SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
          gts.outdbd[i]=opendb(outdbn,5,0);
-         if (strlen(in.sqlinit) > 1) {
+         if (in.sqlinit_len > 1) {
            char *err = NULL;
            if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, &err) != SQLITE_OK) {
              fprintf(stderr, "Error: %s\n", err);
@@ -655,7 +655,7 @@ int processfin() {
        i=0;
        while (i < in.maxthreads) {
          closedb(gts.outdbd[i]);
-         if (strlen(in.sqlfin) > 1) {
+         if (in.sqlfin_len > 1) {
            char *err = NULL;
            if (sqlite3_exec(gts.outdbd[i], in.sqlfin, NULL, NULL, &err) != SQLITE_OK) {
              fprintf(stderr, "Error: %s\n", err);
