@@ -112,16 +112,17 @@ def parse_args(args = None):
         raise argparse.ArgumentTypeError("Invalid Port: {}".format(port))
 
     parser = argparse.ArgumentParser(description='gufi_client')
-    parser.add_argument('--username',     dest='username',     type=get_username, default=getpass.getuser(),                             help='Username (not UID)')
-    parser.add_argument('-p', '--port',   dest='port',         type=get_port,     default=22,                                            help='SSH port')
-    parser.add_argument('--known_hosts',  dest='known_hosts',  type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
-    parser.add_argument('--hostkey',      dest='hostkey',      type=str,          default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
-    parser.add_argument('--paramiko',     dest='paramiko',     type=str,          default=os.path.join(INSTALL_PREFIX, 'paramiko'),      help='Location of paramiko on client machine')
-    parser.add_argument('--gufi_bin',     dest='gufi_bin',     type=str,          default=os.path.join(INSTALL_PREFIX, 'bin'),           help='GUFI binaries directory on server')
-    parser.add_argument('hostname',                            type=str,                                                                 help='GUFI server hostname')
-    parser.add_argument('gufi_tree',                           type=str,                                                                 help='GUFI tree path')
-    parser.add_argument('tool',                                type=str,          choices=TOOLS.keys(),                                  help='GUFI tool to use')
-    parser.add_argument('args',                                nargs='*',         default=[],                                            help='Arguments to pass to the GUFI tool')
+    parser.add_argument('--version', '-v',                      action='version',  version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('--username',      dest='username',     type=get_username, default=getpass.getuser(),                             help='Username (not UID)')
+    parser.add_argument('-p', '--port',    dest='port',         type=get_port,     default=22,                                            help='SSH port')
+    parser.add_argument('--known_hosts',   dest='known_hosts',  type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
+    parser.add_argument('--hostkey',       dest='hostkey',      type=str,          default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
+    parser.add_argument('--paramiko',      dest='paramiko',     type=str,          default=os.path.join(INSTALL_PREFIX, 'paramiko'),      help='Location of paramiko on client machine')
+    parser.add_argument('--gufi_bin',      dest='gufi_bin',     type=str,          default=os.path.join(INSTALL_PREFIX, 'bin'),           help='GUFI binaries directory on server')
+    parser.add_argument('hostname',                             type=str,                                                                 help='GUFI server hostname')
+    parser.add_argument('gufi_tree',                            type=str,                                                                 help='GUFI tree path')
+    parser.add_argument('tool',                                 type=str,          choices=TOOLS.keys(),                                  help='GUFI tool to use')
+    parser.add_argument('args',                                 nargs='*',         default=[],                                            help='Arguments to pass to the GUFI tool')
 
     if args is None:
         args = sys.argv[1:]

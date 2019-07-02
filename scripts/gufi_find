@@ -280,7 +280,8 @@ def build_order_by(args):
 if __name__=='__main__':
     cwd = os.getcwd()
 
-    parser = argparse.ArgumentParser(description='GUFI version of find')
+    parser = argparse.ArgumentParser(prog='GUFI', description='GUFI version of find')
+    parser.add_argument('--version', '-v',                                                action='version',                             version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
 
     # GNU find options
     parser.add_argument('-amin',               metavar='n',         dest='amin',          type=qb.get_non_negative,                     help='File was last accessed n minutes ago.')

@@ -84,7 +84,7 @@ if (PARAMIKO)
   install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION paramiko COMPONENT Client)
 
   # copy gufi_client into the build directory for easy access
-  configure_file(gufi_client gufi_client COPYONLY)
+  configure_file(gufi_client gufi_client @ONLY)
 
   # install gufi_client separately
   install(PROGRAMS gufi_client DESTINATION bin COMPONENT Client)
@@ -93,7 +93,7 @@ endif()
 # copy and install scripts that act like binaries
 foreach(TOOL ${TOOLS})
   # copy the tools into the build directory for easy access
-  configure_file(${TOOL} ${TOOL} COPYONLY)
+  configure_file(${TOOL} ${TOOL} @ONLY)
 
   # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
   install(PROGRAMS ${TOOL} DESTINATION bin COMPONENT Server)

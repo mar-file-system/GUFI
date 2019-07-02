@@ -169,6 +169,7 @@ if __name__=='__main__':
     cwd = os.getcwd()
 
     parser = argparse.ArgumentParser(description='GUFI version of ls')
+    parser.add_argument('--version', '-v',                                        action='version',            version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
     parser.add_argument('-a', '--all',                     dest='all',            action='store_true',         help='do not ignore entries starting with .')
     parser.add_argument('-A', '--amost-all',               dest='almost_all',     action='store_true',         help='do not list implied . and ..')
     parser.add_argument('-B', '--ignore-backups',          dest='ignore_backups', action='store_true',         help='do not list implied entries ending with ~')
