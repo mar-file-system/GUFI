@@ -2,10 +2,6 @@
 
 set -e
 
-# cleanup old containers
-docker container stop $(docker container ls -aq) || true
-docker container rm   $(docker container ls -aq) || true
-
 # get the image
 docker pull "${DOCKER_IMAGE}"
 
