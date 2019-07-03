@@ -114,7 +114,7 @@ pcre                 (version 1)
 # locations for these packages can be provided (single prefix) in order to avoid downloading them
 C-Thread-Pool
 GoogleTest
-paramiko
+paramiko             (patched by GUFI)
 sqlite3              (patched by GUFI)
 sqlite3-pcre
 
@@ -150,7 +150,6 @@ CMake (-D<VAR>=<VALUE>):
         If the dependencies are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
 
 (2.2) Make
-
 If cmake is not available, the tarball found at
 https://github.com/mar-file-system/GUFI/raw/tarball/gufi.tar.gz
 can be built by running `make` in the extraction directory.
@@ -160,9 +159,17 @@ This tarball is generated through CMake with the command "make gary".
 Prebuilt binaries can be installed with RPMs, which can be found at
 https://github.com/mar-file-system/GUFI/releases/latest
 
-(3) Known build issuses
+(3) Running gufi_client
+In order to run gufi_client, the patched paramiko should be installed.
+Paramiko itself requires the libraries python-cryptography, python-bcrypt,
+and python-pynacl. These should be installed through pip, not the OS
+package manager. There is a script in contrib/python to install them.
+There are also instructions for installing the libraries if your system
+is offline, and the wheel files need to be downloaded manually.
 
-(3.1) (CentOS) submodule googletest build fails for cmake < 3.0
+(4) Known build issuses
+
+(4.1) (CentOS) submodule googletest build fails for cmake < 3.0
 
 CMake Error at /usr/share/cmake/Modules/WriteBasicConfigVersionFile.cmake:39 (message):
   No VERSION specified for WRITE_BASIC_CONFIG_VERSION_FILE()
@@ -179,7 +186,7 @@ yum remove cmake
 yum install cmake3
 ln -s /usr/bin/cmake3 /usr/bin/cmake
 
-(3.2) our build of test/googletest fails
+(4.2) our build of test/googletest fails
 
 -- WORK-AROUND
 disable the C++ compiler when calling cmake ('CXX=false cmake')
