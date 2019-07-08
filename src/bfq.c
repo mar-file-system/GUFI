@@ -99,28 +99,24 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "pcre.h"
 
-/* #ifdef DEBUG */
-/* #undef DEBUG */
-/* #endif */
-
-/* #ifndef THREAD_STATS */
-/* #define THREAD_STATS */
-/* #endif */
-
-#ifdef DEBUG
-#include <time.h>
-long double elapsed(const struct timespec *start, const struct timespec *end) {
-    const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
-    const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
-    return e - s;
-}
-#endif
-
 extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
 #ifdef DEBUG
+
+/* #ifndef THREAD_STATS */
+/* #define THREAD_STATS */
+/* #endif */
+
+#include <time.h>
+
+long double elapsed(const struct timespec *start, const struct timespec *end) {
+    const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
+    const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
+    return e - s;
+}
+
 long double total_opendir_time = 0;
 long double total_open_time = 0;
 long double total_create_tables_time = 0;
@@ -133,6 +129,25 @@ long double total_detach_time = 0;
 long double total_close_time = 0;
 long double total_closedir_time = 0;
 pthread_mutex_t total_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#define concat(first, second) first##second
+
+#define start_timer(var)                                    \
+    struct timespec concat(var, _start);                    \
+    clock_gettime(CLOCK_MONOTONIC, &concat(var, _start));
+
+#define end_timer(var)                                                       \
+    struct timespec concat(var, _end);                                       \
+    clock_gettime(CLOCK_MONOTONIC, &concat(var, _end));                      \
+    concat(var, _time) += elapsed(&concat(var, _start), &concat(var, _end));
+
+#define end_timer_ptr(var)                                                        \
+    struct timespec concat(var, _end);                                            \
+    clock_gettime(CLOCK_MONOTONIC, &concat(var, _end));                           \
+    if (concat(var, _time)) {                                                     \
+        *concat(var, _time) += elapsed(&concat(var, _start), &concat(var, _end)); \
+    }
+
 #endif
 
 // Push the subdirectories in the current directory onto the queue
@@ -184,14 +199,11 @@ static size_t descend2(struct work *passmywork,
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     #ifdef DEBUG
-                    struct timespec pushdir_start;
-                    clock_gettime(CLOCK_MONOTONIC, &pushdir_start);
+                    start_timer(pushdir);
                     #endif
                     pushdir(&qwork);
                     #ifdef DEBUG
-                    struct timespec pushdir_end;
-                    clock_gettime(CLOCK_MONOTONIC, &pushdir_end);
-                    *pushdir_time += elapsed(&pushdir_start, &pushdir_end);
+                    end_timer_ptr(pushdir);
                     #endif
                     pushed++;
                 }
@@ -246,17 +258,14 @@ sqlite3 * opendb2(const char *name, int openwhat, int createtables
     }
 
     #ifdef DEBUG
-    struct timespec open_start;
-    clock_gettime(CLOCK_MONOTONIC, &open_start);
+    start_timer(open);
     #endif
     if (sqlite3_open_v2(dbn, &db, flags, "unix-none") != SQLITE_OK) {
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         return NULL;
     }
     #ifdef DEBUG
-    struct timespec open_end;
-    clock_gettime(CLOCK_MONOTONIC, &open_end);
-    *open_time = elapsed(&open_start, &open_end);
+    end_timer_ptr(open);
     #endif
 
     /* // try to turn sychronization off */
@@ -276,8 +285,7 @@ sqlite3 * opendb2(const char *name, int openwhat, int createtables
     /* } */
 
     #ifdef DEBUG
-    struct timespec create_tables_start;
-    clock_gettime(CLOCK_MONOTONIC, &create_tables_start);
+    start_timer(create_tables);
     #endif
     if (createtables) {
         if (create_tables(dbn, openwhat, db) != 0) {
@@ -287,14 +295,11 @@ sqlite3 * opendb2(const char *name, int openwhat, int createtables
         }
     }
     #ifdef DEBUG
-    struct timespec create_tables_end;
-    clock_gettime(CLOCK_MONOTONIC, &create_tables_end);
-    *create_tables_time = elapsed(&create_tables_start, &create_tables_end);
+    end_timer_ptr(create_tables);
     #endif
 
     #ifdef DEBUG
-    struct timespec load_extension_start;
-    clock_gettime(CLOCK_MONOTONIC, &load_extension_start);
+    start_timer(load_extension);
     #endif
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
         (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
@@ -304,9 +309,7 @@ sqlite3 * opendb2(const char *name, int openwhat, int createtables
         db = NULL;
     }
     #ifdef DEBUG
-    struct timespec load_extension_end;
-    clock_gettime(CLOCK_MONOTONIC, &load_extension_end);
-    *load_extension_time = elapsed(&load_extension_start, &load_extension_end);
+    end_timer_ptr(load_extension);
     #endif
 
     return db;
@@ -363,15 +366,12 @@ static void processdir(void * passv)
 
     // open directory
     #ifdef DEBUG
-    struct timespec opendir_start;
-    clock_gettime(CLOCK_MONOTONIC, &opendir_start);
+    start_timer(opendir);
     #endif
     // keep opendir near opendb to help speed up sqlite3_open_v2
     DIR * dir = opendir(passmywork->name);
     #ifdef DEBUG
-    struct timespec opendir_end;
-    clock_gettime(CLOCK_MONOTONIC, &opendir_end);
-    opendir_time = elapsed(&opendir_start, &opendir_end);
+    end_timer(opendir);
     #endif
 
     // if we have out db then we have that db open so we just attach the gufi db
@@ -387,8 +387,7 @@ static void processdir(void * passv)
     }
 
     #ifdef DEBUG
-    struct timespec attach_start;
-    clock_gettime(CLOCK_MONOTONIC, &attach_start);
+    start_timer(attach);
     #endif
     if (in.aggregate_or_print == AGGREGATE) {
         // attach in-memory result aggregation database
@@ -401,9 +400,7 @@ static void processdir(void * passv)
         }
     }
     #ifdef DEBUG
-    struct timespec attach_end;
-    clock_gettime(CLOCK_MONOTONIC, &attach_end);
-    attach_time = elapsed(&attach_start, &attach_end);
+    end_timer(attach);
     #endif
 
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
@@ -436,8 +433,7 @@ static void processdir(void * passv)
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
         #ifdef DEBUG
-        struct timespec descend_start;
-        clock_gettime(CLOCK_MONOTONIC, &descend_start);
+        start_timer(descend);
         #endif
         // push subdirectories into the queue
         descend2(passmywork, dir, in.max_level
@@ -446,9 +442,7 @@ static void processdir(void * passv)
                  #endif
             );
         #ifdef DEBUG
-        struct timespec descend_end;
-        clock_gettime(CLOCK_MONOTONIC, &descend_end);
-        descend_time = elapsed(&descend_start, &descend_end);
+        end_timer(descend);
         #endif
 
         if (db) {
@@ -483,17 +477,14 @@ static void processdir(void * passv)
                         realpath(passmywork->name,gps[mytid].gfpath);
 
                         #ifdef DEBUG
-                        struct timespec exec_start;
-                        clock_gettime(CLOCK_MONOTONIC, &exec_start);
+                        start_timer(exec);
                         #endif
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, in.print_callback, out, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s \"%s\"\n", err, in.sqlent);
                         }
                         #ifdef DEBUG
-                        struct timespec exec_end;
-                        clock_gettime(CLOCK_MONOTONIC, &exec_end);
-                        exec_time = elapsed(&exec_start, &exec_end);
+                        end_timer(exec);
                         #endif
 
                         sqlite3_free(err);
@@ -504,8 +495,7 @@ static void processdir(void * passv)
     }
 
     #ifdef DEBUG
-    struct timespec detach_start;
-    clock_gettime(CLOCK_MONOTONIC, &detach_start);
+    start_timer(detach);
     #endif
     if (in.aggregate_or_print == AGGREGATE) {
         // detach in-memory result aggregation database
@@ -515,15 +505,12 @@ static void processdir(void * passv)
         }
     }
     #ifdef DEBUG
-    struct timespec detach_end;
-    clock_gettime(CLOCK_MONOTONIC, &detach_end);
-    detach_time = elapsed(&detach_start, &detach_end);
+    end_timer(detach);
     #endif
 
     // if we have an out db we just detach gufi db
     #ifdef DEBUG
-    struct timespec close_start;
-    clock_gettime(CLOCK_MONOTONIC, &close_start);
+    start_timer(close);
     #endif
     if (in.outdb > 0) {
       detachdb(name, db, "tree");
@@ -531,9 +518,7 @@ static void processdir(void * passv)
       closedb(db);
     }
     #ifdef DEBUG
-    struct timespec close_end;
-    clock_gettime(CLOCK_MONOTONIC, &close_end);
-    close_time = elapsed(&close_start, &close_end);
+    end_timer(close);
     #endif
 
   out_dir:
@@ -541,14 +526,11 @@ static void processdir(void * passv)
 
     // close dir
     #ifdef DEBUG
-    struct timespec closedir_start;
-    clock_gettime(CLOCK_MONOTONIC, &closedir_start);
+    start_timer(closedir);
     #endif
     closedir(dir);
     #ifdef DEBUG
-    struct timespec closedir_end;
-    clock_gettime(CLOCK_MONOTONIC, &closedir_end);
-    closedir_time = elapsed(&closedir_start, &closedir_end);
+    end_timer(closedir);
     #endif
 
     // restore mtime and atime
