@@ -674,6 +674,13 @@ void sub_help() {
    printf("\n");
 }
 
+static void cleanup_intermediates(sqlite3 **intermediates, const size_t count) {
+    for(size_t i = 0; i < count; i++) {
+        closedb(intermediates[i]);
+    }
+    free(intermediates);
+}
+
 int main(int argc, char *argv[])
 {
      // process input args - all programs share the common 'struct input',
@@ -713,10 +720,7 @@ int main(int argc, char *argv[])
              SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
              if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
                  fprintf(stderr, "Could not open %s\n", intermediate_name);
-                 for(size_t j = 0; j < i; j++) {
-                     closedb(intermediates[j]);
-                 }
-                 free(intermediates);
+                 cleanup_intermediates(intermediates, i);
                  closedb(aggregate);
                  return -1;
              }
@@ -728,10 +732,7 @@ int main(int argc, char *argv[])
      mythpool = thpool_init(in.maxthreads);
      if (thpool_null(mythpool)) {
         fprintf(stderr, "thpool_init() failed!\n");
-        for(size_t i = 0; i < in.maxthreads; i++) {
-            closedb(intermediates[i]);
-        }
-        free(intermediates);
+        cleanup_intermediates(intermediates, in.maxthreads);
         closedb(aggregate);
         return -1;
      }
@@ -817,10 +818,7 @@ int main(int argc, char *argv[])
 #endif
 
          // cleanup the intermediate databases outside of the timing (no need to detach)
-         for(size_t i = 0; i < in.maxthreads; i++) {
-             sqlite3_close(intermediates[i]);
-         }
-         free(intermediates);
+         cleanup_intermediates(intermediates, in.maxthreads);
 
 #ifdef DEBUG
          struct timespec output_start;

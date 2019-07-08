@@ -172,7 +172,6 @@ int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * 
 // return 0 if there were no errors. Non-zero values results
 // the qwork not being pushed onto the queue.
 size_t descend(struct work *passmywork, DIR *dir,
-               const size_t max_level,
-               int (*callback)(struct work *, void *), void *args);
+               const size_t max_level);
 
 #endif

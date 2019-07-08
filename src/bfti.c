@@ -128,8 +128,7 @@ static void processdir(void * passv)
     }
 
     // push subdirectories into the queue
-    //descend(passmywork, dir, in.max_level,
-    //        NULL, NULL);
+    //descend(passmywork, dir, in.max_level);
 
     if ((db=opendb(passmywork->name,3,0))) {
        zeroit(&sumin);
@@ -137,7 +136,7 @@ static void processdir(void * passv)
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(passmywork, dir, in.max_level,NULL,NULL);
+         descend(passmywork, dir, in.max_level);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {
          querytsdb(passmywork->name,&sumin,db,&recs,1);

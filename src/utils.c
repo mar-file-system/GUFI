@@ -876,8 +876,7 @@ void cleanup(struct Trie *head) {
 
 // Push the subdirectories in the current directory onto the queue
 size_t descend(struct work *passmywork, DIR *dir,
-               const size_t max_level,
-               int (*callback)(struct work *, void *), void *args) {
+               const size_t max_level) {
     if (!passmywork || !dir) {
         return 0;
     }
@@ -909,10 +908,6 @@ size_t descend(struct work *passmywork, DIR *dir,
 
                     // this is how the parent gets passed on
                     qwork.pinode = passmywork->statuso.st_ino;
-
-                    if (callback && (callback(&qwork, args) != 0)) {
-                        continue;
-                    }
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     pushdir(&qwork);
