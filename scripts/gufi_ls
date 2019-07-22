@@ -99,12 +99,13 @@ def build_select(args):
         select += ['type', 'mode', 'nlink', 'uid']
         if not args.no_group:
             select += ['gid']
-        select += ['size', 'mtime', 'name', 'linkname']
+        select += ['size', 'mtime', ('(path() || "/" || name)' if args.recursive or (len(args.GUFI_tree) > 1) else 'name') + ' as fullpath', 'linkname']
     else:
         # at minimum, print the file name
-        select += ['name']
+        select += [('(path() || "/" ||  name)' if args.recursive or (len(args.GUFI_tree) > 1) else 'name') + ' as fullpath']
 
     return select
+
 
 def build_aggregate_select(args):
     '''Build the SELECT portion of the query on the aggregate data'''
@@ -122,25 +123,29 @@ def build_aggregate_select(args):
         select += ['printf("%03o", mode)', 'nlink', 'uid']
         if not args.no_group:
             select += ['gid']
-        select += ['size', 'strftime("%m %d %H:%M", mtime, "unixepoch")', 'case when (type == "l") then (name || " -> " || linkname) else name end']
+        select += ['size', 'strftime("%m %d %H:%M", mtime, "unixepoch")', 'case when (type == "l") then (fullpath' + ' || " -> " || linkname) else fullpath end']
     else:
         # at minimum, print the file name
-        select += ['name']
+        select += ['fullpath']
 
     return select
+
 
 def build_where(args):
     '''Build the WHERE portion of the query'''
     where = []
 
+    # everything
     if not args.all:
-        where += ['name REGEXP "^(?![\.]).*$"']
+        where += ['fullpath REGEXP "^(?![\.]).*$"']
 
-    if args.almost_all:
-        where += ['name REGEXP "(?!(\.|\.\.))"']
+    # ignore . and ..
+    elif args.almost_all:
+        where += ['fullpath REGEXP "(?!(\.|\.\.))"']
 
-    if args.ignore_backups == True:
-        where += ['name REGEXP "^.*(?<![\~])$"']
+    # ignore files that end with ~
+    elif args.ignore_backups == True:
+        where += ['fullpath REGEXP "^.*(?<![\~])$"']
 
     return where
 
@@ -149,7 +154,7 @@ def build_order_by(args):
     order_by = []
 
     if args.reverse:
-        order_by += ['name DESC']
+        order_by += ['fullpath DESC']
 
     if args.sort_largest:
         order_by += ['size DESC']
@@ -158,7 +163,7 @@ def build_order_by(args):
         order_by += ['mtime DESC']
 
     if len(order_by) == 0:
-        return ['name ASC']
+        return ['fullpath ASC']
 
     if args.no_sort:
         order_by = []
@@ -169,25 +174,25 @@ if __name__=='__main__':
     cwd = os.getcwd()
 
     parser = argparse.ArgumentParser(description='GUFI version of ls')
-    parser.add_argument('--version', '-v',                                        action='version',            version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('-a', '--all',                     dest='all',            action='store_true',         help='do not ignore entries starting with .')
-    parser.add_argument('-A', '--amost-all',               dest='almost_all',     action='store_true',         help='do not list implied . and ..')
-    parser.add_argument('-B', '--ignore-backups',          dest='ignore_backups', action='store_true',         help='do not list implied entries ending with ~')
-    parser.add_argument('-G', '--no-group',                dest='no_group',       action='store_true',         help='in a long listing, don\'t print group names')
-    parser.add_argument('-i', '--inode',                   dest='inode',          action='store_true',         help='print the index number of each file')
-    parser.add_argument('-l',                              dest='long_listing',   action='store_true',         help='use a long listing format')
-    parser.add_argument('-r', '--reverse',                 dest='reverse',        action='store_true',         help='reverse order while sorting')
-    parser.add_argument('-R', '--recursive',               dest='recursive',      action='store_true',         help='list subdirectories recursively')
-    parser.add_argument('-s', '--size',                    dest='size',           action='store_true',         help='print the allocated size of each file, in blocks')
-    parser.add_argument('-S',                              dest='sort_largest',   action='store_true',         help='sort by file size, largest first')
-    parser.add_argument('-t',                              dest='mtime',          action='store_true',         help='sort by modification time, newest first')
-    parser.add_argument('-U',                              dest='no_sort',        action='store_true',         help='do not sort; list entries in directory order')
+    parser.add_argument('--version', '-v',                                      action='version',           version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('-a', '--all',                   dest='all',            action='store_true',        help='do not ignore entries starting with .')
+    parser.add_argument('-A', '--amost-all',             dest='almost_all',     action='store_true',        help='do not list implied . and ..')
+    parser.add_argument('-B', '--ignore-backups',        dest='ignore_backups', action='store_true',        help='do not list implied entries ending with ~')
+    parser.add_argument('-G', '--no-group',              dest='no_group',       action='store_true',        help='in a long listing, don\'t print group names')
+    parser.add_argument('-i', '--inode',                 dest='inode',          action='store_true',        help='print the index number of each file')
+    parser.add_argument('-l',                            dest='long_listing',   action='store_true',        help='use a long listing format')
+    parser.add_argument('-r', '--reverse',               dest='reverse',        action='store_true',        help='reverse order while sorting')
+    parser.add_argument('-R', '--recursive',             dest='recursive',      action='store_true',        help='list subdirectories recursively')
+    parser.add_argument('-s', '--size',                  dest='size',           action='store_true',        help='print the allocated size of each file, in blocks')
+    parser.add_argument('-S',                            dest='sort_largest',   action='store_true',        help='sort by file size, largest first')
+    parser.add_argument('-t',                            dest='mtime',          action='store_true',        help='sort by modification time, newest first')
+    parser.add_argument('-U',                            dest='no_sort',        action='store_true',        help='do not sort; list entries in directory order')
 
     # GUFI specific arguments
-    parser.add_argument('--delim',            metavar='c', dest='delim',          type=qb.get_char,            help='delimiter separating output columns')
-    parser.add_argument('--num_results',      metavar='n', dest='num_results',    type=qb.get_non_negative,    help='first n results')
-    parser.add_argument('--bfq',                           dest='bfq',            default=BFQ_EXEC,            help='Location of bfq executable')
-    parser.add_argument('GUFI_tree',                                              default=[cwd], nargs='*',    help='path containing GUFI tree database file')
+    parser.add_argument('--delim',       metavar='c',    dest='delim',          type=qb.get_char,           help='delimiter separating output columns')
+    parser.add_argument('--num_results', metavar='n',    dest='num_results',    type=qb.get_non_negative,   help='first n results')
+    parser.add_argument('--bfq',                         dest='bfq',            default=BFQ_EXEC,           help='Location of bfq executable')
+    parser.add_argument('GUFI_tree',                                            default=[cwd], nargs='*',   help='path containing GUFI tree database file')
 
     args = parser.parse_args();
 
@@ -207,23 +212,19 @@ if __name__=='__main__':
                                    order_by,
                                    args.num_results)
 
-    rc = 0
-    for path in args.GUFI_tree:
-        # create the bfq command
-        bfq_cmd = [args.bfq,
-                   '-p', '-P',
-                   '-E', first_query,
-                   '-J', 'SELECT * FROM entries;',
-                   '-G', second_query,
-                   '-z', '-1' if args.recursive else '1']
+    # create the bfq command
+    bfq_cmd = [args.bfq,
+               '-p', '-P',
+               '-e', '0',
+               '-E', first_query,
+               '-J', 'SELECT * FROM entries;',
+               '-G', second_query,
+               '-z', '-1' if args.recursive else '1']
 
-        if args.delim:
-            bfq_cmd += ['-d', args.delim]
+    if args.delim:
+        bfq_cmd += ['-d', args.delim]
 
-        bfq = subprocess.Popen(bfq_cmd + [path])
-        bfq.communicate() # block until bfq finishes
+    bfq = subprocess.Popen(bfq_cmd + args.GUFI_tree)
+    bfq.communicate() # block until bfq finishes
 
-        if bfq.returncode != 0:
-            rc = bfq.returncode
-
-    sys.exit(rc)
+    sys.exit(bfq.returncode)
