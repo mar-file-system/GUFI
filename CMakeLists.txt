@@ -269,6 +269,9 @@ set(COMMON_LIBRARIES
   m
   dl)
 
+# build contrib executables
+add_subdirectory(contrib)
+
 # tell CMake to look at the src directory
 add_subdirectory(src)
 
@@ -302,7 +305,7 @@ set(PATHS
   src
   test)
 
-# Set the output nemae
+# Set the output name
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
 add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
@@ -331,8 +334,8 @@ add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory 
                                    COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
 
 add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" make DEBUG=1
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" make test
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make DEBUG=1
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make test
                              WORKING_DIRECTORY ${TARBALL_TEST_DIR}
                              DEPENDS gary make_tarball_dir)
 
