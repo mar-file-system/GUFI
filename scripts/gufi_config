@@ -1,0 +1,173 @@
+#!/usr/bin/env python2.7
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# -----
+# NOTE:
+# -----
+#
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+import argparse
+import imp
+import os
+
+# location of this file
+PATH = os.path.realpath(__file__)
+
+gufi_common = imp.load_source('gufi_common', os.path.join(os.path.dirname(os.path.dirname(PATH)), 'lib', 'GUFI', 'gufi_common.py'))
+
+# default configuration file location
+DEFAULT_CONFIG_PATH=os.path.expanduser('~/.gufi_config')
+
+# recognized settings
+CLIENT_SETTINGS = ['Server', 'Port', 'Paramiko', 'KnownHosts', 'HostKey']
+SERVER_SETTINGS = ['Threads', 'bfq', 'DefaultPath']
+
+def paths_to_string(paths, sep = ';'):
+    return sep.join([os.path.realpath(path) for path in paths])
+
+def string_to_paths(string, sep = ';'):
+    return string.split(sep)
+
+def dump_client(server, port, paramiko, known_hosts, hostkey):
+    return "Server={0}\nPort={1}\nParamiko={2}\nKnownHosts={3}\nHostKey={4}\n".format(server, port, os.path.realpath(paramiko), paths_to_string(string_to_paths(known_hosts)), hostkey)
+
+def dump_server(threads, bfq, default_path):
+    return 'Threads={0}\nbfq={1}\nDefaultPath={2}\n'.format(str(threads), os.path.realpath(bfq), os.path.realpath(default_path))
+
+def read(f):
+    out = {}
+    for line in f:
+        line.strip()
+        line = line[:-1]
+        if len(line) == 0:
+            continue
+
+        name, value = line.split('=', 1)
+        if name == 'Port':
+            value = gufi_common.get_port(value)
+        elif name == 'Threads':
+            value = gufi_common.get_positive(value)
+        elif name == 'Paths':
+            value = string_to_paths(value)
+        out[name] = value
+    return out
+
+def read_filename(filename):
+    return read(open(filename, 'r'))
+
+if __name__=='__main__':
+    # get location of this file
+    PATH = os.path.realpath(__file__)
+
+    # assumes both client and server were installed to directories with the same name on different machines
+    INSTALL_PREFIX = os.path.dirname(PATH)
+
+    # assumes paramiko was installed in the same directory as the executables
+    PARAMIKO = os.path.join(os.path.dirname(INSTALL_PREFIX), 'lib', 'GUFI', 'paramiko')
+
+    # default client SSH path
+    CLIENT_SSH_PATH='/etc/ssh'
+
+    parser = argparse.ArgumentParser(description='GUFI Config Dump')
+    parser.add_argument('--version', '-v', action='version', version=os.path.basename(PATH) + ' @GUFI_VERSION@')
+
+    action_subparser = parser.add_subparsers(dest='action')
+
+    # Read Config
+    read_parser = action_subparser.add_parser('read')
+    read_parser.add_argument('filename',        type=argparse.FileType('r'),                                                                  help='Configuration file name')
+
+    # Dump Config
+    dump_parser = action_subparser.add_parser('dump')
+
+    dump_subparser = dump_parser.add_subparsers(dest='mode')
+    client_parser = dump_subparser.add_parser('client')
+    server_parser = dump_subparser.add_parser('server')
+
+    # Client Settings
+    client_parser.add_argument('--port',        type=gufi_common.get_port,     default=22,                                                    help='Server Port')
+    client_parser.add_argument('--paramiko',    type=str,                      default=PARAMIKO,                                              help='Paramiko install location')
+    client_parser.add_argument('--known_hosts', type=str,                      default=os.path.join(CLIENT_SSH_PATH, 'ssh_known_hosts'),      help='ssh_known_hosts file to use')
+    client_parser.add_argument('--hostkey',     type=str,                      default=os.path.join(CLIENT_SSH_PATH, 'ssh_host_rsa_key.pub'), help='ssh_host_rsa_key.pub file to use')
+    client_parser.add_argument('server',        type=str,                                                                                     help='Server Name/IP')
+
+    # Server Settings
+    server_parser.add_argument('--threads',     type=gufi_common.get_positive, default=gufi_common.cpus(),                                    help='Number of threads')
+    server_parser.add_argument('--bfq',         type=str,                      default=os.path.join(INSTALL_PREFIX, 'bfq'),                   help='Location of bfq')
+    server_parser.add_argument('default_path',  type=str,                                                                                     help='Default GUFI tree path')
+
+    args = parser.parse_args()
+
+    if args.action == 'read':
+        print read(args.filename)
+    elif args.action == 'dump':
+        if args.mode == 'client':
+            print dump_client(args.server, args.port, args.paramiko, args.known_hosts, args.hostkey)
+        elif args.mode == 'server':
+            print dump_server(args.threads, args.bfq, args.default_path)

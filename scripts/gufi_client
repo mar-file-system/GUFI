@@ -74,62 +74,67 @@
 
 
 
-
-import argparse
 import getpass
+import imp
 import os
-import pwd
 import sys
 
-# get location of this file
-# assumes both client and server were installed to directories with the same name on different machines
-INSTALL_PREFIX = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+# location of this file
+PATH = os.path.realpath(__file__)
+DIR = os.path.dirname(PATH)
 
-# command line argument aliases of available tools
-# assumes that all of the tools are installed under the same directory
-# a prefix will be prepended onto the selected tool
-TOOLS  = {
-    'find'  : 'gufi_find',
-    'ls'    : 'gufi_ls',
-    'stats' : 'gufi_stats',
-}
+gufi_config = imp.load_source('gufi_config', os.path.join(DIR, 'gufi_config'))
 
-def parse_args(args = None):
+class Args:
+    def __init__(self):
+        self.config = gufi_config.DEFAULT_CONFIG_PATH
+        self.args = []
+
+def parse_args(cmd_args = sys.argv):
     '''
-    Create an argument parser and return the parsed arguments
+    Manually parse arguments
     '''
 
-    def get_username(username):
-        return pwd.getpwnam(username).pw_name
+    if len(cmd_args) == 0:
+        sys.stderr.write('Bad command line arguments\n')
+        sys.exit(1)
 
-    def get_port(port):
-        if type(port) != int:
-            port = int(port)
+    tool = os.path.basename(cmd_args[0])
 
-        if (0 < port) and (port < 65536):
-            return port
+    args = Args()
 
-        raise argparse.ArgumentTypeError("Invalid Port: {}".format(port))
+    i = 1
+    while i < len(cmd_args):
+        if (cmd_args[i] == '--help') or (cmd_args[i] == '-h'):
+            print 'usage: ' + tool + ' [-h] [--version] [--config CONFIG] [args [args ...]]'
+            print
+            print tool
+            print
+            print 'positional arguments:'
+            print '  args                      arguments to ' + tool + ' to pass to the server'
+            print
+            print 'optional arguments:'
+            print '  -h, --help                show this help message and exit'
+            print '  --version                 show program\'s version number and exit'
+            print '  --config CONFIG           Configuration file name'
+            sys.exit(0)
+        elif cmd_args[i] == '--version':
+            print tool + ' @GUFI_VERSION@'
+            sys.exit(0)
+        elif cmd_args[i] == '--config':
+            i += 1
+            args.config = cmd_args[i]
+        elif cmd_args[i] == '--':
+            i += 1
+            break
+        else:
+            args.args += [cmd_args[i]]
+        i += 1
 
-    parser = argparse.ArgumentParser(description='gufi_client')
-    parser.add_argument('--version', '-v',                      action='version',  version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--username',      dest='username',     type=get_username, default=getpass.getuser(),                             help='Username (not UID)')
-    parser.add_argument('-p', '--port',    dest='port',         type=get_port,     default=22,                                            help='SSH port')
-    parser.add_argument('--known_hosts',   dest='known_hosts',  type=str,          default=['/etc/ssh/ssh_known_hosts'], action='append', help='File containing hosts known to the system')
-    parser.add_argument('--hostkey',       dest='hostkey',      type=str,          default='/etc/ssh/ssh_host_rsa_key.pub',               help='Public key of host')
-    parser.add_argument('--paramiko',      dest='paramiko',     type=str,          default=os.path.join(INSTALL_PREFIX, 'paramiko'),      help='Location of paramiko on client machine')
-    parser.add_argument('--gufi_bin',      dest='gufi_bin',     type=str,          default=os.path.join(INSTALL_PREFIX, 'bin'),           help='GUFI binaries directory on server')
-    parser.add_argument('hostname',                             type=str,                                                                 help='GUFI server hostname')
-    parser.add_argument('gufi_tree',                            type=str,                                                                 help='GUFI tree path')
-    parser.add_argument('tool',                                 type=str,          choices=TOOLS.keys(),                                  help='GUFI tool to use')
-    parser.add_argument('args',                                 nargs='*',         default=[],                                            help='Arguments to pass to the GUFI tool')
+    args.args += cmd_args[i:]
+    return args
 
-    if args is None:
-        args = sys.argv[1:]
-
-    return parser.parse_args(args)
-
-def contact_server(args):
+def talk_to_server(args):
     '''
     Given a set of arguments, attempt to connect to a remote host and run the command
     '''
@@ -137,19 +142,19 @@ def contact_server(args):
         ssh = paramiko.client.SSHClient()
 
         # load known server host keys
-        for known_hosts in args.known_hosts:
-            ssh.load_system_host_keys(os.path.expanduser(known_hosts))
+        ssh.load_system_host_keys(os.path.expanduser(args.known_hosts))
 
         # connect to the server
         ssh.connect(hostname=args.hostname,
                     port=args.port,
-                    username=args.username,
+                    username=getpass.getuser(),
                     hostkey=paramiko.opensshkey.load_pubkey_from_file(args.hostkey))
 
         # run the command
-        cmd = os.path.join(args.gufi_bin, TOOLS[args.tool]) + ' ' + ' '.join(['"' + arg + '"' for arg in args.args]) + ' --bfq ' + os.path.join(args.gufi_bin, 'bfq')
+        # assumes that gufi_@TOOL@ can be found in PATH
+        cmd = os.path.join('gufi_@TOOL@ ' + ' '.join(['"' + arg + '"' for arg in args.args]))
 
-        _, stdout, stderr = ssh.exec_command(cmd + ' ' + args.gufi_tree)
+        _, stdout, stderr = ssh.exec_command(cmd)
 
         try:
             sys.stdout.write(stdout.read())
@@ -160,10 +165,15 @@ def contact_server(args):
         ssh.close()
 
 if __name__  == '__main__':
-    args = parse_args()
+    args = parse_args(sys.argv)
+    config = gufi_config.read_filename(args.config)
+    args.hostname = config['Server']
+    args.port = config['Port']
+    args.known_hosts = config['KnownHosts']
+    args.hostkey = config['HostKey']
 
     # import paramiko from provided path
-    sys.path.append(args.paramiko)
+    sys.path.append(config['Paramiko'])
     import paramiko
 
-    contact_server(args)
+    talk_to_server(args)

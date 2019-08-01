@@ -113,6 +113,13 @@ def get_size(value):
         raise argparse.ArgumentTypeError("%s is not a valid size" % value)
     return value
 
+def get_port(port):
+    '''Make sure the value is an integer between 0 and 65536'''
+    p = int(port)
+    if (p < 0) or (65535 < p):
+        raise argparse.ArgumentTypeError("Bad port: %d" % p)
+    return p
+
 def get_uid(uid_str):
     '''
     Attempts to convert a string into an integer

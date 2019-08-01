@@ -75,20 +75,37 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# list of scripts that act as tools
-set(TOOLS gufi_find gufi_stats gufi_ls query_builder.py)
-
+# list this first so that make install will overwrite these files
 if (PARAMIKO)
   # add the paramiko source for installing
   # keep the trailing / to rename the directory
-  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION paramiko COMPONENT Client)
+  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION lib/GUFI/paramiko COMPONENT Client)
 
-  # copy gufi_client into the build directory for easy access
-  configure_file(gufi_client gufi_client @ONLY)
+  # copy the configuration handling script into both the Server and Client RPMs
+  configure_file(gufi_config gufi_config @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Server)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Client)
 
-  # install gufi_client separately
-  install(PROGRAMS gufi_client DESTINATION bin COMPONENT Client)
+  # common.py is also needed by the client
+  configure_file(gufi_common.py common.py @ONLY)
+  install(FILES gufi_common.py DESTINATION lib/GUFI COMPONENT Client)
+
+  # create individual client scripts
+  set(TOOL find)
+  configure_file(gufi_client gufi_client_find @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_find  RENAME gufi_find  DESTINATION bin COMPONENT Client)
+
+  set(TOOL ls)
+  configure_file(gufi_client gufi_client_ls @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_ls    RENAME gufi_ls    DESTINATION bin COMPONENT Client)
+
+  set(TOOL stats)
+  configure_file(gufi_client gufi_client_stats @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stats RENAME gufi_stats DESTINATION bin COMPONENT Client)
 endif()
+
+# list of scripts that act as tools on the server
+set(TOOLS gufi_find gufi_stats gufi_ls)
 
 # copy and install scripts that act like binaries
 foreach(TOOL ${TOOLS})
@@ -98,3 +115,7 @@ foreach(TOOL ${TOOLS})
   # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
   install(PROGRAMS ${TOOL} DESTINATION bin COMPONENT Server)
 endforeach()
+
+# common.py is not an executable
+configure_file(gufi_common.py common.py @ONLY)
+install(FILES gufi_common.py DESTINATION lib/GUFI COMPONENT Server)
