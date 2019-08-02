@@ -106,7 +106,7 @@ if (CMAKE_CXX_COMPILER)
   add_executable(verifytrace verifytrace.cpp)
 
   add_executable(verifytreeintrace verifytreeintrace.cpp)
-  target_link_libraries(verifytreeintrace sqlite3 Threads::Threads)
+  target_link_libraries(verifytreeintrace ${COMMON_LIBRARIES})
   add_dependencies(verifytreeintrace install_dependencies)
 endif()
 
