@@ -582,10 +582,10 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_free(zxattr);
     sqlite3_free(zosstext1);
     sqlite3_free(zosstext2);
-    if (error != SQLITE_ROW) {
-          //fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db));
+    /* if (error != SQLITE_ROW)  { */
+          /* fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db)); */
           //return 0;
-    }
+    /* } */
     /* sqlite3_clear_bindings(res); */
     sqlite3_reset(res);
 

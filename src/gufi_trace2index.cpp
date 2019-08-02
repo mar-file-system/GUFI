@@ -13,27 +13,6 @@
 #include <vector>
 #include <unistd.h>
 
-// OSX's sendfile is slightly different
-#ifdef __APPLE__
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-
-static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) {
-    off_t len = size;
-    return sendfile(src_fd, dst_fd, offset, &len, NULL, 0);
-}
-
-#else
-
-#include <sys/sendfile.h>
-
-static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) {
-    return sendfile(dst_fd, src_fd, &offset, size);
-}
-#endif
-
 // #ifdef DEBUG
 // #undef DEBUG
 // #endif
@@ -51,8 +30,10 @@ extern "C" {
 #include "bf.h"
 #include "utils.h"
 #include "dbutils.h"
-
+#include "template_db.h"
 }
+
+#include <ThreadWork.hpp>
 
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH
 
@@ -84,22 +65,7 @@ void delete_row(Row & row) {
     delete row;
 }
 
-// basically thread args
-struct ThreadWork {
-    ThreadWork()
-        : id(0),
-          queue(),
-          mutex(),
-          cv()
-    {}
-
-    int id;
-    std::list <Row> queue;
-    std::mutex mutex;
-    std::condition_variable cv;
-};
-
-typedef std::pair <ThreadWork, std::thread> WorkPair;
+typedef std::pair <ThreadWork <Row>, std::thread> WorkPair;
 typedef std::vector <WorkPair> State;
 
 int duping(0);
@@ -235,39 +201,13 @@ void scout_function(std::atomic_bool & scouting, const char * filename, State & 
     return;
 }
 
-// copy the template file instead of creating a new database and new tables for each work item
-// the ownership and permissions are set too
-int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid) {
-    incr(copying);
-
-    // ignore errors here
-    const int src_db = dup(src_fd);
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-    const ssize_t sf = gufi_sendfile(src_db, dst_db, 0, size);
-    fchmod(dst_db, S_IRWXU | S_IRWXG | S_IRWXO);
-    fchown(dst_db, uid, gid);
-    close(src_db);
-    close(dst_db);
-
-    if (sf == -1) {
-        fprintf(stderr, "Could not copy template file to %s\n", dst);
-        return -1;
-    }
-
-    decr(copying);
-    return 0;
-}
-
 sqlite3 * opendb(const char *name)
 {
-    char dbn[MAXPATH];
-    snprintf(dbn, MAXSQL, "%s", name);
-
     incr(opening);
     sqlite3 * db = NULL;
     // no need to create because the file should already exist
-    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
         decr(opening);
         return NULL;
     }
@@ -452,7 +392,7 @@ bool processdir(Row & w, std::ifstream & trace) {
 }
 
 // consumer of work
-std::size_t worker_function(std::atomic_bool & scouting, ThreadWork & tw) {
+std::size_t worker_function(std::atomic_bool & scouting, ThreadWork <Row> & tw) {
     std::ifstream trace(in.name, std::ios::binary);
     if (!trace) {
         std::cerr << "Could not open " << in.name << ". Thread not running." << std::endl;
@@ -538,30 +478,6 @@ void processfin(std::thread & scout, State & state, const bool spawned_threads) 
     }
 }
 
-// create the initial database file to copy from
-off_t create_template(int & fd) {
-    static const char name[] = "tmp.db";
-
-    sqlite3 * db = nullptr;
-    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
-        fprintf(stderr, "Cannot create template database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
-        return -1;
-    }
-
-    create_tables(name, 4, db);
-    closedb(db);
-
-    if ((fd = open(name, O_RDONLY)) == -1) {
-        fprintf(stderr, "Could not open template file\n");
-        return -1;
-    }
-
-    // no need for the file to remain on the filesystem
-    remove(name);
-
-    return lseek(fd, 0, SEEK_END);
-}
-
 // This app allows users to do any of the following: (a) just walk the
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
@@ -569,15 +485,6 @@ int validate_inputs() {
    char expathin[MAXPATH];
    char expathout[MAXPATH];
    char expathtst[MAXPATH];
-
-   if (in.buildindex && !in.nameto[0]) {
-      fprintf(stderr, "Building an index '-b' requires a destination dir '-t'.\n");
-      return -1;
-   }
-   if (in.nameto[0] && ! in.buildindex) {
-      fprintf(stderr, "Destination dir '-t' found.  Assuming implicit '-b'.\n");
-      in.buildindex = 1;        // you're welcome
-   }
 
    SNPRINTF(expathtst,MAXPATH,"%s/%s",in.nameto,in.name);
    realpath(expathtst,expathout);
@@ -607,7 +514,7 @@ void sub_help() {
 int main(int argc, char * argv[]) {
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-    int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbo:t:Du", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHpn:d:t:", 1, "input_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -628,7 +535,7 @@ int main(int argc, char * argv[]) {
     std::atomic_bool scouting;
     std::thread scout;
 
-    if ((templatesize = create_template(templatefd)) == (off_t) -1) {
+    if ((templatesize = create_template(&templatefd)) == (off_t) -1) {
         std::cerr << "Could not create template file" << std::endl;
         return -1;
     }

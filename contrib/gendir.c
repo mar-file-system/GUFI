@@ -1,7 +1,7 @@
 /*
-This code generates trees in a well defined manner. Starting at the
-provided root directory, the provided fixed number directories and
-files are generated at every directory. At the bottom level, the
+This code generates directories in a well defined manner. Starting
+at the root directory, the provided fixed number subdirectories
+and files are generated at every directory. At the bottom level, the
 subdirectories are empty.
 
 Each directory has the name d.<number>, where number is in [0, # of directories - 1].

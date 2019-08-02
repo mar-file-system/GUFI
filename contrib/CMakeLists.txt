@@ -76,7 +76,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 
 # build the source tree generator
-add_executable(gentree gentree.c)
+add_executable(gendir gendir.c)
 
 # create make benchmark
 #    clean up old benchmark directory and create a new one
@@ -91,12 +91,12 @@ set(BENCHMARK_TREE "${BENCHMARK_DIR}/tree")
 set(BENCHMARK_GUFI_TREE "${BENCHMARK_DIR}/gufi_tree")
 add_custom_target(benchmark_init COMMAND ${CMAKE_COMMAND} -E remove_directory ${BENCHMARK_DIR}
                                  COMMAND ${CMAKE_COMMAND} -E make_directory ${BENCHMARK_DIR})
-add_custom_target(benchmark_gen COMMAND time ./gentree ${BENCHMARK_TREE} 4 6 10
-                  DEPENDS benchmark_init gentree)
-add_custom_target(benchmark_index COMMAND time ${CMAKE_BINARY_DIR}/src/bfwi -n ${N} -d x -t ${BENCHMARK_GUFI_TREE} ${BENCHMARK_TREE}
-                  DEPENDS benchmark_gen bfwi)
+add_custom_target(benchmark_generate_dir COMMAND time ./gendir ${BENCHMARK_TREE} 5 5 5 #4 6 10
+                  DEPENDS benchmark_init gendir)
+add_custom_target(benchmark_dir2index COMMAND time ${CMAKE_BINARY_DIR}/src/gufi_dir2index -n ${N} -d x -t ${BENCHMARK_GUFI_TREE} ${BENCHMARK_TREE}
+                  DEPENDS benchmark_generate_dir gufi_dir2index)
 add_custom_target(benchmark_query COMMAND time ${CMAKE_BINARY_DIR}/scripts/gufi_find --bfq ${CMAKE_BINARY_DIR}/src/bfq ${BENCHMARK_GUFI_TREE} > /dev/null
-                  DEPENDS benchmark_index bfq ${CMAKE_BINARY_DIR}/scripts/gufi_find)
+                  DEPENDS benchmark_dir2index bfq ${CMAKE_BINARY_DIR}/scripts/gufi_find)
 add_custom_target(benchmark_fin COMMAND ${CMAKE_COMMAND} -E remove_directory ${BENCHMARK_DIR}
                   DEPENDS benchmark_query)
 add_custom_target(benchmark DEPENDS benchmark_fin)
