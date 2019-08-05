@@ -127,43 +127,6 @@ bool processdir(struct work & work, State & state, std::atomic_size_t & queued, 
         return false;
     }
 
-    // create the directory
-    char topath[MAXPATH];
-    SNPRINTF(topath, MAXPATH, "%s/%s", in.nameto, work.name);
-    int rc = mkdir(topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // don't need recursion because parent is guaranteed to exist
-    if (rc < 0) {
-        const int err = errno;
-        if (err != EEXIST) {
-            fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
-            processdir_cleanup(dir, queued, state);
-            return false;
-        }
-    }
-
-    // create the database name
-    char dbname[MAXPATH];
-    SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, topath);
-
-    // copy the template file
-    if (copy_template(templatefd, dbname, templatesize, dir_st.st_uid, dir_st.st_gid)) {
-        processdir_cleanup(dir, queued, state);
-        return false;
-    }
-
-    sqlite3 * db = opendb(dbname);
-    if (!db) {
-        processdir_cleanup(dir, queued, state);
-        return false;
-    }
-
-    // prepare to insert into the database
-    struct sum summary;
-    zeroit(&summary);
-
-    sqlite3_stmt * res = insertdbprep(db, NULL);
-
-    startdb(db);
-
     struct dirent * entry = nullptr;
     std::size_t rows = 0;
     while ((entry = readdir(dir))) {
@@ -219,22 +182,30 @@ bool processdir(struct work & work, State & state, std::atomic_size_t & queued, 
         total_files++;
         #endif
 
-        // update summary table
-        sumit(&summary, &e);
+        // print to stdout, to be redirected by caller
+        // this should probably be changed to write to a per thread database/file to avoid locking
+        static std::mutex print_mutex;
+        std::lock_guard <std::mutex> lock(print_mutex);
 
-        // add entry into bulk insert
-        insertdbgo(&e, db, res);
+        fprintf(stdout, "%s%c", e.name, in.delim[0]);
+        fprintf(stdout, "%c%c", e.type[0], in.delim[0]);
+        fprintf(stdout, "%" STAT_ino "%c", e.statuso.st_ino, in.delim[0]);
+        fprintf(stdout, "%d%c", e.statuso.st_mode, in.delim[0]);
+        fprintf(stdout, "%" STAT_nlink"%c", e.statuso.st_nlink, in.delim[0]);
+        fprintf(stdout, "%d%c", e.statuso.st_uid, in.delim[0]);
+        fprintf(stdout, "%d%c", e.statuso.st_gid, in.delim[0]);
+        fprintf(stdout, "%" STAT_size "%c", e.statuso.st_size, in.delim[0]);
+        fprintf(stdout, "%" STAT_bsize "%c", e.statuso.st_blksize, in.delim[0]);
+        fprintf(stdout, "%" STAT_blocks "%c", e.statuso.st_blocks, in.delim[0]);
+        fprintf(stdout, "%d%c", e.statuso.st_atime, in.delim[0]);
+        fprintf(stdout, "%d%c", e.statuso.st_mtime, in.delim[0]);
+        fprintf(stdout, "%d%c", e.statuso.st_ctime, in.delim[0]);
+        fprintf(stdout, "%s%c", e.linkname, in.delim[0]);
+        fprintf(stdout, "%s%c", e.xattr, in.delim[0]);
+        fprintf(stdout, "%d%c", e.crtime, in.delim[0]);
+        fprintf(stdout, "%lld%c", e.pinode, in.delim[0]);
+        fprintf(stdout, "\n");
     }
-
-    stopdb(db);
-    insertdbfin(db, res);
-    insertsumdb(db, &work, &summary);
-    closedb(db);
-    db = NULL;
-
-    // ignore errors
-    chmod(work.name, work.statuso.st_mode);
-    chown(work.name, work.statuso.st_uid, work.statuso.st_gid);
 
     processdir_cleanup(dir, queued, state);
 
@@ -245,26 +216,6 @@ bool processdir(struct work & work, State & state, std::atomic_size_t & queued, 
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
 int validate_inputs() {
-   char expathin[MAXPATH];
-   char expathout[MAXPATH];
-   char expathtst[MAXPATH];
-
-   SNPRINTF(expathtst,MAXPATH,"%s/%s",in.nameto,in.name);
-   realpath(expathtst,expathout);
-   //printf("expathtst: %s expathout %s\n",expathtst,expathout);
-   realpath(in.name,expathin);
-   //printf("in.name: %s expathin %s\n",in.name,expathin);
-   if (!strcmp(expathin,expathout)) {
-     fprintf(stderr,"You are putting the index dbs in input directory\n");
-     in.buildinindir = 1;
-   }
-
-   // not errors, but you might want to know ...
-   if (!in.nameto[0]) {
-      fprintf(stderr, "No GUFI-tree specified (-t).\n");
-      return -1;
-   }
-
    struct stat src_st;
    if (lstat(in.name, &src_st) < 0) {
       fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
@@ -276,29 +227,17 @@ int validate_inputs() {
      return -1;
    }
 
-   // check if the destination path already exists (not an error)
-   struct stat dst_st;
-   if (lstat(in.nameto, &dst_st) == 0) {
-      fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
-
-      // if the destination path is not a directory, error
-      if (!S_ISDIR(dst_st.st_mode)) {
-          fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
-          return -1;
-      }
-   }
-
    return 0;
 }
 
 void sub_help() {
-   printf("input_dir         walk this tree to produce GUFI-tree\n");
+   printf("input_dir         walk this tree to produce trace file\n");
    // printf("GUFI_dir          build GUFI index here (if -b)\n");
    printf("\n");
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHpn:d:t:", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHpn:d:", 1, "input_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -307,7 +246,6 @@ int main(int argc, char * argv[]) {
         // parse positional args, following the options
         int retval = 0;
         INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
-        // INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "to_dir");
 
         if (retval)
             return retval;
@@ -315,29 +253,9 @@ int main(int argc, char * argv[]) {
     if (validate_inputs())
         return -1;
 
-    char root[MAXPATH];
-    SNPRINTF(root, MAXPATH, "%s/%s", in.nameto, in.name);
-
     struct stat st;
     if (lstat(in.name, &st) < 0) {
         fprintf(stderr, "Could not stat directory \"%s\"\n", in.name);
-        return -1;
-    }
-
-    #if BENCHMARK
-    fprintf(stderr, "Creating GUFI Index %s in %s\n", in.name, in.nameto);
-    #endif
-
-    // create the source root under the destination directory using
-    // the source directory's permissions and owners
-    // this allows for the threads to not have to recursively create directories
-    if (dupdir(root, &st)) {
-        fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
-        return -1;
-    }
-
-    if ((templatesize = create_template(&templatefd)) == (off_t) -1) {
-        fprintf(stderr, "Could not create template file\n");
         return -1;
     }
 
@@ -358,11 +276,6 @@ int main(int argc, char * argv[]) {
                                             #endif
                                             );
     processfin(state, spawned_threads);
-
-    close(templatefd);
-
-    // set top level permissions
-    chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     #if BENCHMARK
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();

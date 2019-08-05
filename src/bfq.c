@@ -103,7 +103,7 @@ extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
-#ifdef DEBUG
+#if defined(DEBUG) || BENCHMARK
 
 /* #ifndef THREAD_STATS */
 /* #define THREAD_STATS */
@@ -116,7 +116,9 @@ long double elapsed(const struct timespec *start, const struct timespec *end) {
     const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
     return e - s;
 }
+#endif
 
+#ifdef DEBUG
 long double total_opendir_time = 0;
 long double total_open_time = 0;
 long double total_create_tables_time = 0;
@@ -665,188 +667,218 @@ static void cleanup_intermediates(sqlite3 **intermediates, const size_t count) {
 
 int main(int argc, char *argv[])
 {
-     // process input args - all programs share the common 'struct input',
-     // but allow different fields to be filled at the command-line.
-     // Callers provide the options-string for get_opt(), which will
-     // control which options are parsed for each program.
+    #if BENCHMARK
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    #endif
+
+    // process input args - all programs share the common 'struct input',
+    // but allow different fields to be filled at the command-line.
+    // Callers provide the options-string for get_opt(), which will
+    // control which options are parsed for each program.
     int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:G:J:e:m:", 1, "GUFI_tree ...", &in);
-     if (in.helped)
+    if (in.helped)
         sub_help();
-     if (idx < 0)
+    if (idx < 0)
         return -1;
 
-     const int rc = sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);
-     if (rc != SQLITE_OK) {
-         fprintf(stderr, "sqlite3_config error: %d\n", rc);
-         return -1;
-     }
+    const int rc = sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "sqlite3_config error: %d\n", rc);
+        return -1;
+    }
 
-     sqlite3 *aggregate = NULL;
-     sqlite3 **intermediates = NULL;
-     char aggregate_name[MAXSQL] = {};
-     if (in.aggregate_or_print == AGGREGATE) {
-         // modify in.sqlent to insert the results into the aggregate table
-         char orig_sqlent[MAXSQL];
-         SNPRINTF(orig_sqlent, MAXSQL, "%s", in.sqlent);
-         SNPRINTF(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
+    #if BENCHMARK
+    fprintf(stderr, "Querying GUFI Index");
+    for(int i = idx; i < argc; i++) {
+        fprintf(stderr, " %s\n", argv[i]);
+    }
+    #endif
 
-         // create the aggregate database
-         SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
-         if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
-             return -1;
-         }
+    sqlite3 *aggregate = NULL;
+    sqlite3 **intermediates = NULL;
+    char aggregate_name[MAXSQL] = {};
+    if (in.aggregate_or_print == AGGREGATE) {
+        // modify in.sqlent to insert the results into the aggregate table
+        char orig_sqlent[MAXSQL];
+        SNPRINTF(orig_sqlent, MAXSQL, "%s", in.sqlent);
+        SNPRINTF(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
 
-         intermediates = malloc(sizeof(sqlite3 *) * in.maxthreads);
-         for(size_t i = 0; i < in.maxthreads; i++) {
-             char intermediate_name[MAXSQL];
-             SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
-             if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
-                 fprintf(stderr, "Could not open %s\n", intermediate_name);
-                 cleanup_intermediates(intermediates, i);
-                 closedb(aggregate);
-                 return -1;
-             }
-         }
-     }
+        // create the aggregate database
+        SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
+        if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
+            return -1;
+        }
 
-     // start threads and loop watching threads needing work and queue size
-     // - this always stays in main right here
-     mythpool = thpool_init(in.maxthreads);
-     if (thpool_null(mythpool)) {
+        intermediates = malloc(sizeof(sqlite3 *) * in.maxthreads);
+        for(size_t i = 0; i < in.maxthreads; i++) {
+            char intermediate_name[MAXSQL];
+            SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
+            if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
+                fprintf(stderr, "Could not open %s\n", intermediate_name);
+                cleanup_intermediates(intermediates, i);
+                closedb(aggregate);
+                return -1;
+            }
+        }
+    }
+
+    // start threads and loop watching threads needing work and queue size
+    // - this always stays in main right here
+    mythpool = thpool_init(in.maxthreads);
+    if (thpool_null(mythpool)) {
         fprintf(stderr, "thpool_init() failed!\n");
         cleanup_intermediates(intermediates, in.maxthreads);
         closedb(aggregate);
         return -1;
-     }
+    }
 
-#ifdef DEBUG
-     struct timespec intermediate_start;
-     clock_gettime(CLOCK_MONOTONIC, &intermediate_start);
-#endif
+    long double total_time = 0;
 
-     long double acquire_mutex_time = 0;
-     long double work_time = 0;
+    #if defined(DEBUG) || BENCHMARK
+    struct timespec intermediate_start;
+    clock_gettime(CLOCK_MONOTONIC, &intermediate_start);
+    #endif
 
-     // process initialization, this is work done once the threads are up
-     // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are stating the directory passed in and
-     // putting that directory on the queue
-     processinit(&argv[idx], argc - idx);
+    long double acquire_mutex_time = 0;
+    long double work_time = 0;
 
-     // processdirs - if done properly, this routine is common and does not
-     // have to be done per instance of a bf program loops through and
-     // processes all directories that enter the queue by farming the work
-     // out to the threadpool
-     const int thread_count = processdirs2(processdir, &acquire_mutex_time, &work_time);
+    // process initialization, this is work done once the threads are up
+    // but not busy yet - this will be different for each instance of a bf
+    // program in this case we are stating the directory passed in and
+    // putting that directory on the queue
+    processinit(&argv[idx], argc - idx);
 
-     // processfin - this is work done after the threads are done working
-     // before they are taken down - this will be different for each
-     // instance of a bf program
-     processfin();
+    // processdirs - if done properly, this routine is common and does not
+    // have to be done per instance of a bf program loops through and
+    // processes all directories that enter the queue by farming the work
+    // out to the threadpool
+    const int thread_count = processdirs2(processdir, &acquire_mutex_time, &work_time);
 
-     // wait for all threads to stop before processing the aggregate data
-     thpool_wait(mythpool);
+    // processfin - this is work done after the threads are done working
+    // before they are taken down - this will be different for each
+    // instance of a bf program
+    processfin();
 
-#ifdef DEBUG
-     struct timespec intermediate_end;
-     clock_gettime(CLOCK_MONOTONIC, &intermediate_end);
+    // wait for all threads to stop before processing the aggregate data
+    thpool_wait(mythpool);
 
-     fprintf(stderr, "Time to acquire queue lock for popping work:    %.2Lf\n", acquire_mutex_time);
-     fprintf(stderr, "Time to do processdir work:                     %.2Lf\n", work_time);
+    #if defined(DEBUG) || BENCHMARK
+    struct timespec intermediate_end;
+    clock_gettime(CLOCK_MONOTONIC, &intermediate_end);
+    total_time += elapsed(&intermediate_start, &intermediate_end);
+    #endif
 
-     if (in.aggregate_or_print == PRINT) {
-         const long double main_time = elapsed(&intermediate_start, &intermediate_end);
-         fprintf(stderr, "Time to do main work:                           %.2Lfs\n", main_time);
-         fprintf(stderr, "Time to open directories:                       %.2Lfs\n", total_opendir_time);
-         fprintf(stderr, "Time to open databases:                         %.2Lfs\n", total_open_time);
-         fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
-         fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
-         fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
-         fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
-         fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
-         fprintf(stderr, "Time to sqlite3_exec (query and print)          %.2Lfs\n", total_exec_time);
-         fprintf(stderr, "Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
-         fprintf(stderr, "Time to close databases:                        %.2Lfs\n", total_close_time);
-         fprintf(stderr, "Time to close directories:                      %.2Lfs\n", total_closedir_time);
-         fprintf(stderr, "Queries performed:                              %d\n",     thread_count);
-         fprintf(stderr, "Real time:                                      %.2Lfs\n", main_time);
-     }
-#endif
+    #ifdef DEBUG
+    fprintf(stderr, "Time to acquire queue lock for popping work:    %.2Lf\n", acquire_mutex_time);
+    fprintf(stderr, "Time to do processdir work:                     %.2Lf\n", work_time);
 
-     thpool_destroy(mythpool);
+    if (in.aggregate_or_print == PRINT) {
+        const long double main_time = elapsed(&intermediate_start, &intermediate_end);
+        fprintf(stderr, "Time to do main work:                           %.2Lfs\n", main_time);
+        fprintf(stderr, "Time to open directories:                       %.2Lfs\n", total_opendir_time);
+        fprintf(stderr, "Time to open databases:                         %.2Lfs\n", total_open_time);
+        fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
+        fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
+        fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
+        fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
+        fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
+        fprintf(stderr, "Time to sqlite3_exec (query and print)          %.2Lfs\n", total_exec_time);
+        fprintf(stderr, "Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
+        fprintf(stderr, "Time to close databases:                        %.2Lfs\n", total_close_time);
+        fprintf(stderr, "Time to close directories:                      %.2Lfs\n", total_closedir_time);
+        fprintf(stderr, "Queries performed:                              %d\n",     thread_count);
+        fprintf(stderr, "Real time:                                      %.2Lfs\n", main_time);
+    }
+    #endif
 
-     if (in.aggregate_or_print == AGGREGATE) {
-         // prepend the intermediate database query with "INSERT INTO" to move
-         // the data from the databases into the final aggregation database
-         char intermediate[MAXSQL];
-         sqlite3_snprintf(MAXSQL, intermediate, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, in.intermediate);
+    thpool_destroy(mythpool);
 
-#ifdef DEBUG
-         struct timespec aggregate_start;
-         clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
-#endif
+    if (in.aggregate_or_print == AGGREGATE) {
+        // prepend the intermediate database query with "INSERT INTO" to move
+        // the data from the databases into the final aggregation database
+        char intermediate[MAXSQL];
+        sqlite3_snprintf(MAXSQL, intermediate, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, in.intermediate);
 
-         // aggregate the intermediate results
-         for(size_t i = 0; i < in.maxthreads; i++) {
-             if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
-                 (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
-                 printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
-             }
+        #if defined(DEBUG) || BENCHMARK
+        struct timespec aggregate_start;
+        clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
+        #endif
+
+        // aggregate the intermediate results
+        for(size_t i = 0; i < in.maxthreads; i++) {
+            if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
+                (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
+                printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
+            }
          }
 
-#ifdef DEBUG
-         struct timespec aggregate_end;
-         clock_gettime(CLOCK_MONOTONIC, &aggregate_end);
-#endif
+        #if defined(DEBUG) || BENCHMARK
+        struct timespec aggregate_end;
+        clock_gettime(CLOCK_MONOTONIC, &aggregate_end);
+        total_time += elapsed(&aggregate_start, &aggregate_end);
+        #endif
 
-         // cleanup the intermediate databases outside of the timing (no need to detach)
-         cleanup_intermediates(intermediates, in.maxthreads);
+        // cleanup the intermediate databases outside of the timing (no need to detach)
+        cleanup_intermediates(intermediates, in.maxthreads);
 
-#ifdef DEBUG
-         struct timespec output_start;
-         clock_gettime(CLOCK_MONOTONIC, &output_start);
-#endif
+        #if defined(DEBUG) || BENCHMARK
+        struct timespec output_start;
+        clock_gettime(CLOCK_MONOTONIC, &output_start);
+        #endif
 
-         // run the aggregate query on the aggregated results
-         size_t rows = 0;
-         sqlite3_stmt *res = NULL;
-         if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
-             rows = print_results(res, stdout, 1, 0, in.printing, in.delim);
-         }
-         else {
-             fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
-         }
-         sqlite3_finalize(res);
+        // run the aggregate query on the aggregated results
+        size_t rows = 0;
+        sqlite3_stmt *res = NULL;
+        if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
+            rows = print_results(res, stdout, 1, 0, in.printing, in.delim);
+        }
+        else {
+            fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
+        }
+        sqlite3_finalize(res);
 
-#ifdef DEBUG
-         struct timespec output_end;
-         clock_gettime(CLOCK_MONOTONIC, &output_end);
+        #if defined(DEBUG) || BENCHMARK
+        struct timespec output_end;
+        clock_gettime(CLOCK_MONOTONIC, &output_end);
+        total_time += elapsed(&output_start, &output_end);
+        #endif
 
-         const long double intermediate_time = elapsed(&intermediate_start, &intermediate_end);
-         const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
-         const long double output_time = elapsed(&output_start, &output_end);
+        #ifdef DEBUG
+        const long double intermediate_time = elapsed(&intermediate_start, &intermediate_end);
+        const long double aggregate_time = elapsed(&aggregate_start, &aggregate_end);
+        const long double output_time = elapsed(&output_start, &output_end);
 
-         fprintf(stderr, "Time to do main work:                           %.2Lfs\n", intermediate_time);
-         fprintf(stderr, "Time to open directories:                       %.2Lfs\n", total_opendir_time);
-         fprintf(stderr, "Time to open databases:                         %.2Lfs\n", total_open_time);
-         fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
-         fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
-         fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
-         fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
-         fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
-         fprintf(stderr, "Time to sqlite3_exec (query and insert)         %.2Lfs\n", total_exec_time);
-         fprintf(stderr, "Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
-         fprintf(stderr, "Time to close databases:                        %.2Lfs\n", total_close_time);
-         fprintf(stderr, "Time to close directories:                      %.2Lfs\n", total_closedir_time);
-         fprintf(stderr, "Time to aggregate into final databases:         %.2Lfs\n", aggregate_time);
-         fprintf(stderr, "Time to print:                                  %.2Lfs\n", output_time);
-         fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
-         fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.maxthreads + 1));
-         fprintf(stderr, "Real time:                                      %.2Lfs\n", intermediate_time + aggregate_time + output_time);
-#endif
+        fprintf(stderr, "Time to do main work:                           %.2Lfs\n", intermediate_time);
+        fprintf(stderr, "Time to open directories:                       %.2Lfs\n", total_opendir_time);
+        fprintf(stderr, "Time to open databases:                         %.2Lfs\n", total_open_time);
+        fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
+        fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
+        fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
+        fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_pushdir_time);
+        fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
+        fprintf(stderr, "Time to sqlite3_exec (query and insert)         %.2Lfs\n", total_exec_time);
+        fprintf(stderr, "Time to detach intermediate databases:          %.2Lfs\n", total_detach_time);
+        fprintf(stderr, "Time to close databases:                        %.2Lfs\n", total_close_time);
+        fprintf(stderr, "Time to close directories:                      %.2Lfs\n", total_closedir_time);
+        fprintf(stderr, "Time to aggregate into final databases:         %.2Lfs\n", aggregate_time);
+        fprintf(stderr, "Time to print:                                  %.2Lfs\n", output_time);
+        fprintf(stderr, "Rows returned:                                  %zu\n",    rows);
+        fprintf(stderr, "Queries performed:                              %d\n",     (int) (thread_count + in.maxthreads + 1));
+        fprintf(stderr, "Real time:                                      %.2Lfs\n", total_time);
+        #endif
 
-         closedb(aggregate);
+        closedb(aggregate);
      }
+
+     #if BENCHMARK
+     struct timespec end;
+     clock_gettime(CLOCK_MONOTONIC, &end);
+
+     fprintf(stderr, "Total Dirs:            %zu\n", thread_count);
+     fprintf(stderr, "Time Spent Querying:   %Lfs\n", elapsed(&start, &end));
+     fprintf(stderr, "Dirs/Sec:              %Lf\n", thread_count / total_time);
+     #endif
 
      return 0;
 }

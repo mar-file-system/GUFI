@@ -875,9 +875,14 @@ void cleanup(struct Trie *head) {
 /* end of  the triell */
 
 // Push the subdirectories in the current directory onto the queue
-size_t descend(struct work *passmywork, DIR *dir,
-               const size_t max_level) {
-    if (!passmywork || !dir) {
+size_t descend(struct work *passmywork, DIR * dir, const size_t max_level) {
+    if (!passmywork) {
+        fprintf(stderr, "Got NULL work\n");
+        return 0;
+    }
+
+    if (!dir) {
+        fprintf(stderr, "Could not open %s: %d %s\n", passmywork->name, errno, strerror(errno));
         return 0;
     }
 
@@ -913,11 +918,15 @@ size_t descend(struct work *passmywork, DIR *dir,
                     pushdir(&qwork);
                     pushed++;
                 }
-                else {
-                    /* fprintf(stderr, "couldn't access dir '%s': %s\n", */
-                    /*         qwork.name, strerror(errno)); */
-                }
+                /* else { */
+                /*     fprintf(stderr, "couldn't access dir '%s': %s\n", */
+                /*             qwork.name, strerror(errno)); */
+                /* } */
             }
+            /* else { */
+            /*     fprintf(stderr, "not a dir '%s': %s\n", */
+            /*             qwork.name, strerror(errno)); */
+            /* } */
         }
     }
 

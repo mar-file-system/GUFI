@@ -75,6 +75,10 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
+if (BENCHMARK)
+  add_definitions(-DBENCHMARK=1)
+endif()
+
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES bf.c dbutils.c structq.c template_db.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
@@ -136,11 +140,17 @@ set(SOURCES
 
 # add C++ sources if C++ support is available
 if (CMAKE_CXX_COMPILER)
-  set(SOURCES
-    ${SOURCES}
-    gufi_dir2index.cpp
-    gufi_trace2index.cpp
-    make_testtree.cpp)
+  add_library(gufi_dir2x STATIC gufi_dir2x.cpp)
+
+  add_executable(gufi_dir2index gufi_dir2index.cpp gufi_dir2x)
+  target_link_libraries(gufi_dir2index ${COMMON_LIBRARIES})
+  add_dependencies(gufi_dir2index GUFI)
+  install(TARGETS gufi_dir2index DESTINATION bin COMPONENT Server)
+
+  add_executable(gufi_dir2trace gufi_dir2trace.cpp gufi_dir2x)
+  target_link_libraries(gufi_dir2trace ${COMMON_LIBRARIES})
+  add_dependencies(gufi_dir2trace GUFI)
+  install(TARGETS gufi_dir2trace DESTINATION bin COMPONENT Server)
 endif()
 
 # build the main binaries

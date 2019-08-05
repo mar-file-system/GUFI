@@ -127,7 +127,7 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
-    printf("Generating into %s: %zu directories per level, %zu files per level, and %zu levels\n", output, dirs, files, depth);
+    printf("Generating into %s: %zu levels, %zu directories per level, %zu files per directory\n", output, depth, dirs, files);
 
     if (mkdir(output, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
         fprintf(stderr, "mkdir failed for %s: %d %s\n", output, errno, strerror(errno));
@@ -159,9 +159,9 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
+    printf("Time Spent Generating: %Lfs\n", elapsed(&start, &end));
     printf("Dirs/Sec:              %Lf\n",  total_dirs / mkdir_time);
     printf("Files/Sec:             %Lf\n",  total_files / mkfile_time);
-    printf("Time Spent Generating: %Lfs\n", elapsed(&start, &end));
 
     return 0;
 }
