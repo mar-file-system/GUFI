@@ -159,9 +159,9 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
-    printf("Time Spent Generating: %Lfs\n", elapsed(&start, &end));
-    printf("Dirs/Sec:              %Lf\n",  total_dirs / mkdir_time);
-    printf("Files/Sec:             %Lf\n",  total_files / mkfile_time);
+    printf("Time Spent Generating: %.2Lfs\n", elapsed(&start, &end));
+    printf("Dirs/Sec:              %.2Lf\n",  total_dirs / mkdir_time);
+    printf("Files/Sec:             %.2Lf\n",  total_files / mkfile_time);
 
     return 0;
 }

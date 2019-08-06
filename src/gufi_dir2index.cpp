@@ -368,11 +368,11 @@ int main(int argc, char * argv[]) {
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
 
     const long double processtime = std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9L;
-    fprintf(stderr, "Total Dirs:            %zu\n",  total_dirs.load());
-    fprintf(stderr, "Total Files:           %zu\n",  total_files.load());
-    fprintf(stderr, "Time Spent Indexing:   %Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %Lf\n",  total_dirs.load() / processtime);
-    fprintf(stderr, "Files/Sec:             %Lf\n",  total_files.load() / processtime);
+    fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs.load());
+    fprintf(stderr, "Total Files:           %zu\n",    total_files.load());
+    fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs.load() / processtime);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files.load() / processtime);
     #endif
 
     return 0;

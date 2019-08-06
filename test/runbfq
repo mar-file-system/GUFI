@@ -86,7 +86,7 @@ else
 fi
 
 DIR=`dirname $SCRIPT`
-BFQ=$DIR/../${SRC}/bfq
+BFQ=$DIR/../${SRC}/gufi_query
 
 
 usage() {

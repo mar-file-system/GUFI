@@ -83,7 +83,7 @@ import time
 
 import query_builder as qb
 
-BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", 'bfq')
+EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", 'gufi_query')
 
 SECONDS_PER_DAY = str(24 * 60 * 60)
 
@@ -393,7 +393,7 @@ if __name__=='__main__':
     parser.add_argument('--intermediate_dbs',  metavar='n',          dest='intermediates',      type=qb.get_non_negative,                     help='number of intermediate databases')
     parser.add_argument('--intermediate_skip', metavar='n',          dest='skip',               type=qb.get_non_negative,                     help='number of intermediate databases to skip when selecting the next database')
     parser.add_argument('--aggregate',                               dest='aggregate',          action='store_true',                          help='aggregate results before printing')
-    parser.add_argument('--bfq',                                     dest='bfq',                default=BFQ_EXEC,                             help='Location of bfq executable')
+    parser.add_argument('--exec',                                    dest='query_exec',         default=EXEC,                                 help='Location of gufi_query executable')
 
     args = parser.parse_args();
 
@@ -419,11 +419,11 @@ if __name__=='__main__':
     tsummary_order_by, summary_order_by, entries_order_by = build_order_by(args)
 
     tsummary = qb.build_query(tsummary_select,
-                             ['treesummary'],
-                             tsummary_where,
-                             tsummary_group_by,
-                             tsummary_order_by,
-                             args.num_results)
+                              ['treesummary'],
+                              tsummary_where,
+                              tsummary_group_by,
+                              tsummary_order_by,
+                              args.num_results)
 
     summary = qb.build_query(summary_select,
                              ['summary'],
@@ -446,43 +446,43 @@ if __name__=='__main__':
                                           entries_order_by,
                                           args.num_results)
 
-    # create the bfq command
-    bfq_cmd = [args.bfq,
-               '-p', '-P',
-               '-e', str(int(not args.aggregate)),
-               '-n', str(args.threads)]
+    # create the query command
+    query_cmd = [args.query_exec,
+                 '-p', '-P',
+                 '-e', str(int(not args.aggregate)),
+                 '-n', str(args.threads)]
 
     # if len(tsummary):
-    #     bfq_cmd += ['-T', tsummary]
+    #     query_cmd += ['-T', tsummary]
 
     # if len(summary):
-    #     bfq_cmd += ['-S', summary]
+    #     query_cmd += ['-S', summary]
 
     if len(initial):
-        bfq_cmd += ['-E', initial]
+        query_cmd += ['-E', initial]
 
     if len(intermediate):
-        bfq_cmd += ['-J', intermediate]
+        query_cmd += ['-J', intermediate]
 
     if len(final):
-        bfq_cmd += ['-G', final]
+        query_cmd += ['-G', final]
 
     if args.delim:
-        bfq_cmd += ['-d', args.delim]
+        query_cmd += ['-d', args.delim]
 
     if args.intermediates:
-        bfq_cmd += ['-v', str(args.intermediates)]
+        query_cmd += ['-v', str(args.intermediates)]
 
     if args.skip:
-        bfq_cmd += ['-w', str(args.skip)]
+        query_cmd += ['-w', str(args.skip)]
 
     if args.maxdepth:
-        bfq_cmd += ['-z', str(args.maxdepth)]
+        query_cmd += ['-z', str(args.maxdepth)]
 
     if args.mindepth:
-        bfq_cmd += ['-y', str(args.mindepth)]
+        query_cmd += ['-y', str(args.mindepth)]
 
-    bfq = subprocess.Popen(bfq_cmd + find_out.split()) # positional arguments must appear after flags
-    bfq.communicate()                                  # block until bfq finishes
+    query = subprocess.Popen(query_cmd + find_out.split()) # positional arguments must appear after flags
+    query.communicate()                                    # block until query finishes
 
-    sys.exit(bfq.returncode)
+    sys.exit(query.returncode)

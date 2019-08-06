@@ -103,15 +103,63 @@ extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
-#if defined(DEBUG) || BENCHMARK
+#if BENCHMARK
+struct atomic{
+    pthread_mutex_t mutex;
+    void * value;
+};
 
-/* #ifndef THREAD_STATS */
-/* #define THREAD_STATS */
-/* #endif */
+int atomic_lock(struct atomic * ptr) {
+    if (!ptr) {
+        return 0;
+    }
+
+    pthread_mutex_lock(&ptr->mutex);
+    return 1;
+}
+
+int atomic_unlock(struct atomic * ptr) {
+    if (!ptr) {
+        return 0;
+    }
+
+    pthread_mutex_unlock(&ptr->mutex);
+    return 1;
+}
+
+#define atomic_alloc(TYPE, NAME, VALUE)         \
+    pthread_mutex_init(&NAME.mutex, NULL);      \
+    atomic_lock(&NAME);                         \
+    NAME.value = malloc(sizeof(TYPE));          \
+    * (TYPE *) NAME.value = VALUE;              \
+    atomic_unlock(&NAME)
+
+void atomic_free(struct atomic * ptr) {
+    if (ptr) {
+        atomic_lock(ptr);
+        free(ptr->value);
+        atomic_unlock(ptr);
+        pthread_mutex_destroy(&ptr->mutex);
+    }
+}
+
+static struct atomic total_files;
+
+static int total_files_callback(void * unused, int count, char ** data, char ** columns) {
+    const size_t files = atol(data[1]);
+    atomic_lock(&total_files);
+    * ((size_t *) total_files.value) += files;
+    atomic_unlock(&total_files);
+    return 0;
+}
+
+#endif
+
+#if defined(DEBUG) || BENCHMARK
 
 #include <time.h>
 
-long double elapsed(const struct timespec *start, const struct timespec *end) {
+static long double elapsed(const struct timespec *start, const struct timespec *end) {
     const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
     const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
     return e - s;
@@ -119,6 +167,11 @@ long double elapsed(const struct timespec *start, const struct timespec *end) {
 #endif
 
 #ifdef DEBUG
+
+/* #ifndef THREAD_STATS */
+/* #define THREAD_STATS */
+/* #endif */
+
 long double total_opendir_time = 0;
 long double total_open_time = 0;
 long double total_create_tables_time = 0;
@@ -388,6 +441,10 @@ static void processdir(void * passv)
           );
     }
 
+    #if BENCHMARK
+
+    #endif
+
     #ifdef DEBUG
     start_timer(attach);
     #endif
@@ -490,6 +547,16 @@ static void processdir(void * passv)
                         #endif
 
                         sqlite3_free(err);
+
+                        #if BENCHMARK
+                        // get the total number of files in this database, regardless of whether or not the query was successful
+                        if (in.outdb > 0) {
+                            sqlite3_exec(db, "SELECT path(), COUNT(*) FROM tree.entries", total_files_callback, NULL, NULL);
+                        }
+                        else {
+                            sqlite3_exec(db, "SELECT path(), COUNT(*) FROM entries", total_files_callback, NULL, NULL);
+                        }
+                        #endif
                     }
                 }
             }
@@ -691,8 +758,9 @@ int main(int argc, char *argv[])
     #if BENCHMARK
     fprintf(stderr, "Querying GUFI Index");
     for(int i = idx; i < argc; i++) {
-        fprintf(stderr, " %s\n", argv[i]);
+        fprintf(stderr, " %s", argv[i]);
     }
+    fprintf(stderr, "\n");
     #endif
 
     sqlite3 *aggregate = NULL;
@@ -734,6 +802,10 @@ int main(int argc, char *argv[])
     }
 
     long double total_time = 0;
+
+    #if BENCHMARK
+    atomic_alloc(size_t, total_files, 0);
+    #endif
 
     #if defined(DEBUG) || BENCHMARK
     struct timespec intermediate_start;
@@ -875,9 +947,13 @@ int main(int argc, char *argv[])
      struct timespec end;
      clock_gettime(CLOCK_MONOTONIC, &end);
 
-     fprintf(stderr, "Total Dirs:            %zu\n", thread_count);
-     fprintf(stderr, "Time Spent Querying:   %Lfs\n", elapsed(&start, &end));
-     fprintf(stderr, "Dirs/Sec:              %Lf\n", thread_count / total_time);
+     fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
+     fprintf(stderr, "Total Files:           %zu\n",    * ((size_t *) total_files.value));
+     fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time);
+     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time);
+     fprintf(stderr, "Files/Sec:             %.2Lf\n",  (* (size_t *) total_files.value) / total_time);
+
+     atomic_free(&total_files);
      #endif
 
      return 0;

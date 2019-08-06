@@ -52,7 +52,7 @@ GID="$(id -g)"
 
 # compare files
 echo "Compare files"
-diff <(${ORIGIN}/../scripts/gufi_find --bfq "${ORIGIN}/../${SRC}/bfq" "${root}" -path "${dst}" -type "f" --select "path() || '/' || name as name, type, nlink, uid, gid, size, linkname" | sort) <(
+diff <(${ORIGIN}/../scripts/gufi_find --exec "${ORIGIN}/../${SRC}/gufi_query" "${root}" -path "${dst}" -type "f" --select "path() || '/' || name as name, type, nlink, uid, gid, size, linkname" | sort) <(
     (
         echo "${dst}/1KB|f|1|${UID}|${GID}|1024||"
         echo "${dst}/1MB|f|1|${UID}|${GID}|1048576||"
@@ -71,7 +71,7 @@ error=$(($error + $?))
 # compare files and symlinks
 echo
 echo "Compare files and symlinks"
-diff <(${ORIGIN}/../scripts/gufi_find --bfq "${ORIGIN}/../${SRC}/bfq" "${root}" -path "${dst}" --select "path() || '/' || name as name, type, nlink, uid, gid, linkname" | sort) <(
+diff <(${ORIGIN}/../scripts/gufi_find --exec "${ORIGIN}/../${SRC}/gufi_query" "${root}" -path "${dst}" --select "path() || '/' || name as name, type, nlink, uid, gid, linkname" | sort) <(
     (
         echo "${dst}/1KB|f|1|${UID}|${GID}||"
         echo "${dst}/1MB|f|1|${UID}|${GID}||"

@@ -82,7 +82,7 @@ import sys
 
 import query_builder as qb
 
-BFQ_EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", 'bfq')
+EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin", 'gufi_query')
 
 def build(args, root_uid = 0, root_gid = 0):
     select = [args.select] if args.select else []
@@ -179,19 +179,19 @@ def leaf_depth(args, sep = '/'):
             ret += get_depth(leaf, sep)
     return ret
 
-# mapping of valid non-bfq 'operation' argument values
+# mapping of valid non-query 'operation' argument values
 NONQUERIES  = {'depth'      : depth,
                'leaf-depth' : leaf_depth}
 
-# mapping of valid bfq 'operation' argument values to array generators
-BFQ_QUERIES = {'space'           : space,
-               'files'           : files,
-               'total-space'     : total_space,
-               'total-files'     : total_files,
-               'directory-count' : directory_count,
-               'leaf-count'      : leaf_count,
-               'total-leaf'      : total_in_leaf,
-               'median-leaf'     : median_in_leaf}
+# mapping of valid query 'operation' argument values to array generators
+QUERIES = {'space'           : space,
+           'files'           : files,
+           'total-space'     : total_space,
+           'total-files'     : total_files,
+           'directory-count' : directory_count,
+           'leaf-count'      : leaf_count,
+           'total-leaf'      : total_in_leaf,
+           'median-leaf'     : median_in_leaf}
 
 # allowed keywords for sorting output (if applicable)
 ASCENDING  = 'ASC'
@@ -214,8 +214,8 @@ if __name__=='__main__':
     parser.add_argument('--select',        metavar='cols',   dest='select',      type=str,                                        help='comma separated columns')
     parser.add_argument('--threads',       metavar='n',      dest='threads',     type=qb.get_non_negative,  default=qb.cpus(),    help='number of threads')
     parser.add_argument('--uid', '--user', metavar='u',      dest='uid',         type=qb.get_uid,                                 help='restrict to user')
-    parser.add_argument('--bfq',                             dest='bfq',                                    default=BFQ_EXEC,     help='Location of bfq executable')
-    parser.add_argument('operation',                                             choices=NONQUERIES.keys() + BFQ_QUERIES.keys(),  help='operation to perform')
+    parser.add_argument('--exec',                            dest='query_exec',                             default=EXEC,         help='Location of gufi_query executable')
+    parser.add_argument('operation',                                             choices=NONQUERIES.keys() + QUERIES.keys(),      help='operation to perform')
     parser.add_argument('GUFI_tree',                                                                        nargs='+',            help='path containing GUFI tree database file')
 
     args = parser.parse_args();
@@ -227,39 +227,39 @@ if __name__=='__main__':
         res.sort(key = lambda pair: pair[1], reverse=(args.order==DESCENDING))
         for path, count in res[:args.num_results]:
             print path, count
-    elif args.operation in BFQ_QUERIES:
-        entries, intermediate, aggregate = BFQ_QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
+    elif args.operation in QUERIES:
+        entries, intermediate, aggregate = QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
 
-        # create the bfq command
-        bfq_cmd = [args.bfq,
-                   '-n', str(args.threads),
-                   '-p', '-P']
+        # create the query command
+        query_cmd = [args.query_exec,
+                     '-n', str(args.threads),
+                     '-p', '-P']
 
         if entries is not None:
-            bfq_cmd += ['-E', entries]
+            query_cmd += ['-E', entries]
         else:
-            bfq_cmd += ['-E', 'SELECT * FROM entries']
+            query_cmd += ['-E', 'SELECT * FROM entries']
 
         if intermediate is not None:
-            bfq_cmd += ['-J', intermediate]
+            query_cmd += ['-J', intermediate]
         else:
-            bfq_cmd += ['-J', 'SELECT * FROM entries']
+            query_cmd += ['-J', 'SELECT * FROM entries']
 
         if aggregate is not None:
-            bfq_cmd += ['-G', aggregate]
+            query_cmd += ['-G', aggregate]
         else:
-            bfq_cmd += ['-G', 'SELECT * FROM entries']
+            query_cmd += ['-G', 'SELECT * FROM entries']
 
         if args.delim:
-            bfq_cmd += ['-d', args.delim]
+            query_cmd += ['-d', args.delim]
 
         if args.maxdepth:
-            bfq_cmd += ['-z', str(args.maxdepth)]
+            query_cmd += ['-z', str(args.maxdepth)]
 
         if args.mindepth:
-            bfq_cmd += ['-y', str(args.mindepth)]
+            query_cmd += ['-y', str(args.mindepth)]
 
-        bfq = subprocess.Popen(bfq_cmd + args.GUFI_tree)
-        bfq.communicate() # block until bfq finishes
+        query = subprocess.Popen(query_cmd + args.GUFI_tree)
+        query.communicate() # block until query finishes
 
-        sys.exit(bfq.returncode)
+        sys.exit(query.returncode)
