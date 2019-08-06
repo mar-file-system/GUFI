@@ -107,14 +107,6 @@ def get_char(value):
         raise argparse.ArgumentTypeError("%s is not a character" % value)
     return value
 
-def get_bool(value):
-    '''Make sure the value can be converted into a boolean'''
-    if value in ['true', 'True','t', 'T', '1']:
-        return True
-    elif value in ['false', 'False', 'f', 'F', '0']:
-        return False
-    raise argparse.ArgumentTypeError("%s is not a valid bool" % value)
-
 def get_size(value):
     '''Make sure the value matches [+/-]n[bcwkMG].'''
     if not re.match('^[+-]?[0-9]+[bcwkMG]?$', value):

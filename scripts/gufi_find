@@ -100,8 +100,20 @@ def build_select(args):
     summary  = ['name']
     entries  = []
 
-    if args.select:
-        entries += [args.select]
+    # select must exist
+    if args.select == None:
+        args.select = [['id', 'path() || "/" || name', 'type',
+                        'inode', 'mode', 'nlink', 'uid', 'gid',
+                        'size', 'blksize', 'blocks', 'atime',
+                        'mtime', 'ctime', 'linkname', 'xattrs',
+                        'crtime', 'ossint1', 'ossint2', 'ossint3',
+                        'ossint4', 'osstext1', 'osstext2', 'pinode']]
+
+    select = []
+    for columns in args.select:
+        select += columns
+
+    entries += [','.join(select)]
 
     return tsummary, summary, entries
 
@@ -260,7 +272,12 @@ def build_group_by(args):
     entries  = []
 
     if args.group_by:
-        entries += [args.group_by]
+        group_by = []
+        for columns in args.group_by:
+            group_by += columns
+
+        entries += [','.join(group_by)]
+
     return tsummary, summary, entries
 
 def build_order_by(args):
@@ -330,20 +347,20 @@ if __name__=='__main__':
     parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',      type=qb.get_non_negative,                     help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
 
     # # GNU find optional arguments
-    parser.add_argument('starting-point',      metavar='root',                            type=str,  nargs='+',      default=cwd,       help='top-most directory to search from')
+    parser.add_argument('starting-point',      metavar='root',                             type=str, nargs='+', default=cwd,             help='top-most directory to search from')
 
     # GUFI specific arguments
-    parser.add_argument('--select',            metavar='cols',       dest='select',        type=str,                  default='*',       help='comma separated columns (default: *)')
-    parser.add_argument('--group_by',          metavar='cols',       dest='group_by',      type=str,                                     help='comma separated columns (default: None)')
+    parser.add_argument('--select',            metavar='cols',       dest='select',        action='append', nargs='+',                   help='columns (default: *)')
+    parser.add_argument('--group_by',          metavar='cols',       dest='group_by',      action='append', nargs='*',                   help='columns (default: None)')
     parser.add_argument('--delim',             metavar='c',          dest='delim',         type=qb.get_char,                             help='delimiter separating output columns')
     parser.add_argument('--num_results',       metavar='n',          dest='num_results',   type=qb.get_non_negative,                     help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',      action='store_true',                          help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',       action='store_true',                          help='top n largest files')
-    parser.add_argument('--threads', '-t',     metavar='n',          dest='threads',       type=qb.get_positive,      default=qb.cpus(), help='number of threads')
+    parser.add_argument('--threads', '-t',     metavar='n',          dest='threads',       type=qb.get_positive, default=qb.cpus(),      help='number of threads')
     parser.add_argument('--intermediate_dbs',  metavar='n',          dest='intermediates', type=qb.get_non_negative,                     help='number of intermediate databases')
     parser.add_argument('--intermediate_skip', metavar='n',          dest='skip',          type=qb.get_non_negative,                     help='number of intermediate databases to skip when selecting the next database')
-    parser.add_argument('--aggregate',         metavar='True/False', dest='aggregate',     type=qb.get_bool,          default=False,     help='do not aggregate results before printing')
-    parser.add_argument('--bfq',                                     dest='bfq',                                      default=BFQ_EXEC,  help='Location of bfq executable')
+    parser.add_argument('--aggregate',                               dest='aggregate',     action='store_true',                          help='aggregate results before printing')
+    parser.add_argument('--bfq',                                     dest='bfq',           default=BFQ_EXEC,                             help='Location of bfq executable')
 
     args = parser.parse_args();
 
