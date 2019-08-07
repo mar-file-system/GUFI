@@ -92,23 +92,21 @@ if(GPFS_LIB)
   target_link_libraries(gpfs-scan-tool ${GPFS_LIB} ${COMMON_LIBRARIES})
 endif()
 
-# This function builds executables using the
-# provided file names (SOURCE is an optional
-# argument, so it does not show up in the
+# This function builds C executables using the provided file names
+# (SOURCE is an optional argument, so it does not show up in the
 # arguments list).
 #
 # PATH is the installation directory.
 #
-# There will be duplicate targets if two files
-# share the same name.
+# There will be duplicate targets if two files share the same name.
 #
 # ex:
 #     build_and_install(bin TRUE file1.c file2.cpp)
 #        -> compiles file1.c into file1
-#        -> compiles file2.cpp into file2
+#        -> compiles file2.c into file2
 #        -> installs file1 and file2 into bin
 #
-function(build_and_install PATH LINK_GUFI)
+function(build_c_and_install PATH LINK_GUFI)
   foreach(SOURCE ${ARGN})
     # get the filename only (no path or extension)
     string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
@@ -118,7 +116,7 @@ function(build_and_install PATH LINK_GUFI)
 
     # link GUFI libraries if needed
     if (LINK_GUFI)
-      target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+      target_link_libraries(${TARGET} GUFI ${COMMON_LIBRARIES} -static-libgcc)
       add_dependencies(${TARGET} GUFI)
     endif()
 
@@ -128,9 +126,9 @@ function(build_and_install PATH LINK_GUFI)
 endfunction()
 
 # build and install the binaries that need to link with GUFI
-set(SOURCES
+set(C_SOURCES
   bfti.c
-  bfwi.c
+  # bfwi.c
   bfwreaddirplus2db.c
   dfw.c
   gufi_query.c
@@ -138,32 +136,44 @@ set(SOURCES
   querydb.c
   querydbn.c)
 
-# add C++ sources if C++ support is available
-if (CMAKE_CXX_COMPILER)
-  add_library(gufi_dir2x STATIC gufi_dir2x.cpp)
-
-  add_executable(gufi_dir2index gufi_dir2index.cpp gufi_dir2x)
-  target_link_libraries(gufi_dir2index ${COMMON_LIBRARIES})
-  add_dependencies(gufi_dir2index GUFI)
-  install(TARGETS gufi_dir2index DESTINATION bin COMPONENT Server)
-
-  add_executable(gufi_dir2trace gufi_dir2trace.cpp gufi_dir2x)
-  target_link_libraries(gufi_dir2trace ${COMMON_LIBRARIES})
-  add_dependencies(gufi_dir2trace GUFI)
-  install(TARGETS gufi_dir2trace DESTINATION bin COMPONENT Server)
-
-  add_executable(gufi_trace2index gufi_trace2index.cpp)
-  target_link_libraries(gufi_trace2index ${COMMON_LIBRARIES})
-  add_dependencies(gufi_trace2index GUFI)
-  install(TARGETS gufi_trace2index DESTINATION bin COMPONENT Server)
-endif()
-
-# build the main binaries
-build_and_install(bin TRUE ${SOURCES})
+# build the C executables
+build_c_and_install(bin TRUE ${C_SOURCES})
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install(bin FALSE ${MISC_SOURCES})
+build_c_and_install(bin FALSE ${MISC_SOURCES})
+
+# build C++ executables if C++ support is available
+if (CMAKE_CXX_COMPILER)
+  add_library(gufi_dir2x STATIC gufi_dir2x.cpp)
+
+  function(build_cpp_and_install PATH LINK_GUFI)
+    foreach(SOURCE ${ARGN})
+      # get the filename only (no path or extension)
+      string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
+
+      # create the target for building the executable
+      add_executable(${TARGET} ${SOURCE})
+      target_link_libraries(${TARGET} -static-libstdc++)
+
+      # link GUFI libraries if needed
+      if (LINK_GUFI)
+        target_link_libraries(${TARGET} GUFI gufi_dir2x ${COMMON_LIBRARIES})
+        add_dependencies(${TARGET} GUFI gufi_dir2x)
+      endif()
+
+      # install the executable
+      install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
+    endforeach()
+  endfunction()
+
+  set(CXX_SOURCES
+    gufi_dir2trace.cpp
+    gufi_dir2index.cpp
+    gufi_trace2index.cpp)
+
+  build_cpp_and_install(bin TRUE ${CXX_SOURCES})
+endif()
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND)

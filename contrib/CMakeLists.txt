@@ -93,7 +93,7 @@ if (CMAKE_CXX_COMPILER)
 endif()
 
 # potentially useful Python scripts
-configure_file(bfwi_anonymizer.py bfwi_anonymizer.py COPYONLY)
+configure_file(trace_anonymizer.py trace_anonymizer.py COPYONLY)
 configure_file(gentrace.py gentrace.py COPYONLY)
 
 # make benchmark
