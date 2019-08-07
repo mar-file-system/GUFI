@@ -11,7 +11,7 @@ The number of directories there would be if each directory spawned 1 subdirector
 
              depth - 1
                 ---
-           s =  \   # directories ** i = ((# of directories ** depth) - 1) / (# of directories - 1)
+           s =  \   # of directories ** i = ((# of directories ** depth) - 1) / (# of directories - 1)
                 /
                 ---
                i = 0
@@ -24,6 +24,11 @@ The number of files generated is
 
            # of files * s
 */
+
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -47,13 +52,15 @@ int generate_level(const char * dir, const size_t subdir_count, const size_t fil
     }
 
     char name[4096];
+    // create the files in this directory
     for(size_t i = 0; i < file_count; i++) {
         int rc = snprintf(name, 4096, "%s/f.%zu", dir, i);
         if ((rc < 0) || (4096 <= rc)) {
             return 1;
         }
 
-        const int fd = open(name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        // overwrite any existing data
+        const int fd = open(name, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if (fd < 0) {
             fprintf(stderr, "open failed for %s: %d %s\n", name, errno, strerror(errno));
             return 1;
@@ -61,20 +68,22 @@ int generate_level(const char * dir, const size_t subdir_count, const size_t fil
         close(fd);
     }
 
+    // create the subdirectories in this directory
     for(size_t i = 0; i < subdir_count; i++) {
         int rc = snprintf(name, 4096, "%s/d.%zu", dir, i);
         if ((rc < 0) || (4096 <= rc)) {
             return 1;
         }
 
-        rc = mkdir(name, S_IRWXU | S_IRWXG | S_IRWXO);
-
-        if (rc < 0) {
-            fprintf(stderr, "mkdir failed for %s: %d %s\n", name, errno, strerror(errno));
-            return 1;
+        if (mkdir(name, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
+            if (errno != EEXIST) {
+                fprintf(stderr, "mkdir failed for %s: %d %s\n", name, errno, strerror(errno));
+                return 1;
+            }
         }
     }
 
+    // recurse down each subdirectory
     for(size_t i = 0; i < subdir_count; i++) {
         int rc = snprintf(name, 4096, "%s/d.%zu", dir, i);
         if ((rc < 0) || (4096 <= rc)) {
@@ -119,8 +128,10 @@ int main(int argc, char * argv[]) {
     printf("Generating into %s: %zu levels, %zu directories per level, %zu files per directory\n", output, depth, dirs, files);
 
     if (mkdir(output, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
-        fprintf(stderr, "mkdir failed for %s: %d %s\n", output, errno, strerror(errno));
-        return 1;
+        if (errno != EEXIST) {
+            fprintf(stderr, "mkdir failed for %s: %d %s\n", output, errno, strerror(errno));
+            return 1;
+        }
     }
 
     size_t sum = 1;
