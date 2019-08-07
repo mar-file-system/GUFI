@@ -132,7 +132,6 @@ set(C_SOURCES
   bfwreaddirplus2db.c
   dfw.c
   gufi_query.c
-  make_testdirs.c
   querydb.c
   querydbn.c)
 
