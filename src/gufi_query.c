@@ -155,17 +155,6 @@ static int total_files_callback(void * unused, int count, char ** data, char ** 
 
 #endif
 
-#if defined(DEBUG) || BENCHMARK
-
-#include <time.h>
-
-static long double elapsed(const struct timespec *start, const struct timespec *end) {
-    const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
-    const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
-    return e - s;
-}
-#endif
-
 #ifdef DEBUG
 
 /* #ifndef THREAD_STATS */

@@ -77,6 +77,7 @@ OF SUCH DAMAGE.
 
 #include <atomic>
 #include <sys/types.h>
+#include <thread>
 #include <vector>
 
 extern "C" {
@@ -110,7 +111,7 @@ bool processinit(std::atomic_size_t & queued, State & state
     );
 
 // signature of function that needs to be defined by different directory transformation executables
-bool processdir(struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
+bool processdir(const int id, struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
                 #if BENCHMARK
                 , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
                 #endif

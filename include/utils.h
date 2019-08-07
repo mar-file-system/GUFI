@@ -164,7 +164,6 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
 typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
-int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * work_time);
 
 // Function used in processdir to decend into subdirectories.
 // The callback function is used to modify the qwork before
@@ -173,5 +172,14 @@ int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * 
 // the qwork not being pushed onto the queue.
 size_t descend(struct work *passmywork, DIR *dir,
                const size_t max_level);
+
+#if defined(DEBUG) || BENCHMARK
+
+#include <time.h>
+
+long double elapsed(const struct timespec *start, const struct timespec *end);
+int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * work_time);
+
+#endif
 
 #endif

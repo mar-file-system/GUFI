@@ -79,14 +79,12 @@ OF SUCH DAMAGE.
 #include <atomic>
 #endif
 
-#include <cerrno>
-#include <condition_variable>
 #include <cstring>
+#include <ctime>
 #include <fcntl.h>
 #include <mutex>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <thread>
 #include <unistd.h>
 
 extern "C" {
@@ -98,13 +96,39 @@ extern "C" {
 
 }
 
-extern int errno;
-
 #include "gufi_dir2x.hpp"
+
+FILE ** output;
+
+int output_fin(const int end) {
+    for(int i = 0; i < end; i++) {
+        fclose(output[i]);
+    }
+    free(output);
+    return 0;
+}
+
+int output_init(const int end) {
+    if (!(output = (FILE **) malloc(in.maxthreads * sizeof(FILE *)))) {
+        fprintf(stderr, "Could not allocate space for per thread file array\n");
+        return -1;
+    }
+
+    for(int i = 0; i < end; i++) {
+        char buf[MAXPATH];
+        SNPRINTF(buf, MAXPATH, "%s.%d", in.outfilen, i);
+        if (!(output[i] = fopen(buf, "w"))) {
+            output_fin(i);
+            fprintf(stderr, "Could not open thread file %s\n", buf);
+            return -1;
+        }
+    }
+    return 0;
+}
 
 // process the work under one directory (no recursion)
 // deletes work
-bool processdir(struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
+bool processdir(const int id, struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
                 #if BENCHMARK
                 , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
                 #endif
@@ -182,29 +206,24 @@ bool processdir(struct work & work, State & state, std::atomic_size_t & queued, 
         total_files++;
         #endif
 
-        // print to stdout, to be redirected by caller
-        // this should probably be changed to write to a per thread database/file to avoid locking
-        static std::mutex print_mutex;
-        std::lock_guard <std::mutex> lock(print_mutex);
-
-        fprintf(stdout, "%s%c", e.name, in.delim[0]);
-        fprintf(stdout, "%c%c", e.type[0], in.delim[0]);
-        fprintf(stdout, "%" STAT_ino "%c", e.statuso.st_ino, in.delim[0]);
-        fprintf(stdout, "%d%c", e.statuso.st_mode, in.delim[0]);
-        fprintf(stdout, "%" STAT_nlink"%c", e.statuso.st_nlink, in.delim[0]);
-        fprintf(stdout, "%d%c", e.statuso.st_uid, in.delim[0]);
-        fprintf(stdout, "%d%c", e.statuso.st_gid, in.delim[0]);
-        fprintf(stdout, "%" STAT_size "%c", e.statuso.st_size, in.delim[0]);
-        fprintf(stdout, "%" STAT_bsize "%c", e.statuso.st_blksize, in.delim[0]);
-        fprintf(stdout, "%" STAT_blocks "%c", e.statuso.st_blocks, in.delim[0]);
-        fprintf(stdout, "%d%c", e.statuso.st_atime, in.delim[0]);
-        fprintf(stdout, "%d%c", e.statuso.st_mtime, in.delim[0]);
-        fprintf(stdout, "%d%c", e.statuso.st_ctime, in.delim[0]);
-        fprintf(stdout, "%s%c", e.linkname, in.delim[0]);
-        fprintf(stdout, "%s%c", e.xattr, in.delim[0]);
-        fprintf(stdout, "%d%c", e.crtime, in.delim[0]);
-        fprintf(stdout, "%lld%c", e.pinode, in.delim[0]);
-        fprintf(stdout, "\n");
+        fprintf(output[id], "%s%c", e.name, in.delim[0]);
+        fprintf(output[id], "%c%c", e.type[0], in.delim[0]);
+        fprintf(output[id], "%" STAT_ino "%c", e.statuso.st_ino, in.delim[0]);
+        fprintf(output[id], "%d%c", e.statuso.st_mode, in.delim[0]);
+        fprintf(output[id], "%" STAT_nlink"%c", e.statuso.st_nlink, in.delim[0]);
+        fprintf(output[id], "%d%c", e.statuso.st_uid, in.delim[0]);
+        fprintf(output[id], "%d%c", e.statuso.st_gid, in.delim[0]);
+        fprintf(output[id], "%" STAT_size "%c", e.statuso.st_size, in.delim[0]);
+        fprintf(output[id], "%" STAT_bsize "%c", e.statuso.st_blksize, in.delim[0]);
+        fprintf(output[id], "%" STAT_blocks "%c", e.statuso.st_blocks, in.delim[0]);
+        fprintf(output[id], "%d%c", e.statuso.st_atime, in.delim[0]);
+        fprintf(output[id], "%d%c", e.statuso.st_mtime, in.delim[0]);
+        fprintf(output[id], "%d%c", e.statuso.st_ctime, in.delim[0]);
+        fprintf(output[id], "%s%c", e.linkname, in.delim[0]);
+        fprintf(output[id], "%s%c", e.xattr, in.delim[0]);
+        fprintf(output[id], "%d%c", e.crtime, in.delim[0]);
+        fprintf(output[id], "%lld%c", e.pinode, in.delim[0]);
+        fprintf(output[id], "\n");
     }
 
     processdir_cleanup(dir, queued, state);
@@ -216,28 +235,33 @@ bool processdir(struct work & work, State & state, std::atomic_size_t & queued, 
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
 int validate_inputs() {
-   struct stat src_st;
-   if (lstat(in.name, &src_st) < 0) {
-      fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
-      return -1;
-   }
+    if (!in.outfile || !strlen(in.outfilen)) {
+        fprintf(stderr, "No output file name provided (-o)\n");
+        return -1;
+    }
 
-   if (!S_ISDIR(src_st.st_mode)) {
-     fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
-     return -1;
-   }
+    struct stat src_st;
+    if (lstat(in.name, &src_st) < 0) {
+        fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
+        return -1;
+    }
 
-   return 0;
+    if (!S_ISDIR(src_st.st_mode)) {
+        fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
+        return -1;
+    }
+
+    return 0;
 }
 
 void sub_help() {
-   printf("input_dir         walk this tree to produce trace file\n");
-   // printf("GUFI_dir          build GUFI index here (if -b)\n");
-   printf("\n");
+    printf("input_dir         walk this tree to produce trace file\n");
+    // printf("GUFI_dir          build GUFI index here (if -b)\n");
+    printf("\n");
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHpn:d:", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:d:o:", 1, "input_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -253,9 +277,8 @@ int main(int argc, char * argv[]) {
     if (validate_inputs())
         return -1;
 
-    struct stat st;
-    if (lstat(in.name, &st) < 0) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", in.name);
+
+    if (output_init(in.maxthreads) != 0) {
         return -1;
     }
 
@@ -267,7 +290,8 @@ int main(int argc, char * argv[]) {
     std::atomic_size_t total_dirs(0);
     std::atomic_size_t total_files(0);
 
-    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
     const bool spawned_threads = processinit(queued, state
@@ -278,15 +302,19 @@ int main(int argc, char * argv[]) {
     processfin(state, spawned_threads);
 
     #if BENCHMARK
-    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    struct timespec end;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    const long double processtime = elapsed(&start, &end);
 
-    const long double processtime = std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9L;
     fprintf(stderr, "Total Dirs:            %zu\n",  total_dirs.load());
     fprintf(stderr, "Total Files:           %zu\n",  total_files.load());
     fprintf(stderr, "Time Spent Indexing:   %Lfs\n", processtime);
     fprintf(stderr, "Dirs/Sec:              %Lf\n",  total_dirs.load() / processtime);
     fprintf(stderr, "Files/Sec:             %Lf\n",  total_files.load() / processtime);
     #endif
+
+    output_fin(in.maxthreads);
+
 
     return 0;
 }

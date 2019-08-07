@@ -195,7 +195,7 @@ std::size_t worker_function(std::atomic_size_t & queued, State & state, ThreadWo
 
         // process all work
         for(struct work & dir : dirs) {
-            processed += processdir(dir, state, queued, next_queue
+            processed += processdir(tw.id, dir, state, queued, next_queue
                                     #if BENCHMARK
                                     , total_dirs, total_files
                                     #endif

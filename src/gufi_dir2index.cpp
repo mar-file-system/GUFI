@@ -86,7 +86,6 @@ OF SUCH DAMAGE.
 #include <mutex>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <thread>
 #include <unistd.h>
 
 extern "C" {
@@ -104,7 +103,7 @@ extern int errno;
 
 // process the work under one directory (no recursion)
 // deletes work
-bool processdir(struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
+bool processdir(const int, struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
                 #if BENCHMARK
                 , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
                 #endif
@@ -287,6 +286,17 @@ int validate_inputs() {
           return -1;
       }
    }
+   else {
+       // create the source root under the destination directory using
+       // the source directory's permissions and owners
+       // this allows for the threads to not have to recursively create directories
+       char root[MAXPATH];
+       SNPRINTF(root, MAXPATH, "%s/%s", in.nameto, in.name);
+       if (dupdir(root, &dst_st)) {
+           fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
+           return -1;
+       }
+   }
 
    return 0;
 }
@@ -315,26 +325,9 @@ int main(int argc, char * argv[]) {
     if (validate_inputs())
         return -1;
 
-    char root[MAXPATH];
-    SNPRINTF(root, MAXPATH, "%s/%s", in.nameto, in.name);
-
-    struct stat st;
-    if (lstat(in.name, &st) < 0) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", in.name);
-        return -1;
-    }
-
     #if BENCHMARK
     fprintf(stderr, "Creating GUFI Index %s in %s\n", in.name, in.nameto);
     #endif
-
-    // create the source root under the destination directory using
-    // the source directory's permissions and owners
-    // this allows for the threads to not have to recursively create directories
-    if (dupdir(root, &st)) {
-        fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
-        return -1;
-    }
 
     if ((templatesize = create_template(&templatefd)) == (off_t) -1) {
         fprintf(stderr, "Could not create template file\n");

@@ -41,9 +41,8 @@ long double elapsed(const struct timespec *start, const struct timespec *end) {
     return e - s;
 }
 
-int generate_level(const char * dir, const size_t subdir_count, const size_t file_count, const size_t current_level, const size_t max_level,
-                   long double * mkdir_time, long double * mkfile_time) {
-    if (current_level == max_level) {
+int generate_level(const char * dir, const size_t subdir_count, const size_t file_count, const size_t current_level, const size_t max_level) {
+    if (current_level >= max_level) {
         return 0;
     }
 
@@ -54,12 +53,7 @@ int generate_level(const char * dir, const size_t subdir_count, const size_t fil
             return 1;
         }
 
-        struct timespec start;
-        clock_gettime(CLOCK_MONOTONIC, &start);
         const int fd = open(name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        struct timespec end;
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        *mkfile_time += elapsed(&start, &end);
         if (fd < 0) {
             fprintf(stderr, "open failed for %s: %d %s\n", name, errno, strerror(errno));
             return 1;
@@ -73,12 +67,7 @@ int generate_level(const char * dir, const size_t subdir_count, const size_t fil
             return 1;
         }
 
-        struct timespec start;
-        clock_gettime(CLOCK_MONOTONIC, &start);
         rc = mkdir(name, S_IRWXU | S_IRWXG | S_IRWXO);
-        struct timespec end;
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        *mkdir_time += elapsed(&start, &end);
 
         if (rc < 0) {
             fprintf(stderr, "mkdir failed for %s: %d %s\n", name, errno, strerror(errno));
@@ -92,7 +81,7 @@ int generate_level(const char * dir, const size_t subdir_count, const size_t fil
             return 1;
         }
 
-        if (generate_level(name, subdir_count, file_count, current_level + 1, max_level, mkdir_time, mkfile_time) != 0) {
+        if (generate_level(name, subdir_count, file_count, current_level + 1, max_level) != 0) {
             fprintf(stderr, "descent failed for %s\n", name);
             return 1;
         }
@@ -146,11 +135,9 @@ int main(int argc, char * argv[]) {
     printf("Total Dirs:            %zu\n", total_dirs);
     printf("Total Files:           %zu\n", total_files);
 
-    long double mkdir_time = 0;
-    long double mkfile_time = 0;
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
-    const int rc = generate_level(output, dirs, files, 0, depth, &mkdir_time, &mkfile_time);
+    const int rc = generate_level(output, dirs, files, 0, depth);
     struct timespec end;
     clock_gettime(CLOCK_MONOTONIC, &end);
 
@@ -159,9 +146,11 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
-    printf("Time Spent Generating: %.2Lfs\n", elapsed(&start, &end));
-    printf("Dirs/Sec:              %.2Lf\n",  total_dirs / mkdir_time);
-    printf("Files/Sec:             %.2Lf\n",  total_files / mkfile_time);
+    const long double gen_time = elapsed(&start, &end);
+
+    printf("Time Spent Generating: %.2Lfs\n", gen_time);
+    printf("Dirs/Sec:              %.2Lf\n",  total_dirs / gen_time);
+    printf("Files/Sec:             %.2Lf\n",  total_files / gen_time);
 
     return 0;
 }
