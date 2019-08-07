@@ -80,10 +80,10 @@ add_executable(gendir gendir.c)
 
 # potentially useful C++ executables
 if (CMAKE_CXX_COMPILER)
-  # a more complex tree generator
-  add_executable(make_testtree make_testtree.cpp)
-  target_link_libraries(make_testtree ${COMMON_LIBRARIES})
-  add_dependencies(make_testtree GUFI)
+  # a more complex index generator
+  add_executable(make_testindex make_testindex.cpp)
+  target_link_libraries(make_testindex ${COMMON_LIBRARIES})
+  add_dependencies(make_testindex GUFI)
 
   add_executable(verifytrace verifytrace.cpp)
 
