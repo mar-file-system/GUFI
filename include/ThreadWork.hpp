@@ -75,8 +75,8 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef THREADWORK_H
-#define THREADWORK_H
+#ifndef THREAD_WORK_HPP
+#define THREAD_WORK_HPP
 
 #include <condition_variable>
 #include <list>

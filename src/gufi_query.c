@@ -104,52 +104,14 @@ extern int errno;
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
 #if BENCHMARK
-struct atomic{
-    pthread_mutex_t mutex;
-    void * value;
-};
-
-int atomic_lock(struct atomic * ptr) {
-    if (!ptr) {
-        return 0;
-    }
-
-    pthread_mutex_lock(&ptr->mutex);
-    return 1;
-}
-
-int atomic_unlock(struct atomic * ptr) {
-    if (!ptr) {
-        return 0;
-    }
-
-    pthread_mutex_unlock(&ptr->mutex);
-    return 1;
-}
-
-#define atomic_alloc(TYPE, NAME, VALUE)         \
-    pthread_mutex_init(&NAME.mutex, NULL);      \
-    atomic_lock(&NAME);                         \
-    NAME.value = malloc(sizeof(TYPE));          \
-    * (TYPE *) NAME.value = VALUE;              \
-    atomic_unlock(&NAME)
-
-void atomic_free(struct atomic * ptr) {
-    if (ptr) {
-        atomic_lock(ptr);
-        free(ptr->value);
-        atomic_unlock(ptr);
-        pthread_mutex_destroy(&ptr->mutex);
-    }
-}
-
-static struct atomic total_files;
+static size_t total_files;
+static pthread_mutex_t total_files_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int total_files_callback(void * unused, int count, char ** data, char ** columns) {
     const size_t files = atol(data[1]);
-    atomic_lock(&total_files);
-    * ((size_t *) total_files.value) += files;
-    atomic_unlock(&total_files);
+    pthread_mutex_lock(&total_files_mutex);
+    total_files += files;
+    pthread_mutex_unlock(&total_files_mutex);
     return 0;
 }
 
@@ -793,7 +755,7 @@ int main(int argc, char *argv[])
     long double total_time = 0;
 
     #if BENCHMARK
-    atomic_alloc(size_t, total_files, 0);
+    total_files = 0;
     #endif
 
     #if defined(DEBUG) || BENCHMARK
@@ -814,7 +776,11 @@ int main(int argc, char *argv[])
     // have to be done per instance of a bf program loops through and
     // processes all directories that enter the queue by farming the work
     // out to the threadpool
+    #ifdef DEBUG
     const int thread_count = processdirs2(processdir, &acquire_mutex_time, &work_time);
+    #else
+    const int thread_count = processdirs(processdir);
+    #endif
 
     // processfin - this is work done after the threads are done working
     // before they are taken down - this will be different for each
@@ -936,13 +902,11 @@ int main(int argc, char *argv[])
      struct timespec end;
      clock_gettime(CLOCK_MONOTONIC, &end);
 
-     fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
-     fprintf(stderr, "Total Files:           %zu\n",    * ((size_t *) total_files.value));
+     fprintf(stderr, "Total Dirs:            %d\n",     thread_count);
+     fprintf(stderr, "Total Files:           %zu\n",    total_files);
      fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time);
      fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time);
-     fprintf(stderr, "Files/Sec:             %.2Lf\n",  (* (size_t *) total_files.value) / total_time);
-
-     atomic_free(&total_files);
+     fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / total_time);
      #endif
 
      return 0;

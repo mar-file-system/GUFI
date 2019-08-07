@@ -75,7 +75,6 @@ OF SUCH DAMAGE.
 
 
 
-#include <atomic>
 #include <sys/types.h>
 #include <thread>
 #include <vector>
@@ -90,12 +89,9 @@ extern "C" {
 
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH
 
-// constants set at runtime (probably cannot be constexpr)
-extern int templatefd;
-extern off_t templatesize;
-
 // queue-per-thread
 typedef std::pair <ThreadWork <struct work>, std::thread> WorkPair;
+
 // the thread pool
 typedef std::vector <WorkPair> State;
 
@@ -111,7 +107,7 @@ bool processinit(std::atomic_size_t & queued, State & state
     );
 
 // signature of function that needs to be defined by different directory transformation executables
-bool processdir(const int id, struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
+bool processdir(struct work & work, const int id, State & state, std::atomic_size_t & queued, std::size_t & next_queue
                 #if BENCHMARK
                 , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
                 #endif

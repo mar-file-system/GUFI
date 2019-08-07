@@ -75,10 +75,7 @@ OF SUCH DAMAGE.
 
 
 
-#if BENCHMARK
 #include <atomic>
-#endif
-
 #include <cstring>
 #include <ctime>
 #include <fcntl.h>
@@ -128,7 +125,7 @@ int output_init(const int end) {
 
 // process the work under one directory (no recursion)
 // deletes work
-bool processdir(const int id, struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
+bool processdir(struct work & work, const int id, State & state, std::atomic_size_t & queued, std::size_t & next_queue
                 #if BENCHMARK
                 , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
                 #endif
@@ -216,9 +213,9 @@ bool processdir(const int id, struct work & work, State & state, std::atomic_siz
         fprintf(output[id], "%" STAT_size "%c", e.statuso.st_size, in.delim[0]);
         fprintf(output[id], "%" STAT_bsize "%c", e.statuso.st_blksize, in.delim[0]);
         fprintf(output[id], "%" STAT_blocks "%c", e.statuso.st_blocks, in.delim[0]);
-        fprintf(output[id], "%d%c", e.statuso.st_atime, in.delim[0]);
-        fprintf(output[id], "%d%c", e.statuso.st_mtime, in.delim[0]);
-        fprintf(output[id], "%d%c", e.statuso.st_ctime, in.delim[0]);
+        fprintf(output[id], "%lld%c", e.statuso.st_atime, in.delim[0]);
+        fprintf(output[id], "%lld%c", e.statuso.st_mtime, in.delim[0]);
+        fprintf(output[id], "%lld%c", e.statuso.st_ctime, in.delim[0]);
         fprintf(output[id], "%s%c", e.linkname, in.delim[0]);
         fprintf(output[id], "%s%c", e.xattr, in.delim[0]);
         fprintf(output[id], "%d%c", e.crtime, in.delim[0]);
@@ -284,7 +281,6 @@ int main(int argc, char * argv[]) {
 
     State state(in.maxthreads);
     std::atomic_size_t queued(0); // so long as one directory is queued, there is potential for more subdirectories, so don't stop the thread
-    std::vector <std::size_t> processed(in.maxthreads);
 
     #if BENCHMARK
     std::atomic_size_t total_dirs(0);
@@ -295,9 +291,9 @@ int main(int argc, char * argv[]) {
     #endif
 
     const bool spawned_threads = processinit(queued, state
-                                            #if BENCHMARK
-                                            , total_dirs, total_files
-                                            #endif
+                                             #if BENCHMARK
+                                             , total_dirs, total_files
+                                             #endif
                                             );
     processfin(state, spawned_threads);
 
@@ -314,7 +310,6 @@ int main(int argc, char * argv[]) {
     #endif
 
     output_fin(in.maxthreads);
-
 
     return 0;
 }

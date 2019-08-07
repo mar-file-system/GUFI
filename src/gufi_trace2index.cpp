@@ -37,8 +37,8 @@ extern "C" {
 
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH
 
-static int templatefd = -1;    // this is really a constant that is set at runtime
-static off_t templatesize = 0; // this is really a constant that is set at runtime
+int templatefd = -1;    // this is really a constant that is set at runtime
+off_t templatesize = 0; // this is really a constant that is set at runtime
 
 // Data stored during first pass of input file
 struct first {
@@ -472,8 +472,8 @@ void processfin(std::thread & scout, State & state, const bool spawned_threads) 
     scout.join();
 
     if (spawned_threads) {
-        for(WorkPair & wp : state) {
-            wp.second.join();
+        for(int i = 0; i < in.maxthreads; i++) {
+            state[i].second.join();
         }
     }
 }

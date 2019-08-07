@@ -151,6 +151,11 @@ if (CMAKE_CXX_COMPILER)
   target_link_libraries(gufi_dir2trace ${COMMON_LIBRARIES})
   add_dependencies(gufi_dir2trace GUFI)
   install(TARGETS gufi_dir2trace DESTINATION bin COMPONENT Server)
+
+  add_executable(gufi_trace2index gufi_trace2index.cpp)
+  target_link_libraries(gufi_trace2index ${COMMON_LIBRARIES})
+  add_dependencies(gufi_trace2index GUFI)
+  install(TARGETS gufi_trace2index DESTINATION bin COMPONENT Server)
 endif()
 
 # build the main binaries

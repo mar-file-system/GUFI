@@ -75,13 +75,10 @@ OF SUCH DAMAGE.
 
 
 
-#if BENCHMARK
 #include <atomic>
-#endif
-
 #include <cerrno>
-#include <condition_variable>
 #include <cstring>
+#include <ctime>
 #include <fcntl.h>
 #include <mutex>
 #include <sys/stat.h>
@@ -97,13 +94,17 @@ extern "C" {
 
 }
 
+#include "gufi_dir2x.hpp"
+
 extern int errno;
 
-#include "gufi_dir2x.hpp"
+// constants set at runtime (probably cannot be constexpr)
+int templatefd = -1;
+off_t templatesize = 0;
 
 // process the work under one directory (no recursion)
 // deletes work
-bool processdir(const int, struct work & work, State & state, std::atomic_size_t & queued, std::size_t & next_queue
+bool processdir(struct work & work, const int, State & state, std::atomic_size_t & queued, std::size_t & next_queue
                 #if BENCHMARK
                 , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
                 #endif
@@ -286,16 +287,15 @@ int validate_inputs() {
           return -1;
       }
    }
-   else {
-       // create the source root under the destination directory using
-       // the source directory's permissions and owners
-       // this allows for the threads to not have to recursively create directories
-       char root[MAXPATH];
-       SNPRINTF(root, MAXPATH, "%s/%s", in.nameto, in.name);
-       if (dupdir(root, &dst_st)) {
-           fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
-           return -1;
-       }
+
+   // create the source root under the destination directory using
+   // the source directory's permissions and owners
+   // this allows for the threads to not have to recursively create directories
+   char root[MAXPATH];
+   SNPRINTF(root, MAXPATH, "%s/%s", in.nameto, in.name);
+   if (dupdir(root, &src_st)) {
+       fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
+       return -1;
    }
 
    return 0;
@@ -336,37 +336,39 @@ int main(int argc, char * argv[]) {
 
     State state(in.maxthreads);
     std::atomic_size_t queued(0); // so long as one directory is queued, there is potential for more subdirectories, so don't stop the thread
-    std::vector <std::size_t> processed(in.maxthreads);
 
     #if BENCHMARK
     std::atomic_size_t total_dirs(0);
     std::atomic_size_t total_files(0);
 
-    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
     const bool spawned_threads = processinit(queued, state
-                                            #if BENCHMARK
-                                            , total_dirs, total_files
-                                            #endif
+                                             #if BENCHMARK
+                                             , total_dirs, total_files
+                                             #endif
                                             );
     processfin(state, spawned_threads);
-
-    close(templatefd);
 
     // set top level permissions
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     #if BENCHMARK
-    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    struct timespec end;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    const long double processtime = elapsed(&start, &end);
 
-    const long double processtime = std::chrono::duration_cast <std::chrono::nanoseconds> (end - start).count() / 1e9L;
     fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs.load());
     fprintf(stderr, "Total Files:           %zu\n",    total_files.load());
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs.load() / processtime);
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files.load() / processtime);
+
     #endif
+
+    close(templatefd);
 
     return 0;
 }

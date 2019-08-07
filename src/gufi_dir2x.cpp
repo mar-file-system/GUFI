@@ -94,7 +94,6 @@ extern "C" {
 #include "bf.h"
 #include "utils.h"
 #include "dbutils.h"
-#include "template_db.h"
 
 }
 
@@ -102,13 +101,10 @@ extern int errno;
 
 #include "gufi_dir2x.hpp"
 
-int templatefd = -1;    // this is really a constant that is set at runtime
-off_t templatesize = 0; // this is really a constant that is set at runtime
-
 typedef std::pair <ThreadWork <struct work>, std::thread> WorkPair;
 typedef std::vector <WorkPair> State;
 
-sqlite3 * opendb(const char *name)
+sqlite3 * opendb(const char * name)
 {
     sqlite3 * db = NULL;
 
@@ -173,13 +169,20 @@ std::size_t worker_function(std::atomic_size_t & queued, State & state, ThreadWo
     while (true) {
         std::list <struct work> dirs;
         {
-            std::unique_lock <std::mutex> lock(tw.mutex);
 
             // wait for work
-            while (queued && !tw.queue.size()) {
-                tw.cv.wait(lock);
+            while (true) {
+                std::unique_lock <std::mutex> lock(tw.mutex);
+                if (queued && !tw.queue.size()) {
+                    tw.cv.wait(lock);
+                }
+                else {
+                    break;
+                }
             }
 
+            // only stop if all items have been processed
+            // ignore attempts to shut down early
             if (!queued && !tw.queue.size()) {
                 break;
             }
@@ -195,7 +198,7 @@ std::size_t worker_function(std::atomic_size_t & queued, State & state, ThreadWo
 
         // process all work
         for(struct work & dir : dirs) {
-            processed += processdir(tw.id, dir, state, queued, next_queue
+            processed += processdir(dir, tw.id, state, queued, next_queue
                                     #if BENCHMARK
                                     , total_dirs, total_files
                                     #endif
