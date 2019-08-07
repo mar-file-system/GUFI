@@ -22,6 +22,7 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
         return false;
     }
 
+    // get the path of the parent, removing the trailing slash
     const std::string parent = line.substr(0, first_delim - (line[first_delim - 1] == '/'));
 
     // followed by a series of non-directories
@@ -46,19 +47,11 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
         }
 
         // check if the current path is a direct child of the parent path
-        char * buf = new char[first_delim + 1]();
-        memcpy(buf, line.c_str(), first_delim);
-        char * bufdir = dirname(buf);
-        const std::size_t len = strlen(bufdir);
-
-        if ((parent.size() != len)         ||
-            parent.compare(0, len, bufdir)) {
-            delete [] buf;
+        const std::string::size_type last_slash = line.find_last_of('/', first_delim);
+        if (last_slash != parent.size()) {
             std::cerr << "Bad child: " << line << std::endl;
             return false;
         }
-
-        delete [] buf;
     }
 
     return true;
