@@ -75,29 +75,27 @@ OF SUCH DAMAGE.
 
 
 
-#include <atomic>
-#include <cstring>
-#include <ctime>
 #include <fcntl.h>
-#include <mutex>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
 #include <unistd.h>
 
-extern "C" {
 #include "bf.h"
 #include "utils.h"
 #include "dbutils.h"
 #include "template_db.h"
 #include "trace.h"
-}
-
-#include "QueuePerThreadPool.hpp"
+#include "QueuePerThreadPool.h"
 
 #if BENCHMARK
-std::atomic_size_t total_dirs(0);
-std::atomic_size_t total_files(0);
+#include <time.h>
+
+pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
+size_t total_dirs = 0;
+size_t total_files = 0;
 #endif
 
 // per thread output file handles
@@ -133,33 +131,38 @@ int output_init(char * prefix, const int count) {
 
 // process the work under one directory (no recursion)
 // deletes work
-bool processdir(QPTPool * ctx, struct work & work, const size_t id, std::size_t & next_queue, void * args) {
-
+int processdir(struct QPTPool * ctx, struct work * work, const size_t id, size_t * next_queue, void * args) {
     #if BENCHMARK
+    pthread_mutex_lock(&global_mutex);
     total_dirs++;
+    pthread_mutex_unlock(&global_mutex);
     #endif
 
-    DIR * dir = opendir(work.name);
+    if (!ctx || !work) {
+        return 0;
+    }
+
+    DIR * dir = opendir(work->name);
     if (!dir) {
         closedir(dir);
-        return false;
+        return 0;
     }
 
     // get source directory info
     struct stat dir_st;
-    if (lstat(work.name, &dir_st) < 0)  {
+    if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
-        return false;
+        return 0;
     }
 
-    worktofile(output[id], in.delim, &work);
+    worktofile(output[id], in.delim, work);
 
-    struct dirent * entry = nullptr;
-    std::size_t rows = 0;
+    struct dirent * entry = NULL;
+    size_t rows = 0;
     while ((entry = readdir(dir))) {
         // skip . and ..
         if (entry->d_name[0] == '.') {
-            std::size_t len = strlen(entry->d_name);
+            size_t len = strlen(entry->d_name);
             if ((len == 1) ||
                 ((len == 2) && (entry->d_name[1] == '.'))) {
                 continue;
@@ -167,68 +170,68 @@ bool processdir(QPTPool * ctx, struct work & work, const size_t id, std::size_t 
         }
 
         // get entry path
-        struct work e;
-        memset(&e, 0, sizeof(e));
-        SNPRINTF(e.name, MAXPATH, "%s/%s", work.name, entry->d_name);
+        struct work * e = (struct work *) calloc(1, sizeof(struct work));
+        SNPRINTF(e->name, MAXPATH, "%s/%s", work->name, entry->d_name);
 
         // get the entry's metadata
-        if (lstat(e.name, &e.statuso) < 0) {
+        if (lstat(e->name, &e->statuso) < 0) {
             continue;
         }
 
-        e.xattrs=0;
+        e->xattrs=0;
         if (in.doxattrs > 0) {
-            memset(e.xattr, 0, sizeof(e.xattr));
-            e.xattrs = pullxattrs(e.name, e.xattr);
+            memset(e->xattr, 0, sizeof(e->xattr));
+            e->xattrs = pullxattrs(e->name, e->xattr);
         }
 
         // push subdirectories onto the queue
-        if (S_ISDIR(e.statuso.st_mode)) {
-            e.type[0] = 'd';
-            e.pinode = work.statuso.st_ino;
-            ctx->enqueue(e, next_queue);
+        if (S_ISDIR(e->statuso.st_mode)) {
+            e->type[0] = 'd';
+            e->pinode = work->statuso.st_ino;
+            QPTPool_enqueue_internal(ctx, e, next_queue);
             continue;
         }
 
         rows++;
 
         // non directories
-        if (S_ISLNK(e.statuso.st_mode)) {
-            e.type[0] = 'l';
-            readlink(e.name, e.linkname, MAXPATH);
+        if (S_ISLNK(e->statuso.st_mode)) {
+            e->type[0] = 'l';
+            readlink(e->name, e->linkname, MAXPATH);
         }
-        else if (S_ISREG(e.statuso.st_mode)) {
-            e.type[0] = 'f';
+        else if (S_ISREG(e->statuso.st_mode)) {
+            e->type[0] = 'f';
         }
 
         #if BENCHMARK
+        pthread_mutex_lock(&global_mutex);
         total_files++;
+        pthread_mutex_unlock(&global_mutex);
         #endif
 
-        worktofile(output[id], in.delim, &e);
+        worktofile(output[id], in.delim, e);
     }
 
     closedir(dir);
 
-    return true;
+    return 1;
 }
 
 // This app allows users to do any of the following: (a) just walk the
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
-int validate_inputs(struct work & root) {
-    memset(&root, 0, sizeof(root));
-    SNPRINTF(root.name, MAXPATH, "%s", in.name);
+int validate_inputs(struct work * root) {
+    SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
     // get input path metadata
-    if (lstat(root.name, &root.statuso) < 0) {
+    if (lstat(root->name, &root->statuso) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
         return -1;
     }
 
     // check that the input path is a directory
-    if (S_ISDIR(root.statuso.st_mode)) {
-        root.type[0] = 'd';
+    if (S_ISDIR(root->statuso.st_mode)) {
+        root->type[0] = 'd';
     }
     else {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
@@ -237,7 +240,7 @@ int validate_inputs(struct work & root) {
 
     // check if the source directory can be accessed
     static mode_t PERMS = R_OK | X_OK;
-    if ((root.statuso.st_mode & PERMS) != PERMS) {
+    if ((root->statuso.st_mode & PERMS) != PERMS) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 in.name, strerror(errno));
         return 1;
@@ -266,7 +269,7 @@ int validate_inputs(struct work & root) {
    }
 
    if (in.doxattrs > 0) {
-       root.xattrs = pullxattrs(in.name, root.xattr);
+       root->xattrs = pullxattrs(in.name, root->xattr);
    }
 
    return 0;
@@ -294,38 +297,49 @@ int main(int argc, char * argv[]) {
             return retval;
     }
 
-    struct work root;
+    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    if (!root) {
+        fprintf(stderr, "Could not allocate root struct\n");
+        return -1;
+    }
+
     if (validate_inputs(root))
         return -1;
-
 
     if (output_init(in.outfilen, in.maxthreads) != 0) {
         return -1;
     }
-
-    // State state(in.maxthreads);
-    // std::atomic_size_t queued(0); // so long as one directory is queued, there is potential for more subdirectories, so don't stop the thread
 
     #if BENCHMARK
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    QPTPool pool(in.maxthreads);
-    pool.enqueue(root);
-    pool.start(processdir, nullptr);
-    pool.wait();
+    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    if (!pool) {
+        fprintf(stderr, "Failed to initialize thread pool\n");
+        return -1;
+    }
+
+    QPTPool_enqueue_external(pool, root);
+    if (QPTPool_start(pool, processdir, NULL) != (size_t) in.maxthreads) {
+        fprintf(stderr, "Failed to start all threads\n");
+        return -1;
+    }
+
+    QPTPool_wait(pool);
+    QPTPool_destroy(pool);
 
     #if BENCHMARK
     struct timespec end;
     clock_gettime(CLOCK_MONOTONIC, &end);
     const long double processtime = elapsed(&start, &end);
 
-    fprintf(stderr, "Total Dirs:            %zu\n",  total_dirs.load());
-    fprintf(stderr, "Total Files:           %zu\n",  total_files.load());
+    fprintf(stderr, "Total Dirs:            %zu\n",  total_dirs);
+    fprintf(stderr, "Total Files:           %zu\n",  total_files);
     fprintf(stderr, "Time Spent Indexing:   %Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %Lf\n",  total_dirs.load() / processtime);
-    fprintf(stderr, "Files/Sec:             %Lf\n",  total_files.load() / processtime);
+    fprintf(stderr, "Dirs/Sec:              %Lf\n",  total_dirs / processtime);
+    fprintf(stderr, "Files/Sec:             %Lf\n",  total_files / processtime);
     #endif
 
     output_fin(in.maxthreads);

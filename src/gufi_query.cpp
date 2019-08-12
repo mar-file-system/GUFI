@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
         fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
         fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
-        fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_readdir_time - total_pushdir_time);
+        fprintf(stderr, "Time to descend (w/o readdir + pushdir):        %.2Lfs\n", total_descend_time - total_readdir_time - total_pushdir_time);
         fprintf(stderr, "Time to readdir:                                %.2Lfs\n", total_readdir_time);
         fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
         fprintf(stderr, "Time to sqlite3_exec (query and print)          %.2Lfs\n", total_exec_time);
@@ -713,7 +713,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Time to create tables:                          %.2Lfs\n", total_create_tables_time);
         fprintf(stderr, "Time to load extensions:                        %.2Lfs\n", total_load_extension_time);
         fprintf(stderr, "Time to attach intermediate databases:          %.2Lfs\n", total_attach_time);
-        fprintf(stderr, "Time to descend:                                %.2Lfs\n", total_descend_time - total_readdir_time - total_pushdir_time);
+        fprintf(stderr, "Time to descend (w/o readdir + pushdir):        %.2Lfs\n", total_descend_time - total_readdir_time - total_pushdir_time);
         fprintf(stderr, "Time to readdir:                                %.2Lfs\n", total_readdir_time);
         fprintf(stderr, "Time to pushdir:                                %.2Lfs\n", total_pushdir_time);
         fprintf(stderr, "Time to sqlite3_exec (query and insert)         %.2Lfs\n", total_exec_time);

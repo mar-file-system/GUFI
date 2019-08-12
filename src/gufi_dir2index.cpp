@@ -92,9 +92,8 @@ extern "C" {
 #include "opendb.h"
 #include "template_db.h"
 #include "utils.h"
+#include "QueuePerThreadPool.h"
 }
-
-#include "QueuePerThreadPool.hpp"
 
 extern int errno;
 
@@ -107,34 +106,38 @@ std::atomic_size_t total_dirs(0);
 std::atomic_size_t total_files(0);
 #endif
 
-bool processdir(QPTPool * ctx, struct work & work , const size_t id, size_t & next_queue, void * args) {
+int processdir(QPTPool * ctx, struct work * work , const size_t id, size_t * next_queue, void * args) {
     #if BENCHMARK
     total_dirs++;
     #endif
 
-    DIR * dir = opendir(work.name);
+    if (!ctx || !work) {
+        return 0;
+    }
+
+    DIR * dir = opendir(work->name);
     if (!dir) {
         closedir(dir);
-        return false;
+        return 0;
     }
 
     // get source directory info
     struct stat dir_st;
-    if (lstat(work.name, &dir_st) < 0)  {
+    if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
-        return false;
+        return 0;
     }
 
     // create the directory
     char topath[MAXPATH];
-    SNPRINTF(topath, MAXPATH, "%s/%s", in.nameto, work.name);
+    SNPRINTF(topath, MAXPATH, "%s/%s", in.nameto, work->name);
     int rc = mkdir(topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // don't need recursion because parent is guaranteed to exist
     if (rc < 0) {
         const int err = errno;
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
             closedir(dir);
-            return false;
+            return 0;
         }
     }
 
@@ -145,13 +148,13 @@ bool processdir(QPTPool * ctx, struct work & work , const size_t id, size_t & ne
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir_st.st_uid, dir_st.st_gid)) {
         closedir(dir);
-        return false;
+        return 0;
     }
 
     sqlite3 * db = opendb2(dbname, 0, 0, 1);
     if (!db) {
         closedir(dir);
-        return false;
+        return 0;
     }
 
     // prepare to insert into the database
@@ -175,38 +178,37 @@ bool processdir(QPTPool * ctx, struct work & work , const size_t id, size_t & ne
         }
 
         // get entry path
-        struct work e;
-        memset(&e, 0, sizeof(e));
-        SNPRINTF(e.name, MAXPATH, "%s/%s", work.name, entry->d_name);
+        struct work * e = (struct work *) calloc(1, sizeof(struct work));
+        SNPRINTF(e->name, MAXPATH, "%s/%s", work->name, entry->d_name);
 
         // get the entry's metadata
-        if (lstat(e.name, &e.statuso) < 0) {
+        if (lstat(e->name, &e->statuso) < 0) {
             continue;
         }
 
-        e.xattrs=0;
+        e->xattrs=0;
         if (in.doxattrs > 0) {
-            memset(e.xattr, 0, sizeof(e.xattr));
-            e.xattrs = pullxattrs(e.name, e.xattr);
+            memset(e->xattr, 0, sizeof(e->xattr));
+            e->xattrs = pullxattrs(e->name, e->xattr);
         }
 
         // push subdirectories onto the queue
-        if (S_ISDIR(e.statuso.st_mode)) {
-            e.type[0] = 'd';
-            e.pinode = work.statuso.st_ino;
-            ctx->enqueue(e, next_queue);
+        if (S_ISDIR(e->statuso.st_mode)) {
+            e->type[0] = 'd';
+            e->pinode = work->statuso.st_ino;
+            QPTPool_enqueue_internal(ctx, e, next_queue);
             continue;
         }
 
         rows++;
 
         // non directories
-        if (S_ISLNK(e.statuso.st_mode)) {
-            e.type[0] = 'l';
-            readlink(e.name, e.linkname, MAXPATH);
+        if (S_ISLNK(e->statuso.st_mode)) {
+            e->type[0] = 'l';
+            readlink(e->name, e->linkname, MAXPATH);
         }
-        else if (S_ISREG(e.statuso.st_mode)) {
-            e.type[0] = 'f';
+        else if (S_ISREG(e->statuso.st_mode)) {
+            e->type[0] = 'f';
         }
 
         #if BENCHMARK
@@ -214,31 +216,35 @@ bool processdir(QPTPool * ctx, struct work & work , const size_t id, size_t & ne
         #endif
 
         // update summary table
-        sumit(&summary, &e);
+        sumit(&summary, e);
 
         // add entry into bulk insert
-        insertdbgo(&e, db, res);
+        insertdbgo(e, db, res);
+
+        free(e);
     }
 
     stopdb(db);
     insertdbfin(db, res);
-    insertsumdb(db, &work, &summary);
+    insertsumdb(db, work, &summary);
     closedb(db);
     db = NULL;
 
     // ignore errors
-    chmod(topath, work.statuso.st_mode);
-    chown(topath, work.statuso.st_uid, work.statuso.st_gid);
+    chmod(topath, work->statuso.st_mode);
+    chown(topath, work->statuso.st_uid, work->statuso.st_gid);
 
     closedir(dir);
 
-    return true;
+    free(work);
+
+    return 1;
 }
 
 // This app allows users to do any of the following: (a) just walk the
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
-int validate_inputs(struct work & root) {
+int validate_inputs(struct work * root) {
    char expathin[MAXPATH];
    char expathout[MAXPATH];
    char expathtst[MAXPATH];
@@ -252,18 +258,17 @@ int validate_inputs(struct work & root) {
        fprintf(stderr,"You are putting the index dbs in input directory\n");
    }
 
-   memset(&root, 0, sizeof(root));
-   SNPRINTF(root.name, MAXPATH, "%s", in.name);
+   SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
     // get input path metadata
-   if (lstat(root.name, &root.statuso) < 0) {
+   if (lstat(root->name, &root->statuso) < 0) {
        fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
        return -1;
    }
 
    // check that the input path is a directory
-   if (S_ISDIR(root.statuso.st_mode)) {
-       root.type[0] = 'd';
+   if (S_ISDIR(root->statuso.st_mode)) {
+       root->type[0] = 'd';
    }
    else {
        fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
@@ -272,7 +277,7 @@ int validate_inputs(struct work & root) {
 
    // check if the source directory can be accessed
    static mode_t PERMS = R_OK | X_OK;
-   if ((root.statuso.st_mode & PERMS) != PERMS) {
+   if ((root->statuso.st_mode & PERMS) != PERMS) {
        fprintf(stderr, "couldn't access input dir '%s': %s\n",
                in.name, strerror(errno));
        return 1;
@@ -300,13 +305,13 @@ int validate_inputs(struct work & root) {
    // this allows for the threads to not have to recursively create directories
    char dst_path[MAXPATH];
    SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name);
-   if (dupdir(dst_path, &root.statuso)) {
+   if (dupdir(dst_path, &root->statuso)) {
        fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
        return -1;
    }
 
    if (in.doxattrs > 0) {
-       root.xattrs = pullxattrs(in.name, root.xattr);
+       root->xattrs = pullxattrs(in.name, root->xattr);
    }
 
    return 0;
@@ -319,7 +324,7 @@ void sub_help() {
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHpn:d:", 1, "input_dir output_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHpn:", 1, "input_dir output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -334,7 +339,12 @@ int main(int argc, char * argv[]) {
             return retval;
     }
 
-    struct work root;
+    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    if (!root) {
+        fprintf(stderr, "Could not allocate root struct\n");
+        return -1;
+    }
+
     if (validate_inputs(root))
         return -1;
 
@@ -352,10 +362,20 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    QPTPool pool(in.maxthreads);
-    pool.enqueue(root);
-    pool.start(processdir, nullptr);
-    pool.wait();
+    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    if (!pool) {
+        fprintf(stderr, "Failed to initialize thread pool\n");
+        return -1;
+    }
+
+    QPTPool_enqueue_external(pool, root);
+    if (QPTPool_start(pool, processdir, NULL) != (size_t) in.maxthreads) {
+        fprintf(stderr, "Failed to start all threads\n");
+        return -1;
+    }
+
+    QPTPool_wait(pool);
+    QPTPool_destroy(pool);
 
     // set top level permissions
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

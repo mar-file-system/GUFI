@@ -75,112 +75,54 @@ OF SUCH DAMAGE.
 
 
 
-#include "QueuePerThreadPool.hpp"
+#ifndef QUEUE_PER_THREAD_POOL
+#define QUEUE_PER_THREAD_POOL
 
-QPTPool::QPTPool(const std::size_t threads)
-    : incomplete(0),
-      state(threads)
-{
-    if (!threads) {
-        throw std::runtime_error("0 threads specified for thread pool");
-    }
+#include <pthread.h>
 
-    for(std::size_t id = 0; id < threads; id++) {
-        state[id].first.id = id;
-    }
-}
+#include "bf.h"
 
-void QPTPool::enqueue(struct work & new_work) {
-    static std::size_t next_queue = 0;
-    enqueue(new_work, next_queue);
-}
+struct node;
 
-void QPTPool::enqueue(struct work & new_work, std::size_t & next_queue) {
-    // put the work on the queue
-    {
-        std::lock_guard <std::mutex> lock(state[next_queue].first.mutex);
-        state[next_queue].first.queue.emplace_back(std::move(new_work));
-        incomplete++;
-        state[next_queue].first.cv.notify_all();
-    }
+struct queue {
+    struct node * head;
+    struct node * tail;
+};
 
-    // round robin
-    next_queue++;
-    next_queue %= state.size();
-}
+/* The context for a single thread in QPTPool */
+struct QPTPoolData {
+    size_t id;
+    struct queue queue;
+    pthread_mutex_t mutex;
+    pthread_cond_t cv;
+    pthread_t thread;
+    size_t threads_started;
+    size_t threads_successful;
+};
 
-void QPTPool::start(Func_t func, void * extra_args) {
-    for(WorkPair & wp : state) {
-        wp.second = std::thread(&QPTPool::worker_function, this, func, wp.first.id, extra_args);
-    }
-}
+// The Queue Per Thread Pool context
+struct QPTPool {
+    struct QPTPoolData * data;
+    size_t size;
 
-void QPTPool::worker_function(Func_t func, const size_t id, void *args) {
-    PerThread<struct work> & tw = state[id].first;
-    std::size_t next_queue = id;
+    pthread_mutex_t mutex;
+    size_t incomplete;
+};
 
-    while (true) {
-        std::list <struct work> dirs;
-        {
-            std::unique_lock <std::mutex> lock(tw.mutex);
+/* User defined function to pass into QPTPool_start*/
+typedef int (*QPTPoolFunc_t)(struct QPTPool *, struct work *, const size_t, size_t *, void *);
 
-            // wait for work
-            while (incomplete && !tw.queue.size()) {
-                tw.cv.wait(lock);
-            }
+struct QPTPool * QPTPool_init(const size_t threads);
+void QPTPool_enqueue_external(struct QPTPool * ctx, struct work * new_work);
+void QPTPool_enqueue_internal(struct QPTPool * ctx, struct work * new_work, size_t * next_queue);
+size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args);
+void QPTPool_wait(struct QPTPool * ctx);
+void QPTPool_destroy(struct QPTPool * ctx);
 
-            if (!incomplete && !tw.queue.size()) {
-                break;
-            }
+// utility functions
+size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);      // get a number in the range [0, # of threads), or a value outside of that range on error
+size_t QPTPool_threads_started(struct QPTPool * ctx);
+size_t QPTPool_threads_completed(struct QPTPool * ctx);
 
-            // take all work
-            dirs = std::move(tw.queue);
-            tw.queue.clear();
-        }
 
-        // process all work
-        for(struct work & dir : dirs) {
-            tw.threads_successful += func(this, dir, id, next_queue, args);
-        }
-        tw.threads_started += dirs.size();
-
-        incomplete -= dirs.size();
-    }
-
-    for(size_t i = 0; i < state.size(); i++) {
-        state[i].first.cv.notify_all();
-    }
-}
-
-void QPTPool::wait() {
-    for(size_t i = 0; i < state.size(); i++) {
-        if (state[i].second.joinable()) {
-            state[i].second.join();
-        }
-    }
-}
-
-std::size_t QPTPool::get_index(const std::thread::id & id) const {
-    for(WorkPair const & wp : state) {
-        if (wp.second.get_id() == id) {
-            return wp.first.id;
-        }
-    }
-    return state.size();
-}
-
-std::size_t QPTPool::threads_started() const {
-    std::size_t sum = 0;
-    for(WorkPair const & wp : state) {
-        sum += wp.first.threads_started;
-    }
-    return sum;
-}
-
-std::size_t QPTPool::threads_completed() const {
-    std::size_t sum = 0;
-    for(WorkPair const & wp : state) {
-        sum += wp.first.threads_successful;
-    }
-    return sum;
-}
+#endif

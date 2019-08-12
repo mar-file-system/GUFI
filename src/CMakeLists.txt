@@ -80,7 +80,7 @@ if (BENCHMARK)
 endif()
 
 # create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c opendb.c structq.c template_db.c trace.c utils.c)
+set(GUFI_SOURCES bf.c dbutils.c opendb.c QueuePerThreadPool.c structq.c template_db.c trace.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 install(TARGETS GUFI DESTINATION lib COMPONENT Server)
@@ -130,6 +130,7 @@ set(C_SOURCES
   bfti.c
   bfwreaddirplus2db.c
   dfw.c
+  gufi_dir2trace.c
   querydb.c
   querydbn.c)
 
@@ -165,9 +166,8 @@ if (CMAKE_CXX_COMPILER)
   endfunction()
 
   set(CXX_SOURCES
-    gufi_dir2trace.cpp
-    gufi_dir2index.cpp
     gufi_query.cpp
+    gufi_dir2index.cpp
     gufi_trace2index.cpp)
 
   build_cpp_and_install(bin TRUE ${CXX_SOURCES})
