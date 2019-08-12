@@ -119,7 +119,7 @@ off_t create_template(int * fd) {
     }
 
     create_tables(name, db);
-    closedb(db);
+    sqlite3_close(db);
 
     if ((*fd = open(name, O_RDONLY)) == -1) {
         fprintf(stderr, "Could not open template file\n");

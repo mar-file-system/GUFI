@@ -112,9 +112,11 @@ class QPTPool {
     typedef std::function<bool(QPTPool *, struct work &, const std::size_t, std::size_t &, void *)> Func_t;
 
     QPTPool(const std::size_t threads, Func_t func, struct work & first_work_item, void * extra_args = nullptr);
+    QPTPool(const std::size_t threads, Func_t func, std::list <struct work> & first_work_items, void * extra_args = nullptr);
     void enqueue(struct work & new_work, std::size_t & next_queue);
     void wait();
     void stop();
+    std::size_t threads_run() const;
 
   private:
     // This should be passed into a thread as the thread arguments to
@@ -138,10 +140,12 @@ class QPTPool {
 
     typedef std::pair <PerThread <struct work>, std::thread> WorkPair;
 
-    std::size_t worker_function(Func_t func, const size_t id, void *args);
+    void worker_function(Func_t func, const size_t id, void *args);
 
     std::atomic_size_t keep_running;
-    std::vector <WorkPair>  state;
+    std::vector <WorkPair> state;
+    std::atomic_size_t thread_count;
+    std::atomic_size_t successful;
 };
 
 #endif

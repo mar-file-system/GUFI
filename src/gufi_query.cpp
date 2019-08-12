@@ -93,11 +93,16 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
+#include <list>
+
+extern "C" {
 #include "bf.h"
 #include "dbutils.h"
 #include "opendb.h"
-#include "structq.h"
 #include "utils.h"
+}
+
+#include "QueuePerThreadPool.hpp"
 
 extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
@@ -108,7 +113,7 @@ static size_t total_files;
 static pthread_mutex_t total_files_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int total_files_callback(void * unused, int count, char ** data, char ** columns) {
-    const size_t files = atol(data[1]);
+    const size_t files = atol(data[0]);
     pthread_mutex_lock(&total_files_mutex);
     total_files += files;
     pthread_mutex_unlock(&total_files_mutex);
@@ -157,7 +162,9 @@ pthread_mutex_t total_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 // Push the subdirectories in the current directory onto the queue
-static size_t descend2(struct work *passmywork,
+static size_t descend2(QPTPool * ctx,
+                       struct work *passmywork,
+                       std::size_t & next_queue,
                        DIR * dir,
                        const size_t max_level
                        #ifdef DEBUG
@@ -171,7 +178,7 @@ static size_t descend2(struct work *passmywork,
     }
 
     if (!dir) {
-        fprintf(stderr, "Could not open %s: %d %s\n", passmywork->name, errno, strerror(errno));
+        fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno));
         return 0;
     }
 
@@ -207,7 +214,8 @@ static size_t descend2(struct work *passmywork,
                     #ifdef DEBUG
                     start_timer(pushdir);
                     #endif
-                    pushdir(&qwork);
+                    ctx->enqueue(qwork, next_queue);
+                    // pushdir(&qwork);
                     #ifdef DEBUG
                     end_timer_ptr(pushdir);
                     #endif
@@ -228,27 +236,23 @@ static size_t descend2(struct work *passmywork,
     return pushed;
 }
 
-// This becomes an argument to thpool_add_work(), so it must return void,
-// instead of void*.
-static void processdir(void * passv)
-{
-    struct work *passmywork = passv;
-    const int mytid = gettid();     // get thread id so we can get access to thread state we need to keep until the thread ends
+bool processdir(QPTPool * ctx, struct work & work , const size_t id, size_t & next_queue, void * args) {
     sqlite3 *db;
     int recs;
     int trecs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
+    DIR * dir = nullptr;
 
     // only print if not aggregating and user wants to print
     // where to output to when printing
     FILE *out = stdout;
     if (in.outfile > 0) {
-       out = gts.outfd[mytid];
+       out = gts.outfd[id];
     }
 
     char name[MAXSQL];
-    SNPRINTF(name, MAXSQL, "%s/" DBNAME, passmywork->name);
+    SNPRINTF(name, MAXSQL, "%s/" DBNAME, work.name);
 
     #ifdef DEBUG
     long double opendir_time = 0;
@@ -282,18 +286,18 @@ static void processdir(void * passv)
     start_timer(opendir);
     #endif
     // keep opendir near opendb to help speed up sqlite3_open_v2
-    DIR * dir = opendir(passmywork->name);
+    dir = opendir(work.name);
     #ifdef DEBUG
     end_timer(opendir);
     #endif
 
     // if we have out db then we have that db open so we just attach the gufi db
     if (in.outdb > 0) {
-      db = gts.outdbd[mytid];
+      db = gts.outdbd[id];
       attachdb(name, db, "tree");
     } else {
         char dbname[MAXPATH];
-        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, passmywork->name);
+        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work.name);
         db = opendb2(dbname, 1, 0, 0
                    /* #ifdef DEBUG */
                    /* , &open_time, &create_tables_time, &load_extension_time */
@@ -307,7 +311,7 @@ static void processdir(void * passv)
     if (in.aggregate_or_print == AGGREGATE) {
         // attach in-memory result aggregation database
         char intermediate_name[MAXSQL];
-        SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, mytid);
+        SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, id);
         if (db && !attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
             fprintf(stderr, "Could not attach database\n");
             closedb(db);
@@ -331,11 +335,11 @@ static void processdir(void * passv)
     if (in.sqltsum_len > 1) {
 
        if (in.andor == 0) {      // AND
-         trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
+           trecs=rawquerydb(work.name, 0, db, (char *) "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
          if (trecs<1) {
            recs=-1;
          } else {
-           recs=rawquerydb(passmywork->name, 0, db, in.sqltsum, 0, 0, 0, mytid);
+           recs=rawquerydb(work.name, 0, db, in.sqltsum, 0, 0, 0, id);
          }
       }
       // this is an OR or we got a record back. go on to summary/entries
@@ -351,7 +355,7 @@ static void processdir(void * passv)
         start_timer(descend);
         #endif
         // push subdirectories into the queue
-        descend2(passmywork, dir, in.max_level
+        descend2(ctx, &work, next_queue, dir, in.max_level
                  #ifdef DEBUG
                  , &pushdir_time
                  #endif
@@ -362,21 +366,21 @@ static void processdir(void * passv)
 
         if (db) {
             // only query this level if the min_level has been reached
-            if (passmywork->level >= in.min_level) {
+            if (work.level >= in.min_level) {
                 // run query on summary, print it if printing is needed, if returns none
                 // and we are doing AND, skip querying the entries db
                 // memset(endname, 0, sizeof(endname));
-                shortpath(passmywork->name,shortname,endname);
-                SNPRINTF(gps[mytid].gepath,MAXPATH,"%s",endname);
+                shortpath(work.name,shortname,endname);
+                SNPRINTF(gps[id].gepath,MAXPATH,"%s",endname);
                 if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     // for directories we have to take off after the last slash
                     // and set the path so users can put path() in their queries
-                    SNPRINTF(gps[mytid].gpath,MAXPATH,"%s",shortname);
+                    SNPRINTF(gps[id].gpath,MAXPATH,"%s",shortname);
                     //printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath);
-                    realpath(passmywork->name,gps[mytid].gfpath);
-                    recs = rawquerydb(passmywork->name, 1, db, in.sqlsum, 1, 0, 0, mytid);
-                    //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,passmywork->name,recs);
+                    realpath(work.name,gps[id].gfpath);
+                    recs = rawquerydb(work.name, 1, db, in.sqlsum, 1, 0, 0, id);
+                    //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,work.name,recs);
                 } else {
                     recs = 1;
                 }
@@ -388,8 +392,8 @@ static void processdir(void * passv)
                     if (in.sqlent_len > 1) {
                         // set the path so users can put path() in their queries
                         //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
-                        SNPRINTF(gps[mytid].gpath,MAXPATH,"%s",passmywork->name);
-                        realpath(passmywork->name,gps[mytid].gfpath);
+                        SNPRINTF(gps[id].gpath,MAXPATH,"%s",work.name);
+                        realpath(work.name,gps[id].gfpath);
 
                         #ifdef DEBUG
                         start_timer(exec);
@@ -397,20 +401,19 @@ static void processdir(void * passv)
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, in.print_callback, out, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s \"%s\"\n", err, in.sqlent);
+                            sqlite3_free(err);
                         }
                         #ifdef DEBUG
                         end_timer(exec);
                         #endif
 
-                        sqlite3_free(err);
-
                         #if BENCHMARK
                         // get the total number of files in this database, regardless of whether or not the query was successful
                         if (in.outdb > 0) {
-                            sqlite3_exec(db, "SELECT path(), COUNT(*) FROM tree.entries", total_files_callback, NULL, NULL);
+                            sqlite3_exec(db, "SELECT COUNT(*) FROM tree.entries", total_files_callback, NULL, NULL);
                         }
                         else {
-                            sqlite3_exec(db, "SELECT path(), COUNT(*) FROM entries", total_files_callback, NULL, NULL);
+                            sqlite3_exec(db, "SELECT COUNT(*) FROM entries", total_files_callback, NULL, NULL);
                         }
                         #endif
                     }
@@ -469,7 +472,7 @@ static void processdir(void * passv)
 
 #ifdef DEBUG
     #ifdef THREAD_STATS
-    fprintf(stderr, "%s %d %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf\n", passmywork->name, !!db, opendir_time, open_time, create_tables_time, load_extension_time, attach_time, descend_time - pushdir_time, pushdir_time, exec_time, detach_time, close_time, closedir_time);
+    fprintf(stderr, "%s %d %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf\n", work.name, !!db, opendir_time, open_time, create_tables_time, load_extension_time, attach_time, descend_time - pushdir_time, pushdir_time, exec_time, detach_time, close_time, closedir_time);
     #endif
 
     pthread_mutex_lock(&total_mutex);
@@ -489,91 +492,9 @@ static void processdir(void * passv)
 #endif
 
     // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
+    free(work.freeme);
 
-    // return NULL;
-}
-
-int processinit(char ** names, int count) {
-
-     //open up the output files if needed
-     if (in.outfile > 0) {
-       char outfn[MAXPATH];
-       for(int i=0; i < in.maxthreads; i++) {
-         SNPRINTF(outfn,MAXPATH,"%s.%d",in.outfilen,i);
-         gts.outfd[i]=fopen(outfn,"w");
-       }
-     }
-
-     //  ******  create and open output dbs here
-     if (in.outdb > 0) {
-       char outdbn[MAXPATH];
-       for(int i=0; i < in.maxthreads; i++) {
-         SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
-         gts.outdbd[i]=opendb(outdbn,5,0);
-         if (in.sqlinit_len > 1) {
-           char *err = NULL;
-           if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, &err) != SQLITE_OK) {
-             fprintf(stderr, "Error: %s\n", err);
-           }
-           sqlite3_free(err);
-         }
-       }
-     }
-
-     // enqueue all input paths
-     for(int i = 0; i < count; i++) {
-       struct work mywork;
-
-       // check that the top level path is an accessible directory
-       SNPRINTF(mywork.name,MAXPATH,"%s",names[i]);
-       lstat(mywork.name,&mywork.statuso);
-       if (access(mywork.name, R_OK | X_OK)) {
-         fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                 mywork.name, strerror(errno));
-         return 1;
-       }
-       if (!S_ISDIR(mywork.statuso.st_mode) ) {
-         fprintf(stderr,"input-dir '%s' is not a directory\n", mywork.name);
-         return 1;
-       }
-
-       // push the path onto the queue
-       mywork.level = 0;
-       pushdir(&mywork);
-     }
-     return 0;
-}
-
-int processfin() {
-    int i;
-
-     // close outputfiles
-     if (in.outfile > 0) {
-       i=0;
-       while (i < in.maxthreads) {
-         fclose(gts.outfd[i]);
-         i++;
-       }
-     }
-
-     // close output dbs here
-     if (in.outdb > 0) {
-       i=0;
-       while (i < in.maxthreads) {
-         closedb(gts.outdbd[i]);
-         if (in.sqlfin_len > 1) {
-           char *err = NULL;
-           if (sqlite3_exec(gts.outdbd[i], in.sqlfin, NULL, NULL, &err) != SQLITE_OK) {
-             fprintf(stderr, "Error: %s\n", err);
-           }
-           sqlite3_free(err);
-         }
-         i++;
-       }
-     }
-
-     return 0;
+    return true;
 }
 
 void sub_help() {
@@ -634,7 +555,7 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        intermediates = malloc(sizeof(sqlite3 *) * in.maxthreads);
+        intermediates = (sqlite3 **) malloc(sizeof(sqlite3 *) * in.maxthreads);
         for(size_t i = 0; i < in.maxthreads; i++) {
             char intermediate_name[MAXSQL];
             SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
@@ -647,15 +568,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    // start threads and loop watching threads needing work and queue size
-    // - this always stays in main right here
-    mythpool = thpool_init(in.maxthreads);
-    if (thpool_null(mythpool)) {
-        fprintf(stderr, "thpool_init() failed!\n");
-        cleanup_intermediates(intermediates, in.maxthreads);
-        closedb(aggregate);
-        return -1;
-    }
+    // // start threads and loop watching threads needing work and queue size
+    // // - this always stays in main right here
+    // mythpool = thpool_init(in.maxthreads);
+    // if (thpool_null(mythpool)) {
+    //     fprintf(stderr, "thpool_init() failed!\n");
+    //     cleanup_intermediates(intermediates, in.maxthreads);
+    //     closedb(aggregate);
+    //     return -1;
+    // }
 
     long double total_time = 0;
 
@@ -671,29 +592,36 @@ int main(int argc, char *argv[])
     long double acquire_mutex_time = 0;
     long double work_time = 0;
 
-    // process initialization, this is work done once the threads are up
-    // but not busy yet - this will be different for each instance of a bf
-    // program in this case we are stating the directory passed in and
-    // putting that directory on the queue
-    processinit(&argv[idx], argc - idx);
 
-    // processdirs - if done properly, this routine is common and does not
-    // have to be done per instance of a bf program loops through and
-    // processes all directories that enter the queue by farming the work
-    // out to the threadpool
-    #ifdef DEBUG
-    const int thread_count = processdirs2(processdir, &acquire_mutex_time, &work_time);
-    #else
-    const int thread_count = processdirs(processdir);
-    #endif
+    std::list <struct work> roots;
+     // enqueue all input paths
+     for(int i = idx; i < argc; i++) {
+       struct work mywork;
+       memset(&mywork, 0, sizeof(mywork));
 
-    // processfin - this is work done after the threads are done working
-    // before they are taken down - this will be different for each
-    // instance of a bf program
-    processfin();
+       // check that the top level path is an accessible directory
+       SNPRINTF(mywork.name,MAXPATH,"%s",argv[i]);
+       lstat(mywork.name,&mywork.statuso);
+       if (access(mywork.name, R_OK | X_OK)) {
+         fprintf(stderr, "couldn't access input dir '%s': %s\n",
+                 mywork.name, strerror(errno));
+         return 1;
+       }
+       if (!S_ISDIR(mywork.statuso.st_mode) ) {
+         fprintf(stderr,"input-dir '%s' is not a directory\n", mywork.name);
+         return 1;
+       }
 
-    // wait for all threads to stop before processing the aggregate data
-    thpool_wait(mythpool);
+       // push the path onto the queue
+       mywork.level = 0;
+       roots.emplace_back(mywork);
+       // pushdir(&mywork);
+     }
+
+    QPTPool pool(in.maxthreads, processdir, roots, nullptr);
+    pool.wait();
+
+    const int thread_count = pool.threads_run();
 
     #if defined(DEBUG) || BENCHMARK
     struct timespec intermediate_end;
@@ -723,8 +651,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Real time:                                      %.2Lfs\n", main_time);
     }
     #endif
-
-    thpool_destroy(mythpool);
 
     if (in.aggregate_or_print == AGGREGATE) {
         // prepend the intermediate database query with "INSERT INTO" to move
