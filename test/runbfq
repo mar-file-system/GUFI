@@ -79,7 +79,7 @@
 SCRIPT="$BASH_SOURCE" # Must be at the top
 
 # check if the executables are here, or in src
-if [[ -f src/bfwi && -x src/bfwi ]]; then
+if [[ -f src/gufi_query && -x src/gufi_query ]]; then
     SRC="src"
 else
     SRC=""

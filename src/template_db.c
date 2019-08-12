@@ -82,7 +82,7 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "dbutils.h"
+#include "opendb.h"
 #include "template_db.h"
 
 // OSX's sendfile is slightly different
@@ -118,7 +118,7 @@ off_t create_template(int * fd) {
         return -1;
     }
 
-    create_tables(name, 4, db);
+    create_tables(name, db);
     closedb(db);
 
     if ((*fd = open(name, O_RDONLY)) == -1) {

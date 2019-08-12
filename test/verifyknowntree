@@ -8,7 +8,7 @@ ORIGIN="$(realpath $(dirname ${BASH_SOURCE[0]}))"
 cd "$(dirname ${ORIGIN})"
 
 # check if the executables are here, or in src
-if [[ -f src/bfwi && -x src/bfwi ]]; then
+if [[ -f src/gufi_query && -x src/gufi_query ]]; then
     SRC="src"
 else
     SRC=""
@@ -30,7 +30,7 @@ trap cleanup EXIT
 ${ORIGIN}/generatetree -d "${src}"
 
 # read it into GUFI
-${ORIGIN}/../${SRC}/bfwi -t "${dst}" "${src}" 2>/dev/null
+${ORIGIN}/../${SRC}/gufi_dir2index "${src}" "${dst}"
 
 dst="$(echo ${dst} | tr -s /)" # clean up slashes
 dst="${dst%/}"                 # remove last slash

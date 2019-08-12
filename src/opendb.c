@@ -18,7 +18,7 @@ static int create_table_wrapper(const char *name, sqlite3 * db, const char * sql
     return rc;
 }
 
-static int create_tables(const char *name, sqlite3 *db) {
+int create_tables(const char *name, sqlite3 *db) {
     /* if (openwhat==1 || openwhat==4 || openwhat==8) { */
         if (create_table_wrapper(name, db, "esql",         esql,        NULL, NULL) != SQLITE_OK)  {
             return -1;
