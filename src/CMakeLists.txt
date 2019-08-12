@@ -128,7 +128,6 @@ endfunction()
 # build and install the binaries that need to link with GUFI
 set(C_SOURCES
   bfti.c
-  # bfwi.c
   bfwreaddirplus2db.c
   dfw.c
   gufi_query.c
