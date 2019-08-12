@@ -75,25 +75,22 @@ OF SUCH DAMAGE.
 
 
 
-#include <atomic>
-#include <cerrno>
-#include <cstring>
-#include <ctime>
+#include <errno.h>
 #include <fcntl.h>
-#include <mutex>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
+#include <time.h>
 #include <unistd.h>
 
-extern "C" {
 #include "bf.h"
 #include "dbutils.h"
 #include "opendb.h"
 #include "template_db.h"
 #include "utils.h"
 #include "QueuePerThreadPool.h"
-}
 
 extern int errno;
 
@@ -102,13 +99,18 @@ int templatefd = -1;
 off_t templatesize = 0;
 
 #if BENCHMARK
-std::atomic_size_t total_dirs(0);
-std::atomic_size_t total_files(0);
+#include <time.h>
+
+pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
+size_t total_dirs = 0;
+size_t total_files = 0;
 #endif
 
-int processdir(QPTPool * ctx, struct work * work , const size_t id, size_t * next_queue, void * args) {
+int processdir(struct QPTPool * ctx, struct work * work , const size_t id, size_t * next_queue, void * args) {
     #if BENCHMARK
+    pthread_mutex_lock(&global_mutex);
     total_dirs++;
+    pthread_mutex_unlock(&global_mutex);
     #endif
 
     if (!ctx || !work) {
@@ -165,12 +167,12 @@ int processdir(QPTPool * ctx, struct work * work , const size_t id, size_t * nex
 
     startdb(db);
 
-    struct dirent * entry = nullptr;
-    std::size_t rows = 0;
+    struct dirent * entry = NULL;
+    size_t rows = 0;
     while ((entry = readdir(dir))) {
         // skip . and ..
         if (entry->d_name[0] == '.') {
-            std::size_t len = strlen(entry->d_name);
+            size_t len = strlen(entry->d_name);
             if ((len == 1) ||
                 ((len == 2) && (entry->d_name[1] == '.'))) {
                 continue;
@@ -212,7 +214,9 @@ int processdir(QPTPool * ctx, struct work * work , const size_t id, size_t * nex
         }
 
         #if BENCHMARK
+        pthread_mutex_lock(&global_mutex);
         total_files++;
+        pthread_mutex_unlock(&global_mutex);
         #endif
 
         // update summary table
@@ -385,11 +389,11 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &end);
     const long double processtime = elapsed(&start, &end);
 
-    fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs.load());
-    fprintf(stderr, "Total Files:           %zu\n",    total_files.load());
+    fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
+    fprintf(stderr, "Total Files:           %zu\n",    total_files);
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs.load() / processtime);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files.load() / processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs / processtime);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
     #endif
 
     close(templatefd);

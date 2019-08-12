@@ -130,6 +130,7 @@ set(C_SOURCES
   bfti.c
   bfwreaddirplus2db.c
   dfw.c
+  gufi_dir2index.c
   gufi_dir2trace.c
   querydb.c
   querydbn.c)
@@ -167,7 +168,6 @@ if (CMAKE_CXX_COMPILER)
 
   set(CXX_SOURCES
     gufi_query.cpp
-    gufi_dir2index.cpp
     gufi_trace2index.cpp)
 
   build_cpp_and_install(bin TRUE ${CXX_SOURCES})
