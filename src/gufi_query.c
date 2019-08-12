@@ -94,10 +94,10 @@ OF SUCH DAMAGE.
 #include <utime.h>
 
 #include "bf.h"
+#include "dbutils.h"
+#include "opendb.h"
 #include "structq.h"
 #include "utils.h"
-#include "dbutils.h"
-#include "pcre.h"
 
 extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
@@ -228,99 +228,6 @@ static size_t descend2(struct work *passmywork,
     return pushed;
 }
 
-sqlite3 * opendb2(const char *name, int openwhat, int createtables
-                  #ifdef DEBUG
-                  , long double * open_time, long double * create_tables_time, long double * load_extension_time
-                  #endif
-    )
-{
-    sqlite3 * db = NULL;
-    char *err_msg = NULL;
-    char dbn[MAXPATH];
-
-    // sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
-
-    sqlite3_snprintf(MAXSQL, dbn, "%s/" DBNAME, name);
-
-    if (createtables) {
-        if (openwhat != 3)
-            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
-        if (openwhat==7 || openwhat==8)
-            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
-    }
-    else {
-        if (openwhat == 6)
-            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
-        if (openwhat == 5)
-            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
-    }
-
-    int flags = SQLITE_OPEN_URI;
-    if (createtables) {
-        flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
-    }
-    else {
-        flags |= SQLITE_OPEN_READONLY;
-    }
-
-    #ifdef DEBUG
-    start_timer(open);
-    #endif
-    if (sqlite3_open_v2(dbn, &db, flags, "unix-none") != SQLITE_OK) {
-        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
-        return NULL;
-    }
-    #ifdef DEBUG
-    end_timer_ptr(open);
-    #endif
-
-    /* // try to turn sychronization off */
-    /* if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
-
-    /* // try to turn journaling off */
-    /* if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
-
-    /* // try to get an exclusive lock */
-    /* if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
-
-    /* // try increasing the page size */
-    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
-
-    #ifdef DEBUG
-    start_timer(create_tables);
-    #endif
-    if (createtables) {
-        if (create_tables(dbn, openwhat, db) != 0) {
-            fprintf(stderr, "Cannot create tables: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
-            sqlite3_close(db);
-            return NULL;
-        }
-    }
-    #ifdef DEBUG
-    end_timer_ptr(create_tables);
-    #endif
-
-    #ifdef DEBUG
-    start_timer(load_extension);
-    #endif
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
-        (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
-        fprintf(stderr, "Unable to load regex extension\n");
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-        db = NULL;
-    }
-    #ifdef DEBUG
-    end_timer_ptr(load_extension);
-    #endif
-
-    return db;
-}
-
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 static void processdir(void * passv)
@@ -385,10 +292,12 @@ static void processdir(void * passv)
       db = gts.outdbd[mytid];
       attachdb(name, db, "tree");
     } else {
-      db = opendb2(passmywork->name, 1, 0
-                   #ifdef DEBUG
-                   , &open_time, &create_tables_time, &load_extension_time
-                   #endif
+        char dbname[MAXPATH];
+        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, passmywork->name);
+        db = opendb2(dbname, 1, 0, 0
+                   /* #ifdef DEBUG */
+                   /* , &open_time, &create_tables_time, &load_extension_time */
+                   /* #endif */
           );
     }
 

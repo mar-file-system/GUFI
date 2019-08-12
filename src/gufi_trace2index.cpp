@@ -31,6 +31,8 @@ extern "C" {
 #include "utils.h"
 #include "dbutils.h"
 #include "template_db.h"
+#include "trace.h"
+
 }
 
 #include <ThreadWork.hpp>
@@ -248,31 +250,6 @@ sqlite3 * opendb(const char *name)
     return db;
 }
 
-void parsetowork(char * delim, char * line, struct work * pinwork) {
-    char *p;
-    char *q;
-
-    //printf("in parsetowork delim %s line %s\n",delim,line);
-    line[strlen(line)-1]= '\0';
-    p=line;    q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->name,MAXPATH,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->type,2,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_ino=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_mode=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_nlink=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_uid=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_gid=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_size=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_blksize=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_blocks=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_atime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_mtime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->statuso.st_ctime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->linkname,MAXPATH,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(pinwork->xattr,MAXXATTR,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->crtime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); pinwork->pinode=atol(p);
-}
-
 // process the work under one directory (no recursion)
 // also deletes w
 bool processdir(Row & w, std::ifstream & trace) {
@@ -286,7 +263,7 @@ bool processdir(Row & w, std::ifstream & trace) {
     struct work dir;
     char line[MAXLINE] = {0};
     memcpy(line, w->line.c_str(), w->line.size());
-    parsetowork(in.delim, line, &dir);
+    linetowork(line, in.delim, &dir);
     decr(parsing);
 
     // create the directory
@@ -344,7 +321,7 @@ bool processdir(Row & w, std::ifstream & trace) {
 
             incr(parsing);
             struct work row;
-            parsetowork(in.delim, line, &row);
+            linetowork(line, in.delim, &row);
             decr(parsing);
 
             // stop on directories, since files are listed first

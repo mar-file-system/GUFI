@@ -83,18 +83,20 @@ OF SUCH DAMAGE.
 #include <mutex>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/xattr.h>
 #include <unistd.h>
 
 extern "C" {
 
 #include "bf.h"
-#include "utils.h"
 #include "dbutils.h"
+#include "opendb.h"
 #include "template_db.h"
+#include "utils.h"
 
 }
 
-#include "gufi_dir2x.hpp"
+#include "QueuePerThreadPool.hpp"
 
 extern int errno;
 
@@ -102,28 +104,26 @@ extern int errno;
 int templatefd = -1;
 off_t templatesize = 0;
 
-// process the work under one directory (no recursion)
-// deletes work
-bool processdir(struct work & work, const int, State & state, std::atomic_size_t & queued, std::size_t & next_queue
-                #if BENCHMARK
-                , std::atomic_size_t & total_dirs, std::atomic_size_t & total_files
-                #endif
-    ) {
+#if BENCHMARK
+std::atomic_size_t total_dirs(0);
+std::atomic_size_t total_files(0);
+#endif
 
+bool processdir(QPTPool * ctx, struct work & work , const size_t id, size_t & next_queue, void * args) {
     #if BENCHMARK
     total_dirs++;
     #endif
 
     DIR * dir = opendir(work.name);
     if (!dir) {
-        processdir_cleanup(dir, queued, state);
+        closedir(dir);
         return false;
     }
 
     // get source directory info
     struct stat dir_st;
     if (lstat(work.name, &dir_st) < 0)  {
-        processdir_cleanup(dir, queued, state);
+        closedir(dir);
         return false;
     }
 
@@ -135,7 +135,7 @@ bool processdir(struct work & work, const int, State & state, std::atomic_size_t
         const int err = errno;
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
-            processdir_cleanup(dir, queued, state);
+            closedir(dir);
             return false;
         }
     }
@@ -146,13 +146,13 @@ bool processdir(struct work & work, const int, State & state, std::atomic_size_t
 
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir_st.st_uid, dir_st.st_gid)) {
-        processdir_cleanup(dir, queued, state);
+        closedir(dir);
         return false;
     }
 
-    sqlite3 * db = opendb(dbname);
+    sqlite3 * db = opendb2(dbname, 0, 0, 1);
     if (!db) {
-        processdir_cleanup(dir, queued, state);
+        closedir(dir);
         return false;
     }
 
@@ -178,29 +178,25 @@ bool processdir(struct work & work, const int, State & state, std::atomic_size_t
 
         // get entry path
         struct work e;
+        memset(&e, 0, sizeof(e));
         SNPRINTF(e.name, MAXPATH, "%s/%s", work.name, entry->d_name);
 
-        // lstat entry
+        // get the entry's metadata
         if (lstat(e.name, &e.statuso) < 0) {
             continue;
         }
 
+        e.xattrs=0;
+        if (in.doxattrs > 0) {
+            memset(e.xattr, 0, sizeof(e.xattr));
+            e.xattrs = pullxattrs(e.name, e.xattr);
+        }
+
         // push subdirectories onto the queue
         if (S_ISDIR(e.statuso.st_mode)) {
+            e.type[0] = 'd';
             e.pinode = work.statuso.st_ino;
-
-            // put the previous work on the queue
-            {
-                std::lock_guard <std::mutex> lock(state[next_queue].first.mutex);
-                state[next_queue].first.queue.emplace_back(std::move(e));
-                queued++;
-                state[next_queue].first.cv.notify_all();
-            }
-
-            // round robin
-            next_queue++;
-            next_queue %= in.maxthreads;
-
+            ctx->enqueue(e, next_queue);
             continue;
         }
 
@@ -233,10 +229,10 @@ bool processdir(struct work & work, const int, State & state, std::atomic_size_t
     db = NULL;
 
     // ignore errors
-    chmod(work.name, work.statuso.st_mode);
-    chown(work.name, work.statuso.st_uid, work.statuso.st_gid);
+    chmod(topath, work.statuso.st_mode);
+    chown(topath, work.statuso.st_uid, work.statuso.st_gid);
 
-    processdir_cleanup(dir, queued, state);
+    closedir(dir);
 
     return true;
 }
@@ -244,7 +240,7 @@ bool processdir(struct work & work, const int, State & state, std::atomic_size_t
 // This app allows users to do any of the following: (a) just walk the
 // input tree, (b) like a, but also creating corresponding GUFI-tree
 // directories, (c) like b, but also creating an index.
-int validate_inputs() {
+int validate_inputs(struct work & root) {
    char expathin[MAXPATH];
    char expathout[MAXPATH];
    char expathtst[MAXPATH];
@@ -255,47 +251,64 @@ int validate_inputs() {
    realpath(in.name,expathin);
    //printf("in.name: %s expathin %s\n",in.name,expathin);
    if (!strcmp(expathin,expathout)) {
-     fprintf(stderr,"You are putting the index dbs in input directory\n");
-     in.buildinindir = 1;
+       fprintf(stderr,"You are putting the index dbs in input directory\n");
    }
 
-   // not errors, but you might want to know ...
-   if (!in.nameto[0]) {
-      fprintf(stderr, "No GUFI-tree specified (-t).\n");
-      return -1;
+   memset(&root, 0, sizeof(root));
+   SNPRINTF(root.name, MAXPATH, "%s", in.name);
+
+    // get input path metadata
+   if (lstat(root.name, &root.statuso) < 0) {
+       fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
+       return -1;
    }
 
-   struct stat src_st;
-   if (lstat(in.name, &src_st) < 0) {
-      fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
-      return -1;
+   // check that the input path is a directory
+   if (S_ISDIR(root.statuso.st_mode)) {
+       root.type[0] = 'd';
+   }
+   else {
+       fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
+       return -1;
    }
 
-   if (!S_ISDIR(src_st.st_mode)) {
-     fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
-     return -1;
+   // check if the source directory can be accessed
+   static mode_t PERMS = R_OK | X_OK;
+   if ((root.statuso.st_mode & PERMS) != PERMS) {
+       fprintf(stderr, "couldn't access input dir '%s': %s\n",
+               in.name, strerror(errno));
+       return 1;
+   }
+
+   if (!strlen(in.nameto)) {
+       fprintf(stderr, "No output path specified\n");
+       return -1;
    }
 
    // check if the destination path already exists (not an error)
    struct stat dst_st;
    if (lstat(in.nameto, &dst_st) == 0) {
-      fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+       fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-      // if the destination path is not a directory, error
-      if (!S_ISDIR(dst_st.st_mode)) {
-          fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
-          return -1;
-      }
+       // if the destination path is not a directory (error)
+       if (!S_ISDIR(dst_st.st_mode)) {
+           fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
+           return -1;
+       }
    }
 
    // create the source root under the destination directory using
    // the source directory's permissions and owners
    // this allows for the threads to not have to recursively create directories
-   char root[MAXPATH];
-   SNPRINTF(root, MAXPATH, "%s/%s", in.nameto, in.name);
-   if (dupdir(root, &src_st)) {
+   char dst_path[MAXPATH];
+   SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name);
+   if (dupdir(dst_path, &root.statuso)) {
        fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
        return -1;
+   }
+
+   if (in.doxattrs > 0) {
+       root.xattrs = pullxattrs(in.name, root.xattr);
    }
 
    return 0;
@@ -303,12 +316,12 @@ int validate_inputs() {
 
 void sub_help() {
    printf("input_dir         walk this tree to produce GUFI-tree\n");
-   // printf("GUFI_dir          build GUFI index here (if -b)\n");
+   printf("output_dir        build GUFI index here\n");
    printf("\n");
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHpn:d:t:", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHpn:d:", 1, "input_dir output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -317,12 +330,14 @@ int main(int argc, char * argv[]) {
         // parse positional args, following the options
         int retval = 0;
         INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
-        // INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "to_dir");
+        INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_dir");
 
         if (retval)
             return retval;
     }
-    if (validate_inputs())
+
+    struct work root;
+    if (validate_inputs(root))
         return -1;
 
     #if BENCHMARK
@@ -334,23 +349,13 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    State state(in.maxthreads);
-    std::atomic_size_t queued(0); // so long as one directory is queued, there is potential for more subdirectories, so don't stop the thread
-
     #if BENCHMARK
-    std::atomic_size_t total_dirs(0);
-    std::atomic_size_t total_files(0);
-
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    const bool spawned_threads = processinit(queued, state
-                                             #if BENCHMARK
-                                             , total_dirs, total_files
-                                             #endif
-                                            );
-    processfin(state, spawned_threads);
+    QPTPool pool(in.maxthreads, processdir, root, nullptr);
+    pool.wait();
 
     // set top level permissions
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -365,7 +370,6 @@ int main(int argc, char * argv[]) {
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs.load() / processtime);
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files.load() / processtime);
-
     #endif
 
     close(templatefd);

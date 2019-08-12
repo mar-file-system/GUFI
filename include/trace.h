@@ -75,69 +75,20 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DBUTILS_H
-#define DBUTILS_H
+#ifndef GUFI_TRACE_H
+#define GUFI_TRACE_H
 
-#include <sys/stat.h>
-#include <sqlite3.h>
+#include <stdio.h>
 
-#include "utils.h"
+#include "bf.h"
 
+// write a work struct to a file
+int worktofile(FILE * file, char * delim, struct work * work);
 
-extern char *rsql;
-extern char *rsqli;
+// get a line from a file and convert the line to a work struct
+int filetowork(FILE * file, char * delim, struct work * work);
 
-extern char *esql;
-extern char *esqli;
-
-extern char *ssql;
-extern char *tsql;
-
-extern char *vesql;
-
-extern char *vssqldir;
-extern char *vssqluser;
-extern char *vssqlgroup;
-
-extern char *vtssqldir;
-extern char *vtssqluser;
-extern char *vtssqlgroup;
-
-
-
-sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
-
-sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
-
-sqlite3 * opendb(const char *name, int openwhat, int createtables);
-
-int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
-               int printpath, int printheader, int printing, int ptid);
-
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
-
-int startdb(sqlite3 *db);
-
-int stopdb(sqlite3 *db);
-
-int closedb(sqlite3 *db);
-
-int insertdbfin(sqlite3 *db,sqlite3_stmt *res);
-
-sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res);
-sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res);
-
-int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
-int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
-
-int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
-
-int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
-
-int addqueryfuncs(sqlite3 *db);
-
-size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
-
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query);
+// convert a formatted string to a work struct
+int linetowork(char * line, char * delim, struct work * work);
 
 #endif

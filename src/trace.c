@@ -75,69 +75,84 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef DBUTILS_H
-#define DBUTILS_H
-
-#include <sys/stat.h>
-#include <sqlite3.h>
-
+#include "trace.h"
 #include "utils.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-extern char *rsql;
-extern char *rsqli;
+int worktofile(FILE * file, char * delim, struct work * work) {
+    if (!file || !delim || !work) {
+        return -1;
+    }
 
-extern char *esql;
-extern char *esqli;
+    int count = 0;
 
-extern char *ssql;
-extern char *tsql;
+    count += fprintf(file, "%s%c",               work->name,               delim[0]);
+    count += fprintf(file, "%c%c",               work->type[0],            delim[0]);
+    count += fprintf(file, "%" STAT_ino "%c",    work->statuso.st_ino,     delim[0]);
+    count += fprintf(file, "%d%c",               work->statuso.st_mode,    delim[0]);
+    count += fprintf(file, "%" STAT_nlink"%c",   work->statuso.st_nlink,   delim[0]);
+    count += fprintf(file, "%d%c",               work->statuso.st_uid,     delim[0]);
+    count += fprintf(file, "%d%c",               work->statuso.st_gid,     delim[0]);
+    count += fprintf(file, "%" STAT_size "%c",   work->statuso.st_size,    delim[0]);
+    count += fprintf(file, "%" STAT_bsize "%c",  work->statuso.st_blksize, delim[0]);
+    count += fprintf(file, "%" STAT_blocks "%c", work->statuso.st_blocks,  delim[0]);
+    count += fprintf(file, "%ld%c",              work->statuso.st_atime,   delim[0]);
+    count += fprintf(file, "%ld%c",              work->statuso.st_mtime,   delim[0]);
+    count += fprintf(file, "%ld%c",              work->statuso.st_ctime,   delim[0]);
+    count += fprintf(file, "%s%c",               work->linkname,           delim[0]);
+    count += fprintf(file, "%s%c",               work->xattr,              delim[0]);
+    count += fprintf(file, "%d%c",               work->crtime,             delim[0]);
+    count += fprintf(file, "%lld%c",             work->pinode,             delim[0]);
+    count += fprintf(file, "\n");
 
-extern char *vesql;
+    return count;
+}
 
-extern char *vssqldir;
-extern char *vssqluser;
-extern char *vssqlgroup;
+int filetowork(FILE * file, char * delim, struct work * work) {
+    if (!file || !delim || !work) {
+        return -1;
+    }
 
-extern char *vtssqldir;
-extern char *vtssqluser;
-extern char *vtssqlgroup;
+    char * line = NULL;
+    if (getline(&line, NULL, file) == -1) {
+        return -1;
+    }
 
+    int rc = linetowork(delim, line, work);
+    free(line);
 
+    return rc;
+}
 
-sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
+int linetowork(char * line, char * delim, struct work * work) {
+    if (!line || !delim || !work) {
+        return -1;
+    }
 
-sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
+    char *p;
+    char *q;
 
-sqlite3 * opendb(const char *name, int openwhat, int createtables);
+    line[strlen(line)-1]= '\0';
+    p=line;    q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->name,MAXPATH,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->type,2,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_ino=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_mode=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_nlink=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_uid=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_gid=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_size=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_blksize=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_blocks=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_atime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_mtime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_ctime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->linkname,MAXPATH,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->xattr,MAXXATTR,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->crtime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->pinode=atol(p);
 
-int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
-               int printpath, int printheader, int printing, int ptid);
-
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
-
-int startdb(sqlite3 *db);
-
-int stopdb(sqlite3 *db);
-
-int closedb(sqlite3 *db);
-
-int insertdbfin(sqlite3 *db,sqlite3_stmt *res);
-
-sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res);
-sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res);
-
-int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
-int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
-
-int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
-
-int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
-
-int addqueryfuncs(sqlite3 *db);
-
-size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
-
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query);
-
-#endif
+    return 0;
+}

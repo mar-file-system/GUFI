@@ -80,7 +80,7 @@ if (BENCHMARK)
 endif()
 
 # create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c structq.c template_db.c utils.c)
+set(GUFI_SOURCES bf.c dbutils.c opendb.c structq.c template_db.c trace.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 install(TARGETS GUFI DESTINATION lib COMPONENT Server)
@@ -144,7 +144,7 @@ build_c_and_install(bin FALSE ${MISC_SOURCES})
 
 # build C++ executables if C++ support is available
 if (CMAKE_CXX_COMPILER)
-  add_library(gufi_dir2x STATIC gufi_dir2x.cpp)
+  add_library(QueuePerThreadPool QueuePerThreadPool.cpp)
 
   function(build_cpp_and_install PATH LINK_GUFI)
     foreach(SOURCE ${ARGN})
@@ -157,8 +157,8 @@ if (CMAKE_CXX_COMPILER)
 
       # link GUFI libraries if needed
       if (LINK_GUFI)
-        target_link_libraries(${TARGET} GUFI gufi_dir2x ${COMMON_LIBRARIES})
-        add_dependencies(${TARGET} GUFI gufi_dir2x)
+        target_link_libraries(${TARGET} GUFI QueuePerThreadPool ${COMMON_LIBRARIES})
+        add_dependencies(${TARGET} GUFI QueuePerThreadPool)
       endif()
 
       # install the executable
