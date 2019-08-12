@@ -118,13 +118,12 @@ def build_select(args):
 
     # select must exist
     if args.select == None:
-        args.select = [['*']]
-        # args.select = [['id', 'path() || "/" || name', 'type',
-        #                 'inode', 'mode', 'nlink', 'uid', 'gid',
-        #                 'size', 'blksize', 'blocks', 'atime',
-        #                 'mtime', 'ctime', 'linkname', 'xattrs',
-        #                 'crtime', 'ossint1', 'ossint2', 'ossint3',
-        #                 'ossint4', 'osstext1', 'osstext2', 'pinode']]
+        args.select = [['id', 'path() || "/" || name', 'type',
+                        'inode', 'mode', 'nlink', 'uid', 'gid',
+                        'size', 'blksize', 'blocks', 'atime',
+                        'mtime', 'ctime', 'linkname', 'xattrs',
+                        'crtime', 'ossint1', 'ossint2', 'ossint3',
+                        'ossint4', 'osstext1', 'osstext2', 'pinode']]
 
     select = []
     for columns in args.select:

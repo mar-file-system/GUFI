@@ -87,13 +87,11 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 extern "C" {
-
 #include "bf.h"
 #include "dbutils.h"
 #include "opendb.h"
 #include "template_db.h"
 #include "utils.h"
-
 }
 
 #include "QueuePerThreadPool.hpp"
@@ -354,7 +352,9 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    QPTPool pool(in.maxthreads, processdir, root, nullptr);
+    QPTPool pool(in.maxthreads);
+    pool.enqueue(root);
+    pool.start(processdir, nullptr);
     pool.wait();
 
     // set top level permissions

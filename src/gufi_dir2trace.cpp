@@ -86,13 +86,11 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 extern "C" {
-
 #include "bf.h"
 #include "utils.h"
 #include "dbutils.h"
 #include "template_db.h"
 #include "trace.h"
-
 }
 
 #include "QueuePerThreadPool.hpp"
@@ -313,7 +311,9 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    QPTPool pool(in.maxthreads, processdir, root, nullptr);
+    QPTPool pool(in.maxthreads);
+    pool.enqueue(root);
+    pool.start(processdir, nullptr);
     pool.wait();
 
     #if BENCHMARK

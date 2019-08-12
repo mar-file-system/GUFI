@@ -113,7 +113,7 @@ sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, c
 
     // no need to create because the file should already exist
     if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         return NULL;
     }
 

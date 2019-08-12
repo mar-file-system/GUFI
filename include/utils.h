@@ -178,7 +178,6 @@ size_t descend(struct work *passmywork, DIR *dir,
 #include <time.h>
 
 long double elapsed(const struct timespec *start, const struct timespec *end);
-int processdirs2(DirFunc dir_fn, long double *acquire_mutex_time, long double * work_time);
 
 #endif
 

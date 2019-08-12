@@ -484,14 +484,14 @@ int validate_inputs() {
 
 void sub_help() {
    printf("input_dir         walk this tree to produce GUFI-tree\n");
-   // printf("GUFI_dir          build GUFI index here (if -b)\n");
+   printf("output_dir        build GUFI index here\n");
    printf("\n");
 }
 
 int main(int argc, char * argv[]) {
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-    int idx = parse_cmd_line(argc, argv, "hHpn:d:t:", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHpn:d:", 1, "input_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -500,7 +500,7 @@ int main(int argc, char * argv[]) {
         // parse positional args, following the options
         int retval = 0;
         INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
-        // INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "to_dir");
+        INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_dir");
 
         if (retval)
             return retval;

@@ -93,12 +93,12 @@ extern "C" {
 }
 
 /*
- * QPTPool
- * This thread pool is somewhat different from other thread
- * pools.  This thread pool is meant to be used to generate more work
- * for itself through the single function that was passed into it,
- * rather than having independent functions+work to run.
+ * Queue Per Thread Pool
  *
+ * Usage:
+ *     enqueue work first
+ *     call QPTPool::start to start the threads
+ *     call QPTPool::wait to wait for the threads to complete
  */
 class QPTPool {
   public:
@@ -111,12 +111,16 @@ class QPTPool {
      */
     typedef std::function<bool(QPTPool *, struct work &, const std::size_t, std::size_t &, void *)> Func_t;
 
-    QPTPool(const std::size_t threads, Func_t func, struct work & first_work_item, void * extra_args = nullptr);
-    QPTPool(const std::size_t threads, Func_t func, std::list <struct work> & first_work_items, void * extra_args = nullptr);
+    QPTPool(const std::size_t threads);
+    void enqueue(struct work & new_work);
     void enqueue(struct work & new_work, std::size_t & next_queue);
+    void start(Func_t func, void * extra_args);
     void wait();
-    void stop();
-    std::size_t threads_run() const;
+
+    // utility functions
+    std::size_t get_index(const std::thread::id & id) const;      // get a number in the range [0, # of threads), or # of threads on error
+    std::size_t threads_started() const;
+    std::size_t threads_completed() const;
 
   private:
     // This should be passed into a thread as the thread arguments to
@@ -136,16 +140,16 @@ class QPTPool {
         std::list <Work> queue;
         std::mutex mutex;
         std::condition_variable cv;
+        std::size_t threads_started;
+        std::size_t threads_successful;
     };
 
     typedef std::pair <PerThread <struct work>, std::thread> WorkPair;
 
     void worker_function(Func_t func, const size_t id, void *args);
 
-    std::atomic_size_t keep_running;
+    std::atomic_size_t incomplete;
     std::vector <WorkPair> state;
-    std::atomic_size_t thread_count;
-    std::atomic_size_t successful;
 };
 
 #endif
