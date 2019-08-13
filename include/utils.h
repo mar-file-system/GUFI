@@ -83,6 +83,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
 
 #include "C-Thread-Pool/thpool.h"
 #include <sqlite3.h>
@@ -173,12 +174,8 @@ int processdirs(DirFunc dir_fn);
 size_t descend(struct work *passmywork, DIR *dir,
                const size_t max_level);
 
-#if defined(DEBUG) || BENCHMARK
 
-#include <time.h>
-
+// Get number of seconds between two events recorded in struct timespecs
 long double elapsed(const struct timespec *start, const struct timespec *end);
-
-#endif
 
 #endif

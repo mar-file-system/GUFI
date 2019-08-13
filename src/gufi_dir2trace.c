@@ -131,16 +131,18 @@ int output_init(char * prefix, const int count) {
 
 // process the work under one directory (no recursion)
 // deletes work
-int processdir(struct QPTPool * ctx, struct work * work, const size_t id, size_t * next_queue, void * args) {
+int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    if (!ctx || !work) {
+    if (!ctx || !data) {
         return 0;
     }
+
+    struct work * work = (struct work *) data;
 
     DIR * dir = opendir(work->name);
     if (!dir) {
@@ -335,11 +337,11 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &end);
     const long double processtime = elapsed(&start, &end);
 
-    fprintf(stderr, "Total Dirs:            %zu\n",  total_dirs);
-    fprintf(stderr, "Total Files:           %zu\n",  total_files);
-    fprintf(stderr, "Time Spent Indexing:   %Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %Lf\n",  total_dirs / processtime);
-    fprintf(stderr, "Files/Sec:             %Lf\n",  total_files / processtime);
+    fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
+    fprintf(stderr, "Total Files:           %zu\n",    total_files);
+    fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs / processtime);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
     #endif
 
     output_fin(in.maxthreads);

@@ -81,37 +81,37 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 
 struct node {
-    struct work * work;
+    void * data;
     struct node * next;
 };
 
-struct queue * queue_init(struct queue * queue) {
-    memset(queue, 0, sizeof(struct queue));
-    return queue;
+struct sll * sll_init(struct sll * sll) {
+    memset(sll, 0, sizeof(struct sll));
+    return sll;
 };
 
-struct queue * queue_push(struct queue * queue, struct work * work) {
-    if (!queue || !work) {
+struct sll * sll_push(struct sll * sll, void * data) {
+    if (!sll || !data) {
         return NULL;
     }
 
     struct node * node = calloc(1, sizeof(struct node));
-    node->work = work;
+    node->data = data;
 
-    if (!queue->head) {
-        queue->head = node;
+    if (!sll->head) {
+        sll->head = node;
     }
 
-    if (queue->tail) {
-        queue->tail->next = node;
+    if (sll->tail) {
+        sll->tail->next = node;
     }
 
-    queue->tail = node;
+    sll->tail = node;
 
-    return queue;
+    return sll;
 }
 
-struct queue * queue_move(struct queue * dst, struct queue * src) {
+struct sll * sll_move(struct sll * dst, struct sll * src) {
     if (!dst || !src) {
         return NULL;
     }
@@ -123,12 +123,34 @@ struct queue * queue_move(struct queue * dst, struct queue * src) {
     return dst;
 }
 
-void queue_destroy(struct queue * queue) {
-    if (queue) {
-        for(struct node * node = queue->head; node; node = node->next) {
+void sll_destroy(struct sll * sll) {
+    if (sll) {
+        for(struct node * node = sll->head; node; node = node->next) {
             free(node);
         }
     }
+}
+
+struct node * sll_head_node(struct sll * sll) {
+    if (!sll) {
+        return NULL;
+    }
+    return sll->head;
+}
+
+struct node * sll_next_node(struct node * node) {
+    if (!node) {
+        return NULL;
+    }
+
+    return node->next;
+}
+
+void * sll_node_data(struct node * node) {
+    if (!node) {
+        return NULL;
+    }
+    return node->data;
 }
 
 struct QPTPool * QPTPool_init(const size_t threads) {
@@ -150,7 +172,7 @@ struct QPTPool * QPTPool_init(const size_t threads) {
 
     for(size_t i = 0; i < threads; i++) {
         ctx->data[i].id = i;
-        queue_init(&ctx->data[i].queue);
+        sll_init(&ctx->data[i].queue);
         pthread_mutex_init(&ctx->data[i].mutex, NULL);
         pthread_cond_init(&ctx->data[i].cv, NULL);
         ctx->data[i].thread = 0;
@@ -164,14 +186,14 @@ struct QPTPool * QPTPool_init(const size_t threads) {
     return ctx;
 }
 
-void QPTPool_enqueue_external(struct QPTPool * ctx, struct work * new_work) {
+void QPTPool_enqueue_external(struct QPTPool * ctx, void * new_work) {
     static size_t next_queue = 0;
     QPTPool_enqueue_internal(ctx, new_work, &next_queue);
 }
 
-void QPTPool_enqueue_internal(struct QPTPool * ctx, struct work * new_work, size_t * next_queue) {
+void QPTPool_enqueue_internal(struct QPTPool * ctx, void * new_work, size_t * next_queue) {
     pthread_mutex_lock(&ctx->data[*next_queue].mutex);
-    queue_push(&ctx->data[*next_queue].queue, new_work);
+    sll_push(&ctx->data[*next_queue].queue, new_work);
     pthread_mutex_unlock(&ctx->data[*next_queue].mutex);
 
     pthread_mutex_lock(&ctx->mutex);
@@ -207,37 +229,37 @@ static void * worker_function(void *args) {
     size_t next_queue = wf_args->id;
 
     while (1) {
-        struct queue dirs;
-        queue_init(&dirs);
+        struct sll dirs;
+        sll_init(&dirs);
         {
             pthread_mutex_lock(&tw->mutex);
+            pthread_mutex_lock(&ctx->mutex);
 
             // wait for work
             while (ctx->incomplete && !tw->queue.head) {
+                pthread_mutex_unlock(&ctx->mutex);
                 pthread_cond_wait(&tw->cv, &tw->mutex);
+                pthread_mutex_lock(&ctx->mutex);
             }
 
-            pthread_mutex_lock(&ctx->mutex);
-
             if (!ctx->incomplete && !tw->queue.head) {
-                pthread_mutex_unlock(&tw->mutex);
                 pthread_mutex_unlock(&ctx->mutex);
+                pthread_mutex_unlock(&tw->mutex);
                 break;
             }
 
             pthread_mutex_unlock(&ctx->mutex);
 
-            // take all work
-            queue_move(&dirs, &tw->queue);
-            /* tw->queue.clear(); */
+            // moves queue into dirs and clears out queue
+            sll_move(&dirs, &tw->queue);
 
             pthread_mutex_unlock(&tw->mutex);
         }
 
         // process all work
         size_t work_count = 0;
-        for(struct node * dir = dirs.head; dir; dir = dir->next) {
-            tw->threads_successful += wf_args->func(ctx, dir->work, wf_args->id, &next_queue, wf_args->args);
+        for(struct node * dir = sll_head_node(&dirs); dir; dir = sll_next_node(dir)) {
+            tw->threads_successful += wf_args->func(ctx, sll_node_data(dir), wf_args->id, &next_queue, wf_args->args);
             work_count++;
         }
         tw->threads_started += work_count;
@@ -292,7 +314,7 @@ void QPTPool_destroy(struct QPTPool * ctx) {
             ctx->data[i].thread = 0;
             pthread_cond_destroy(&ctx->data[i].cv);
             pthread_mutex_destroy(&ctx->data[i].mutex);
-            queue_destroy(&ctx->data[i].queue);
+            sll_destroy(&ctx->data[i].queue);
         }
 
         free(ctx->data);

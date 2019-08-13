@@ -106,16 +106,18 @@ size_t total_dirs = 0;
 size_t total_files = 0;
 #endif
 
-int processdir(struct QPTPool * ctx, struct work * work , const size_t id, size_t * next_queue, void * args) {
+int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * next_queue, void * args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    if (!ctx || !work) {
+    if (!ctx || !data) {
         return 0;
     }
+
+    struct work * work = (struct work *) data;
 
     DIR * dir = opendir(work->name);
     if (!dir) {

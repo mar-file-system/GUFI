@@ -82,17 +82,27 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 
+// Singly linked list that is used like a queue
 struct node;
-
-struct queue {
+struct sll {
     struct node * head;
     struct node * tail;
 };
 
+struct sll * sll_init(struct sll * sll);
+struct sll * sll_push(struct sll * sll, void * data);
+struct sll * sll_move(struct sll * dst, struct sll * src);
+void sll_destroy(struct sll * sll);
+
+// functions for looping over a sll
+struct node * sll_head_node(struct sll * sll);
+struct node * sll_next_node(struct node * node);
+void * sll_node_data(struct node * node);
+
 /* The context for a single thread in QPTPool */
 struct QPTPoolData {
     size_t id;
-    struct queue queue;
+    struct sll queue;
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     pthread_t thread;
@@ -109,12 +119,19 @@ struct QPTPool {
     size_t incomplete;
 };
 
-/* User defined function to pass into QPTPool_start*/
-typedef int (*QPTPoolFunc_t)(struct QPTPool *, struct work *, const size_t, size_t *, void *);
+/* User defined function to pass into QPTPool_start
+ *
+ *     QPTPool   to provide context
+ *     void *    for the data this thread is going to work on
+ *     size_t    for id of this thread
+ *     size_t *  for next queue to push on to
+ *     void *    extra args
+ */
+typedef int (*QPTPoolFunc_t)(struct QPTPool *, void *, const size_t, size_t *, void *);
 
 struct QPTPool * QPTPool_init(const size_t threads);
-void QPTPool_enqueue_external(struct QPTPool * ctx, struct work * new_work);
-void QPTPool_enqueue_internal(struct QPTPool * ctx, struct work * new_work, size_t * next_queue);
+void QPTPool_enqueue_external(struct QPTPool * ctx, void * new_work);
+void QPTPool_enqueue_internal(struct QPTPool * ctx, void * new_work, size_t * next_queue);
 size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args);
 void QPTPool_wait(struct QPTPool * ctx);
 void QPTPool_destroy(struct QPTPool * ctx);
