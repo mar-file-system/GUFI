@@ -77,6 +77,8 @@ cmake_minimum_required(VERSION 3.0.0)
 
 # build the simple source tree generator
 add_executable(gendir gendir.c)
+target_link_libraries(gendir ${COMMON_LIBRARIES})
+add_dependencies(gendir GUFI)
 
 # potentially useful C++ executables
 if (CMAKE_CXX_COMPILER)
@@ -126,15 +128,21 @@ if (BENCHMARK)
 
   include(ProcessorCount)
   ProcessorCount(N)
+  set(BENCHMARK_THREADS "${N}" CACHE STRING "Number of levels in the benchmark tree")
+  check_int(BENCHMARK_DEPTH)
+  if (NOT "${BENCHMARK_THREADS}" GREATER "0")
+    message(FATAL_ERROR "Need at least one thread to run executables")
+  endif()
+
   set(BENCHMARK_TREE "${BENCHMARK_ROOT}/tree")
   set(BENCHMARK_GUFI_TREE "${BENCHMARK_ROOT}/gufi_tree")
   add_custom_target(benchmark_init COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
                                    COMMAND ${CMAKE_COMMAND} -E make_directory "${BENCHMARK_ROOT}")
-  add_custom_target(benchmark_generate_dir COMMAND $<TARGET_FILE:gendir> "${BENCHMARK_TREE}" "${BENCHMARK_DIRS}" "${BENCHMARK_FILES}" "${BENCHMARK_DEPTH}"
+  add_custom_target(benchmark_generate_dir COMMAND $<TARGET_FILE:gendir> "${BENCHMARK_TREE}" "${BENCHMARK_DIRS}" "${BENCHMARK_FILES}" "${BENCHMARK_DEPTH}" "${BENCHMARK_THREADS}"
                     DEPENDS benchmark_init gendir)
-  add_custom_target(benchmark_dir2index COMMAND $<TARGET_FILE:gufi_dir2index> -n ${N} -d x "${BENCHMARK_TREE}" "${BENCHMARK_GUFI_TREE}"
+  add_custom_target(benchmark_dir2index COMMAND $<TARGET_FILE:gufi_dir2index> -n "${BENCHMARK_THREADS}" "${BENCHMARK_TREE}" "${BENCHMARK_GUFI_TREE}"
                     DEPENDS benchmark_generate_dir gufi_dir2index)
-  add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find --threads ${N} --exec $<TARGET_FILE:gufi_query> "${BENCHMARK_GUFI_TREE}" > /dev/null
+  add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find --threads "${BENCHMARK_THREADS}" --exec $<TARGET_FILE:gufi_query> "${BENCHMARK_GUFI_TREE}" > /dev/null
                     DEPENDS benchmark_dir2index gufi_query ${CMAKE_BINARY_DIR}/scripts/gufi_find)
   add_custom_target(benchmark_fin COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
                     DEPENDS benchmark_query)

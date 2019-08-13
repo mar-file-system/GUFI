@@ -267,7 +267,9 @@ set(COMMON_LIBRARIES
   ${DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
   Threads::Threads
   m
-  dl)
+  dl
+  -static-libgcc
+)
 
 # build contrib executables
 add_subdirectory(contrib)
@@ -295,7 +297,8 @@ set(OTHER_FILES
   INSTALL
   LICENSE.txt
   Makefile
-  README.md)
+  README.md
+)
 set(PATHS
   contrib
   docs
@@ -303,7 +306,8 @@ set(PATHS
   include
   scripts
   src
-  test)
+  test
+)
 
 # Set the output name
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")

@@ -102,11 +102,11 @@ endif()
 #
 # ex:
 #     build_and_install(bin TRUE file1.c file2.cpp)
-#        -> compiles file1.c into file1
-#        -> compiles file2.c into file2
+#        -> compiles file1.c   into file1
+#        -> compiles file2.cpp into file2
 #        -> installs file1 and file2 into bin
 #
-function(build_c_and_install PATH LINK_GUFI)
+function(build_and_install PATH LINK_GUFI)
   foreach(SOURCE ${ARGN})
     # get the filename only (no path or extension)
     string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
@@ -116,7 +116,7 @@ function(build_c_and_install PATH LINK_GUFI)
 
     # link GUFI libraries if needed
     if (LINK_GUFI)
-      target_link_libraries(${TARGET} GUFI ${COMMON_LIBRARIES} -static-libgcc)
+      target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
       add_dependencies(${TARGET} GUFI)
     endif()
 
@@ -139,41 +139,11 @@ set(C_SOURCES
 )
 
 # build the C executables
-build_c_and_install(bin TRUE ${C_SOURCES})
+build_and_install(bin TRUE ${C_SOURCES})
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_c_and_install(bin FALSE ${MISC_SOURCES})
-
-# build C++ executables if C++ support is available
-if (CMAKE_CXX_COMPILER)
-  add_library(QueuePerThreadPool QueuePerThreadPool.cpp)
-
-  function(build_cpp_and_install PATH LINK_GUFI)
-    foreach(SOURCE ${ARGN})
-      # get the filename only (no path or extension)
-      string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
-
-      # create the target for building the executable
-      add_executable(${TARGET} ${SOURCE})
-      target_link_libraries(${TARGET} -static-libstdc++)
-
-      # link GUFI libraries if needed
-      if (LINK_GUFI)
-        target_link_libraries(${TARGET} GUFI QueuePerThreadPool ${COMMON_LIBRARIES})
-        add_dependencies(${TARGET} GUFI QueuePerThreadPool)
-      endif()
-
-      # install the executable
-      install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
-    endforeach()
-  endfunction()
-
-  set(CXX_SOURCES
-  )
-
-  build_cpp_and_install(bin TRUE ${CXX_SOURCES})
-endif()
+build_and_install(bin FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND)
