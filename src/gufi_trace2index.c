@@ -1,18 +1,15 @@
-#include <fcntl.h>
-#include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "utils.h"
 #include "dbutils.h"
 #include "opendb.h"
 #include "template_db.h"
 #include "trace.h"
-#include "QueuePerThreadPool.h"
+#include "utils.h"
 
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH
 
@@ -28,21 +25,16 @@ struct row {
     size_t entries;
 };
 
-struct row * init_row(struct row * fp) {
-    if (fp) {
-        memset(fp, 0, sizeof(struct row));
-        fp->first_delim = -1;
-        fp->offset = -1;
+struct row * row_init() {
+    struct row * row = calloc(1, sizeof(struct row));
+    if (row) {
+        row->first_delim = -1;
+        row->offset = -1;
     }
-
-    return fp;
+    return row;
 }
 
-struct row * new_row() {
-    return init_row((struct row *) malloc(sizeof(struct row)));
-}
-
-void delete_row(struct row * row) {
+void row_destroy(struct row * row) {
     if (row) {
         free(row->line);
         free(row);
@@ -65,19 +57,19 @@ pthread_mutex_t counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef PRINT_STAGE
 static inline void print_counters() {
-    fprintf(stdout, "duping: %d",     duping);
-    fprintf(stdout, " copying: %d",   copying);
-    fprintf(stdout, " opening: %d",   opening);
-    fprintf(stdout, " settings: %d",  settings);
-    fprintf(stdout, " waiting: %d",   waiting);
-    fprintf(stdout, " waiting: %d",   waiting);
-    fprintf(stdout, " prepping: %d",  prepping);
-    fprintf(stdout, " bt: %d",        bt);
-    fprintf(stdout, " parsing: %d",   parsing);
-    fprintf(stdout, " inserting: %d", inserting);
-    fprintf(stdout, " et: %d",        et);
-    fprintf(stdout, " unprep: %d",    unprep);
-    fprintf(stdout, " closing: %d",   closing);
+    fprintf(stdout, "duping:    %d ", duping);
+    fprintf(stdout, "copying:   %d ", copying);
+    fprintf(stdout, "opening:   %d ", opening);
+    fprintf(stdout, "settings:  %d ", settings);
+    fprintf(stdout, "waiting:   %d ", waiting);
+    fprintf(stdout, "waiting:   %d ", waiting);
+    fprintf(stdout, "prepping:  %d ", prepping);
+    fprintf(stdout, "bt:        %d ", bt);
+    fprintf(stdout, "parsing:   %d ", parsing);
+    fprintf(stdout, "inserting: %d ", inserting);
+    fprintf(stdout, "et:        %d ", et);
+    fprintf(stdout, "unprep:    %d ", unprep);
+    fprintf(stdout, "closing:   %d ", closing);
     fprintf(stdout, "\n");
 }
 #endif
@@ -158,9 +150,9 @@ void * scout_function(void * args) {
     // keep current directory while finding next directory
     // in order to find out whether or not the current
     // directory has files in it
-    struct row * work = new_row();
+    struct row * work = row_init();
     if (getline(&work->line, &work->len, trace) == -1) {
-        delete_row(work);
+        row_destroy(work);
         fclose(trace);
         return NULL;
     }
@@ -176,7 +168,7 @@ void * scout_function(void * args) {
     char * line = NULL;
     size_t n = 0;
     while (getline(&line, &n, trace) != -1) {
-        struct row * next = new_row();
+        struct row * next = row_init();
         next->line = line;
         next->len = n;
 
@@ -205,7 +197,7 @@ void * scout_function(void * args) {
         else {
             work->entries++;
             file_count++;
-            delete_row(next);
+            row_destroy(next);
         }
 
         line = NULL;
@@ -220,6 +212,12 @@ void * scout_function(void * args) {
 
     struct timespec end;
     clock_gettime(CLOCK_MONOTONIC, &end);
+
+    // in case nothing was read, force the main thread to continue
+    pthread_mutex_lock(&sa->mutex);
+    sa->processed = 1;
+    pthread_cond_broadcast(&sa->cv);
+    pthread_mutex_unlock(&sa->mutex);
 
     pthread_mutex_lock(&counter_mutex);
     fprintf(stderr, "Scout finished in %.2Lf seconds\n", elapsed(&start, &end));
@@ -255,7 +253,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     if (dupdir(topath, &dir.statuso)) {
       const int err = errno;
       fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));
-      delete_row(w);
+      row_destroy(w);
       return 0;
     }
     decr(&duping);
@@ -267,13 +265,13 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     // // don't bother doing anything if there is nothing to insert
     // // (the database file will not exist for empty directories)
     // if (!w->entries) {
-    //     delete_row(w);
+    //     row_destroy(w);
     //     return true;
     // }
 
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir.statuso.st_uid, dir.statuso.st_gid)) {
-        delete_row(w);
+        row_destroy(w);
         return 0;
     }
 
@@ -349,7 +347,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
         decr(&closing);
     }
 
-    delete_row(w);
+    row_destroy(w);
 
     return !!db;
 }
@@ -408,7 +406,7 @@ int main(int argc, char * argv[]) {
     }
 
     // open trace files for threads to jump around in
-    // all have to be passed in at once because theres no way to send one to each thread
+    // all have to be passed in at once because there's no way to send one to each thread
     // the trace files have to be opened outside of the thread in order to not repeatedly open the files
     FILE ** traces = open_per_thread_traces(in.name, in.maxthreads);
     if (!traces) {
@@ -435,12 +433,14 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
+    // wait for the scouting function to push at least 1 item onto the queue before starting the threads
     pthread_mutex_lock(&sargs.mutex);
     while (!sargs.processed) {
         pthread_cond_wait(&sargs.cv, &sargs.mutex);
     }
     pthread_mutex_unlock(&sargs.mutex);
 
+    // scouting function errored
     if (sargs.processed == -1) {
         fprintf(stderr, "Scouting error\n");
         QPTPool_destroy(pool);
@@ -450,6 +450,7 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
+    // start up threads and start processing
     if (QPTPool_start(pool, processdir, traces) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         pthread_join(scout, NULL);

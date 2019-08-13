@@ -83,12 +83,12 @@ OF SUCH DAMAGE.
 #include <sys/xattr.h>
 #include <unistd.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "utils.h"
 #include "dbutils.h"
 #include "template_db.h"
 #include "trace.h"
-#include "QueuePerThreadPool.h"
+#include "utils.h"
 
 #if BENCHMARK
 #include <time.h>

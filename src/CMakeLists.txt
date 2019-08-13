@@ -133,6 +133,7 @@ set(C_SOURCES
   gufi_dir2index.c
   gufi_dir2trace.c
   gufi_trace2index.c
+  gufi_query.c
   querydb.c
   querydbn.c
 )
@@ -169,7 +170,6 @@ if (CMAKE_CXX_COMPILER)
   endfunction()
 
   set(CXX_SOURCES
-    gufi_query.cpp
   )
 
   build_cpp_and_install(bin TRUE ${CXX_SOURCES})
