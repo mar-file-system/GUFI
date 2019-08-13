@@ -138,7 +138,12 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    if (!ctx || !data) {
+    if (!data) {
+        return 0;
+    }
+
+    if (!ctx || (id >= ctx->size) || !next_queue) {
+        free(data);
         return 0;
     }
 
@@ -147,6 +152,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     DIR * dir = opendir(work->name);
     if (!dir) {
         closedir(dir);
+        free(data);
         return 0;
     }
 
@@ -154,6 +160,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     struct stat dir_st;
     if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
+        free(data);
         return 0;
     }
 
@@ -172,37 +179,43 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
         }
 
         // get entry path
-        struct work * e = (struct work *) calloc(1, sizeof(struct work));
-        SNPRINTF(e->name, MAXPATH, "%s/%s", work->name, entry->d_name);
+        struct work e;
+        memset(&e, 0, sizeof(struct work));
+        SNPRINTF(e.name, MAXPATH, "%s/%s", work->name, entry->d_name);
 
         // get the entry's metadata
-        if (lstat(e->name, &e->statuso) < 0) {
+        if (lstat(e.name, &e.statuso) < 0) {
             continue;
         }
 
-        e->xattrs=0;
+        e.xattrs=0;
         if (in.doxattrs > 0) {
-            memset(e->xattr, 0, sizeof(e->xattr));
-            e->xattrs = pullxattrs(e->name, e->xattr);
+            e.xattrs = pullxattrs(e.name, e.xattr);
         }
 
         // push subdirectories onto the queue
-        if (S_ISDIR(e->statuso.st_mode)) {
-            e->type[0] = 'd';
-            e->pinode = work->statuso.st_ino;
-            QPTPool_enqueue_internal(ctx, e, next_queue);
+        if (S_ISDIR(e.statuso.st_mode)) {
+            e.type[0] = 'd';
+            e.pinode = work->statuso.st_ino;
+
+            // make a copy here so that the data can be pushed into the queue
+            // this is more efficient than malloc+free for every single entry
+            struct work * copy = (struct work *) calloc(1, sizeof(struct work));
+            memcpy(copy, &e, sizeof(struct work));
+
+            QPTPool_enqueue_internal(ctx, copy, next_queue);
             continue;
         }
 
         rows++;
 
         // non directories
-        if (S_ISLNK(e->statuso.st_mode)) {
-            e->type[0] = 'l';
-            readlink(e->name, e->linkname, MAXPATH);
+        if (S_ISLNK(e.statuso.st_mode)) {
+            e.type[0] = 'l';
+            readlink(e.name, e.linkname, MAXPATH);
         }
-        else if (S_ISREG(e->statuso.st_mode)) {
-            e->type[0] = 'f';
+        else if (S_ISREG(e.statuso.st_mode)) {
+            e.type[0] = 'f';
         }
 
         #if BENCHMARK
@@ -211,10 +224,11 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
         pthread_mutex_unlock(&global_mutex);
         #endif
 
-        worktofile(output[id], in.delim, e);
+        worktofile(output[id], in.delim, &e);
     }
 
     closedir(dir);
+    free(data);
 
     return 1;
 }

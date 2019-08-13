@@ -112,7 +112,12 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    if (!ctx || !data) {
+    if (!data) {
+        return 0;
+    }
+
+    if (!ctx || (id >= ctx->size) || !next_queue) {
+        free(data);
         return 0;
     }
 
@@ -354,7 +359,7 @@ int main(int argc, char * argv[]) {
         return -1;
 
     #if BENCHMARK
-    fprintf(stderr, "Creating GUFI Index %s in %s\n", in.name, in.nameto);
+    fprintf(stderr, "Creating GUFI Index %s in %s with %d threads\n", in.name, in.nameto, in.maxthreads);
     #endif
 
     if ((templatesize = create_template(&templatefd)) == (off_t) -1) {

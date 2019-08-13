@@ -92,12 +92,14 @@ struct sll {
 struct sll * sll_init(struct sll * sll);
 struct sll * sll_push(struct sll * sll, void * data);
 struct sll * sll_move(struct sll * dst, struct sll * src);
-void sll_destroy(struct sll * sll);
 
 // functions for looping over a sll
 struct node * sll_head_node(struct sll * sll);
 struct node * sll_next_node(struct node * node);
 void * sll_node_data(struct node * node);
+
+void sll_destroy(struct sll * sll);
+
 
 /* The context for a single thread in QPTPool */
 struct QPTPoolData {

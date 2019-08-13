@@ -64,6 +64,7 @@ int generate_level(struct QPTPool * ctx, void * data, const size_t id, size_t * 
     struct dir * dir = (struct dir *) data;
 
     if (dir->current_level >= settings->max_level) {
+        free(dir);
         return 0;
     }
 
@@ -74,7 +75,7 @@ int generate_level(struct QPTPool * ctx, void * data, const size_t id, size_t * 
             continue;
         }
 
-        SNPRINTF(subdir->name, MAXPATH, "%s/d.%zu", dir, i);
+        SNPRINTF(subdir->name, MAXPATH, "%s/d.%zu", dir->name, i);
 
         // no need to recursively make upper directories because they have already been created
         if (mkdir(subdir->name, DIR_PERMS) < 0) {
@@ -104,6 +105,7 @@ int generate_level(struct QPTPool * ctx, void * data, const size_t id, size_t * 
         close(fd);
     }
 
+    free(dir);
     return 0;
 }
 
@@ -165,11 +167,13 @@ int main(int argc, char * argv[]) {
     memcpy(root->name, argv[1], strlen(argv[1]));
 
     struct stat top_st;
+    memset(&top_st, 0, sizeof(struct stat));
     top_st.st_mode = DIR_PERMS;
     top_st.st_uid = geteuid();
     top_st.st_uid = getegid();
     if (dupdir(root->name, &top_st) != 0) {
         fprintf(stderr, "mkdir failed for %s: %d %s\n", root->name, errno, strerror(errno));
+        free(root);
         return 1;
     }
 
@@ -177,6 +181,7 @@ int main(int argc, char * argv[]) {
     struct QPTPool * pool = QPTPool_init(threads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        free(root);
         return -1;
     }
 

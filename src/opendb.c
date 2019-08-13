@@ -114,6 +114,7 @@ sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, c
     // no need to create because the file should already exist
     if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
+        sqlite3_close(db); // close db even if it didn't open to avoid memory leaks
         return NULL;
     }
 
@@ -128,16 +129,6 @@ sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, c
     if (setpragmas) {
         // ignore errors
         set_pragmas(db);
-    }
-
-    // load the PCRE extension
-    char * err_msg = NULL;
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
-        (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
-        fprintf(stderr, "Unable to load regex extension\n");
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-        db = NULL;
     }
 
     return db;

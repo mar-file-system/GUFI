@@ -97,6 +97,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "opendb.h"
+#include "pcre.h"
 #include "utils.h"
 
 extern int errno;
@@ -106,7 +107,7 @@ extern int errno;
 #if BENCHMARK
 #include <time.h>
 
-static size_t total_files;
+static size_t total_files = 0;
 static pthread_mutex_t total_files_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int total_files_callback(void * unused, int count, char ** data, char ** columns) {
@@ -208,23 +209,28 @@ static size_t descend2(struct QPTPool *ctx,
                 continue;
             }
 
-            struct work * qwork = calloc(1, sizeof(struct work));
-            SNPRINTF(qwork->name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
+            struct work qwork;
+            SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
 
-            lstat(qwork->name, &qwork->statuso);
-            if (S_ISDIR(qwork->statuso.st_mode)) {
-                if (!access(qwork->name, R_OK | X_OK)) {
-                    qwork->level = next_level;
-                    qwork->type[0] = 'd';
+            lstat(qwork.name, &qwork.statuso);
+            if (S_ISDIR(qwork.statuso.st_mode)) {
+                if (!access(qwork.name, R_OK | X_OK)) {
+                    qwork.level = next_level;
+                    qwork.type[0] = 'd';
 
                     // this is how the parent gets passed on
-                    qwork->pinode = passmywork->statuso.st_ino;
+                    qwork.pinode = passmywork->statuso.st_ino;
+
+                    // make a copy here so that the data can be pushed into the queue
+                    // this is more efficient than malloc+free for every single entry
+                    struct work * copy = (struct work *) calloc(1, sizeof(struct work));
+                    memcpy(copy, &qwork, sizeof(struct work));
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     #ifdef DEBUG
                     start_timer(pushdir);
                     #endif
-                    QPTPool_enqueue_internal(ctx, qwork, next_queue);
+                    QPTPool_enqueue_internal(ctx, copy, next_queue);
                     #ifdef DEBUG
                     end_timer_ptr(pushdir);
                     #endif
@@ -251,16 +257,44 @@ static void path2(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     const size_t id = QPTPool_get_index((struct QPTPool *) sqlite3_user_data(context), pthread_self());
     sqlite3_result_text(context, gps[id].gpath, -1, SQLITE_TRANSIENT);
+
     return;
 }
 
 int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
-    return !(sqlite3_create_function(db, "path",       0, SQLITE_UTF8, ctx, &path2,       NULL, NULL) == SQLITE_OK);
+    return !(sqlite3_create_function(db, "path", 0, SQLITE_UTF8, ctx, &path2, NULL, NULL) == SQLITE_OK);
 }
 // //////////////////////////////////////////////////////
 
+// print the results of the query
+static int print_callback(void *out, int count, char **data, char **columns) {
+    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+    static char ffielddelim[2];
+    switch (in.dodelim) {
+        case 0:
+            SNPRINTF(ffielddelim,2,"|");
+            break;
+        case 1:
+            SNPRINTF(ffielddelim,2,"%s",fielddelim);
+            break;
+        case 2:
+            SNPRINTF(ffielddelim,2,"%s",in.delim);
+            break;
+    }
+
+    if (out) {
+        pthread_mutex_lock(&print_mutex);
+        for(int i = 0; i < count; i++) {
+            fprintf((FILE *) out, "%s%s", data[i], ffielddelim);
+        }
+        fprintf((FILE *) out, "\n");
+        pthread_mutex_unlock(&print_mutex);
+    }
+    return 0;
+}
+
 int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * next_queue, void * args) {
-    sqlite3 *db;
+    sqlite3 *db = NULL;
     int recs;
     int trecs;
     char shortname[MAXPATH];
@@ -280,8 +314,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
        out = gts.outfd[id];
     }
 
-    char name[MAXSQL];
-    SNPRINTF(name, MAXSQL, "%s/" DBNAME, work->name);
+    char dbname[MAXSQL];
+    SNPRINTF(dbname, MAXSQL, "%s/" DBNAME, work->name);
 
     #ifdef DEBUG
     long double opendir_time = 0;
@@ -302,7 +336,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     struct utimbuf dbtime = {};
     if (in.keep_matime) {
         struct stat st;
-        if (lstat(name, &st) != 0) {
+        if (lstat(dbname, &st) != 0) {
             perror("stat");
             goto out_free;
         }
@@ -324,11 +358,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     // if we have out db then we have that db open so we just attach the gufi db
     if (in.outdb > 0) {
       db = gts.outdbd[id];
-      attachdb(name, db, "tree");
+      attachdb(dbname, db, "tree");
     } else {
-        char dbname[MAXPATH];
-        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
-        db = opendb2(dbname, 1, 0, 0
+      db = opendb2(dbname, 1, 0, 0
                    /* #ifdef DEBUG */
                    /* , &open_time, &create_tables_time, &load_extension_time */
                    /* #endif */
@@ -403,6 +435,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
                 // memset(endname, 0, sizeof(endname));
                 shortpath(work->name,shortname,endname);
                 SNPRINTF(gps[id].gepath,MAXPATH,"%s",endname);
+
                 if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     // for directories we have to take off after the last slash
@@ -430,8 +463,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
                         start_timer(exec);
                         #endif
                         char *err = NULL;
-                        if (sqlite3_exec(db, in.sqlent, in.print_callback, out, &err) != SQLITE_OK) {
-                            fprintf(stderr, "Error: %s \"%s\"\n", err, in.sqlent);
+                        if (sqlite3_exec(db, in.sqlent, (int (*)(void*,int,char**,char**)) args, out, &err) != SQLITE_OK) {
+                            fprintf(stderr, "Error: %s: \"%s\"\n", err, in.sqlent);
                             sqlite3_free(err);
                         }
                         #ifdef DEBUG
@@ -472,7 +505,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     start_timer(close);
     #endif
     if (in.outdb > 0) {
-      detachdb(name, db, "tree");
+      detachdb(dbname, db, "tree");
     } else {
       closedb(db);
     }
@@ -494,10 +527,11 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
 
     // restore mtime and atime
     if (in.keep_matime) {
-        utime(name, &dbtime);
+        utime(dbname, &dbtime);
     }
 
   out_free:
+    free(work);
 
 #ifdef DEBUG
     #ifdef THREAD_STATS
@@ -553,9 +587,10 @@ int main(int argc, char *argv[])
     if (idx < 0)
         return -1;
 
-    const int rc = sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);
+    // load the pcre extension every time a database is opened
+    const int rc = sqlite3_auto_extension((void (*)(void)) sqlite3_extension_init);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "sqlite3_config error: %d\n", rc);
+        fprintf(stderr, "sqlite3_auto_extension error: %d\n", rc);
         return -1;
     }
 
@@ -564,7 +599,7 @@ int main(int argc, char *argv[])
     for(int i = idx; i < argc; i++) {
         fprintf(stderr, " %s", argv[i]);
     }
-    fprintf(stderr, "\n");
+    fprintf(stderr, " with %d threads\n", in.maxthreads);
     #endif
 
     sqlite3 *aggregate = NULL;
@@ -595,11 +630,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    long double total_time = 0;
+    // provide a function to print if PRINT is set
+    int (*print_callback_func)(void*,int,char**,char**) = (((in.aggregate_or_print == PRINT) && in.printdir)?print_callback:NULL);
 
-    #if BENCHMARK
-    total_files = 0;
-    #endif
+    long double total_time = 0;
 
     #if defined(DEBUG) || BENCHMARK
     struct timespec intermediate_start;
@@ -622,19 +656,20 @@ int main(int argc, char *argv[])
         if (access(mywork->name, R_OK | X_OK)) {
             fprintf(stderr, "couldn't access input dir '%s': %s\n",
                     mywork->name, strerror(errno));
-            return 1;
+            free(mywork);
+            continue;
         }
         if (!S_ISDIR(mywork->statuso.st_mode) ) {
             fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
-            return 1;
+            free(mywork);
+            continue;
         }
 
         // push the path onto the queue
-        mywork->level = 0;
         QPTPool_enqueue_external(pool, mywork);
     }
 
-    if (QPTPool_start(pool, processdir, NULL) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, processdir, print_callback_func) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;
     }

@@ -16,31 +16,7 @@
 int templatefd = -1;    // this is really a constant that is set at runtime
 off_t templatesize = 0; // this is really a constant that is set at runtime
 
-// Data stored during first pass of input file
-struct row {
-    size_t first_delim;
-    char * line;
-    size_t len;
-    long offset;
-    size_t entries;
-};
-
-struct row * row_init() {
-    struct row * row = calloc(1, sizeof(struct row));
-    if (row) {
-        row->first_delim = -1;
-        row->offset = -1;
-    }
-    return row;
-}
-
-void row_destroy(struct row * row) {
-    if (row) {
-        free(row->line);
-        free(row);
-    }
-}
-
+#ifdef DEBUG
 int duping = 0;
 int copying = 0;
 int opening = 0;
@@ -94,6 +70,32 @@ static inline void decr(int * var) {
         pthread_mutex_unlock(&counter_mutex);
     }
     #endif
+}
+#endif
+
+// Data stored during first pass of input file
+struct row {
+    size_t first_delim;
+    char * line;
+    size_t len;
+    long offset;
+    size_t entries;
+};
+
+struct row * row_init() {
+    struct row * row = calloc(1, sizeof(struct row));
+    if (row) {
+        row->first_delim = -1;
+        row->offset = -1;
+    }
+    return row;
+}
+
+void row_destroy(struct row * row) {
+    if (row) {
+        free(row->line);
+        free(row);
+    }
 }
 
 void parsefirst(const char delim, struct row * work) {
@@ -219,35 +221,52 @@ void * scout_function(void * args) {
     pthread_cond_broadcast(&sa->cv);
     pthread_mutex_unlock(&sa->mutex);
 
+    #ifdef DEBUG
     pthread_mutex_lock(&counter_mutex);
+    #endif
     fprintf(stderr, "Scout finished in %.2Lf seconds\n", elapsed(&start, &end));
     fprintf(stderr, "Files: %zu\n", file_count);
     fprintf(stderr, "Dirs:  %zu\n", dir_count);
     fprintf(stderr, "Total: %zu\n", file_count + dir_count);
+    #ifdef DEBUG
     pthread_mutex_unlock(&counter_mutex);
+    #endif
 
     return NULL;
 }
 
 // process the work under one directory (no recursion)
-// also deletes w
+// also deletes data
 int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * args) {
     // might want to skip this check
     if (!data) {
         return 0;
     }
 
+    if (!ctx || (id >= ctx->size) || !next_queue) {
+        free(data);
+        return 0;
+    }
+
     struct row * w = (struct row *) data;
     FILE * trace = ((FILE **) args)[id];
 
-    // parse the directory data
-    incr(&parsing);
     struct work dir;
+    memset(&dir, 0, sizeof(struct work));
+
+    // parse the directory data
+    #ifdef DEBUG
+    incr(&parsing);
+    #endif
     linetowork(w->line, in.delim, &dir);
+    #ifdef DEBUG
     decr(&parsing);
+    #endif
 
     // create the directory
+    #ifdef DEBUG
     incr(&duping);
+    #endif
     char topath[MAXPATH];
     SNPRINTF(topath,MAXPATH,"%s/%s",in.nameto,dir.name);
     if (dupdir(topath, &dir.statuso)) {
@@ -256,7 +275,9 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
       row_destroy(w);
       return 0;
     }
+    #ifdef DEBUG
     decr(&duping);
+    #endif
 
     // create the database name
     char dbname[MAXPATH];
@@ -281,13 +302,21 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
         struct sum summary;
         zeroit(&summary);
 
+        #ifdef DEBUG
         incr(&prepping);
+        #endif
         sqlite3_stmt * res = insertdbprep(db, NULL);
+        #ifdef DEBUG
         decr(&prepping);
+        #endif
 
+        #ifdef DEBUG
         incr(&bt);
+        #endif
         startdb(db);
+        #ifdef DEBUG
         decr(&bt);
+        #endif
 
         // move the trace file to the offet
         fseek(trace, w->offset, SEEK_SET);
@@ -301,11 +330,15 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
                 break;
             }
 
-            incr(&parsing);
             struct work row;
+            memset(&row, 0, sizeof(struct row));
+            #ifdef DEBUG
+            incr(&parsing);
+            #endif
             linetowork(line, in.delim, &row);
+            #ifdef DEBUG
             decr(&parsing);
-
+            #endif
             free(line);
 
             // stop on directories, since files are listed first
@@ -320,9 +353,13 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
             row.pinode = 0;
 
             // add row to bulk insert
+            #ifdef DEBUG
             incr(&inserting);
+            #endif
             insertdbgo(&row,db,res);
+            #ifdef DEBUG
             decr(&inserting);
+            #endif
 
             row_count++;
             if (row_count > 100000) {
@@ -332,19 +369,30 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
             }
         }
 
+        #ifdef DEBUG
         incr(&et);
+        #endif
         stopdb(db);
+        #ifdef DEBUG
         decr(&et);
+        #endif
 
+        #ifdef DEBUG
         incr(&unprep);
+        #endif
         insertdbfin(db, res);
+        #ifdef DEBUG
         decr(&unprep);
-
+        #endif
         insertsumdb(db, &dir, &summary);
 
+        #ifdef DEBUG
         incr(&closing);
+        #endif
         closedb(db); // don't set to nullptr
+        #ifdef DEBUG
         decr(&closing);
+        #endif
     }
 
     row_destroy(w);

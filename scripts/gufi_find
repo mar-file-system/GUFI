@@ -461,20 +461,14 @@ if __name__=='__main__':
     if len(initial):
         query_cmd += ['-E', initial]
 
-    if len(intermediate):
+    if args.aggregate and len(intermediate):
         query_cmd += ['-J', intermediate]
 
-    if len(final):
+    if args.aggregate and len(final):
         query_cmd += ['-G', final]
 
     if args.delim:
         query_cmd += ['-d', args.delim]
-
-    if args.intermediates:
-        query_cmd += ['-v', str(args.intermediates)]
-
-    if args.skip:
-        query_cmd += ['-w', str(args.skip)]
 
     if args.maxdepth:
         query_cmd += ['-z', str(args.maxdepth)]
