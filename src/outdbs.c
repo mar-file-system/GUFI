@@ -83,6 +83,7 @@ OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // allocate the array of sqlite3 * and open file
 sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit) {
@@ -99,13 +100,17 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
                 fprintf(stderr, "Could not open output database file %s\n", buf);
                 return NULL;
             }
+        }
 
-            char * err = NULL;
-            if (sqlite3_exec(dbs[i], sqlinit, NULL, NULL, &err) != SQLITE_OK) {
-                outdbs_fin(dbs, i, NULL);
-                fprintf(stderr, "Initial SQL Error: %s\n", err);
-                sqlite3_free(err);
-                return NULL;
+        if (strlen(sqlinit)) {
+            for(int i = 0; i < count; i++) {
+                char * err = NULL;
+                if (sqlite3_exec(dbs[i], sqlinit, NULL, NULL, &err) != SQLITE_OK) {
+                    outdbs_fin(dbs, i, NULL);
+                    fprintf(stderr, "Initial SQL Error: %s\n", err);
+                    sqlite3_free(err);
+                    return NULL;
+                }
             }
         }
     }
@@ -115,14 +120,18 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
 // close all output dbs
 int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin) {
     if (dbs) {
-        for(int i = 0; i < end; i++) {
-            char * err = NULL;
-            if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Final SQL Error: %s\n", err);
-                sqlite3_free(err);
-                // ignore errors, since the database is closing anyways
+        if (strlen(sqlfin)) {
+            for(int i = 0; i < end; i++) {
+                char * err = NULL;
+                if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {
+                    fprintf(stderr, "Final SQL Error: %s\n", err);
+                    sqlite3_free(err);
+                    // ignore errors, since the database is closing anyways
+                }
             }
+        }
 
+        for(int i = 0; i < end; i++) {
             closedb(dbs[i]);
         }
     }
