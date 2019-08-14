@@ -77,16 +77,8 @@
 #
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
-
-# check if the executables are here, or in src
-if [[ -f src/gufi_query && -x src/gufi_query ]]; then
-    SRC="src"
-else
-    SRC=""
-fi
-
 DIR=`dirname $SCRIPT`
-BFQ=$DIR/../${SRC}/gufi_query
+BFQ=$DIR/../src/gufi_query
 
 
 usage() {
@@ -134,10 +126,10 @@ ls -l outq*
 for F in `ls outq*`; do echo; echo $F; cat $F; done
 
 echo
-echo "query to screen, insert per-user size-summary into table 'sument' in outdb.<thread_no>"
+echo "query to screen, insert per-user size-summary into table 'sument' in outdb.<thread_no> ${GUFI}"
 rm -f outdb*
 $BFQ \
-    -Pp -n 2 -O outdb \
+    -n 2 -O outdb \
     -I "CREATE TABLE sument (uid int64, type text, totfiles int64, totsize int64);" \
     -E "INSERT INTO sument SELECT uid, type, count(*), sum(size) FROM entries group by type;" \
     $GUFI

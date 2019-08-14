@@ -334,7 +334,7 @@ void sub_help() {
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHpn:", 1, "input_dir output_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:x", 1, "input_dir output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)

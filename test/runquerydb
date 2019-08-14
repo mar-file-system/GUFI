@@ -75,16 +75,8 @@
 
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
-
-# check if the executables are here, or in src
-if [[ -f src/bfwi && -x src/bfwi ]]; then
-    SRC="src"
-else
-    SRC=""
-fi
-
 DIR=`dirname $SCRIPT`
-QUERYDB=$DIR/../${SRC}/querydb
+QUERYDB=$DIR/../src/querydb
 
 
 usage() {

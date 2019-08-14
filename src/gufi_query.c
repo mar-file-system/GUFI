@@ -97,6 +97,8 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "opendb.h"
+#include "outdbs.h"
+#include "outfiles.h"
 #include "pcre.h"
 #include "utils.h"
 
@@ -599,6 +601,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads)             ||
+        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit)) {
+        return -1;
+    }
+
     #if BENCHMARK
     fprintf(stderr, "Querying GUFI Index");
     for(int i = idx; i < argc; i++) {
@@ -788,6 +795,9 @@ int main(int argc, char *argv[])
 
         closedb(aggregate);
      }
+
+     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
+     outfiles_fin(gts.outfd,  in.maxthreads);
 
      #if BENCHMARK
      struct timespec end;

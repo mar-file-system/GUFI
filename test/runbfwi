@@ -78,16 +78,9 @@
 
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
-
-# check if the executables are here, or in src
-if [[ -f src/bfwi && -x src/bfwi ]]; then
-    SRC="src"
-else
-    SRC=""
-fi
-
 DIR=`dirname $SCRIPT`
-BFWI=$DIR/../${SRC}/bfwi
+DIR2TRACE=$DIR/../src/gufi_dir2trace
+DIR2INDEX=$DIR/../src/gufi_dir2index
 
 
 # NOTE: The destination GUFI-tree is optional
@@ -157,7 +150,7 @@ DEST=
 CLEAN_GUFI=":"
 
 if [ -n "$GUFI_BASE" ]; then
-    DEST="-b -t $GUFI_BASE"
+    DEST="$GUFI_BASE"
     GUFI="$GUFI_BASE/$SOURCE"
     CLEAN_GUFI="rm -rf $GUFI"
 fi
@@ -173,8 +166,8 @@ echo "out to screen"
 echo $CLEAN_GUFI
 $CLEAN_GUFI
 
-echo $BFWI -n 2 -xP $DEST $SOURCE
-$BFWI -n 2 -xP $DEST $SOURCE
+echo $DIR2TRACE -n 2 -x $SOURCE
+$DIR2TRACE -n 2 -x $SOURCE
 
 
 
@@ -185,13 +178,23 @@ echo "send to output files"
 
 echo $CLEAN_GUFI
 $CLEAN_GUFI
-rm -f  testout*
+rm -f testout*
 
-echo $BFWI -n 2 -xP -o testout $DEST $SOURCE
-$BFWI -n 2 -xP -o testout $DEST $SOURCE
+echo $DIR2TRACE -n 2 -x -o testout $SOURCE
+$DIR2TRACE -n 2 -x -o testout $SOURCE
 
 ls -l testout*
 for F in testout*; do echo; echo $F; cat $F; done
+
+# run to output files directory
+echo
+echo "send to output directory"
+
+echo $CLEAN_GUFI
+$CLEAN_GUFI
+
+echo $DIR2INDEX -n 2 -x $SOURCE $DEST
+$DIR2INDEX -n 2 -x $SOURCE $DEST
 
 if [ -n "$GUFI" ]; then
     ls -lR $GUFI

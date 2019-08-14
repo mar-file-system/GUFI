@@ -86,6 +86,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "outfiles.h"
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
@@ -97,37 +98,6 @@ pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
 size_t total_dirs = 0;
 size_t total_files = 0;
 #endif
-
-// per thread output file handles
-FILE ** output;
-
-// close all output files
-int output_fin(const int end) {
-    for(int i = 0; i < end; i++) {
-        fclose(output[i]);
-    }
-    free(output);
-    return 0;
-}
-
-// allocate the array of FILE * and open file
-int output_init(char * prefix, const int count) {
-    if (!(output = (FILE **) malloc(in.maxthreads * sizeof(FILE *)))) {
-        fprintf(stderr, "Could not allocate space for per thread file array\n");
-        return -1;
-    }
-
-    for(int i = 0; i < count; i++) {
-        char buf[MAXPATH];
-        SNPRINTF(buf, MAXPATH, "%s.%d", prefix, i);
-        if (!(output[i] = fopen(buf, "w"))) {
-            output_fin(i);
-            fprintf(stderr, "Could not open thread file %s\n", buf);
-            return -1;
-        }
-    }
-    return 0;
-}
 
 // process the work under one directory (no recursion)
 // deletes work
@@ -164,7 +134,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
         return 1;
     }
 
-    worktofile(output[id], in.delim, work);
+    worktofile(gts.outfd[id], in.delim, work);
 
     struct dirent * entry = NULL;
     size_t rows = 0;
@@ -224,7 +194,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
         pthread_mutex_unlock(&global_mutex);
         #endif
 
-        worktofile(output[id], in.delim, &e);
+        worktofile(gts.outfd[id], in.delim, &e);
     }
 
     closedir(dir);
@@ -262,27 +232,30 @@ int validate_inputs(struct work * root) {
         return 1;
     }
 
-   if (!strlen(in.outfilen)) {
-       fprintf(stderr, "No output file name specified\n");
-       return -1;
-   }
+    // check the output files, if one was provided
+    if (in.outfile) {
+        if (!strlen(in.outfilen)) {
+            fprintf(stderr, "No output file name specified\n");
+            return -1;
+        }
 
-   // check if the destination path already exists (not an error)
-   for(int i = 0; i < in.maxthreads; i++) {
-       char outname[MAXPATH];
-       SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
+        // check if the destination path already exists (not an error)
+        for(int i = 0; i < in.maxthreads; i++) {
+            char outname[MAXPATH];
+            SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
 
-       struct stat dst_st;
-       if (lstat(in.outfilen, &dst_st) == 0) {
-           fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+            struct stat dst_st;
+            if (lstat(in.outfilen, &dst_st) == 0) {
+                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-           // if the destination path is not a directory (error)
-           if (S_ISDIR(dst_st.st_mode)) {
-               fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
-               return -1;
-           }
-       }
-   }
+                // if the destination path is not a directory (error)
+                if (S_ISDIR(dst_st.st_mode)) {
+                    fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
+                    return -1;
+                }
+            }
+        }
+    }
 
    if (in.doxattrs > 0) {
        root->xattrs = pullxattrs(in.name, root->xattr);
@@ -293,12 +266,11 @@ int validate_inputs(struct work * root) {
 
 void sub_help() {
     printf("input_dir         walk this tree to produce trace file\n");
-    printf("out_file          output prefix\n");
     printf("\n");
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:d:", 1, "input_dir out_file", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:o:", 1, "input_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -307,7 +279,6 @@ int main(int argc, char * argv[]) {
         // parse positional args, following the options
         int retval = 0;
         INSTALL_STR(in.name,     argv[idx++], MAXPATH, "input_dir");
-        INSTALL_STR(in.outfilen, argv[idx++], MAXPATH, "out_file");
 
         if (retval)
             return retval;
@@ -322,7 +293,7 @@ int main(int argc, char * argv[]) {
     if (validate_inputs(root))
         return -1;
 
-    if (output_init(in.outfilen, in.maxthreads) != 0) {
+    if (!outfiles_init(gts.outfd, in.outfile, in.outfilen, in.maxthreads)) {
         return -1;
     }
 
@@ -346,6 +317,8 @@ int main(int argc, char * argv[]) {
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
+    outfiles_fin(gts.outfd, in.maxthreads);
+
     #if BENCHMARK
     struct timespec end;
     clock_gettime(CLOCK_MONOTONIC, &end);
@@ -357,8 +330,6 @@ int main(int argc, char * argv[]) {
     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs / processtime);
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
     #endif
-
-    output_fin(in.maxthreads);
 
     return 0;
 }
