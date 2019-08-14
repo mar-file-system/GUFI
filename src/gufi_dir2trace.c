@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,6 +91,8 @@ OF SUCH DAMAGE.
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
+
+extern int errno;
 
 #if BENCHMARK
 #include <time.h>
