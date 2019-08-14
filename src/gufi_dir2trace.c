@@ -203,16 +203,20 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     return 0;
 }
 
-// This app allows users to do any of the following: (a) just walk the
-// input tree, (b) like a, but also creating corresponding GUFI-tree
-// directories, (c) like b, but also creating an index.
-int validate_inputs(struct work * root) {
+struct work * validate_inputs() {
+    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    if (!root) {
+        fprintf(stderr, "Could not allocate root struct\n");
+        return NULL;
+    }
+
     SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
     // get input path metadata
     if (lstat(root->name, &root->statuso) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
-        return -1;
+        free(root);
+        return NULL;
     }
 
     // check that the input path is a directory
@@ -221,7 +225,8 @@ int validate_inputs(struct work * root) {
     }
     else {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
-        return -1;
+        free(root);
+        return NULL;
     }
 
     // check if the source directory can be accessed
@@ -229,14 +234,16 @@ int validate_inputs(struct work * root) {
     if ((root->statuso.st_mode & PERMS) != PERMS) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 in.name, strerror(errno));
-        return 1;
+        free(root);
+        return NULL;
     }
 
-    // check the output files, if one was provided
+    // check the output files, if a prefix was provided
     if (in.outfile) {
         if (!strlen(in.outfilen)) {
             fprintf(stderr, "No output file name specified\n");
-            return -1;
+            free(root);
+            return NULL;
         }
 
         // check if the destination path already exists (not an error)
@@ -251,17 +258,18 @@ int validate_inputs(struct work * root) {
                 // if the destination path is not a directory (error)
                 if (S_ISDIR(dst_st.st_mode)) {
                     fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
-                    return -1;
+                    free(root);
+                    return NULL;
                 }
             }
         }
     }
 
-   if (in.doxattrs > 0) {
-       root->xattrs = pullxattrs(in.name, root->xattr);
-   }
+    if (in.doxattrs > 0) {
+        root->xattrs = pullxattrs(in.name, root->xattr);
+    }
 
-   return 0;
+    return root;
 }
 
 void sub_help() {
@@ -284,14 +292,11 @@ int main(int argc, char * argv[]) {
             return retval;
     }
 
-    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    // get first work item by validating inputs
+    struct work * root = validate_inputs();
     if (!root) {
-        fprintf(stderr, "Could not allocate root struct\n");
         return -1;
     }
-
-    if (validate_inputs(root))
-        return -1;
 
     if (!outfiles_init(gts.outfd, in.outfile, in.outfilen, in.maxthreads)) {
         return -1;

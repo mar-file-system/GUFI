@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -10,6 +11,8 @@
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
+
+extern int errno;
 
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH
 
@@ -510,10 +513,11 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
+    // force the scout to finish before allowing the QPTPool to finish
+    pthread_join(scout, NULL);
+
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
-
-    pthread_join(scout, NULL);
 
     // set top level permissions
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

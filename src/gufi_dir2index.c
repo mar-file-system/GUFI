@@ -251,80 +251,143 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     return 0;
 }
 
-// This app allows users to do any of the following: (a) just walk the
-// input tree, (b) like a, but also creating corresponding GUFI-tree
-// directories, (c) like b, but also creating an index.
-int validate_inputs(struct work * root) {
-   char expathin[MAXPATH];
-   char expathout[MAXPATH];
-   char expathtst[MAXPATH];
+struct work * validate_inputs() {
+    char expathin[MAXPATH];
+    char expathout[MAXPATH];
+    char expathtst[MAXPATH];
 
-   SNPRINTF(expathtst,MAXPATH,"%s/%s",in.nameto,in.name);
-   realpath(expathtst,expathout);
-   //printf("expathtst: %s expathout %s\n",expathtst,expathout);
-   realpath(in.name,expathin);
-   //printf("in.name: %s expathin %s\n",in.name,expathin);
-   if (!strcmp(expathin,expathout)) {
-       fprintf(stderr,"You are putting the index dbs in input directory\n");
-   }
+    SNPRINTF(expathtst,MAXPATH,"%s/%s",in.nameto,in.name);
+    realpath(expathtst,expathout);
+    //printf("expathtst: %s expathout %s\n",expathtst,expathout);
+    realpath(in.name,expathin);
+    //printf("in.name: %s expathin %s\n",in.name,expathin);
+    if (!strcmp(expathin,expathout)) {
+        fprintf(stderr,"You are putting the index dbs in input directory\n");
+    }
 
-   SNPRINTF(root->name, MAXPATH, "%s", in.name);
+    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    if (!root) {
+        fprintf(stderr, "Could not allocate root struct\n");
+        return NULL;
+    }
+
+    SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
     // get input path metadata
-   if (lstat(root->name, &root->statuso) < 0) {
-       fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
-       return -1;
-   }
+    if (lstat(root->name, &root->statuso) < 0) {
+        fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
+        free(root);
+        return NULL;
+    }
 
-   // check that the input path is a directory
-   if (S_ISDIR(root->statuso.st_mode)) {
-       root->type[0] = 'd';
-   }
-   else {
-       fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
-       return -1;
-   }
+    // check that the input path is a directory
+    if (S_ISDIR(root->statuso.st_mode)) {
+        root->type[0] = 'd';
+    }
+    else {
+        fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
+        free(root);
+        return NULL;
+    }
 
-   // check if the source directory can be accessed
-   static mode_t PERMS = R_OK | X_OK;
-   if ((root->statuso.st_mode & PERMS) != PERMS) {
-       fprintf(stderr, "couldn't access input dir '%s': %s\n",
-               in.name, strerror(errno));
-       return 1;
-   }
+    // check if the source directory can be accessed
+    static mode_t PERMS = R_OK | X_OK;
+    if ((root->statuso.st_mode & PERMS) != PERMS) {
+        fprintf(stderr, "couldn't access input dir '%s': %s\n",
+                in.name, strerror(errno));
+        free(root);
+        return NULL;
+    }
 
-   if (!strlen(in.nameto)) {
-       fprintf(stderr, "No output path specified\n");
-       return -1;
-   }
+    if (!strlen(in.nameto)) {
+        fprintf(stderr, "No output path specified\n");
+        free(root);
+        return NULL;
+    }
 
-   // check if the destination path already exists (not an error)
-   struct stat dst_st;
-   if (lstat(in.nameto, &dst_st) == 0) {
-       fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+    // check if the destination path already exists (not an error)
+    struct stat dst_st;
+    if (lstat(in.nameto, &dst_st) == 0) {
+        fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-       // if the destination path is not a directory (error)
-       if (!S_ISDIR(dst_st.st_mode)) {
-           fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
-           return -1;
-       }
-   }
+        // if the destination path is not a directory (error)
+        if (!S_ISDIR(dst_st.st_mode)) {
+            fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
+            free(root);
+            return NULL;
+        }
+    }
 
-   // create the source root under the destination directory using
-   // the source directory's permissions and owners
-   // this allows for the threads to not have to recursively create directories
-   char dst_path[MAXPATH];
-   SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name);
-   if (dupdir(dst_path, &root->statuso)) {
-       fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
-       return -1;
-   }
+    // check the output files, if a prefix was provided
+    if (in.outfile) {
+        if (!strlen(in.outfilen)) {
+            fprintf(stderr, "No output file name specified\n");
+            free(root);
+            return NULL;
+        }
 
-   if (in.doxattrs > 0) {
-       root->xattrs = pullxattrs(in.name, root->xattr);
-   }
+        // check if the destination path already exists (not an error)
+        for(int i = 0; i < in.maxthreads; i++) {
+            char outname[MAXPATH];
+            SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
 
-   return 0;
+            struct stat dst_st;
+            if (lstat(in.outfilen, &dst_st) == 0) {
+                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+
+                // if the destination path is not a directory (error)
+                if (S_ISDIR(dst_st.st_mode)) {
+                    fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
+                    free(root);
+                    return NULL;
+                }
+            }
+        }
+    }
+
+    // check the output dbs, if a prefix was provided
+    if (in.outdb) {
+        if (!strlen(in.outdbn)) {
+            fprintf(stderr, "No output db name specified\n");
+            free(root);
+            return NULL;
+        }
+
+        // check if the destination path already exists (not an error)
+        for(int i = 0; i < in.maxthreads; i++) {
+            char outname[MAXPATH];
+            SNPRINTF(outname, MAXPATH, "%s.%d", in.outdbn, i);
+
+            struct stat dst_st;
+            if (lstat(in.outdbn, &dst_st) == 0) {
+                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+
+                // if the destination path is not a directory (error)
+                if (S_ISDIR(dst_st.st_mode)) {
+                    fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outdbn);
+                    free(root);
+                    return NULL;
+                }
+            }
+        }
+    }
+
+    // create the source root under the destination directory using
+    // the source directory's permissions and owners
+    // this allows for the threads to not have to recursively create directories
+    char dst_path[MAXPATH];
+    SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name);
+    if (dupdir(dst_path, &root->statuso)) {
+        fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
+        free(root);
+        return NULL;
+    }
+
+    if (in.doxattrs > 0) {
+        root->xattrs = pullxattrs(in.name, root->xattr);
+    }
+
+    return root;
 }
 
 void sub_help() {
@@ -349,14 +412,11 @@ int main(int argc, char * argv[]) {
             return retval;
     }
 
-    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    // get first work item by validating inputs
+    struct work * root = validate_inputs();
     if (!root) {
-        fprintf(stderr, "Could not allocate root struct\n");
         return -1;
     }
-
-    if (validate_inputs(root))
-        return -1;
 
     #if BENCHMARK
     fprintf(stderr, "Creating GUFI Index %s in %s with %d threads\n", in.name, in.nameto, in.maxthreads);
