@@ -240,12 +240,12 @@ void * scout_function(void * args) {
 int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * args) {
     // might want to skip this check
     if (!data) {
-        return 0;
+        return 1;
     }
 
     if (!ctx || (id >= ctx->size) || !next_queue) {
         free(data);
-        return 0;
+        return 1;
     }
 
     struct row * w = (struct row *) data;
@@ -273,7 +273,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
       const int err = errno;
       fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));
       row_destroy(w);
-      return 0;
+      return 1;
     }
     #ifdef DEBUG
     decr(&duping);
@@ -293,7 +293,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir.statuso.st_uid, dir.statuso.st_gid)) {
         row_destroy(w);
-        return 0;
+        return 1;
     }
 
     // process the work
@@ -397,7 +397,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
 
     row_destroy(w);
 
-    return !!db;
+    return !db;
 }
 
 void sub_help() {

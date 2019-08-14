@@ -76,14 +76,10 @@ OF SUCH DAMAGE.
 
 
 #include "QueuePerThreadPool.h"
+#include "QueuePerThreadPoolPrivate.h"
 
 #include <string.h>
 #include <stdlib.h>
-
-struct node {
-    void * data;
-    struct node * next;
-};
 
 struct sll * sll_init(struct sll * sll) {
     memset(sll, 0, sizeof(struct sll));
@@ -91,7 +87,7 @@ struct sll * sll_init(struct sll * sll) {
 };
 
 struct sll * sll_push(struct sll * sll, void * data) {
-    if (!sll || !data) {
+    if (!sll) {
         return NULL;
     }
 
@@ -116,6 +112,7 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
         return NULL;
     }
 
+    sll_destroy(dst);
     *dst = *src;
     memset(src, 0, sizeof(struct sll));
     return dst;
@@ -150,6 +147,8 @@ void sll_destroy(struct sll * sll) {
         free(node);
         node = next;
     }
+
+    memset(sll, 0, sizeof(struct sll));
 }
 
 struct QPTPool * QPTPool_init(const size_t threads) {
@@ -179,6 +178,8 @@ struct QPTPool * QPTPool_init(const size_t threads) {
         ctx->data[i].threads_successful = 0;
     }
 
+    ctx->next_queue = 0;
+
     pthread_mutex_init(&ctx->mutex, NULL);
     ctx->incomplete = 0;
 
@@ -186,8 +187,7 @@ struct QPTPool * QPTPool_init(const size_t threads) {
 }
 
 void QPTPool_enqueue_external(struct QPTPool * ctx, void * new_work) {
-    static size_t next_queue = 0;
-    QPTPool_enqueue_internal(ctx, new_work, &next_queue);
+    QPTPool_enqueue_internal(ctx, new_work, &ctx->next_queue);
 }
 
 void QPTPool_enqueue_internal(struct QPTPool * ctx, void * new_work, size_t * next_queue) {
@@ -258,7 +258,7 @@ static void * worker_function(void *args) {
         // process all work
         size_t work_count = 0;
         for(struct node * dir = sll_head_node(&dirs); dir; dir = sll_next_node(dir)) {
-            tw->threads_successful += wf_args->func(ctx, sll_node_data(dir), wf_args->id, &next_queue, wf_args->args);
+            tw->threads_successful += !wf_args->func(ctx, sll_node_data(dir), wf_args->id, &next_queue, wf_args->args);
             work_count++;
         }
         sll_destroy(&dirs);
@@ -324,9 +324,8 @@ void QPTPool_destroy(struct QPTPool * ctx) {
 
 // utility functions
 size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id) {
-    const pthread_t tid = pthread_self();
     for(size_t i = 0; i < ctx->size; i++) {
-        if (tid == ctx->data[i].thread) {
+        if (id == ctx->data[i].thread) {
             return i;
         }
     }

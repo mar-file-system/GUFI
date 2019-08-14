@@ -139,12 +139,12 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     #endif
 
     if (!data) {
-        return 0;
+        return 1;
     }
 
     if (!ctx || (id >= ctx->size) || !next_queue) {
         free(data);
-        return 0;
+        return 1;
     }
 
     struct work * work = (struct work *) data;
@@ -153,7 +153,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     if (!dir) {
         closedir(dir);
         free(data);
-        return 0;
+        return 1;
     }
 
     // get source directory info
@@ -161,7 +161,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
         free(data);
-        return 0;
+        return 1;
     }
 
     worktofile(output[id], in.delim, work);
@@ -230,7 +230,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next
     closedir(dir);
     free(data);
 
-    return 1;
+    return 0;
 }
 
 // This app allows users to do any of the following: (a) just walk the

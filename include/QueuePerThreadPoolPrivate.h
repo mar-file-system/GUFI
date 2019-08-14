@@ -75,46 +75,42 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef QUEUE_PER_THREAD_POOL_H
-#define QUEUE_PER_THREAD_POOL_H
+#ifndef QUEUE_PER_THREAD_POOL_PRIVATE_H
+#define QUEUE_PER_THREAD_POOL_PRIVATE_H
 
 #include <pthread.h>
 
-// The Queue Per Thread Pool context
-struct QPTPoolData;
-struct QPTPool {
-    struct QPTPoolData * data;
-    size_t size;
-
-    /* per pool counter; only used when calling QPTPool_enqueue_external */
-    size_t next_queue;
-
-    pthread_mutex_t mutex;
-    size_t incomplete;
+struct node {
+    void * data;
+    struct node * next;
 };
 
-/* User defined function to pass into QPTPool_start
- *
- * @param ctx            the pool context the function is running in
- * @param data           the data the function is operating on
- * @param id             the id of this thread
- * @param next_queue     the next queue to push work into
- * @param extra args     any extra data to make accessible to the function
- * @return 0 if successful, non-zero if not
- */
-typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * extra_args);
+/* Singly linked list that is used like a queue */
+struct sll {
+    struct node * head;
+    struct node * tail;
+};
 
-/* main functions for operating a QPTPool */
-struct QPTPool * QPTPool_init(const size_t threads);
-void QPTPool_enqueue_external(struct QPTPool * ctx, void * new_work);
-void QPTPool_enqueue_internal(struct QPTPool * ctx, void * new_work, size_t * next_queue);
-size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args);
-void QPTPool_wait(struct QPTPool * ctx);
-void QPTPool_destroy(struct QPTPool * ctx);
+struct sll * sll_init(struct sll * sll);
+struct sll * sll_push(struct sll * sll, void * data);
+struct sll * sll_move(struct sll * dst, struct sll * src);
 
-/* utility functions */
-size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);      /* get a number in the range [0, # of threads), or (size_t) -1 on error */
-size_t QPTPool_threads_started(struct QPTPool * ctx);
-size_t QPTPool_threads_completed(struct QPTPool * ctx);
+/* functions for looping over a sll */
+struct node * sll_head_node(struct sll * sll);
+struct node * sll_next_node(struct node * node);
+void * sll_node_data(struct node * node);
+
+void sll_destroy(struct sll * sll);
+
+/* The context for a single thread in QPTPool */
+struct QPTPoolData {
+    size_t id;
+    struct sll queue;
+    pthread_mutex_t mutex;
+    pthread_cond_t cv;
+    pthread_t thread;
+    size_t threads_started;
+    size_t threads_successful;
+};
 
 #endif

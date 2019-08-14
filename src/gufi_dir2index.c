@@ -113,12 +113,12 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     #endif
 
     if (!data) {
-        return 0;
+        return 1;
     }
 
     if (!ctx || (id >= ctx->size) || !next_queue) {
         free(data);
-        return 0;
+        return 1;
     }
 
     struct work * work = (struct work *) data;
@@ -126,14 +126,14 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     DIR * dir = opendir(work->name);
     if (!dir) {
         closedir(dir);
-        return 0;
+        return 1;
     }
 
     // get source directory info
     struct stat dir_st;
     if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
-        return 0;
+        return 1;
     }
 
     // create the directory
@@ -145,7 +145,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
             closedir(dir);
-            return 0;
+            return 1;
         }
     }
 
@@ -156,13 +156,13 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     // copy the template file
     if (copy_template(templatefd, dbname, templatesize, dir_st.st_uid, dir_st.st_gid)) {
         closedir(dir);
-        return 0;
+        return 1;
     }
 
     sqlite3 * db = opendb2(dbname, 0, 0, 1);
     if (!db) {
         closedir(dir);
-        return 0;
+        return 1;
     }
 
     // prepare to insert into the database
@@ -248,7 +248,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
 
     free(work);
 
-    return 1;
+    return 0;
 }
 
 // This app allows users to do any of the following: (a) just walk the

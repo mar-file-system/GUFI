@@ -301,8 +301,13 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     char endname[MAXPATH];
     DIR * dir = NULL;
 
-    if (!ctx || !data) {
-        return 0;
+    if (!data) {
+        return 1;
+    }
+
+    if (!ctx || (id >= ctx->size) || !next_queue) {
+        free(data);
+        return 1;
     }
 
     struct work * work = (struct work *) data;
@@ -555,7 +560,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
     pthread_mutex_unlock(&total_mutex);
 #endif
 
-    return 1;
+    return 0;
 }
 
 void sub_help() {
