@@ -4,7 +4,7 @@ extern "C" {
 #include "QueuePerThreadPoolPrivate.h"
 }
 
-TEST(QueuePerThreadPool, sll_init_destroy) {
+TEST(SinglyLinkedList, init_destroy) {
     struct sll sll;
     EXPECT_EQ(&sll, sll_init(&sll));
     EXPECT_EQ(sll.head, nullptr);
@@ -13,7 +13,7 @@ TEST(QueuePerThreadPool, sll_init_destroy) {
     sll_destroy(&sll);
 }
 
-TEST(QueuePerThreadPool, sll_push) {
+TEST(SinglyLinkedList, push) {
     struct sll sll;
     EXPECT_EQ(&sll, sll_init(&sll));
     EXPECT_EQ(sll.head, nullptr);
@@ -42,7 +42,7 @@ TEST(QueuePerThreadPool, sll_push) {
     sll_destroy(&sll);
 }
 
-TEST(QueuePerThreadPool, sll_move) {
+TEST(SinglyLinkedList, move) {
     // create sll with 2 items
     struct sll sll_src;
     EXPECT_EQ(&sll_src, sll_init(&sll_src));
@@ -73,7 +73,7 @@ TEST(QueuePerThreadPool, sll_move) {
     sll_destroy(&sll_src);
 }
 
-TEST(QueuePerThreadPool, sll_head_node) {
+TEST(SinglyLinkedList, head_node) {
     struct sll sll;
     EXPECT_EQ(&sll, sll_init(&sll));
 
@@ -90,7 +90,7 @@ TEST(QueuePerThreadPool, sll_head_node) {
     sll_destroy(&sll);
 }
 
-TEST(QueuePerThreadPool, sll_next_node) {
+TEST(SinglyLinkedList, next_node) {
     // create sll with 2 items
     struct sll sll;
     EXPECT_EQ(&sll, sll_init(&sll));
@@ -114,7 +114,7 @@ TEST(QueuePerThreadPool, sll_next_node) {
     sll_destroy(&sll);
 }
 
-TEST(QueuePerThreadPool, sll_node_data) {
+TEST(SinglyLinkedList, node_data) {
     int value = 1234;
     struct sll sll;
     EXPECT_EQ(&sll, sll_init(&sll));
@@ -127,7 +127,7 @@ TEST(QueuePerThreadPool, sll_node_data) {
     sll_destroy(&sll);
 }
 
-TEST(QueuePerThreadPool, sll_loop) {
+TEST(SinglyLinkedList, loop) {
     const size_t count = 10;
     int * values = new int[count]();
 
