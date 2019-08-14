@@ -73,59 +73,68 @@ OF SUCH DAMAGE.
 
 
 
-bfwi - breadth first walk of input tree to list the tree, or create a GUFI index-tree
+gufi_query - breadth first walk of a GUFI tree.  We optionally perform queries
+    against the tree-summary, the directory-summary, and/or the directory
+    contents tables, per directory encountered (obeys POSIX permissions for
+    access to directory info).  You supply your own SQL statements for
+    tree, summary, and entries, and select AND/OR logic between
+    tree/directory/entry queries.  The traversal can write its output to
+    stdout, one file per thread, or one database output per thread. SQL
+    init allows you to run an SQL statement per thread associated to the
+    output db before starting the walk, and an SQL statement per thread on
+    the output db after the walk.
+    there is also a mode that will take input from a file instead of getting info from a walk/stat
+    the file must have the appropriate fields delimited by a delimiter provided and it should
+    have a line for dir and lines for files/links in that dir and then another dir and then files/links
+    the file does not have to be in tree order, it just must have all files/links associated with a dir
+    immediately after that dir
 
-Usage: bfwi [options] input_dir
+Usage: src/gufi_query [options] GUFI_tree ...
 options:
-  -h              help
-  -H              show assigned input values (debugging)
-  -p              print files as they are encountered
-  -n <threads>    number of threads
-  -d <delim>      delimiter (one char)
-  -x              pull xattrs from source file-sys into GUFI
-  -P              print directories as they are encountered
-  -b              build GUFI index tree
-  -o <out_fname>  output file (one-per-thread, with thread-id suffix)
-  -D              dont descend in the tree (make a single gufi db at one level of the tree
-  -t <to_dir>     place to put gufi tree (remember it will put the top of the src directory in this to_dir directory
-  -u              input mode is from a file so input is a file not a dir
-future options:
-  -U              create by user summary per directory
-  -G              create by group summary per directory
+  -h                 help
+  -H                 show assigned input values (debugging)
+  -T <SQL_tsum>      SQL for tree-summary table
+  -S <SQL_sum>       SQL for summary table
+  -E <SQL_ent>       SQL for entries table
+  -P                 print directories as they are encountered
+  -a                 AND/OR (SQL query combination)
+  -p                 print file-names
+  -n <threads>       number of threads
+  -o <out_fname>     output file (one-per-thread, with thread-id suffix), implies -e 1
+  -d <delim>         delimiter (one char)  [use 'x' for 0x1E]
+  -O <out_DB>        output DB, implies -e 1
+  -I <SQL_init>      SQL init
+  -F <SQL_fin>       SQL cleanup
+  -y <min level>     minimum level to go down
+  -z <max level>     maximum level to go down
+  -G <SQL_aggregate> SQL for aggregated results (deaults to "SELECT * FROM entries")
+  -J <SQL_interm>    SQL for intermediate results (deaults to "SELECT * FROM entries")
+  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)
+  -m                 Keep mtime and atime same on the database files
+GUFI_tree         find GUFI index-tree here
 
-If -P -p and -x are used in conjunction with -o  to create an output file per thread
-the format of the files created make it so that you can run bfwi again against one or all of them concantenated) with the -u option
 
 Flow:
-input is either a directory to walk or a file that is formatted properly for input using the -u option
-file format is directory then files/links in that directory following the directory record
-record format is pathname, type, stat info, linkname, xattrs   delimited.
 input directory is put on a queue
-output file(s) are opened one per thread
+output file(s) are opened one per thread if needed
+output dbs are opened if needed one per thread
+if init SQL provided run once per thread
 threads are started
 loop assigning work (directories) from queue to threads
-each thread lists the directory readdir/stat and xattr if called for
-  if directory put it on the queue and duplicate the directory if making a gufi
-  if link or file print it to screen or out file
-      and build an entries table with entries and keep a sum for the directory
+each thread lists the directory and queries the gufi tables for that directory
+  if directory put it on the queue
+  if treesql input run query on treesummary table
+  and/or applied on whether to continue
+  if dirsql input run query on summary table - if printdir - print, if output to db do that
+  and/or applied on whether to continue
+  if entsql input run query on entries table - if print - print, if output to db to that
   close directory
-  write directory summary table
 end
 close output files if needed
-you can end up with an output file per thread
-
-
-
-Location of GUFI-tree:
-
-    bfwi will re-create the dir-path of <input_dir> underneath <to_dir>.
-    For example, if <input_dir> is /a/b/c and <to_dir> is /q/r/s, the GUFI-tree will
-    be created at /q/r/s/a/b/c.
-
-    This would be the path to provide to other commands that take a
-    GUFI-tree as input.  We have debated whether the GUFI-tree should just
-    be build at /q/r/s/c.  That may come in a future release.  We're open
-    to discussion.
-
-    If you are putting your GUFI-tree index right into the source tree, you must follow the same syntax where input_dir is the top of the src tree and -t to dir is the directory above the source tree.  This keeps the same syntax for where you want your gufi tree built.
-Bfwi will recognize that the to dir and input dir are the same real paths and if so will save some work on creating output directories, setting the mode of the output directories, and will ignore the database file (DBNAME defined in bf.h default db.db) when building the index.  This way indexes built in the source tree and in another tree will create the exact same index.
+if fin SQL provided run that per thread
+close outputdb
+you can end up with an output file per thread and/or a dbfile per thread
+If you are reading the input from a file instead of a treewalk, the file
+must have a record for dir immediately followed by files and links in that dir
+but beyond that it doesnt have to be in any order. In this input file mode
+the info is read from this file and not gotten from a walk/stat activity

@@ -73,39 +73,52 @@ OF SUCH DAMAGE.
 
 
 
-make_testtree -  generate a GUFI tree without a source tree
+gufi_trace2index - uses a flat trace file to create a GUFI index-tree
 
-# Syntax: ./make_testtree [options] directory --file-count [--file-count ...] --file-size [--file-size ...]
-#
-#     -h | --help
-#
-#     Options:
-#         --users n               Number of users                                        (Default: 1000)
-#         --files n               Number of files in the tree                            (Default: 750000000)
-#         --uid uid               Set the starting uid                                   (Default: 0)
-#         --gid gid               Set the starting gid                                   (Default: 0)
-#         --permissions perm      Set the permissions of each file to this mode          (Default: 511, greater than 0777 sets random)
-#         --path-separator c      Character that separates path sections                 (Default: '/')
-#         --leading-zeros n       Number of leading zeros in names                       (Default: 0)
-#         --db-name name          Name of each database file                             (Default: db.db)
-#         --files-with-dirs       Whether or not files exist in intermediate directories (Default: true)
-#         --blocksize n           Block size for filesystem I/O                          (Default: 512)
-#         --chown                 Set the owner of each directory (requires sudo)        (Default: false)
-#         --chgrp                 Set the group of each directory (requires sudo)        (Default: false)
-#         --file-count            Comma separated triple of min,max,weight. At least one should be provided.
-#         --file-size             Comma separated triple of min,max,weight. At least one should be provided.
-#
-#     RNG configuration:
-#         --min-time n            Minimum timestamp                                      (Default: 0)
-#         --max-time n            Maximum timestamp                                      (Default: 1551894233450177846)
-#         --min-subdirs n         Minimum subdirectories                                 (Default: 1)
-#         --max-subdirs n         Maximum subdirectories                                 (Default: 5)
-#
-#     Runtime Configuration:
-#         --threads n             Set the number of threads to use                       (Default: 20)
-#         --stat-rate ms          How often to print timed statistics, in milliseconds   (Default: 1000, 0 cancels)
-#         --progress-rate ms      How often to print progress, in milliseconds           (Default: 1000, 0 cancels)
-#         --dry-run               Runs without creating the GUFI tree                    (Default: false)
-#
-#     directory                   The directory to put the generated tree into
-#
+Usage: gufi_trace2index [options] input_file
+options:
+  -h                 help
+  -H                 show assigned input values (debugging)
+  -n <threads>       number of threads
+  -d <delim>         delimiter (one char)  [use 'x' for 0x1E]
+
+input_file        parse this trace file to produce GUFI-tree
+output_dir        build GUFI index here
+
+future options:
+  -U              create by user summary per directory
+  -G              create by group summary per directory
+
+Flow:
+input is a file that is formatted properly for input
+file format is directory then files/links in that directory following the directory record
+record format is pathname, type, stat info, linkname, xattrs   delimited.
+input directory is put on a queue
+output file(s) are opened one per thread
+threads are started
+loop assigning work (directories) from queue to threads
+each thread lists the directory readdir/stat and xattr if called for
+  if directory put it on the queue and duplicate the directory if making a gufi
+  if link or file print it to screen or out file
+      and build an entries table with entries and keep a sum for the directory
+  close directory
+  write directory summary table
+end
+close output files if needed
+you can end up with an output file per thread
+
+
+
+Location of GUFI-tree:
+
+    bfwi will re-create the dir-path of <input_dir> underneath <to_dir>.
+    For example, if <input_dir> is /a/b/c and <to_dir> is /q/r/s, the GUFI-tree will
+    be created at /q/r/s/a/b/c.
+
+    This would be the path to provide to other commands that take a
+    GUFI-tree as input.  We have debated whether the GUFI-tree should just
+    be build at /q/r/s/c.  That may come in a future release.  We're open
+    to discussion.
+
+    If you are putting your GUFI-tree index right into the source tree, you must follow the same syntax where input_dir is the top of the src tree and -t to dir is the directory above the source tree.  This keeps the same syntax for where you want your gufi tree built.
+Bfwi will recognize that the to dir and input dir are the same real paths and if so will save some work on creating output directories, setting the mode of the output directories, and will ignore the database file (DBNAME defined in bf.h default db.db) when building the index.  This way indexes built in the source tree and in another tree will create the exact same index.

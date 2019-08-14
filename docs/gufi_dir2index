@@ -73,10 +73,55 @@ OF SUCH DAMAGE.
 
 
 
-make_testdirs
+gufi_dir2index - breadth first walk of input tree to create a GUFI index-tree
 
-# Usage: make_testdirs [ options ] dirname
-# options:
-#   -d <n_dirs>    number of subdirs
-#   -f <n_files>   number of files per subdir
-#   -h             help
+Usage: gufi_dir2index input_dir output_dir
+options:
+  -h                 help
+  -H                 show assigned input values (debugging)
+  -n <threads>       number of threads
+  -x                 pull xattrs from source file-sys into GUFI
+
+input_dir         walk this tree to produce GUFI-tree
+output_dir        build GUFI index here
+
+future options:
+  -U              create by user summary per directory
+  -G              create by group summary per directory
+
+If -P -p and -x are used in conjunction with -o  to create an output file per thread
+the format of the files created make it so that you can run bfwi again against one or all of them concantenated) with the -u option
+
+Flow:
+input is either a directory to walk or a file that is formatted properly for input using the -u option
+file format is directory then files/links in that directory following the directory record
+record format is pathname, type, stat info, linkname, xattrs   delimited.
+input directory is put on a queue
+output file(s) are opened one per thread
+threads are started
+loop assigning work (directories) from queue to threads
+each thread lists the directory readdir/stat and xattr if called for
+  if directory put it on the queue and duplicate the directory if making a gufi
+  if link or file print it to screen or out file
+      and build an entries table with entries and keep a sum for the directory
+  close directory
+  write directory summary table
+end
+close output files if needed
+you can end up with an output file per thread
+
+
+
+Location of GUFI-tree:
+
+    bfwi will re-create the dir-path of <input_dir> underneath <to_dir>.
+    For example, if <input_dir> is /a/b/c and <to_dir> is /q/r/s, the GUFI-tree will
+    be created at /q/r/s/a/b/c.
+
+    This would be the path to provide to other commands that take a
+    GUFI-tree as input.  We have debated whether the GUFI-tree should just
+    be build at /q/r/s/c.  That may come in a future release.  We're open
+    to discussion.
+
+    If you are putting your GUFI-tree index right into the source tree, you must follow the same syntax where input_dir is the top of the src tree and -t to dir is the directory above the source tree.  This keeps the same syntax for where you want your gufi tree built.
+Bfwi will recognize that the to dir and input dir are the same real paths and if so will save some work on creating output directories, setting the mode of the output directories, and will ignore the database file (DBNAME defined in bf.h default db.db) when building the index.  This way indexes built in the source tree and in another tree will create the exact same index.
