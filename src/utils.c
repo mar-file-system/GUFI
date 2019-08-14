@@ -597,13 +597,11 @@ int processdirs(DirFunc dir_fn) {
      return thread_count;
 }
 
-#if defined(DEBUG) || BENCHMARK
 long double elapsed(const struct timespec *start, const struct timespec *end) {
     const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
     const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
     return e - s;
 }
-#endif
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
   if (!printing) return 0;
