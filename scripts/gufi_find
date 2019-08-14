@@ -75,6 +75,7 @@
 
 
 import argparse
+import exceptions
 import os
 import subprocess
 import sys
@@ -93,6 +94,21 @@ filesize = {'b' : 512,
             'k' : 1024,
             'M' : 1048576,
             'G' : 1073741824}
+
+def parse_size(size):
+    prefix = None
+    if size[0] == '+' or size[0] == '-':
+        prefix = size[0]
+        size = size[1:]
+
+    unit = 'b'
+    if size[-1] in filesize:
+        unit = size[-1]
+        size = size[:-1]
+
+    # compute the actual size
+    size = int(size) * filesize[unit]
+    return prefix, size
 
 def build_select(args):
     '''Build the SELECT portion of the queries for the treesummary, summary, and entries tables.'''
@@ -213,40 +229,46 @@ def build_where(args, root_uid = 0, root_gid = 0):
         entries += ['inode == {}'.format(args.samefile.st_ino)]
 
     if args.size is not None:
-        size = args.size
+        if len(args.size) == 1:
+            prefix, size = parse_size(args.size[0])
 
-        prefix = None
-        if size[0] == '+' or size[0] == '-':
-            prefix = size[0]
-            size = size[1:]
+            # (size - x%, size + x%)
+            # the prefix is ignored
+            if args.size_percent_range is not None:
+                percent_range = sorted(args.size_percent_range)
+                lower = size + size * percent_range[0] / 100.0
+                higher = size + size * percent_range[1] / 100.0
+                entries += ['{} < size'.format(lower), 'size <= {}'.format(higher)]
+            # size <=/=/>= x
+            else:
+                comp = '=='
+                if prefix == '+':
+                    summary += ['minsize => {}'.format(size)]
+                    comp = '>'
+                elif prefix == '-':
+                    summary += ['maxsize <= {}'.format(size)]
+                    comp = '<'
 
-        unit = 'b'
-        if size[-1] in filesize:
-            unit = size[-1]
-            size = size[:-1]
+                entries += ['size {} {}'.format(comp, size)]
+        # if there are multiple sizes, do not process args.size_percent_range
+        elif len(args.size) == 2:
+            if args.size_percent_range is not None:
+                sys.stderr.write("Ignoring --size%\n")
 
-        # compute the actual size
-        size = int(size) * filesize[unit]
+            for size_str in args.size:
+                prefix, size = parse_size(size_str)
 
-        # (size - x%, size + x%)
-        # the prefix is ignored
-        if args.size_percent_range is not None:
-            percent_range = sorted(args.size_percent_range)
-            lower = size + size * percent_range[0] / 100.0
-            higher = size + size * percent_range[1] / 100.0
-            entries += ['{} < size'.format(lower), 'size <= {}'.format(higher)]
+                comp = '=='
+                if prefix == '+':
+                    summary += ['minsize => {}'.format(size)]
+                    comp = '>'
+                elif prefix == '-':
+                    summary += ['maxsize <= {}'.format(size)]
+                    comp = '<'
 
-        # size <=/=/>= x
+                entries += ['size {} {}'.format(comp, size)]
         else:
-            comp = '=='
-            if prefix == '+':
-                summary += ['minsize => {}'.format(size)]
-                comp = '>'
-            elif prefix == '-':
-                summary += ['maxsize <= {}'.format(size)]
-                comp = '<'
-
-            entries += ['size {} {}'.format(comp, size)]
+            raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}.'.format(len(args.size)))
 
     if args.true == True:
         summary += ['1']
@@ -337,12 +359,12 @@ if __name__=='__main__':
     parser.add_argument('-newer',              metavar='file',       dest='newer',              type=os.stat,                                 help='File was modified more recently than file.')
     # parser.add_argument('-newerXY',            metavar='reference',  dest='newerXY',            type=str,                                     help='Compares the timestamp of the current file with reference.')
     # parser.add_argument('-nouser',                                   dest='nouser',             type='store_true',                            help='No user corresponds to file\'s numeric user ID.')
-    parser.add_argument('-path',               metavar='pattern',    dest='path',               type=str,      action='append', default=[],        help='File name matches shell pattern pattern.')
+    parser.add_argument('-path',               metavar='pattern',    dest='path',               type=str,      action='append', default=[],   help='File name matches shell pattern pattern.')
     # parser.add_argument('-perm',               metavar='mode',       dest='perm',               type=str,                                     help='File\'s  permission bits')
     parser.add_argument('-readable',                                 dest='readable',           action='store_true',                          help='Matches files which are readable.')
     # parser.add_argument('-regex',              metavar='pattern',    dest='regex',              type=str,                                     help='File name matches regular expression pattern.')
     parser.add_argument('-samefile',           metavar='name',       dest='samefile',           type=os.stat,                                 help='File refers to the same inode as name.')
-    parser.add_argument('-size',               metavar='n',          dest='size',               type=qb.get_size,                             help='')
+    parser.add_argument('-size',               metavar='n',          dest='size',               type=qb.get_size, action='append',            help='')
     parser.add_argument('-true',                                     dest='true',               action='store_true',                          help='Always true')
     parser.add_argument('-type',               metavar='c',          dest='type',               type=qb.get_char,                             help='File is of type c')
     parser.add_argument('-uid',                metavar='n',          dest='uid',                type=qb.get_uid,                              help='File\'s numeric user ID is n.')
