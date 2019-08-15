@@ -511,7 +511,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
         #endif
         // push subdirectories into the queue
-        descend2(ctx, id, work, dir, in.max_level
+        const size_t pushed = descend2(ctx, id, work, dir, in.max_level
                  #ifdef DEBUG
                  , &readdir_start
                  , &readdir_end
@@ -522,6 +522,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                  #endif
             );
         #ifdef DEBUG
+        fprintf(stderr, "%s %zu\n", work->name, pushed);
         clock_gettime(CLOCK_MONOTONIC, &descend_end);
         #endif
 

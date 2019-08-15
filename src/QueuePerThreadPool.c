@@ -216,10 +216,10 @@ struct worker_function_args {
     void * args;
 };
 
-#include <stdio.h>
-#include <inttypes.h>
-static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
-uint64_t epoch;
+/* #include <stdio.h> */
+/* #include <inttypes.h> */
+/* static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER; */
+/* uint64_t epoch; */
 
 static void * worker_function(void *args) {
     if (!args) {
@@ -261,30 +261,29 @@ static void * worker_function(void *args) {
             // moves queue into dirs and clears out queue
             sll_move(&dirs, &tw->queue);
 
-            #if defined(DEBUG)
-            pthread_mutex_lock(&count_mutex);
-            tw->queue.size = dirs.size;
+            /* #if defined(DEBUG) */
+            /* pthread_mutex_lock(&count_mutex); */
+            /* tw->queue.size = dirs.size; */
 
-            struct timespec now;
-            clock_gettime(CLOCK_MONOTONIC, &now);
-            uint64_t ns = now.tv_sec;
-            ns *= 1000000000ULL;
-            ns += now.tv_nsec;
-            ns -= epoch;
-            size_t sum = 0;
+            /* struct timespec now; */
+            /* clock_gettime(CLOCK_MONOTONIC, &now); */
+            /* uint64_t ns = now.tv_sec; */
+            /* ns *= 1000000000ULL; */
+            /* ns += now.tv_nsec; */
+            /* ns -= epoch; */
+            /* size_t sum = 0; */
 
-            fprintf(stderr, "%" PRIu64 " ", ns);
-            for(size_t i = 0; i < wf_args->ctx->size; i++) {
-                fprintf(stderr, "%zu ", wf_args->ctx->data[i].queue.size);
-                sum += wf_args->ctx->data[i].queue.size;
-            }
-            fprintf(stderr, "%zu\n", sum);
-            tw->queue.size = 0;
-            pthread_mutex_unlock(&count_mutex);
-            #endif
+            /* fprintf(stderr, "%" PRIu64 " ", ns); */
+            /* for(size_t i = 0; i < wf_args->ctx->size; i++) { */
+            /*     fprintf(stderr, "%zu ", wf_args->ctx->data[i].queue.size); */
+            /*     sum += wf_args->ctx->data[i].queue.size; */
+            /* } */
+            /* fprintf(stderr, "%zu\n", sum); */
+            /* tw->queue.size = 0; */
+            /* pthread_mutex_unlock(&count_mutex); */
+            /* #endif */
 
             pthread_mutex_unlock(&tw->mutex);
-
         }
 
         // process all work
