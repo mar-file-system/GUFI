@@ -202,7 +202,20 @@ def build_where(args, root_uid = 0, root_gid = 0):
         entries += ['({} - mtime) / 60 == {}'.format(time.time(), args.mmin)]
 
     if args.mtime is not None:
-        entries += ['({} - mtime) / {} == {} '.format(time.time(), SECONDS_PER_DAY, args.mtime)]
+        if len(args.mtime) > 2:
+            raise exceptions.Exception('Up to 2 -mtime flags can be provided. Got {}.'.format(len(args.mtime)))
+
+        for mtime in args.mtime:
+            comp = '=='
+
+            if mtime[0] == '-':
+                comp = '<'
+                mtime = mtime[1:]
+            elif mtime[0] == '+':
+                comp = '>'
+                mtime = mtime[1:]
+
+            entries += ['({} - mtime) / {} {} {}'.format(time.time(), SECONDS_PER_DAY, comp, mtime)]
 
     if args.name is not None:
         entries += ['name REGEXP \'{}\''.format(args.name)]
@@ -354,7 +367,7 @@ if __name__=='__main__':
     parser.add_argument('-links',              metavar='n',          dest='links',              type=qb.get_non_negative,                     help='File has n links.')
     parser.add_argument('-lname',              metavar='pattern',    dest='lname' ,             type=str,                                     help='File is a symbolic link whose contents match shell pattern pattern.')
     parser.add_argument('-mmin',               metavar='n',          dest='mmin',               type=qb.get_non_negative,                     help='File\'s data was last modified n minutes ago.')
-    parser.add_argument('-mtime',              metavar='n',          dest='mtime',              type=qb.get_non_negative,                     help='File\'s data was last modified n*24 hours ago.')
+    parser.add_argument('-mtime',              metavar='n',          dest='mtime',              action='append',                              help='File\'s data was last modified n*24 hours ago.')
     parser.add_argument('-name',               metavar='pattern',    dest='name',               type=str,                                     help='Base of file name (the path with the leading directories removed) matches shell pattern pattern.')
     parser.add_argument('-newer',              metavar='file',       dest='newer',              type=os.stat,                                 help='File was modified more recently than file.')
     # parser.add_argument('-newerXY',            metavar='reference',  dest='newerXY',            type=str,                                     help='Compares the timestamp of the current file with reference.')
