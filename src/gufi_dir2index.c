@@ -105,7 +105,7 @@ size_t total_dirs = 0;
 size_t total_files = 0;
 #endif
 
-int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * next_queue, void * args) {
+int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
@@ -116,7 +116,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
         return 1;
     }
 
-    if (!ctx || (id >= ctx->size) || !next_queue) {
+    if (!ctx || (id >= ctx->size)) {
         free(data);
         return 1;
     }
@@ -204,7 +204,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, size_t * nex
         if (S_ISDIR(e->statuso.st_mode)) {
             e->type[0] = 'd';
             e->pinode = work->statuso.st_ino;
-            QPTPool_enqueue_internal(ctx, e, next_queue);
+            QPTPool_enqueue(ctx, id, e);
             continue;
         }
 
@@ -438,7 +438,7 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    QPTPool_enqueue_external(pool, root);
+    QPTPool_enqueue(pool, 0, root);
     if (QPTPool_start(pool, processdir, NULL) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;

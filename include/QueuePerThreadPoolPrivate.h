@@ -89,11 +89,13 @@ struct node {
 struct sll {
     struct node * head;
     struct node * tail;
+    size_t size;
 };
 
 struct sll * sll_init(struct sll * sll);
 struct sll * sll_push(struct sll * sll, void * data);
 struct sll * sll_move(struct sll * dst, struct sll * src);
+size_t sll_get_size(struct sll * sll);
 
 /* functions for looping over a sll */
 struct node * sll_head_node(struct sll * sll);
@@ -108,6 +110,7 @@ struct QPTPoolData {
     struct sll queue;
     pthread_mutex_t mutex;
     pthread_cond_t cv;
+    size_t next_queue;
     pthread_t thread;
     size_t threads_started;
     size_t threads_successful;

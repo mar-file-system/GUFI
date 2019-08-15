@@ -86,9 +86,6 @@ struct QPTPool {
     struct QPTPoolData * data;
     size_t size;
 
-    /* per pool counter; only used when calling QPTPool_enqueue_external */
-    size_t next_queue;
-
     pthread_mutex_t mutex;
     size_t incomplete;
 };
@@ -98,22 +95,20 @@ struct QPTPool {
  * @param ctx            the pool context the function is running in
  * @param data           the data the function is operating on
  * @param id             the id of this thread
- * @param next_queue     the next queue to push work into
  * @param extra args     any extra data to make accessible to the function
  * @return 0 if successful, non-zero if not
  */
-typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * extra_args);
+typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, void * data, const size_t id, void * extra_args);
 
 /* main functions for operating a QPTPool */
 struct QPTPool * QPTPool_init(const size_t threads);
-void QPTPool_enqueue_external(struct QPTPool * ctx, void * new_work);
-void QPTPool_enqueue_internal(struct QPTPool * ctx, void * new_work, size_t * next_queue);
+void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work); /* id will push to the thread's next scheduled queue, rather than directly onto queue[id]*/
 size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args);
 void QPTPool_wait(struct QPTPool * ctx);
 void QPTPool_destroy(struct QPTPool * ctx);
 
 /* utility functions */
-size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);      /* get a number in the range [0, # of threads), or (size_t) -1 on error */
+size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);           /* get a number in the range [0, # of threads), or (size_t) -1 on error */
 size_t QPTPool_threads_started(struct QPTPool * ctx);
 size_t QPTPool_threads_completed(struct QPTPool * ctx);
 

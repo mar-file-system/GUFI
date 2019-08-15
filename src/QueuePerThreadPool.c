@@ -104,6 +104,8 @@ struct sll * sll_push(struct sll * sll, void * data) {
 
     sll->tail = node;
 
+    sll->size++;
+
     return sll;
 }
 
@@ -116,6 +118,14 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
     *dst = *src;
     memset(src, 0, sizeof(struct sll));
     return dst;
+}
+
+size_t sll_get_size(struct sll * sll) {
+    if (!sll) {
+        return 0;
+    }
+
+    return sll->size;
 }
 
 struct node * sll_head_node(struct sll * sll) {
@@ -173,12 +183,11 @@ struct QPTPool * QPTPool_init(const size_t threads) {
         sll_init(&ctx->data[i].queue);
         pthread_mutex_init(&ctx->data[i].mutex, NULL);
         pthread_cond_init(&ctx->data[i].cv, NULL);
+        ctx->data[i].next_queue = i;
         ctx->data[i].thread = 0;
         ctx->data[i].threads_started = 0;
         ctx->data[i].threads_successful = 0;
     }
-
-    ctx->next_queue = 0;
 
     pthread_mutex_init(&ctx->mutex, NULL);
     ctx->incomplete = 0;
@@ -186,22 +195,18 @@ struct QPTPool * QPTPool_init(const size_t threads) {
     return ctx;
 }
 
-void QPTPool_enqueue_external(struct QPTPool * ctx, void * new_work) {
-    QPTPool_enqueue_internal(ctx, new_work, &ctx->next_queue);
-}
-
-void QPTPool_enqueue_internal(struct QPTPool * ctx, void * new_work, size_t * next_queue) {
-    pthread_mutex_lock(&ctx->data[*next_queue].mutex);
-    sll_push(&ctx->data[*next_queue].queue, new_work);
-    pthread_mutex_unlock(&ctx->data[*next_queue].mutex);
+void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work) {
+    pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
+    sll_push(&ctx->data[ctx->data[id].next_queue].queue, new_work);
+    pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->incomplete++;
     pthread_mutex_unlock(&ctx->mutex);
 
-    pthread_cond_broadcast(&ctx->data[*next_queue].cv);
+    pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
 
-    *next_queue = (*next_queue + 1) % ctx->size;
+    ctx->data[id].next_queue = (ctx->data[id].next_queue + 1) % ctx->size;
 }
 
 struct worker_function_args {
@@ -210,6 +215,11 @@ struct worker_function_args {
     QPTPoolFunc_t func;
     void * args;
 };
+
+#include <stdio.h>
+#include <inttypes.h>
+static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
+uint64_t epoch;
 
 static void * worker_function(void *args) {
     if (!args) {
@@ -225,7 +235,6 @@ static void * worker_function(void *args) {
     }
 
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
-    size_t next_queue = wf_args->id;
 
     while (1) {
         struct sll dirs;
@@ -252,13 +261,36 @@ static void * worker_function(void *args) {
             // moves queue into dirs and clears out queue
             sll_move(&dirs, &tw->queue);
 
+            #if defined(DEBUG)
+            pthread_mutex_lock(&count_mutex);
+            tw->queue.size = dirs.size;
+
+            struct timespec now;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            uint64_t ns = now.tv_sec;
+            ns *= 1000000000ULL;
+            ns += now.tv_nsec;
+            ns -= epoch;
+            size_t sum = 0;
+
+            fprintf(stderr, "%" PRIu64 " ", ns);
+            for(size_t i = 0; i < wf_args->ctx->size; i++) {
+                fprintf(stderr, "%zu ", wf_args->ctx->data[i].queue.size);
+                sum += wf_args->ctx->data[i].queue.size;
+            }
+            fprintf(stderr, "%zu\n", sum);
+            tw->queue.size = 0;
+            pthread_mutex_unlock(&count_mutex);
+            #endif
+
             pthread_mutex_unlock(&tw->mutex);
+
         }
 
         // process all work
         size_t work_count = 0;
         for(struct node * dir = sll_head_node(&dirs); dir; dir = sll_next_node(dir)) {
-            tw->threads_successful += !wf_args->func(ctx, sll_node_data(dir), wf_args->id, &next_queue, wf_args->args);
+            tw->threads_successful += !wf_args->func(ctx, sll_node_data(dir), wf_args->id, wf_args->args);
             work_count++;
         }
         sll_destroy(&dirs);

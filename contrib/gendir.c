@@ -59,7 +59,7 @@ struct dir {
     size_t current_level;
 };
 
-int generate_level(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * args) {
+int generate_level(struct QPTPool * ctx, void * data, const size_t id, void * args) {
     struct settings * settings = (struct settings *) args;
     struct dir * dir = (struct dir *) data;
 
@@ -89,7 +89,7 @@ int generate_level(struct QPTPool * ctx, void * data, const size_t id, size_t * 
         subdir->current_level = dir->current_level + 1;
 
         // recurse down by placing subdirectories onto queue
-        QPTPool_enqueue_internal(ctx, subdir, next_queue);
+        QPTPool_enqueue(ctx, id, subdir);
     }
 
     // create the files in this directory
@@ -185,7 +185,7 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    QPTPool_enqueue_external(pool, root);
+    QPTPool_enqueue(pool, 0, root);
     if (QPTPool_start(pool, generate_level, &settings) != threads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;

@@ -30,7 +30,7 @@ TEST(QueuePerThreadPool, no_work) {
     ASSERT_NE(pool, nullptr);
 
     EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool *, void *, const size_t, size_t *, void *) -> int {
+                            [](struct QPTPool *, void *, const size_t, void *) -> int {
                                 return 0;
                             },
                             nullptr), threads);
@@ -39,8 +39,8 @@ TEST(QueuePerThreadPool, no_work) {
     QPTPool_destroy(pool);
 }
 
-// push work onto queues from the outside with QPTPool_enqueue_external
-TEST(QueuePerThreadPool, external_work) {
+// push work onto queues from the outside
+TEST(QueuePerThreadPool, enqueue_external) {
     const size_t threads = 5;
     const size_t work_count = 11;
 
@@ -59,11 +59,11 @@ TEST(QueuePerThreadPool, external_work) {
         work->value = &values[i];
         work->counter = i;
 
-        QPTPool_enqueue_external(pool, work);
+        QPTPool_enqueue(pool, i % threads,work);
     }
 
     EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool *, void * data, const size_t id, size_t *, void *) -> int {
+                            [](struct QPTPool *, void * data, const size_t id, void *) -> int {
                                 struct test_work * work = (struct test_work *) data;
                                 *(work->value) = work->counter;
                                 free(work);
@@ -81,52 +81,8 @@ TEST(QueuePerThreadPool, external_work) {
     QPTPool_destroy(pool);
 }
 
-// push work onto queues from the outside with QPTPool_enqueue_internal
-TEST(QueuePerThreadPool, external_work_using_internal_enqueue) {
-    const size_t threads = 5;
-    const size_t work_count = 11;
-
-    struct QPTPool * pool = QPTPool_init(threads);
-    ASSERT_NE(pool, nullptr);
-
-    size_t * values = new size_t[work_count]();
-
-    struct test_work {
-        size_t * value;
-        size_t counter;
-    };
-
-    size_t next_queue = 0;
-    for(size_t i = 0; i < work_count; i++) {
-        struct test_work * work = (struct test_work *) calloc(1, sizeof(struct test_work));
-        work->value = &values[i];
-        work->counter = i;
-
-        QPTPool_enqueue_internal(pool, work, &next_queue);
-    }
-
-    EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool *, void * data, const size_t id, size_t *, void *) -> int {
-                                struct test_work * work = (struct test_work *) data;
-                                *(work->value) = work->counter;
-                                free(work);
-                                return 0;
-                            },
-                            nullptr), threads);
-    QPTPool_wait(pool);
-
-    EXPECT_EQ(next_queue, work_count % threads);
-    for(size_t i = 0; i < work_count; i++) {
-        EXPECT_EQ(values[i], i);
-    }
-    EXPECT_EQ(QPTPool_threads_completed(pool), work_count);
-
-    delete [] values;
-    QPTPool_destroy(pool);
-}
-
-// push work onto queues with QPTPool_enqueue_internal
-TEST(QueuePerThreadPool, internal_work) {
+// push work onto queues from within the queue function
+TEST(QueuePerThreadPool, enqueue_internal) {
     const size_t threads = 5;
     const size_t work_count = 11;
 
@@ -145,10 +101,10 @@ TEST(QueuePerThreadPool, internal_work) {
     struct test_work * zero = (struct test_work *) calloc(1, sizeof(struct test_work));
     zero->index = 0;
     zero->values = values;
-    QPTPool_enqueue_external(pool, zero);
+    QPTPool_enqueue(pool, 0, zero);
 
     EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * args) -> int {
+                            [](struct QPTPool * ctx, void * data, const size_t id, void * args) -> int {
                                 struct test_work * work = (struct test_work *) data;
                                 const size_t work_count = * (size_t *) args;
 
@@ -163,7 +119,7 @@ TEST(QueuePerThreadPool, internal_work) {
                                 next_work->index = work->index + 1;
                                 next_work->values = work->values;
 
-                                QPTPool_enqueue_internal(ctx, next_work, next_queue);
+                                QPTPool_enqueue(ctx, id, next_work);
                                 free(work);
 
                                 return 0;
@@ -188,11 +144,11 @@ TEST(QueuePerThreadPool, get_index) {
     ASSERT_NE(pool, nullptr);
 
     for(size_t i = 0; i < work_count; i++) {
-        QPTPool_enqueue_external(pool, nullptr);
+        QPTPool_enqueue(pool, i % threads, nullptr);
     }
 
     EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool *, void * data, const size_t id, size_t *, void *) -> int {
+                            [](struct QPTPool *, void * data, const size_t id, void *) -> int {
                                 struct test_work * work = (struct test_work *) data;
                                 free(work);
                                 return 0;
@@ -217,11 +173,11 @@ TEST(QueuePerThreadPool, threads_started) {
     ASSERT_NE(pool, nullptr);
 
     for(size_t i = 0; i < work_count; i++) {
-        QPTPool_enqueue_external(pool, nullptr);
+        QPTPool_enqueue(pool, i % threads, nullptr);
     }
 
     EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool *, void * data, const size_t id, size_t *, void *) -> int {
+                            [](struct QPTPool *, void * data, const size_t id, void *) -> int {
                                 struct test_work * work = (struct test_work *) data;
                                 free(work);
                                 return 0;
@@ -243,11 +199,11 @@ TEST(QueuePerThreadPool, threads_completed) {
     ASSERT_NE(pool, nullptr);
 
     for(size_t i = 0; i < work_count; i++) {
-        QPTPool_enqueue_external(pool, nullptr);
+        QPTPool_enqueue(pool, i % threads, nullptr);
     }
 
     EXPECT_EQ(QPTPool_start(pool,
-                            [](struct QPTPool *, void * data, const size_t id, size_t *, void *) -> int {
+                            [](struct QPTPool *, void * data, const size_t id, void *) -> int {
                                 struct test_work * work = (struct test_work *) data;
                                 free(work);
                                 return 0;

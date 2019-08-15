@@ -461,7 +461,7 @@ if __name__=='__main__':
 
     # create the query command
     query_cmd = [args.query_exec,
-                 '-p', '-P',
+                 '-P',
                  '-e', str(int(not args.aggregate)),
                  '-n', str(args.threads)]
 

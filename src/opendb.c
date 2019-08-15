@@ -1,6 +1,5 @@
 #include "opendb.h"
 #include "dbutils.h"
-#include "pcre.h"
 
 #include <stdio.h>
 #include <string.h>

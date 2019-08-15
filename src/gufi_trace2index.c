@@ -165,7 +165,8 @@ void * scout_function(void * args) {
     parsefirst(in.delim[0], work);
     work->offset = ftell(trace);
 
-    // int tid = 0;
+    size_t target_thread = 0;
+
     size_t file_count = 0;
     size_t dir_count = 1; // always start with a directory
     size_t empty = 0;
@@ -188,7 +189,7 @@ void * scout_function(void * args) {
             next->offset = ftell(trace);
 
             // put the previous work on the queue
-            QPTPool_enqueue_external(ctx, work);
+            QPTPool_enqueue(ctx, target_thread, work);
 
             if (!sa->processed) {
                 pthread_mutex_lock(&sa->mutex);
@@ -198,6 +199,8 @@ void * scout_function(void * args) {
             }
 
             work = next;
+
+            target_thread = (target_thread + 1) % ctx->size;
         }
         else {
             work->entries++;
@@ -211,7 +214,7 @@ void * scout_function(void * args) {
     free(line);
 
     // insert the last work item
-    QPTPool_enqueue_external(ctx, work);
+    QPTPool_enqueue(ctx, target_thread, work);
 
     fclose(trace);
 
@@ -240,13 +243,13 @@ void * scout_function(void * args) {
 
 // process the work under one directory (no recursion)
 // also deletes data
-int processdir(struct QPTPool * ctx, void * data, const size_t id, size_t * next_queue, void * args) {
+int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) {
     // might want to skip this check
     if (!data) {
         return 1;
     }
 
-    if (!ctx || (id >= ctx->size) || !next_queue) {
+    if (!ctx || (id >= ctx->size)) {
         free(data);
         return 1;
     }
