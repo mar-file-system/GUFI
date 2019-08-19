@@ -267,10 +267,10 @@ static void * worker_function(void *args) {
         pthread_mutex_lock(&ctx->mutex);
         ctx->incomplete -= work_count;
         pthread_mutex_unlock(&ctx->mutex);
-    }
 
-    for(size_t i = 0; i < ctx->size; i++) {
-        pthread_cond_broadcast(&ctx->data[i].cv);
+        for(size_t i = 0; i < ctx->size; i++) {
+            pthread_cond_broadcast(&ctx->data[i].cv);
+        }
     }
 
     free(args);
