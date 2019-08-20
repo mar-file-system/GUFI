@@ -77,89 +77,9 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "QueuePerThreadPoolPrivate.h"
+#include "debug.h"
 
-#include <string.h>
 #include <stdlib.h>
-
-struct sll * sll_init(struct sll * sll) {
-    memset(sll, 0, sizeof(struct sll));
-    return sll;
-};
-
-struct sll * sll_push(struct sll * sll, void * data) {
-    if (!sll) {
-        return NULL;
-    }
-
-    struct node * node = calloc(1, sizeof(struct node));
-    node->data = data;
-
-    if (!sll->head) {
-        sll->head = node;
-    }
-
-    if (sll->tail) {
-        sll->tail->next = node;
-    }
-
-    sll->tail = node;
-
-    sll->size++;
-
-    return sll;
-}
-
-struct sll * sll_move(struct sll * dst, struct sll * src) {
-    if (!dst || !src) {
-        return NULL;
-    }
-
-    sll_destroy(dst);
-    *dst = *src;
-    memset(src, 0, sizeof(struct sll));
-    return dst;
-}
-
-size_t sll_get_size(struct sll * sll) {
-    if (!sll) {
-        return 0;
-    }
-
-    return sll->size;
-}
-
-struct node * sll_head_node(struct sll * sll) {
-    if (!sll) {
-        return NULL;
-    }
-    return sll->head;
-}
-
-struct node * sll_next_node(struct node * node) {
-    if (!node) {
-        return NULL;
-    }
-
-    return node->next;
-}
-
-void * sll_node_data(struct node * node) {
-    if (!node) {
-        return NULL;
-    }
-    return node->data;
-}
-
-void sll_destroy(struct sll * sll) {
-    struct node * node = sll_head_node(sll);
-    while (node) {
-        struct node * next = sll_next_node(node);
-        free(node);
-        node = next;
-    }
-
-    memset(sll, 0, sizeof(struct sll));
-}
 
 struct QPTPool * QPTPool_init(const size_t threads) {
     if (!threads) {
@@ -216,13 +136,22 @@ struct worker_function_args {
     void * args;
 };
 
-/* #include <stdio.h> */
-/* #include <inttypes.h> */
-/* static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER; */
-/* uint64_t epoch; */
+#if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+#include <stdio.h>
+static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+extern uint64_t epoch;
+#endif
 
 static void * worker_function(void *args) {
+    #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+    struct timespec wf_start;
+    clock_gettime(CLOCK_MONOTONIC, &wf_start);
+    #endif
+
     if (!args) {
+        struct timespec wf_end;
+        clock_gettime(CLOCK_MONOTONIC, &wf_end);
         return NULL;
     }
 
@@ -231,24 +160,62 @@ static void * worker_function(void *args) {
 
     if (!ctx) {
         free(args);
+        struct timespec wf_end;
+        clock_gettime(CLOCK_MONOTONIC, &wf_end);
         return NULL;
     }
 
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
 
     while (1) {
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        struct timespec wf_sll_init_start;
+        struct timespec wf_sll_init_end;
+        struct timespec wf_tw_mutex_lock_start;
+        struct timespec wf_tw_mutex_lock_end;
+        struct timespec wf_ctx_mutex_lock_start;
+        struct timespec wf_ctx_mutex_lock_end;
+        struct timespec wf_wait_start;
+        struct timespec wf_wait_end;
+        struct timespec wf_move_queue_start;
+        struct timespec wf_move_queue_end;
+
+        clock_gettime(CLOCK_MONOTONIC, &wf_sll_init_start);
+        #endif
         struct sll dirs;
         sll_init(&dirs);
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        clock_gettime(CLOCK_MONOTONIC, &wf_sll_init_end);
+        #endif
         {
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_tw_mutex_lock_start);
+            #endif
             pthread_mutex_lock(&tw->mutex);
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_tw_mutex_lock_end);
+            #endif
+
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_ctx_mutex_lock_start);
+            #endif
             pthread_mutex_lock(&ctx->mutex);
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_ctx_mutex_lock_end);
+            #endif
 
             // wait for work
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_wait_start);
+            #endif
             while (ctx->incomplete && !tw->queue.head) {
                 pthread_mutex_unlock(&ctx->mutex);
                 pthread_cond_wait(&tw->cv, &tw->mutex);
                 pthread_mutex_lock(&ctx->mutex);
             }
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_wait_end);
+            #endif
 
             if (!ctx->incomplete && !tw->queue.head) {
                 pthread_mutex_unlock(&ctx->mutex);
@@ -256,6 +223,9 @@ static void * worker_function(void *args) {
                 break;
             }
 
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_move_queue_start);
+            #endif
             pthread_mutex_unlock(&ctx->mutex);
 
             // moves queue into dirs and clears out queue
@@ -284,27 +254,93 @@ static void * worker_function(void *args) {
             /* #endif */
 
             pthread_mutex_unlock(&tw->mutex);
+
+            #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+            clock_gettime(CLOCK_MONOTONIC, &wf_move_queue_end);
+            #endif
         }
 
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        struct timespec wf_process_queue_start;
+        clock_gettime(CLOCK_MONOTONIC, &wf_process_queue_start);
+        #endif
         // process all work
         size_t work_count = 0;
         for(struct node * dir = sll_head_node(&dirs); dir; dir = sll_next_node(dir)) {
             tw->threads_successful += !wf_args->func(ctx, sll_node_data(dir), wf_args->id, wf_args->args);
             work_count++;
         }
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        struct timespec wf_process_queue_end;
+        clock_gettime(CLOCK_MONOTONIC, &wf_process_queue_end);
+        #endif
+
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        struct timespec wf_cleanup_start;
+        clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_start);
+        #endif
         sll_destroy(&dirs);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
         ctx->incomplete -= work_count;
         pthread_mutex_unlock(&ctx->mutex);
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        struct timespec wf_cleanup_end;
+        clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_end);
+        #endif
 
-        for(size_t i = 0; i < ctx->size; i++) {
-            pthread_cond_broadcast(&ctx->data[i].cv);
-        }
+        #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+        pthread_mutex_lock(&count_mutex);
+        fprintf(stderr, "%zu ", wf_args->id);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_sll_init_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_sll_init_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_tw_mutex_lock_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_tw_mutex_lock_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_ctx_mutex_lock_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_ctx_mutex_lock_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_wait_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_wait_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_move_queue_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_move_queue_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_process_queue_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_process_queue_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_cleanup_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_cleanup_end) - epoch);
+        /* fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_broadcast_start) - epoch); */
+        /* fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_broadcast_end) - epoch); */
+        fprintf(stderr, "\n");
+        pthread_mutex_unlock(&count_mutex);
+        #endif
     }
 
+    #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+    struct timespec wf_broadcast_start;
+    clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_start);
+    #endif
+    for(size_t i = 0; i < ctx->size; i++) {
+        pthread_cond_broadcast(&ctx->data[i].cv);
+    }
+    #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+    struct timespec wf_broadcast_end;
+    clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_end);
+    #endif
+
     free(args);
+
+    #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS)
+    struct timespec wf_end;
+    clock_gettime(CLOCK_MONOTONIC, &wf_end);
+    #endif
+
+    /* #if defined(DEBUG) && defined(QPTPOOL_TIMESTAMPS) */
+    /* pthread_mutex_lock(&count_mutex); */
+    /* fprintf(stderr, "%zu ", wf_args->id); */
+    /* fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_start) - epoch); */
+    /* fprintf(stderr, "%" PRIu64 " ", timestamp(&wf_end) - epoch); */
+    /* fprintf(stderr, "\n"); */
+    /* pthread_mutex_unlock(&count_mutex); */
+    /* #endif */
 
     return NULL;
 }

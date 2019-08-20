@@ -12,6 +12,8 @@
 #include "trace.h"
 #include "utils.h"
 
+#include "debug.h"
+
 extern int errno;
 
 #define MAXLINE MAXPATH+MAXPATH+MAXPATH

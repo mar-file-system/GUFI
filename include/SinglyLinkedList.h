@@ -75,23 +75,33 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef QUEUE_PER_THREAD_POOL_PRIVATE_H
-#define QUEUE_PER_THREAD_POOL_PRIVATE_H
+#ifndef SINGLY_LINKED_LIST_H
+#define SINGLY_LINKED_LIST_H
 
-#include <pthread.h>
+#include <stddef.h>
 
-#include "SinglyLinkedList.h"
-
-/* The context for a single thread in QPTPool */
-struct QPTPoolData {
-    size_t id;
-    struct sll queue;
-    pthread_mutex_t mutex;
-    pthread_cond_t cv;
-    size_t next_queue;
-    pthread_t thread;
-    size_t threads_started;
-    size_t threads_successful;
+struct node {
+    void * data;
+    struct node * next;
 };
+
+/* Singly linked list that is used like a queue */
+struct sll {
+    struct node * head;
+    struct node * tail;
+    size_t size;
+};
+
+struct sll * sll_init(struct sll * sll);
+struct sll * sll_push(struct sll * sll, void * data);
+struct sll * sll_move(struct sll * dst, struct sll * src);
+size_t sll_get_size(struct sll * sll);
+
+/* functions for looping over a sll */
+struct node * sll_head_node(struct sll * sll);
+struct node * sll_next_node(struct node * node);
+void * sll_node_data(struct node * node);
+
+void sll_destroy(struct sll * sll);
 
 #endif

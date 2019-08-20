@@ -79,8 +79,34 @@ if (BENCHMARK)
   add_definitions(-DBENCHMARK=1)
 endif()
 
+# ##########################################
+# Debug prints
+# Only one of these should be used at once
+# Also should not be used with BENCHMARK
+
+# Cumulative times shown at end of run
+if (CUMULATIVE_TIMES)
+  add_definitions(-DCUMULATIVE_TIMES=1)
+endif()
+
+# Timestamps showing what each thread is doing
+if (PER_THREAD_TIMESTAMPS)
+  add_definitions(-DPER_THREAD_TIMESTAMPS=1)
+endif()
+
+# print subdirectory counts
+if (SUBDIRECTORY_COUNTS)
+  add_definitions(-DSUBDIRECTORY_COUNTS=1)
+endif()
+
+# QueuePerThread debug timestamps
+if (QPTPOOL_TIMESTAMPS)
+  add_definitions(-DQPTPOOL_TIMESTAMPS=1)
+endif()
+# ##########################################
+
 # create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c opendb.c outfiles.c outdbs.c QueuePerThreadPool.c structq.c template_db.c trace.c utils.c)
+set(GUFI_SOURCES bf.c dbutils.c debug.c opendb.c outfiles.c outdbs.c QueuePerThreadPool.c SinglyLinkedList.c structq.c template_db.c trace.c utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 install(TARGETS GUFI DESTINATION lib COMPONENT Server)

@@ -86,6 +86,7 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
+#include "debug.h"
 #include "dbutils.h"
 #include "opendb.h"
 #include "template_db.h"

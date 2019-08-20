@@ -75,23 +75,87 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef QUEUE_PER_THREAD_POOL_PRIVATE_H
-#define QUEUE_PER_THREAD_POOL_PRIVATE_H
-
-#include <pthread.h>
-
 #include "SinglyLinkedList.h"
 
-/* The context for a single thread in QPTPool */
-struct QPTPoolData {
-    size_t id;
-    struct sll queue;
-    pthread_mutex_t mutex;
-    pthread_cond_t cv;
-    size_t next_queue;
-    pthread_t thread;
-    size_t threads_started;
-    size_t threads_successful;
+#include <stdlib.h>
+#include <string.h>
+
+struct sll * sll_init(struct sll * sll) {
+    memset(sll, 0, sizeof(struct sll));
+    return sll;
 };
 
-#endif
+struct sll * sll_push(struct sll * sll, void * data) {
+    if (!sll) {
+        return NULL;
+    }
+
+    struct node * node = calloc(1, sizeof(struct node));
+    node->data = data;
+
+    if (!sll->head) {
+        sll->head = node;
+    }
+
+    if (sll->tail) {
+        sll->tail->next = node;
+    }
+
+    sll->tail = node;
+
+    sll->size++;
+
+    return sll;
+}
+
+struct sll * sll_move(struct sll * dst, struct sll * src) {
+    if (!dst || !src) {
+        return NULL;
+    }
+
+    sll_destroy(dst);
+    *dst = *src;
+    memset(src, 0, sizeof(struct sll));
+    return dst;
+}
+
+size_t sll_get_size(struct sll * sll) {
+    if (!sll) {
+        return 0;
+    }
+
+    return sll->size;
+}
+
+struct node * sll_head_node(struct sll * sll) {
+    if (!sll) {
+        return NULL;
+    }
+    return sll->head;
+}
+
+struct node * sll_next_node(struct node * node) {
+    if (!node) {
+        return NULL;
+    }
+
+    return node->next;
+}
+
+void * sll_node_data(struct node * node) {
+    if (!node) {
+        return NULL;
+    }
+    return node->data;
+}
+
+void sll_destroy(struct sll * sll) {
+    struct node * node = sll_head_node(sll);
+    while (node) {
+        struct node * next = sll_next_node(node);
+        free(node);
+        node = next;
+    }
+
+    memset(sll, 0, sizeof(struct sll));
+}

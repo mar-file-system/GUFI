@@ -41,6 +41,7 @@ The number of files generated is
 
 #include "QueuePerThreadPool.h"
 #include "utils.h"
+#include "debug.h"
 
 extern int errno;
 
