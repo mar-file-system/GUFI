@@ -80,12 +80,6 @@ add_executable(gendir gendir.c)
 target_link_libraries(gendir ${COMMON_LIBRARIES})
 add_dependencies(gendir GUFI)
 
-
-add_executable(fill_queues fill_queues.c)
-target_link_libraries(fill_queues ${COMMON_LIBRARIES})
-add_dependencies(fill_queues GUFI)
-
-
 # potentially useful C++ executables
 if (CMAKE_CXX_COMPILER)
   # a more complex index generator

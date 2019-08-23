@@ -403,10 +403,9 @@ if __name__=='__main__':
     parser.add_argument('--smallest',                                dest='smallest',           action='store_true',                          help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',            action='store_true',                          help='top n largest files')
     parser.add_argument('--threads', '-t',     metavar='n',          dest='threads',            type=qb.get_positive, default=qb.cpus(),      help='number of threads')
-    parser.add_argument('--intermediate_dbs',  metavar='n',          dest='intermediates',      type=qb.get_non_negative,                     help='number of intermediate databases')
-    parser.add_argument('--intermediate_skip', metavar='n',          dest='skip',               type=qb.get_non_negative,                     help='number of intermediate databases to skip when selecting the next database')
     parser.add_argument('--aggregate',                               dest='aggregate',          action='store_true',                          help='aggregate results before printing')
     parser.add_argument('--exec',                                    dest='query_exec',         default=EXEC,                                 help='Location of gufi_query executable')
+    parser.add_argument('--output',                                  dest='output',             type=str,                                     help='Output file prefix (Creates file <output>.tid)')
 
     args = parser.parse_args();
 
@@ -488,6 +487,9 @@ if __name__=='__main__':
 
     if args.mindepth:
         query_cmd += ['-y', str(args.mindepth)]
+
+    if args.output:
+        query_cmd += ['-o', args.output]
 
     query = subprocess.Popen(query_cmd + find_out.split()) # positional arguments must appear after flags
     query.communicate()                                    # block until query finishes

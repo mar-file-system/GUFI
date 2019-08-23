@@ -106,7 +106,20 @@ endif()
 # ##########################################
 
 # create the GUFI library, which contains all of the common source files
-set(GUFI_SOURCES bf.c dbutils.c debug.c opendb.c outfiles.c outdbs.c QueuePerThreadPool.c SinglyLinkedList.c structq.c template_db.c trace.c utils.c)
+set(GUFI_SOURCES
+  bf.c
+  dbutils.c
+  debug.c
+  opendb.c
+  outfiles.c
+  outdbs.c
+  OutputBuffers.c
+  QueuePerThreadPool.c
+  SinglyLinkedList.c
+  structq.c
+  template_db.c
+  trace.c
+  utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 install(TARGETS GUFI DESTINATION lib COMPONENT Server)
