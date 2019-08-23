@@ -187,7 +187,7 @@ int main(int argc, char * argv[]) {
     }
 
     QPTPool_enqueue(pool, 0, root);
-    if (QPTPool_start(pool, generate_level, &settings) != threads) {
+    if (QPTPool_start(pool, 0, generate_level, &settings) != threads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;
     }

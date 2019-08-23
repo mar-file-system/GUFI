@@ -74,11 +74,15 @@ OF SUCH DAMAGE.
 */
 
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include "QueuePerThreadPool.h"
 #include "QueuePerThreadPoolPrivate.h"
 #include "debug.h"
 
+#include <sched.h>
 #include <stdlib.h>
 
 struct QPTPool * QPTPool_init(const size_t threads) {
@@ -95,7 +99,6 @@ struct QPTPool * QPTPool_init(const size_t threads) {
         free(ctx);
         return NULL;
     }
-
     ctx->size = threads;
 
     for(size_t i = 0; i < threads; i++) {
@@ -133,6 +136,7 @@ struct worker_function_args {
     struct QPTPool * ctx;
     size_t id;
     QPTPoolFunc_t func;
+    int pinned;
     void * args;
 };
 
@@ -163,6 +167,16 @@ static void * worker_function(void *args) {
         struct timespec wf_end;
         clock_gettime(CLOCK_MONOTONIC, &wf_end);
         return NULL;
+    }
+
+    if (wf_args->pinned) {
+        cpu_set_t cpus;
+        CPU_ZERO(&cpus);
+        CPU_SET(wf_args->id, &cpus);
+
+        if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpus) != 0) {
+            return NULL;
+        }
     }
 
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
@@ -345,7 +359,7 @@ static void * worker_function(void *args) {
     return NULL;
 }
 
-size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args) {
+size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t func, void * args) {
     if (!ctx || !func) {
         return 0;
     }
@@ -355,6 +369,7 @@ size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args) {
         struct worker_function_args * wf_args = calloc(1, sizeof(struct worker_function_args));
         wf_args->ctx = ctx;
         wf_args->id = i;
+        wf_args->pinned = pinned;
         wf_args->func = func;
         wf_args->args = args;
         started += !pthread_create(&ctx->data[i].thread, NULL, worker_function, wf_args);

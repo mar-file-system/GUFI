@@ -394,24 +394,25 @@ static size_t descend2(struct QPTPool *ctx,
             sll_push(snprintf_ends, snprintf_end);
             #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-            struct timespec * lstat_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, lstat_start);
-            sll_push(lstat_starts, lstat_start);
-            #endif
-            lstat(qwork.name, &qwork.statuso);
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-            struct timespec * lstat_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, lstat_end);
-            sll_push(lstat_ends, lstat_end);
-            #endif
+            /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+            /* struct timespec * lstat_start = malloc(sizeof(struct timespec)); */
+            /* clock_gettime(CLOCK_MONOTONIC, lstat_start); */
+            /* sll_push(lstat_starts, lstat_start); */
+            /* #endif */
+            /* lstat(qwork.name, &qwork.statuso); */
+            /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+            /* struct timespec * lstat_end = malloc(sizeof(struct timespec)); */
+            /* clock_gettime(CLOCK_MONOTONIC, lstat_end); */
+            /* sll_push(lstat_ends, lstat_end); */
+            /* #endif */
 
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * isdir_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, isdir_start);
             sll_push(isdir_starts, isdir_start);
             #endif
-            const int isdir = S_ISDIR(qwork.statuso.st_mode);
+            const int isdir = (entry->d_type == DT_DIR);
+            /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * isdir_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, isdir_end);
@@ -1174,7 +1175,7 @@ int main(int argc, char *argv[])
 
     // provide a function to print if PRINT is set
     args.print_callback_func = (((in.aggregate_or_print == PRINT) && in.printdir)?print_callback:NULL);
-    if (QPTPool_start(pool, processdir, &args) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, 0, processdir, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;
     }

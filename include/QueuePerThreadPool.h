@@ -103,7 +103,7 @@ typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, void * data, const size_t id,
 /* main functions for operating a QPTPool */
 struct QPTPool * QPTPool_init(const size_t threads);
 void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work); /* id will push to the thread's next scheduled queue, rather than directly onto queue[id]*/
-size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t func, void * args);
+size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t func, void * args);
 void QPTPool_wait(struct QPTPool * ctx);
 void QPTPool_destroy(struct QPTPool * ctx);
 

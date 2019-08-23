@@ -440,7 +440,7 @@ int main(int argc, char * argv[]) {
     }
 
     QPTPool_enqueue(pool, 0, root);
-    if (QPTPool_start(pool, processdir, NULL) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, 0, processdir, NULL) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;
     }

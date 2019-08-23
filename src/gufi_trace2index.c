@@ -507,7 +507,7 @@ int main(int argc, char * argv[]) {
     }
 
     // start up threads and start processing
-    if (QPTPool_start(pool, processdir, traces) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, 0, processdir, traces) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         pthread_join(scout, NULL);
         QPTPool_wait(pool);
