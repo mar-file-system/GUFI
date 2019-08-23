@@ -114,6 +114,7 @@ pcre                 (version 1)
 # locations for these packages can be provided (single prefix) in order to avoid downloading them
 C-Thread-Pool
 GoogleTest
+jemalloc
 paramiko             (patched by GUFI)
 sqlite3              (patched by GUFI)
 sqlite3-pcre

@@ -259,7 +259,7 @@ if __name__=='__main__':
         if args.mindepth:
             query_cmd += ['-y', str(args.mindepth)]
 
-        query = subprocess.Popen(query_cmd + args.GUFI_tree)
+        query = subprocess.Popen(query_cmd + args.GUFI_tree, env=qb.jemalloc_preload())
         query.communicate() # block until query finishes
 
         sys.exit(query.returncode)

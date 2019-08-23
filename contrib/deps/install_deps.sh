@@ -75,6 +75,9 @@ echo "Installing SQLite3"
 echo "Installing SQLite3 PCRE"
 . ${SCRIPT_PATH}/sqlite3_pcre.sh
 
+echo "Installing jemalloc"
+. ${SCRIPT_PATH}/jemalloc.sh
+
 if [[ "${BUILD_CXX}" == "true" ]]; then
     echo "Installing GoogleTest"
     . ${SCRIPT_PATH}/googletest.sh

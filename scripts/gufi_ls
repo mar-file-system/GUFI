@@ -224,7 +224,7 @@ if __name__=='__main__':
     if args.delim:
         query_cmd += ['-d', args.delim]
 
-    query = subprocess.Popen(query_cmd + args.GUFI_tree)
+    query = subprocess.Popen(query_cmd + args.GUFI_tree, env=qb.jemalloc_preload())
     query.communicate() # block until query finishes
 
     sys.exit(query.returncode)
