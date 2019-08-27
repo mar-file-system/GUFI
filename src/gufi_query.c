@@ -310,15 +310,17 @@ static size_t descend2(struct QPTPool *ctx,
         return 0;
     }
 
-    if (!dir) {
-        fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno));
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-        struct timespec * check_args_end = malloc(sizeof(struct timespec));
-        clock_gettime(CLOCK_MONOTONIC, check_args_end);
-        sll_push(check_args_ends, check_args_end);
-        #endif
-        return 0;
-    }
+    // dir was already checked in the calling thread
+
+    /* if (!dir) { */
+    /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
+    /*     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+    /*     struct timespec * check_args_end = malloc(sizeof(struct timespec)); */
+    /*     clock_gettime(CLOCK_MONOTONIC, check_args_end); */
+    /*     sll_push(check_args_ends, check_args_end); */
+    /*     #endif */
+    /*     return 0; */
+    /* } */
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec * check_args_end = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, check_args_end);
@@ -420,19 +422,19 @@ static size_t descend2(struct QPTPool *ctx,
             #endif
 
             if (isdir) {
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                struct timespec * access_start = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, access_start);
-                sll_push(access_starts, access_start);
-                #endif
-                const int accessible = !access(qwork.name, R_OK | X_OK);
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                struct timespec * access_end = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, access_end);
-                sll_push(access_ends, access_end);
-                #endif
+                /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+                /* struct timespec * access_start = malloc(sizeof(struct timespec)); */
+                /* clock_gettime(CLOCK_MONOTONIC, access_start); */
+                /* sll_push(access_starts, access_start); */
+                /* #endif */
+                /* const int accessible = !access(qwork.name, R_OK | X_OK); */
+                /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+                /* struct timespec * access_end = malloc(sizeof(struct timespec)); */
+                /* clock_gettime(CLOCK_MONOTONIC, access_end); */
+                /* sll_push(access_ends, access_end); */
+                /* #endif */
 
-                if (accessible) {
+                /* if (accessible) { */
                     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                     struct timespec * set_start = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, set_start);
@@ -480,7 +482,7 @@ static size_t descend2(struct QPTPool *ctx,
                     #endif
 
                     pushed++;
-                }
+                /* } */
                 /* else { */
                 /*     fprintf(stderr, "couldn't access dir '%s': %s\n", */
                 /*             qwork->name, strerror(errno)); */
@@ -695,6 +697,12 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     clock_gettime(CLOCK_MONOTONIC, &opendir_end);
     #endif
+
+    // if the directorty can't be opened, don't bother with anything else
+    if (!dir) {
+        fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno));
+        return 1;
+    }
 
     // if we have out db then we have that db open so we just attach the gufi db
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
