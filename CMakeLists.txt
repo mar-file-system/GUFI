@@ -270,6 +270,7 @@ set(COMMON_LIBRARIES
   pcre
   ${DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
   Threads::Threads
+  ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
   m
   dl
   -static-libgcc

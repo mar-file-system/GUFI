@@ -255,17 +255,3 @@ def cpus():
         return multiprocessing.cpu_count()
     except:
         return 1;
-
-# replace standard malloc with jemalloc's implementation of malloc
-def jemalloc_preload():
-    env = os.environ.copy()
-    jemalloc_config = os.path.join("@DEP_INSTALL_PREFIX@", 'jemalloc', 'bin', 'jemalloc-config')
-    jemalloc_config_get_libdir = subprocess.Popen([jemalloc_config, '--libdir'], stdout=subprocess.PIPE)
-    jemalloc_config_libdir = jemalloc_config_get_libdir.stdout.read().strip()
-    jemalloc_config_get_revision = subprocess.Popen([jemalloc_config, '--revision'], stdout=subprocess.PIPE)
-    jemalloc_config_revision = jemalloc_config_get_revision.stdout.read().strip()
-    ld_preload = jemalloc_config_libdir + "/libjemalloc.so." + jemalloc_config_revision
-    if 'LD_PRELOAD' in env:
-        ld_preload += ':' + env['LD_PRELOAD']
-    env['LD_PRELOAD'] = ld_preload
-    return env
