@@ -20,7 +20,7 @@ de zypper --non-interactive --no-gpg-checks update
 de zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
 
 # install extra packages
-de zypper --non-interactive install binutils cmake git libgcc_s1 patch pkg-config
+de zypper --non-interactive install autoconf binutils cmake git libgcc_s1 patch pkg-config
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"
