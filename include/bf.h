@@ -195,8 +195,8 @@ struct input {
    char aggregate[MAXSQL];    // SQL query to run on aggregated data
    char intermediate[MAXSQL]; // SQL query to run on intermediate tables
    ShowResults_t aggregate_or_print;
-
    int keep_matime;
+   size_t output_buffer_size;
 };
 extern struct input in;
 

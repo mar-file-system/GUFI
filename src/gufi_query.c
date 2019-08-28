@@ -300,6 +300,7 @@ static size_t descend2(struct QPTPool *ctx,
     clock_gettime(CLOCK_MONOTONIC, check_args_start);
     sll_push(check_args_starts, check_args_start);
     #endif
+    /* passmywork was already checked in the calling thread */
     /* if (!passmywork) { */
     /*     fprintf(stderr, "Got NULL work\n"); */
     /*     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
@@ -310,8 +311,7 @@ static size_t descend2(struct QPTPool *ctx,
     /*     return 0; */
     /* } */
 
-    // dir was already checked in the calling thread
-
+    /* dir was already checked in the calling thread */
     /* if (!dir) { */
     /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
     /*     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
@@ -332,12 +332,10 @@ static size_t descend2(struct QPTPool *ctx,
     clock_gettime(CLOCK_MONOTONIC, level_start);
     sll_push(level_starts, level_start);
     #endif
-
     size_t pushed = 0;
 
     const size_t next_level = passmywork->level + 1;
     const int level_check = (next_level <= max_level);
-
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec * level_end = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, level_end);
@@ -971,29 +969,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     {
-        sll_destroy(&check_args_starts);
-        sll_destroy(&check_args_ends);
-        sll_destroy(&level_starts);
-        sll_destroy(&level_ends);
-        sll_destroy(&readdir_starts);
-        sll_destroy(&readdir_ends);
-        sll_destroy(&strncmp_starts);
-        sll_destroy(&strncmp_ends);
-        sll_destroy(&snprintf_starts);
-        sll_destroy(&snprintf_ends);
-        sll_destroy(&lstat_starts);
-        sll_destroy(&lstat_ends);
-        sll_destroy(&isdir_starts);
-        sll_destroy(&isdir_ends);
-        sll_destroy(&access_starts);
-        sll_destroy(&access_ends);
-        sll_destroy(&set_starts);
-        sll_destroy(&set_ends);
-        sll_destroy(&clone_starts);
-        sll_destroy(&clone_ends);
-        sll_destroy(&pushdir_starts);
-        sll_destroy(&pushdir_ends);
-
         static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&print_mutex);
         total_opendir_time           += elapsed(&opendir_start, &opendir_end);
@@ -1022,6 +997,29 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         total_utime_time             += elapsed(&utime_start, &utime_end);
         total_free_work_time         += elapsed(&free_work_start, &free_work_end);
         pthread_mutex_unlock(&print_mutex);
+
+        sll_destroy(&check_args_starts);
+        sll_destroy(&check_args_ends);
+        sll_destroy(&level_starts);
+        sll_destroy(&level_ends);
+        sll_destroy(&readdir_starts);
+        sll_destroy(&readdir_ends);
+        sll_destroy(&strncmp_starts);
+        sll_destroy(&strncmp_ends);
+        sll_destroy(&snprintf_starts);
+        sll_destroy(&snprintf_ends);
+        sll_destroy(&lstat_starts);
+        sll_destroy(&lstat_ends);
+        sll_destroy(&isdir_starts);
+        sll_destroy(&isdir_ends);
+        sll_destroy(&access_starts);
+        sll_destroy(&access_ends);
+        sll_destroy(&set_starts);
+        sll_destroy(&set_ends);
+        sll_destroy(&clone_starts);
+        sll_destroy(&clone_ends);
+        sll_destroy(&pushdir_starts);
+        sll_destroy(&pushdir_ends);
     }
     #endif
 
@@ -1091,7 +1089,7 @@ int main(int argc, char *argv[])
     // but allow different fields to be filled at the command-line.
     // Callers provide the options-string for get_opt(), which will
     // control which options are parsed for each program.
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:G:J:e:m:", 1, "GUFI_tree ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:G:J:e:m:B:", 1, "GUFI_tree ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -1112,9 +1110,9 @@ int main(int argc, char *argv[])
     struct ThreadArgs args;
 
     // initialize globals
-    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads)             ||
-        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit) ||
-        !OutputBuffers_init(&args.output_buffers, in.maxthreads, 65536))                {
+    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads)              ||
+        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit)  ||
+        !OutputBuffers_init(&args.output_buffers, in.maxthreads, in.output_buffer_size)) {
         return -1;
     }
 
