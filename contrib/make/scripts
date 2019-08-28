@@ -1,7 +1,7 @@
 CP=cp
 SCRIPTS=gufi_find gufi_ls gufi_stats query_builder.py
 
-TARGETS=$(addprefix ../,$(SCRIPTS))
+TARGETS=$(SCRIPTS)
 
 all: $(TARGETS)
 

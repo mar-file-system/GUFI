@@ -1,19 +1,20 @@
 # libGUFI files
-LIBFILES = bf structq dbutils utils
+LIBFILES = bf dbutils debug opendb outfiles outdbs OutputBuffers QueuePerThreadPool SinglyLinkedList structq template_db trace utils
+
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
 LIB_H = $(addsuffix .h,$(LIBFILES))
-LIB_A = ../lib$(LIB).a
+LIB_A = lib$(LIB).a
 
 # executables
 DFW       = dfw
-BFW       = bfwi bfti bfq bfwreaddirplus2db
+BFW       = bfti bfwreaddirplus2db gufi_dir2trace gufi_dir2index gufi_trace2index gufi_query
 BFW_MYSQL = bfmi.mysql
-C_TOOLS   = querydb querydbn make_testdirs
+C_TOOLS   = querydb querydbn
 ifneq ("$(CXX)", "false")
-CXX_TOOLS = make_testtree
+CXX_TOOLS =
 endif
-TARGETS   = $(addprefix ../,$(DFW) $(BFW) $(C_TOOLS) $(CXX_TOOLS))
+TARGETS   = $(DFW) $(BFW) $(C_TOOLS) $(CXX_TOOLS)
 
 all: $(TARGETS)
 
@@ -27,11 +28,11 @@ $(LIB_A): $(LIB_O)
 
 # --- apps
 
-../%: %.c $(LIB_A) $(STATIC_DEPS)
+%: %.c $(LIB_A) $(STATIC_DEPS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 ifneq ("$(CXX)", "false")
-../%: %.cpp $(LIB_A) $(STATIC_DEPS)
+%: %.cpp $(LIB_A) $(STATIC_DEPS)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 endif
 

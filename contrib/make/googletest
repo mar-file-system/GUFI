@@ -15,7 +15,7 @@ all: $(TARGET)
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(TARGET): $(OBJ) $(realpath ../..)/libGUFI.a $(STATIC_DEPS)
+$(TARGET): $(OBJ) $(realpath ../../src)/libGUFI.a $(STATIC_DEPS)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
 run: $(TARGET)
