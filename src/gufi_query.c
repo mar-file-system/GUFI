@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 #define _GNU_SOURCE
 #endif
 
-#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
@@ -300,15 +299,15 @@ static size_t descend2(struct QPTPool *ctx,
     clock_gettime(CLOCK_MONOTONIC, check_args_start);
     sll_push(check_args_starts, check_args_start);
     #endif
-    if (!passmywork) {
-        fprintf(stderr, "Got NULL work\n");
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-        struct timespec * check_args_end = malloc(sizeof(struct timespec));
-        clock_gettime(CLOCK_MONOTONIC, check_args_end);
-        sll_push(check_args_ends, check_args_end);
-        #endif
-        return 0;
-    }
+    /* if (!passmywork) { */
+    /*     fprintf(stderr, "Got NULL work\n"); */
+    /*     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+    /*     struct timespec * check_args_end = malloc(sizeof(struct timespec)); */
+    /*     clock_gettime(CLOCK_MONOTONIC, check_args_end); */
+    /*     sll_push(check_args_ends, check_args_end); */
+    /*     #endif */
+    /*     return 0; */
+    /* } */
 
     // dir was already checked in the calling thread
 
@@ -459,7 +458,7 @@ static size_t descend2(struct QPTPool *ctx,
 
                     // make a clone here so that the data can be pushed into the queue
                     // this is more efficient than malloc+free for every single entry
-                    struct work * clone = (struct work *) calloc(1, sizeof(struct work));
+                    struct work * clone = (struct work *) malloc(sizeof(struct work));
                     memcpy(clone, &qwork, sizeof(struct work));
 
                     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -521,20 +520,27 @@ struct CallbackArgs {
     int id;
 };
 
-void flush_buffer(pthread_mutex_t * print_mutex, struct OutputBuffer * output_buffer, FILE * out) {
-    /* skip argument checking */
+size_t flush_buffer(pthread_mutex_t * print_mutex, struct OutputBuffer * output_buffer, FILE * out) {
+    /* /\* skip argument checking *\/ */
+    /* if (!print_mutex || !output_buffer || !out) { */
+    /*     return 0; */
+    /* } */
 
     output_buffer->buf[output_buffer->filled] = '\0';
 
     pthread_mutex_lock(print_mutex);
-    fwrite(output_buffer->buf, sizeof(char), output_buffer->filled, out);
+    const size_t rc = fwrite(output_buffer->buf, sizeof(char), output_buffer->filled, out);
     pthread_mutex_unlock(print_mutex);
 
     output_buffer->filled = 0;
+    return rc;
 }
 
 static int print_callback(void * args, int count, char **data, char **columns) {
     /* skip argument checking */
+    /* if (!args) { */
+    /*     return 1; */
+    /* } */
 
     struct CallbackArgs * ca = (struct CallbackArgs *) args;
     const int id = ca->id;
@@ -1160,7 +1166,7 @@ int main(int argc, char *argv[])
 
     // enqueue all input paths
     for(int i = idx; i < argc; i++) {
-        struct work * mywork = calloc(1, sizeof(struct work));
+        struct work * mywork = malloc(sizeof(struct work));
 
         // check that the top level path is an accessible directory
         SNPRINTF(mywork->name,MAXPATH,"%s",argv[i]);
