@@ -83,6 +83,7 @@ struct OutputBuffer {
     char * buf;
     size_t capacity;
     size_t filled;
+    size_t count;
 };
 
 /* Buffers for all threads */

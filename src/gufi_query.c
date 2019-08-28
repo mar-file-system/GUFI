@@ -511,8 +511,6 @@ int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
 }
 // //////////////////////////////////////////////////////
 
-static size_t rows = 0;
-
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
     struct OutputBuffers * output_buffers;
@@ -570,6 +568,7 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         filled++;
 
         ca->output_buffers->buffers[id].filled = filled;
+        ca->output_buffers->buffers[id].count++;
 
         // if the new data filled up the buffer, flush it
         if ((ca->output_buffers->buffers[id].filled + 1) >= ca->output_buffers->buffers[id].capacity) {
@@ -672,6 +671,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     sll_init(&strncmp_ends);
     sll_init(&snprintf_starts);
     sll_init(&snprintf_ends);
+    sll_init(&lstat_starts);
+    sll_init(&lstat_ends);
     sll_init(&isdir_starts);
     sll_init(&isdir_ends);
     sll_init(&access_starts);
@@ -1184,17 +1185,17 @@ int main(int argc, char *argv[])
 
     // enqueue all input paths
     for(int i = idx; i < argc; i++) {
-        struct work * mywork = malloc(sizeof(struct work));
+        struct work * mywork = calloc(1, sizeof(struct work));
 
         // check that the top level path is an accessible directory
         SNPRINTF(mywork->name,MAXPATH,"%s",argv[i]);
         lstat(mywork->name,&mywork->statuso);
-        if (access(mywork->name, R_OK | X_OK)) {
-            fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                    mywork->name, strerror(errno));
-            free(mywork);
-            continue;
-        }
+        /* if (access(mywork->name, R_OK | X_OK)) { */
+        /*     fprintf(stderr, "couldn't access input dir '%s': %s\n", */
+        /*             mywork->name, strerror(errno)); */
+        /*     free(mywork); */
+        /*     continue; */
+        /* } */
         if (!S_ISDIR(mywork->statuso.st_mode) ) {
             fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
             free(mywork);
@@ -1222,8 +1223,10 @@ int main(int argc, char *argv[])
     QPTPool_destroy(pool);
 
     // clear out buffered data
+    size_t rows = 0;
     for(int i = 0; i < in.maxthreads; i++) {
         flush_buffer(&args.output_buffers.mutex, &args.output_buffers.buffers[i], gts.outfd[i]);
+        rows += args.output_buffers.buffers[i].count;
     }
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
@@ -1239,7 +1242,6 @@ int main(int argc, char *argv[])
     long double output_time = 0;
     #endif
 
-    /* size_t rows = 0; */
     if (in.aggregate_or_print == AGGREGATE) {
         // prepend the intermediate database query with "INSERT INTO" to move
         // the data from the databases into the final aggregation database
