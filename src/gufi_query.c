@@ -151,6 +151,8 @@ long double total_exec_time = 0;
 long double total_detach_time = 0;
 long double total_close_time = 0;
 long double total_closedir_time = 0;
+long double total_utime_time = 0;
+long double total_free_work_time = 0;
 
 long double sll_loop_sum(struct sll * start, struct sll * end) {
     long double sum = 0;
@@ -221,7 +223,6 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
         flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
     }
 
-    // no need to create because the file should already exist
     if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
         #ifdef CUMULATIVE_TIMES
         clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
@@ -658,6 +659,10 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct timespec close_end;
     struct timespec closedir_start;
     struct timespec closedir_end;
+    struct timespec utime_start;
+    struct timespec utime_end;
+    struct timespec free_work_start;
+    struct timespec free_work_end;
 
     sll_init(&check_args_starts);
     sll_init(&check_args_ends);
@@ -707,7 +712,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     // if the directorty can't be opened, don't bother with anything else
     if (!dir) {
         fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno));
-        return 1;
+        goto out_free;
     }
 
     // if we have out db then we have that db open so we just attach the gufi db
@@ -941,16 +946,54 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     clock_gettime(CLOCK_MONOTONIC, &closedir_end);
     #endif
 
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    clock_gettime(CLOCK_MONOTONIC, &utime_start);
+    #endif
     // restore mtime and atime
     if (in.keep_matime) {
         utime(dbname, &dbtime);
     }
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    clock_gettime(CLOCK_MONOTONIC, &utime_end);
+    #endif
 
   out_free:
     ;
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    clock_gettime(CLOCK_MONOTONIC, &free_work_start);
+    #endif
+    free(work);
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    clock_gettime(CLOCK_MONOTONIC, &free_work_end);
+    #endif
+
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     {
+        sll_destroy(&check_args_starts);
+        sll_destroy(&check_args_ends);
+        sll_destroy(&level_starts);
+        sll_destroy(&level_ends);
+        sll_destroy(&readdir_starts);
+        sll_destroy(&readdir_ends);
+        sll_destroy(&strncmp_starts);
+        sll_destroy(&strncmp_ends);
+        sll_destroy(&snprintf_starts);
+        sll_destroy(&snprintf_ends);
+        sll_destroy(&lstat_starts);
+        sll_destroy(&lstat_ends);
+        sll_destroy(&isdir_starts);
+        sll_destroy(&isdir_ends);
+        sll_destroy(&access_starts);
+        sll_destroy(&access_ends);
+        sll_destroy(&set_starts);
+        sll_destroy(&set_ends);
+        sll_destroy(&clone_starts);
+        sll_destroy(&clone_ends);
+        sll_destroy(&pushdir_starts);
+        sll_destroy(&pushdir_ends);
+
         static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&print_mutex);
         total_opendir_time           += elapsed(&opendir_start, &opendir_end);
@@ -976,30 +1019,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         total_exec_time              += elapsed(&exec_start, &exec_end);
         total_detach_time            += elapsed(&detach_start, &detach_end);
         total_close_time             += elapsed(&close_start, &close_end);
+        total_utime_time             += elapsed(&utime_start, &utime_end);
+        total_free_work_time         += elapsed(&free_work_start, &free_work_end);
         pthread_mutex_unlock(&print_mutex);
-
-        sll_destroy(&check_args_starts);
-        sll_destroy(&check_args_ends);
-        sll_destroy(&level_starts);
-        sll_destroy(&level_ends);
-        sll_destroy(&readdir_starts);
-        sll_destroy(&readdir_ends);
-        sll_destroy(&strncmp_starts);
-        sll_destroy(&strncmp_ends);
-        sll_destroy(&snprintf_starts);
-        sll_destroy(&snprintf_ends);
-        sll_destroy(&lstat_starts);
-        sll_destroy(&lstat_ends);
-        sll_destroy(&isdir_starts);
-        sll_destroy(&isdir_ends);
-        sll_destroy(&access_starts);
-        sll_destroy(&access_ends);
-        sll_destroy(&set_starts);
-        sll_destroy(&set_ends);
-        sll_destroy(&clone_starts);
-        sll_destroy(&clone_ends);
-        sll_destroy(&pushdir_starts);
-        sll_destroy(&pushdir_ends);
     }
     #endif
 
@@ -1038,8 +1060,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
     #endif
     #endif
-
-    free(work);
 
     return 0;
 }
@@ -1329,6 +1349,8 @@ int main(int argc, char *argv[])
     fprintf(stderr, "     detach intermediate databases:          %.2Lfs\n", total_detach_time);
     fprintf(stderr, "     close databases:                        %.2Lfs\n", total_close_time);
     fprintf(stderr, "     close directories:                      %.2Lfs\n", total_closedir_time);
+    fprintf(stderr, "     restore timestamps:                     %.2Lfs\n", total_utime_time);
+    fprintf(stderr, "     free work:                              %.2Lfs\n", total_free_work_time);
     fprintf(stderr, "aggregate into final databases:              %.2Lfs\n", aggregate_time);
     fprintf(stderr, "clean up intermediate databases:             %.2Lfs\n", cleanup_time);
     fprintf(stderr, "print aggregated results:                    %.2Lfs\n", output_time);
