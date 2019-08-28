@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 
 #include <pthread.h>
 
-// The Queue Per Thread Pool context
+/* The Queue Per Thread Pool context */
 struct QPTPoolData;
 struct QPTPool {
     struct QPTPoolData * data;

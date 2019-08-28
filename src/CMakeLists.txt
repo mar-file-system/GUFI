@@ -103,6 +103,13 @@ endif()
 if (QPTPOOL_TIMESTAMPS)
   add_definitions(-DQPTPOOL_TIMESTAMPS=1)
 endif()
+
+# QueuePerThread queue size
+if (QPTPOOL_QUEUE_SIZE)
+  add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
+endif()
+
+
 # ##########################################
 
 # create the GUFI library, which contains all of the common source files
