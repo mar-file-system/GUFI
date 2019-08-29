@@ -110,6 +110,29 @@ extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
+/* Equivalent to snprintf printing only strings */
+/* Varadic arguments should be pairs of strings and their lengths */
+size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
+    va_list args;
+    size_t max_len = dst_len;
+
+    count *= 2;
+
+    va_start(args, count);
+    for(size_t i = 0; i < count; i += 2) {
+        char * src = va_arg(args, char *);
+        size_t len = va_arg(args, size_t);
+        const size_t copy_len = (len < max_len)?len:max_len;
+        memcpy(dst, src, copy_len);
+        dst += copy_len;
+        max_len -= copy_len;
+    }
+    va_end(args);
+
+    *dst = '\0';
+    return dst_len - max_len;
+}
+
 #if BENCHMARK
 #include <time.h>
 
@@ -387,7 +410,7 @@ static size_t descend2(struct QPTPool *ctx,
             sll_push(snprintf_starts, snprintf_start);
             #endif
             struct work qwork;
-            SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
+            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", 1, entry->d_name, strlen(entry->d_name));
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * snprintf_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, snprintf_end);
@@ -605,9 +628,10 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     /* } */
 
     struct work * work = (struct work *) data;
+    const size_t work_name_len = strlen(work->name);
 
     char dbname[MAXSQL];
-    SNPRINTF(dbname, MAXSQL, "%s/" DBNAME, work->name);
+    SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec opendir_start;
@@ -845,13 +869,13 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                 // and we are doing AND, skip querying the entries db
                 // memset(endname, 0, sizeof(endname));
                 shortpath(work->name,shortname,endname);
-                SNPRINTF(gps[id].gepath,MAXPATH,"%s",endname);
+                SNFORMAT_S(gps[id].gepath, MAXPATH, 1, endname, strlen(endname));
 
                 if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     // for directories we have to take off after the last slash
                     // and set the path so users can put path() in their queries
-                    SNPRINTF(gps[id].gpath,MAXPATH,"%s",shortname);
+                    SNFORMAT_S(gps[id].gpath, MAXPATH, 1, shortname, strlen(shortname));
                     //printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath);
                     realpath(work->name,gps[id].gfpath);
                     recs = rawquerydb(work->name, 1, db, in.sqlsum, 1, 0, 0, id);
@@ -867,7 +891,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                     if (in.sqlent_len > 1) {
                         // set the path so users can put path() in their queries
                         //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
-                        SNPRINTF(gps[id].gpath,MAXPATH,"%s",work->name);
+                        SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
                         realpath(work->name,gps[id].gfpath);
 
                         struct ThreadArgs * ta = (struct ThreadArgs *) args;
@@ -1142,8 +1166,8 @@ int main(int argc, char *argv[])
     if (in.aggregate_or_print == AGGREGATE) {
         // modify in.sqlent to insert the results into the aggregate table
         char orig_sqlent[MAXSQL];
-        SNPRINTF(orig_sqlent, MAXSQL, "%s", in.sqlent);
-        SNPRINTF(in.sqlent, MAXSQL, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, orig_sqlent);
+        SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, strlen(in.sqlent));
+        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", 9, orig_sqlent, strlen(orig_sqlent));
 
         // create the aggregate database
         SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
@@ -1188,7 +1212,8 @@ int main(int argc, char *argv[])
         struct work * mywork = calloc(1, sizeof(struct work));
 
         // check that the top level path is an accessible directory
-        SNPRINTF(mywork->name,MAXPATH,"%s",argv[i]);
+        SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], strlen(argv[i]));
+
         lstat(mywork->name,&mywork->statuso);
         /* if (access(mywork->name, R_OK | X_OK)) { */
         /*     fprintf(stderr, "couldn't access input dir '%s': %s\n", */
@@ -1246,7 +1271,7 @@ int main(int argc, char *argv[])
         // prepend the intermediate database query with "INSERT INTO" to move
         // the data from the databases into the final aggregation database
         char intermediate[MAXSQL];
-        sqlite3_snprintf(MAXSQL, intermediate, "INSERT INTO %s.entries %s", AGGREGATE_ATTACH_NAME, in.intermediate);
+        SNFORMAT_S(intermediate, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", 9, in.intermediate, strlen(in.intermediate));
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec aggregate_start;
