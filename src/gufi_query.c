@@ -83,6 +83,7 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <pthread.h>
 #include <sqlite3.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
