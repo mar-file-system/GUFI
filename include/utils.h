@@ -100,6 +100,10 @@ OF SUCH DAMAGE.
         }                                                               \
     } while (0)
 
+/* Equivalent to snprintf printing only strings */
+/* Varadic arguments should be pairs of strings and their lengths */
+size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...);
+
 /* this block is for the triell */
 /* we think this should be 10 since we are just using chars 0-9 but 10 doesnt work for some reason */
 #define CHAR_SIZE 24

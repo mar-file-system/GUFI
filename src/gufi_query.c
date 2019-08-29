@@ -111,29 +111,6 @@ extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
-/* Equivalent to snprintf printing only strings */
-/* Varadic arguments should be pairs of strings and their lengths */
-size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
-    va_list args;
-    size_t max_len = dst_len;
-
-    count *= 2;
-
-    va_start(args, count);
-    for(size_t i = 0; i < count; i += 2) {
-        char * src = va_arg(args, char *);
-        size_t len = va_arg(args, size_t);
-        const size_t copy_len = (len < max_len)?len:max_len;
-        memcpy(dst, src, copy_len);
-        dst += copy_len;
-        max_len -= copy_len;
-    }
-    va_end(args);
-
-    *dst = '\0';
-    return dst_len - max_len;
-}
-
 #if BENCHMARK
 #include <time.h>
 
@@ -930,10 +907,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         struct CallbackArgs ca;
                         ca.output_buffers = &ta->output_buffers;
                         ca.id = id;
-
-                        /* // make a copy of the print arguments to allow for changing of output file */
-                        /* struct print_args pa = * (struct print_args *) args; */
-                        /* pa.out = out; */
 
                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);

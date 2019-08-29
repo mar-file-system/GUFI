@@ -11,6 +11,12 @@ extern "C" {
 
 }
 
+TEST(SNFORMAT_S, concatenate) {
+    char buf[1024];
+    SNFORMAT_S(buf, 1024, 3, "A", (size_t) 1, "BC", (size_t) 2, "DEF", (size_t) 3);
+    EXPECT_STREQ(buf, "ABCDEF");
+}
+
 TEST(Trie, create_cleanup) {
     struct Trie *root = getNewTrieNode();
     ASSERT_NE(root, nullptr);
