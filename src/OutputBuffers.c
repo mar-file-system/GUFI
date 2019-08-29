@@ -84,6 +84,7 @@ static struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const
         }
         obuf->capacity = capacity;
         obuf->filled = 0;
+        obuf->count = 0;
     }
 
     return obuf;

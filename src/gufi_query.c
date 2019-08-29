@@ -686,6 +686,23 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct timespec free_work_start;
     struct timespec free_work_end;
 
+    memset(&opendir_start, 0, sizeof(struct timespec));
+    memset(&opendir_end, 0, sizeof(struct timespec));
+    memset(&open_start, 0, sizeof(struct timespec));
+    memset(&open_end, 0, sizeof(struct timespec));
+    memset(&sqlite3_open_start, 0, sizeof(struct timespec));
+    memset(&sqlite3_open_end, 0, sizeof(struct timespec));
+    memset(&create_tables_start, 0, sizeof(struct timespec));
+    memset(&create_tables_end, 0, sizeof(struct timespec));
+    memset(&set_pragmas_start, 0, sizeof(struct timespec));
+    memset(&set_pragmas_end, 0, sizeof(struct timespec));
+    memset(&attach_start, 0, sizeof(struct timespec));
+    memset(&attach_end, 0, sizeof(struct timespec));
+    memset(&addqueryfuncs_start, 0, sizeof(struct timespec));
+    memset(&addqueryfuncs_end, 0, sizeof(struct timespec));
+    memset(&descend_start, 0, sizeof(struct timespec));
+    memset(&descend_end, 0, sizeof(struct timespec));
+
     sll_init(&check_args_starts);
     sll_init(&check_args_ends);
     sll_init(&level_starts);
@@ -708,6 +725,20 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     sll_init(&clone_ends);
     sll_init(&pushdir_starts);
     sll_init(&pushdir_ends);
+
+    memset(&exec_start, 0, sizeof(struct timespec));
+    memset(&exec_end, 0, sizeof(struct timespec));
+    memset(&detach_start, 0, sizeof(struct timespec));
+    memset(&detach_end, 0, sizeof(struct timespec));
+    memset(&close_start, 0, sizeof(struct timespec));
+    memset(&close_end, 0, sizeof(struct timespec));
+    memset(&closedir_start, 0, sizeof(struct timespec));
+    memset(&closedir_end, 0, sizeof(struct timespec));
+    memset(&utime_start, 0, sizeof(struct timespec));
+    memset(&utime_end, 0, sizeof(struct timespec));
+    memset(&free_work_start, 0, sizeof(struct timespec));
+    memset(&free_work_end, 0, sizeof(struct timespec));
+
     #endif
 
     // keep track of the mtime and atime
