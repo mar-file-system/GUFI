@@ -75,7 +75,7 @@ OF SUCH DAMAGE.
 
 gufi_trace2index - uses a flat trace file to create a GUFI index-tree
 
-Usage: gufi_trace2index [options] input_file
+Usage: gufi_trace2index [options] input_file output_dir
 options:
   -h                 help
   -H                 show assigned input values (debugging)

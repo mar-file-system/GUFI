@@ -89,7 +89,7 @@ gufi_query - breadth first walk of a GUFI tree.  We optionally perform queries
     the file does not have to be in tree order, it just must have all files/links associated with a dir
     immediately after that dir
 
-Usage: src/gufi_query [options] GUFI_tree ...
+Usage: gufi_query [options] GUFI_tree ...
 options:
   -h                 help
   -H                 show assigned input values (debugging)
@@ -111,6 +111,8 @@ options:
   -J <SQL_interm>    SQL for intermediate results (deaults to "SELECT * FROM entries")
   -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)
   -m                 Keep mtime and atime same on the database files
+  -B <buffer size>   size of each thread's output buffer in bytes
+
 GUFI_tree         find GUFI index-tree here
 
 
