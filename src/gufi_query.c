@@ -139,11 +139,16 @@ long double total_addqueryfuncs_time = 0;
 long double total_descend_time = 0;
 long double total_check_args_time = 0;
 long double total_level_time = 0;
+long double total_level_branch_time = 0;
+long double total_while_branch_time = 0;
 long double total_readdir_time = 0;
+long double total_readdir_branch_time = 0;
 long double total_strncmp_time = 0;
+long double total_strncmp_branch_time = 0;
 long double total_snprintf_time = 0;
 long double total_lstat_time = 0;
 long double total_isdir_time = 0;
+long double total_isdir_branch_time = 0;
 long double total_access_time = 0;
 long double total_set_time = 0;
 long double total_clone_time = 0;
@@ -276,16 +281,26 @@ static size_t descend2(struct QPTPool *ctx,
                        , struct sll *check_args_ends
                        , struct sll *level_starts
                        , struct sll *level_ends
+                       , struct sll *level_branch_starts
+                       , struct sll *level_branch_ends
+                       , struct sll *while_branch_starts
+                       , struct sll *while_branch_ends
                        , struct sll *readdir_starts
                        , struct sll *readdir_ends
+                       , struct sll *readdir_branch_starts
+                       , struct sll *readdir_branch_ends
                        , struct sll *strncmp_starts
                        , struct sll *strncmp_ends
+                       , struct sll *strncmp_branch_starts
+                       , struct sll *strncmp_branch_ends
                        , struct sll *snprintf_starts
                        , struct sll *snprintf_ends
                        , struct sll *lstat_starts
                        , struct sll *lstat_ends
                        , struct sll *isdir_starts
                        , struct sll *isdir_ends
+                       , struct sll *isdir_branch_starts
+                       , struct sll *isdir_branch_ends
                        , struct sll *access_starts
                        , struct sll *access_ends
                        , struct sll *set_starts
@@ -343,27 +358,74 @@ static size_t descend2(struct QPTPool *ctx,
     sll_push(level_ends, level_end);
     #endif
 
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    struct timespec * level_branch_start = malloc(sizeof(struct timespec));
+    clock_gettime(CLOCK_MONOTONIC, level_branch_start);
+    sll_push(level_branch_starts, level_branch_start);
+    #endif
     if (level_check) {
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        struct timespec * level_branch_end = malloc(sizeof(struct timespec));
+        clock_gettime(CLOCK_MONOTONIC, level_branch_end);
+        sll_push(level_branch_ends, level_branch_end);
+        #endif
+
         // go ahead and send the subdirs to the queue since we need to look
         // further down the tree.  loop over dirents, if link push it on the
         // queue, if file or link print it, fill up qwork structure for
         // each
-        struct dirent *entry = NULL;
+        /* struct dirent *entry = NULL; */
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        {
+            struct timespec * while_branch_start = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, while_branch_start);
+            sll_push(while_branch_starts, while_branch_start);
+        }
+        #endif
         while (1) {
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            struct timespec * while_branch_end = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, while_branch_end);
+            sll_push(while_branch_ends, while_branch_end);
+            #endif
+
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * readdir_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, readdir_start);
             sll_push(readdir_starts, readdir_start);
             #endif
-            entry = readdir(dir);
+            struct dirent * entry = readdir(dir);
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * readdir_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, readdir_end);
             sll_push(readdir_ends, readdir_end);
             #endif
+
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            struct timespec * readdir_branch_start = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, readdir_branch_start);
+            sll_push(readdir_branch_starts, readdir_branch_start);
+            #endif
             if (!entry) {
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                struct timespec * readdir_branch_end = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, readdir_branch_end);
+                sll_push(readdir_branch_ends, readdir_branch_end);
+                #endif
+
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                struct timespec * while_branch_start = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, while_branch_start);
+                sll_push(while_branch_starts, while_branch_start);
+                #endif
+
                 break;
             }
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            struct timespec * readdir_branch_end = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, readdir_branch_end);
+            sll_push(readdir_branch_ends, readdir_branch_end);
+            #endif
 
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * strncmp_start = malloc(sizeof(struct timespec));
@@ -378,9 +440,32 @@ static size_t descend2(struct QPTPool *ctx,
             clock_gettime(CLOCK_MONOTONIC, strncmp_end);
             sll_push(strncmp_ends, strncmp_end);
             #endif
+
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            struct timespec * strncmp_branch_start = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, strncmp_branch_start);
+            sll_push(strncmp_branch_starts, strncmp_branch_start);
+            #endif
             if (skip) {
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                struct timespec * strncmp_branch_end = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, strncmp_branch_end);
+                sll_push(strncmp_branch_ends, strncmp_branch_end);
+                #endif
+
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                struct timespec * while_branch_start = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, while_branch_start);
+                sll_push(while_branch_starts, while_branch_start);
+                #endif
+
                 continue;
             }
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            struct timespec * strncmp_branch_end = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, strncmp_branch_end);
+            sll_push(strncmp_branch_ends, strncmp_branch_end);
+            #endif
 
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * snprintf_start = malloc(sizeof(struct timespec));
@@ -420,7 +505,17 @@ static size_t descend2(struct QPTPool *ctx,
             sll_push(isdir_ends, isdir_end);
             #endif
 
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            struct timespec * isdir_branch_start = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, isdir_branch_start);
+            sll_push(isdir_branch_starts, isdir_branch_start);
+            #endif
             if (isdir) {
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                struct timespec * isdir_branch_end = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, isdir_branch_end);
+                sll_push(isdir_branch_ends, isdir_branch_end);
+                #endif
                 /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
                 /* struct timespec * access_start = malloc(sizeof(struct timespec)); */
                 /* clock_gettime(CLOCK_MONOTONIC, access_start); */
@@ -487,11 +582,36 @@ static size_t descend2(struct QPTPool *ctx,
                 /*             qwork->name, strerror(errno)); */
                 /* } */
             }
-            /* else { */
+            else {
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                struct timespec * isdir_branch_end = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, isdir_branch_end);
+                sll_push(isdir_branch_ends, isdir_branch_end);
+                #endif
             /*     fprintf(stderr, "not a dir '%s': %s\n", */
             /*             qwork->name, strerror(errno)); */
-            /* } */
+            }
+
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            {
+                struct timespec * while_branch_start = malloc(sizeof(struct timespec));
+                clock_gettime(CLOCK_MONOTONIC, while_branch_start);
+                sll_push(while_branch_starts, while_branch_start);
+            }
+            #endif
         }
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        struct timespec * while_branch_end = malloc(sizeof(struct timespec));
+        clock_gettime(CLOCK_MONOTONIC, while_branch_end);
+        sll_push(while_branch_ends, while_branch_end);
+        #endif
+    }
+    else {
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        struct timespec * level_branch_end = malloc(sizeof(struct timespec));
+        clock_gettime(CLOCK_MONOTONIC, level_branch_end);
+        sll_push(level_branch_ends, level_branch_end);
+        #endif
     }
 
     return pushed;
@@ -632,16 +752,26 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct sll check_args_ends;
     struct sll level_starts;
     struct sll level_ends;
+    struct sll level_branch_starts;
+    struct sll level_branch_ends;
+    struct sll while_branch_starts;
+    struct sll while_branch_ends;
     struct sll readdir_starts;
     struct sll readdir_ends;
+    struct sll readdir_branch_starts;
+    struct sll readdir_branch_ends;
     struct sll strncmp_starts;
     struct sll strncmp_ends;
+    struct sll strncmp_branch_starts;
+    struct sll strncmp_branch_ends;
     struct sll snprintf_starts;
     struct sll snprintf_ends;
     struct sll lstat_starts;
     struct sll lstat_ends;
     struct sll isdir_starts;
     struct sll isdir_ends;
+    struct sll isdir_branch_starts;
+    struct sll isdir_branch_ends;
     struct sll access_starts;
     struct sll access_ends;
     struct sll set_starts;
@@ -684,16 +814,26 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     sll_init(&check_args_ends);
     sll_init(&level_starts);
     sll_init(&level_ends);
+    sll_init(&level_branch_starts);
+    sll_init(&level_branch_ends);
+    sll_init(&while_branch_starts);
+    sll_init(&while_branch_ends);
     sll_init(&readdir_starts);
     sll_init(&readdir_ends);
+    sll_init(&readdir_branch_starts);
+    sll_init(&readdir_branch_ends);
     sll_init(&strncmp_starts);
     sll_init(&strncmp_ends);
+    sll_init(&strncmp_branch_starts);
+    sll_init(&strncmp_branch_ends);
     sll_init(&snprintf_starts);
     sll_init(&snprintf_ends);
     sll_init(&lstat_starts);
     sll_init(&lstat_ends);
     sll_init(&isdir_starts);
     sll_init(&isdir_ends);
+    sll_init(&isdir_branch_starts);
+    sll_init(&isdir_branch_ends);
     sll_init(&access_starts);
     sll_init(&access_ends);
     sll_init(&set_starts);
@@ -837,16 +977,26 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                  , &check_args_ends
                  , &level_starts
                  , &level_ends
+                 , &level_branch_starts
+                 , &level_branch_ends
+                 , &while_branch_starts
+                 , &while_branch_ends
                  , &readdir_starts
                  , &readdir_ends
+                 , &readdir_branch_starts
+                 , &readdir_branch_ends
                  , &strncmp_starts
                  , &strncmp_ends
+                 , &strncmp_branch_starts
+                 , &strncmp_branch_ends
                  , &snprintf_starts
                  , &snprintf_ends
                  , &lstat_starts
                  , &lstat_ends
                  , &isdir_starts
                  , &isdir_ends
+                 , &isdir_branch_starts
+                 , &isdir_branch_ends
                  , &access_starts
                  , &access_ends
                  , &set_starts
@@ -1011,11 +1161,16 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         total_descend_time           += elapsed(&descend_start, &descend_end);
         total_check_args_time        += sll_loop_sum(&check_args_starts, &check_args_ends);
         total_level_time             += sll_loop_sum(&level_starts, &level_ends);
+        total_level_branch_time      += sll_loop_sum(&level_branch_starts, &level_branch_ends);
+        total_while_branch_time      += sll_loop_sum(&while_branch_starts, &while_branch_ends);
         total_readdir_time           += sll_loop_sum(&readdir_starts, &readdir_ends);
+        total_readdir_branch_time    += sll_loop_sum(&readdir_branch_starts, &readdir_branch_ends);
         total_strncmp_time           += sll_loop_sum(&strncmp_starts, &strncmp_ends);
+        total_strncmp_branch_time    += sll_loop_sum(&strncmp_branch_starts, &strncmp_branch_ends);
         total_snprintf_time          += sll_loop_sum(&snprintf_starts, &snprintf_ends);
         total_lstat_time             += sll_loop_sum(&lstat_starts, &lstat_ends);
         total_isdir_time             += sll_loop_sum(&isdir_starts, &isdir_ends);
+        total_isdir_branch_time      += sll_loop_sum(&isdir_branch_starts, &isdir_branch_ends);
         total_access_time            += sll_loop_sum(&access_starts, &access_ends);
         total_set_time               += sll_loop_sum(&set_starts, &set_ends);
         total_clone_time             += sll_loop_sum(&clone_starts, &clone_ends);
@@ -1032,16 +1187,26 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         sll_destroy(&check_args_ends);
         sll_destroy(&level_starts);
         sll_destroy(&level_ends);
+        sll_destroy(&level_branch_starts);
+        sll_destroy(&level_branch_ends);
+        sll_destroy(&while_branch_starts);
+        sll_destroy(&while_branch_ends);
         sll_destroy(&readdir_starts);
         sll_destroy(&readdir_ends);
+        sll_destroy(&readdir_branch_starts);
+        sll_destroy(&readdir_branch_ends);
         sll_destroy(&strncmp_starts);
         sll_destroy(&strncmp_ends);
+        sll_destroy(&strncmp_branch_starts);
+        sll_destroy(&strncmp_branch_ends);
         sll_destroy(&snprintf_starts);
         sll_destroy(&snprintf_ends);
         sll_destroy(&lstat_starts);
         sll_destroy(&lstat_ends);
         sll_destroy(&isdir_starts);
         sll_destroy(&isdir_ends);
+        sll_destroy(&isdir_branch_starts);
+        sll_destroy(&isdir_branch_ends);
         sll_destroy(&access_starts);
         sll_destroy(&access_ends);
         sll_destroy(&set_starts);
@@ -1366,11 +1531,16 @@ int main(int argc, char *argv[])
     fprintf(stderr, "     descend:                                %.2Lfs\n", total_descend_time);
     fprintf(stderr, "         check args:                         %.2Lfs\n", total_check_args_time);
     fprintf(stderr, "         check level:                        %.2Lfs\n", total_level_time);
+    fprintf(stderr, "         check level <= max_level branch:    %.2Lfs\n", total_level_branch_time);
+    fprintf(stderr, "         while true:                         %.2Lfs\n", total_while_branch_time);
     fprintf(stderr, "         readdir:                            %.2Lfs\n", total_readdir_time);
+    fprintf(stderr, "         readdir != null branch:             %.2Lfs\n", total_readdir_branch_time);
     fprintf(stderr, "         strncmp:                            %.2Lfs\n", total_strncmp_time);
+    fprintf(stderr, "         strncmp != . or ..:                 %.2Lfs\n", total_strncmp_branch_time);
     fprintf(stderr, "         snprintf:                           %.2Lfs\n", total_snprintf_time);
     fprintf(stderr, "         lstat:                              %.2Lfs\n", total_lstat_time);
     fprintf(stderr, "         isdir:                              %.2Lfs\n", total_isdir_time);
+    fprintf(stderr, "         isdir branch:                       %.2Lfs\n", total_isdir_branch_time);
     fprintf(stderr, "         access:                             %.2Lfs\n", total_access_time);
     fprintf(stderr, "         set:                                %.2Lfs\n", total_set_time);
     fprintf(stderr, "         clone:                              %.2Lfs\n", total_clone_time);
