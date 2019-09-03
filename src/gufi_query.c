@@ -135,7 +135,6 @@ long double total_sqlite3_open_time = 0;
 long double total_create_tables_time = 0;
 long double total_set_pragmas_time = 0;
 long double total_load_extension_time = 0;
-long double total_attach_time = 0;
 long double total_addqueryfuncs_time = 0;
 long double total_descend_time = 0;
 long double total_check_args_time = 0;
@@ -154,6 +153,7 @@ long double total_access_time = 0;
 long double total_set_time = 0;
 long double total_clone_time = 0;
 long double total_pushdir_time = 0;
+long double total_attach_time = 0;
 long double total_exec_time = 0;
 long double total_detach_time = 0;
 long double total_close_time = 0;
@@ -760,8 +760,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct timespec set_pragmas_end;
     struct timespec load_extension_start;
     struct timespec load_extension_end;
-    struct timespec attach_start;
-    struct timespec attach_end;
     struct timespec addqueryfuncs_start;
     struct timespec addqueryfuncs_end;
     struct timespec descend_start;
@@ -798,6 +796,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct sll clone_ends;
     struct sll pushdir_starts;
     struct sll pushdir_ends;
+    struct timespec attach_start;
+    struct timespec attach_end;
     struct timespec exec_start;
     struct timespec exec_end;
     struct timespec detach_start;
@@ -823,8 +823,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&set_pragmas_end, 0, sizeof(struct timespec));
     memset(&load_extension_start, 0, sizeof(struct timespec));
     memset(&load_extension_end, 0, sizeof(struct timespec));
-    memset(&attach_start, 0, sizeof(struct timespec));
-    memset(&attach_end, 0, sizeof(struct timespec));
     memset(&addqueryfuncs_start, 0, sizeof(struct timespec));
     memset(&addqueryfuncs_end, 0, sizeof(struct timespec));
     memset(&descend_start, 0, sizeof(struct timespec));
@@ -863,6 +861,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     sll_init(&pushdir_starts);
     sll_init(&pushdir_ends);
 
+    memset(&attach_start, 0, sizeof(struct timespec));
+    memset(&attach_end, 0, sizeof(struct timespec));
     memset(&exec_start, 0, sizeof(struct timespec));
     memset(&exec_end, 0, sizeof(struct timespec));
     memset(&detach_start, 0, sizeof(struct timespec));
@@ -929,23 +929,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     clock_gettime(CLOCK_MONOTONIC, &open_end);
-    #endif
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    clock_gettime(CLOCK_MONOTONIC, &attach_start);
-    #endif
-    if (in.aggregate_or_print == AGGREGATE) {
-        // attach in-memory result aggregation database
-        char intermediate_name[MAXSQL];
-        SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) id);
-        if (db && !attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
-            fprintf(stderr, "Could not attach database\n");
-            closedb(db);
-            goto out_dir;
-        }
-    }
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    clock_gettime(CLOCK_MONOTONIC, &attach_end);
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -1063,12 +1046,29 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                 } else {
                     recs = 1;
                 }
-                if (in.andor > 0)
+                if (in.andor > 0) {
                     recs = 1;
+                }
 
                 // if we have recs (or are running an OR) query the entries table
                 if (recs > 0) {
                     if (in.sqlent_len > 1) {
+                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                         clock_gettime(CLOCK_MONOTONIC, &attach_start);
+                         #endif
+                         if (in.aggregate_or_print == AGGREGATE) {
+                             // attach in-memory result aggregation database
+                             char intermediate_name[MAXSQL];
+                             SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) id);
+                             if (db && !attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
+                                 fprintf(stderr, "Could not attach database\n");
+                                 closedb(db);
+                                 goto out_dir;
+                             }
+                         }
+                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        clock_gettime(CLOCK_MONOTONIC, &attach_end);
+                        #endif
                         // set the path so users can put path() in their queries
                         //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
@@ -1091,6 +1091,20 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         #endif
 
+                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        clock_gettime(CLOCK_MONOTONIC, &detach_start);
+                        #endif
+                        if (in.aggregate_or_print == AGGREGATE) {
+                            // detach in-memory result aggregation database
+                            if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
+                                closedb(db);
+                                goto out_dir;
+                            }
+                        }
+                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        clock_gettime(CLOCK_MONOTONIC, &detach_end);
+                        #endif
+
                         #if BENCHMARK
                         // get the total number of files in this database, regardless of whether or not the query was successful
                         if (in.outdb > 0) {
@@ -1105,20 +1119,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
             }
         }
     }
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    clock_gettime(CLOCK_MONOTONIC, &detach_start);
-    #endif
-    if (in.aggregate_or_print == AGGREGATE) {
-        // detach in-memory result aggregation database
-        if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
-            closedb(db);
-            goto out_dir;
-        }
-    }
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    clock_gettime(CLOCK_MONOTONIC, &detach_end);
-    #endif
 
     // if we have an out db we just detach gufi db
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -1178,7 +1178,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         total_create_tables_time     += elapsed(&create_tables_start, &create_tables_end);
         total_set_pragmas_time       += elapsed(&set_pragmas_start, &set_pragmas_end);
         total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
-        total_attach_time            += elapsed(&attach_start, &attach_end);
         total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
         total_descend_time           += elapsed(&descend_start, &descend_end);
         total_check_args_time        += sll_loop_sum(&check_args_starts, &check_args_ends);
@@ -1198,6 +1197,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         total_clone_time             += sll_loop_sum(&clone_starts, &clone_ends);
         total_pushdir_time           += sll_loop_sum(&pushdir_starts, &pushdir_ends);
         total_closedir_time          += elapsed(&closedir_start, &closedir_end);
+        total_attach_time            += elapsed(&attach_start, &attach_end);
         total_exec_time              += elapsed(&exec_start, &exec_end);
         total_detach_time            += elapsed(&detach_start, &detach_end);
         total_close_time             += elapsed(&close_start, &close_end);
@@ -1258,12 +1258,12 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         fprintf(stderr, "%" PRIu64 " ", timestamp(&set_pragmas_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&load_extension_start) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&load_extension_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&addqueryfuncs_start) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&addqueryfuncs_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&descend_start) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&descend_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&exec_start) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&exec_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&detach_start) - epoch);
@@ -1546,7 +1546,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "         create tables:                      %.2Lfs\n", total_create_tables_time);
     fprintf(stderr, "         set pragmas:                        %.2Lfs\n", total_set_pragmas_time);
     fprintf(stderr, "         load extensions:                    %.2Lfs\n", total_load_extension_time);
-    fprintf(stderr, "     attach intermediate databases:          %.2Lfs\n", total_attach_time);
     fprintf(stderr, "     addqueryfuncs:                          %.2Lfs\n", total_addqueryfuncs_time);
     fprintf(stderr, "     descend:                                %.2Lfs\n", total_descend_time);
     fprintf(stderr, "         check args:                         %.2Lfs\n", total_check_args_time);
@@ -1565,6 +1564,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "         set:                                %.2Lfs\n", total_set_time);
     fprintf(stderr, "         clone:                              %.2Lfs\n", total_clone_time);
     fprintf(stderr, "         pushdir:                            %.2Lfs\n", total_pushdir_time);
+    fprintf(stderr, "     attach intermediate databases:          %.2Lfs\n", total_attach_time);
     fprintf(stderr, "     sqlite3_exec                            %.2Lfs\n", total_exec_time);
     fprintf(stderr, "     detach intermediate databases:          %.2Lfs\n", total_detach_time);
     fprintf(stderr, "     close databases:                        %.2Lfs\n", total_close_time);
@@ -1577,7 +1577,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "clean up globals:                            %.2Lfs\n", cleanup_globals_time);
     fprintf(stderr, "\n");
     fprintf(stderr, "Rows returned:                               %zu\n",    rows);
-    fprintf(stderr, "Queries performed:                           %zu\n",    (size_t) (thread_count + in.maxthreads + 1));
+    fprintf(stderr, "Queries performed:                           %zu\n",    thread_count);
     fprintf(stderr, "Real time:                                   %.2Lfs\n", total_time);
     #endif
 
