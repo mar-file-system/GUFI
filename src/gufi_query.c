@@ -273,7 +273,7 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
     clock_gettime(CLOCK_MONOTONIC, load_extension_start);
     #endif
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
-        (sqlite3_extension_init(db, NULL, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
+        (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { // load the sqlite3-pcre extension
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;
@@ -489,7 +489,7 @@ static size_t descend2(struct QPTPool *ctx,
             sll_push(snprintf_starts, snprintf_start);
             #endif
             struct work qwork;
-            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", 1, entry->d_name, strlen(entry->d_name));
+            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, strlen(entry->d_name));
             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
             struct timespec * snprintf_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, snprintf_end);
@@ -902,7 +902,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
 
     // if the directorty can't be opened, don't bother with anything else
     if (!dir) {
-        fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno));
+        /* fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno)); */
         goto out_free;
     }
 
@@ -1322,9 +1322,9 @@ int main(int argc, char *argv[])
     struct ThreadArgs args;
 
     // initialize globals
-    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads)              ||
-        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit)  ||
-        !OutputBuffers_init(&args.output_buffers, in.maxthreads, in.output_buffer_size)) {
+    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads + 1)              ||
+        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit)      ||
+        !OutputBuffers_init(&args.output_buffers, in.maxthreads + 1, in.output_buffer_size)) {
         return -1;
     }
 
@@ -1354,7 +1354,7 @@ int main(int argc, char *argv[])
         // modify in.sqlent to insert the results into the aggregate table
         char orig_sqlent[MAXSQL];
         SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, strlen(in.sqlent));
-        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", 9, orig_sqlent, strlen(orig_sqlent));
+        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, orig_sqlent, strlen(orig_sqlent));
 
         // create the aggregate database
         SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
@@ -1402,14 +1402,16 @@ int main(int argc, char *argv[])
         SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], strlen(argv[i]));
 
         lstat(mywork->name,&mywork->statuso);
-        /* if (access(mywork->name, R_OK | X_OK)) { */
-        /*     fprintf(stderr, "couldn't access input dir '%s': %s\n", */
-        /*             mywork->name, strerror(errno)); */
-        /*     free(mywork); */
-        /*     continue; */
-        /* } */
         if (!S_ISDIR(mywork->statuso.st_mode) ) {
             fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
+            free(mywork);
+            continue;
+        }
+
+        // check access(2) here since it's only called a few times
+        if (access(mywork->name, R_OK | X_OK)) {
+            fprintf(stderr, "couldn't access input dir '%s': %s\n",
+                    mywork->name, strerror(errno));
             free(mywork);
             continue;
         }
@@ -1434,13 +1436,6 @@ int main(int argc, char *argv[])
 
     QPTPool_destroy(pool);
 
-    // clear out buffered data
-    size_t rows = 0;
-    for(int i = 0; i < in.maxthreads; i++) {
-        flush_buffer(&args.output_buffers.mutex, &args.output_buffers.buffers[i], gts.outfd[i]);
-        rows += args.output_buffers.buffers[i].count;
-    }
-
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     struct timespec work_end;
     clock_gettime(CLOCK_MONOTONIC, &work_end);
@@ -1458,7 +1453,7 @@ int main(int argc, char *argv[])
         // prepend the intermediate database query with "INSERT INTO" to move
         // the data from the databases into the final aggregation database
         char intermediate[MAXSQL];
-        SNFORMAT_S(intermediate, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", 9, in.intermediate, strlen(in.intermediate));
+        SNFORMAT_S(intermediate, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, in.intermediate, strlen(in.intermediate));
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec aggregate_start;
@@ -1471,7 +1466,7 @@ int main(int argc, char *argv[])
                 (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
                 printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
             }
-         }
+        }
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec aggregate_end;
@@ -1500,15 +1495,15 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &output_start);
         #endif
 
-        // run the aggregate query on the aggregated results
-        sqlite3_stmt *res = NULL;
-        if (sqlite3_prepare_v2(aggregate, in.aggregate, MAXSQL, &res, NULL) == SQLITE_OK) {
-            rows = print_results(res, stdout, 1, 0, in.printing, in.delim);
+        struct CallbackArgs ca;
+        ca.output_buffers = &args.output_buffers;
+        ca.id = in.maxthreads;
+
+        char * err;
+        if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
+            fprintf(stderr, "Cannot print from aggregate database: %s\n", err);
+            sqlite3_free(err);
         }
-        else {
-            fprintf(stderr, "%s\n", sqlite3_errmsg(aggregate));
-        }
-        sqlite3_finalize(res);
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec output_end;
@@ -1520,13 +1515,20 @@ int main(int argc, char *argv[])
         closedb(aggregate);
     }
 
+    // clear out buffered data
+    size_t rows = 0;
+    for(int i = 0; i < in.maxthreads + 1; i++) {
+        flush_buffer(&args.output_buffers.mutex, &args.output_buffers.buffers[i], gts.outfd[i]);
+        rows += args.output_buffers.buffers[i].count;
+    }
+
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec cleanup_globals_start;
     clock_gettime(CLOCK_MONOTONIC, &cleanup_globals_start);
     #endif
 
     // clean up globals
-    OutputBuffers_destroy(&args.output_buffers, in.maxthreads);
+    OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
     outfiles_fin(gts.outfd,  in.maxthreads);
 
