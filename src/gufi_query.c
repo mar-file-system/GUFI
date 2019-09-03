@@ -134,6 +134,7 @@ long double total_open_time = 0;
 long double total_sqlite3_open_time = 0;
 long double total_create_tables_time = 0;
 long double total_set_pragmas_time = 0;
+long double total_load_extension_time = 0;
 long double total_attach_time = 0;
 long double total_addqueryfuncs_time = 0;
 long double total_descend_time = 0;
@@ -208,6 +209,8 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
                          , struct timespec * create_tables_end
                          , struct timespec * set_pragmas_start
                          , struct timespec * set_pragmas_end
+                         , struct timespec * load_extension_start
+                         , struct timespec * load_extension_end
                          #endif
     ) {
     sqlite3 * db = NULL;
@@ -264,6 +267,19 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
     }
     #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
+    #endif
+
+    #ifdef CUMULATIVE_TIMES
+    clock_gettime(CLOCK_MONOTONIC, load_extension_start);
+    #endif
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
+        (sqlite3_extension_init(db, NULL, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
+        fprintf(stderr, "Unable to load regex extension\n");
+        sqlite3_close(db);
+        db = NULL;
+    }
+    #ifdef CUMULATIVE_TIMES
+    clock_gettime(CLOCK_MONOTONIC, load_extension_end);
     #endif
 
     return db;
@@ -742,6 +758,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct timespec create_tables_end;
     struct timespec set_pragmas_start;
     struct timespec set_pragmas_end;
+    struct timespec load_extension_start;
+    struct timespec load_extension_end;
     struct timespec attach_start;
     struct timespec attach_end;
     struct timespec addqueryfuncs_start;
@@ -803,6 +821,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&create_tables_end, 0, sizeof(struct timespec));
     memset(&set_pragmas_start, 0, sizeof(struct timespec));
     memset(&set_pragmas_end, 0, sizeof(struct timespec));
+    memset(&load_extension_start, 0, sizeof(struct timespec));
+    memset(&load_extension_end, 0, sizeof(struct timespec));
     memset(&attach_start, 0, sizeof(struct timespec));
     memset(&attach_end, 0, sizeof(struct timespec));
     memset(&addqueryfuncs_start, 0, sizeof(struct timespec));
@@ -855,7 +875,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&utime_end, 0, sizeof(struct timespec));
     memset(&free_work_start, 0, sizeof(struct timespec));
     memset(&free_work_end, 0, sizeof(struct timespec));
-
     #endif
 
     // keep track of the mtime and atime
@@ -903,6 +922,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                    , &create_tables_end
                    , &set_pragmas_start
                    , &set_pragmas_end
+                   , &load_extension_start
+                   , &load_extension_end
                    #endif
           );
     }
@@ -1156,6 +1177,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         total_sqlite3_open_time      += elapsed(&sqlite3_open_start, &sqlite3_open_end);
         total_create_tables_time     += elapsed(&create_tables_start, &create_tables_end);
         total_set_pragmas_time       += elapsed(&set_pragmas_start, &set_pragmas_end);
+        total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
         total_attach_time            += elapsed(&attach_start, &attach_end);
         total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
         total_descend_time           += elapsed(&descend_start, &descend_end);
@@ -1234,6 +1256,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         fprintf(stderr, "%" PRIu64 " ", timestamp(&create_tables_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&set_pragmas_start) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&set_pragmas_end) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&load_extension_start) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&load_extension_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_start) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_end) - epoch);
         fprintf(stderr, "%" PRIu64 " ", timestamp(&addqueryfuncs_start) - epoch);
@@ -1289,13 +1313,6 @@ int main(int argc, char *argv[])
         sub_help();
     if (idx < 0)
         return -1;
-
-    // load the pcre extension every time a database is opened
-    const int rc = sqlite3_auto_extension((void (*)(void)) sqlite3_extension_init);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "sqlite3_auto_extension error: %d\n", rc);
-        return -1;
-    }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec setup_globals_start;
@@ -1526,6 +1543,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "         sqlite3_open_v2:                    %.2Lfs\n", total_sqlite3_open_time);
     fprintf(stderr, "         create tables:                      %.2Lfs\n", total_create_tables_time);
     fprintf(stderr, "         set pragmas:                        %.2Lfs\n", total_set_pragmas_time);
+    fprintf(stderr, "         load extensions:                    %.2Lfs\n", total_load_extension_time);
     fprintf(stderr, "     attach intermediate databases:          %.2Lfs\n", total_attach_time);
     fprintf(stderr, "     addqueryfuncs:                          %.2Lfs\n", total_addqueryfuncs_time);
     fprintf(stderr, "     descend:                                %.2Lfs\n", total_descend_time);
