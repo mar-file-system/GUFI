@@ -441,7 +441,7 @@ int main(int argc, char * argv[]) {
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    int idx = parse_cmd_line(argc, argv, "hHn:d:", 1, "input_file output_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "input_file output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
