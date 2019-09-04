@@ -82,7 +82,7 @@ if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "Refusing to build in source directory \"${CMAKE_SOURCE_DIR}\"")
 endif()
 
-project(GUFI VERSION 0.4.0 LANGUAGES C)
+project(GUFI VERSION 0.4.1 LANGUAGES C)
 
 # Require C99
 set(CMAKE_C_STANDARD 99)
