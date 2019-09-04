@@ -1,5 +1,6 @@
 #include "opendb.h"
 #include "dbutils.h"
+#include "pcre.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -128,6 +129,13 @@ sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, c
     if (setpragmas) {
         // ignore errors
         set_pragmas(db);
+    }
+
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
+        (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { // load the sqlite3-pcre extension
+        fprintf(stderr, "Unable to load regex extension\n");
+        sqlite3_close(db); // close db even if it didn't open to avoid memory leaks
+        db = NULL;
     }
 
     return db;
