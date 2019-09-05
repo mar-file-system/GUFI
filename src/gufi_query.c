@@ -680,36 +680,44 @@ static int print_callback(void * args, int count, char **data, char **columns) {
     const int id = ca->id;
     /* if (gts.outfd[id]) { */
         size_t * lens = malloc(count * sizeof(size_t));
-        size_t row_len = count + 1; // one delimiter per column + newline
+        size_t row_len = count + 1; /* one delimiter per column + newline */
         for(int i = 0; i < count; i++) {
             lens[i] = strlen(data[i]);
             row_len += lens[i];
         }
 
-        // if theres not enough space in the buffer to fit the whole row, flush it first
-        if ((ca->output_buffers->buffers[id].filled + row_len + 1) >= ca->output_buffers->buffers[id].capacity) {
-            flush_buffer(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
-        }
+        const size_t capacity = ca->output_buffers->buffers[id].capacity;
 
-        char * buf = ca->output_buffers->buffers[id].buf;
-        size_t filled = ca->output_buffers->buffers[id].filled;
-        for(int i = 0; i < count; i++) {
-            memcpy(&buf[filled], data[i], lens[i]);
-            filled += lens[i];
+        /* if the row can fit within an empty buffer, try to add the row to previously buffered rows */
+        if (row_len <= capacity) {
+            /* if there's not enough space in the buffer to fit the new row, flush it first */
+            if ((ca->output_buffers->buffers[id].filled + row_len) > capacity) {
+                flush_buffer(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+            }
 
-            buf[filled] = in.delim[0];
+            char * buf = ca->output_buffers->buffers[id].buf;
+            size_t filled = ca->output_buffers->buffers[id].filled;
+            for(int i = 0; i < count; i++) {
+                memcpy(&buf[filled], data[i], lens[i]);
+                filled += lens[i];
+
+                buf[filled] = in.delim[0];
+                filled++;
+            }
+
+            buf[filled] = '\n';
             filled++;
+
+            ca->output_buffers->buffers[id].filled = filled;
+            ca->output_buffers->buffers[id].count++;
         }
-
-        buf[filled] = '\n';
-        filled++;
-
-        ca->output_buffers->buffers[id].filled = filled;
-        ca->output_buffers->buffers[id].count++;
-
-        // if the new data filled up the buffer, flush it
-        if ((ca->output_buffers->buffers[id].filled + 1) >= ca->output_buffers->buffers[id].capacity) {
-            flush_buffer(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+        else {
+            /* if the row does not fit the buffer, output immediately instead of buffering */
+            for(int i = 0; i < count; i++) {
+                fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
+                fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
+                fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+            }
         }
 
         free(lens);
