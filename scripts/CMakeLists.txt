@@ -86,9 +86,9 @@ if (PARAMIKO)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Server)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Client)
 
-  # common.py is also needed by the client
-  configure_file(gufi_common.py common.py @ONLY)
-  install(FILES gufi_common.py DESTINATION lib/GUFI COMPONENT Client)
+  # gufi_common.py is also needed by the client
+  configure_file(gufi_common.py gufi_common.py @ONLY)
+  install(FILES gufi_common.py DESTINATION bin COMPONENT Client)
 
   # create individual client scripts
   set(TOOL find)
@@ -116,6 +116,6 @@ foreach(TOOL ${TOOLS})
   install(PROGRAMS ${TOOL} DESTINATION bin COMPONENT Server)
 endforeach()
 
-# common.py is not an executable
-configure_file(gufi_common.py common.py @ONLY)
-install(FILES gufi_common.py DESTINATION lib/GUFI COMPONENT Server)
+# gufi_common.py is not an executable, but is installed in bin for convenience
+configure_file(gufi_common.py gufi_common.py @ONLY)
+install(FILES gufi_common.py DESTINATION bin COMPONENT Server)

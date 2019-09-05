@@ -79,11 +79,7 @@ import imp
 import os
 import sys
 
-# location of this file
-PATH = os.path.realpath(__file__)
-DIR = os.path.dirname(PATH)
-
-gufi_config = imp.load_source('gufi_config', os.path.join(DIR, 'gufi_config'))
+gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'gufi_config'))
 
 class Args:
     def __init__(self):

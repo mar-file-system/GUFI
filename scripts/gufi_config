@@ -76,10 +76,13 @@ import argparse
 import imp
 import os
 
+import gufi_common
+
 # location of this file
 PATH = os.path.realpath(__file__)
 
-gufi_common = imp.load_source('gufi_common', os.path.join(os.path.dirname(os.path.dirname(PATH)), 'lib', 'GUFI', 'gufi_common.py'))
+# assumes both client and server were installed to directories with the same name on different machines
+INSTALL_PREFIX = os.path.dirname(PATH)
 
 # default configuration file location
 DEFAULT_CONFIG_PATH=os.path.expanduser('~/.gufi_config')
@@ -122,12 +125,6 @@ def read_filename(filename):
     return read(open(filename, 'r'))
 
 if __name__=='__main__':
-    # get location of this file
-    PATH = os.path.realpath(__file__)
-
-    # assumes both client and server were installed to directories with the same name on different machines
-    INSTALL_PREFIX = os.path.dirname(PATH)
-
     # assumes paramiko was installed in the same directory as the executables
     PARAMIKO = os.path.join(os.path.dirname(INSTALL_PREFIX), 'lib', 'GUFI', 'paramiko')
 
@@ -159,7 +156,7 @@ if __name__=='__main__':
 
     # Server Settings
     server_parser.add_argument('--threads',     type=gufi_common.get_positive, default=gufi_common.cpus(),                                    help='Number of threads')
-    server_parser.add_argument('--bfq',         type=str,                      default=os.path.join(INSTALL_PREFIX, 'bfq'),                   help='Location of bfq')
+    server_parser.add_argument('--bfq',         type=str,                      default=os.path.join(INSTALL_PREFIX, 'gufi_query'),            help='Location of gufi_query')
     server_parser.add_argument('default_path',  type=str,                                                                                     help='Default GUFI tree path')
 
     args = parser.parse_args()
