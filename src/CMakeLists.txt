@@ -129,7 +129,6 @@ set(GUFI_SOURCES
   utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
-install(TARGETS GUFI DESTINATION lib COMPONENT Server)
 
 #If the GPFS library exists, build the gpfs scan tool
 if(GPFS_LIB)
