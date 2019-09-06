@@ -98,7 +98,7 @@ realpath
 rpmbuild
 truncate (with the '-s' option available)
 Python 2.7
-[optional; needed to install latest Python libraries] pip
+[optional; needed for paramiko dependencies] pip
 
 # Libraries (see platform-specific caveats, below)
 xattr
@@ -149,6 +149,17 @@ CMake (-D<VAR>=<VALUE>):
     - DEP_BUILD_DIR_PREFIX=<PATH> to select a location to build the dependencies.
     - DEP_INSTALL_PREFIX=<PATH> to select the location to install the dependencies.
         If the dependencies are not installed in ${CMAKE_BINARY_DIR}, they will not need to be redownloaded/rebuilt/reinstalled everytime ${CMAKE_BINARY_DIR} is deleted.
+    - BENCHMARK=On/Off
+        Build so that gufi_query prints out some benchmarks at the end of a run.
+        Make target 'benchmark' is created. This target generates a source tree,
+        indexes it, and queries the tree. At each step, benchmark values will be
+        printed. The tree is deleted after the benchmarks complete.
+        Configuration variables
+            - BENCHMARK_ROOT
+            - BENCHMARK_DIRS    (default: 4)
+            - BENCHMARK_DEPTH   (default: 10)
+            - BENCHMARK_FILES   (default: 42)
+            - BENCHMARK_THREADS (default: # of processors on the machine)
 
 (2.2) Make
 If cmake is not available, the tarball found at
