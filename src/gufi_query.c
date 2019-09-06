@@ -83,7 +83,6 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <pthread.h>
 #include <sqlite3.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,7 +94,6 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "debug.h"
 #include "dbutils.h"
 #ifndef DEBUG
 #include "opendb.h"
@@ -112,7 +110,7 @@ extern int errno;
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
 #if BENCHMARK
-#include <time.h>
+#include "debug.h"
 
 static size_t total_files = 0;
 static pthread_mutex_t total_files_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -128,6 +126,8 @@ static int total_files_callback(void * unused, int count, char ** data, char ** 
 #endif
 
 #ifdef DEBUG
+#include "debug.h"
+
 #ifdef CUMULATIVE_TIMES
 long double total_opendir_time = 0;
 long double total_open_time = 0;
@@ -189,12 +189,6 @@ long double sll_loop_sum(struct sll * start, struct sll * end) {
 
 #endif
 
-#ifdef QPTPOOL_TIMESTAMPS
-extern uint64_t epoch;
-#else
-uint64_t epoch = 0;
-#endif
-
 static const char GUFI_SQLITE_VFS[] = "unix-none";
 
 int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args);
@@ -202,7 +196,6 @@ int create_tables(const char *name, sqlite3 *db);
 int set_pragmas(sqlite3 * db);
 
 static sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, const int setpragmas
-                         #ifdef CUMULATIVE_TIMES
                          , struct timespec * sqlite3_open_start
                          , struct timespec * sqlite3_open_end
                          , struct timespec * create_tables_start
@@ -211,7 +204,6 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
                          , struct timespec * set_pragmas_end
                          , struct timespec * load_extension_start
                          , struct timespec * load_extension_end
-                         #endif
     ) {
     sqlite3 * db = NULL;
 
@@ -220,9 +212,7 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
         return NULL;
     }
 
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, sqlite3_open_start);
-    #endif
 
     int flags = SQLITE_OPEN_URI;
     if (rdonly) {
@@ -233,20 +223,14 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
     }
 
     if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
-        #ifdef CUMULATIVE_TIMES
         clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
-        #endif
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         sqlite3_close(db); // close db even if it didn't open to avoid memory leaks
         return NULL;
     }
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
-    #endif
 
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, create_tables_start);
-    #endif
     if (createtables) {
         if (create_tables(name, db) != 0) {
             fprintf(stderr, "Cannot create tables: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
@@ -254,33 +238,23 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
             return NULL;
         }
     }
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, create_tables_end);
-    #endif
 
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
-    #endif
     if (setpragmas) {
         // ignore errors
         set_pragmas(db);
     }
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
-    #endif
 
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, load_extension_start);
-    #endif
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
         (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { // load the sqlite3-pcre extension
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;
     }
-    #ifdef CUMULATIVE_TIMES
     clock_gettime(CLOCK_MONOTONIC, load_extension_end);
-    #endif
 
     return db;
 }
@@ -327,63 +301,144 @@ static size_t descend2(struct QPTPool *ctx,
                        , struct sll *pushdir_ends
                        #endif
     ) {
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    struct timespec check_args_start;
+    struct timespec check_args_end;
+    struct timespec level_start;
+    struct timespec level_end;
+    struct timespec level_branch_start;
+    struct timespec level_branch_end;
+    struct timespec while_branch_start;
+    struct timespec while_branch_end;
+    struct timespec readdir_start;
+    struct timespec readdir_end;
+    struct timespec readdir_branch_start;
+    struct timespec readdir_branch_end;
+    struct timespec strncmp_start;
+    struct timespec strncmp_end;
+    struct timespec strncmp_branch_start;
+    struct timespec strncmp_branch_end;
+    struct timespec snprintf_start;
+    struct timespec snprintf_end;
+    struct timespec lstat_start;
+    struct timespec lstat_end;
+    struct timespec isdir_start;
+    struct timespec isdir_end;
+    struct timespec isdir_branch_start;
+    struct timespec isdir_branch_end;
+    struct timespec access_start;
+    struct timespec access_end;
+    struct timespec set_start;
+    struct timespec set_end;
+    struct timespec clone_start;
+    struct timespec clone_end;
+    struct timespec pushdir_start;
+    struct timespec pushdir_end;
+    #endif
+
+    #ifdef DEBUG
+    #ifdef CUMULATIVE_TIMES
     struct timespec * check_args_start = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, check_args_start);
     sll_push(check_args_starts, check_args_start);
     #endif
+    #ifdef PER_THREAD_STATS
+    clock_gettime(CLOCK_MONOTONIC, &check_args_start);
+    #endif
+    #endif
     /* passmywork was already checked in the calling thread */
     /* if (!passmywork) { */
     /*     fprintf(stderr, "Got NULL work\n"); */
-    /*     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+    /*     #ifdef DEBUG */
     /*     struct timespec * check_args_end = malloc(sizeof(struct timespec)); */
     /*     clock_gettime(CLOCK_MONOTONIC, check_args_end); */
+        /* #ifdef CUMULATIVE_TIMES */
     /*     sll_push(check_args_ends, check_args_end); */
     /*     #endif */
+        /* #endif */
     /*     return 0; */
     /* } */
 
     /* dir was already checked in the calling thread */
     /* if (!dir) { */
     /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
-    /*     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+    /*     #ifdef DEBUG */
     /*     struct timespec * check_args_end = malloc(sizeof(struct timespec)); */
     /*     clock_gettime(CLOCK_MONOTONIC, check_args_end); */
+        /* #ifdef CUMULATIVE_TIMES */
     /*     sll_push(check_args_ends, check_args_end); */
     /*     #endif */
+        /* #endif */
     /*     return 0; */
     /* } */
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #ifdef DEBUG
+    #ifdef CUMULATIVE_TIMES
     struct timespec * check_args_end = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, check_args_end);
     sll_push(check_args_ends, check_args_end);
     #endif
+    #ifdef PER_THREAD_STATS
+    {
+        clock_gettime(CLOCK_MONOTONIC, &check_args_end);
+        pthread_mutex_lock(&print_mutex);
+        fprintf(stderr, "%zu check_args %" PRIu64 " %" PRIu64 "\n", id, timestamp(&check_args_start) - epoch, timestamp(&check_args_end) - epoch);
+        pthread_mutex_unlock(&print_mutex);
+    }
+    #endif
+    #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #ifdef DEBUG
+    #ifdef CUMULATIVE_TIMES
     struct timespec * level_start = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, level_start);
     sll_push(level_starts, level_start);
+    #endif
+    #ifdef PER_THREAD_STATS
+    clock_gettime(CLOCK_MONOTONIC, &level_start);
+    #endif
     #endif
     size_t pushed = 0;
 
     const size_t next_level = passmywork->level + 1;
     const int level_check = (next_level <= max_level);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #ifdef DEBUG
+    #ifdef CUMULATIVE_TIMES
     struct timespec * level_end = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, level_end);
     sll_push(level_ends, level_end);
     #endif
+    #ifdef PER_THREAD_STATS
+    clock_gettime(CLOCK_MONOTONIC, &level_end);
+    pthread_mutex_lock(&print_mutex);
+    fprintf(stderr, "%zu level %" PRIu64 " %" PRIu64 "\n", id, timestamp(&level_start) - epoch, timestamp(&level_end) - epoch);
+    pthread_mutex_unlock(&print_mutex);
+    #endif
+    #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #ifdef DEBUG
+    #ifdef CUMULATIVE_TIMES
     struct timespec * level_branch_start = malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, level_branch_start);
     sll_push(level_branch_starts, level_branch_start);
     #endif
+    #ifdef PER_THREAD_STATS
+    clock_gettime(CLOCK_MONOTONIC, &level_branch_start);
+    #endif
+    #endif
     if (level_check) {
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        #ifdef DEBUG
+        #ifdef CUMULATIVE_TIMES
         struct timespec * level_branch_end = malloc(sizeof(struct timespec));
         clock_gettime(CLOCK_MONOTONIC, level_branch_end);
         sll_push(level_branch_ends, level_branch_end);
+        #endif
+        #ifdef PER_THREAD_STATS
+        clock_gettime(CLOCK_MONOTONIC, &level_branch_end);
+        pthread_mutex_lock(&print_mutex);
+        fprintf(stderr, "%zu level_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&level_branch_start) - epoch, timestamp(&level_branch_end) - epoch);
+        pthread_mutex_unlock(&print_mutex);
+        #endif
         #endif
 
         // go ahead and send the subdirs to the queue since we need to look
@@ -391,180 +446,334 @@ static size_t descend2(struct QPTPool *ctx,
         // queue, if file or link print it, fill up qwork structure for
         // each
         /* struct dirent *entry = NULL; */
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        #ifdef DEBUG
+        #ifdef CUMULATIVE_TIMES
         {
             struct timespec * while_branch_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, while_branch_start);
             sll_push(while_branch_starts, while_branch_start);
         }
         #endif
+        #ifdef PER_THREAD_STATS
+        clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
+        #endif
+        #endif
         while (1) {
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * while_branch_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, while_branch_end);
             sll_push(while_branch_ends, while_branch_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &while_branch_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu while_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&while_branch_start) - epoch, timestamp(&while_branch_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * readdir_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, readdir_start);
             sll_push(readdir_starts, readdir_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &readdir_start);
+            #endif
+            #endif
             struct dirent * entry = readdir(dir);
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * readdir_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, readdir_end);
             sll_push(readdir_ends, readdir_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &readdir_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu readdir %" PRIu64 " %" PRIu64 "\n", id, timestamp(&readdir_start) - epoch, timestamp(&readdir_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * readdir_branch_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, readdir_branch_start);
             sll_push(readdir_branch_starts, readdir_branch_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &readdir_branch_start);
+            #endif
+            #endif
             if (!entry) {
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                #ifdef DEBUG
+                #ifdef CUMULATIVE_TIMES
                 struct timespec * readdir_branch_end = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, readdir_branch_end);
                 sll_push(readdir_branch_ends, readdir_branch_end);
                 #endif
+                #ifdef PER_THREAD_STATS
+                clock_gettime(CLOCK_MONOTONIC, &readdir_branch_end);
+                pthread_mutex_lock(&print_mutex);
+                fprintf(stderr, "%zu readdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&readdir_branch_start) - epoch, timestamp(&readdir_branch_end) - epoch);
+                pthread_mutex_unlock(&print_mutex);
+                #endif
+                #endif
 
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                #ifdef DEBUG
+                #ifdef CUMULATIVE_TIMES
                 struct timespec * while_branch_start = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, while_branch_start);
                 sll_push(while_branch_starts, while_branch_start);
+                #endif
+                #ifdef PER_THREAD_STATS
+                clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
+                #endif
                 #endif
 
                 break;
             }
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * readdir_branch_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, readdir_branch_end);
             sll_push(readdir_branch_ends, readdir_branch_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &readdir_branch_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu readdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&readdir_branch_start) - epoch, timestamp(&readdir_branch_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * strncmp_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, strncmp_start);
             sll_push(strncmp_starts, strncmp_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_start);
+            #endif
+            #endif
             const size_t len = strlen(entry->d_name);
             const int skip = (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                               ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)));
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * strncmp_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, strncmp_end);
             sll_push(strncmp_ends, strncmp_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu strncmp %" PRIu64 " %" PRIu64 "\n", id, timestamp(&strncmp_start) - epoch, timestamp(&strncmp_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * strncmp_branch_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, strncmp_branch_start);
             sll_push(strncmp_branch_starts, strncmp_branch_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_branch_start);
+            #endif
+            #endif
             if (skip) {
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                #ifdef DEBUG
+                #ifdef CUMULATIVE_TIMES
                 struct timespec * strncmp_branch_end = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, strncmp_branch_end);
                 sll_push(strncmp_branch_ends, strncmp_branch_end);
                 #endif
+                #ifdef PER_THREAD_STATS
+                clock_gettime(CLOCK_MONOTONIC, &strncmp_branch_end);
+                pthread_mutex_lock(&print_mutex);
+                fprintf(stderr, "%zu strncmp_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&strncmp_branch_start) - epoch, timestamp(&strncmp_branch_end) - epoch);
+                pthread_mutex_unlock(&print_mutex);
+                #endif
+                #endif
 
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                #ifdef DEBUG
+                #ifdef CUMULATIVE_TIMES
                 struct timespec * while_branch_start = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, while_branch_start);
                 sll_push(while_branch_starts, while_branch_start);
                 #endif
+                #ifdef PER_THREAD_STATS
+                clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
+                #endif
+                #endif
 
                 continue;
             }
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * strncmp_branch_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, strncmp_branch_end);
             sll_push(strncmp_branch_ends, strncmp_branch_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_branch_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu strncmp_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&strncmp_branch_start) - epoch, timestamp(&strncmp_branch_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * snprintf_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, snprintf_start);
             sll_push(snprintf_starts, snprintf_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &snprintf_start);
+            #endif
+            #endif
             struct work qwork;
             SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, strlen(entry->d_name));
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * snprintf_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, snprintf_end);
             sll_push(snprintf_ends, snprintf_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &snprintf_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu snprintf %" PRIu64 " %" PRIu64 "\n", id, timestamp(&snprintf_start) - epoch, timestamp(&snprintf_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+            /* #ifdef DEBUG */
             /* struct timespec * lstat_start = malloc(sizeof(struct timespec)); */
             /* clock_gettime(CLOCK_MONOTONIC, lstat_start); */
             /* sll_push(lstat_starts, lstat_start); */
             /* #endif */
+            /* #endif */
             /* lstat(qwork.name, &qwork.statuso); */
-            /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+            /* #ifdef DEBUG */
             /* struct timespec * lstat_end = malloc(sizeof(struct timespec)); */
             /* clock_gettime(CLOCK_MONOTONIC, lstat_end); */
             /* sll_push(lstat_ends, lstat_end); */
             /* #endif */
+            /* #endif */
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * isdir_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, isdir_start);
             sll_push(isdir_starts, isdir_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &isdir_start);
+            #endif
+            #endif
             const int isdir = (entry->d_type == DT_DIR);
             /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * isdir_end = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, isdir_end);
             sll_push(isdir_ends, isdir_end);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &isdir_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu isdir %" PRIu64 " %" PRIu64 "\n", id, timestamp(&isdir_start) - epoch, timestamp(&isdir_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             struct timespec * isdir_branch_start = malloc(sizeof(struct timespec));
             clock_gettime(CLOCK_MONOTONIC, isdir_branch_start);
             sll_push(isdir_branch_starts, isdir_branch_start);
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &isdir_branch_start);
+            #endif
+            #endif
             if (isdir) {
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                #ifdef DEBUG
+                #ifdef CUMULATIVE_TIMES
                 struct timespec * isdir_branch_end = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, isdir_branch_end);
                 sll_push(isdir_branch_ends, isdir_branch_end);
                 #endif
-                /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+                #ifdef PER_THREAD_STATS
+                clock_gettime(CLOCK_MONOTONIC, &isdir_branch_end);
+                pthread_mutex_lock(&print_mutex);
+                fprintf(stderr, "%zu isdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&isdir_branch_start) - epoch, timestamp(&isdir_branch_end) - epoch);
+                pthread_mutex_unlock(&print_mutex);
+                #endif
+                #endif
+                /* #ifdef DEBUG */
                 /* struct timespec * access_start = malloc(sizeof(struct timespec)); */
                 /* clock_gettime(CLOCK_MONOTONIC, access_start); */
+                /* #ifdef CUMULATIVE_TIMES */
                 /* sll_push(access_starts, access_start); */
                 /* #endif */
+                /* #endif */
                 /* const int accessible = !access(qwork.name, R_OK | X_OK); */
-                /* #if defined(DEBUG) && defined(CUMULATIVE_TIMES) */
+                /* #ifdef DEBUG */
                 /* struct timespec * access_end = malloc(sizeof(struct timespec)); */
                 /* clock_gettime(CLOCK_MONOTONIC, access_end); */
+                /* #ifdef CUMULATIVE_TIMES */
                 /* sll_push(access_ends, access_end); */
+                /* #endif */
                 /* #endif */
 
                 /* if (accessible) { */
-                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    #ifdef DEBUG
+                    #ifdef CUMULATIVE_TIMES
                     struct timespec * set_start = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, set_start);
                     sll_push(set_starts, set_start);
+                    #endif
+                    #ifdef PER_THREAD_STATS
+                    clock_gettime(CLOCK_MONOTONIC, &set_start);
+                    #endif
                     #endif
                     qwork.level = next_level;
                     qwork.type[0] = 'd';
 
                     // this is how the parent gets passed on
                     qwork.pinode = passmywork->statuso.st_ino;
-                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    #ifdef DEBUG
+                    #ifdef CUMULATIVE_TIMES
                     struct timespec * set_end = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, set_end);
                     sll_push(set_ends, set_end);
                     #endif
+                    #ifdef PER_THREAD_STATS
+                    clock_gettime(CLOCK_MONOTONIC, &set_end);
+                    pthread_mutex_lock(&print_mutex);
+                    fprintf(stderr, "%zu set %" PRIu64 " %" PRIu64 "\n", id, timestamp(&set_start) - epoch, timestamp(&set_end) - epoch);
+                    pthread_mutex_unlock(&print_mutex);
+                    #endif
+                    #endif
 
-                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    #ifdef DEBUG
+                    #ifdef CUMULATIVE_TIMES
                     struct timespec * clone_start = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, clone_start);
                     sll_push(clone_starts, clone_start);
+                    #endif
+                    #ifdef PER_THREAD_STATS
+                    clock_gettime(CLOCK_MONOTONIC, &clone_start);
+                    #endif
                     #endif
 
                     // make a clone here so that the data can be pushed into the queue
@@ -572,23 +781,44 @@ static size_t descend2(struct QPTPool *ctx,
                     struct work * clone = (struct work *) malloc(sizeof(struct work));
                     memcpy(clone, &qwork, sizeof(struct work));
 
-                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    #ifdef DEBUG
+                    #ifdef CUMULATIVE_TIMES
                     struct timespec * clone_end = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, clone_end);
                     sll_push(clone_ends, clone_end);
                     #endif
+                    #ifdef PER_THREAD_STATS
+                    clock_gettime(CLOCK_MONOTONIC, &clone_end);
+                    pthread_mutex_lock(&print_mutex);
+                    fprintf(stderr, "%zu clone %" PRIu64 " %" PRIu64 "\n", id, timestamp(&clone_start) - epoch, timestamp(&clone_end) - epoch);
+                    pthread_mutex_unlock(&print_mutex);
+                    #endif
+                    #endif
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
-                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    #ifdef DEBUG
+                    #ifdef CUMULATIVE_TIMES
                     struct timespec * pushdir_start = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, pushdir_start);
                     sll_push(pushdir_starts, pushdir_start);
                     #endif
+                    #ifdef PER_THREAD_STATS
+                    clock_gettime(CLOCK_MONOTONIC, &pushdir_start);
+                    #endif
+                    #endif
                     QPTPool_enqueue(ctx, id, clone);
-                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    #ifdef DEBUG
+                    #ifdef CUMULATIVE_TIMES
                     struct timespec * pushdir_end = malloc(sizeof(struct timespec));
                     clock_gettime(CLOCK_MONOTONIC, pushdir_end);
                     sll_push(pushdir_ends, pushdir_end);
+                    #endif
+                    #ifdef PER_THREAD_STATS
+                    clock_gettime(CLOCK_MONOTONIC, &pushdir_end);
+                    pthread_mutex_lock(&print_mutex);
+                    fprintf(stderr, "%zu pushdir %" PRIu64 " %" PRIu64 "\n", id, timestamp(&pushdir_start) - epoch, timestamp(&pushdir_end) - epoch);
+                    pthread_mutex_unlock(&print_mutex);
+                    #endif
                     #endif
 
                     pushed++;
@@ -599,34 +829,63 @@ static size_t descend2(struct QPTPool *ctx,
                 /* } */
             }
             else {
-                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                #ifdef DEBUG
+                #ifdef CUMULATIVE_TIMES
                 struct timespec * isdir_branch_end = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, isdir_branch_end);
                 sll_push(isdir_branch_ends, isdir_branch_end);
+                #endif
+                #ifdef PER_THREAD_STATS
+                clock_gettime(CLOCK_MONOTONIC, &isdir_branch_end);
+                pthread_mutex_lock(&print_mutex);
+                fprintf(stderr, "%zu isdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&isdir_branch_start) - epoch, timestamp(&isdir_branch_end) - epoch);
+                pthread_mutex_unlock(&print_mutex);
+                #endif
                 #endif
             /*     fprintf(stderr, "not a dir '%s': %s\n", */
             /*             qwork->name, strerror(errno)); */
             }
 
-            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
             {
                 struct timespec * while_branch_start = malloc(sizeof(struct timespec));
                 clock_gettime(CLOCK_MONOTONIC, while_branch_start);
                 sll_push(while_branch_starts, while_branch_start);
             }
             #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
+            #endif
+            #endif
         }
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        #ifdef DEBUG
+        #ifdef CUMULATIVE_TIMES
         struct timespec * while_branch_end = malloc(sizeof(struct timespec));
         clock_gettime(CLOCK_MONOTONIC, while_branch_end);
         sll_push(while_branch_ends, while_branch_end);
         #endif
+        #ifdef PER_THREAD_STATS
+        clock_gettime(CLOCK_MONOTONIC, &while_branch_end);
+        pthread_mutex_lock(&print_mutex);
+        fprintf(stderr, "%zu while_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&while_branch_start) - epoch, timestamp(&while_branch_end) - epoch);
+        pthread_mutex_unlock(&print_mutex);
+        #endif
+        #endif
     }
     else {
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        #ifdef DEBUG
+        #ifdef CUMULATIVE_TIMES
         struct timespec * level_branch_end = malloc(sizeof(struct timespec));
         clock_gettime(CLOCK_MONOTONIC, level_branch_end);
         sll_push(level_branch_ends, level_branch_end);
+        #endif
+        #ifdef PER_THREAD_STATS
+        clock_gettime(CLOCK_MONOTONIC, &level_branch_end);
+        pthread_mutex_lock(&print_mutex);
+        fprintf(stderr, "%zu level_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&level_branch_start) - epoch, timestamp(&level_branch_end) - epoch);
+        pthread_mutex_unlock(&print_mutex);
+        #endif
         #endif
     }
 
@@ -755,7 +1014,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     char dbname[MAXSQL];
     SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     struct timespec opendir_start;
     struct timespec opendir_end;
     struct timespec open_start;
@@ -899,12 +1158,12 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     // open directory
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &opendir_start);
     #endif
     // keep opendir near opendb to help speed up sqlite3_open_v2
     dir = opendir(work->name);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &opendir_end);
     #endif
 
@@ -915,7 +1174,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     // if we have out db then we have that db open so we just attach the gufi db
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &open_start);
     #endif
     if (in.outdb > 0) {
@@ -923,7 +1182,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
       attachdb(dbname, db, "tree");
     } else {
       db = opendb2(dbname, 1, 0, 0
-                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                   #if defined(DEBUG)
                    , &sqlite3_open_start
                    , &sqlite3_open_end
                    , &create_tables_start
@@ -935,18 +1194,18 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                    #endif
           );
     }
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &open_end);
     #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_start);
     #endif
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
     if (db) {
         addqueryfuncs2(db, ctx);
     }
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_end);
     #endif
 
@@ -975,9 +1234,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     // so we have to go on and query summary and entries possibly
     if (recs > 0) {
         #ifdef DEBUG
-        #ifdef CUMULATIVE_TIMES
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
-        #endif
         #ifdef SUBDIRECTORY_COUNTS
         const size_t pushed =
         #endif
@@ -1020,12 +1277,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                  #endif
             );
         #ifdef DEBUG
-        #ifdef CUMULATIVE_TIMES
         clock_gettime(CLOCK_MONOTONIC, &descend_end);
-        #endif
         #ifdef SUBDIRECTORY_COUNTS
         {
-            static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
             pthread_mutex_lock(&print_mutex);
             fprintf(stderr, "%s %zu\n", work->name, pushed);
             pthread_mutex_unlock(&print_mutex);
@@ -1061,7 +1315,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                 // if we have recs (or are running an OR) query the entries table
                 if (recs > 0) {
                     if (in.sqlent_len > 1) {
-                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                         #if defined(DEBUG)
                          clock_gettime(CLOCK_MONOTONIC, &attach_start);
                          #endif
                          if (in.aggregate_or_print == AGGREGATE) {
@@ -1074,7 +1328,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                                  goto out_dir;
                              }
                          }
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &attach_end);
                         #endif
                         // set the path so users can put path() in their queries
@@ -1087,7 +1341,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         ca.output_buffers = &ta->output_buffers;
                         ca.id = id;
 
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
                         #endif
                         char *err = NULL;
@@ -1095,11 +1349,11 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                             fprintf(stderr, "Error: %s: %s\n", err, dbname);
                             sqlite3_free(err);
                         }
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         #endif
 
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &detach_start);
                         #endif
                         if (in.aggregate_or_print == AGGREGATE) {
@@ -1109,7 +1363,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                                 goto out_dir;
                             }
                         }
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &detach_end);
                         #endif
 
@@ -1129,7 +1383,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     // if we have an out db we just detach gufi db
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &close_start);
     #endif
     if (in.outdb > 0) {
@@ -1137,7 +1391,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     } else {
       closedb(db);
     }
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &close_end);
     #endif
 
@@ -1145,40 +1399,39 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     ;
 
     // close dir
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &closedir_start);
     #endif
     closedir(dir);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &closedir_end);
     #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &utime_start);
     #endif
     // restore mtime and atime
     if (in.keep_matime) {
         utime(dbname, &dbtime);
     }
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &utime_end);
     #endif
 
   out_free:
     ;
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &free_work_start);
     #endif
     free(work);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     clock_gettime(CLOCK_MONOTONIC, &free_work_end);
     #endif
 
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     {
-        static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&print_mutex);
         total_opendir_time           += elapsed(&opendir_start, &opendir_end);
         total_open_time              += elapsed(&open_start, &open_end);
@@ -1250,37 +1503,20 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
 
     #ifdef PER_THREAD_STATS
     {
-        static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&print_mutex);
-        fprintf(stderr, "%zu ", id);
-        fprintf(stderr, "%s ", work->name);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&opendir_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&opendir_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&open_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&open_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&sqlite3_open_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&sqlite3_open_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&create_tables_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&create_tables_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&set_pragmas_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&set_pragmas_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&load_extension_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&load_extension_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&addqueryfuncs_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&addqueryfuncs_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&descend_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&descend_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&attach_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&exec_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&exec_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&detach_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&detach_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&close_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&close_end) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&closedir_start) - epoch);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&closedir_end) - epoch);
-        fprintf(stderr, "\n");
+        fprintf(stderr, "%zu opendir %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&opendir_start) - epoch, timestamp(&opendir_end) - epoch);
+        fprintf(stderr, "%zu opendb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&open_start) - epoch, timestamp(&open_end) - epoch);
+        fprintf(stderr, "%zu sqlite3_open_v2 %" PRIu64 " %" PRIu64 "\n", id, timestamp(&sqlite3_open_start) - epoch, timestamp(&sqlite3_open_end) - epoch);
+        fprintf(stderr, "%zu create_tables %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&create_tables_start) - epoch, timestamp(&create_tables_end) - epoch);
+        fprintf(stderr, "%zu set_pragmas %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&set_pragmas_start) - epoch, timestamp(&set_pragmas_end) - epoch);
+        fprintf(stderr, "%zu load_extensions %" PRIu64 " %" PRIu64 "\n", id, timestamp(&load_extension_start) - epoch, timestamp(&load_extension_end) - epoch);
+        fprintf(stderr, "%zu addqueryfuncs %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&addqueryfuncs_start) - epoch, timestamp(&addqueryfuncs_end) - epoch);
+        fprintf(stderr, "%zu descend %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&descend_start) - epoch, timestamp(&descend_end) - epoch);
+        fprintf(stderr, "%zu attach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&attach_start) - epoch, timestamp(&attach_end) - epoch);
+        fprintf(stderr, "%zu sqlite3_exec %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&exec_start) - epoch, timestamp(&exec_end) - epoch);
+        fprintf(stderr, "%zu detach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&detach_start) - epoch, timestamp(&detach_end) - epoch);
+        fprintf(stderr, "%zu closedb %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&close_start) - epoch, timestamp(&close_end) - epoch);
+        fprintf(stderr, "%zu closedir %"        PRIu64 " %" PRIu64 "\n", id, timestamp(&closedir_start) - epoch, timestamp(&closedir_end) - epoch);
         pthread_mutex_unlock(&print_mutex);
     }
     #endif
@@ -1303,12 +1539,12 @@ static void cleanup_intermediates(sqlite3 **intermediates, const size_t count) {
 
 int main(int argc, char *argv[])
 {
-    #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+    #if defined(DEBUG) || BENCHMARK
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG)
     epoch = timestamp(&start);
     #endif
 
@@ -1416,13 +1652,13 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        // check access(2) here since it's only called a few times
-        if (access(mywork->name, R_OK | X_OK)) {
-            fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                    mywork->name, strerror(errno));
-            free(mywork);
-            continue;
-        }
+        /* // check access(2) here since it's only called a few times */
+        /* if (access(mywork->name, R_OK | X_OK)) { */
+        /*     fprintf(stderr, "couldn't access input dir '%s': %s\n", */
+        /*             mywork->name, strerror(errno)); */
+        /*     free(mywork); */
+        /*     continue; */
+        /* } */
 
         // push the path onto the queue
         QPTPool_enqueue(pool, i % in.maxthreads, mywork);

@@ -90,18 +90,13 @@ if (CUMULATIVE_TIMES)
 endif()
 
 # Timestamps showing what each thread is doing
-if (PER_THREAD_TIMESTAMPS)
-  add_definitions(-DPER_THREAD_TIMESTAMPS=1)
+if (PER_THREAD_STATS)
+  add_definitions(-DPER_THREAD_STATS=1)
 endif()
 
 # print subdirectory counts
 if (SUBDIRECTORY_COUNTS)
   add_definitions(-DSUBDIRECTORY_COUNTS=1)
-endif()
-
-# QueuePerThread debug timestamps
-if (QPTPOOL_TIMESTAMPS)
-  add_definitions(-DQPTPOOL_TIMESTAMPS=1)
 endif()
 
 # QueuePerThread queue size
