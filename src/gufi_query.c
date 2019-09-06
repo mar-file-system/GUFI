@@ -327,8 +327,8 @@ static size_t descend2(struct QPTPool *ctx,
     struct timespec isdir_end;
     struct timespec isdir_branch_start;
     struct timespec isdir_branch_end;
-    struct timespec access_start;
-    struct timespec access_end;
+    /* struct timespec access_start; */
+    /* struct timespec access_end; */
     struct timespec set_start;
     struct timespec set_end;
     struct timespec clone_start;
@@ -655,19 +655,30 @@ static size_t descend2(struct QPTPool *ctx,
             #endif
             #endif
 
-            /* #ifdef DEBUG */
-            /* struct timespec * lstat_start = malloc(sizeof(struct timespec)); */
-            /* clock_gettime(CLOCK_MONOTONIC, lstat_start); */
-            /* sll_push(lstat_starts, lstat_start); */
-            /* #endif */
-            /* #endif */
-            /* lstat(qwork.name, &qwork.statuso); */
-            /* #ifdef DEBUG */
-            /* struct timespec * lstat_end = malloc(sizeof(struct timespec)); */
-            /* clock_gettime(CLOCK_MONOTONIC, lstat_end); */
-            /* sll_push(lstat_ends, lstat_end); */
-            /* #endif */
-            /* #endif */
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
+            struct timespec * lstat_start = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, lstat_start);
+            sll_push(lstat_starts, lstat_start);
+            #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &lstat_start);
+            #endif
+            #endif
+            lstat(qwork.name, &qwork.statuso);
+            #ifdef DEBUG
+            #ifdef CUMULATIVE_TIMES
+            struct timespec * lstat_end = malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_MONOTONIC, lstat_end);
+            sll_push(lstat_ends, lstat_end);
+            #endif
+            #ifdef PER_THREAD_STATS
+            clock_gettime(CLOCK_MONOTONIC, &lstat_end);
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stderr, "%zu lstat %" PRIu64 " %" PRIu64 "\n", id, timestamp(&lstat_start) - epoch, timestamp(&lstat_end) - epoch);
+            pthread_mutex_unlock(&print_mutex);
+            #endif
+            #endif
 
             #ifdef DEBUG
             #ifdef CUMULATIVE_TIMES

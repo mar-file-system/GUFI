@@ -328,7 +328,16 @@ static void * worker_function(void *args) {
     clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_start);
     #endif
     for(size_t i = 0; i < ctx->size; i++) {
+        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+        struct timespec wf_dowork_start;
+        clock_gettime(CLOCK_MONOTONIC, &wf_dowork_start);
+        #endif
         pthread_cond_broadcast(&ctx->data[i].cv);
+        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+        struct timespec wf_dowork_end;
+        clock_gettime(CLOCK_MONOTONIC, &wf_dowork_end);
+        fprintf(stderr, "%zu wf_dowork %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_dowork_start) - epoch, timestamp(&wf_dowork_end) - epoch);
+        #endif
     }
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec wf_broadcast_end;
