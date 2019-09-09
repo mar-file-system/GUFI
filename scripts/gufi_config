@@ -122,7 +122,10 @@ def read(f):
     return out
 
 def read_filename(filename):
-    return read(open(filename, 'r'))
+    try:
+        return read(open(filename, 'r'))
+    except:
+        return None
 
 if __name__=='__main__':
     # assumes paramiko was installed in the same directory as the executables
