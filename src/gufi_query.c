@@ -690,8 +690,8 @@ static size_t descend2(struct QPTPool *ctx,
             clock_gettime(CLOCK_MONOTONIC, &isdir_start);
             #endif
             #endif
-            const int isdir = (entry->d_type == DT_DIR);
-            /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
+            /* const int isdir = (entry->d_type == DT_DIR); */
+            const int isdir = S_ISDIR(qwork.statuso.st_mode);
             #ifdef DEBUG
             #ifdef CUMULATIVE_TIMES
             struct timespec * isdir_end = malloc(sizeof(struct timespec));
@@ -959,7 +959,7 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         const size_t capacity = ca->output_buffers->buffers[id].capacity;
 
         /* if the row can fit within an empty buffer, try to add the row to previously buffered rows */
-        if (row_len <= capacity) {
+        if (row_len < capacity) {
             /* if there's not enough space in the buffer to fit the new row, flush it first */
             if ((ca->output_buffers->buffers[id].filled + row_len) > capacity) {
                 flush_buffer(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
@@ -1105,7 +1105,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&addqueryfuncs_end, 0, sizeof(struct timespec));
     memset(&descend_start, 0, sizeof(struct timespec));
     memset(&descend_end, 0, sizeof(struct timespec));
-
     sll_init(&check_args_starts);
     sll_init(&check_args_ends);
     sll_init(&level_starts);
@@ -1138,7 +1137,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     sll_init(&clone_ends);
     sll_init(&pushdir_starts);
     sll_init(&pushdir_ends);
-
     memset(&attach_start, 0, sizeof(struct timespec));
     memset(&attach_end, 0, sizeof(struct timespec));
     memset(&exec_start, 0, sizeof(struct timespec));
@@ -1154,19 +1152,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&free_work_start, 0, sizeof(struct timespec));
     memset(&free_work_end, 0, sizeof(struct timespec));
     #endif
-
-    // keep track of the mtime and atime
-    struct utimbuf dbtime = {};
-    if (in.keep_matime) {
-        struct stat st;
-        if (lstat(dbname, &st) != 0) {
-            perror("stat");
-            goto out_free;
-        }
-
-        dbtime.actime  = st.st_atime;
-        dbtime.modtime = st.st_mtime;
-    }
 
     // open directory
     #if defined(DEBUG)
@@ -1290,11 +1275,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         #ifdef DEBUG
         clock_gettime(CLOCK_MONOTONIC, &descend_end);
         #ifdef SUBDIRECTORY_COUNTS
-        {
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%s %zu\n", work->name, pushed);
-            pthread_mutex_unlock(&print_mutex);
-        }
+        pthread_mutex_lock(&print_mutex);
+        fprintf(stderr, "%s %zu\n", work->name, pushed);
+        pthread_mutex_unlock(&print_mutex);
         #endif
         #endif
 
@@ -1423,6 +1406,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     #endif
     // restore mtime and atime
     if (in.keep_matime) {
+        struct utimbuf dbtime = {};
+        dbtime.actime  = work->statuso.st_atime;
+        dbtime.modtime = work->statuso.st_mtime;
         utime(dbname, &dbtime);
     }
     #if defined(DEBUG)
@@ -1442,94 +1428,91 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
 
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
-    {
-        pthread_mutex_lock(&print_mutex);
-        total_opendir_time           += elapsed(&opendir_start, &opendir_end);
-        total_open_time              += elapsed(&open_start, &open_end);
-        total_sqlite3_open_time      += elapsed(&sqlite3_open_start, &sqlite3_open_end);
-        total_create_tables_time     += elapsed(&create_tables_start, &create_tables_end);
-        total_set_pragmas_time       += elapsed(&set_pragmas_start, &set_pragmas_end);
-        total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
-        total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
-        total_descend_time           += elapsed(&descend_start, &descend_end);
-        total_check_args_time        += sll_loop_sum(&check_args_starts, &check_args_ends);
-        total_level_time             += sll_loop_sum(&level_starts, &level_ends);
-        total_level_branch_time      += sll_loop_sum(&level_branch_starts, &level_branch_ends);
-        total_while_branch_time      += sll_loop_sum(&while_branch_starts, &while_branch_ends);
-        total_readdir_time           += sll_loop_sum(&readdir_starts, &readdir_ends);
-        total_readdir_branch_time    += sll_loop_sum(&readdir_branch_starts, &readdir_branch_ends);
-        total_strncmp_time           += sll_loop_sum(&strncmp_starts, &strncmp_ends);
-        total_strncmp_branch_time    += sll_loop_sum(&strncmp_branch_starts, &strncmp_branch_ends);
-        total_snprintf_time          += sll_loop_sum(&snprintf_starts, &snprintf_ends);
-        total_lstat_time             += sll_loop_sum(&lstat_starts, &lstat_ends);
-        total_isdir_time             += sll_loop_sum(&isdir_starts, &isdir_ends);
-        total_isdir_branch_time      += sll_loop_sum(&isdir_branch_starts, &isdir_branch_ends);
-        total_access_time            += sll_loop_sum(&access_starts, &access_ends);
-        total_set_time               += sll_loop_sum(&set_starts, &set_ends);
-        total_clone_time             += sll_loop_sum(&clone_starts, &clone_ends);
-        total_pushdir_time           += sll_loop_sum(&pushdir_starts, &pushdir_ends);
-        total_closedir_time          += elapsed(&closedir_start, &closedir_end);
-        total_attach_time            += elapsed(&attach_start, &attach_end);
-        total_exec_time              += elapsed(&exec_start, &exec_end);
-        total_detach_time            += elapsed(&detach_start, &detach_end);
-        total_close_time             += elapsed(&close_start, &close_end);
-        total_utime_time             += elapsed(&utime_start, &utime_end);
-        total_free_work_time         += elapsed(&free_work_start, &free_work_end);
-        pthread_mutex_unlock(&print_mutex);
+    pthread_mutex_lock(&print_mutex);
+    total_opendir_time           += elapsed(&opendir_start, &opendir_end);
+    total_open_time += elapsed(&open_start, &open_end);
+    total_sqlite3_open_time      += elapsed(&sqlite3_open_start, &sqlite3_open_end);
+    total_create_tables_time     += elapsed(&create_tables_start, &create_tables_end);
+    total_set_pragmas_time       += elapsed(&set_pragmas_start, &set_pragmas_end);
+    total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
+    total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
+    total_descend_time           += elapsed(&descend_start, &descend_end);
+    total_check_args_time        += sll_loop_sum(&check_args_starts, &check_args_ends);
+    total_level_time             += sll_loop_sum(&level_starts, &level_ends);
+    total_level_branch_time      += sll_loop_sum(&level_branch_starts, &level_branch_ends);
+    total_while_branch_time      += sll_loop_sum(&while_branch_starts, &while_branch_ends);
+    total_readdir_time           += sll_loop_sum(&readdir_starts, &readdir_ends);
+    total_readdir_branch_time    += sll_loop_sum(&readdir_branch_starts, &readdir_branch_ends);
+    total_strncmp_time           += sll_loop_sum(&strncmp_starts, &strncmp_ends);
+    total_strncmp_branch_time    += sll_loop_sum(&strncmp_branch_starts, &strncmp_branch_ends);
+    total_snprintf_time          += sll_loop_sum(&snprintf_starts, &snprintf_ends);
+    total_lstat_time             += sll_loop_sum(&lstat_starts, &lstat_ends);
+    total_isdir_time             += sll_loop_sum(&isdir_starts, &isdir_ends);
+    total_isdir_branch_time      += sll_loop_sum(&isdir_branch_starts, &isdir_branch_ends);
+    total_access_time            += sll_loop_sum(&access_starts, &access_ends);
+    total_set_time               += sll_loop_sum(&set_starts, &set_ends);
+    total_clone_time             += sll_loop_sum(&clone_starts, &clone_ends);
+    total_pushdir_time           += sll_loop_sum(&pushdir_starts, &pushdir_ends);
+    total_closedir_time          += elapsed(&closedir_start, &closedir_end);
+    total_attach_time            += elapsed(&attach_start, &attach_end);
+    total_exec_time              += elapsed(&exec_start, &exec_end);
+    total_detach_time            += elapsed(&detach_start, &detach_end);
+    total_close_time             += elapsed(&close_start, &close_end);
+    total_utime_time             += elapsed(&utime_start, &utime_end);
+    total_free_work_time         += elapsed(&free_work_start, &free_work_end);
+    pthread_mutex_unlock(&print_mutex);
 
-        sll_destroy(&check_args_starts);
-        sll_destroy(&check_args_ends);
-        sll_destroy(&level_starts);
-        sll_destroy(&level_ends);
-        sll_destroy(&level_branch_starts);
-        sll_destroy(&level_branch_ends);
-        sll_destroy(&while_branch_starts);
-        sll_destroy(&while_branch_ends);
-        sll_destroy(&readdir_starts);
-        sll_destroy(&readdir_ends);
-        sll_destroy(&readdir_branch_starts);
-        sll_destroy(&readdir_branch_ends);
-        sll_destroy(&strncmp_starts);
-        sll_destroy(&strncmp_ends);
-        sll_destroy(&strncmp_branch_starts);
-        sll_destroy(&strncmp_branch_ends);
-        sll_destroy(&snprintf_starts);
-        sll_destroy(&snprintf_ends);
-        sll_destroy(&lstat_starts);
-        sll_destroy(&lstat_ends);
-        sll_destroy(&isdir_starts);
-        sll_destroy(&isdir_ends);
-        sll_destroy(&isdir_branch_starts);
-        sll_destroy(&isdir_branch_ends);
-        sll_destroy(&access_starts);
-        sll_destroy(&access_ends);
-        sll_destroy(&set_starts);
-        sll_destroy(&set_ends);
-        sll_destroy(&clone_starts);
-        sll_destroy(&clone_ends);
-        sll_destroy(&pushdir_starts);
-        sll_destroy(&pushdir_ends);
-    }
+    sll_destroy(&check_args_starts);
+    sll_destroy(&check_args_ends);
+    sll_destroy(&level_starts);
+    sll_destroy(&level_ends);
+    sll_destroy(&level_branch_starts);
+    sll_destroy(&level_branch_ends);
+    sll_destroy(&while_branch_starts);
+    sll_destroy(&while_branch_ends);
+    sll_destroy(&readdir_starts);
+    sll_destroy(&readdir_ends);
+    sll_destroy(&readdir_branch_starts);
+    sll_destroy(&readdir_branch_ends);
+    sll_destroy(&strncmp_starts);
+    sll_destroy(&strncmp_ends);
+    sll_destroy(&strncmp_branch_starts);
+    sll_destroy(&strncmp_branch_ends);
+    sll_destroy(&snprintf_starts);
+    sll_destroy(&snprintf_ends);
+    sll_destroy(&lstat_starts);
+    sll_destroy(&lstat_ends);
+    sll_destroy(&isdir_starts);
+    sll_destroy(&isdir_ends);
+    sll_destroy(&isdir_branch_starts);
+    sll_destroy(&isdir_branch_ends);
+    sll_destroy(&access_starts);
+    sll_destroy(&access_ends);
+    sll_destroy(&set_starts);
+    sll_destroy(&set_ends);
+    sll_destroy(&clone_starts);
+    sll_destroy(&clone_ends);
+    sll_destroy(&pushdir_starts);
+    sll_destroy(&pushdir_ends);
     #endif
 
     #ifdef PER_THREAD_STATS
-    {
-        pthread_mutex_lock(&print_mutex);
-        fprintf(stderr, "%zu opendir %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&opendir_start) - epoch, timestamp(&opendir_end) - epoch);
-        fprintf(stderr, "%zu opendb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&open_start) - epoch, timestamp(&open_end) - epoch);
-        fprintf(stderr, "%zu sqlite3_open_v2 %" PRIu64 " %" PRIu64 "\n", id, timestamp(&sqlite3_open_start) - epoch, timestamp(&sqlite3_open_end) - epoch);
-        fprintf(stderr, "%zu create_tables %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&create_tables_start) - epoch, timestamp(&create_tables_end) - epoch);
-        fprintf(stderr, "%zu set_pragmas %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&set_pragmas_start) - epoch, timestamp(&set_pragmas_end) - epoch);
-        fprintf(stderr, "%zu load_extensions %" PRIu64 " %" PRIu64 "\n", id, timestamp(&load_extension_start) - epoch, timestamp(&load_extension_end) - epoch);
-        fprintf(stderr, "%zu addqueryfuncs %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&addqueryfuncs_start) - epoch, timestamp(&addqueryfuncs_end) - epoch);
-        fprintf(stderr, "%zu descend %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&descend_start) - epoch, timestamp(&descend_end) - epoch);
-        fprintf(stderr, "%zu attach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&attach_start) - epoch, timestamp(&attach_end) - epoch);
-        fprintf(stderr, "%zu sqlite3_exec %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&exec_start) - epoch, timestamp(&exec_end) - epoch);
-        fprintf(stderr, "%zu detach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&detach_start) - epoch, timestamp(&detach_end) - epoch);
-        fprintf(stderr, "%zu closedb %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&close_start) - epoch, timestamp(&close_end) - epoch);
-        fprintf(stderr, "%zu closedir %"        PRIu64 " %" PRIu64 "\n", id, timestamp(&closedir_start) - epoch, timestamp(&closedir_end) - epoch);
-        pthread_mutex_unlock(&print_mutex);
-    }
+    pthread_mutex_lock(&print_mutex);
+    fprintf(stderr, "%zu opendir %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&opendir_start) - epoch, timestamp(&opendir_end) - epoch);
+    fprintf(stderr, "%zu opendb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&open_start) - epoch, timestamp(&open_end) - epoch);
+    fprintf(stderr, "%zu sqlite3_open_v2 %" PRIu64 " %" PRIu64 "\n", id, timestamp(&sqlite3_open_start) - epoch, timestamp(&sqlite3_open_end) - epoch);
+    fprintf(stderr, "%zu create_tables %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&create_tables_start) - epoch, timestamp(&create_tables_end) - epoch);
+    fprintf(stderr, "%zu set_pragmas %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&set_pragmas_start) - epoch, timestamp(&set_pragmas_end) - epoch);
+    fprintf(stderr, "%zu load_extensions %" PRIu64 " %" PRIu64 "\n", id, timestamp(&load_extension_start) - epoch, timestamp(&load_extension_end) - epoch);
+    fprintf(stderr, "%zu addqueryfuncs %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&addqueryfuncs_start) - epoch, timestamp(&addqueryfuncs_end) - epoch);
+    fprintf(stderr, "%zu descend %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&descend_start) - epoch, timestamp(&descend_end) - epoch);
+    fprintf(stderr, "%zu attach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&attach_start) - epoch, timestamp(&attach_end) - epoch);
+    fprintf(stderr, "%zu sqlite3_exec %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&exec_start) - epoch, timestamp(&exec_end) - epoch);
+    fprintf(stderr, "%zu detach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&detach_start) - epoch, timestamp(&detach_end) - epoch);
+    fprintf(stderr, "%zu closedb %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&close_start) - epoch, timestamp(&close_end) - epoch);
+    fprintf(stderr, "%zu closedir %"        PRIu64 " %" PRIu64 "\n", id, timestamp(&closedir_start) - epoch, timestamp(&closedir_end) - epoch);
+    fprintf(stderr, "%zu utime %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&utime_start) - epoch, timestamp(&utime_end) - epoch);
+    pthread_mutex_unlock(&print_mutex);
     #endif
     #endif
 
@@ -1663,14 +1646,6 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        /* // check access(2) here since it's only called a few times */
-        /* if (access(mywork->name, R_OK | X_OK)) { */
-        /*     fprintf(stderr, "couldn't access input dir '%s': %s\n", */
-        /*             mywork->name, strerror(errno)); */
-        /*     free(mywork); */
-        /*     continue; */
-        /* } */
-
         // push the path onto the queue
         QPTPool_enqueue(pool, i % in.maxthreads, mywork);
     }
@@ -1735,7 +1710,7 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &cleanup_start);
         #endif
 
-        // cleanup the intermediate databases outside of the timing (no need to detach)
+        // cleanup the intermediate databases (no need to detach)
         cleanup_intermediates(intermediates, in.maxthreads);
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
