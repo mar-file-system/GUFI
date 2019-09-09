@@ -395,6 +395,9 @@ if __name__=='__main__':
     parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',           type=gufi_common.get_non_negative,                              help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
     parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',           type=gufi_common.get_non_negative,                              help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
 
+    # GNU find optional arguments
+    parser.add_argument('GUFI_tree',                                                            type=str, nargs='*',                                            help='top-most directory to search from')
+
     # GUFI specific arguments
     parser.add_argument('--select',            metavar='cols',       dest='select',             action='append', nargs='*',                                     help='comma separated columns (default: path/name)')
     parser.add_argument('--group_by',          metavar='cols',       dest='group_by',           type=str,                                                       help='comma separated columns (default: None)')
@@ -403,21 +406,35 @@ if __name__=='__main__':
     parser.add_argument('--num_results',       metavar='n',          dest='num_results',        type=gufi_common.get_non_negative,                              help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',           action='store_true',                                            help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',            action='store_true',                                            help='top n largest files')
-    parser.add_argument('--threads', '-t',     metavar='n',          dest='threads',            type=gufi_common.get_positive, default=gufi_common.cpus(),      help='number of threads')
+    parser.add_argument('--threads', '-t',     metavar='n',          dest='threads',            type=gufi_common.get_positive,                                  help='number of threads')
     parser.add_argument('--aggregate',                               dest='aggregate',          action='store_true',                                            help='Aggregate results before printing')
+    parser.add_argument('--exec',                                    dest='query_exec',                                                                         help='Location of gufi_query executable')
     parser.add_argument('--output',                                  dest='output',             type=str,                                                       help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',      type=gufi_common.get_positive, default=4096,                    help='Size of each thread\'s output buffer')
     parser.add_argument('--config',                                                             type=str, default=gufi_config.DEFAULT_CONFIG_PATH,              help='Configuration file name')
 
     args = parser.parse_args();
 
+    # command line arguments override configuration file values (logic is inverted)
     config = gufi_config.read_filename(args.config)
-    args.threads = config['Threads']
-    args.query_exec = config['bfq']
-    args.root = [config['DefaultPath']]
+    if not args.threads :
+        if 'Threads' in config:
+            args.threads = config['Threads']
+        else:
+            raise exceptions.Exception('Missing thread count.')
+    if not args.query_exec:
+        if 'bfq' in config:
+            args.query_exec = config['bfq']
+        else:
+            raise exceptions.Exception('Missing gufi_query location.')
+    if not args.GUFI_tree:
+        if 'DefaultPath' in config:
+            args.GUFI_tree = [config['DefaultPath']]
+        else:
+            raise exceptions.Exception('Missing default path argument.')
 
     # create the find command
-    find = gufi_common.find_dir(args.root, [os.path.normpath(path) for path in args.path], [os.path.normpath(path) for path in args.wholename])
+    find = gufi_common.find_dir(args.GUFI_tree, [os.path.normpath(path) for path in args.path], [os.path.normpath(path) for path in args.wholename])
     find_out, find_err = find.communicate()
 
     # check for data in stdout, not the return code of find
@@ -427,7 +444,7 @@ if __name__=='__main__':
             sys.stderr.write('Error: find returned: {}\n{}\n'.format(os.strerror(find.returncode), find_err))
         # otherwise, nothing was found
         else:
-            sys.stderr.write('Error: No directories found while searching in "{}" for "{}"\n'.format(';'.join(args.root), ' '.join([os.path.normpath(path) for path in args.path] + [os.path.normpath(path) for path in args.wholename])))
+            sys.stderr.write('Error: No directories found while searching in "{}" for "{}"\n'.format(';'.join(args.GUFI_tree), ' '.join([os.path.normpath(path) for path in args.path] + [os.path.normpath(path) for path in args.wholename])))
         sys.exit(find.returncode)
     # if there is data and errors, ignore the errors
 

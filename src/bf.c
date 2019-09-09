@@ -245,7 +245,7 @@ int parse_cmd_line(int         argc,
    memset(in->sqlent,       0, MAXSQL);
    memset(in->intermediate, 0, MAXSQL);
    memset(in->aggregate,    0, MAXSQL);
-   in->aggregate_or_print = AGGREGATE; // aggregate by default
+   in->aggregate_or_print = PRINT;     // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
 
    int show   = 0;
@@ -448,6 +448,14 @@ int parse_cmd_line(int         argc,
          retval = -1;
          fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
       };
+   }
+
+   // aggregating requires 2 more SQL queries
+   if (in->aggregate_or_print == AGGREGATE) {
+       if (!strlen(in->aggregate) || !strlen(in->intermediate)) {
+           retval = -1;
+           return retval;
+       }
    }
 
    // if there were no other errors,

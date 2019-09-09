@@ -1174,7 +1174,7 @@ int main(int argc, char *argv[])
     }
 
     // provide a function to print if PRINT is set
-    args.print_callback_func = (((in.aggregate_or_print == PRINT) && in.printdir)?print_callback:NULL);
+    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
     if (QPTPool_start(pool, 0, processdir, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;

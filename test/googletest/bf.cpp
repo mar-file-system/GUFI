@@ -170,7 +170,7 @@ TEST(parse_cmd_line, positional) {
     EXPECT_EQ(in.max_level,          (size_t) -1);
     EXPECT_STREQ(in.intermediate,    "");
     EXPECT_STREQ(in.aggregate,       "");
-    EXPECT_EQ(in.aggregate_or_print, AGGREGATE);
+    EXPECT_EQ(in.aggregate_or_print, PRINT);
 }
 
 TEST(INSTALL_STR, good) {
