@@ -984,8 +984,8 @@ static int print_callback(void * args, int count, char **data, char **columns) {
             for(int i = 0; i < count; i++) {
                 fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
                 fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
-                fwrite("\n", sizeof(char), 1, gts.outfd[id]);
             }
+            fwrite("\n", sizeof(char), 1, gts.outfd[id]);
         }
 
         free(lens);
