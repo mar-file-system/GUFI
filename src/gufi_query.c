@@ -379,12 +379,10 @@ static size_t descend2(struct QPTPool *ctx,
     sll_push(check_args_ends, check_args_end);
     #endif
     #ifdef PER_THREAD_STATS
-    {
-        clock_gettime(CLOCK_MONOTONIC, &check_args_end);
-        pthread_mutex_lock(&print_mutex);
-        fprintf(stderr, "%zu check_args %" PRIu64 " %" PRIu64 "\n", id, timestamp(&check_args_start) - epoch, timestamp(&check_args_end) - epoch);
-        pthread_mutex_unlock(&print_mutex);
-    }
+    clock_gettime(CLOCK_MONOTONIC, &check_args_end);
+    pthread_mutex_lock(&print_mutex);
+    fprintf(stderr, "%zu check_args %" PRIu64 " %" PRIu64 "\n", id, timestamp(&check_args_start) - epoch, timestamp(&check_args_end) - epoch);
+    pthread_mutex_unlock(&print_mutex);
     #endif
     #endif
 
@@ -1495,7 +1493,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     sll_destroy(&pushdir_starts);
     sll_destroy(&pushdir_ends);
     #endif
-
     #ifdef PER_THREAD_STATS
     pthread_mutex_lock(&print_mutex);
     fprintf(stderr, "%zu opendir %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&opendir_start) - epoch, timestamp(&opendir_end) - epoch);

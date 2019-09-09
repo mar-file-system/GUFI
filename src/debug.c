@@ -2,7 +2,7 @@
 
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-uint64_t epoch;
+uint64_t epoch = 0;
 
 uint64_t timestamp(struct timespec * ts) {
     uint64_t ns = ts->tv_sec;

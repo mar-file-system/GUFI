@@ -89,7 +89,6 @@ OF SUCH DAMAGE.
 #include <sched.h>
 #include <stdlib.h>
 
-
 struct QPTPool * QPTPool_init(const size_t threads) {
     if (!threads) {
         return NULL;
@@ -150,8 +149,6 @@ struct worker_function_args {
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 #include <stdio.h>
 static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-extern uint64_t epoch;
 #endif
 
 static void * worker_function(void *args) {
@@ -328,20 +325,12 @@ static void * worker_function(void *args) {
     clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_start);
     #endif
     for(size_t i = 0; i < ctx->size; i++) {
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_dowork_start;
-        clock_gettime(CLOCK_MONOTONIC, &wf_dowork_start);
-        #endif
         pthread_cond_broadcast(&ctx->data[i].cv);
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_dowork_end;
-        clock_gettime(CLOCK_MONOTONIC, &wf_dowork_end);
-        fprintf(stderr, "%zu wf_dowork %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_dowork_start) - epoch, timestamp(&wf_dowork_end) - epoch);
-        #endif
     }
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec wf_broadcast_end;
     clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_end);
+    fprintf(stderr, "%zu wf_broadcast %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_broadcast_start) - epoch, timestamp(&wf_broadcast_end) - epoch);
     #endif
 
     free(args);
