@@ -413,25 +413,7 @@ if __name__=='__main__':
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',      type=gufi_common.get_positive, default=4096,                    help='Size of each thread\'s output buffer')
     parser.add_argument('--config',                                                             type=str, default=gufi_config.DEFAULT_CONFIG_PATH,              help='Configuration file name')
 
-    args = parser.parse_args();
-
-    # command line arguments override configuration file values (logic is inverted)
-    config = gufi_config.read_filename(args.config)
-    if not args.threads :
-        if 'Threads' in config:
-            args.threads = config['Threads']
-        else:
-            raise exceptions.Exception('Missing thread count.')
-    if not args.query_exec:
-        if 'bfq' in config:
-            args.query_exec = config['bfq']
-        else:
-            raise exceptions.Exception('Missing gufi_query location.')
-    if not args.GUFI_tree:
-        if 'DefaultPath' in config:
-            args.GUFI_tree = [config['DefaultPath']]
-        else:
-            raise exceptions.Exception('Missing default path argument.')
+    args = gufi_config.cli_over_config(parser.parse_args());
 
     # create the find command
     find = gufi_common.find_dir(args.GUFI_tree, [os.path.normpath(path) for path in args.path], [os.path.normpath(path) for path in args.wholename])

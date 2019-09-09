@@ -223,25 +223,7 @@ if __name__=='__main__':
     parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),                     help='operation to perform')
     parser.add_argument('GUFI_tree',                                              nargs='*',                                                      help='path containing GUFI tree database files')
 
-    args = parser.parse_args();
-
-    # command line arguments override configuration file values (logic is inverted)
-    config = gufi_config.read_filename(args.config)
-    if not args.threads :
-        if 'Threads' in config:
-            args.threads = config['Threads']
-        else:
-            raise exceptions.Exception('Missing thread count.')
-    if not args.query_exec:
-        if 'bfq' in config:
-            args.query_exec = config['bfq']
-        else:
-            raise exceptions.Exception('Missing gufi_query location.')
-    if not args.GUFI_tree:
-        if 'DefaultPath' in config:
-            args.root = [config['DefaultPath']]
-        else:
-            raise exceptions.Exception('Missing default path argument.')
+    args = gufi_config.cli_over_config(parser.parse_args());
 
     if args.order:
         args.order = ORDER[args.order]

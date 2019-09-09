@@ -73,6 +73,7 @@
 # OF SUCH DAMAGE.
 
 import argparse
+import exceptions
 import imp
 import os
 
@@ -126,6 +127,26 @@ def read_filename(filename):
         return read(open(filename, 'r'))
     except:
         return None
+
+# command line arguments override configuration file values (logic is inverted)
+def cli_over_config(args):
+    config = read_filename(args.config)
+    if not args.threads:
+        if config and ('Threads' in config):
+            args.threads = config['Threads']
+        else:
+            raise exceptions.Exception('Missing thread count (--threads).')
+    if not args.query_exec:
+        if config and ('bfq' in config):
+            args.query_exec = config['bfq']
+        else:
+            raise exceptions.Exception('Missing gufi_query location (--exec).')
+    if not args.GUFI_tree:
+        if config and ('DefaultPath' in config):
+            args.GUFI_tree = [config['DefaultPath']]
+        else:
+            raise exceptions.Exception('Missing default path argument (GUFI_tree).')
+    return args
 
 if __name__=='__main__':
     # assumes paramiko was installed in the same directory as the executables
