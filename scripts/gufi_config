@@ -86,103 +86,57 @@ PATH = os.path.realpath(__file__)
 INSTALL_PREFIX = os.path.dirname(PATH)
 
 # default configuration file location
-DEFAULT_CONFIG_PATH=os.path.expanduser('~/.gufi_config')
+DEFAULT_CONFIG_PATH='/etc/GUFI/config'
 
 # recognized settings
-CLIENT_SETTINGS = ['Server', 'Port', 'Paramiko', 'KnownHosts', 'HostKey']
-SERVER_SETTINGS = ['Threads', 'bfq', 'DefaultPath']
+CLIENT_SETTINGS = ['Server', 'Port', 'Paramiko']
+SERVER_SETTINGS = ['Threads', 'DefaultPath']
 
-def paths_to_string(paths, sep = ';'):
-    return sep.join([os.path.realpath(path) for path in paths])
+def dump_client(server, port, paramiko):
+    return "Server={0}\nPort={1}\nParamiko={2}\n".format(server, port, os.path.realpath(paramiko))
 
-def string_to_paths(string, sep = ';'):
-    return string.split(sep)
+def dump_server(threads, default_path):
+    return 'Threads={0}\nDefaultPath={2}\n'.format(str(threads), os.path.realpath(default_path))
 
-def dump_client(server, port, paramiko, known_hosts, hostkey):
-    return "Server={0}\nPort={1}\nParamiko={2}\nKnownHosts={3}\nHostKey={4}\n".format(server, port, os.path.realpath(paramiko), paths_to_string(string_to_paths(known_hosts)), hostkey)
+def read_config(filename):
+    with open(filename, 'r') as f:
+        out = {}
+        for line in f:
+            line.strip()
+            line = line[:-1]
+            if len(line) == 0:
+                continue
 
-def dump_server(threads, bfq, default_path):
-    return 'Threads={0}\nbfq={1}\nDefaultPath={2}\n'.format(str(threads), os.path.realpath(bfq), os.path.realpath(default_path))
-
-def read(f):
-    out = {}
-    for line in f:
-        line.strip()
-        line = line[:-1]
-        if len(line) == 0:
-            continue
-
-        name, value = line.split('=', 1)
-        if name == 'Port':
-            value = gufi_common.get_port(value)
-        elif name == 'Threads':
-            value = gufi_common.get_positive(value)
-        elif name == 'Paths':
-            value = string_to_paths(value)
-        out[name] = value
-    return out
-
-def read_filename(filename):
-    try:
-        return read(open(filename, 'r'))
-    except:
-        return None
+            name, value = line.split('=', 1)
+            if name == 'Port':
+                value = gufi_common.get_port(value)
+            elif name == 'Threads':
+                value = gufi_common.get_positive(value)
+            out[name] = value
+        return out
 
 # command line arguments override configuration file values (logic is inverted)
-def cli_over_client_config(args):
-    config = read_filename(args.config)
-    if not args.threads:
-        if config and ('Threads' in config):
-            args.threads = config['Threads']
-        else:
-            raise exceptions.Exception('Missing thread count (--threads).')
-    if not args.query_exec:
-        if config and ('bfq' in config):
-            args.query_exec = config['bfq']
-        else:
-            raise exceptions.Exception('Missing gufi_query location (--exec).')
-    if not args.GUFI_tree:
-        if config and ('DefaultPath' in config):
-            args.GUFI_tree = [config['DefaultPath']]
-        else:
-            raise exceptions.Exception('Missing default path argument (GUFI_tree).')
-    return args
+def server_config(filename = DEFAULT_CONFIG_PATH):
+    config = read_config(filename)
+    if 'Threads' not in config:
+        raise exceptions.Exception('Missing Threads')
+    if 'DefaultPath' not in config:
+        raise exceptions.Exception('Missing DefaultPath')
+    return config
 
-def cli_over_server_config(args):
-    config = read_filename(args.config)
-    if not args.server:
-        if config and ('Server' in config):
-            args.server = config['Server']
-        else:
-            raise exceptions.Exception('Missing thread count (--server).')
-    if not args.port:
-        if config and ('Port' in config):
-            args.port = config['Port']
-        else:
-            raise exceptions.Exception('Missing port number (--port).')
-    if not args.paramiko:
-        if config and ('Paramiko' in config):
-            args.paramiko = config['Paramiko']
-        else:
-            raise exceptions.Exception('Missing paramiko directory (--paramiko).')
-    if not args.known_hosts:
-        if config and ('KnownHosts' in config):
-            args.known_hosts = config['KnownHosts']
-        else:
-            raise exceptions.Exception('Missing known hosts file (--known-hosts).')
-    if not args.host_key:
-        if config and ('HostKey' in config):
-            args.host_key = config['HostKey']
-        else:
-            raise exceptions.Exception('Missing host key file (--host-key).')
-    return args
+def client_config(filename = DEFAULT_CONFIG_PATH):
+    config = read_config(filename)
+    if 'Server' not in config:
+        raise exceptions.Exception('Missing Server')
+    if 'Port' not in config:
+        raise exceptions.Exception('Missing Port')
+    if 'Paramiko' not in config:
+        raise exceptions.Exception('Missing Paramiko')
+    return config
 
 if __name__=='__main__':
     # assumes paramiko was installed in the same directory as the executables
     PARAMIKO = os.path.join(os.path.dirname(INSTALL_PREFIX), 'lib', 'GUFI', 'paramiko')
-
-    # default client SSH path
-    CLIENT_SSH_PATH='/etc/ssh'
 
     parser = argparse.ArgumentParser(description='GUFI Config Dump')
     parser.add_argument('--version', '-v', action='version', version=os.path.basename(PATH) + ' @GUFI_VERSION@')
@@ -191,7 +145,7 @@ if __name__=='__main__':
 
     # Read Config
     read_parser = action_subparser.add_parser('read')
-    read_parser.add_argument('filename',        type=argparse.FileType('r'),                                                                  help='Configuration file name')
+    read_parser.add_argument('filename',        type=str,                                                    help='Configuration file name')
 
     # Dump Config
     dump_parser = action_subparser.add_parser('dump')
@@ -201,23 +155,20 @@ if __name__=='__main__':
     server_parser = dump_subparser.add_parser('server')
 
     # Client Settings
-    client_parser.add_argument('--port',        type=gufi_common.get_port,     default=22,                                                    help='Server Port')
-    client_parser.add_argument('--paramiko',    type=str,                      default=PARAMIKO,                                              help='Paramiko install location')
-    client_parser.add_argument('--known_hosts', type=str,                      default=os.path.join(CLIENT_SSH_PATH, 'ssh_known_hosts'),      help='ssh_known_hosts file to use')
-    client_parser.add_argument('--hostkey',     type=str,                      default=os.path.join(CLIENT_SSH_PATH, 'ssh_host_rsa_key.pub'), help='ssh_host_rsa_key.pub file to use')
-    client_parser.add_argument('server',        type=str,                                                                                     help='Server Name/IP')
+    client_parser.add_argument('--port',        type=gufi_common.get_port,     default=22,                   help='Server Port')
+    client_parser.add_argument('--paramiko',    type=str,                      default=PARAMIKO,             help='Paramiko install location')
+    client_parser.add_argument('server',        type=str,                                                    help='Server Name/IP')
 
     # Server Settings
-    server_parser.add_argument('--threads',     type=gufi_common.get_positive, default=gufi_common.cpus(),                                    help='Number of threads')
-    server_parser.add_argument('--bfq',         type=str,                      default=os.path.join(INSTALL_PREFIX, 'gufi_query'),            help='Location of gufi_query')
-    server_parser.add_argument('default_path',  type=str,                                                                                     help='Default GUFI tree path')
+    server_parser.add_argument('--threads',     type=gufi_common.get_positive, default=gufi_common.cpus(),   help='Number of threads')
+    server_parser.add_argument('default_path',  type=str,                                                    help='Default GUFI tree path')
 
     args = parser.parse_args()
 
     if args.action == 'read':
-        print read(args.filename)
+        print read_config(args.filename)
     elif args.action == 'dump':
         if args.mode == 'client':
-            print dump_client(args.server, args.port, args.paramiko, args.known_hosts, args.hostkey)
+            print dump_client(args.server, args.port, args.paramiko)
         elif args.mode == 'server':
-            print dump_server(args.threads, args.bfq, args.default_path)
+            print dump_server(args.threads, args.default_path)

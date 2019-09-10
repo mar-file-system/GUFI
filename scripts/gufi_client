@@ -84,29 +84,29 @@ import gufi_common
 
 gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'gufi_config'))
 
-def talk_to_server(args):
+def talk_to_server(config, args):
     '''
-    Given a set of arguments, attempt to connect to a remote host and run the command
+    Send all arguments to gufi_@TOOL@
     '''
     try:
         ssh = paramiko.client.SSHClient()
 
         # load known server host keys
-        ssh.load_system_host_keys(os.path.expanduser(args.known_hosts))
+        ssh.load_system_host_keys('/etc/ssh/ssh_known_hosts')
 
         # connect to the server
-        ssh.connect(hostname=args.server,
-                    port=args.port,
+        ssh.connect(hostname=config['Server'],
+                    port=config['Port'],
                     username=getpass.getuser(),
-                    hostkey=paramiko.opensshkey.load_pubkey_from_file(args.host_key))
+                    hostkey=paramiko.opensshkey.load_pubkey_from_file('/etc/ssh/ssh_host_rsa_key.pub'))
 
         # run the command
-        # assumes that gufi_@TOOL@ can be found in PATH
-        cmd = os.path.join('gufi_@TOOL@ ' + ' '.join(['"' + arg + '"' for arg in args.args]))
-
-        _, stdout, stderr = ssh.exec_command(cmd)
+        # assumes that gufi_@TOOL@ can be found in PATH on the other side
+        # args needs to be sanitized
+        cmd = 'gufi_@TOOL@ ' + ' '.join(['"' + arg + '"' for arg in args])
 
         try:
+            _, stdout, stderr = ssh.exec_command(cmd)
             sys.stdout.write(stdout.read())
             sys.stderr.write(stderr.read())
         except Exception as e:
@@ -115,21 +115,10 @@ def talk_to_server(args):
         ssh.close()
 
 if __name__  == '__main__':
-    tool = os.path.basename(__file__)
-    parser = argparse.ArgumentParser(prog=tool)
-    parser.add_argument('--version', '-v',                      action='version',                                  version=tool + ' @GUFI_VERSION@')
-    parser.add_argument('--server',      metavar='IP/hostname', type=str,                                          help='Server IP/Hostname')
-    parser.add_argument('--port',        metavar='num',         type=gufi_common.get_non_negative,                 help='SSH port')
-    parser.add_argument('--paramiko',    metavar='dir',         type=str,                                          help='Paramiko Directory')
-    parser.add_argument('--known-hosts', metavar='file',        type=str,                                          help='Known Hosts file')
-    parser.add_argument('--host-key',    metavar='file',        type=str,                                          help='Host Key file')
-    parser.add_argument('--config',      metavar='file',        type=str, default=gufi_config.DEFAULT_CONFIG_PATH, help='Client configuration file')
-    parser.add_argument('args',          nargs='*',                                                                help='Arguments to pass to the server')
-
-    args = gufi_config.cli_over_server_config(parser.parse_args())
+    config = gufi_config.client_config(gufi_config.DEFAULT_CONFIG_PATH)
 
     # import paramiko from provided path
-    sys.path.append(args.paramiko)
+    sys.path.append(config['Paramiko'])
     import paramiko
 
-    talk_to_server(args)
+    talk_to_server(config, sys.argv[1:])
