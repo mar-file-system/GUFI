@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 static struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const size_t capacity) {

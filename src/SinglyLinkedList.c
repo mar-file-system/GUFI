@@ -113,7 +113,7 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
         return NULL;
     }
 
-    sll_destroy(dst);
+    sll_destroy(dst, 0);
     *dst = *src;
     memset(src, 0, sizeof(struct sll));
     return dst;
@@ -149,9 +149,12 @@ void * sll_node_data(struct node * node) {
     return node->data;
 }
 
-void sll_destroy(struct sll * sll) {
+void sll_destroy(struct sll * sll, const int dealloc) {
     struct node * node = sll_head_node(sll);
     while (node) {
+        if (dealloc) {
+            free(sll_node_data(node));
+        }
         struct node * next = sll_next_node(node);
         free(node);
         node = next;

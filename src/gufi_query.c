@@ -128,6 +128,40 @@ static int total_files_callback(void * unused, int count, char ** data, char ** 
 #ifdef DEBUG
 #include "debug.h"
 
+struct start_end {
+    struct timespec start;
+    struct timespec end;
+};
+
+struct descend_timers {
+    struct sll within_descend;
+    struct sll check_args;
+    struct sll level;
+    struct sll level_branch;
+    struct sll while_branch;
+    struct sll readdir;
+    struct sll readdir_branch;
+    struct sll strncmp;
+    struct sll strncmp_branch;
+    struct sll snprintf;
+    struct sll lstat;
+    struct sll isdir;
+    struct sll isdir_branch;
+    struct sll access;
+    struct sll set;
+    struct sll clone;
+    struct sll pushdir;
+};
+
+#ifdef PER_THREAD_STATS
+void print_timers(struct sll * timers, const char * name, const size_t id) {
+    for(struct node * node = sll_head_node(timers); node; node = sll_next_node(node)) {
+        struct start_end * times = sll_node_data(node);
+        fprintf(stderr, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, timestamp(&times->start) - epoch, timestamp(&times->end) - epoch);
+    }
+}
+#endif
+
 #ifdef CUMULATIVE_TIMES
 long double total_opendir_time = 0;
 long double total_open_time = 0;
@@ -161,32 +195,15 @@ long double total_closedir_time = 0;
 long double total_utime_time = 0;
 long double total_free_work_time = 0;
 
-long double sll_loop_sum(struct sll * start, struct sll * end) {
+long double sll_loop_sum(struct sll * timer) {
     long double sum = 0;
-    if (start->size == end->size) {
-        struct node * start_node = sll_head_node(start);
-        struct node * end_node = sll_head_node(end);
-
-        for(size_t i = 0; i < start->size; i++) {
-            struct timespec * start_timestamp = sll_node_data(start_node);
-            struct timespec * end_timestamp = sll_node_data(end_node);
-
-            sum += elapsed(start_timestamp, end_timestamp);
-
-            free(start_timestamp);
-            free(end_timestamp);
-
-            start_node = sll_next_node(start_node);
-            end_node = sll_next_node(end_node);
-        }
-    }
-    else {
-        fprintf(stderr, "Different lengths\n");
+    for(struct node * node = sll_head_node(timer); node; node = sll_next_node(node)) {
+        struct start_end * times = sll_node_data(node);
+        sum += elapsed(&times->start, &times->end);
     }
 
     return sum;
 }
-
 #endif
 
 static const char GUFI_SQLITE_VFS[] = "unix-none";
@@ -266,177 +283,57 @@ static size_t descend2(struct QPTPool *ctx,
                        struct work *passmywork,
                        DIR *dir,
                        const size_t max_level
-                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                       , struct sll *check_args_starts
-                       , struct sll *check_args_ends
-                       , struct sll *level_starts
-                       , struct sll *level_ends
-                       , struct sll *level_branch_starts
-                       , struct sll *level_branch_ends
-                       , struct sll *while_branch_starts
-                       , struct sll *while_branch_ends
-                       , struct sll *readdir_starts
-                       , struct sll *readdir_ends
-                       , struct sll *readdir_branch_starts
-                       , struct sll *readdir_branch_ends
-                       , struct sll *strncmp_starts
-                       , struct sll *strncmp_ends
-                       , struct sll *strncmp_branch_starts
-                       , struct sll *strncmp_branch_ends
-                       , struct sll *snprintf_starts
-                       , struct sll *snprintf_ends
-                       , struct sll *lstat_starts
-                       , struct sll *lstat_ends
-                       , struct sll *isdir_starts
-                       , struct sll *isdir_ends
-                       , struct sll *isdir_branch_starts
-                       , struct sll *isdir_branch_ends
-                       , struct sll *access_starts
-                       , struct sll *access_ends
-                       , struct sll *set_starts
-                       , struct sll *set_ends
-                       , struct sll *clone_starts
-                       , struct sll *clone_ends
-                       , struct sll *pushdir_starts
-                       , struct sll *pushdir_ends
+                       #ifdef DEBUG
+                       , struct descend_timers * timers
                        #endif
     ) {
-
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct timespec check_args_start;
-    struct timespec check_args_end;
-    struct timespec level_start;
-    struct timespec level_end;
-    struct timespec level_branch_start;
-    struct timespec level_branch_end;
-    struct timespec while_branch_start;
-    struct timespec while_branch_end;
-    struct timespec readdir_start;
-    struct timespec readdir_end;
-    struct timespec readdir_branch_start;
-    struct timespec readdir_branch_end;
-    struct timespec strncmp_start;
-    struct timespec strncmp_end;
-    struct timespec strncmp_branch_start;
-    struct timespec strncmp_branch_end;
-    struct timespec snprintf_start;
-    struct timespec snprintf_end;
-    struct timespec lstat_start;
-    struct timespec lstat_end;
-    struct timespec isdir_start;
-    struct timespec isdir_end;
-    struct timespec isdir_branch_start;
-    struct timespec isdir_branch_end;
-    /* struct timespec access_start; */
-    /* struct timespec access_end; */
-    struct timespec set_start;
-    struct timespec set_end;
-    struct timespec clone_start;
-    struct timespec clone_end;
-    struct timespec pushdir_start;
-    struct timespec pushdir_end;
+    #ifdef DEBUG
+    struct start_end * within_descend = malloc(sizeof(struct start_end));
+    clock_gettime(CLOCK_MONOTONIC, &within_descend->start);
     #endif
 
     #ifdef DEBUG
-    #ifdef CUMULATIVE_TIMES
-    struct timespec * check_args_start = malloc(sizeof(struct timespec));
-    clock_gettime(CLOCK_MONOTONIC, check_args_start);
-    sll_push(check_args_starts, check_args_start);
-    #endif
-    #ifdef PER_THREAD_STATS
-    clock_gettime(CLOCK_MONOTONIC, &check_args_start);
-    #endif
+    struct start_end * check_args = malloc(sizeof(struct start_end));
+    clock_gettime(CLOCK_MONOTONIC, &check_args->start);
     #endif
     /* passmywork was already checked in the calling thread */
     /* if (!passmywork) { */
     /*     fprintf(stderr, "Got NULL work\n"); */
-    /*     #ifdef DEBUG */
-    /*     struct timespec * check_args_end = malloc(sizeof(struct timespec)); */
-    /*     clock_gettime(CLOCK_MONOTONIC, check_args_end); */
-        /* #ifdef CUMULATIVE_TIMES */
-    /*     sll_push(check_args_ends, check_args_end); */
-    /*     #endif */
-        /* #endif */
     /*     return 0; */
     /* } */
 
     /* dir was already checked in the calling thread */
     /* if (!dir) { */
     /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
-    /*     #ifdef DEBUG */
-    /*     struct timespec * check_args_end = malloc(sizeof(struct timespec)); */
-    /*     clock_gettime(CLOCK_MONOTONIC, check_args_end); */
-        /* #ifdef CUMULATIVE_TIMES */
-    /*     sll_push(check_args_ends, check_args_end); */
-    /*     #endif */
-        /* #endif */
     /*     return 0; */
     /* } */
     #ifdef DEBUG
-    #ifdef CUMULATIVE_TIMES
-    struct timespec * check_args_end = malloc(sizeof(struct timespec));
-    clock_gettime(CLOCK_MONOTONIC, check_args_end);
-    sll_push(check_args_ends, check_args_end);
-    #endif
-    #ifdef PER_THREAD_STATS
-    clock_gettime(CLOCK_MONOTONIC, &check_args_end);
-    pthread_mutex_lock(&print_mutex);
-    fprintf(stderr, "%zu check_args %" PRIu64 " %" PRIu64 "\n", id, timestamp(&check_args_start) - epoch, timestamp(&check_args_end) - epoch);
-    pthread_mutex_unlock(&print_mutex);
-    #endif
+    clock_gettime(CLOCK_MONOTONIC, &check_args->end);
+    sll_push(&timers->check_args, check_args);
     #endif
 
     #ifdef DEBUG
-    #ifdef CUMULATIVE_TIMES
-    struct timespec * level_start = malloc(sizeof(struct timespec));
-    clock_gettime(CLOCK_MONOTONIC, level_start);
-    sll_push(level_starts, level_start);
-    #endif
-    #ifdef PER_THREAD_STATS
-    clock_gettime(CLOCK_MONOTONIC, &level_start);
-    #endif
+    struct start_end * level_cmp = malloc(sizeof(struct start_end));
+    clock_gettime(CLOCK_MONOTONIC, &level_cmp->start);
     #endif
     size_t pushed = 0;
 
     const size_t next_level = passmywork->level + 1;
     const int level_check = (next_level <= max_level);
     #ifdef DEBUG
-    #ifdef CUMULATIVE_TIMES
-    struct timespec * level_end = malloc(sizeof(struct timespec));
-    clock_gettime(CLOCK_MONOTONIC, level_end);
-    sll_push(level_ends, level_end);
-    #endif
-    #ifdef PER_THREAD_STATS
-    clock_gettime(CLOCK_MONOTONIC, &level_end);
-    pthread_mutex_lock(&print_mutex);
-    fprintf(stderr, "%zu level %" PRIu64 " %" PRIu64 "\n", id, timestamp(&level_start) - epoch, timestamp(&level_end) - epoch);
-    pthread_mutex_unlock(&print_mutex);
-    #endif
+    clock_gettime(CLOCK_MONOTONIC, &level_cmp->end);
+    sll_push(&timers->level, level_cmp);
     #endif
 
     #ifdef DEBUG
-    #ifdef CUMULATIVE_TIMES
-    struct timespec * level_branch_start = malloc(sizeof(struct timespec));
-    clock_gettime(CLOCK_MONOTONIC, level_branch_start);
-    sll_push(level_branch_starts, level_branch_start);
+    struct start_end * level_branch = malloc(sizeof(struct start_end));
+    clock_gettime(CLOCK_MONOTONIC, &level_branch->start);
     #endif
-    #ifdef PER_THREAD_STATS
-    clock_gettime(CLOCK_MONOTONIC, &level_branch_start);
-    #endif
-    #endif
+
     if (level_check) {
         #ifdef DEBUG
-        #ifdef CUMULATIVE_TIMES
-        struct timespec * level_branch_end = malloc(sizeof(struct timespec));
-        clock_gettime(CLOCK_MONOTONIC, level_branch_end);
-        sll_push(level_branch_ends, level_branch_end);
-        #endif
-        #ifdef PER_THREAD_STATS
-        clock_gettime(CLOCK_MONOTONIC, &level_branch_end);
-        pthread_mutex_lock(&print_mutex);
-        fprintf(stderr, "%zu level_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&level_branch_start) - epoch, timestamp(&level_branch_end) - epoch);
-        pthread_mutex_unlock(&print_mutex);
-        #endif
+        clock_gettime(CLOCK_MONOTONIC, &level_branch->end);
+        sll_push(&timers->level_branch, level_branch);
         #endif
 
         // go ahead and send the subdirs to the queue since we need to look
@@ -444,316 +341,128 @@ static size_t descend2(struct QPTPool *ctx,
         // queue, if file or link print it, fill up qwork structure for
         // each
         /* struct dirent *entry = NULL; */
-        #ifdef DEBUG
-        #ifdef CUMULATIVE_TIMES
-        {
-            struct timespec * while_branch_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, while_branch_start);
-            sll_push(while_branch_starts, while_branch_start);
-        }
-        #endif
-        #ifdef PER_THREAD_STATS
-        clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
-        #endif
-        #endif
+        /* #ifdef DEBUG */
+        /* struct start_end * while_branch = malloc(sizeof(struct start_end)); */
+        /* clock_gettime(CLOCK_MONOTONIC, &while_branch->start); */
+        /* #endif */
         while (1) {
-            #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * while_branch_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, while_branch_end);
-            sll_push(while_branch_ends, while_branch_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &while_branch_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu while_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&while_branch_start) - epoch, timestamp(&while_branch_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
-            #endif
+            /* #ifdef DEBUG */
+            /* clock_gettime(CLOCK_MONOTONIC, &while_branch->end); */
+            /* sll_push(&timers->while_branch, while_branch); */
+            /* #endif */
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * readdir_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, readdir_start);
-            sll_push(readdir_starts, readdir_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &readdir_start);
-            #endif
+            struct start_end * readdir_call = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &readdir_call->start);
             #endif
             struct dirent * entry = readdir(dir);
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * readdir_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, readdir_end);
-            sll_push(readdir_ends, readdir_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &readdir_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu readdir %" PRIu64 " %" PRIu64 "\n", id, timestamp(&readdir_start) - epoch, timestamp(&readdir_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
+            clock_gettime(CLOCK_MONOTONIC, &readdir_call->end);
+            sll_push(&timers->readdir, readdir_call);
             #endif
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * readdir_branch_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, readdir_branch_start);
-            sll_push(readdir_branch_starts, readdir_branch_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &readdir_branch_start);
-            #endif
+            struct start_end * readdir_branch = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &readdir_branch->start);
             #endif
             if (!entry) {
                 #ifdef DEBUG
-                #ifdef CUMULATIVE_TIMES
-                struct timespec * readdir_branch_end = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, readdir_branch_end);
-                sll_push(readdir_branch_ends, readdir_branch_end);
+                clock_gettime(CLOCK_MONOTONIC, &readdir_branch->end);
+                sll_push(&timers->readdir_branch, readdir_branch);
                 #endif
-                #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &readdir_branch_end);
-                pthread_mutex_lock(&print_mutex);
-                fprintf(stderr, "%zu readdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&readdir_branch_start) - epoch, timestamp(&readdir_branch_end) - epoch);
-                pthread_mutex_unlock(&print_mutex);
-                #endif
-                #endif
-
-                #ifdef DEBUG
-                #ifdef CUMULATIVE_TIMES
-                struct timespec * while_branch_start = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, while_branch_start);
-                sll_push(while_branch_starts, while_branch_start);
-                #endif
-                #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
-                #endif
-                #endif
-
                 break;
             }
-            #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * readdir_branch_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, readdir_branch_end);
-            sll_push(readdir_branch_ends, readdir_branch_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &readdir_branch_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu readdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&readdir_branch_start) - epoch, timestamp(&readdir_branch_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
-            #endif
+            else {
+                #ifdef DEBUG
+                clock_gettime(CLOCK_MONOTONIC, &readdir_branch->end);
+                sll_push(&timers->readdir_branch, readdir_branch);
+                #endif
+            }
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * strncmp_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, strncmp_start);
-            sll_push(strncmp_starts, strncmp_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_start);
-            #endif
+            struct start_end * strncmp_call = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_call->start);
             #endif
             const size_t len = strlen(entry->d_name);
             const int skip = (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                               ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)));
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * strncmp_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, strncmp_end);
-            sll_push(strncmp_ends, strncmp_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu strncmp %" PRIu64 " %" PRIu64 "\n", id, timestamp(&strncmp_start) - epoch, timestamp(&strncmp_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_call->end);
+            sll_push(&timers->strncmp, strncmp_call);
             #endif
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * strncmp_branch_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, strncmp_branch_start);
-            sll_push(strncmp_branch_starts, strncmp_branch_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_branch_start);
-            #endif
+            struct start_end * strncmp_branch = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->start);
             #endif
             if (skip) {
                 #ifdef DEBUG
-                #ifdef CUMULATIVE_TIMES
-                struct timespec * strncmp_branch_end = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, strncmp_branch_end);
-                sll_push(strncmp_branch_ends, strncmp_branch_end);
-                #endif
-                #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &strncmp_branch_end);
-                pthread_mutex_lock(&print_mutex);
-                fprintf(stderr, "%zu strncmp_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&strncmp_branch_start) - epoch, timestamp(&strncmp_branch_end) - epoch);
-                pthread_mutex_unlock(&print_mutex);
-                #endif
+                clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->end);
+                sll_push(&timers->strncmp_branch, strncmp_branch);
                 #endif
 
-                #ifdef DEBUG
-                #ifdef CUMULATIVE_TIMES
-                struct timespec * while_branch_start = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, while_branch_start);
-                sll_push(while_branch_starts, while_branch_start);
-                #endif
-                #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
-                #endif
-                #endif
+                /* #ifdef DEBUG */
+                /* while_branch = malloc(sizeof(struct start_end)); */
+                /* clock_gettime(CLOCK_MONOTONIC, &while_branch->start); */
+                /* #endif */
 
                 continue;
             }
-            #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * strncmp_branch_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, strncmp_branch_end);
-            sll_push(strncmp_branch_ends, strncmp_branch_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_branch_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu strncmp_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&strncmp_branch_start) - epoch, timestamp(&strncmp_branch_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
-            #endif
+            else {
+                #ifdef DEBUG
+                clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->end);
+                sll_push(&timers->strncmp_branch, strncmp_branch);
+                #endif
+            }
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * snprintf_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, snprintf_start);
-            sll_push(snprintf_starts, snprintf_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &snprintf_start);
-            #endif
+            struct start_end * snprintf_call = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &snprintf_call->start);
             #endif
             struct work qwork;
             SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, strlen(entry->d_name));
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * snprintf_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, snprintf_end);
-            sll_push(snprintf_ends, snprintf_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &snprintf_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu snprintf %" PRIu64 " %" PRIu64 "\n", id, timestamp(&snprintf_start) - epoch, timestamp(&snprintf_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
+            clock_gettime(CLOCK_MONOTONIC, &snprintf_call->end);
+            sll_push(&timers->snprintf, snprintf_call);
             #endif
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * lstat_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, lstat_start);
-            sll_push(lstat_starts, lstat_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &lstat_start);
-            #endif
+            struct start_end * lstat_call = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &lstat_call->start);
             #endif
             lstat(qwork.name, &qwork.statuso);
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * lstat_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, lstat_end);
-            sll_push(lstat_ends, lstat_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &lstat_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu lstat %" PRIu64 " %" PRIu64 "\n", id, timestamp(&lstat_start) - epoch, timestamp(&lstat_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
+            clock_gettime(CLOCK_MONOTONIC, &lstat_call->end);
+            sll_push(&timers->lstat, lstat_call);
             #endif
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * isdir_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, isdir_start);
-            sll_push(isdir_starts, isdir_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &isdir_start);
-            #endif
+            struct start_end * isdir_call = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &isdir_call->start);
             #endif
             /* const int isdir = (entry->d_type == DT_DIR); */
             const int isdir = S_ISDIR(qwork.statuso.st_mode);
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * isdir_end = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, isdir_end);
-            sll_push(isdir_ends, isdir_end);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &isdir_end);
-            pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%zu isdir %" PRIu64 " %" PRIu64 "\n", id, timestamp(&isdir_start) - epoch, timestamp(&isdir_end) - epoch);
-            pthread_mutex_unlock(&print_mutex);
-            #endif
+            clock_gettime(CLOCK_MONOTONIC, &isdir_call->end);
+            sll_push(&timers->isdir, isdir_call);
             #endif
 
             #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            struct timespec * isdir_branch_start = malloc(sizeof(struct timespec));
-            clock_gettime(CLOCK_MONOTONIC, isdir_branch_start);
-            sll_push(isdir_branch_starts, isdir_branch_start);
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &isdir_branch_start);
-            #endif
+            struct start_end * isdir_branch = malloc(sizeof(struct start_end));
+            clock_gettime(CLOCK_MONOTONIC, &isdir_branch->start);
             #endif
             if (isdir) {
                 #ifdef DEBUG
-                #ifdef CUMULATIVE_TIMES
-                struct timespec * isdir_branch_end = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, isdir_branch_end);
-                sll_push(isdir_branch_ends, isdir_branch_end);
+                clock_gettime(CLOCK_MONOTONIC, &isdir_branch->end);
+                sll_push(&timers->isdir_branch, isdir_branch);
                 #endif
-                #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &isdir_branch_end);
-                pthread_mutex_lock(&print_mutex);
-                fprintf(stderr, "%zu isdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&isdir_branch_start) - epoch, timestamp(&isdir_branch_end) - epoch);
-                pthread_mutex_unlock(&print_mutex);
-                #endif
-                #endif
-                /* #ifdef DEBUG */
-                /* struct timespec * access_start = malloc(sizeof(struct timespec)); */
-                /* clock_gettime(CLOCK_MONOTONIC, access_start); */
-                /* #ifdef CUMULATIVE_TIMES */
-                /* sll_push(access_starts, access_start); */
-                /* #endif */
-                /* #endif */
+
                 /* const int accessible = !access(qwork.name, R_OK | X_OK); */
-                /* #ifdef DEBUG */
-                /* struct timespec * access_end = malloc(sizeof(struct timespec)); */
-                /* clock_gettime(CLOCK_MONOTONIC, access_end); */
-                /* #ifdef CUMULATIVE_TIMES */
-                /* sll_push(access_ends, access_end); */
-                /* #endif */
-                /* #endif */
 
                 /* if (accessible) { */
                     #ifdef DEBUG
-                    #ifdef CUMULATIVE_TIMES
-                    struct timespec * set_start = malloc(sizeof(struct timespec));
-                    clock_gettime(CLOCK_MONOTONIC, set_start);
-                    sll_push(set_starts, set_start);
-                    #endif
-                    #ifdef PER_THREAD_STATS
-                    clock_gettime(CLOCK_MONOTONIC, &set_start);
-                    #endif
+                    struct start_end * set = malloc(sizeof(struct start_end));
+                    clock_gettime(CLOCK_MONOTONIC, &set->start);
                     #endif
                     qwork.level = next_level;
                     qwork.type[0] = 'd';
@@ -761,28 +470,13 @@ static size_t descend2(struct QPTPool *ctx,
                     // this is how the parent gets passed on
                     qwork.pinode = passmywork->statuso.st_ino;
                     #ifdef DEBUG
-                    #ifdef CUMULATIVE_TIMES
-                    struct timespec * set_end = malloc(sizeof(struct timespec));
-                    clock_gettime(CLOCK_MONOTONIC, set_end);
-                    sll_push(set_ends, set_end);
-                    #endif
-                    #ifdef PER_THREAD_STATS
-                    clock_gettime(CLOCK_MONOTONIC, &set_end);
-                    pthread_mutex_lock(&print_mutex);
-                    fprintf(stderr, "%zu set %" PRIu64 " %" PRIu64 "\n", id, timestamp(&set_start) - epoch, timestamp(&set_end) - epoch);
-                    pthread_mutex_unlock(&print_mutex);
-                    #endif
+                    clock_gettime(CLOCK_MONOTONIC, &set->end);
+                    sll_push(&timers->set, set);
                     #endif
 
                     #ifdef DEBUG
-                    #ifdef CUMULATIVE_TIMES
-                    struct timespec * clone_start = malloc(sizeof(struct timespec));
-                    clock_gettime(CLOCK_MONOTONIC, clone_start);
-                    sll_push(clone_starts, clone_start);
-                    #endif
-                    #ifdef PER_THREAD_STATS
-                    clock_gettime(CLOCK_MONOTONIC, &clone_start);
-                    #endif
+                    struct start_end * make_clone = malloc(sizeof(struct start_end));
+                    clock_gettime(CLOCK_MONOTONIC, &make_clone->start);
                     #endif
 
                     // make a clone here so that the data can be pushed into the queue
@@ -791,43 +485,19 @@ static size_t descend2(struct QPTPool *ctx,
                     memcpy(clone, &qwork, sizeof(struct work));
 
                     #ifdef DEBUG
-                    #ifdef CUMULATIVE_TIMES
-                    struct timespec * clone_end = malloc(sizeof(struct timespec));
-                    clock_gettime(CLOCK_MONOTONIC, clone_end);
-                    sll_push(clone_ends, clone_end);
-                    #endif
-                    #ifdef PER_THREAD_STATS
-                    clock_gettime(CLOCK_MONOTONIC, &clone_end);
-                    pthread_mutex_lock(&print_mutex);
-                    fprintf(stderr, "%zu clone %" PRIu64 " %" PRIu64 "\n", id, timestamp(&clone_start) - epoch, timestamp(&clone_end) - epoch);
-                    pthread_mutex_unlock(&print_mutex);
-                    #endif
+                    clock_gettime(CLOCK_MONOTONIC, &make_clone->end);
+                    sll_push(&timers->clone, make_clone);
                     #endif
 
                     // this pushes the dir onto queue - pushdir does locking around queue update
                     #ifdef DEBUG
-                    #ifdef CUMULATIVE_TIMES
-                    struct timespec * pushdir_start = malloc(sizeof(struct timespec));
-                    clock_gettime(CLOCK_MONOTONIC, pushdir_start);
-                    sll_push(pushdir_starts, pushdir_start);
-                    #endif
-                    #ifdef PER_THREAD_STATS
-                    clock_gettime(CLOCK_MONOTONIC, &pushdir_start);
-                    #endif
+                    struct start_end * pushdir = malloc(sizeof(struct start_end));
+                    clock_gettime(CLOCK_MONOTONIC, &pushdir->start);
                     #endif
                     QPTPool_enqueue(ctx, id, clone);
                     #ifdef DEBUG
-                    #ifdef CUMULATIVE_TIMES
-                    struct timespec * pushdir_end = malloc(sizeof(struct timespec));
-                    clock_gettime(CLOCK_MONOTONIC, pushdir_end);
-                    sll_push(pushdir_ends, pushdir_end);
-                    #endif
-                    #ifdef PER_THREAD_STATS
-                    clock_gettime(CLOCK_MONOTONIC, &pushdir_end);
-                    pthread_mutex_lock(&print_mutex);
-                    fprintf(stderr, "%zu pushdir %" PRIu64 " %" PRIu64 "\n", id, timestamp(&pushdir_start) - epoch, timestamp(&pushdir_end) - epoch);
-                    pthread_mutex_unlock(&print_mutex);
-                    #endif
+                    clock_gettime(CLOCK_MONOTONIC, &pushdir->end);
+                    sll_push(&timers->pushdir, pushdir);
                     #endif
 
                     pushed++;
@@ -839,64 +509,34 @@ static size_t descend2(struct QPTPool *ctx,
             }
             else {
                 #ifdef DEBUG
-                #ifdef CUMULATIVE_TIMES
-                struct timespec * isdir_branch_end = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, isdir_branch_end);
-                sll_push(isdir_branch_ends, isdir_branch_end);
-                #endif
-                #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &isdir_branch_end);
-                pthread_mutex_lock(&print_mutex);
-                fprintf(stderr, "%zu isdir_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&isdir_branch_start) - epoch, timestamp(&isdir_branch_end) - epoch);
-                pthread_mutex_unlock(&print_mutex);
-                #endif
+                clock_gettime(CLOCK_MONOTONIC, &isdir_branch->end);
+                sll_push(&timers->isdir_branch, isdir_branch);
                 #endif
             /*     fprintf(stderr, "not a dir '%s': %s\n", */
             /*             qwork->name, strerror(errno)); */
             }
 
-            #ifdef DEBUG
-            #ifdef CUMULATIVE_TIMES
-            {
-                struct timespec * while_branch_start = malloc(sizeof(struct timespec));
-                clock_gettime(CLOCK_MONOTONIC, while_branch_start);
-                sll_push(while_branch_starts, while_branch_start);
-            }
-            #endif
-            #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &while_branch_start);
-            #endif
-            #endif
+            /* #ifdef DEBUG */
+            /* while_branch = malloc(sizeof(struct start_end)); */
+            /* clock_gettime(CLOCK_MONOTONIC, &while_branch->start); */
+            /* #endif */
         }
-        #ifdef DEBUG
-        #ifdef CUMULATIVE_TIMES
-        struct timespec * while_branch_end = malloc(sizeof(struct timespec));
-        clock_gettime(CLOCK_MONOTONIC, while_branch_end);
-        sll_push(while_branch_ends, while_branch_end);
-        #endif
-        #ifdef PER_THREAD_STATS
-        clock_gettime(CLOCK_MONOTONIC, &while_branch_end);
-        pthread_mutex_lock(&print_mutex);
-        fprintf(stderr, "%zu while_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&while_branch_start) - epoch, timestamp(&while_branch_end) - epoch);
-        pthread_mutex_unlock(&print_mutex);
-        #endif
-        #endif
+        /* #ifdef DEBUG */
+        /* clock_gettime(CLOCK_MONOTONIC, &while_branch->end); */
+        /* sll_push(&timers->while_branch, while_branch); */
+        /* #endif */
     }
     else {
         #ifdef DEBUG
-        #ifdef CUMULATIVE_TIMES
-        struct timespec * level_branch_end = malloc(sizeof(struct timespec));
-        clock_gettime(CLOCK_MONOTONIC, level_branch_end);
-        sll_push(level_branch_ends, level_branch_end);
-        #endif
-        #ifdef PER_THREAD_STATS
-        clock_gettime(CLOCK_MONOTONIC, &level_branch_end);
-        pthread_mutex_lock(&print_mutex);
-        fprintf(stderr, "%zu level_branch %" PRIu64 " %" PRIu64 "\n", id, timestamp(&level_branch_start) - epoch, timestamp(&level_branch_end) - epoch);
-        pthread_mutex_unlock(&print_mutex);
-        #endif
+        clock_gettime(CLOCK_MONOTONIC, &level_branch->end);
+        sll_push(&timers->level_branch, level_branch);
         #endif
     }
+
+    #ifdef DEBUG
+    clock_gettime(CLOCK_MONOTONIC, &within_descend->end);
+    sll_push(&timers->within_descend, within_descend);
+    #endif
 
     return pushed;
 }
@@ -1040,38 +680,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct timespec addqueryfuncs_end;
     struct timespec descend_start;
     struct timespec descend_end;
-    struct sll check_args_starts;
-    struct sll check_args_ends;
-    struct sll level_starts;
-    struct sll level_ends;
-    struct sll level_branch_starts;
-    struct sll level_branch_ends;
-    struct sll while_branch_starts;
-    struct sll while_branch_ends;
-    struct sll readdir_starts;
-    struct sll readdir_ends;
-    struct sll readdir_branch_starts;
-    struct sll readdir_branch_ends;
-    struct sll strncmp_starts;
-    struct sll strncmp_ends;
-    struct sll strncmp_branch_starts;
-    struct sll strncmp_branch_ends;
-    struct sll snprintf_starts;
-    struct sll snprintf_ends;
-    struct sll lstat_starts;
-    struct sll lstat_ends;
-    struct sll isdir_starts;
-    struct sll isdir_ends;
-    struct sll isdir_branch_starts;
-    struct sll isdir_branch_ends;
-    struct sll access_starts;
-    struct sll access_ends;
-    struct sll set_starts;
-    struct sll set_ends;
-    struct sll clone_starts;
-    struct sll clone_ends;
-    struct sll pushdir_starts;
-    struct sll pushdir_ends;
+    struct descend_timers descend_timers;
     struct timespec attach_start;
     struct timespec attach_end;
     struct timespec exec_start;
@@ -1103,38 +712,23 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&addqueryfuncs_end, 0, sizeof(struct timespec));
     memset(&descend_start, 0, sizeof(struct timespec));
     memset(&descend_end, 0, sizeof(struct timespec));
-    sll_init(&check_args_starts);
-    sll_init(&check_args_ends);
-    sll_init(&level_starts);
-    sll_init(&level_ends);
-    sll_init(&level_branch_starts);
-    sll_init(&level_branch_ends);
-    sll_init(&while_branch_starts);
-    sll_init(&while_branch_ends);
-    sll_init(&readdir_starts);
-    sll_init(&readdir_ends);
-    sll_init(&readdir_branch_starts);
-    sll_init(&readdir_branch_ends);
-    sll_init(&strncmp_starts);
-    sll_init(&strncmp_ends);
-    sll_init(&strncmp_branch_starts);
-    sll_init(&strncmp_branch_ends);
-    sll_init(&snprintf_starts);
-    sll_init(&snprintf_ends);
-    sll_init(&lstat_starts);
-    sll_init(&lstat_ends);
-    sll_init(&isdir_starts);
-    sll_init(&isdir_ends);
-    sll_init(&isdir_branch_starts);
-    sll_init(&isdir_branch_ends);
-    sll_init(&access_starts);
-    sll_init(&access_ends);
-    sll_init(&set_starts);
-    sll_init(&set_ends);
-    sll_init(&clone_starts);
-    sll_init(&clone_ends);
-    sll_init(&pushdir_starts);
-    sll_init(&pushdir_ends);
+    sll_init(&descend_timers.within_descend);
+    sll_init(&descend_timers.check_args);
+    sll_init(&descend_timers.level);
+    sll_init(&descend_timers.level_branch);
+    sll_init(&descend_timers.while_branch);
+    sll_init(&descend_timers.readdir);
+    sll_init(&descend_timers.readdir_branch);
+    sll_init(&descend_timers.strncmp);
+    sll_init(&descend_timers.strncmp_branch);
+    sll_init(&descend_timers.snprintf);
+    sll_init(&descend_timers.lstat);
+    sll_init(&descend_timers.isdir);
+    sll_init(&descend_timers.isdir_branch);
+    sll_init(&descend_timers.access);
+    sll_init(&descend_timers.set);
+    sll_init(&descend_timers.clone);
+    sll_init(&descend_timers.pushdir);
     memset(&attach_start, 0, sizeof(struct timespec));
     memset(&attach_end, 0, sizeof(struct timespec));
     memset(&exec_start, 0, sizeof(struct timespec));
@@ -1235,39 +829,8 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         #endif
         // push subdirectories into the queue
         descend2(ctx, id, work, dir, in.max_level
-                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                 , &check_args_starts
-                 , &check_args_ends
-                 , &level_starts
-                 , &level_ends
-                 , &level_branch_starts
-                 , &level_branch_ends
-                 , &while_branch_starts
-                 , &while_branch_ends
-                 , &readdir_starts
-                 , &readdir_ends
-                 , &readdir_branch_starts
-                 , &readdir_branch_ends
-                 , &strncmp_starts
-                 , &strncmp_ends
-                 , &strncmp_branch_starts
-                 , &strncmp_branch_ends
-                 , &snprintf_starts
-                 , &snprintf_ends
-                 , &lstat_starts
-                 , &lstat_ends
-                 , &isdir_starts
-                 , &isdir_ends
-                 , &isdir_branch_starts
-                 , &isdir_branch_ends
-                 , &access_starts
-                 , &access_ends
-                 , &set_starts
-                 , &set_ends
-                 , &clone_starts
-                 , &clone_ends
-                 , &pushdir_starts
-                 , &pushdir_ends
+                 #if defined(DEBUG)
+                 , &descend_timers
                  #endif
             );
         #ifdef DEBUG
@@ -1435,22 +998,22 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
     total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
     total_descend_time           += elapsed(&descend_start, &descend_end);
-    total_check_args_time        += sll_loop_sum(&check_args_starts, &check_args_ends);
-    total_level_time             += sll_loop_sum(&level_starts, &level_ends);
-    total_level_branch_time      += sll_loop_sum(&level_branch_starts, &level_branch_ends);
-    total_while_branch_time      += sll_loop_sum(&while_branch_starts, &while_branch_ends);
-    total_readdir_time           += sll_loop_sum(&readdir_starts, &readdir_ends);
-    total_readdir_branch_time    += sll_loop_sum(&readdir_branch_starts, &readdir_branch_ends);
-    total_strncmp_time           += sll_loop_sum(&strncmp_starts, &strncmp_ends);
-    total_strncmp_branch_time    += sll_loop_sum(&strncmp_branch_starts, &strncmp_branch_ends);
-    total_snprintf_time          += sll_loop_sum(&snprintf_starts, &snprintf_ends);
-    total_lstat_time             += sll_loop_sum(&lstat_starts, &lstat_ends);
-    total_isdir_time             += sll_loop_sum(&isdir_starts, &isdir_ends);
-    total_isdir_branch_time      += sll_loop_sum(&isdir_branch_starts, &isdir_branch_ends);
-    total_access_time            += sll_loop_sum(&access_starts, &access_ends);
-    total_set_time               += sll_loop_sum(&set_starts, &set_ends);
-    total_clone_time             += sll_loop_sum(&clone_starts, &clone_ends);
-    total_pushdir_time           += sll_loop_sum(&pushdir_starts, &pushdir_ends);
+    total_check_args_time        += sll_loop_sum(&descend_timers.check_args);
+    total_level_time             += sll_loop_sum(&descend_timers.level);
+    total_level_branch_time      += sll_loop_sum(&descend_timers.level_branch);
+    total_while_branch_time      += sll_loop_sum(&descend_timers.while_branch);
+    total_readdir_time           += sll_loop_sum(&descend_timers.readdir);
+    total_readdir_branch_time    += sll_loop_sum(&descend_timers.readdir_branch);
+    total_strncmp_time           += sll_loop_sum(&descend_timers.strncmp);
+    total_strncmp_branch_time    += sll_loop_sum(&descend_timers.strncmp_branch);
+    total_snprintf_time          += sll_loop_sum(&descend_timers.snprintf);
+    total_lstat_time             += sll_loop_sum(&descend_timers.lstat);
+    total_isdir_time             += sll_loop_sum(&descend_timers.isdir);
+    total_isdir_branch_time      += sll_loop_sum(&descend_timers.isdir_branch);
+    total_access_time            += sll_loop_sum(&descend_timers.access);
+    total_set_time               += sll_loop_sum(&descend_timers.set);
+    total_clone_time             += sll_loop_sum(&descend_timers.clone);
+    total_pushdir_time           += sll_loop_sum(&descend_timers.pushdir);
     total_closedir_time          += elapsed(&closedir_start, &closedir_end);
     total_attach_time            += elapsed(&attach_start, &attach_end);
     total_exec_time              += elapsed(&exec_start, &exec_end);
@@ -1459,39 +1022,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     total_utime_time             += elapsed(&utime_start, &utime_end);
     total_free_work_time         += elapsed(&free_work_start, &free_work_end);
     pthread_mutex_unlock(&print_mutex);
-
-    sll_destroy(&check_args_starts);
-    sll_destroy(&check_args_ends);
-    sll_destroy(&level_starts);
-    sll_destroy(&level_ends);
-    sll_destroy(&level_branch_starts);
-    sll_destroy(&level_branch_ends);
-    sll_destroy(&while_branch_starts);
-    sll_destroy(&while_branch_ends);
-    sll_destroy(&readdir_starts);
-    sll_destroy(&readdir_ends);
-    sll_destroy(&readdir_branch_starts);
-    sll_destroy(&readdir_branch_ends);
-    sll_destroy(&strncmp_starts);
-    sll_destroy(&strncmp_ends);
-    sll_destroy(&strncmp_branch_starts);
-    sll_destroy(&strncmp_branch_ends);
-    sll_destroy(&snprintf_starts);
-    sll_destroy(&snprintf_ends);
-    sll_destroy(&lstat_starts);
-    sll_destroy(&lstat_ends);
-    sll_destroy(&isdir_starts);
-    sll_destroy(&isdir_ends);
-    sll_destroy(&isdir_branch_starts);
-    sll_destroy(&isdir_branch_ends);
-    sll_destroy(&access_starts);
-    sll_destroy(&access_ends);
-    sll_destroy(&set_starts);
-    sll_destroy(&set_ends);
-    sll_destroy(&clone_starts);
-    sll_destroy(&clone_ends);
-    sll_destroy(&pushdir_starts);
-    sll_destroy(&pushdir_ends);
     #endif
     #ifdef PER_THREAD_STATS
     pthread_mutex_lock(&print_mutex);
@@ -1503,6 +1033,23 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     fprintf(stderr, "%zu load_extensions %" PRIu64 " %" PRIu64 "\n", id, timestamp(&load_extension_start) - epoch, timestamp(&load_extension_end) - epoch);
     fprintf(stderr, "%zu addqueryfuncs %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&addqueryfuncs_start) - epoch, timestamp(&addqueryfuncs_end) - epoch);
     fprintf(stderr, "%zu descend %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&descend_start) - epoch, timestamp(&descend_end) - epoch);
+    print_timers(&descend_timers.within_descend, "within_descend",   id);
+    print_timers(&descend_timers.check_args,     "check_args",       id);
+    print_timers(&descend_timers.level,          "level",            id);
+    print_timers(&descend_timers.level_branch,   "level_branch",     id);
+    print_timers(&descend_timers.while_branch,   "while_branch",     id);
+    print_timers(&descend_timers.readdir,        "readdir",          id);
+    print_timers(&descend_timers.readdir_branch, "readdir_branch",   id);
+    print_timers(&descend_timers.strncmp,        "strncmp",          id);
+    print_timers(&descend_timers.strncmp_branch, "strncmp_branch",   id);
+    print_timers(&descend_timers.snprintf,       "snprintf",         id);
+    print_timers(&descend_timers.lstat,          "lstat",            id);
+    print_timers(&descend_timers.isdir,          "isdir",            id);
+    print_timers(&descend_timers.isdir_branch,   "isdir_branch",     id);
+    print_timers(&descend_timers.access,         "access",           id);
+    print_timers(&descend_timers.set,            "set",              id);
+    print_timers(&descend_timers.clone,          "clone",            id);
+    print_timers(&descend_timers.pushdir,        "pushdir",          id);
     fprintf(stderr, "%zu attach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&attach_start) - epoch, timestamp(&attach_end) - epoch);
     fprintf(stderr, "%zu sqlite3_exec %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&exec_start) - epoch, timestamp(&exec_end) - epoch);
     fprintf(stderr, "%zu detach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&detach_start) - epoch, timestamp(&detach_end) - epoch);
@@ -1511,6 +1058,23 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     fprintf(stderr, "%zu utime %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&utime_start) - epoch, timestamp(&utime_end) - epoch);
     pthread_mutex_unlock(&print_mutex);
     #endif
+    sll_destroy(&descend_timers.within_descend, 1);
+    sll_destroy(&descend_timers.check_args, 1);
+    sll_destroy(&descend_timers.level, 1);
+    sll_destroy(&descend_timers.level_branch, 1);
+    sll_destroy(&descend_timers.while_branch, 1);
+    sll_destroy(&descend_timers.readdir, 1);
+    sll_destroy(&descend_timers.readdir_branch, 1);
+    sll_destroy(&descend_timers.strncmp, 1);
+    sll_destroy(&descend_timers.strncmp_branch, 1);
+    sll_destroy(&descend_timers.snprintf, 1);
+    sll_destroy(&descend_timers.lstat, 1);
+    sll_destroy(&descend_timers.isdir, 1);
+    sll_destroy(&descend_timers.isdir_branch, 1);
+    sll_destroy(&descend_timers.access, 1);
+    sll_destroy(&descend_timers.set, 1);
+    sll_destroy(&descend_timers.clone, 1);
+    sll_destroy(&descend_timers.pushdir, 1);
     #endif
 
     return 0;

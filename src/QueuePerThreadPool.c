@@ -296,7 +296,7 @@ static void * worker_function(void *args) {
         struct timespec wf_cleanup_start;
         clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_start);
         #endif
-        sll_destroy(&dirs);
+        sll_destroy(&dirs, 0);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
@@ -386,7 +386,7 @@ void QPTPool_destroy(struct QPTPool * ctx) {
             ctx->data[i].thread = 0;
             pthread_cond_destroy(&ctx->data[i].cv);
             pthread_mutex_destroy(&ctx->data[i].mutex);
-            sll_destroy(&ctx->data[i].queue);
+            sll_destroy(&ctx->data[i].queue, 0);
         }
 
         free(ctx->data);

@@ -102,6 +102,6 @@ struct node * sll_head_node(struct sll * sll);
 struct node * sll_next_node(struct node * node);
 void * sll_node_data(struct node * node);
 
-void sll_destroy(struct sll * sll);
+void sll_destroy(struct sll * sll, const int dealloc);
 
 #endif

@@ -10,7 +10,7 @@ TEST(SinglyLinkedList, init_destroy) {
     EXPECT_EQ(sll.head, nullptr);
     EXPECT_EQ(sll.tail, nullptr);
 
-    sll_destroy(&sll);
+    sll_destroy(&sll, 0);
 }
 
 TEST(SinglyLinkedList, push) {
@@ -39,7 +39,7 @@ TEST(SinglyLinkedList, push) {
     // the head and tail nodes should be different now
     EXPECT_NE(sll.head, sll.tail);
 
-    sll_destroy(&sll);
+    sll_destroy(&sll, 0);
 }
 
 TEST(SinglyLinkedList, move) {
@@ -69,8 +69,8 @@ TEST(SinglyLinkedList, move) {
     EXPECT_EQ(sll_src.head, nullptr);
     EXPECT_EQ(sll_src.tail, nullptr);
 
-    sll_destroy(&sll_dst);
-    sll_destroy(&sll_src);
+    sll_destroy(&sll_dst, 0);
+    sll_destroy(&sll_src, 0);
 }
 
 TEST(SinglyLinkedList, head_node) {
@@ -87,7 +87,7 @@ TEST(SinglyLinkedList, head_node) {
     EXPECT_EQ(sll.head, sll_head_node(&sll));
     EXPECT_NE(sll.tail, sll_head_node(&sll));
 
-    sll_destroy(&sll);
+    sll_destroy(&sll, 0);
 }
 
 TEST(SinglyLinkedList, next_node) {
@@ -111,7 +111,7 @@ TEST(SinglyLinkedList, next_node) {
     struct node * third = sll.tail;
     EXPECT_EQ(third, sll_next_node(second));
 
-    sll_destroy(&sll);
+    sll_destroy(&sll, 0);
 }
 
 TEST(SinglyLinkedList, node_data) {
@@ -124,7 +124,7 @@ TEST(SinglyLinkedList, node_data) {
     EXPECT_EQ(&value, data);
     EXPECT_EQ(value, * (int *) data);
 
-    sll_destroy(&sll);
+    sll_destroy(&sll, 0);
 }
 
 TEST(SinglyLinkedList, loop) {
@@ -146,6 +146,6 @@ TEST(SinglyLinkedList, loop) {
         i++;
     }
 
-    sll_destroy(&sll);
+    sll_destroy(&sll, 0);
     delete [] values;
 }
