@@ -200,7 +200,7 @@ if __name__=='__main__':
     parser.add_argument('--config',                                                type=str, default=gufi_config.DEFAULT_CONFIG_PATH, help='Configuration file name')
     parser.add_argument('GUFI_tree',                                               nargs='*',                                         help='path containing GUFI tree database files')
 
-    args = gufi_config.cli_over_config(parser.parse_args());
+    args = gufi_config.cli_over_client_config(parser.parse_args());
 
     where = build_where(args)
     order_by = build_order_by(args)

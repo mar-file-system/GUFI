@@ -223,7 +223,7 @@ if __name__=='__main__':
     parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),                     help='operation to perform')
     parser.add_argument('GUFI_tree',                                              nargs='*',                                                      help='path containing GUFI tree database files')
 
-    args = gufi_config.cli_over_config(parser.parse_args());
+    args = gufi_config.cli_over_client_config(parser.parse_args());
 
     if args.order:
         args.order = ORDER[args.order]

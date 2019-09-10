@@ -129,7 +129,7 @@ def read_filename(filename):
         return None
 
 # command line arguments override configuration file values (logic is inverted)
-def cli_over_config(args):
+def cli_over_client_config(args):
     config = read_filename(args.config)
     if not args.threads:
         if config and ('Threads' in config):
@@ -146,6 +146,35 @@ def cli_over_config(args):
             args.GUFI_tree = [config['DefaultPath']]
         else:
             raise exceptions.Exception('Missing default path argument (GUFI_tree).')
+    return args
+
+def cli_over_server_config(args):
+    config = read_filename(args.config)
+    if not args.server:
+        if config and ('Server' in config):
+            args.server = config['Server']
+        else:
+            raise exceptions.Exception('Missing thread count (--server).')
+    if not args.port:
+        if config and ('Port' in config):
+            args.port = config['Port']
+        else:
+            raise exceptions.Exception('Missing port number (--port).')
+    if not args.paramiko:
+        if config and ('Paramiko' in config):
+            args.paramiko = config['Paramiko']
+        else:
+            raise exceptions.Exception('Missing paramiko directory (--paramiko).')
+    if not args.known_hosts:
+        if config and ('KnownHosts' in config):
+            args.known_hosts = config['KnownHosts']
+        else:
+            raise exceptions.Exception('Missing known hosts file (--known-hosts).')
+    if not args.host_key:
+        if config and ('HostKey' in config):
+            args.host_key = config['HostKey']
+        else:
+            raise exceptions.Exception('Missing host key file (--host-key).')
     return args
 
 if __name__=='__main__':

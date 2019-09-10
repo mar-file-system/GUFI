@@ -413,7 +413,7 @@ if __name__=='__main__':
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',      type=gufi_common.get_positive, default=4096,                    help='Size of each thread\'s output buffer')
     parser.add_argument('--config',                                                             type=str, default=gufi_config.DEFAULT_CONFIG_PATH,              help='Configuration file name')
 
-    args = gufi_config.cli_over_config(parser.parse_args());
+    args = gufi_config.cli_over_client_config(parser.parse_args());
 
     # create the find command
     find = gufi_common.find_dir(args.GUFI_tree, [os.path.normpath(path) for path in args.path], [os.path.normpath(path) for path in args.wholename])

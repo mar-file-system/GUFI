@@ -74,61 +74,15 @@
 
 
 
+import argparse
 import getpass
 import imp
 import os
 import sys
 
+import gufi_common
+
 gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'gufi_config'))
-
-class Args:
-    def __init__(self):
-        self.config = gufi_config.DEFAULT_CONFIG_PATH
-        self.args = []
-
-def parse_args(cmd_args = sys.argv):
-    '''
-    Manually parse arguments
-    '''
-
-    if len(cmd_args) == 0:
-        sys.stderr.write('Bad command line arguments\n')
-        sys.exit(1)
-
-    tool = os.path.basename(cmd_args[0])
-
-    args = Args()
-
-    i = 1
-    while i < len(cmd_args):
-        if (cmd_args[i] == '--help') or (cmd_args[i] == '-h'):
-            print 'usage: ' + tool + ' [-h] [--version] [--config CONFIG] [args [args ...]]'
-            print
-            print tool
-            print
-            print 'positional arguments:'
-            print '  args                      arguments to ' + tool + ' to pass to the server'
-            print
-            print 'optional arguments:'
-            print '  -h, --help                show this help message and exit'
-            print '  --version                 show program\'s version number and exit'
-            print '  --config CONFIG           Configuration file name'
-            sys.exit(0)
-        elif cmd_args[i] == '--version':
-            print tool + ' @GUFI_VERSION@'
-            sys.exit(0)
-        elif cmd_args[i] == '--config':
-            i += 1
-            args.config = cmd_args[i]
-        elif cmd_args[i] == '--':
-            i += 1
-            break
-        else:
-            args.args += [cmd_args[i]]
-        i += 1
-
-    args.args += cmd_args[i:]
-    return args
 
 def talk_to_server(args):
     '''
@@ -141,10 +95,10 @@ def talk_to_server(args):
         ssh.load_system_host_keys(os.path.expanduser(args.known_hosts))
 
         # connect to the server
-        ssh.connect(hostname=args.hostname,
+        ssh.connect(hostname=args.server,
                     port=args.port,
                     username=getpass.getuser(),
-                    hostkey=paramiko.opensshkey.load_pubkey_from_file(args.hostkey))
+                    hostkey=paramiko.opensshkey.load_pubkey_from_file(args.host_key))
 
         # run the command
         # assumes that gufi_@TOOL@ can be found in PATH
@@ -161,15 +115,21 @@ def talk_to_server(args):
         ssh.close()
 
 if __name__  == '__main__':
-    args = parse_args(sys.argv)
-    config = gufi_config.read_filename(args.config)
-    args.hostname = config['Server']
-    args.port = config['Port']
-    args.known_hosts = config['KnownHosts']
-    args.hostkey = config['HostKey']
+    tool = os.path.basename(__file__)
+    parser = argparse.ArgumentParser(prog=tool)
+    parser.add_argument('--version', '-v',                      action='version',                                  version=tool + ' @GUFI_VERSION@')
+    parser.add_argument('--server',      metavar='IP/hostname', type=str,                                          help='Server IP/Hostname')
+    parser.add_argument('--port',        metavar='num',         type=gufi_common.get_non_negative,                 help='SSH port')
+    parser.add_argument('--paramiko',    metavar='dir',         type=str,                                          help='Paramiko Directory')
+    parser.add_argument('--known-hosts', metavar='file',        type=str,                                          help='Known Hosts file')
+    parser.add_argument('--host-key',    metavar='file',        type=str,                                          help='Host Key file')
+    parser.add_argument('--config',      metavar='file',        type=str, default=gufi_config.DEFAULT_CONFIG_PATH, help='Client configuration file')
+    parser.add_argument('args',          nargs='*',                                                                help='Arguments to pass to the server')
+
+    args = gufi_config.cli_over_server_config(parser.parse_args())
 
     # import paramiko from provided path
-    sys.path.append(config['Paramiko'])
+    sys.path.append(args.paramiko)
     import paramiko
 
     talk_to_server(args)
