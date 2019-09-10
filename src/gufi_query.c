@@ -426,22 +426,22 @@ static size_t descend2(struct QPTPool *ctx,
             sll_push(&timers->snprintf, snprintf_call);
             #endif
 
-            #ifdef DEBUG
-            struct start_end * lstat_call = malloc(sizeof(struct start_end));
-            clock_gettime(CLOCK_MONOTONIC, &lstat_call->start);
-            #endif
-            lstat(qwork.name, &qwork.statuso);
-            #ifdef DEBUG
-            clock_gettime(CLOCK_MONOTONIC, &lstat_call->end);
-            sll_push(&timers->lstat, lstat_call);
-            #endif
+            /* #ifdef DEBUG */
+            /* struct start_end * lstat_call = malloc(sizeof(struct start_end)); */
+            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->start); */
+            /* #endif */
+            /* lstat(qwork.name, &qwork.statuso); */
+            /* #ifdef DEBUG */
+            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->end); */
+            /* sll_push(&timers->lstat, lstat_call); */
+            /* #endif */
 
             #ifdef DEBUG
             struct start_end * isdir_call = malloc(sizeof(struct start_end));
             clock_gettime(CLOCK_MONOTONIC, &isdir_call->start);
             #endif
-            /* const int isdir = (entry->d_type == DT_DIR); */
-            const int isdir = S_ISDIR(qwork.statuso.st_mode);
+            const int isdir = (entry->d_type == DT_DIR);
+            /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
             #ifdef DEBUG
             clock_gettime(CLOCK_MONOTONIC, &isdir_call->end);
             sll_push(&timers->isdir, isdir_call);
