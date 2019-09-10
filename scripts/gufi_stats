@@ -204,8 +204,10 @@ ORDER = {'ASC'   : ASCENDING,
          'most'  : DESCENDING}
 
 if __name__=='__main__':
-    cwd = os.getcwd()
+    # find and parse the configuration file first
+    config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
 
+    # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI statistics')
     parser.add_argument('--version', '-v',                                        action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
     parser.add_argument('--order',         metavar='order', dest='order',         choices=ORDER.keys(),      default='',                          help='sort output (if applicable)')
@@ -214,16 +216,12 @@ if __name__=='__main__':
     parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',      type=gufi_common.get_non_negative,                              help='the minimum number of levels to search')
     parser.add_argument('--num_results',   metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                              help='first n results')
     parser.add_argument('--select',        metavar='cols',  dest='select',        type=str,                                                       help='comma separated columns')
-    parser.add_argument('--threads',       metavar='n',     dest='threads',       type=gufi_common.get_non_negative,                              help='number of threads')
     parser.add_argument('--uid', '--user', metavar='u',     dest='uid',           type=gufi_common.get_uid,                                       help='restrict to user')
-    parser.add_argument('--exec',                           dest='query_exec',                                                                    help='Location of gufi_query executable')
     parser.add_argument('--output',                         dest='output',        type=str,                                                       help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer', metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,               help='Size of each thread\'s output buffer')
-    parser.add_argument('--config',                                               type=str, default=gufi_config.DEFAULT_CONFIG_PATH,              help='Configuration file name')
     parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),                     help='operation to perform')
-    parser.add_argument('GUFI_tree',                                              nargs='*',                                                      help='path containing GUFI tree database files')
 
-    args = gufi_config.cli_over_client_config(parser.parse_args());
+    args = parser.parse_args()
 
     if args.order:
         args.order = ORDER[args.order]
@@ -237,8 +235,8 @@ if __name__=='__main__':
         entries, intermediate, aggregate = QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
 
         # create the query command
-        query_cmd = [args.query_exec,
-                     '-n', str(args.threads),
+        query_cmd = [config['Exec'],
+                     '-n', str(config['Threads']),
                      '-p', '-P']
 
         if entries is not None:
@@ -271,7 +269,7 @@ if __name__=='__main__':
         if args.output_buffer:
             query_cmd += ['-B', str(args.output_buffer)]
 
-        query = subprocess.Popen(query_cmd + args.GUFI_tree)
+        query = subprocess.Popen(query_cmd + config['GUFIPaths'])
         query.communicate() # block until query finishes
 
         sys.exit(query.returncode)

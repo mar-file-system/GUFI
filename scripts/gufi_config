@@ -85,26 +85,40 @@ PATH = os.path.realpath(__file__)
 # assumes both client and server were installed to directories with the same name on different machines
 INSTALL_PREFIX = os.path.dirname(PATH)
 
+# expected location of gufi_query
+GUFI_QUERY = os.path.join(INSTALL_PREFIX, 'bin', 'gufi_query')
+
 # default configuration file location
 DEFAULT_CONFIG_PATH='/etc/GUFI/config'
 
 # recognized settings
 CLIENT_SETTINGS = ['Server', 'Port', 'Paramiko']
-SERVER_SETTINGS = ['Threads', 'DefaultPath']
+SERVER_SETTINGS = ['Threads', 'Exec', 'GUFIPaths']
+
+def paths_to_string(paths, sep = ';'):
+    return sep.join([os.path.realpath(path) for path in paths])
+
+def string_to_paths(string, sep = ';'):
+    return string.split(sep)
 
 def dump_client(server, port, paramiko):
     return "Server={0}\nPort={1}\nParamiko={2}\n".format(server, port, os.path.realpath(paramiko))
 
-def dump_server(threads, default_path):
-    return 'Threads={0}\nDefaultPath={2}\n'.format(str(threads), os.path.realpath(default_path))
+def dump_server(threads, bfq, paths):
+    return 'Threads={0}\nExec={1}\nGUFIPaths={2}\n'.format(str(threads), bfq, paths_to_string([os.path.realpath(path) for path in paths]))
 
 def read_config(filename):
     with open(filename, 'r') as f:
         out = {}
         for line in f:
             line.strip()
-            line = line[:-1]
+            if line[-1] == '\n':
+                line = line[:-1]
+
             if len(line) == 0:
+                continue
+
+            if line[0] == '#':
                 continue
 
             name, value = line.split('=', 1)
@@ -112,6 +126,8 @@ def read_config(filename):
                 value = gufi_common.get_port(value)
             elif name == 'Threads':
                 value = gufi_common.get_positive(value)
+            elif name == 'GUFIPaths':
+                value = string_to_paths(value)
             out[name] = value
         return out
 
@@ -120,8 +136,8 @@ def server_config(filename = DEFAULT_CONFIG_PATH):
     config = read_config(filename)
     if 'Threads' not in config:
         raise exceptions.Exception('Missing Threads')
-    if 'DefaultPath' not in config:
-        raise exceptions.Exception('Missing DefaultPath')
+    if 'GUFIPaths' not in config:
+        raise exceptions.Exception('Missing GUFIPaths')
     return config
 
 def client_config(filename = DEFAULT_CONFIG_PATH):
@@ -161,7 +177,8 @@ if __name__=='__main__':
 
     # Server Settings
     server_parser.add_argument('--threads',     type=gufi_common.get_positive, default=gufi_common.cpus(),   help='Number of threads')
-    server_parser.add_argument('default_path',  type=str,                                                    help='Default GUFI tree path')
+    server_parser.add_argument('--gufi-query',  type=str,                      default=GUFI_QUERY,           help='gufi_query')
+    server_parser.add_argument('GUFITree',      type=str,                      nargs='+', default=[],        help='Default GUFI tree path(s)')
 
     args = parser.parse_args()
 
@@ -171,4 +188,4 @@ if __name__=='__main__':
         if args.mode == 'client':
             print dump_client(args.server, args.port, args.paramiko)
         elif args.mode == 'server':
-            print dump_server(args.threads, args.default_path)
+            print dump_server(args.threads, args.gufi_query, args.GUFITree)
