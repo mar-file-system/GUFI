@@ -401,7 +401,7 @@ if __name__=='__main__':
     parser.add_argument('GUFI_tree',                                                            type=str, nargs='*',                                help='top-most directory to search from')
 
     # GUFI specific arguments
-    parser.add_argument('--select',            metavar='cols',       dest='select',             action='append', nargs='*',                         help='comma separated columns (default: path/name)')
+    parser.add_argument('--select',            metavar='cols',       dest='select',             action='append', nargs='*',                         help='comma separated columns (default: *)')
     parser.add_argument('--group_by',          metavar='cols',       dest='group_by',           type=str,                                           help='comma separated columns (default: None)')
     parser.add_argument('--delim',             metavar='c',          dest='delim',              type=gufi_common.get_char,                          help='delimiter separating output columns')
     parser.add_argument('--size%',             metavar='n',          dest='size_percent_range', type=float, nargs=2,                                help='Modifier to the -size flag. Expects 2 values that define the min and max percentage from the size.')
