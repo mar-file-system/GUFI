@@ -236,6 +236,7 @@ if __name__=='__main__':
 
         # create the query command
         query_cmd = [config['Exec'],
+                     '-e', '0',
                      '-n', str(config['Threads']),
                      '-p', '-P']
 
