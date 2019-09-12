@@ -134,7 +134,7 @@ struct start_end {
 };
 
 struct buffer {
-    struct start_end data[10000];
+    struct start_end data[7000];
     size_t i;
 };
 
@@ -161,6 +161,8 @@ struct descend_timers {
     struct buffer clone;
     struct buffer pushdir;
 };
+
+struct descend_timers global_timers[48];
 
 #ifdef PER_THREAD_STATS
 void print_timers(struct buffer * timers, const char * name, const size_t id) {
@@ -273,12 +275,12 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
     }
     clock_gettime(CLOCK_MONOTONIC, create_tables_end);
 
-    clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
-    if (setpragmas) {
-        // ignore errors
-        set_pragmas(db);
-    }
-    clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
+    /* clock_gettime(CLOCK_MONOTONIC, set_pragmas_start); */
+    /* if (setpragmas) { */
+    /*     // ignore errors */
+    /*     set_pragmas(db); */
+    /* } */
+    /* clock_gettime(CLOCK_MONOTONIC, set_pragmas_end); */
 
     clock_gettime(CLOCK_MONOTONIC, load_extension_start);
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
@@ -675,7 +677,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct timespec addqueryfuncs_end;
     struct timespec descend_start;
     struct timespec descend_end;
-    struct descend_timers descend_timers;
+    struct descend_timers * descend_timers = &global_timers[id];
     struct timespec attach_start;
     struct timespec attach_end;
     struct timespec exec_start;
@@ -707,7 +709,23 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     memset(&addqueryfuncs_end, 0, sizeof(struct timespec));
     memset(&descend_start, 0, sizeof(struct timespec));
     memset(&descend_end, 0, sizeof(struct timespec));
-    memset(&descend_timers, 0, sizeof(struct descend_timers));
+    descend_timers->within_descend.i = 0;
+    descend_timers->check_args.i = 0;
+    descend_timers->level.i = 0;
+    descend_timers->level_branch.i = 0;
+    descend_timers->while_branch.i = 0;
+    descend_timers->readdir.i = 0;
+    descend_timers->readdir_branch.i = 0;
+    descend_timers->strncmp.i = 0;
+    descend_timers->strncmp_branch.i = 0;
+    descend_timers->snprintf.i = 0;
+    descend_timers->lstat.i = 0;
+    descend_timers->isdir.i = 0;
+    descend_timers->isdir_branch.i = 0;
+    descend_timers->access.i = 0;
+    descend_timers->set.i = 0;
+    descend_timers->clone.i = 0;
+    descend_timers->pushdir.i = 0;
     memset(&attach_start, 0, sizeof(struct timespec));
     memset(&attach_end, 0, sizeof(struct timespec));
     memset(&exec_start, 0, sizeof(struct timespec));
@@ -809,7 +827,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         // push subdirectories into the queue
         descend2(ctx, id, work, dir, in.max_level
                  #if defined(DEBUG)
-                 , &descend_timers
+                 , descend_timers
                  #endif
             );
         #ifdef DEBUG
@@ -977,22 +995,22 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
     total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
     total_descend_time           += elapsed(&descend_start, &descend_end);
-    total_check_args_time        += buffer_sum(&descend_timers.check_args);
-    total_level_time             += buffer_sum(&descend_timers.level);
-    total_level_branch_time      += buffer_sum(&descend_timers.level_branch);
-    total_while_branch_time      += buffer_sum(&descend_timers.while_branch);
-    total_readdir_time           += buffer_sum(&descend_timers.readdir);
-    total_readdir_branch_time    += buffer_sum(&descend_timers.readdir_branch);
-    total_strncmp_time           += buffer_sum(&descend_timers.strncmp);
-    total_strncmp_branch_time    += buffer_sum(&descend_timers.strncmp_branch);
-    total_snprintf_time          += buffer_sum(&descend_timers.snprintf);
-    total_lstat_time             += buffer_sum(&descend_timers.lstat);
-    total_isdir_time             += buffer_sum(&descend_timers.isdir);
-    total_isdir_branch_time      += buffer_sum(&descend_timers.isdir_branch);
-    total_access_time            += buffer_sum(&descend_timers.access);
-    total_set_time               += buffer_sum(&descend_timers.set);
-    total_clone_time             += buffer_sum(&descend_timers.clone);
-    total_pushdir_time           += buffer_sum(&descend_timers.pushdir);
+    total_check_args_time        += buffer_sum(&descend_timers->check_args);
+    total_level_time             += buffer_sum(&descend_timers->level);
+    total_level_branch_time      += buffer_sum(&descend_timers->level_branch);
+    total_while_branch_time      += buffer_sum(&descend_timers->while_branch);
+    total_readdir_time           += buffer_sum(&descend_timers->readdir);
+    total_readdir_branch_time    += buffer_sum(&descend_timers->readdir_branch);
+    total_strncmp_time           += buffer_sum(&descend_timers->strncmp);
+    total_strncmp_branch_time    += buffer_sum(&descend_timers->strncmp_branch);
+    total_snprintf_time          += buffer_sum(&descend_timers->snprintf);
+    total_lstat_time             += buffer_sum(&descend_timers->lstat);
+    total_isdir_time             += buffer_sum(&descend_timers->isdir);
+    total_isdir_branch_time      += buffer_sum(&descend_timers->isdir_branch);
+    total_access_time            += buffer_sum(&descend_timers->access);
+    total_set_time               += buffer_sum(&descend_timers->set);
+    total_clone_time             += buffer_sum(&descend_timers->clone);
+    total_pushdir_time           += buffer_sum(&descend_timers->pushdir);
     total_closedir_time          += elapsed(&closedir_start, &closedir_end);
     total_attach_time            += elapsed(&attach_start, &attach_end);
     total_exec_time              += elapsed(&exec_start, &exec_end);
@@ -1012,23 +1030,23 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     fprintf(stderr, "%zu load_extensions %" PRIu64 " %" PRIu64 "\n", id, timestamp(&load_extension_start) - epoch, timestamp(&load_extension_end) - epoch);
     fprintf(stderr, "%zu addqueryfuncs %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&addqueryfuncs_start) - epoch, timestamp(&addqueryfuncs_end) - epoch);
     fprintf(stderr, "%zu descend %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&descend_start) - epoch, timestamp(&descend_end) - epoch);
-    print_timers(&descend_timers.within_descend, "within_descend",   id);
-    print_timers(&descend_timers.check_args,     "check_args",       id);
-    print_timers(&descend_timers.level,          "level",            id);
-    print_timers(&descend_timers.level_branch,   "level_branch",     id);
-    print_timers(&descend_timers.while_branch,   "while_branch",     id);
-    print_timers(&descend_timers.readdir,        "readdir",          id);
-    print_timers(&descend_timers.readdir_branch, "readdir_branch",   id);
-    print_timers(&descend_timers.strncmp,        "strncmp",          id);
-    print_timers(&descend_timers.strncmp_branch, "strncmp_branch",   id);
-    print_timers(&descend_timers.snprintf,       "snprintf",         id);
-    print_timers(&descend_timers.lstat,          "lstat",            id);
-    print_timers(&descend_timers.isdir,          "isdir",            id);
-    print_timers(&descend_timers.isdir_branch,   "isdir_branch",     id);
-    print_timers(&descend_timers.access,         "access",           id);
-    print_timers(&descend_timers.set,            "set",              id);
-    print_timers(&descend_timers.clone,          "clone",            id);
-    print_timers(&descend_timers.pushdir,        "pushdir",          id);
+    print_timers(&descend_timers->within_descend, "within_descend",   id);
+    print_timers(&descend_timers->check_args,     "check_args",       id);
+    print_timers(&descend_timers->level,          "level",            id);
+    print_timers(&descend_timers->level_branch,   "level_branch",     id);
+    print_timers(&descend_timers->while_branch,   "while_branch",     id);
+    print_timers(&descend_timers->readdir,        "readdir",          id);
+    print_timers(&descend_timers->readdir_branch, "readdir_branch",   id);
+    print_timers(&descend_timers->strncmp,        "strncmp",          id);
+    print_timers(&descend_timers->strncmp_branch, "strncmp_branch",   id);
+    print_timers(&descend_timers->snprintf,       "snprintf",         id);
+    print_timers(&descend_timers->lstat,          "lstat",            id);
+    print_timers(&descend_timers->isdir,          "isdir",            id);
+    print_timers(&descend_timers->isdir_branch,   "isdir_branch",     id);
+    print_timers(&descend_timers->access,         "access",           id);
+    print_timers(&descend_timers->set,            "set",              id);
+    print_timers(&descend_timers->clone,          "clone",            id);
+    print_timers(&descend_timers->pushdir,        "pushdir",          id);
     fprintf(stderr, "%zu attach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&attach_start) - epoch, timestamp(&attach_end) - epoch);
     fprintf(stderr, "%zu sqlite3_exec %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&exec_start) - epoch, timestamp(&exec_end) - epoch);
     fprintf(stderr, "%zu detach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&detach_start) - epoch, timestamp(&detach_end) - epoch);

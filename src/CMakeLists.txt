@@ -79,31 +79,32 @@ if (BENCHMARK)
   add_definitions(-DBENCHMARK=1)
 endif()
 
-# ##########################################
-# Debug prints
-# Only one of these should be used at once
-# Also should not be used with BENCHMARK
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # ##########################################
+  # Debug prints
+  # Only one of these should be used at once
+  # Also should not be used with BENCHMARK
 
-# Cumulative times shown at end of run
-if (CUMULATIVE_TIMES)
-  add_definitions(-DCUMULATIVE_TIMES=1)
+  # Cumulative times shown at end of run
+  if (CUMULATIVE_TIMES)
+    add_definitions(-DCUMULATIVE_TIMES=1)
+  endif()
+
+  # Timestamps showing what each thread is doing
+  if (PER_THREAD_STATS)
+    add_definitions(-DPER_THREAD_STATS=1)
+  endif()
+
+  # print subdirectory counts
+  if (SUBDIRECTORY_COUNTS)
+    add_definitions(-DSUBDIRECTORY_COUNTS=1)
+  endif()
+
+  # QueuePerThread queue size
+  if (QPTPOOL_QUEUE_SIZE)
+    add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
+  endif()
 endif()
-
-# Timestamps showing what each thread is doing
-if (PER_THREAD_STATS)
-  add_definitions(-DPER_THREAD_STATS=1)
-endif()
-
-# print subdirectory counts
-if (SUBDIRECTORY_COUNTS)
-  add_definitions(-DSUBDIRECTORY_COUNTS=1)
-endif()
-
-# QueuePerThread queue size
-if (QPTPOOL_QUEUE_SIZE)
-  add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
-endif()
-
 
 # ##########################################
 
