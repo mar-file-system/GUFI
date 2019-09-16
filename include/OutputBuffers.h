@@ -77,14 +77,27 @@ OF SUCH DAMAGE.
 
 #include <pthread.h>
 #include <stddef.h>
+#include <stdio.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+  Users are meant to know the internal structures
+  of OutputBuffer and OutputBuffers, instead of
+  having their implementations encapsulated.
+*/
 
 /* Single Buffer */
 struct OutputBuffer {
     char * buf;
     size_t capacity;
     size_t filled;
-    size_t count;
+    size_t count;     /* GUFI specific; counter for number of rows that were buffered here */
 };
+
+size_t OutputBuffer_flush(pthread_mutex_t * print_mutex, struct OutputBuffer * obuf, FILE * out);
 
 /* Buffers for all threads */
 struct OutputBuffers {
@@ -93,4 +106,10 @@ struct OutputBuffers {
 };
 
 struct OutputBuffers * OutputBuffers_init(struct OutputBuffers * obufs, const size_t count, const size_t capacity);
+size_t OutputBuffers_flush_single(struct OutputBuffers * obufs, const size_t count, FILE * out);
+size_t OutputBuffers_flush_multiple(struct OutputBuffers * obufs, const size_t count, FILE ** out);
 void OutputBuffers_destroy(struct OutputBuffers * obufs, const size_t count);
+
+#ifdef __cplusplus
+}
+#endif

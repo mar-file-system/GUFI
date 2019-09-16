@@ -75,7 +75,6 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 
-#include <stdarg.h>
 #include <stdlib.h>
 
 static struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const size_t capacity) {
@@ -89,6 +88,20 @@ static struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const
     }
 
     return obuf;
+}
+
+size_t OutputBuffer_flush(pthread_mutex_t * print_mutex, struct OutputBuffer * obuf, FILE * out) {
+    /* /\* skip argument checking *\/ */
+    /* if (!print_mutex || !output_buffer || !out) { */
+    /*     return 0; */
+    /* } */
+
+    pthread_mutex_lock(print_mutex);
+    const size_t rc = fwrite(obuf->buf, sizeof(char), obuf->filled, out);
+    pthread_mutex_unlock(print_mutex);
+
+    obuf->filled = 0;
+    return rc;
 }
 
 static void OutputBuffer_destroy(struct OutputBuffer * obuf) {
@@ -115,6 +128,26 @@ struct OutputBuffers * OutputBuffers_init(struct OutputBuffers * obufs, const si
     }
 
     return obufs;
+}
+
+size_t OutputBuffers_flush_single(struct OutputBuffers * obufs, const size_t count, FILE * out) {
+    /* skip argument checking */
+    size_t rows = 0;
+    for(size_t i = 0; i < count; i++) {
+        OutputBuffer_flush(&obufs->mutex, &obufs->buffers[i], out);
+        rows += obufs->buffers[i].count;
+    }
+    return rows;
+}
+
+size_t OutputBuffers_flush_multiple(struct OutputBuffers * obufs, const size_t count, FILE ** out) {
+    /* skip argument checking */
+    size_t rows = 0;
+    for(size_t i = 0; i < count; i++) {
+        OutputBuffer_flush(&obufs->mutex, &obufs->buffers[i], out[i]);
+        rows += obufs->buffers[i].count;
+    }
+    return rows;
 }
 
 void OutputBuffers_destroy(struct OutputBuffers * obufs, const size_t count) {
