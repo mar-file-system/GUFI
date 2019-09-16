@@ -162,7 +162,7 @@ struct descend_timers {
     struct buffer pushdir;
 };
 
-struct descend_timers global_timers[48];
+struct descend_timers * global_timers = NULL;
 
 #ifdef PER_THREAD_STATS
 void print_timers(struct buffer * timers, const char * name, const size_t id) {
@@ -213,15 +213,6 @@ long double buffer_sum(struct buffer * timer) {
 
     return sum;
 }
-/* long double sll_loop_sum(struct sll * timer) { */
-/*     long double sum = 0; */
-/*     for(struct node * node = sll_head_node(timer); node; node = sll_next_node(node)) { */
-/*         struct start_end * times = sll_node_data(node); */
-/*         sum += elapsed(&times->start, &times->end); */
-/*     } */
-
-/*     return sum; */
-/* } */
 #endif
 
 static const char GUFI_SQLITE_VFS[] = "unix-none";
@@ -275,12 +266,12 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
     }
     clock_gettime(CLOCK_MONOTONIC, create_tables_end);
 
-    /* clock_gettime(CLOCK_MONOTONIC, set_pragmas_start); */
-    /* if (setpragmas) { */
-    /*     // ignore errors */
-    /*     set_pragmas(db); */
-    /* } */
-    /* clock_gettime(CLOCK_MONOTONIC, set_pragmas_end); */
+    clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
+    if (setpragmas) {
+        // ignore errors
+        set_pragmas(db);
+    }
+    clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
 
     clock_gettime(CLOCK_MONOTONIC, load_extension_start);
     if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
@@ -559,22 +550,6 @@ struct CallbackArgs {
     int id;
 };
 
-size_t flush_buffer(pthread_mutex_t * print_mutex, struct OutputBuffer * output_buffer, FILE * out) {
-    /* /\* skip argument checking *\/ */
-    /* if (!print_mutex || !output_buffer || !out) { */
-    /*     return 0; */
-    /* } */
-
-    output_buffer->buf[output_buffer->filled] = '\0';
-
-    pthread_mutex_lock(print_mutex);
-    const size_t rc = fwrite(output_buffer->buf, sizeof(char), output_buffer->filled, out);
-    pthread_mutex_unlock(print_mutex);
-
-    output_buffer->filled = 0;
-    return rc;
-}
-
 static int print_callback(void * args, int count, char **data, char **columns) {
     /* skip argument checking */
     /* if (!args) { */
@@ -593,11 +568,11 @@ static int print_callback(void * args, int count, char **data, char **columns) {
 
         const size_t capacity = ca->output_buffers->buffers[id].capacity;
 
-        /* if the row can fit within an empty buffer, try to add the row to previously buffered rows */
-        if (row_len < capacity) {
+        /* if the row can fit within an empty buffer, try to add the new row to the buffer */
+        if (row_len <= capacity) {
             /* if there's not enough space in the buffer to fit the new row, flush it first */
             if ((ca->output_buffers->buffers[id].filled + row_len) > capacity) {
-                flush_buffer(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+                OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
             }
 
             char * buf = ca->output_buffers->buffers[id].buf;
@@ -896,11 +871,13 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
                         #endif
+                        #if defined(DEBUG) && ! defined(NO_SQL_EXEC)
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s: %s\n", err, dbname);
                             sqlite3_free(err);
                         }
+                        #endif
                         #if defined(DEBUG)
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         #endif
@@ -1107,6 +1084,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
+
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec setup_globals_end;
     clock_gettime(CLOCK_MONOTONIC, &setup_globals_end);
@@ -1286,19 +1265,16 @@ int main(int argc, char *argv[])
         closedb(aggregate);
     }
 
-    // clear out buffered data
-    size_t rows = 0;
-    for(int i = 0; i < in.maxthreads + 1; i++) {
-        flush_buffer(&args.output_buffers.mutex, &args.output_buffers.buffers[i], gts.outfd[i]);
-        rows += args.output_buffers.buffers[i].count;
-    }
-
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec cleanup_globals_start;
     clock_gettime(CLOCK_MONOTONIC, &cleanup_globals_start);
     #endif
 
+    // clear out buffered data
+    const size_t rows = OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads + 1, gts.outfd);
+
     // clean up globals
+    free(global_timers);
     OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
     outfiles_fin(gts.outfd,  in.maxthreads);
