@@ -635,7 +635,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     char dbname[MAXSQL];
     SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
-    #if defined(DEBUG)
+    #ifdef DEBUG
     struct timespec opendir_start;
     struct timespec opendir_end;
     struct timespec open_start;
@@ -718,12 +718,12 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     #endif
 
     // open directory
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &opendir_start);
     #endif
     // keep opendir near opendb to help speed up sqlite3_open_v2
     dir = opendir(work->name);
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &opendir_end);
     #endif
 
@@ -734,7 +734,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     // if we have out db then we have that db open so we just attach the gufi db
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_start);
     #endif
     if (in.outdb > 0) {
@@ -742,7 +742,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
       attachdb(dbname, db, "tree");
     } else {
       db = opendb2(dbname, 1, 0, 0
-                   #if defined(DEBUG)
+                   #ifdef DEBUG
                    , &sqlite3_open_start
                    , &sqlite3_open_end
                    , &create_tables_start
@@ -754,18 +754,18 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                    #endif
           );
     }
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_end);
     #endif
 
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_start);
     #endif
     // this is needed to add some query functions like path() uidtouser() gidtogroup()
     if (db) {
         addqueryfuncs2(db, ctx);
     }
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_end);
     #endif
 
@@ -801,7 +801,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         #endif
         // push subdirectories into the queue
         descend2(ctx, id, work, dir, in.max_level
-                 #if defined(DEBUG)
+                 #ifdef DEBUG
                  , descend_timers
                  #endif
             );
@@ -842,7 +842,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                 // if we have recs (or are running an OR) query the entries table
                 if (recs > 0) {
                     if (in.sqlent_len > 1) {
-                         #if defined(DEBUG)
+                         #ifdef DEBUG
                          clock_gettime(CLOCK_MONOTONIC, &attach_start);
                          #endif
                          if (in.aggregate_or_print == AGGREGATE) {
@@ -855,7 +855,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                                  goto out_dir;
                              }
                          }
-                        #if defined(DEBUG)
+                        #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &attach_end);
                         #endif
                         // set the path so users can put path() in their queries
@@ -868,7 +868,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         ca.output_buffers = &ta->output_buffers;
                         ca.id = id;
 
-                        #if defined(DEBUG)
+                        #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
                         #endif
                         #if defined(DEBUG) && ! defined(NO_SQL_EXEC)
@@ -878,11 +878,11 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                             sqlite3_free(err);
                         }
                         #endif
-                        #if defined(DEBUG)
+                        #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         #endif
 
-                        #if defined(DEBUG)
+                        #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &detach_start);
                         #endif
                         if (in.aggregate_or_print == AGGREGATE) {
@@ -892,7 +892,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                                 goto out_dir;
                             }
                         }
-                        #if defined(DEBUG)
+                        #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &detach_end);
                         #endif
 
@@ -912,7 +912,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     // if we have an out db we just detach gufi db
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &close_start);
     #endif
     if (in.outdb > 0) {
@@ -920,7 +920,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     } else {
       closedb(db);
     }
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &close_end);
     #endif
 
@@ -928,15 +928,15 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     ;
 
     // close dir
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &closedir_start);
     #endif
     closedir(dir);
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &closedir_end);
     #endif
 
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &utime_start);
     #endif
     // restore mtime and atime
@@ -946,18 +946,18 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         dbtime.modtime = work->statuso.st_mtime;
         utime(dbname, &dbtime);
     }
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &utime_end);
     #endif
 
   out_free:
     ;
 
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &free_work_start);
     #endif
     free(work);
-    #if defined(DEBUG)
+    #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &free_work_end);
     #endif
 
@@ -1056,7 +1056,7 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &start);
     #endif
 
-    #if defined(DEBUG)
+    #ifdef DEBUG
     epoch = timestamp(&start);
     #endif
 
@@ -1084,7 +1084,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    #ifdef DEBUG
     global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
+    #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec setup_globals_end;
@@ -1271,10 +1273,15 @@ int main(int argc, char *argv[])
     #endif
 
     // clear out buffered data
-    const size_t rows = OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads + 1, gts.outfd);
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    const size_t rows =
+    #endif
+    OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads + 1, gts.outfd);
 
     // clean up globals
+    #ifdef DEBUG
     free(global_timers);
+    #endif
     OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
     outfiles_fin(gts.outfd,  in.maxthreads);
