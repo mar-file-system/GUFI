@@ -80,6 +80,10 @@ OF SUCH DAMAGE.
 
 #include <pthread.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* The Queue Per Thread Pool context */
 struct QPTPoolData;
 struct QPTPool {
@@ -87,6 +91,7 @@ struct QPTPool {
     size_t size;
 
     pthread_mutex_t mutex;
+    int running;
     size_t incomplete;
 };
 
@@ -111,5 +116,9 @@ void QPTPool_destroy(struct QPTPool * ctx);
 size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);           /* get a number in the range [0, # of threads), or (size_t) -1 on error */
 size_t QPTPool_threads_started(struct QPTPool * ctx);
 size_t QPTPool_threads_completed(struct QPTPool * ctx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

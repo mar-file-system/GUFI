@@ -80,14 +80,18 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 #include "QueuePerThreadPoolPrivate.h"
-#include "debug.h"
 
 #ifdef DEBUG
+#include "debug.h"
 #include <time.h>
 #endif
 
 #include <sched.h>
 #include <stdlib.h>
+
+#if defined(__linux__) || defined(__unix__)
+#include <sys/sysinfo.h>
+#endif
 
 struct QPTPool * QPTPool_init(const size_t threads) {
     if (!threads) {
@@ -118,6 +122,7 @@ struct QPTPool * QPTPool_init(const size_t threads) {
     }
 
     pthread_mutex_init(&ctx->mutex, NULL);
+    ctx->running = 0;
     ctx->incomplete = 0;
 
     return ctx;
@@ -125,17 +130,20 @@ struct QPTPool * QPTPool_init(const size_t threads) {
 
 /* id selects the next_queue variable to use, not where the work will be placed */
 void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work) {
-    pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
-    sll_push(&ctx->data[ctx->data[id].next_queue].queue, new_work);
-    pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
+    /* skip argument checking */
+    /* if (ctx) { */
+        pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
+        sll_push(&ctx->data[ctx->data[id].next_queue].queue, new_work);
+        pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
 
-    pthread_mutex_lock(&ctx->mutex);
-    ctx->incomplete++;
-    pthread_mutex_unlock(&ctx->mutex);
+        pthread_mutex_lock(&ctx->mutex);
+        ctx->incomplete++;
+        pthread_mutex_unlock(&ctx->mutex);
 
-    pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
+        pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
 
-    ctx->data[id].next_queue = (ctx->data[id].next_queue + 1) % ctx->size;
+        ctx->data[id].next_queue = (ctx->data[id].next_queue + 1) % ctx->size;
+    /* } */
 }
 
 struct worker_function_args {
@@ -173,15 +181,17 @@ static void * worker_function(void *args) {
         return NULL;
     }
 
-    // pin thread to processor
+    /* pin thread to processor */
     if (wf_args->pinned) {
+        #if defined(__linux__) || defined(__unix__)
         cpu_set_t cpus;
         CPU_ZERO(&cpus);
-        CPU_SET(wf_args->id, &cpus);
+        CPU_SET(wf_args->id % get_nprocs(), &cpus);
 
         if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpus) != 0) {
             return NULL;
         }
+        #endif
     }
 
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
@@ -227,7 +237,7 @@ static void * worker_function(void *args) {
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         clock_gettime(CLOCK_MONOTONIC, &wf_wait_start);
         #endif
-        while (ctx->incomplete && !tw->queue.head) {
+        while (ctx->running || (ctx->incomplete && !tw->queue.head)) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_cond_wait(&tw->cv, &tw->mutex);
             pthread_mutex_lock(&ctx->mutex);
@@ -236,7 +246,7 @@ static void * worker_function(void *args) {
         clock_gettime(CLOCK_MONOTONIC, &wf_wait_end);
         #endif
 
-        if (!ctx->incomplete && !tw->queue.head) {
+        if (!ctx->running && !ctx->incomplete && !tw->queue.head) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_mutex_unlock(&tw->mutex);
             break;
@@ -259,13 +269,9 @@ static void * worker_function(void *args) {
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        uint64_t ns = now.tv_sec;
-        ns *= 1000000000ULL;
-        ns += now.tv_nsec;
-        ns -= epoch;
-        size_t sum = 0;
+        fprintf(stderr, "%" PRIu64 " ", timestamp(&now) - epoch);
 
-        fprintf(stderr, "%" PRIu64 " ", ns);
+        size_t sum = 0;
         for(size_t i = 0; i < wf_args->ctx->size; i++) {
             fprintf(stderr, "%zu ", wf_args->ctx->data[i].queue.size);
             sum += wf_args->ctx->data[i].queue.size;
@@ -354,6 +360,8 @@ size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t func,
         return 0;
     }
 
+    ctx->running = 1;
+
     size_t started = 0;
     for(size_t i = 0; i < ctx->size; i++) {
         struct worker_function_args * wf_args = calloc(1, sizeof(struct worker_function_args));
@@ -372,6 +380,13 @@ void QPTPool_wait(struct QPTPool * ctx) {
     if (!ctx) {
         return;
     }
+
+    pthread_mutex_lock(&ctx->mutex);
+    ctx->running = 0;
+    for(size_t i = 0; i < ctx->size; i++) {
+        pthread_cond_broadcast(&ctx->data[i].cv);
+    }
+    pthread_mutex_unlock(&ctx->mutex);
 
     for(size_t i = 0; i < ctx->size; i++) {
         pthread_join(ctx->data[i].thread, NULL);
