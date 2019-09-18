@@ -383,10 +383,12 @@ void QPTPool_wait(struct QPTPool * ctx) {
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->running = 0;
-    for(size_t i = 0; i < ctx->size; i++) {
-        pthread_cond_broadcast(&ctx->data[i].cv);
-    }
     pthread_mutex_unlock(&ctx->mutex);
+    for(size_t i = 0; i < ctx->size; i++) {
+        pthread_mutex_lock(&ctx->data[i].mutex);
+        pthread_cond_broadcast(&ctx->data[i].cv);
+        pthread_mutex_unlock(&ctx->data[i].mutex);
+    }
 
     for(size_t i = 0; i < ctx->size; i++) {
         pthread_join(ctx->data[i].thread, NULL);
