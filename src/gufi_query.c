@@ -871,7 +871,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
                         #endif
-                        #if defined(DEBUG) && ! defined(NO_SQL_EXEC)
+                        #ifndef NO_SQL_EXEC
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s: %s\n", err, dbname);

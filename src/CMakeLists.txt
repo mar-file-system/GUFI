@@ -105,12 +105,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
   endif()
 
-  # remove the sqlite3_exec
-  if (NO_SQL_EXEC)
-    add_definitions(-DNO_SQL_EXEC=1)
-  endif()
 endif()
 
+# remove the sqlite3_exec
+if (NO_SQL_EXEC)
+  add_definitions(-DNO_SQL_EXEC=1)
+endif()
 # ##########################################
 
 # create the GUFI library, which contains all of the common source files
