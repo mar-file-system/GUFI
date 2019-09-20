@@ -1108,7 +1108,9 @@ int main(int argc, char *argv[])
     }
 
     #ifdef DEBUG
+    #ifdef PER_THREAD_STATS
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL);
+    #endif
     global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
     #endif
 
