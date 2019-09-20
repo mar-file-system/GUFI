@@ -157,6 +157,37 @@ struct worker_function_args {
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 #include <stdio.h>
 static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#include "OutputBuffers.h"
+#include <string.h>
+struct OutputBuffers debug_output_buffers = {};
+
+int print_debug(struct OutputBuffers * obufs, const size_t id, const char * str, const size_t str_len) {
+    const size_t capacity = obufs->buffers[id].capacity;
+
+    /* if the row can fit within an empty buffer, try to add the new row to the buffer */
+    if (str_len <= capacity) {
+        /* if there's not enough space in the buffer to fit the new row, flush it first */
+        if ((obufs->buffers[id].filled + str_len) > capacity) {
+            OutputBuffer_flush(&obufs->mutex, &obufs->buffers[id], stderr);
+        }
+
+        char * buf = obufs->buffers[id].buf;
+        size_t filled = obufs->buffers[id].filled;
+
+        memcpy(&buf[filled], str, str_len);
+        filled += str_len;
+
+        obufs->buffers[id].filled = filled;
+        obufs->buffers[id].count++;
+    }
+    else {
+        /* if the row does not fit the buffer, output immediately instead of buffering */
+        fwrite(str, sizeof(char), str_len, stderr);
+    }
+
+    return 0;
+}
 #endif
 
 static void * worker_function(void *args) {
@@ -314,15 +345,26 @@ static void * worker_function(void *args) {
         #endif
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        pthread_mutex_lock(&count_mutex);
-        fprintf(stderr, "%zu wf_sll_init %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_sll_init_start) - epoch, timestamp(&wf_sll_init_end) - epoch);
-        fprintf(stderr, "%zu wf_tw_mutex_lock %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_tw_mutex_lock_start) - epoch, timestamp(&wf_tw_mutex_lock_end) - epoch);
-        fprintf(stderr, "%zu wf_ctx_mutex_lock %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_ctx_mutex_lock_start) - epoch, timestamp(&wf_ctx_mutex_lock_end) - epoch);
-        fprintf(stderr, "%zu wf_wait %"           PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_wait_start) - epoch, timestamp(&wf_wait_end) - epoch);
-        fprintf(stderr, "%zu wf_move %"           PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_move_queue_start) - epoch, timestamp(&wf_move_queue_end) - epoch);
-        fprintf(stderr, "%zu wf_process_queue %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_process_queue_start) - epoch, timestamp(&wf_process_queue_end) - epoch);
-        fprintf(stderr, "%zu wf_cleanup %"        PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_cleanup_start) - epoch, timestamp(&wf_cleanup_end) - epoch);
-        pthread_mutex_unlock(&count_mutex);
+        if (debug_output_buffers.buffers) {
+            char buf[4096];
+            size_t len;
+            pthread_mutex_lock(&count_mutex);
+            len = snprintf(buf, 4096, "%zu wf_sll_init %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_sll_init_start) - epoch, timestamp(&wf_sll_init_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            len = snprintf(buf, 4096, "%zu wf_tw_mutex_lock %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_tw_mutex_lock_start) - epoch, timestamp(&wf_tw_mutex_lock_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            len = snprintf(buf, 4096, "%zu wf_ctx_mutex_lock %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_ctx_mutex_lock_start) - epoch, timestamp(&wf_ctx_mutex_lock_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            len = snprintf(buf, 4096, "%zu wf_wait %"           PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_wait_start) - epoch, timestamp(&wf_wait_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            len = snprintf(buf, 4096, "%zu wf_move %"           PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_move_queue_start) - epoch, timestamp(&wf_move_queue_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            len = snprintf(buf, 4096, "%zu wf_process_queue %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_process_queue_start) - epoch, timestamp(&wf_process_queue_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            len = snprintf(buf, 4096, "%zu wf_cleanup %"        PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_cleanup_start) - epoch, timestamp(&wf_cleanup_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            pthread_mutex_unlock(&count_mutex);
+        }
         #endif
     }
 
@@ -336,7 +378,12 @@ static void * worker_function(void *args) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec wf_broadcast_end;
     clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_end);
-    fprintf(stderr, "%zu wf_broadcast %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_broadcast_start) - epoch, timestamp(&wf_broadcast_end) - epoch);
+    if (debug_output_buffers.buffers) {
+        char buf[4096];
+        size_t len;
+        len = snprintf(buf, 4096, "%zu wf_broadcast %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_broadcast_start) - epoch, timestamp(&wf_broadcast_end) - epoch);
+        print_debug(&debug_output_buffers, wf_args->id, buf, len);
+    }
     #endif
 
     free(args);
@@ -347,9 +394,14 @@ static void * worker_function(void *args) {
     #endif
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    pthread_mutex_lock(&count_mutex);
-    fprintf(stderr, "%zu wf %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_start) - epoch, timestamp(&wf_end) - epoch);
-    pthread_mutex_unlock(&count_mutex);
+    if (debug_output_buffers.buffers) {
+        char buf[4096];
+        size_t len;
+        pthread_mutex_lock(&count_mutex);
+        len = snprintf(buf, 4096, "%zu wf %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_start) - epoch, timestamp(&wf_end) - epoch);
+        print_debug(&debug_output_buffers, wf_args->id, buf, len);
+        pthread_mutex_unlock(&count_mutex);
+    }
     #endif
 
     return NULL;
