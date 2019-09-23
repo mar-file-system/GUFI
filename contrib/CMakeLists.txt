@@ -142,7 +142,7 @@ if (BENCHMARK)
                     DEPENDS benchmark_init gendir)
   add_custom_target(benchmark_dir2index COMMAND $<TARGET_FILE:gufi_dir2index> -n "${BENCHMARK_THREADS}" "${BENCHMARK_TREE}" "${BENCHMARK_GUFI_TREE}"
                     DEPENDS benchmark_generate_dir gufi_dir2index)
-  add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find --threads "${BENCHMARK_THREADS}" --exec $<TARGET_FILE:gufi_query> "${BENCHMARK_GUFI_TREE}" > /dev/null
+  add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find > /dev/null
                     DEPENDS benchmark_dir2index gufi_query ${CMAKE_BINARY_DIR}/scripts/gufi_find)
   add_custom_target(benchmark_fin COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
                     DEPENDS benchmark_query)

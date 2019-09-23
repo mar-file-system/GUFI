@@ -83,7 +83,6 @@ if (PARAMIKO)
 
   # copy the configuration handling script into both the Server and Client RPMs
   configure_file(gufi_config gufi_config @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Server)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Client)
 
   # gufi_common.py is also needed by the client
@@ -105,7 +104,7 @@ if (PARAMIKO)
 endif()
 
 # list of scripts that act as tools on the server
-set(TOOLS gufi_find gufi_stats gufi_ls)
+set(TOOLS gufi_find gufi_stats gufi_ls gufi_config)
 
 # copy and install scripts that act like binaries
 foreach(TOOL ${TOOLS})
@@ -113,7 +112,7 @@ foreach(TOOL ${TOOLS})
   configure_file(${TOOL} ${TOOL} @ONLY)
 
   # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${TOOL} DESTINATION bin COMPONENT Server)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${TOOL} DESTINATION bin COMPONENT Server)
 endforeach()
 
 # gufi_common.py is not an executable, but is installed in bin for convenience
