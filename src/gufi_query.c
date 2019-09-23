@@ -75,10 +75,6 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
@@ -734,13 +730,14 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     clock_gettime(CLOCK_MONOTONIC, &opendir_end);
     #endif
 
-    // if the directorty can't be opened, don't bother with anything else
+    // if the directory can't be opened, don't bother with anything else
     if (!dir) {
         /* fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno)); */
         goto out_free;
     }
 
     // if we have out db then we have that db open so we just attach the gufi db
+    #ifndef NO_OPENDB
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_start);
     #endif
@@ -764,7 +761,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_end);
     #endif
+    #endif
 
+    #ifndef NO_ADDQUERYFUNCS
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_start);
     #endif
@@ -774,6 +773,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_end);
+    #endif
     #endif
 
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
@@ -870,6 +870,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
                         realpath(work->name,gps[id].gfpath);
 
+                        #ifndef NO_SQL_EXEC
                         struct ThreadArgs * ta = (struct ThreadArgs *) args;
                         struct CallbackArgs ca;
                         ca.output_buffers = &ta->output_buffers;
@@ -878,15 +879,14 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
                         #endif
-                        #ifndef NO_SQL_EXEC
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s: %s\n", err, dbname);
                             sqlite3_free(err);
                         }
-                        #endif
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
+                        #endif
                         #endif
 
                         #ifdef DEBUG
@@ -919,6 +919,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     // if we have an out db we just detach gufi db
+    #ifndef NO_OPENDB
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &close_start);
     #endif
@@ -929,6 +930,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &close_end);
+    #endif
     #endif
 
   out_dir:
@@ -969,6 +971,9 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     #endif
 
     #ifdef DEBUG
+    struct timespec output_timestamps_start;
+    clock_gettime(CLOCK_MONOTONIC, &output_timestamps_start);
+
     #ifdef CUMULATIVE_TIMES
     pthread_mutex_lock(&print_mutex);
     total_opendir_time           += elapsed(&opendir_start, &opendir_end);
@@ -1005,7 +1010,6 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     pthread_mutex_unlock(&print_mutex);
     #endif
     #ifdef PER_THREAD_STATS
-    pthread_mutex_lock(&print_mutex);
     char buf[4096];
     size_t len;
     len = snprintf(buf, 4096, "%zu opendir %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&opendir_start) - epoch, timestamp(&opendir_end) - epoch);
@@ -1053,8 +1057,16 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     print_debug(&debug_output_buffers, id, buf, len);
     len = snprintf(buf, 4096, "%zu utime %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&utime_start) - epoch, timestamp(&utime_end) - epoch);
     print_debug(&debug_output_buffers, id, buf, len);
-    pthread_mutex_unlock(&print_mutex);
     #endif
+
+    struct timespec output_timestamps_end;
+    clock_gettime(CLOCK_MONOTONIC, &output_timestamps_end);
+
+    #ifdef PER_THREAD_STATS
+    len = snprintf(buf, 4096, "%zu output_timestamps %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&output_timestamps_start) - epoch, timestamp(&output_timestamps_end) - epoch);
+    print_debug(&debug_output_buffers, id, buf, len);
+    #endif
+
     #endif
 
     return 0;
@@ -1087,7 +1099,7 @@ int main(int argc, char *argv[])
     // but allow different fields to be filled at the command-line.
     // Callers provide the options-string for get_opt(), which will
     // control which options are parsed for each program.
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Papn:o:d:O:I:F:y:z:G:J:e:m:B:", 1, "GUFI_tree ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:", 1, "GUFI_tree ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -1298,13 +1310,13 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &cleanup_globals_start);
     #endif
 
-    // clear out buffered data
+    /* clear out buffered data */
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     const size_t rows =
     #endif
     OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads + 1, gts.outfd);
 
-    // clean up globals
+    /* clean up globals */
     OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
     outfiles_fin(gts.outfd,  in.maxthreads);

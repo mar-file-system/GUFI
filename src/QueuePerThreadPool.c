@@ -156,10 +156,8 @@ struct worker_function_args {
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 #include <stdio.h>
-static pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-#include "OutputBuffers.h"
 #include <string.h>
+#include "OutputBuffers.h"
 struct OutputBuffers debug_output_buffers = {};
 
 int print_debug(struct OutputBuffers * obufs, const size_t id, const char * str, const size_t str_len) {
@@ -192,6 +190,9 @@ int print_debug(struct OutputBuffers * obufs, const size_t id, const char * str,
 
 static void * worker_function(void *args) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    char buf[4096];
+    size_t len;
+
     struct timespec wf_start;
     clock_gettime(CLOCK_MONOTONIC, &wf_start);
     #endif
@@ -295,7 +296,7 @@ static void * worker_function(void *args) {
         #endif
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
-        pthread_mutex_lock(&count_mutex);
+        pthread_mutex_lock(&print_mutex);
         tw->queue.size = dirs.size;
 
         struct timespec now;
@@ -309,7 +310,7 @@ static void * worker_function(void *args) {
         }
         fprintf(stderr, "%zu\n", sum);
         tw->queue.size = 0;
-        pthread_mutex_unlock(&count_mutex);
+        pthread_mutex_unlock(&print_mutex);
         #endif
 
         pthread_mutex_unlock(&tw->mutex);
@@ -320,10 +321,51 @@ static void * worker_function(void *args) {
         #endif
         /* process all work */
         size_t work_count = 0;
-        for(struct node * dir = sll_head_node(&dirs); dir; dir = sll_next_node(dir)) {
+
+        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+        struct timespec wf_get_queue_head_start;
+        clock_gettime(CLOCK_MONOTONIC, &wf_get_queue_head_start);
+        #endif
+
+        struct node * dir = sll_head_node(&dirs);
+
+        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+        struct timespec wf_get_queue_head_end;
+        clock_gettime(CLOCK_MONOTONIC, &wf_get_queue_head_end);
+        len = snprintf(buf, 4096, "%zu wf_get_queue_head %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_get_queue_head_start) - epoch, timestamp(&wf_get_queue_head_end) - epoch);
+        print_debug(&debug_output_buffers, wf_args->id, buf, len);
+        #endif
+
+        while (dir) {
+            #if defined(DEBUG) && defined(PER_THREAD_STATS)
+            struct timespec wf_process_work_start;
+            clock_gettime(CLOCK_MONOTONIC, &wf_process_work_start);
+            #endif
             tw->threads_successful += !wf_args->func(ctx, sll_node_data(dir), wf_args->id, wf_args->args);
+            #if defined(DEBUG) && defined(PER_THREAD_STATS)
+            struct timespec wf_process_work_end;
+            clock_gettime(CLOCK_MONOTONIC, &wf_process_work_end);
+
+            len = snprintf(buf, 4096, "%zu wf_process_work %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_process_work_start) - epoch, timestamp(&wf_process_work_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            #endif
+
+            #if defined(DEBUG) && defined(PER_THREAD_STATS)
+            struct timespec wf_next_work_start;
+            clock_gettime(CLOCK_MONOTONIC, &wf_next_work_start);
+            #endif
+            dir = sll_next_node(dir);
+            #if defined(DEBUG) && defined(PER_THREAD_STATS)
+            struct timespec wf_next_work_end;
+            clock_gettime(CLOCK_MONOTONIC, &wf_next_work_end);
+
+            len = snprintf(buf, 4096, "%zu wf_next_work %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_next_work_start) - epoch, timestamp(&wf_next_work_end) - epoch);
+            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            #endif
+
             work_count++;
         }
+
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         struct timespec wf_process_queue_end;
         clock_gettime(CLOCK_MONOTONIC, &wf_process_queue_end);
@@ -346,9 +388,6 @@ static void * worker_function(void *args) {
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            char buf[4096];
-            size_t len;
-            pthread_mutex_lock(&count_mutex);
             len = snprintf(buf, 4096, "%zu wf_sll_init %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_sll_init_start) - epoch, timestamp(&wf_sll_init_end) - epoch);
             print_debug(&debug_output_buffers, wf_args->id, buf, len);
             len = snprintf(buf, 4096, "%zu wf_tw_mutex_lock %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_tw_mutex_lock_start) - epoch, timestamp(&wf_tw_mutex_lock_end) - epoch);
@@ -363,7 +402,6 @@ static void * worker_function(void *args) {
             print_debug(&debug_output_buffers, wf_args->id, buf, len);
             len = snprintf(buf, 4096, "%zu wf_cleanup %"        PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_cleanup_start) - epoch, timestamp(&wf_cleanup_end) - epoch);
             print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            pthread_mutex_unlock(&count_mutex);
         }
         #endif
     }
@@ -379,8 +417,6 @@ static void * worker_function(void *args) {
     struct timespec wf_broadcast_end;
     clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_end);
     if (debug_output_buffers.buffers) {
-        char buf[4096];
-        size_t len;
         len = snprintf(buf, 4096, "%zu wf_broadcast %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_broadcast_start) - epoch, timestamp(&wf_broadcast_end) - epoch);
         print_debug(&debug_output_buffers, wf_args->id, buf, len);
     }
@@ -391,16 +427,10 @@ static void * worker_function(void *args) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec wf_end;
     clock_gettime(CLOCK_MONOTONIC, &wf_end);
-    #endif
 
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
     if (debug_output_buffers.buffers) {
-        char buf[4096];
-        size_t len;
-        pthread_mutex_lock(&count_mutex);
         len = snprintf(buf, 4096, "%zu wf %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_start) - epoch, timestamp(&wf_end) - epoch);
         print_debug(&debug_output_buffers, wf_args->id, buf, len);
-        pthread_mutex_unlock(&count_mutex);
     }
     #endif
 

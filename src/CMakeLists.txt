@@ -107,7 +107,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 endif()
 
-# remove the sqlite3_exec
+# remove opendb (implies NO_ADDQUERYFUNCS and NO_SQL_EXEC)
+if (NO_OPENDB)
+  add_definitions(-DNO_OPENDB=1)
+endif()
+
+# remove addqueryfuncs
+if (NO_ADDQUERYFUNCS)
+  add_definitions(-DNO_ADDQUERYFUNCS=1)
+endif()
+
+# remove sqlite3_exec
 if (NO_SQL_EXEC)
   add_definitions(-DNO_SQL_EXEC=1)
 endif()

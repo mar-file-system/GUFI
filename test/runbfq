@@ -102,14 +102,14 @@ fi
 echo
 echo "query to screen"
 $BFQ \
-    -Pp -n 1\
+    -n 1\
     -E "SELECT path(),* FROM entries;" \
     $GUFI
 
 echo
 echo "query to screen show date conversion (limited to 10 entries)"
 $BFQ \
-    -Pp -n 1 \
+    -n 1 \
     -S "SELECT path(),name,type,size,datetime(mtime,'unixepoch') FROM vsummarydir limit 10;" \
     -E "SELECT path(),name, type, size, datetime(mtime,'unixepoch') FROM entries limit 10;" \
     $GUFI
@@ -118,7 +118,7 @@ echo
 echo "query to out files"
 rm -f outq*
 $BFQ \
-    -Pp -n 2 -o outq \
+    -n 2 -o outq \
     -E "SELECT * FROM entries;" \
     $GUFI
 
@@ -145,7 +145,7 @@ sqlite3 -line outdb.1 'SELECT * FROM sument;'
 echo
 echo "query to screen, insert vsummarydir recs into table 'sumsummary' in outdb.<thread_no>"
 $BFQ \
-    -Pp -n 2 -O outdb \
+    -n 2 -O outdb \
     -I "CREATE TABLE sumsummary(uid INT64, gid INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64);" \
     -S "INSERT INTO sumsummary SELECT uid, gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr FROM vsummarydir;" \
     $GUFI

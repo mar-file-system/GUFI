@@ -2,8 +2,8 @@
 #define GUFI_DEBUG_H
 
 #include <inttypes.h>
-#include <stdint.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <time.h>
 
 extern pthread_mutex_t print_mutex;

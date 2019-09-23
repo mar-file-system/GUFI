@@ -409,10 +409,14 @@ if __name__=='__main__':
     parser.add_argument('--smallest',                                dest='smallest',           action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',            action='store_true',                                help='top n largest files')
     parser.add_argument('--aggregate',                               dest='aggregate',          action='store_true',                                help='Aggregate results before printing')
-    parser.add_argument('--output',                                  dest='output',             type=str,                                           help='Output file prefix (Creates file <output>.tid)')
+    parser.add_argument('--output', '-o',                            dest='output',             type=str,                                           help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',      type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
+    parser.add_argument('--path-index',        metavar='i',          dest='path_index',         type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
 
     args = parser.parse_args()
+
+    if args.path_index is not None:
+        config['GUFIPaths'] = [config['GUFIPaths'][args.path_index]]
 
     # use GNU find to do some directory pruning
     find = gufi_common.find_dir(config['GUFIPaths'], [os.path.normpath(path) for path in args.path], [os.path.normpath(path) for path in args.wholename])
@@ -465,7 +469,6 @@ if __name__=='__main__':
 
     # create the query command
     query_cmd = [config['Exec'],
-                 '-P',
                  '-e', str(int(not args.aggregate)),
                  '-n', str(config['Threads'])]
 
