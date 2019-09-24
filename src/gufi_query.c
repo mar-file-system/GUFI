@@ -488,7 +488,7 @@ static size_t descend2(struct QPTPool *ctx,
                     struct start_end * pushdir = buffer_get(&timers->pushdir);
                     clock_gettime(CLOCK_MONOTONIC, &pushdir->start);
                     #endif
-                    QPTPool_enqueue(ctx, id, clone);
+                    QPTPool_enqueue(ctx, id, clone, NULL);
                     #ifdef DEBUG
                     clock_gettime(CLOCK_MONOTONIC, &pushdir->end);
                     #endif
@@ -1205,7 +1205,7 @@ int main(int argc, char *argv[])
         }
 
         // push the path onto the queue
-        QPTPool_enqueue(pool, i % in.maxthreads, mywork);
+        QPTPool_enqueue(pool, i % in.maxthreads, mywork, processdir);
     }
 
     // provide a function to print if PRINT is set

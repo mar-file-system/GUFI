@@ -128,126 +128,6 @@ void row_destroy(struct row * row) {
     }
 }
 
-size_t parsefirst(char * line, const size_t len, const char delim) {
-    size_t first_delim = 0;
-    while ((first_delim < len) && (line[first_delim] != delim)) {
-        first_delim++;
-    }
-
-    if (first_delim == len) {
-        first_delim = -1;
-    }
-
-    return first_delim;
-}
-
-struct scout_args {
-    struct QPTPool * ctx;
-    const char * filename;
-};
-
-/* Read ahead to figure out where files under directories start */
-void * scout_function(void * args) {
-    struct timespec start;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    /* skip argument checking */
-    struct scout_args * sa = (struct scout_args *) args;
-    struct QPTPool * ctx = sa->ctx;
-    FILE * trace = fopen(sa->filename, "rb");
-
-    /* the trace file must exist */
-    if (!trace) {
-        fprintf(stderr, "Could not open file %s\n", sa->filename);
-        return NULL;;
-    }
-
-    /* keep current directory while finding next directory */
-    /* in order to find out whether or not the current */
-    /* directory has files in it */
-    /* char line[MAXLINE]; */
-    /* if (!fgets(line, MAXLINE, trace)) { */
-    char * line = NULL;
-    size_t len = 0;
-    if (getline(&line, &len, trace) == -1) {
-        free(line);
-        fclose(trace);
-        return NULL;
-    }
-
-    /* find a delimiter */
-    size_t first_delim = parsefirst(line, len, in.delim[0]);
-    if (first_delim == (size_t) -1) {
-        free(line);
-        fclose(trace);
-        return NULL;
-    }
-
-    /* make sure the first line is a directory */
-    if (line[first_delim + 1] != 'd') {
-        free(line);
-        fclose(trace);
-        return NULL;
-    }
-
-    struct row * work = row_init(first_delim, line, len, ftell(trace));
-
-    size_t target_thread = 0;
-
-    size_t file_count = 0;
-    size_t dir_count = 1; /* always start with a directory */
-    size_t empty = 0;
-
-    line = NULL;
-    len = 0;
-    while (getline(&line, &len, trace) != -1) {
-        first_delim = parsefirst(line, len, in.delim[0]);
-        if (first_delim == (size_t) -1) {
-            work->entries++;
-            continue;
-        }
-
-        /* push directories onto queues */
-        if (line[first_delim + 1] == 'd') {
-            dir_count++;
-
-            empty += !work->entries;
-
-            /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, target_thread, work);
-            target_thread = (target_thread + 1) % ctx->size;
-
-            work = row_init(first_delim, line, len, ftell(trace));
-        }
-        /* ignore non-directories */
-        else {
-            work->entries++;
-            file_count++;
-        }
-
-        line = NULL;
-        len = 0;
-    }
-    free(line);
-
-    /* insert the last work item */
-    QPTPool_enqueue(ctx, target_thread, work);
-
-    fclose(trace);
-
-    struct timespec end;
-    clock_gettime(CLOCK_MONOTONIC, &end);
-
-    pthread_mutex_lock(&print_mutex);
-    fprintf(stderr, "Scout finished in %.2Lf seconds\n", elapsed(&start, &end));
-    fprintf(stderr, "Files: %zu\n", file_count);
-    fprintf(stderr, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
-    fprintf(stderr, "Total: %zu\n", file_count + dir_count);
-    pthread_mutex_unlock(&print_mutex);
-
-    return NULL;
-}
-
 #ifdef DEBUG
 #ifdef CUMULATIVE_TIMES
 size_t total_handle_args      = 0;
@@ -814,6 +694,118 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     return !db;
 }
 
+size_t parsefirst(char * line, const size_t len, const char delim) {
+    size_t first_delim = 0;
+    while ((first_delim < len) && (line[first_delim] != delim)) {
+        first_delim++;
+    }
+
+    if (first_delim == len) {
+        first_delim = -1;
+    }
+
+    return first_delim;
+}
+
+/* Read ahead to figure out where files under directories start */
+int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * args) {
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    /* skip argument checking */
+    char * filename = (char *) data;
+    FILE * trace = fopen(filename, "rb");
+
+    /* the trace file must exist */
+    if (!trace) {
+        fprintf(stderr, "Could not open file %s\n", filename);
+        return 1;
+    }
+
+    /* keep current directory while finding next directory */
+    /* in order to find out whether or not the current */
+    /* directory has files in it */
+    char * line = NULL;
+    size_t len = 0;
+    if (getline(&line, &len, trace) == -1) {
+        free(line);
+        fclose(trace);
+        return 1;
+    }
+
+    /* find a delimiter */
+    size_t first_delim = parsefirst(line, len, in.delim[0]);
+    if (first_delim == (size_t) -1) {
+        free(line);
+        fclose(trace);
+        return 1;
+    }
+
+    /* make sure the first line is a directory */
+    if (line[first_delim + 1] != 'd') {
+        free(line);
+        fclose(trace);
+        return 1;
+    }
+
+    struct row * work = row_init(first_delim, line, len, ftell(trace));
+
+    size_t target_thread = 0;
+
+    size_t file_count = 0;
+    size_t dir_count = 1; /* always start with a directory */
+    size_t empty = 0;
+
+    line = NULL;
+    len = 0;
+    while (getline(&line, &len, trace) != -1) {
+        first_delim = parsefirst(line, len, in.delim[0]);
+        if (first_delim == (size_t) -1) {
+            work->entries++;
+            continue;
+        }
+
+        /* push directories onto queues */
+        if (line[first_delim + 1] == 'd') {
+            dir_count++;
+
+            empty += !work->entries;
+
+            /* put the previous work on the queue */
+            QPTPool_enqueue(ctx, target_thread, work, processdir);
+            target_thread = (target_thread + 1) % ctx->size;
+
+            work = row_init(first_delim, line, len, ftell(trace));
+        }
+        /* ignore non-directories */
+        else {
+            work->entries++;
+            file_count++;
+        }
+
+        line = NULL;
+        len = 0;
+    }
+    free(line);
+
+    /* insert the last work item */
+    QPTPool_enqueue(ctx, target_thread, work, processdir);
+
+    fclose(trace);
+
+    struct timespec end;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    pthread_mutex_lock(&print_mutex);
+    fprintf(stderr, "Scout finished in %.2Lf seconds\n", elapsed(&start, &end));
+    fprintf(stderr, "Files: %zu\n", file_count);
+    fprintf(stderr, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
+    fprintf(stderr, "Total: %zu\n", file_count + dir_count);
+    pthread_mutex_unlock(&print_mutex);
+
+    return 0;
+}
+
 void sub_help() {
    printf("input_file        parse this trace file to produce the GUFI index\n");
    printf("output_dir        build GUFI index here\n");
@@ -888,22 +880,9 @@ int main(int argc, char * argv[]) {
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL);
     #endif
 
-    /* the scout thread pushes more work into the queue instead of processdir */
-    pthread_t scout;
-    struct scout_args sargs;
-    sargs.ctx = pool;
-    sargs.filename = in.name;
-    if (pthread_create(&scout, NULL, scout_function, &sargs) != 0) {
-        fprintf(stderr, "Failed to start scout thread\n");
-        close_per_thread_traces(traces, in.maxthreads);
-        close(templatefd);
-        return -1;
-    }
-
     /* start up threads and start processing */
     if (QPTPool_start(pool, 0, processdir, traces) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
-        pthread_join(scout, NULL);
         QPTPool_wait(pool);
         QPTPool_destroy(pool);
         close_per_thread_traces(traces, in.maxthreads);
@@ -911,8 +890,8 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    /* force the scout to finish before allowing the QPTPool to finish */
-    pthread_join(scout, NULL);
+    /* the scout thread pushes more work into the queue instead of processdir */
+    QPTPool_enqueue(pool, 0, in.name, scout_function);
 
     QPTPool_wait(pool);
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)

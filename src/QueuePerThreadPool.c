@@ -128,23 +128,12 @@ struct QPTPool * QPTPool_init(const size_t threads) {
     return ctx;
 }
 
-/* id selects the next_queue variable to use, not where the work will be placed */
-void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work) {
-    /* skip argument checking */
-    /* if (ctx) { */
-        pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
-        sll_push(&ctx->data[ctx->data[id].next_queue].queue, new_work);
-        pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
-
-        pthread_mutex_lock(&ctx->mutex);
-        ctx->incomplete++;
-        pthread_mutex_unlock(&ctx->mutex);
-
-        pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
-
-        ctx->data[id].next_queue = (ctx->data[id].next_queue + 1) % ctx->size;
-    /* } */
-}
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+#include <stdio.h>
+#include <string.h>
+#include "OutputBuffers.h"
+struct OutputBuffers debug_output_buffers = {};
+#endif
 
 struct worker_function_args {
     struct QPTPool * ctx;
@@ -154,13 +143,10 @@ struct worker_function_args {
     void * args;
 };
 
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-#include <stdio.h>
-#include <string.h>
-#include "OutputBuffers.h"
-struct OutputBuffers debug_output_buffers = {};
-
-#endif
+struct queue_item {
+    void * work;
+    QPTPoolFunc_t func;
+};
 
 static void * worker_function(void *args) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -316,7 +302,8 @@ static void * worker_function(void *args) {
             struct timespec wf_process_work_start;
             clock_gettime(CLOCK_MONOTONIC, &wf_process_work_start);
             #endif
-            tw->threads_successful += !wf_args->func(ctx, sll_node_data(dir), wf_args->id, wf_args->args);
+            struct queue_item * qi = sll_node_data(dir);
+            tw->threads_successful += !(qi->func?qi->func(ctx, qi->work, wf_args->id, wf_args->args):wf_args->func(ctx, qi->work, wf_args->id, wf_args->args));
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             struct timespec wf_process_work_end;
             clock_gettime(CLOCK_MONOTONIC, &wf_process_work_end);
@@ -350,7 +337,7 @@ static void * worker_function(void *args) {
         struct timespec wf_cleanup_start;
         clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_start);
         #endif
-        sll_destroy(&dirs, 0);
+        sll_destroy(&dirs, 1);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
@@ -412,8 +399,8 @@ static void * worker_function(void *args) {
     return NULL;
 }
 
-size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t func, void * args) {
-    if (!ctx || !func) {
+size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t default_func, void * args) {
+    if (!ctx) {
         return 0;
     }
 
@@ -425,12 +412,35 @@ size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t func,
         wf_args->ctx = ctx;
         wf_args->id = i;
         wf_args->pinned = pinned;
-        wf_args->func = func;
+        wf_args->func = default_func;
         wf_args->args = args;
         started += !pthread_create(&ctx->data[i].thread, NULL, worker_function, wf_args);
     }
 
     return started;
+}
+
+/* id selects the next_queue variable to use, not where the work will be placed */
+void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work, QPTPoolFunc_t func) {
+    /* skip argument checking */
+    /* if (ctx) { */
+        struct queue_item * qi = malloc(sizeof(struct queue_item));
+        qi->work = new_work;
+        qi->func = func;
+
+        pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
+        /* sll_push(&ctx->data[ctx->data[id].next_queue].queue, new_work); */
+        sll_push(&ctx->data[ctx->data[id].next_queue].queue, qi);
+        pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
+
+        pthread_mutex_lock(&ctx->mutex);
+        ctx->incomplete++;
+        pthread_mutex_unlock(&ctx->mutex);
+
+        pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
+
+        ctx->data[id].next_queue = (ctx->data[id].next_queue + 1) % ctx->size;
+    /* } */
 }
 
 void QPTPool_wait(struct QPTPool * ctx) {

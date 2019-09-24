@@ -205,7 +205,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
         if (S_ISDIR(e->statuso.st_mode)) {
             e->type[0] = 'd';
             e->pinode = work->statuso.st_ino;
-            QPTPool_enqueue(ctx, id, e);
+            QPTPool_enqueue(ctx, id, e, processdir);
             continue;
         }
 
@@ -439,7 +439,7 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    QPTPool_enqueue(pool, 0, root);
+    QPTPool_enqueue(pool, 0, root, processdir);
     if (QPTPool_start(pool, 0, processdir, NULL) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;

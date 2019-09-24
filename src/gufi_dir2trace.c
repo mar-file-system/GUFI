@@ -177,7 +177,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
             struct work * copy = (struct work *) calloc(1, sizeof(struct work));
             memcpy(copy, &e, sizeof(struct work));
 
-            QPTPool_enqueue(ctx, id, copy);
+            QPTPool_enqueue(ctx, id, copy, processdir);
             continue;
         }
 
@@ -317,7 +317,7 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    QPTPool_enqueue(pool, 0, root);
+    QPTPool_enqueue(pool, 0, root, processdir);
     if (QPTPool_start(pool, 0, processdir, NULL) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;
