@@ -74,6 +74,8 @@ OF SUCH DAMAGE.
 */
 
 
+#ifndef OUTPUT_BUFFERS_H
+#define OUTPUT_BUFFERS_H
 
 #include <pthread.h>
 #include <stddef.h>
@@ -112,4 +114,6 @@ void OutputBuffers_destroy(struct OutputBuffers * obufs, const size_t count);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

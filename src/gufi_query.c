@@ -163,8 +163,6 @@ struct descend_timers * global_timers = NULL;
 #ifdef PER_THREAD_STATS
 extern struct OutputBuffers debug_output_buffers;
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, const char * str, const size_t str_len);
-
 void print_timers(struct OutputBuffers * obufs, struct buffer * timers, const char * name, const size_t id) {
     char buf[4096];
     size_t len;

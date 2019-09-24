@@ -160,32 +160,6 @@ struct worker_function_args {
 #include "OutputBuffers.h"
 struct OutputBuffers debug_output_buffers = {};
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, const char * str, const size_t str_len) {
-    const size_t capacity = obufs->buffers[id].capacity;
-
-    /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-    if (str_len <= capacity) {
-        /* if there's not enough space in the buffer to fit the new row, flush it first */
-        if ((obufs->buffers[id].filled + str_len) > capacity) {
-            OutputBuffer_flush(&obufs->mutex, &obufs->buffers[id], stderr);
-        }
-
-        char * buf = obufs->buffers[id].buf;
-        size_t filled = obufs->buffers[id].filled;
-
-        memcpy(&buf[filled], str, str_len);
-        filled += str_len;
-
-        obufs->buffers[id].filled = filled;
-        obufs->buffers[id].count++;
-    }
-    else {
-        /* if the row does not fit the buffer, output immediately instead of buffering */
-        fwrite(str, sizeof(char), str_len, stderr);
-    }
-
-    return 0;
-}
 #endif
 
 static void * worker_function(void *args) {
@@ -265,11 +239,12 @@ static void * worker_function(void *args) {
         clock_gettime(CLOCK_MONOTONIC, &wf_ctx_mutex_lock_end);
         #endif
 
-        /* wait for work */
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         clock_gettime(CLOCK_MONOTONIC, &wf_wait_start);
         #endif
-        while (ctx->running || (ctx->incomplete && !tw->queue.head)) {
+        /* wait for work */
+        while ((ctx->running && (!ctx->incomplete || !tw->queue.head)) ||
+               (!ctx->running && (ctx->incomplete && !tw->queue.head))) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_cond_wait(&tw->cv, &tw->mutex);
             pthread_mutex_lock(&ctx->mutex);
