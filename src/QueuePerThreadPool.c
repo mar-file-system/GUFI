@@ -203,8 +203,7 @@ static void * worker_function(void *args) {
 
         clock_gettime(CLOCK_MONOTONIC, &wf_sll_init_start);
         #endif
-        struct sll dirs;
-        sll_init(&dirs);
+        struct sll work; /* don't bother initializing */
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         clock_gettime(CLOCK_MONOTONIC, &wf_sll_init_end);
         #endif
@@ -250,15 +249,15 @@ static void * worker_function(void *args) {
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         clock_gettime(CLOCK_MONOTONIC, &wf_move_queue_start);
         #endif
-        /* moves entire queue into dirs and clears out queue */
-        sll_move(&dirs, &tw->queue);
+        /* moves entire queue into work and clears out queue */
+        sll_move(&work, &tw->queue);
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         clock_gettime(CLOCK_MONOTONIC, &wf_move_queue_end);
         #endif
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
         pthread_mutex_lock(&print_mutex);
-        tw->queue.size = dirs.size;
+        tw->queue.size = work.size;
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
@@ -288,7 +287,7 @@ static void * worker_function(void *args) {
         clock_gettime(CLOCK_MONOTONIC, &wf_get_queue_head_start);
         #endif
 
-        struct node * dir = sll_head_node(&dirs);
+        struct node * w = sll_head_node(&work);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         struct timespec wf_get_queue_head_end;
@@ -297,12 +296,12 @@ static void * worker_function(void *args) {
         print_debug(&debug_output_buffers, wf_args->id, buf, len);
         #endif
 
-        while (dir) {
+        while (w) {
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             struct timespec wf_process_work_start;
             clock_gettime(CLOCK_MONOTONIC, &wf_process_work_start);
             #endif
-            struct queue_item * qi = sll_node_data(dir);
+            struct queue_item * qi = sll_node_data(w);
             tw->threads_successful += !(qi->func?qi->func(ctx, qi->work, wf_args->id, wf_args->args):wf_args->func(ctx, qi->work, wf_args->id, wf_args->args));
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             struct timespec wf_process_work_end;
@@ -316,7 +315,7 @@ static void * worker_function(void *args) {
             struct timespec wf_next_work_start;
             clock_gettime(CLOCK_MONOTONIC, &wf_next_work_start);
             #endif
-            dir = sll_next_node(dir);
+            w = sll_next_node(w);
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             struct timespec wf_next_work_end;
             clock_gettime(CLOCK_MONOTONIC, &wf_next_work_end);
@@ -337,7 +336,7 @@ static void * worker_function(void *args) {
         struct timespec wf_cleanup_start;
         clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_start);
         #endif
-        sll_destroy(&dirs, 1);
+        sll_destroy(&work, 1);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
@@ -429,7 +428,6 @@ void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work, QPT
         qi->func = func;
 
         pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
-        /* sll_push(&ctx->data[ctx->data[id].next_queue].queue, new_work); */
         sll_push(&ctx->data[ctx->data[id].next_queue].queue, qi);
         pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
 

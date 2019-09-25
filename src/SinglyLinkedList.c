@@ -113,7 +113,7 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
         return NULL;
     }
 
-    sll_destroy(dst, 0);
+    /* dst is overwritten, not destroyed */
     *dst = *src;
     memset(src, 0, sizeof(struct sll));
     return dst;

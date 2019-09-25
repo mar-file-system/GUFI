@@ -611,7 +611,7 @@ struct ThreadArgs {
     int (*print_callback_func)(void*,int,char**,char**);
 };
 
-int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args) {
+int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) {
     sqlite3 *db = NULL;
     int recs;
     int trecs;
@@ -1121,13 +1121,14 @@ int main(int argc, char *argv[])
     #ifdef PER_THREAD_STATS
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL);
     #endif
-    global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
-    #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
+
+    #ifdef CUMULATIVE_TIMES
     struct timespec setup_globals_end;
     clock_gettime(CLOCK_MONOTONIC, &setup_globals_end);
     const long double setup_globals_time = elapsed(&setup_globals_start, &setup_globals_end);
+    #endif
     #endif
 
     #if BENCHMARK
@@ -1190,6 +1191,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    // provide a function to print if PRINT is set
+    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
+    if (QPTPool_start(pool, 0, processdir, &args) != (size_t) in.maxthreads) {
+        fprintf(stderr, "Failed to start all threads\n");
+        return -1;
+    }
+
     // enqueue all input paths
     for(int i = idx; i < argc; i++) {
         struct work * mywork = calloc(1, sizeof(struct work));
@@ -1205,14 +1213,7 @@ int main(int argc, char *argv[])
         }
 
         // push the path onto the queue
-        QPTPool_enqueue(pool, i % in.maxthreads, mywork, processdir);
-    }
-
-    // provide a function to print if PRINT is set
-    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
-    if (QPTPool_start(pool, 0, processdir, &args) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start all threads\n");
-        return -1;
+        QPTPool_enqueue(pool, i % in.maxthreads, mywork, NULL);
     }
 
     QPTPool_wait(pool);
