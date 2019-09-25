@@ -348,15 +348,11 @@ static size_t descend2(struct QPTPool *ctx,
         // queue, if file or link print it, fill up qwork structure for
         // each
         /* struct dirent *entry = NULL; */
-        /* #ifdef DEBUG */
-        /* struct start_end * while_branch = buffer_get(&timers->while_branch); */
-        /* clock_gettime(CLOCK_MONOTONIC, &while_branch->start); */
-        /* #endif */
+        #ifdef DEBUG
+        struct start_end * while_branch = buffer_get(&timers->while_branch);
+        clock_gettime(CLOCK_MONOTONIC, &while_branch->start);
+        #endif
         while (1) {
-            /* #ifdef DEBUG */
-            /* clock_gettime(CLOCK_MONOTONIC, &while_branch->end); */
-            /* #endif */
-
             #ifdef DEBUG
             struct start_end * readdir_call = buffer_get(&timers->readdir);
             clock_gettime(CLOCK_MONOTONIC, &readdir_call->start);
@@ -389,6 +385,7 @@ static size_t descend2(struct QPTPool *ctx,
             const size_t len = strlen(entry->d_name);
             const int skip = (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                               ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)));
+
             #ifdef DEBUG
             clock_gettime(CLOCK_MONOTONIC, &strncmp_call->end);
             #endif
@@ -401,11 +398,6 @@ static size_t descend2(struct QPTPool *ctx,
                 #ifdef DEBUG
                 clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->end);
                 #endif
-
-                /* #ifdef DEBUG */
-                /* while_branch = buffer_get(&timers->while_branch); */
-                /* clock_gettime(CLOCK_MONOTONIC, &while_branch->start); */
-                /* #endif */
 
                 continue;
             }
@@ -420,7 +412,7 @@ static size_t descend2(struct QPTPool *ctx,
             clock_gettime(CLOCK_MONOTONIC, &snprintf_call->start);
             #endif
             struct work qwork;
-            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, strlen(entry->d_name));
+            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
             #ifdef DEBUG
             clock_gettime(CLOCK_MONOTONIC, &snprintf_call->end);
             #endif
@@ -507,15 +499,10 @@ static size_t descend2(struct QPTPool *ctx,
             /*     fprintf(stderr, "not a dir '%s': %s\n", */
             /*             qwork->name, strerror(errno)); */
             }
-
-            /* #ifdef DEBUG */
-            /* while_branch = buffer_get(&timers->while_branch); */
-            /* clock_gettime(CLOCK_MONOTONIC, &while_branch->start); */
-            /* #endif */
         }
-        /* #ifdef DEBUG */
-        /* clock_gettime(CLOCK_MONOTONIC, &while_branch->end); */
-        /* #endif */
+        #ifdef DEBUG
+        clock_gettime(CLOCK_MONOTONIC, &while_branch->end);
+        #endif
     }
     else {
         #ifdef DEBUG
@@ -718,7 +705,6 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     memset(&free_work_end, 0, sizeof(struct timespec));
     #endif
 
-    // open directory
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &opendir_start);
     #endif
@@ -1350,18 +1336,18 @@ int main(int argc, char *argv[])
     fprintf(stderr, "         check level:                        %.2Lfs\n", total_level_time);
     fprintf(stderr, "         check level <= max_level branch:    %.2Lfs\n", total_level_branch_time);
     fprintf(stderr, "         while true:                         %.2Lfs\n", total_while_branch_time);
-    fprintf(stderr, "         readdir:                            %.2Lfs\n", total_readdir_time);
-    fprintf(stderr, "         readdir != null branch:             %.2Lfs\n", total_readdir_branch_time);
-    fprintf(stderr, "         strncmp:                            %.2Lfs\n", total_strncmp_time);
-    fprintf(stderr, "         strncmp != . or ..:                 %.2Lfs\n", total_strncmp_branch_time);
-    fprintf(stderr, "         snprintf:                           %.2Lfs\n", total_snprintf_time);
-    fprintf(stderr, "         lstat:                              %.2Lfs\n", total_lstat_time);
-    fprintf(stderr, "         isdir:                              %.2Lfs\n", total_isdir_time);
-    fprintf(stderr, "         isdir branch:                       %.2Lfs\n", total_isdir_branch_time);
-    fprintf(stderr, "         access:                             %.2Lfs\n", total_access_time);
-    fprintf(stderr, "         set:                                %.2Lfs\n", total_set_time);
-    fprintf(stderr, "         clone:                              %.2Lfs\n", total_clone_time);
-    fprintf(stderr, "         pushdir:                            %.2Lfs\n", total_pushdir_time);
+    fprintf(stderr, "             readdir:                        %.2Lfs\n", total_readdir_time);
+    fprintf(stderr, "             readdir != null branch:         %.2Lfs\n", total_readdir_branch_time);
+    fprintf(stderr, "             strncmp:                        %.2Lfs\n", total_strncmp_time);
+    fprintf(stderr, "             strncmp != . or ..:             %.2Lfs\n", total_strncmp_branch_time);
+    fprintf(stderr, "             snprintf:                       %.2Lfs\n", total_snprintf_time);
+    fprintf(stderr, "             lstat:                          %.2Lfs\n", total_lstat_time);
+    fprintf(stderr, "             isdir:                          %.2Lfs\n", total_isdir_time);
+    fprintf(stderr, "             isdir branch:                   %.2Lfs\n", total_isdir_branch_time);
+    fprintf(stderr, "             access:                         %.2Lfs\n", total_access_time);
+    fprintf(stderr, "             set:                            %.2Lfs\n", total_set_time);
+    fprintf(stderr, "             clone:                          %.2Lfs\n", total_clone_time);
+    fprintf(stderr, "             pushdir:                        %.2Lfs\n", total_pushdir_time);
     fprintf(stderr, "     attach intermediate databases:          %.2Lfs\n", total_attach_time);
     fprintf(stderr, "     sqlite3_exec                            %.2Lfs\n", total_exec_time);
     fprintf(stderr, "     detach intermediate databases:          %.2Lfs\n", total_detach_time);
