@@ -17,6 +17,18 @@ TEST(SNFORMAT_S, concatenate) {
     EXPECT_STREQ(buf, "ABCDEF");
 }
 
+TEST(SNFORMAT_S, fill_buffer) {
+    char buf[1024];
+
+    EXPECT_EQ(SNFORMAT_S(buf, 10, 1, "0123456789", (size_t) 10), (size_t) 9);
+    EXPECT_STREQ(buf, "012345678");
+    EXPECT_EQ(buf[9], '\0');
+
+    EXPECT_EQ(SNFORMAT_S(buf, 5, 1, "0123456789", (size_t) 10), (size_t) 4);
+    EXPECT_STREQ(buf, "0123");
+    EXPECT_EQ(buf[4], '\0');
+}
+
 TEST(Trie, create_cleanup) {
     struct Trie *root = getNewTrieNode();
     ASSERT_NE(root, nullptr);

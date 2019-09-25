@@ -1202,7 +1202,7 @@ int main(int argc, char *argv[])
     for(int i = idx; i < argc; i++) {
         struct work * mywork = calloc(1, sizeof(struct work));
 
-        // check that the top level path is an accessible directory
+        // copy argv[i] into the work item
         SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], strlen(argv[i]));
 
         lstat(mywork->name,&mywork->statuso);
@@ -1221,7 +1221,7 @@ int main(int argc, char *argv[])
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     const size_t thread_count =
     #endif
-    QPTPool_threads_started(pool);
+    QPTPool_threads_completed(pool);
 
     QPTPool_destroy(pool);
 

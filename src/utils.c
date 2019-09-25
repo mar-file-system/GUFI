@@ -670,7 +670,7 @@ int printload(const char *name, const struct stat *status, char *type, char *lin
 /* Varadic arguments should be pairs of strings and their lengths */
 size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
     va_list args;
-    size_t max_len = dst_len;
+    size_t max_len = dst_len - 1;
 
     count *= 2;
 
@@ -686,7 +686,7 @@ size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
     va_end(args);
 
     *dst = '\0';
-    return dst_len - max_len;
+    return dst_len - max_len - 1;
 }
 
 /* the following is for the triell */
