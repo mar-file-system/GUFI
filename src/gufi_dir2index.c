@@ -113,14 +113,17 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    if (!data) {
-        return 1;
-    }
+    /* skip argument checking */
+    /* if (!data) { */
+    /*     return 1; */
+    /* } */
 
-    if (!ctx || (id >= ctx->size)) {
-        free(data);
-        return 1;
-    }
+    /* if (!ctx || (id >= ctx->size)) { */
+    /*     free(data); */
+    /*     return 1; */
+    /* } */
+
+    (void) args;
 
     struct work * work = (struct work *) data;
 
@@ -170,7 +173,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     struct sum summary;
     zeroit(&summary);
 
-    sqlite3_stmt * res = insertdbprep(db, NULL);
+    sqlite3_stmt * res = insertdbprep(db);
 
     startdb(db);
 
@@ -236,7 +239,7 @@ int processdir(struct QPTPool * ctx, void * data , const size_t id, void * args)
     }
 
     stopdb(db);
-    insertdbfin(db, res);
+    insertdbfin(res);
     insertsumdb(db, work, &summary);
     closedb(db);
     db = NULL;

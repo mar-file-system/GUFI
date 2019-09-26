@@ -208,6 +208,8 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     /*     return 1; */
     /* } */
 
+    (void) ctx;
+
     struct row * w = (struct row *) data;
     FILE * trace = ((FILE **) args)[id];
 
@@ -321,7 +323,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         clock_gettime(CLOCK_MONOTONIC, &insertdbprep_start);
         #endif
 
-        sqlite3_stmt * res = insertdbprep(db, NULL);
+        sqlite3_stmt * res = insertdbprep(db);
 
         #ifdef DEBUG
         struct timespec insertdbprep_end;
@@ -547,7 +549,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         clock_gettime(CLOCK_MONOTONIC, &insertdbfin_start);
         #endif
 
-        insertdbfin(db, res);
+        insertdbfin(res);
 
         #ifdef DEBUG
         struct timespec insertdbfin_end;
@@ -715,6 +717,9 @@ int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * ar
     /* skip argument checking */
     char * filename = (char *) data;
     FILE * trace = fopen(filename, "rb");
+
+    (void) id;
+    (void) args;
 
     /* the trace file must exist */
     if (!trace) {

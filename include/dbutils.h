@@ -122,10 +122,10 @@ int stopdb(sqlite3 *db);
 
 int closedb(sqlite3 *db);
 
-int insertdbfin(sqlite3 *db,sqlite3_stmt *res);
+int insertdbfin(sqlite3_stmt *res);
 
-sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res);
-sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res);
+sqlite3_stmt * insertdbprep(sqlite3 *db);
+sqlite3_stmt * insertdbprepr(sqlite3 *db);
 
 int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
 int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);

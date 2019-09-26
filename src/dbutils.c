@@ -474,13 +474,13 @@ int closedb(sqlite3 *db)
     return 0;
 }
 
-int insertdbfin(sqlite3 *db,sqlite3_stmt *res)
+int insertdbfin(sqlite3_stmt *res)
 {
     sqlite3_finalize(res);
     return 0;
 }
 
-sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
+sqlite3_stmt * insertdbprep(sqlite3 *db)
 {
     const char *tail;
     int error = SQLITE_OK;
@@ -496,7 +496,7 @@ sqlite3_stmt * insertdbprep(sqlite3 *db,sqlite3_stmt *res)
     return reso;
 }
 
-sqlite3_stmt * insertdbprepr(sqlite3 *db,sqlite3_stmt *res)
+sqlite3_stmt * insertdbprepr(sqlite3 *db)
 {
     const char *tail;
     int error = SQLITE_OK;

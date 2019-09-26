@@ -385,7 +385,6 @@ static size_t descend2(struct QPTPool *ctx,
             const size_t len = strlen(entry->d_name);
             const int skip = (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                               ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)));
-
             #ifdef DEBUG
             clock_gettime(CLOCK_MONOTONIC, &strncmp_call->end);
             #endif

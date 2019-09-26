@@ -79,9 +79,7 @@ OF SUCH DAMAGE.
 #define UTILS_H
 
 #include <dirent.h>
-#include <pthread.h>
 #include <stdio.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 
 #include "C-Thread-Pool/thpool.h"
@@ -93,7 +91,11 @@ OF SUCH DAMAGE.
 #define SNPRINTF(STR, N, FMT, ...)                                      \
     do {                                                                \
         const int n = snprintf(STR, N, FMT, ##__VA_ARGS__);             \
-        if (n >= N) {                                                   \
+        if (n < 0) {                                                    \
+            fprintf(stderr, "%s:%d Error printing \"" FMT "\"\n",       \
+                    __FILE__, __LINE__, ##__VA_ARGS__);                 \
+        }                                                               \
+        if ((size_t) n >= N) {                                          \
             fprintf(stderr, "%s:%d Warning: Message %s "                \
                     "was truncated to %d characters: \"" FMT "\"\n",    \
                     __FILE__, __LINE__, FMT, n, ##__VA_ARGS__);         \
@@ -170,10 +172,6 @@ typedef void(DirFunc)(void*);
 int processdirs(DirFunc dir_fn);
 
 // Function used in processdir to decend into subdirectories.
-// The callback function is used to modify the qwork before
-// it is pushed onto the queue. The callback function should
-// return 0 if there were no errors. Non-zero values results
-// the qwork not being pushed onto the queue.
 size_t descend(struct work *passmywork, DIR *dir,
                const size_t max_level);
 

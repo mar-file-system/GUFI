@@ -533,7 +533,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
     // complete the transaction
     const int rc = sqlite3_exec(on_disk, "END TRANSACTION", nullptr, nullptr, nullptr);
-    insertdbfin(on_disk, res);
+    insertdbfin(res);
     if (rc != SQLITE_OK) {
         std::cerr << "Error completing transaction" << std::endl;
         sqlite3_close(on_disk);

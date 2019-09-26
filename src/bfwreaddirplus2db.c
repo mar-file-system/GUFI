@@ -156,7 +156,6 @@ int reprocessdir(void * passv, DIR *dir)
     char lpatho[MAXPATH];
     struct sum summary;
     sqlite3_stmt *res = NULL;
-    sqlite3_stmt *reso = NULL;
     char dbpath[MAXPATH];
     int transcnt;
     int loop;
@@ -194,7 +193,7 @@ int reprocessdir(void * passv, DIR *dir)
 
     if (!(db = opendb(dbpath,8,1)))
        return -1;
-    res=insertdbprep(db,reso);
+    res=insertdbprep(db);
     startdb(db);
     records=malloc(MAXRECS);
     bzero(records,MAXRECS);
@@ -260,7 +259,7 @@ int reprocessdir(void * passv, DIR *dir)
     }
 
     stopdb(db);
-    insertdbfin(db,res);
+    insertdbfin(res);
 
     // this i believe has to be after we close off the entries transaction
     insertsumdb(db,passmywork,&summary);
@@ -536,7 +535,6 @@ int processinit(void * myworkin) {
 
      struct work * mywork = myworkin;
      int i;
-     sqlite3_stmt *reso = NULL;
      char outdbn[MAXPATH];
      FILE *isf = NULL;
      char incsuspect[24];
@@ -605,7 +603,7 @@ int processinit(void * myworkin) {
        while (i < in.maxthreads) {
            SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
          gts.outdbd[i]=opendb(outdbn,7,1);
-         global_res[i]=insertdbprepr(gts.outdbd[i],reso);
+         global_res[i]=insertdbprepr(gts.outdbd[i]);
          if (in.stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
              fprintf(stderr,"\n mutex %d init failed\n",i);
@@ -658,7 +656,7 @@ int i;
      if (in.outdb > 0) {
        i=0;
        while (i < in.maxthreads) {
-         insertdbfin(gts.outdbd[i],global_res[i]);
+         insertdbfin(global_res[i]);
          closedb(gts.outdbd[i]);
          if (in.stride > 0) {
            pthread_mutex_destroy(&outdb_mutex[i]);

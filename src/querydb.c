@@ -75,25 +75,16 @@ OF SUCH DAMAGE.
 
 
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
+#include <errno.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/stat.h>
-#include <utime.h>
-#include <sys/xattr.h>
-#include <sqlite3.h>
-#include <ctype.h>
-#include <errno.h>
-#include <pthread.h>
+#include <sys/types.h>
 
 #include "bf.h"
-#include "structq.h"
-#include "utils.h"
 #include "dbutils.h"
+#include "utils.h"
 
 extern int errno;
 
@@ -175,7 +166,7 @@ int main(int argc, char *argv[])
      addqueryfuncs(db);
 
      // set the global path so path() is the path passed in
-     bzero(endname,sizeof(endname));
+     memset(endname,0,sizeof(endname));
      shortpath(name,shortname,endname);
      //printf("shortpath out shortname %s end name %s\n",shortname, endname);
 
