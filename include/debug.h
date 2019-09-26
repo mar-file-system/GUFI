@@ -18,6 +18,6 @@ uint64_t timestamp(struct timespec * ts);
 // Get number of seconds between two events recorded in struct timespecs
 long double elapsed(const struct timespec *start, const struct timespec *end);
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, const char * str, const size_t str_len);
+int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct timespec * start, struct timespec * end);
 
 #endif

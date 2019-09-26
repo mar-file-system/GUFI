@@ -163,12 +163,9 @@ struct descend_timers * global_timers = NULL;
 #ifdef PER_THREAD_STATS
 extern struct OutputBuffers debug_output_buffers;
 
-void print_timers(struct OutputBuffers * obufs, struct buffer * timers, const char * name, const size_t id) {
-    char buf[4096];
-    size_t len;
+void print_timers(struct OutputBuffers * obufs, const size_t id, char * buf, const size_t size, const char * name, struct buffer * timers) {
     for(size_t i = 0; i < timers->i; i++) {
-        len = snprintf(buf, 4096, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, timestamp(&timers->data[i].start) - epoch, timestamp(&timers->data[i].end) - epoch);
-        print_debug(obufs, id, buf, len);
+        print_debug(obufs, id, buf, size, name, &timers->data[i].start, &timers->data[i].end);
     }
 }
 #endif
@@ -205,6 +202,7 @@ long double total_close_time = 0;
 long double total_closedir_time = 0;
 long double total_utime_time = 0;
 long double total_free_work_time = 0;
+long double total_output_timestamps_time = 0;
 
 long double buffer_sum(struct buffer * timer) {
     long double sum = 0;
@@ -957,6 +955,45 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     struct timespec output_timestamps_start;
     clock_gettime(CLOCK_MONOTONIC, &output_timestamps_start);
 
+    #ifdef PER_THREAD_STATS
+    char buf[4096];
+    const size_t size = 4096;
+    print_debug (&debug_output_buffers, id, buf, size, "opendir",         &opendir_start, &opendir_end);
+    print_debug (&debug_output_buffers, id, buf, size, "opendb",          &open_start, &open_end);
+    print_debug (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_start, &sqlite3_open_end);
+    print_debug (&debug_output_buffers, id, buf, size, "create_tables",   &create_tables_start, &create_tables_end);
+    print_debug (&debug_output_buffers, id, buf, size, "set_pragmas",     &set_pragmas_start, &set_pragmas_end);
+    print_debug (&debug_output_buffers, id, buf, size, "load_extensions", &load_extension_start, &load_extension_end);
+    print_debug (&debug_output_buffers, id, buf, size, "addqueryfuncs",   &addqueryfuncs_start, &addqueryfuncs_end);
+    print_debug (&debug_output_buffers, id, buf, size, "descend",         &descend_start, &descend_end);
+    print_timers(&debug_output_buffers, id, buf, size, "within_descend",  &descend_timers->within_descend);
+    print_timers(&debug_output_buffers, id, buf, size, "check_args",      &descend_timers->check_args);
+    print_timers(&debug_output_buffers, id, buf, size, "level",           &descend_timers->level);
+    print_timers(&debug_output_buffers, id, buf, size, "level_branch",    &descend_timers->level_branch);
+    print_timers(&debug_output_buffers, id, buf, size, "while_branch",    &descend_timers->while_branch);
+    print_timers(&debug_output_buffers, id, buf, size, "readdir",         &descend_timers->readdir);
+    print_timers(&debug_output_buffers, id, buf, size, "readdir_branch",  &descend_timers->readdir_branch);
+    print_timers(&debug_output_buffers, id, buf, size, "strncmp",         &descend_timers->strncmp);
+    print_timers(&debug_output_buffers, id, buf, size, "strncmp_branch",  &descend_timers->strncmp_branch);
+    print_timers(&debug_output_buffers, id, buf, size, "snprintf",        &descend_timers->snprintf);
+    print_timers(&debug_output_buffers, id, buf, size, "lstat",           &descend_timers->lstat);
+    print_timers(&debug_output_buffers, id, buf, size, "isdir",           &descend_timers->isdir);
+    print_timers(&debug_output_buffers, id, buf, size, "isdir_branch",    &descend_timers->isdir_branch);
+    print_timers(&debug_output_buffers, id, buf, size, "access",          &descend_timers->access);
+    print_timers(&debug_output_buffers, id, buf, size, "set",             &descend_timers->set);
+    print_timers(&debug_output_buffers, id, buf, size, "clone",           &descend_timers->clone);
+    print_timers(&debug_output_buffers, id, buf, size, "pushdir",         &descend_timers->pushdir);
+    print_debug (&debug_output_buffers, id, buf, size, "attach",          &attach_start, &attach_end);
+    print_debug (&debug_output_buffers, id, buf, size, "sqlite3_exec",    &exec_start, &exec_end);
+    print_debug (&debug_output_buffers, id, buf, size, "detach",          &detach_start, &detach_end);
+    print_debug (&debug_output_buffers, id, buf, size, "closedb",         &close_start, &close_end);
+    print_debug (&debug_output_buffers, id, buf, size, "closedir",        &closedir_start, &closedir_end);
+    print_debug (&debug_output_buffers, id, buf, size, "utime",           &utime_start, &utime_end);
+    #endif
+
+    struct timespec output_timestamps_end;
+    clock_gettime(CLOCK_MONOTONIC, &output_timestamps_end);
+
     #ifdef CUMULATIVE_TIMES
     pthread_mutex_lock(&print_mutex);
     total_opendir_time           += elapsed(&opendir_start, &opendir_end);
@@ -990,64 +1027,12 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     total_close_time             += elapsed(&close_start, &close_end);
     total_utime_time             += elapsed(&utime_start, &utime_end);
     total_free_work_time         += elapsed(&free_work_start, &free_work_end);
+    total_output_timestamps_time += elapsed(&output_timestamps_start, &output_timestamps_end);
     pthread_mutex_unlock(&print_mutex);
     #endif
-    #ifdef PER_THREAD_STATS
-    char buf[4096];
-    size_t len;
-    len = snprintf(buf, 4096, "%zu opendir %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&opendir_start) - epoch, timestamp(&opendir_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu opendb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&open_start) - epoch, timestamp(&open_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu sqlite3_open_v2 %" PRIu64 " %" PRIu64 "\n", id, timestamp(&sqlite3_open_start) - epoch, timestamp(&sqlite3_open_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu create_tables %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&create_tables_start) - epoch, timestamp(&create_tables_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu set_pragmas %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&set_pragmas_start) - epoch, timestamp(&set_pragmas_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu load_extensions %" PRIu64 " %" PRIu64 "\n", id, timestamp(&load_extension_start) - epoch, timestamp(&load_extension_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu addqueryfuncs %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&addqueryfuncs_start) - epoch, timestamp(&addqueryfuncs_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu descend %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&descend_start) - epoch, timestamp(&descend_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    print_timers(&debug_output_buffers, &descend_timers->within_descend, "within_descend",   id);
-    print_timers(&debug_output_buffers, &descend_timers->check_args,     "check_args",       id);
-    print_timers(&debug_output_buffers, &descend_timers->level,          "level",            id);
-    print_timers(&debug_output_buffers, &descend_timers->level_branch,   "level_branch",     id);
-    print_timers(&debug_output_buffers, &descend_timers->while_branch,   "while_branch",     id);
-    print_timers(&debug_output_buffers, &descend_timers->readdir,        "readdir",          id);
-    print_timers(&debug_output_buffers, &descend_timers->readdir_branch, "readdir_branch",   id);
-    print_timers(&debug_output_buffers, &descend_timers->strncmp,        "strncmp",          id);
-    print_timers(&debug_output_buffers, &descend_timers->strncmp_branch, "strncmp_branch",   id);
-    print_timers(&debug_output_buffers, &descend_timers->snprintf,       "snprintf",         id);
-    print_timers(&debug_output_buffers, &descend_timers->lstat,          "lstat",            id);
-    print_timers(&debug_output_buffers, &descend_timers->isdir,          "isdir",            id);
-    print_timers(&debug_output_buffers, &descend_timers->isdir_branch,   "isdir_branch",     id);
-    print_timers(&debug_output_buffers, &descend_timers->access,         "access",           id);
-    print_timers(&debug_output_buffers, &descend_timers->set,            "set",              id);
-    print_timers(&debug_output_buffers, &descend_timers->clone,          "clone",            id);
-    print_timers(&debug_output_buffers, &descend_timers->pushdir,        "pushdir",          id);
-    len = snprintf(buf, 4096, "%zu attach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&attach_start) - epoch, timestamp(&attach_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu sqlite3_exec %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&exec_start) - epoch, timestamp(&exec_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu detach %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&detach_start) - epoch, timestamp(&detach_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu closedb %"         PRIu64 " %" PRIu64 "\n", id, timestamp(&close_start) - epoch, timestamp(&close_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu closedir %"        PRIu64 " %" PRIu64 "\n", id, timestamp(&closedir_start) - epoch, timestamp(&closedir_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu utime %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&utime_start) - epoch, timestamp(&utime_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    #endif
-
-    struct timespec output_timestamps_end;
-    clock_gettime(CLOCK_MONOTONIC, &output_timestamps_end);
 
     #ifdef PER_THREAD_STATS
-    len = snprintf(buf, 4096, "%zu output_timestamps %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&output_timestamps_start) - epoch, timestamp(&output_timestamps_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
+    print_debug(&debug_output_buffers, id, buf, size, "output_timestamps", &output_timestamps_start, &output_timestamps_end);
     #endif
 
     #endif
@@ -1354,6 +1339,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "     close directories:                      %.2Lfs\n", total_closedir_time);
     fprintf(stderr, "     restore timestamps:                     %.2Lfs\n", total_utime_time);
     fprintf(stderr, "     free work:                              %.2Lfs\n", total_free_work_time);
+    fprintf(stderr, "output timestamps:                           %.2Lfs\n", total_output_timestamps_time);
     fprintf(stderr, "aggregate into final databases:              %.2Lfs\n", aggregate_time);
     fprintf(stderr, "clean up intermediate databases:             %.2Lfs\n", cleanup_time);
     fprintf(stderr, "print aggregated results:                    %.2Lfs\n", output_time);

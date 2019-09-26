@@ -151,8 +151,7 @@ struct queue_item {
 static void * worker_function(void *args) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     char buf[4096];
-    size_t len;
-
+    const size_t size = 4096;
     struct timespec wf_start;
     clock_gettime(CLOCK_MONOTONIC, &wf_start);
     #endif
@@ -292,8 +291,7 @@ static void * worker_function(void *args) {
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         struct timespec wf_get_queue_head_end;
         clock_gettime(CLOCK_MONOTONIC, &wf_get_queue_head_end);
-        len = snprintf(buf, 4096, "%zu wf_get_queue_head %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_get_queue_head_start) - epoch, timestamp(&wf_get_queue_head_end) - epoch);
-        print_debug(&debug_output_buffers, wf_args->id, buf, len);
+        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head_start, &wf_get_queue_head_end);
         #endif
 
         while (w) {
@@ -307,8 +305,7 @@ static void * worker_function(void *args) {
             struct timespec wf_process_work_end;
             clock_gettime(CLOCK_MONOTONIC, &wf_process_work_end);
 
-            len = snprintf(buf, 4096, "%zu wf_process_work %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_process_work_start) - epoch, timestamp(&wf_process_work_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work_start, &wf_process_work_end);
             #endif
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -319,9 +316,7 @@ static void * worker_function(void *args) {
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             struct timespec wf_next_work_end;
             clock_gettime(CLOCK_MONOTONIC, &wf_next_work_end);
-
-            len = snprintf(buf, 4096, "%zu wf_next_work %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_next_work_start) - epoch, timestamp(&wf_next_work_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work_start, &wf_next_work_end);
             #endif
 
             work_count++;
@@ -349,20 +344,13 @@ static void * worker_function(void *args) {
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            len = snprintf(buf, 4096, "%zu wf_sll_init %"       PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_sll_init_start) - epoch, timestamp(&wf_sll_init_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            len = snprintf(buf, 4096, "%zu wf_tw_mutex_lock %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_tw_mutex_lock_start) - epoch, timestamp(&wf_tw_mutex_lock_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            len = snprintf(buf, 4096, "%zu wf_ctx_mutex_lock %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_ctx_mutex_lock_start) - epoch, timestamp(&wf_ctx_mutex_lock_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            len = snprintf(buf, 4096, "%zu wf_wait %"           PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_wait_start) - epoch, timestamp(&wf_wait_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            len = snprintf(buf, 4096, "%zu wf_move %"           PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_move_queue_start) - epoch, timestamp(&wf_move_queue_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            len = snprintf(buf, 4096, "%zu wf_process_queue %"  PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_process_queue_start) - epoch, timestamp(&wf_process_queue_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
-            len = snprintf(buf, 4096, "%zu wf_cleanup %"        PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_cleanup_start) - epoch, timestamp(&wf_cleanup_end) - epoch);
-            print_debug(&debug_output_buffers, wf_args->id, buf, len);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_sll_init",       &wf_sll_init_start, &wf_sll_init_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_tw_mutex_lock",  &wf_tw_mutex_lock_start, &wf_tw_mutex_lock_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_ctx_mutex_lock", &wf_ctx_mutex_lock_start, &wf_ctx_mutex_lock_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_wait",           &wf_wait_start, &wf_wait_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_move",           &wf_move_queue_start, &wf_move_queue_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_queue",  &wf_process_queue_start, &wf_process_queue_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_cleanup",        &wf_cleanup_start, &wf_cleanup_end);
         }
         #endif
     }
@@ -378,8 +366,7 @@ static void * worker_function(void *args) {
     struct timespec wf_broadcast_end;
     clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_end);
     if (debug_output_buffers.buffers) {
-        len = snprintf(buf, 4096, "%zu wf_broadcast %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_broadcast_start) - epoch, timestamp(&wf_broadcast_end) - epoch);
-        print_debug(&debug_output_buffers, wf_args->id, buf, len);
+        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_broadcast", &wf_broadcast_start, &wf_broadcast_end);
     }
     #endif
 
@@ -390,8 +377,7 @@ static void * worker_function(void *args) {
     clock_gettime(CLOCK_MONOTONIC, &wf_end);
 
     if (debug_output_buffers.buffers) {
-        len = snprintf(buf, 4096, "%zu wf %" PRIu64 " %" PRIu64 "\n", wf_args->id, timestamp(&wf_start) - epoch, timestamp(&wf_end) - epoch);
-        print_debug(&debug_output_buffers, wf_args->id, buf, len);
+        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf_start, &wf_end);
     }
     #endif
 

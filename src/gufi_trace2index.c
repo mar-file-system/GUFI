@@ -185,11 +185,12 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     size_t thread_files = 0;
     #endif
 
-    #ifdef PER_THREAD_STATS
-    char buf[4096];
-    size_t len;
     struct timespec print_timestamps_start;
     struct timespec print_timestamps_end;
+
+    #ifdef PER_THREAD_STATS
+    char buf[4096];
+    const size_t size = 4096;
     #endif
     #endif
 
@@ -477,19 +478,18 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                 #endif
 
                 #ifdef DEBUG
+                clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
+                #ifdef PER_THREAD_STATS
+                print_debug(&debug_output_buffers, id, buf, size, "startdb",          &startdb_start, &startdb_end);
+                print_debug(&debug_output_buffers, id, buf, size, "stopdb",           &stopdb_start, &stopdb_end);
+                #endif
+                clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
                 #ifdef CUMULATIVE_TIMES
                 thread_startdb      += timestamp(&startdb_end) - timestamp(&startdb_start);
                 thread_stopdb       += timestamp(&stopdb_end) - timestamp(&stopdb_start);
                 #endif
                 #ifdef PER_THREAD_STATS
-                clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
-                len = snprintf(buf, 4096, "%zu startdb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&startdb_start) - epoch, timestamp(&startdb_end) - epoch);
-                print_debug(&debug_output_buffers, id, buf, len);
-                len = snprintf(buf, 4096, "%zu stopdb %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&stopdb_start) - epoch, timestamp(&stopdb_end) - epoch);
-                print_debug(&debug_output_buffers, id, buf, len);
-                clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
-                len = snprintf(buf, 4096, "%zu print_timestamps %" PRIu64 " %" PRIu64 "\n", id, timestamp(&print_timestamps_start) - epoch, timestamp(&print_timestamps_end) - epoch);
-                print_debug(&debug_output_buffers, id, buf, len);
+                print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps_start, &print_timestamps_end);
                 #endif
                 #endif
 
@@ -497,6 +497,17 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
             }
 
             #ifdef DEBUG
+            clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
+            #ifdef PER_THREAD_STATS
+            print_debug(&debug_output_buffers, id, buf, size, "getline",          &getline_start, &getline_end);
+            print_debug(&debug_output_buffers, id, buf, size, "memset_row",       &memset_row_start, &memset_row_end);
+            print_debug(&debug_output_buffers, id, buf, size, "entry_linetowork", &entry_linetowork_start, &entry_linetowork_end);
+            print_debug(&debug_output_buffers, id, buf, size, "free",             &free_start, &free_end);
+            print_debug(&debug_output_buffers, id, buf, size, "sumit",            &sumit_start, &sumit_end);
+            print_debug(&debug_output_buffers, id, buf, size, "insertdbgo",       &insertdbgo_start, &insertdbgo_end);
+            #endif
+            clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
+
             #ifdef CUMULATIVE_TIMES
             thread_getline          += timestamp(&getline_end) - timestamp(&getline_start);
             thread_memset_row       += timestamp(&memset_row_end) - timestamp(&memset_row_start);
@@ -507,22 +518,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
             #endif
 
             #ifdef PER_THREAD_STATS
-            clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
-            len = snprintf(buf, 4096, "%zu getline %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&getline_start) - epoch, timestamp(&getline_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
-            len = snprintf(buf, 4096, "%zu memset_row %"       PRIu64 " %" PRIu64 "\n", id, timestamp(&memset_row_start) - epoch, timestamp(&memset_row_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
-            len = snprintf(buf, 4096, "%zu entry_linetowork %" PRIu64 " %" PRIu64 "\n", id, timestamp(&entry_linetowork_start) - epoch, timestamp(&entry_linetowork_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
-            len = snprintf(buf, 4096, "%zu free %"             PRIu64 " %" PRIu64 "\n", id, timestamp(&free_start) - epoch, timestamp(&free_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
-            len = snprintf(buf, 4096, "%zu sumit %"            PRIu64 " %" PRIu64 "\n", id, timestamp(&sumit_start) - epoch, timestamp(&sumit_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
-            len = snprintf(buf, 4096, "%zu insertdbgo %"       PRIu64 " %" PRIu64 "\n", id, timestamp(&insertdbgo_start) - epoch, timestamp(&insertdbgo_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
-            clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
-            len = snprintf(buf, 4096, "%zu print_timestamps %" PRIu64 " %" PRIu64 "\n", id, timestamp(&print_timestamps_start) - epoch, timestamp(&print_timestamps_end) - epoch);
-            print_debug(&debug_output_buffers, id, buf, len);
+            print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps_start, &print_timestamps_end);
             #endif
             #endif
         }
@@ -581,6 +577,21 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         #endif
 
         #ifdef DEBUG
+        clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
+        #ifdef PER_THREAD_STATS
+        print_debug(&debug_output_buffers, id, buf, size, "zero_summary", &zero_summary_start, &zero_summary_end);
+        print_debug(&debug_output_buffers, id, buf, size, "insertdbprep", &insertdbprep_start, &insertdbprep_end);
+        print_debug(&debug_output_buffers, id, buf, size, "startdb",      &startdb_start, &startdb_end);
+        print_debug(&debug_output_buffers, id, buf, size, "fseek",        &fseek_start, &fseek_end);
+        print_debug(&debug_output_buffers, id, buf, size, "read_entries", &read_entries_start, &read_entries_end);
+        print_debug(&debug_output_buffers, id, buf, size, "read_entries", &read_entries_start, &read_entries_end);
+        print_debug(&debug_output_buffers, id, buf, size, "stopdb",       &stopdb_start, &stopdb_end);
+        print_debug(&debug_output_buffers, id, buf, size, "insertdbfin",  &insertdbfin_start, &insertdbfin_end);
+        print_debug(&debug_output_buffers, id, buf, size, "insertsumdb",  &insertsumdb_start, &insertsumdb_end);
+        print_debug(&debug_output_buffers, id, buf, size, "closedb",      &closedb_start, &closedb_end);
+        #endif
+        clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
+
         #ifdef CUMULATIVE_TIMES
         thread_zero_summary += timestamp(&zero_summary_end) - timestamp(&zero_summary_start);
         thread_insertdbprep += timestamp(&insertdbprep_end) - timestamp(&insertdbprep_start);
@@ -594,31 +605,9 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         thread_closedb      += timestamp(&closedb_end) - timestamp(&closedb_start);
         thread_files        += row_count;
         #endif
+
         #ifdef PER_THREAD_STATS
-        clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
-        len = snprintf(buf, 4096, "%zu zero_summary %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&zero_summary_start) - epoch, timestamp(&zero_summary_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu insertdbprep %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&insertdbprep_start) - epoch, timestamp(&insertdbprep_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu startdb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&startdb_start) - epoch, timestamp(&startdb_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu fseek %"            PRIu64 " %" PRIu64 "\n", id, timestamp(&fseek_start) - epoch, timestamp(&fseek_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu read_entries %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&read_entries_start) - epoch, timestamp(&read_entries_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu read_entries %"     PRIu64 " %" PRIu64 "\n", id, timestamp(&read_entries_start) - epoch, timestamp(&read_entries_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu stopdb %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&stopdb_start) - epoch, timestamp(&stopdb_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu insertdbfin %"      PRIu64 " %" PRIu64 "\n", id, timestamp(&insertdbfin_start) - epoch, timestamp(&insertdbfin_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu insertsumdb %"      PRIu64 " %" PRIu64 "\n", id, timestamp(&insertsumdb_start) - epoch, timestamp(&insertsumdb_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        len = snprintf(buf, 4096, "%zu closedb %"          PRIu64 " %" PRIu64 "\n", id, timestamp(&closedb_start) - epoch, timestamp(&closedb_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
-        clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
-        len = snprintf(buf, 4096, "%zu print_timestamps %" PRIu64 " %" PRIu64 "\n", id, timestamp(&print_timestamps_start) - epoch, timestamp(&print_timestamps_end) - epoch);
-        print_debug(&debug_output_buffers, id, buf, len);
+        print_debug(&debug_output_buffers, id, buf, size, "%zu print_timestamps %", &print_timestamps_start, &print_timestamps_end);
         #endif
         #endif
     }
@@ -636,6 +625,17 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     #endif
 
     #ifdef DEBUG
+    clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
+    #ifdef PER_THREAD_STATS
+    print_debug(&debug_output_buffers, id, buf, size, "handle_args",      &handle_args_start, &handle_args_end);
+    print_debug(&debug_output_buffers, id, buf, size, "memset_work",      &memset_work_start, &memset_work_end);
+    print_debug(&debug_output_buffers, id, buf, size, "dir_linetowork",   &dir_linetowork_start, &dir_linetowork_end);
+    print_debug(&debug_output_buffers, id, buf, size, "dupdir",           &dupdir_start, &dupdir_end);
+    print_debug(&debug_output_buffers, id, buf, size, "copy_template",    &copy_template_start, &copy_template_end);
+    print_debug(&debug_output_buffers, id, buf, size, "opendb",           &opendb_start, &opendb_end);
+    print_debug(&debug_output_buffers, id, buf, size, "row_destroy",      &row_destroy_start, &row_destroy_end);
+    #endif
+    clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
     #ifdef CUMULATIVE_TIMES
     thread_handle_args     += timestamp(&handle_args_end) - timestamp(&handle_args_start);
     thread_memset_work     += timestamp(&memset_work_end) - timestamp(&memset_work_start);
@@ -672,24 +672,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     pthread_mutex_unlock(&print_mutex);
     #endif
     #ifdef PER_THREAD_STATS
-    clock_gettime(CLOCK_MONOTONIC, &print_timestamps_start);
-    len = snprintf(buf, 4096, "%zu handle_args %"      PRIu64 " %" PRIu64 "\n", id, timestamp(&handle_args_start) - epoch, timestamp(&handle_args_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu memset_work %"      PRIu64 " %" PRIu64 "\n", id, timestamp(&memset_work_start) - epoch, timestamp(&memset_work_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu dir_linetowork %"   PRIu64 " %" PRIu64 "\n", id, timestamp(&dir_linetowork_start) - epoch, timestamp(&dir_linetowork_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu dupdir %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&dupdir_start) - epoch, timestamp(&dupdir_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu copy_template %"    PRIu64 " %" PRIu64 "\n", id, timestamp(&copy_template_start) - epoch, timestamp(&copy_template_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu opendb %"           PRIu64 " %" PRIu64 "\n", id, timestamp(&opendb_start) - epoch, timestamp(&opendb_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    len = snprintf(buf, 4096, "%zu row_destroy %"      PRIu64 " %" PRIu64 "\n", id, timestamp(&row_destroy_start) - epoch, timestamp(&row_destroy_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
-    clock_gettime(CLOCK_MONOTONIC, &print_timestamps_end);
-    len = snprintf(buf, 4096, "%zu print_timestamps %" PRIu64 " %" PRIu64 "\n", id, timestamp(&print_timestamps_start) - epoch, timestamp(&print_timestamps_end) - epoch);
-    print_debug(&debug_output_buffers, id, buf, len);
+    print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps_start, &print_timestamps_end);
     #endif
     #endif
 
