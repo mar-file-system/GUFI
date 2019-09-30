@@ -86,12 +86,7 @@ OF SUCH DAMAGE.
 #include <time.h>
 #endif
 
-#include <sched.h>
 #include <stdlib.h>
-
-#if defined(__linux__) || defined(__unix__)
-#include <sys/sysinfo.h>
-#endif
 
 struct QPTPool * QPTPool_init(const size_t threads) {
     if (!threads) {
@@ -139,7 +134,6 @@ struct worker_function_args {
     struct QPTPool * ctx;
     size_t id;
     QPTPoolFunc_t func;
-    int pinned;
     void * args;
 };
 
@@ -170,19 +164,6 @@ static void * worker_function(void *args) {
         struct timespec wf_end;
         clock_gettime(CLOCK_MONOTONIC, &wf_end);
         return NULL;
-    }
-
-    /* pin thread to processor */
-    if (wf_args->pinned) {
-        #if defined(__linux__) || defined(__unix__)
-        cpu_set_t cpus;
-        CPU_ZERO(&cpus);
-        CPU_SET(wf_args->id % get_nprocs(), &cpus);
-
-        if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpus) != 0) {
-            return NULL;
-        }
-        #endif
     }
 
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
@@ -300,7 +281,9 @@ static void * worker_function(void *args) {
             clock_gettime(CLOCK_MONOTONIC, &wf_process_work_start);
             #endif
             struct queue_item * qi = sll_node_data(w);
+
             tw->threads_successful += !(qi->func?qi->func(ctx, qi->work, wf_args->id, wf_args->args):wf_args->func(ctx, qi->work, wf_args->id, wf_args->args));
+
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             struct timespec wf_process_work_end;
             clock_gettime(CLOCK_MONOTONIC, &wf_process_work_end);
@@ -384,10 +367,17 @@ static void * worker_function(void *args) {
     return NULL;
 }
 
-size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t default_func, void * args) {
+size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t default_func, void * args) {
     if (!ctx) {
         return 0;
     }
+
+    pthread_mutex_lock(&ctx->mutex);
+    if (ctx->running) {
+        pthread_mutex_unlock(&ctx->mutex);
+        return 0;
+    }
+    pthread_mutex_unlock(&ctx->mutex);
 
     ctx->running = 1;
 
@@ -396,7 +386,6 @@ size_t QPTPool_start(struct QPTPool * ctx, const int pinned, QPTPoolFunc_t defau
         struct worker_function_args * wf_args = calloc(1, sizeof(struct worker_function_args));
         wf_args->ctx = ctx;
         wf_args->id = i;
-        wf_args->pinned = pinned;
         wf_args->func = default_func;
         wf_args->args = args;
         started += !pthread_create(&ctx->data[i].thread, NULL, worker_function, wf_args);

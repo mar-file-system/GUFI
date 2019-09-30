@@ -760,7 +760,7 @@ int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * ar
             empty += !work->entries;
 
             /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, target_thread, work, processdir);
+            QPTPool_enqueue(ctx, target_thread, work, NULL);
             target_thread = (target_thread + 1) % ctx->size;
 
             work = row_init(first_delim, line, len, ftell(trace));
@@ -777,7 +777,7 @@ int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * ar
     free(line);
 
     /* insert the last work item */
-    QPTPool_enqueue(ctx, target_thread, work, processdir);
+    QPTPool_enqueue(ctx, target_thread, work, NULL);
 
     fclose(trace);
 
@@ -869,7 +869,7 @@ int main(int argc, char * argv[]) {
     #endif
 
     /* start up threads and start processing */
-    if (QPTPool_start(pool, 0, processdir, traces) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, processdir, traces) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         QPTPool_wait(pool);
         QPTPool_destroy(pool);
