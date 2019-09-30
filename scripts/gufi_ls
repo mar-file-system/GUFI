@@ -218,7 +218,6 @@ if __name__=='__main__':
 
     # create the query command
     query_cmd = [config['Exec'],
-                '-p', '-P',
                  '-e', str(int(args.recursive)),
                  '-n', str(config['Threads']),
                  '-E', first_query,
