@@ -216,7 +216,6 @@ long double buffer_sum(struct buffer * timer) {
 
 static const char GUFI_SQLITE_VFS[] = "unix-none";
 
-int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args);
 int create_tables(const char *name, sqlite3 *db);
 int set_pragmas(sqlite3 * db);
 
@@ -250,7 +249,7 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
     if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
         clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
         /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
-        sqlite3_close(db); // close db even if it didn't open to avoid memory leaks
+        sqlite3_close(db); /* close db even if it didn't open to avoid memory leaks */
         return NULL;
     }
     clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
@@ -267,14 +266,14 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
 
     clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
     if (setpragmas) {
-        // ignore errors
+        /* ignore errors */
         set_pragmas(db);
     }
     clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
 
     clock_gettime(CLOCK_MONOTONIC, load_extension_start);
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
-        (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { // load the sqlite3-pcre extension
+    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || /* enable loading of extensions */
+        (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { /* load the sqlite3-pcre extension */
         fprintf(stderr, "Unable to load regex extension\n");
         sqlite3_close(db);
         db = NULL;
@@ -285,7 +284,7 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
 }
 #endif
 
-// Push the subdirectories in the current directory onto the queue
+/* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(struct QPTPool *ctx,
                        const size_t id,
                        struct work *passmywork,
@@ -463,8 +462,8 @@ static size_t descend2(struct QPTPool *ctx,
                     clock_gettime(CLOCK_MONOTONIC, &make_clone->start);
                     #endif
 
-                    // make a clone here so that the data can be pushed into the queue
-                    // this is more efficient than malloc+free for every single entry
+                    /* make a clone here so that the data can be pushed into the queue */
+                    /* this is more efficient than malloc+free for every single entry */
                     struct work * clone = (struct work *) malloc(sizeof(struct work));
                     memcpy(clone, &qwork, sizeof(struct work));
 
@@ -834,7 +833,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                          clock_gettime(CLOCK_MONOTONIC, &attach_start);
                          #endif
                          if (in.aggregate_or_print == AGGREGATE) {
-                             // attach in-memory result aggregation database
+                             /* attach in-memory result aggregation database */
                              char intermediate_name[MAXSQL];
                              SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) id);
                              if (db && !attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
@@ -874,7 +873,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                         clock_gettime(CLOCK_MONOTONIC, &detach_start);
                         #endif
                         if (in.aggregate_or_print == AGGREGATE) {
-                            // detach in-memory result aggregation database
+                            /* detach in-memory result aggregation database */
                             if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
                                 closedb(db);
                                 goto out_dir;
@@ -885,7 +884,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                         #endif
 
                         #if BENCHMARK
-                        // get the total number of files in this database, regardless of whether or not the query was successful
+                        /* get the total number of files in this database, regardless of whether or not the query was successful */
                         if (in.outdb > 0) {
                             sqlite3_exec(db, "SELECT COUNT(*) FROM tree.entries", total_files_callback, NULL, NULL);
                         }
@@ -899,7 +898,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         }
     }
 
-    // if we have an out db we just detach gufi db
+    /* if we have an out db we just detach gufi db */
     #ifndef NO_OPENDB
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &close_start);
@@ -917,7 +916,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
   out_dir:
     ;
 
-    // close dir
+    /* close dir */
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &closedir_start);
     #endif
@@ -929,7 +928,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &utime_start);
     #endif
-    // restore mtime and atime
+    /* restore mtime and atime */
     if (in.keep_matime) {
         struct utimbuf dbtime = {};
         dbtime.actime  = work->statuso.st_atime;
@@ -1063,10 +1062,10 @@ int main(int argc, char *argv[])
     epoch = timestamp(&start);
     #endif
 
-    // process input args - all programs share the common 'struct input',
-    // but allow different fields to be filled at the command-line.
-    // Callers provide the options-string for get_opt(), which will
-    // control which options are parsed for each program.
+    /* process input args - all programs share the common 'struct input', */
+    /* but allow different fields to be filled at the command-line. */
+    /* Callers provide the options-string for get_opt(), which will */
+    /* control which options are parsed for each program. */
     int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:", 1, "GUFI_tree ...", &in);
     if (in.helped)
         sub_help();
@@ -1080,7 +1079,7 @@ int main(int argc, char *argv[])
 
     struct ThreadArgs args;
 
-    // initialize globals
+    /* initialize globals */
     if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads + 1)              ||
         !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit)      ||
         !OutputBuffers_init(&args.output_buffers, in.maxthreads + 1, in.output_buffer_size)) {
@@ -1118,12 +1117,12 @@ int main(int argc, char *argv[])
     sqlite3 **intermediates = NULL;
     char aggregate_name[MAXSQL] = {};
     if (in.aggregate_or_print == AGGREGATE) {
-        // modify in.sqlent to insert the results into the aggregate table
+        /* modify in.sqlent to insert the results into the aggregate table */
         char orig_sqlent[MAXSQL];
         SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, strlen(in.sqlent));
         SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, orig_sqlent, strlen(orig_sqlent));
 
-        // create the aggregate database
+        /* create the aggregate database */
         SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
         if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
             return -1;
@@ -1161,18 +1160,18 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // provide a function to print if PRINT is set
+    /* provide a function to print if PRINT is set */
     args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
     if (QPTPool_start(pool, 0, processdir, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start all threads\n");
         return -1;
     }
 
-    // enqueue all input paths
+    /* enqueue all input paths */
     for(int i = idx; i < argc; i++) {
         struct work * mywork = calloc(1, sizeof(struct work));
 
-        // copy argv[i] into the work item
+        /* copy argv[i] into the work item */
         SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], strlen(argv[i]));
 
         lstat(mywork->name,&mywork->statuso);
@@ -1182,7 +1181,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        // push the path onto the queue
+        /* push the path onto the queue */
         QPTPool_enqueue(pool, i % in.maxthreads, mywork, NULL);
     }
 
@@ -1209,8 +1208,8 @@ int main(int argc, char *argv[])
     #endif
 
     if (in.aggregate_or_print == AGGREGATE) {
-        // prepend the intermediate database query with "INSERT INTO" to move
-        // the data from the databases into the final aggregation database
+        /* prepend the intermediate database query with "INSERT INTO" to move */
+        /* the data from the databases into the final aggregation database */
         char intermediate[MAXSQL];
         SNFORMAT_S(intermediate, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, in.intermediate, strlen(in.intermediate));
 
@@ -1219,7 +1218,7 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
         #endif
 
-        // aggregate the intermediate results
+        /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
             if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
                 (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
