@@ -94,9 +94,10 @@ if (CMAKE_CXX_COMPILER)
   add_dependencies(verifytreeintrace install_dependencies)
 endif()
 
-# potentially useful Python scripts
-configure_file(trace_anonymizer.py trace_anonymizer.py COPYONLY)
+# potentially useful scripts
+configure_file(canned_queries.sh canned_queries.sh COPYONLY)
 configure_file(gentrace.py gentrace.py COPYONLY)
+configure_file(trace_anonymizer.py trace_anonymizer.py COPYONLY)
 
 # make benchmark
 #    clean up old benchmark directory and create a new one
