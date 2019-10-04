@@ -106,7 +106,6 @@ struct QPTPool * QPTPool_init(const size_t threads) {
     ctx->size = threads;
 
     for(size_t i = 0; i < threads; i++) {
-        ctx->data[i].id = i;
         sll_init(&ctx->data[i].queue);
         pthread_mutex_init(&ctx->data[i].mutex, NULL);
         pthread_cond_init(&ctx->data[i].cv, NULL);

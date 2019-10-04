@@ -84,7 +84,6 @@ OF SUCH DAMAGE.
 
 /* The context for a single thread in QPTPool */
 struct QPTPoolData {
-    size_t id;
     struct sll queue;
     pthread_mutex_t mutex;
     pthread_cond_t cv;

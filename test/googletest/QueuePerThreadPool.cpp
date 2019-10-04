@@ -11,7 +11,6 @@ TEST(QueuePerThreadPool, init_destroy) {
     ASSERT_NE(pool, nullptr);
 
     for(size_t i = 0; i < threads; i++) {
-        EXPECT_EQ(pool->data[i].id, i);
         EXPECT_EQ(pool->data[i].threads_started, 0UL);
         EXPECT_EQ(pool->data[i].threads_successful, 0UL);
     }
