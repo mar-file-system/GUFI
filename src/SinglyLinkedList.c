@@ -81,8 +81,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 struct sll * sll_init(struct sll * sll) {
-    memset(sll, 0, sizeof(struct sll));
-    return sll;
+    return memset(sll, 0, sizeof(struct sll));
 };
 
 struct sll * sll_push(struct sll * sll, void * data) {
@@ -120,33 +119,19 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
 }
 
 size_t sll_get_size(struct sll * sll) {
-    if (!sll) {
-        return 0;
-    }
-
-    return sll->size;
+    return sll?sll->size:0;
 }
 
 struct node * sll_head_node(struct sll * sll) {
-    if (!sll) {
-        return NULL;
-    }
-    return sll->head;
+    return sll?sll->head:NULL;
 }
 
 struct node * sll_next_node(struct node * node) {
-    if (!node) {
-        return NULL;
-    }
-
-    return node->next;
+    return node?node->next:NULL;
 }
 
 void * sll_node_data(struct node * node) {
-    if (!node) {
-        return NULL;
-    }
-    return node->data;
+    return node?node->data:NULL;
 }
 
 void sll_destroy(struct sll * sll, const int dealloc) {

@@ -107,18 +107,6 @@ extern int errno;
 
 #if BENCHMARK
 #include "debug.h"
-
-static size_t total_files = 0;
-static pthread_mutex_t total_files_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static int total_files_callback(void * unused, int count, char ** data, char ** columns) {
-    const size_t files = atol(data[0]);
-    pthread_mutex_lock(&total_files_mutex);
-    total_files += files;
-    pthread_mutex_unlock(&total_files_mutex);
-    return 0;
-}
-
 #endif
 
 #ifdef DEBUG
@@ -340,11 +328,10 @@ static size_t descend2(struct QPTPool *ctx,
         clock_gettime(CLOCK_MONOTONIC, &level_branch->end);
         #endif
 
-        // go ahead and send the subdirs to the queue since we need to look
-        // further down the tree.  loop over dirents, if link push it on the
-        // queue, if file or link print it, fill up qwork structure for
-        // each
-        /* struct dirent *entry = NULL; */
+        /* go ahead and send the subdirs to the queue since we need to look */
+        /* further down the tree.  loop over dirents, if link push it on the */
+        /* queue, if file or link print it, fill up qwork structure for */
+        /* each */
         #ifdef DEBUG
         struct start_end * while_branch = buffer_get(&timers->while_branch);
         clock_gettime(CLOCK_MONOTONIC, &while_branch->start);
@@ -449,10 +436,10 @@ static size_t descend2(struct QPTPool *ctx,
                     clock_gettime(CLOCK_MONOTONIC, &set->start);
                     #endif
                     qwork.level = next_level;
-                    qwork.type[0] = 'd';
+                    /* qwork.type[0] = 'd'; */
 
-                    // this is how the parent gets passed on
-                    qwork.pinode = passmywork->statuso.st_ino;
+                    /* this is how the parent gets passed on */
+                    /* qwork.pinode = passmywork->statuso.st_ino; */
                     #ifdef DEBUG
                     clock_gettime(CLOCK_MONOTONIC, &set->end);
                     #endif
@@ -471,11 +458,11 @@ static size_t descend2(struct QPTPool *ctx,
                     clock_gettime(CLOCK_MONOTONIC, &make_clone->end);
                     #endif
 
-                    // this pushes the dir onto queue - pushdir does locking around queue update
                     #ifdef DEBUG
                     struct start_end * pushdir = buffer_get(&timers->pushdir);
                     clock_gettime(CLOCK_MONOTONIC, &pushdir->start);
                     #endif
+                    /* push the subdirectory into the queue for processing */
                     QPTPool_enqueue(ctx, id, clone, NULL);
                     #ifdef DEBUG
                     clock_gettime(CLOCK_MONOTONIC, &pushdir->end);
@@ -492,8 +479,6 @@ static size_t descend2(struct QPTPool *ctx,
                 #ifdef DEBUG
                 clock_gettime(CLOCK_MONOTONIC, &isdir_branch->end);
                 #endif
-            /*     fprintf(stderr, "not a dir '%s': %s\n", */
-            /*             qwork->name, strerror(errno)); */
             }
         }
         #ifdef DEBUG
@@ -513,8 +498,8 @@ static size_t descend2(struct QPTPool *ctx,
     return pushed;
 }
 
-// //////////////////////////////////////////////////////
-// these functions need to be moved back into dbutils
+/* ////////////////////////////////////////////////// */
+/* these functions need to be moved back into dbutils */
 static void path2(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     const size_t id = QPTPool_get_index((struct QPTPool *) sqlite3_user_data(context), pthread_self());
@@ -526,7 +511,7 @@ static void path2(sqlite3_context *context, int argc, sqlite3_value **argv)
 int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
     return !(sqlite3_create_function(db, "path", 0, SQLITE_UTF8, ctx, &path2, NULL, NULL) == SQLITE_OK);
 }
-// //////////////////////////////////////////////////////
+/* ////////////////////////////////////////////////// */
 
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
@@ -553,9 +538,9 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         const size_t capacity = ca->output_buffers->buffers[id].capacity;
 
         /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-        if (row_len <= capacity) {
+        if (row_len < capacity) {
             /* if there's not enough space in the buffer to fit the new row, flush it first */
-            if ((ca->output_buffers->buffers[id].filled + row_len) > capacity) {
+            if ((ca->output_buffers->buffers[id].filled + row_len) >= capacity) {
                 OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
             }
 
@@ -608,7 +593,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     /* } */
 
     /* /\* Can probably skip this *\/ */
-    /* if (!ctx || (id >= ctx->size) || !args) { */
+    /* if (!ctx || (id >= ctx->size)) { */
     /*     free(data); */
     /*     return 1; */
     /* } */
@@ -704,19 +689,19 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &opendir_start);
     #endif
-    // keep opendir near opendb to help speed up sqlite3_open_v2
+    /* keep opendir near opendb to help speed up sqlite3_open_v2 */
     dir = opendir(work->name);
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &opendir_end);
     #endif
 
-    // if the directory can't be opened, don't bother with anything else
+    /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
         /* fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno)); */
         goto out_free;
     }
 
-    // if we have out db then we have that db open so we just attach the gufi db
+    /* if we have out db then we have that db open so we just attach the gufi db */
     #ifndef NO_OPENDB
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_start);
@@ -747,7 +732,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_start);
     #endif
-    // this is needed to add some query functions like path() uidtouser() gidtogroup()
+    /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
         addqueryfuncs2(db, ctx);
     }
@@ -757,13 +742,13 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
     #endif
 
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
-             /* if it fails then this will be set to 1 and will go on */
+            /* if it fails then this will be set to 1 and will go on */
 
-    // if AND operation, and sqltsum is there, run a query to see if there is a match.
-    // if this is OR, as well as no-sql-to-run, skip this query
+    /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
+    /* if this is OR, as well as no-sql-to-run, skip this query */
     if (in.sqltsum_len > 1) {
 
-       if (in.andor == 0) {      // AND
+       if (in.andor == 0) {      /* AND */
            trecs=rawquerydb(work->name, 0, db, (char *) "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
          if (trecs<1) {
            recs=-1;
@@ -771,14 +756,14 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
            recs=rawquerydb(work->name, 0, db, in.sqltsum, 0, 0, 0, id);
          }
       }
-      // this is an OR or we got a record back. go on to summary/entries
-      // queries, if not done with this dir and all dirs below it
-      // this means that no tree table exists so assume we have to go on
+      /* this is an OR or we got a record back. go on to summary/entries */
+      /* queries, if not done with this dir and all dirs below it */
+      /* this means that no tree table exists so assume we have to go on */
       if (recs < 0) {
         recs=1;
       }
     }
-    // so we have to go on and query summary and entries possibly
+    /* so we have to go on and query summary and entries possibly */
     if (recs > 0) {
         #ifdef DEBUG
         clock_gettime(CLOCK_MONOTONIC, &descend_start);
@@ -786,7 +771,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         const size_t pushed =
         #endif
         #endif
-        // push subdirectories into the queue
+        /* push subdirectories into the queue */
         descend2(ctx, id, work, dir, in.max_level
                  #ifdef DEBUG
                  , descend_timers
@@ -802,23 +787,23 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
         #endif
 
         if (db) {
-            // only query this level if the min_level has been reached
+            /* only query this level if the min_level has been reached */
             if (work->level >= in.min_level) {
-                // run query on summary, print it if printing is needed, if returns none
-                // and we are doing AND, skip querying the entries db
-                // memset(endname, 0, sizeof(endname));
+                /* run query on summary, print it if printing is needed, if returns none */
+                /* and we are doing AND, skip querying the entries db */
+                /* memset(endname, 0, sizeof(endname)); */
                 shortpath(work->name,shortname,endname);
                 SNFORMAT_S(gps[id].gepath, MAXPATH, 1, endname, strlen(endname));
 
                 if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
-                    // for directories we have to take off after the last slash
-                    // and set the path so users can put path() in their queries
+                    /* for directories we have to take off after the last slash */
+                    /* and set the path so users can put path() in their queries */
                     SNFORMAT_S(gps[id].gpath, MAXPATH, 1, shortname, strlen(shortname));
-                    //printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath);
+                    /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
                     realpath(work->name,gps[id].gfpath);
                     recs = rawquerydb(work->name, 1, db, in.sqlsum, 1, 0, 0, id);
-                    //printf("summary ran %s on %s returned recs %d\n",in.sqlsum,work->name,recs);
+                    /* printf("summary ran %s on %s returned recs %d\n",in.sqlsum,work->name,recs); */
                 } else {
                     recs = 1;
                 }
@@ -826,7 +811,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                     recs = 1;
                 }
 
-                // if we have recs (or are running an OR) query the entries table
+                /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
                     if (in.sqlent_len > 1) {
                          #ifdef DEBUG
@@ -845,8 +830,8 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &attach_end);
                         #endif
-                        // set the path so users can put path() in their queries
-                        //printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent));
+                        /* set the path so users can put path() in their queries */
+                        /* printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent)); */
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
                         realpath(work->name,gps[id].gfpath);
 
@@ -882,27 +867,17 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &detach_end);
                         #endif
-
-                        #if BENCHMARK
-                        /* get the total number of files in this database, regardless of whether or not the query was successful */
-                        if (in.outdb > 0) {
-                            sqlite3_exec(db, "SELECT COUNT(*) FROM tree.entries", total_files_callback, NULL, NULL);
-                        }
-                        else {
-                            sqlite3_exec(db, "SELECT COUNT(*) FROM entries", total_files_callback, NULL, NULL);
-                        }
-                        #endif
                     }
                 }
             }
         }
     }
 
-    /* if we have an out db we just detach gufi db */
     #ifndef NO_OPENDB
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &close_start);
     #endif
+    /* if we have an out db we just detach gufi db */
     if (in.outdb > 0) {
       detachdb(dbname, db, "tree");
     } else {
@@ -916,7 +891,6 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
   out_dir:
     ;
 
-    /* close dir */
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &closedir_start);
     #endif
@@ -956,7 +930,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
 
     #ifdef PER_THREAD_STATS
     char buf[4096];
-    const size_t size = 4096;
+    const size_t size = sizeof(buf);
     print_debug (&debug_output_buffers, id, buf, size, "opendir",         &opendir_start, &opendir_end);
     print_debug (&debug_output_buffers, id, buf, size, "opendb",          &open_start, &open_end);
     print_debug (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_start, &sqlite3_open_end);
@@ -1188,9 +1162,8 @@ int main(int argc, char *argv[])
     QPTPool_wait(pool);
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-    const size_t thread_count =
+    const size_t thread_count = QPTPool_threads_completed(pool);
     #endif
-    QPTPool_threads_completed(pool);
 
     QPTPool_destroy(pool);
 
@@ -1238,7 +1211,7 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &cleanup_start);
         #endif
 
-        // cleanup the intermediate databases (no need to detach)
+        /* cleanup the intermediate databases (no need to detach) */
         cleanup_intermediates(intermediates, in.maxthreads);
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
@@ -1279,7 +1252,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* clear out buffered data */
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     const size_t rows =
     #endif
     OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads + 1, gts.outfd);
@@ -1350,16 +1323,11 @@ int main(int argc, char *argv[])
     #endif
 
     #if BENCHMARK
-    /* struct timespec end; */
-    /* clock_gettime(CLOCK_MONOTONIC, &end); */
-
-    /* const long double main_time = elapsed(&start, &end); */
-
     fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
-    fprintf(stderr, "Total Files:           %zu\n",    total_files);
+    fprintf(stderr, "Total Files:           %zu\n",    rows);
     fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time);
     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / total_time);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time);
     #endif
 
     return 0;

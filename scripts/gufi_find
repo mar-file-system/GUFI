@@ -285,7 +285,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
 
                 entries += ['size {} {}'.format(comp, size)]
         else:
-            raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}.'.format(len(args.size)))
+            raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}: {}.'.format(len(args.size), args.size))
 
     if args.true == True:
         summary += ['1']
