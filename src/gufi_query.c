@@ -562,11 +562,14 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         }
         else {
             /* if the row does not fit the buffer, output immediately instead of buffering */
+            pthread_mutex_lock(&ca->output_buffers->mutex);
             for(int i = 0; i < count; i++) {
                 fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
                 fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
             }
             fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+            ca->output_buffers->buffers[id].count++;
+            pthread_mutex_unlock(&ca->output_buffers->mutex);
         }
 
         free(lens);
