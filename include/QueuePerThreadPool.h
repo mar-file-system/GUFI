@@ -97,27 +97,41 @@ struct QPTPool {
 
 /* User defined function to pass into QPTPool_start
  *
- * @param ctx            the pool context the function is running in
- * @param data           the data the function is operating on
- * @param id             the id of this thread
- * @param extra args     any extra data to make accessible to the function
+ * @param ctx      the pool context the function is running in
+ * @param id       the id of this thread
+ * @param data     the data the function is operating on
+ * @param args     any extra data to make accessible to all functions that this thread pool runs
  * @return 0 if successful, non-zero if not
  */
-typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, void * data, const size_t id, void * extra_args);
+typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, const size_t id, void * data, void * args);
 
 /* main functions for operating a QPTPool */
-struct QPTPool * QPTPool_init(const size_t threads);
-size_t QPTPool_start(struct QPTPool * ctx, QPTPoolFunc_t default_func, void * args);
-/* id will push to the thread's next scheduled queue, rather than directly onto queue[id]*/
-/* if func is provided, it will be called instead of the default function*/
-void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, void * new_work, QPTPoolFunc_t func);
 
+/* initialize a QPTPool context without starting the threads */
+struct QPTPool * QPTPool_init(const size_t threads);
+
+/* start the threads */
+size_t QPTPool_start(struct QPTPool * ctx, void * args);
+
+/* enqueue data and a function to process the data */
+/* id will push to the thread's next scheduled queue, rather than directly onto queue[id]*/
+void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, QPTPoolFunc_t func, void * new_work);
+
+/* wait for all work to be processed and join threads*/
 void QPTPool_wait(struct QPTPool * ctx);
+
+/* clean up QPTPool context data */
 void QPTPool_destroy(struct QPTPool * ctx);
 
 /* utility functions */
-size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);           /* get a number in the range [0, # of threads), or (size_t) -1 on error */
+
+/* get a number in the range [0, # of threads), or (size_t) -1 on error */
+size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id);
+
+/* get the number of threads that were started by the QPTPool */
 size_t QPTPool_threads_started(struct QPTPool * ctx);
+
+/* get the number of started threads that completed successfully */
 size_t QPTPool_threads_completed(struct QPTPool * ctx);
 
 #ifdef __cplusplus

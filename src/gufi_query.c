@@ -272,6 +272,8 @@ static sqlite3 * opendb2(const char * name, const int rdonly, const int createta
 }
 #endif
 
+int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args);
+
 /* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(struct QPTPool *ctx,
                        const size_t id,
@@ -463,7 +465,7 @@ static size_t descend2(struct QPTPool *ctx,
                     clock_gettime(CLOCK_MONOTONIC, &pushdir->start);
                     #endif
                     /* push the subdirectory into the queue for processing */
-                    QPTPool_enqueue(ctx, id, clone, NULL);
+                    QPTPool_enqueue(ctx, id, processdir, clone);
                     #ifdef DEBUG
                     clock_gettime(CLOCK_MONOTONIC, &pushdir->end);
                     #endif
@@ -582,7 +584,7 @@ struct ThreadArgs {
     int (*print_callback_func)(void*,int,char**,char**);
 };
 
-int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) {
+int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     sqlite3 *db = NULL;
     int recs;
     int trecs;
@@ -1131,16 +1133,16 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &work_start);
     #endif
 
+    /* provide a function to print if PRINT is set */
+    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         return -1;
     }
 
-    /* provide a function to print if PRINT is set */
-    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
-    if (QPTPool_start(pool, processdir, &args) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start all threads\n");
+    if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
+        fprintf(stderr, "Failed to start threads\n");
         return -1;
     }
 
@@ -1159,7 +1161,7 @@ int main(int argc, char *argv[])
         }
 
         /* push the path onto the queue */
-        QPTPool_enqueue(pool, i % in.maxthreads, mywork, NULL);
+        QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
     }
 
     QPTPool_wait(pool);

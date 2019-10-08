@@ -157,7 +157,7 @@ size_t total_files            = 0;
 #endif
 
 /* process the work under one directory (no recursion) */
-int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) {
+int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     size_t thread_handle_args      = 0;
@@ -693,7 +693,7 @@ size_t parsefirst(char * line, const size_t len, const char delim) {
 }
 
 /* Read ahead to figure out where files under directories start */
-int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * args) {
+int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
@@ -760,7 +760,7 @@ int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * ar
             empty += !work->entries;
 
             /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, target_thread, work, NULL);
+            QPTPool_enqueue(ctx, target_thread, NULL, work);
             target_thread = (target_thread + 1) % ctx->size;
 
             work = row_init(first_delim, line, len, ftell(trace));
@@ -777,7 +777,7 @@ int scout_function(struct QPTPool * ctx, void * data, const size_t id, void * ar
     free(line);
 
     /* insert the last work item */
-    QPTPool_enqueue(ctx, target_thread, work, NULL);
+    QPTPool_enqueue(ctx, target_thread, processdir, work);
 
     fclose(trace);
 
@@ -857,29 +857,27 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads);
-    if (!pool) {
-        fprintf(stderr, "Failed to initialize thread pool\n");
-        close_per_thread_traces(traces, in.maxthreads);
-        return -1;
-    }
-
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL);
     #endif
 
-    /* start up threads and start processing */
-    if (QPTPool_start(pool, processdir, traces) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start all threads\n");
-        QPTPool_wait(pool);
-        QPTPool_destroy(pool);
+    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    if (!pool) {
+        fprintf(stderr, "Failed to initialize thread pool\n");
+        close_per_thread_traces(traces, in.maxthreads);
+        close(templatefd);
+        return -1;
+    }
+
+    if (!QPTPool_start(pool, traces)) {
+        fprintf(stderr, "Failed to start threads\n");
         close_per_thread_traces(traces, in.maxthreads);
         close(templatefd);
         return -1;
     }
 
     /* the scout thread pushes more work into the queue instead of processdir */
-    QPTPool_enqueue(pool, 0, in.name, scout_function);
+    QPTPool_enqueue(pool, 0, scout_function, in.name);
 
     QPTPool_wait(pool);
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
