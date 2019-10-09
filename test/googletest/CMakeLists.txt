@@ -80,7 +80,7 @@ include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
   include_directories( ${DEP_INSTALL_PREFIX}/googletest/include)
-  add_executable(googletests bf.cpp QueuePerThreadPool.cpp sll.cpp utils.cpp)
+  add_executable(googletests bf.cpp QueuePerThreadPool.cpp sll.cpp trace.cpp utils.cpp)
   target_link_libraries(googletests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 
   add_test(NAME googletests COMMAND googletests)

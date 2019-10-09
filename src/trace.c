@@ -105,6 +105,12 @@ int worktofile(FILE * file, char * delim, struct work * work) {
     count += fprintf(file, "%s%c",               work->linkname,           delim[0]);
     count += fprintf(file, "%s%c",               work->xattr,              delim[0]);
     count += fprintf(file, "%d%c",               work->crtime,             delim[0]);
+    count += fprintf(file, "%d%c",               work->ossint1,            delim[0]);
+    count += fprintf(file, "%d%c",               work->ossint2,            delim[0]);
+    count += fprintf(file, "%d%c",               work->ossint3,            delim[0]);
+    count += fprintf(file, "%d%c",               work->ossint4,            delim[0]);
+    count += fprintf(file, "%s%c",               work->osstext1,           delim[0]);
+    count += fprintf(file, "%s%c",               work->osstext2,           delim[0]);
     count += fprintf(file, "%lld%c",             work->pinode,             delim[0]);
     count += fprintf(file, "\n");
 
@@ -152,6 +158,12 @@ int linetowork(char * line, char * delim, struct work * work) {
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->linkname,MAXPATH,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->xattr,MAXXATTR,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->crtime=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint1=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint2=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint3=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint4=atol(p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->osstext1,MAXXATTR,"%s",p);
+    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->osstext2,MAXXATTR,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->pinode=atol(p);
 
     return 0;
