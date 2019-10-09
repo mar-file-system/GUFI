@@ -445,19 +445,22 @@ if __name__=='__main__':
         # 'H': False,
         # 'L': False,
         'P': True,
-        # 'D': False,
-        # 'O': False,
+        # 'D': False, # don't even handle here
+        # 'O': False, # don't even handle here
     }
     while (i < len(sys.argv)) and (sys.argv[i][0] == '-'):
         if '-help' in sys.argv[i]:
             help(expression_parser)
 
         # must be separate arguments
-        # if any flags are not H, L, P, D, or O, immediately treat the rest of the flags as expression flags
-        if sys.argv[i][1:] not in ['H', 'L', 'P', 'D', 'O']:
+        # if any flags are not H, L, or P, immediately treat the rest of the flags as expression flags
+        if sys.argv[i][1:] not in ['H', 'L', 'P']:
             break
 
-        real[sys.argv[i][1:]] = True
+        if sys.argv[i][1:] in ['H', 'L']:
+            sys.stderr.write('Found flag {}. Ignoring.\n'.format(sys.argv[i][1:]))
+        else:
+            real[sys.argv[i][1:]] = True
 
         i += 1
 
