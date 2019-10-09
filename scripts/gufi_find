@@ -305,6 +305,8 @@ def build_where(args, root_uid = 0, root_gid = 0):
 
     if args.type is not None:
         entries += [' OR '.join(['(type == "{}")'.format(t) for t in args.type])]
+    else:
+        args.type = ['d']
 
     if args.uid is not None:
         summary += ['minuid <= {}'.format(args.uid), '{} <= maxuid'.format(args.uid)]
