@@ -100,7 +100,7 @@ filesize = {'b' : 512,
             'G' : 1073741824}
 
 def validate_args(args):
-    '''Validate arguments here'''
+    '''Validate known arguments here'''
 
     # GUFI directories do not have source tree size/timestamps
     if args.type:
@@ -451,6 +451,7 @@ if __name__=='__main__':
     expression_parser = build_expression_parser()
 
     i = 1
+    at_expressions = False # whether or not the command line arguments started with expressions
 
     # parse 'real' options
     # none are actually handled
@@ -468,6 +469,7 @@ if __name__=='__main__':
         # must be separate arguments
         # if any flags are not H, L, or P, immediately treat the rest of the flags as expression flags
         if sys.argv[i][1:] not in ['H', 'L', 'P']:
+            at_expressions = True
             break
 
         if sys.argv[i][1:] in ['H', 'L']:
@@ -476,6 +478,9 @@ if __name__=='__main__':
             real[sys.argv[i][1:]] = True
 
         i += 1
+
+    if at_expressions and (sys.argv[i][0] != '-'):
+        raise exceptions.RuntimeError('gufi_find: paths must preceed expression: {}'.format(sys.argv[i - 1]))
 
     # parse paths
     paths = []
@@ -489,10 +494,13 @@ if __name__=='__main__':
     paths = [os.path.join(config['IndexRoot'], path) for path in paths]
 
     # parse expressions without the 'real' and path arguments
-    args = expression_parser.parse_args(sys.argv[i:])
+    args, unknown = expression_parser.parse_known_args(sys.argv[i:])
 
     if args.help:
         help(expression_parser)
+
+    if len(unknown):
+        raise exceptions.RuntimeError('gufi_find: unknown predicate `{}\''.format(unknown[0]))
 
     validate_args(args)
 
