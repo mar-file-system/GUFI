@@ -234,28 +234,6 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
 
     return query + ';'
 
-def find_dir(root, paths, wholenames, out=subprocess.PIPE, err=subprocess.PIPE):
-    '''
-    Calls GNU find to try to find paths that match the given patterns
-
-    Args:
-        root: the root directory to search from
-        paths: an array of regex paths (strings) to match on
-
-    Returns:
-        The subprocess.Popen object running the find call.
-        This value should be waited on with communcate.
-    '''
-
-
-    find_cmd = []
-    if type(root) == str:
-        find_cmd = ['find', root, '-type', 'd']
-    elif type(root) == list:
-        find_cmd = ['find'] + root + ['-type', 'd']
-    find_cmd += (' -o -path '.join([''] + paths) + ' -o -wholename '.join([''] + wholenames)).split()[1:] + ['-prune']
-    return subprocess.Popen(find_cmd, stdout=out, stderr=err)
-
 def cpus():
     '''Try to get the number of hardware threads'''
     try:

@@ -344,12 +344,30 @@ def build_order_by(args):
 
     return tsummary, summary, entries
 
-if __name__=='__main__':
-    # find and parse the configuration file first
-    config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
+def help(parser):
+    # generate list of expressions
+    expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
+    expr = [expr[i:i+5] for i in xrange(0, len(expr), 5)]
 
+    print ('Usage: gufi_find [-P] [path...] [expression]\n' +
+           '\n' +
+           'default path is the current directory;\n' +
+           'expression may consist of:\n' +
+           '\n' +
+           '\n'.join(['    ' + ' '.join(row) for row in expr]) + '\n' +
+           '\n' +
+           'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
+           'page at https://github.com/mar-file-system/GUFI/issues\n')
+
+    exit(0)
+
+def build_expression_parser():
     # parse the arguments
-    parser = argparse.ArgumentParser(prog='GUFI', description='GUFI version of find')
+    parser = argparse.ArgumentParser(description='GUFI version of find', add_help=False)
+
+    # override help to not use -h
+    parser.add_argument('-help', '--help',                                                         action='store_true',                                help='Print a summary of the command-line usage of find and exit.')
+
     parser.add_argument('--version', '-v',                                                         action='version',                                   version=os.path.basename(PATH) + ' @GUFI_VERSION@')
 
     # GNU find options
@@ -390,16 +408,13 @@ if __name__=='__main__':
     parser.add_argument('-uid',                metavar='n',          dest='uid',                   type=gufi_common.get_uid,  action='append',         help='File\'s numeric user ID is n.')
     # parser.add_argument('-used',               metavar='n',          dest='used',                  type=gufi_common.get_non_negative,                  help='File was last accessed n days after its status was last changed.')
     parser.add_argument('-user',               metavar='uname',      dest='user',                  type=gufi_common.get_user,                          help='File is owned by user uname (numeric user ID allowed).')
-    parser.add_argument('-wholename',          metavar='pattern',    dest='wholename',             type=str, action='append', default=[],              help='See -path. This alternative is less portable than -path.')
+    # parser.add_argument('-wholename',          metavar='pattern',    dest='wholename',             type=str, action='append', default=[],              help='See -path. This alternative is less portable than -path.')
     parser.add_argument('-writable',                                 dest='writable',              action='store_true',                                help='Matches files which are writable.')
     # parser.add_argument('-xtype',              metavar='c',          dest='xtype',                 type=gufi_common.get_char,                          help='The same as -type unless the file is a symbolic link.')
     # parser.add_argument('-context',            metavar='pattern',    dest='context',               type=str,                                           help='(SELinux only) Security context of the file matches glob pattern.')
 
     parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',              type=gufi_common.get_non_negative,                  help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
     parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',              type=gufi_common.get_non_negative,                  help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
-
-    # GNU find optional arguments
-    parser.add_argument('GUFI_tree',                                                               type=str, nargs='*',                                help='top-most directory to search from')
 
     # GUFI specific arguments
     parser.add_argument('--select',            metavar='cols',       dest='select',                action='append', nargs='*',                         help='comma separated columns (default: *)')
@@ -412,28 +427,56 @@ if __name__=='__main__':
     parser.add_argument('--aggregate',                               dest='aggregate',             action='store_true',                                help='Aggregate results before printing')
     parser.add_argument('--output', '-o',                            dest='output',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
-    parser.add_argument('--path-index',        metavar='i',          dest='path_index',            type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
+    # parser.add_argument('--path-index',        metavar='i',          dest='path_index',            type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
     parser.add_argument('--read-write',                              dest='readwrite',             action='store_true',                                help='Open databases in read-write mode')
+    return parser
 
-    args = parser.parse_args()
+if __name__=='__main__':
+    # find and parse the configuration file first
+    config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
 
-    if args.path_index is not None:
-        config['GUFIPaths'] = [config['GUFIPaths'][args.path_index]]
+    expression_parser = build_expression_parser()
 
-    # use GNU find to do some directory pruning
-    find = gufi_common.find_dir(config['GUFIPaths'], [os.path.normpath(path) for path in args.path], [os.path.normpath(path) for path in args.wholename])
-    find_out, find_err = find.communicate()
+    i = 1
 
-    # check for data in stdout, not the return code of find
-    if len(find_out) == 0:
-        # if there are errors, print them
-        if len(find_err):
-            sys.stderr.write('Error: find returned: {}\n{}\n'.format(os.strerror(find.returncode), find_err))
-        # otherwise, nothing was found
-        else:
-            sys.stderr.write('Error: No directories found while searching in "{}" for "{}"\n'.format(';'.join(args.GUFI_tree), ' '.join([os.path.normpath(path) for path in args.path] + [os.path.normpath(path) for path in args.wholename])))
-        sys.exit(find.returncode)
-    # if there is data and errors, ignore the errors
+    # parse 'real' options
+    # none are actually handled
+    real = {
+        # 'H': False,
+        # 'L': False,
+        'P': True,
+        # 'D': False,
+        # 'O': False,
+    }
+    while (i < len(sys.argv)) and (sys.argv[i][0] == '-'):
+        if '-help' in sys.argv[i]:
+            help(expression_parser)
+
+        # must be separate arguments
+        # if any flags are not H, L, P, D, or O, immediately treat the rest of the flags as expression flags
+        if sys.argv[i][1:] not in ['H', 'L', 'P', 'D', 'O']:
+            break
+
+        real[sys.argv[i][1:]] = True
+
+        i += 1
+
+    # parse paths
+    paths = []
+    while (i < len(sys.argv)) and (sys.argv[i][0] != '-'):
+        paths += [sys.argv[i]]
+        i += 1
+    if len(paths) == 0:
+        paths = [os.getcwd()]
+
+    # prepend the provided paths with the GUFI root path
+    paths = [os.path.join(config['IndexRoot'], path) for path in paths]
+
+    # parse expressions without the 'real' and path arguments
+    args = expression_parser.parse_args(sys.argv[i:])
+
+    if args.help:
+        help(expression_parser)
 
     # generate the queries
     tsummary_select,   summary_select,   entries_select   = build_select(args)
@@ -504,10 +547,15 @@ if __name__=='__main__':
     if args.output_buffer:
         query_cmd += ['-B', str(args.output_buffer)]
 
+<<<<<<< 19fcbb10a9c6f29cc2b516bc87f1e2a8f833e5cb
     if args.readwrite:
         query_cmd += ['-w']
 
     query = subprocess.Popen(query_cmd + find_out.split()) # positional arguments must appear after flags
     query.communicate()                                    # block until query finishes
+=======
+    query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
+    query.communicate()                         # block until query finishes
+>>>>>>> Changed command line argument parsing
 
     sys.exit(query.returncode)

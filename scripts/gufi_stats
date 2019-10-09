@@ -137,7 +137,7 @@ def get_leaf_dirs(path):
     return [dirpath for dirpath, dirnames, filenames in os.walk(path) if not dirnames]
 
 def leaf_count(args, order = ''):
-    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
     return directory_count(args, order)
 
 def total_in_leaf(args, *ignored):
@@ -146,7 +146,7 @@ def total_in_leaf(args, *ignored):
     intermediate   = gufi_common.build_query(['count'],                 ['entries'], None,  None, None, None, None)
     aggregate      = gufi_common.build_query(['TOTAL(count)'],          ['entries'], None,  None, None, None, None)
 
-    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
     return entries, intermediate, aggregate
 
 def median_in_leaf(args, *ignored):
@@ -156,7 +156,7 @@ def median_in_leaf(args, *ignored):
     intermediate = gufi_common.build_query(['count'],             ['entries'], None,  None, ['count'], '(2 - (SELECT COUNT(*) FROM entries) % 2)', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
     aggregate    = gufi_common.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
 
-    args.GUFI_tree = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.GUFI_tree]))
+    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
     return entries, intermediate, aggregate
 
 def get_depth(path, sep = '/'):
@@ -170,13 +170,13 @@ def get_depth(path, sep = '/'):
 
 def depth(args, sep = '/'):
     ret = []
-    for path in args.GUFI_tree:
+    for path in args.paths:
         ret += get_depth(path);
     return ret
 
 def leaf_depth(args, sep = '/'):
     ret = []
-    for path in args.GUFI_tree:
+    for path in args.paths:
         for leaf in get_leaf_dirs(path):
             ret += get_depth(leaf, sep)
     return ret
@@ -208,7 +208,9 @@ if __name__=='__main__':
     config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
 
     # parse the arguments
-    parser = argparse.ArgumentParser(description='GUFI statistics')
+    parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
+    # override help to not use -h
+    parser.add_argument('--help',                                                 action='help',                                                  help='show this help message and exit')
     parser.add_argument('--version', '-v',                                        action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
     parser.add_argument('--order',         metavar='order', dest='order',         choices=ORDER.keys(),      default='',                          help='sort output (if applicable)')
     parser.add_argument('--delim',         metavar='c',     dest='delim',         type=gufi_common.get_char,                                      help='delimiter separating output columns')
@@ -220,8 +222,17 @@ if __name__=='__main__':
     parser.add_argument('--output',                         dest='output',        type=str,                                                       help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer', metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,               help='Size of each thread\'s output buffer')
     parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),                     help='operation to perform')
+    parser.add_argument('paths',                                                  type=str, action='append', nargs='*')
 
-    args = parser.parse_args()
+    args = parser.parse_args();
+
+    # default to current working directory
+    args.paths = args.paths[0]
+    if not args.paths:
+        args.paths = [os.getcwd()]
+
+    # prepend the provided paths with the GUFI root path
+    args.paths = [os.path.join(config['IndexRoot'], path) for path in args.paths]
 
     if args.order:
         args.order = ORDER[args.order]
@@ -269,7 +280,7 @@ if __name__=='__main__':
         if args.output_buffer:
             query_cmd += ['-B', str(args.output_buffer)]
 
-        query = subprocess.Popen(query_cmd + config['GUFIPaths'])
+        query = subprocess.Popen(query_cmd + args.paths)
         query.communicate() # block until query finishes
 
         sys.exit(query.returncode)
