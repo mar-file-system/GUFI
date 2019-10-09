@@ -99,6 +99,15 @@ filesize = {'b' : 512,
             'M' : 1048576,
             'G' : 1073741824}
 
+def validate_args(args):
+    '''Validate arguments here'''
+
+    # GUFI directories do not have source tree size/timestamps
+    if args.type:
+        if 'd' in args.type:
+            if args.size or args.atime or args.mtime or args.ctime:
+                raise exceptions.RuntimeError('size, atime, mtime, and ctime cannot be used with -type d')
+
 def parse_size(size):
     prefix = None
     if size[0] == '+' or size[0] == '-':
@@ -144,25 +153,27 @@ def build_where(args, root_uid = 0, root_gid = 0):
     summary  = []
     entries  = []
 
+    now = time.time()
+
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
     #     entries  += ['(uid == {})'.format(os.getuid())]
     #     # entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
-        entries += ['({} - atime) / 60 == {}'.format(time.time(), args.amin)]
+        entries += ['({} - atime) / 60 == {}'.format(now, args.amin)]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        entries += ['({} - atime) / {} == {} '.format(time.time(), SECONDS_PER_DAY, args.atime)]
+        entries += ['({} - atime) / {} == {} '.format(now, SECONDS_PER_DAY, args.atime)]
 
     if args.cmin is not None:
-        entries += ['({} - ctime) / 60 == {}'.format(time.time(), args.cmin)]
+        entries += ['({} - ctime) / 60 == {}'.format(now, args.cmin)]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        entries += ['({} - ctime) / {} == {} '.format(time.time(), SECONDS_PER_DAY, args.ctime)]
+        entries += ['({} - ctime) / {} == {} '.format(now, SECONDS_PER_DAY, args.ctime)]
 
     if args.empty == True:
         summary += ['minsize == 0']
@@ -204,7 +215,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         entries += ['type == \'f\'', 'linkname REGEXP \'(?i){}\'"'.format(args.lname)]
 
     if args.mmin is not None:
-        entries += ['({} - mtime) / 60 == {}'.format(time.time(), args.mmin)]
+        entries += ['({} - mtime) / 60 == {}'.format(now, args.mmin)]
 
     if args.mtime is not None:
         if len(args.mtime) > 2:
@@ -220,7 +231,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
                 comp = '>'
                 mtime = mtime[1:]
 
-            entries += ['({} - mtime) / {} {} {}'.format(time.time(), SECONDS_PER_DAY, comp, mtime)]
+            entries += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, comp, mtime)]
 
     if args.name is not None:
         entries += [' OR '.join(['(name REGEXP \'{}\')'.format(name) for name in args.name])]
@@ -480,6 +491,8 @@ if __name__=='__main__':
 
     if args.help:
         help(expression_parser)
+
+    validate_args(args)
 
     # generate the queries
     tsummary_select,   summary_select,   entries_select   = build_select(args)
