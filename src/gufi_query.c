@@ -1343,7 +1343,7 @@ int main(int argc, char *argv[])
 
     #if BENCHMARK
     fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
-    fprintf(stderr, "Total Files:           %zu\n",    rows);
+    fprintf(stderr, "Total Files:           %zu\n",    rows - thread_count);
     fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time);
     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time);
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time);
