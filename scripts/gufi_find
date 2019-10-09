@@ -533,6 +533,9 @@ if __name__=='__main__':
                  '-e', str(int(not args.aggregate)),
                  '-n', str(config['Threads'])]
 
+    if args.type and ('d' in args.type):
+        query_cmd += ['-P']
+
     # if len(tsummary):
     #     query_cmd += ['-T', tsummary]
 
@@ -563,15 +566,10 @@ if __name__=='__main__':
     if args.output_buffer:
         query_cmd += ['-B', str(args.output_buffer)]
 
-<<<<<<< 19fcbb10a9c6f29cc2b516bc87f1e2a8f833e5cb
     if args.readwrite:
         query_cmd += ['-w']
 
-    query = subprocess.Popen(query_cmd + find_out.split()) # positional arguments must appear after flags
-    query.communicate()                                    # block until query finishes
-=======
     query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
     query.communicate()                         # block until query finishes
->>>>>>> Changed command line argument parsing
 
     sys.exit(query.returncode)
