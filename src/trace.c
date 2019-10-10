@@ -123,11 +123,12 @@ int filetowork(FILE * file, char * delim, struct work * work) {
     }
 
     char * line = NULL;
-    if (getline(&line, NULL, file) == -1) {
+    size_t n = 0;
+    if (getline(&line, &n, file) == -1) {
         return -1;
     }
 
-    int rc = linetowork(delim, line, work);
+    int rc = linetowork(line, delim, work);
     free(line);
 
     return rc;

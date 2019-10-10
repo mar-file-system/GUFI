@@ -573,7 +573,7 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_bind_int64(res,19,pwork->ossint3);
     sqlite3_bind_int64(res,20,pwork->ossint4);
     error=sqlite3_bind_text(res,21,zosstext1,-1,SQLITE_STATIC);
-    error=sqlite3_bind_text(res,22,zosstext1,-1,SQLITE_STATIC);
+    error=sqlite3_bind_text(res,22,zosstext2,-1,SQLITE_STATIC);
     sqlite3_bind_int64(res,23,pwork->pinode);
     error=sqlite3_step(res);
     sqlite3_free(zname);
