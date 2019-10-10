@@ -413,6 +413,7 @@ if __name__=='__main__':
     parser.add_argument('--output', '-o',                            dest='output',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     parser.add_argument('--path-index',        metavar='i',          dest='path_index',            type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
+    parser.add_argument('--read-write',                              dest='readwrite',             action='store_true',                                help='Open databases in read-write mode')
 
     args = parser.parse_args()
 
@@ -502,6 +503,9 @@ if __name__=='__main__':
 
     if args.output_buffer:
         query_cmd += ['-B', str(args.output_buffer)]
+
+    if args.readwrite:
+        query_cmd += ['-w']
 
     query = subprocess.Popen(query_cmd + find_out.split()) # positional arguments must appear after flags
     query.communicate()                                    # block until query finishes

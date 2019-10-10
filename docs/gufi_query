@@ -112,6 +112,7 @@ options:
   -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)
   -m                 Keep mtime and atime same on the database files
   -B <buffer size>   size of each thread's output buffer in bytes
+  -w                 open the database files in read-write mode instead of read only mode
 
 GUFI_tree         find GUFI index-tree here
 

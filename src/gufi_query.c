@@ -713,7 +713,7 @@ int processdir(struct QPTPool * ctx, void * data, const size_t id, void * args) 
       db = gts.outdbd[id];
       attachdb(dbname, db, "tree");
     } else {
-      db = opendb2(dbname, 1, 0, 0
+      db = opendb2(dbname, in.readonly, 0, 0
                    #ifdef DEBUG
                    , &sqlite3_open_start
                    , &sqlite3_open_end
@@ -1043,7 +1043,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:", 1, "GUFI_tree ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:w", 1, "GUFI_tree ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)

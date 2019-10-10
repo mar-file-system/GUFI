@@ -153,6 +153,7 @@ void print_help(const char* prog_name,
       case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
       case 'm': printf("  -m                 Keep mtime and atime same on the database files\n"); break;
       case 'B': printf("  -B <buffer size>   size of each thread's output buffer in bytes\n"); break;
+      case 'w': printf("  -w                 open the database files in read-write mode instead of read only mode\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -202,6 +203,7 @@ void show_input(struct input* in, int retval) {
    printf("in.aggregate_or_print = %d\n",    in->aggregate_or_print);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
+   printf("in.readonly           = %d\n",    in->readonly);
    printf("\n");
    printf("retval                = %d\n",    retval);
    printf("\n");
@@ -247,6 +249,7 @@ int parse_cmd_line(int         argc,
    memset(in->aggregate,    0, MAXSQL);
    in->aggregate_or_print = PRINT;     // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
+   in->readonly           = 1;         // default to read-only opens
 
    int show   = 0;
    int retval = 0;
@@ -435,6 +438,9 @@ int parse_cmd_line(int         argc,
 
       case 'B':
          INSTALL_UINT(in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-z");
+         break;
+      case 'w':
+         in->readonly = 0;
          break;
 
       case '?':
