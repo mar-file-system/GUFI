@@ -936,37 +936,41 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #ifdef PER_THREAD_STATS
     char buf[4096];
     const size_t size = sizeof(buf);
-    print_debug (&debug_output_buffers, id, buf, size, "opendir",         &opendir_start, &opendir_end);
-    print_debug (&debug_output_buffers, id, buf, size, "opendb",          &open_start, &open_end);
-    print_debug (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_start, &sqlite3_open_end);
-    print_debug (&debug_output_buffers, id, buf, size, "create_tables",   &create_tables_start, &create_tables_end);
-    print_debug (&debug_output_buffers, id, buf, size, "set_pragmas",     &set_pragmas_start, &set_pragmas_end);
-    print_debug (&debug_output_buffers, id, buf, size, "load_extensions", &load_extension_start, &load_extension_end);
-    print_debug (&debug_output_buffers, id, buf, size, "addqueryfuncs",   &addqueryfuncs_start, &addqueryfuncs_end);
-    print_debug (&debug_output_buffers, id, buf, size, "descend",         &descend_start, &descend_end);
-    print_timers(&debug_output_buffers, id, buf, size, "within_descend",  &descend_timers->within_descend);
-    print_timers(&debug_output_buffers, id, buf, size, "check_args",      &descend_timers->check_args);
-    print_timers(&debug_output_buffers, id, buf, size, "level",           &descend_timers->level);
-    print_timers(&debug_output_buffers, id, buf, size, "level_branch",    &descend_timers->level_branch);
-    print_timers(&debug_output_buffers, id, buf, size, "while_branch",    &descend_timers->while_branch);
-    print_timers(&debug_output_buffers, id, buf, size, "readdir",         &descend_timers->readdir);
-    print_timers(&debug_output_buffers, id, buf, size, "readdir_branch",  &descend_timers->readdir_branch);
-    print_timers(&debug_output_buffers, id, buf, size, "strncmp",         &descend_timers->strncmp);
-    print_timers(&debug_output_buffers, id, buf, size, "strncmp_branch",  &descend_timers->strncmp_branch);
-    print_timers(&debug_output_buffers, id, buf, size, "snprintf",        &descend_timers->snprintf);
-    print_timers(&debug_output_buffers, id, buf, size, "lstat",           &descend_timers->lstat);
-    print_timers(&debug_output_buffers, id, buf, size, "isdir",           &descend_timers->isdir);
-    print_timers(&debug_output_buffers, id, buf, size, "isdir_branch",    &descend_timers->isdir_branch);
-    print_timers(&debug_output_buffers, id, buf, size, "access",          &descend_timers->access);
-    print_timers(&debug_output_buffers, id, buf, size, "set",             &descend_timers->set);
-    print_timers(&debug_output_buffers, id, buf, size, "clone",           &descend_timers->clone);
-    print_timers(&debug_output_buffers, id, buf, size, "pushdir",         &descend_timers->pushdir);
-    print_debug (&debug_output_buffers, id, buf, size, "attach",          &attach_start, &attach_end);
-    print_debug (&debug_output_buffers, id, buf, size, "sqlite3_exec",    &exec_start, &exec_end);
-    print_debug (&debug_output_buffers, id, buf, size, "detach",          &detach_start, &detach_end);
-    print_debug (&debug_output_buffers, id, buf, size, "closedb",         &close_start, &close_end);
-    print_debug (&debug_output_buffers, id, buf, size, "closedir",        &closedir_start, &closedir_end);
-    print_debug (&debug_output_buffers, id, buf, size, "utime",           &utime_start, &utime_end);
+    print_debug(         &debug_output_buffers, id, buf, size, "opendir",         &opendir_start, &opendir_end);
+    if (dir) {
+        print_debug(     &debug_output_buffers, id, buf, size, "opendb",          &open_start, &open_end);
+        if (db) {
+            print_debug (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_start, &sqlite3_open_end);
+            print_debug (&debug_output_buffers, id, buf, size, "create_tables",   &create_tables_start, &create_tables_end);
+            print_debug (&debug_output_buffers, id, buf, size, "set_pragmas",     &set_pragmas_start, &set_pragmas_end);
+            print_debug (&debug_output_buffers, id, buf, size, "load_extensions", &load_extension_start, &load_extension_end);
+            print_debug (&debug_output_buffers, id, buf, size, "addqueryfuncs",   &addqueryfuncs_start, &addqueryfuncs_end);
+            print_debug (&debug_output_buffers, id, buf, size, "descend",         &descend_start, &descend_end);
+            print_timers(&debug_output_buffers, id, buf, size, "within_descend",  &descend_timers->within_descend);
+            print_timers(&debug_output_buffers, id, buf, size, "check_args",      &descend_timers->check_args);
+            print_timers(&debug_output_buffers, id, buf, size, "level",           &descend_timers->level);
+            print_timers(&debug_output_buffers, id, buf, size, "level_branch",    &descend_timers->level_branch);
+            print_timers(&debug_output_buffers, id, buf, size, "while_branch",    &descend_timers->while_branch);
+            print_timers(&debug_output_buffers, id, buf, size, "readdir",         &descend_timers->readdir);
+            print_timers(&debug_output_buffers, id, buf, size, "readdir_branch",  &descend_timers->readdir_branch);
+            print_timers(&debug_output_buffers, id, buf, size, "strncmp",         &descend_timers->strncmp);
+            print_timers(&debug_output_buffers, id, buf, size, "strncmp_branch",  &descend_timers->strncmp_branch);
+            print_timers(&debug_output_buffers, id, buf, size, "snprintf",        &descend_timers->snprintf);
+            print_timers(&debug_output_buffers, id, buf, size, "lstat",           &descend_timers->lstat);
+            print_timers(&debug_output_buffers, id, buf, size, "isdir",           &descend_timers->isdir);
+            print_timers(&debug_output_buffers, id, buf, size, "isdir_branch",    &descend_timers->isdir_branch);
+            print_timers(&debug_output_buffers, id, buf, size, "access",          &descend_timers->access);
+            print_timers(&debug_output_buffers, id, buf, size, "set",             &descend_timers->set);
+            print_timers(&debug_output_buffers, id, buf, size, "clone",           &descend_timers->clone);
+            print_timers(&debug_output_buffers, id, buf, size, "pushdir",         &descend_timers->pushdir);
+            print_debug (&debug_output_buffers, id, buf, size, "attach",          &attach_start, &attach_end);
+            print_debug (&debug_output_buffers, id, buf, size, "sqlite3_exec",    &exec_start, &exec_end);
+            print_debug (&debug_output_buffers, id, buf, size, "detach",          &detach_start, &detach_end);
+            print_debug (&debug_output_buffers, id, buf, size, "closedb",         &close_start, &close_end);
+        }
+        print_debug(     &debug_output_buffers, id, buf, size, "closedir",        &closedir_start, &closedir_end);
+        print_debug(     &debug_output_buffers, id, buf, size, "utime",           &utime_start, &utime_end);
+    }
     #endif
 
     struct timespec output_timestamps_end;
