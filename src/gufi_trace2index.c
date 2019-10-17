@@ -760,7 +760,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
             empty += !work->entries;
 
             /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, target_thread, NULL, work);
+            QPTPool_enqueue(ctx, target_thread, processdir, work);
             target_thread = (target_thread + 1) % ctx->size;
 
             work = row_init(first_delim, line, len, ftell(trace));
