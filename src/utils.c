@@ -666,16 +666,16 @@ int printload(const char *name, const struct stat *status, char *type, char *lin
   return(0);
 }
 
-/* Equivalent to snprintf printing only strings */
-/* Varadic arguments should be pairs of strings and their lengths */
+/* Equivalent to snprintf printing only strings. Variadic arguments
+   should be pairs of strings and their lengths (to try to prevent
+   unnecessary calls to strlen). Make sure to typecast the lengths
+   to size_t or weird bugs may occur */
 size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
     va_list args;
     size_t max_len = dst_len - 1;
 
-    count *= 2;
-
     va_start(args, count);
-    for(size_t i = 0; i < count; i += 2) {
+    for(size_t i = 0; i < count; i++) {
         char * src = va_arg(args, char *);
         size_t len = va_arg(args, size_t);
         const size_t copy_len = (len < max_len)?len:max_len;

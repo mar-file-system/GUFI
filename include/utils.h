@@ -102,8 +102,10 @@ OF SUCH DAMAGE.
         }                                                               \
     } while (0)
 
-/* Equivalent to snprintf printing only strings */
-/* Varadic arguments should be pairs of strings and their lengths */
+/* Equivalent to snprintf printing only strings. Variadic arguments
+   should be pairs of strings and their lengths (to try to prevent
+   unnecessary calls to strlen). Make sure to typecast the lengths
+   to size_t or weird bugs may occur */
 size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...);
 
 /* this block is for the triell */

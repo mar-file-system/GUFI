@@ -252,12 +252,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     /* create the directory */
     char topath[MAXPATH];
-    SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", 1, dir.name, strlen(dir.name));
+    SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", (size_t) 1, dir.name, strlen(dir.name));
     if (dupdir(topath, &dir.statuso)) {
-      const int err = errno;
-      fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));
-      row_destroy(w);
-      return 1;
+        const int err = errno;
+        fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));
+        row_destroy(w);
+        return 1;
     }
 
     #ifdef DEBUG
@@ -272,7 +272,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     /* create the database name */
     char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2, topath, strlen(topath), "/" DBNAME, DBNAME_LEN + 1);
+    SNFORMAT_S(dbname, MAXPATH, 2, topath, strlen(topath), "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
     /* /\* don't bother doing anything if there is nothing to insert *\/ */
     /* /\* (the database file will not exist for empty directories) *\/ */
@@ -417,6 +417,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             clock_gettime(CLOCK_MONOTONIC, &free_end);
             #endif
 
+            /* /\* don't need this now because this loop uses the count acquired by the scout function *\/ */
             /* /\* stop on directories, since files are listed first *\/ */
             /* if (row.type[0] == 'd') { */
             /*     break; */
