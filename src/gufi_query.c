@@ -606,15 +606,15 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     struct work * work = (struct work *) data;
     const size_t work_name_len = strlen(work->name);
 
-    /* print directory */
-    if (in.printdir) {
-        struct ThreadArgs * ta = (struct ThreadArgs *) args;
-        struct CallbackArgs ca;
-        ca.output_buffers = &ta->output_buffers;
-        ca.id = id;
-        char * ptr = &(work->name[0]);
-        ta->print_callback_func(&ca, 1, &ptr, NULL);
-    }
+    /* /\* print directory *\/ */
+    /* if (in.printdir) { */
+    /*     struct ThreadArgs * ta = (struct ThreadArgs *) args; */
+    /*     struct CallbackArgs ca; */
+    /*     ca.output_buffers = &ta->output_buffers; */
+    /*     ca.id = id; */
+    /*     char * ptr = &(work->name[0]); */
+    /*     ta->print_callback_func(&ca, 1, &ptr, NULL); */
+    /* } */
 
     char dbname[MAXSQL];
     SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
@@ -1059,7 +1059,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:Pan:o:d:O:I:F:y:z:G:J:e:m:B:w", 1, "GUFI_tree ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:w", 1, "GUFI_tree ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -1343,7 +1343,7 @@ int main(int argc, char *argv[])
 
     #if BENCHMARK
     fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
-    fprintf(stderr, "Total Files:           %zu\n",    rows - thread_count);
+    fprintf(stderr, "Total Files:           %zu\n",    rows);
     fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time);
     fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time);
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time);
