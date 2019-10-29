@@ -204,10 +204,10 @@ if __name__=='__main__':
 
     args = parser.parse_args();
 
-    # default to current working directory
+    # default to IndexRoot
     args.FILE = args.FILE[0]
     if len(args.FILE) == 0:
-        args.FILE = [os.getcwd()]
+        args.FILE = ['']
 
     # prepend the provided paths with the GUFI root path
     args.FILE = [os.path.join(config['IndexRoot'], path) for path in args.FILE]
