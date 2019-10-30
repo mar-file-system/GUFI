@@ -122,6 +122,8 @@ def server_config(filename = DEFAULT_CONFIG_PATH):
     config = read_config(filename)
     if 'Threads' not in config:
         raise exceptions.Exception('Missing Threads')
+    if 'Exec' not in config:
+        raise exceptions.Exception('Missing Exec')
     if 'IndexRoot' not in config:
         raise exceptions.Exception('Missing IndexRoot')
     return config
