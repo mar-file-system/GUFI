@@ -429,6 +429,7 @@ def build_expression_parser():
 
     parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',              type=gufi_common.get_non_negative,                  help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
     parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',              type=gufi_common.get_non_negative,                  help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
+    parser.add_argument('-fprint',             metavar='file',       dest='fprint',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
 
     # GUFI specific arguments
     parser.add_argument('--select',            metavar='cols',       dest='select',                action='append', nargs='*',                         help='comma separated columns (default: *)')
@@ -439,7 +440,6 @@ def build_expression_parser():
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
     parser.add_argument('--aggregate',                               dest='aggregate',             action='store_true',                                help='Aggregate results before printing')
-    parser.add_argument('--output', '-o',                            dest='output',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     # parser.add_argument('--path-index',        metavar='i',          dest='path_index',            type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
     parser.add_argument('--read-write',                              dest='readwrite',             action='store_true',                                help='Open databases in read-write mode')
@@ -568,8 +568,8 @@ if __name__=='__main__':
     if args.mindepth:
         query_cmd += ['-y', str(args.mindepth)]
 
-    if args.output:
-        query_cmd += ['-o', args.output]
+    if args.fprint:
+        query_cmd += ['-o', args.fprint]
 
     if args.output_buffer:
         query_cmd += ['-B', str(args.output_buffer)]
