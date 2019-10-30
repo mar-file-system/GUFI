@@ -95,12 +95,6 @@ SERVER_SETTINGS = [
     'IndexRoot' # absolute path of root directory for GUFI to traverse
 ]
 
-def dump_client(server, port, paramiko):
-    return "Server={0}\nPort={1}\nParamiko={2}\n".format(server, port, os.path.realpath(paramiko))
-
-def dump_server(threads, bfq, root):
-    return 'Threads={0}\nExec={1}\nIndexRoot={2}\n'.format(str(threads), bfq, root)
-
 def read_config(filename):
     with open(filename, 'r') as f:
         out = {}
