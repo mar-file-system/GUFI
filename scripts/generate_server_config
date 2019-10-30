@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+ACTUAL="/etc/GUFI/config"
+EXAMPLE="${ACTUAL}.example"
+
+if [[ ! -f "${ACTUAL}" ]]
+then
+    mkdir -p "$(dirname ${ACTUAL})"
+    if [[ ! -f "${EXAMPLE}" ]]
+    then
+        mkdir -p "$(dirname ${EXAMPLE})"
+        (
+            echo "# Server Config";
+            echo "# The actual file should be ${ACTUAL}"
+            echo ""
+            echo "# positive integer";
+            echo "Threads=96";
+            echo "";
+            echo "# absolute path to gufi_query";
+            echo "# single string";
+            echo "Exec=/path/to/gufi_query";
+            echo "";
+            echo "# prefix of directories used by GUFI";
+            echo "# single string";
+            echo "IndexRoot=/search/root"
+        ) > "${EXAMPLE}"
+        echo "Wrote example server configuration into ${EXAMPLE}"
+    fi
+    echo "Please make sure an actual server configuration file exists as ${ACTUAL}"
+else
+    echo "Nothing Done. ${ACTUAL} and ${EXAMPLE} both already exist."
+fi

@@ -79,21 +79,21 @@ import os
 
 import gufi_common
 
-# location of this file
-PATH = os.path.realpath(__file__)
-
-# assumes both client and server were installed to directories with the same name on different machines
-INSTALL_PREFIX = os.path.dirname(PATH)
-
-# expected location of gufi_query
-GUFI_QUERY = os.path.join(INSTALL_PREFIX, 'bin', 'gufi_query')
-
 # default configuration file location
 DEFAULT_CONFIG_PATH='/etc/GUFI/config'
 
 # recognized settings
-CLIENT_SETTINGS = ['Server', 'Port', 'Paramiko']
-SERVER_SETTINGS = ['Threads', 'Exec', 'IndexRoot']
+CLIENT_SETTINGS = [
+    'Server',   # hostname
+    'Port',     # ssh port
+    'Paramiko'  # location of paramiko installation
+]
+
+SERVER_SETTINGS = [
+    'Threads',  # number of threads to use
+    'Exec',     # absolute path of gufi_query
+    'IndexRoot' # absolute path of root directory for GUFI to traverse
+]
 
 def dump_client(server, port, paramiko):
     return "Server={0}\nPort={1}\nParamiko={2}\n".format(server, port, os.path.realpath(paramiko))
@@ -141,43 +141,3 @@ def client_config(filename = DEFAULT_CONFIG_PATH):
     if 'Paramiko' not in config:
         raise exceptions.Exception('Missing Paramiko')
     return config
-
-if __name__=='__main__':
-    # assumes paramiko was installed in the same directory as the executables
-    PARAMIKO = os.path.join(os.path.dirname(INSTALL_PREFIX), 'lib', 'GUFI', 'paramiko')
-
-    parser = argparse.ArgumentParser(description='GUFI Config Dump')
-    parser.add_argument('--version', '-v', action='version', version=os.path.basename(PATH) + ' @GUFI_VERSION@')
-
-    action_subparser = parser.add_subparsers(dest='action')
-
-    # Read Config
-    read_parser = action_subparser.add_parser('read')
-    read_parser.add_argument('filename',        type=str,                                                    help='Configuration file name')
-
-    # Dump Config
-    dump_parser = action_subparser.add_parser('dump')
-
-    dump_subparser = dump_parser.add_subparsers(dest='mode')
-    client_parser = dump_subparser.add_parser('client')
-    server_parser = dump_subparser.add_parser('server')
-
-    # Client Settings
-    client_parser.add_argument('--port',        type=gufi_common.get_port,     default=22,                   help='Server Port')
-    client_parser.add_argument('--paramiko',    type=str,                      default=PARAMIKO,             help='Paramiko install location')
-    client_parser.add_argument('server',        type=str,                                                    help='Server Name/IP')
-
-    # Server Settings
-    server_parser.add_argument('--threads',     type=gufi_common.get_positive, default=gufi_common.cpus(),   help='Number of threads')
-    server_parser.add_argument('--gufi-query',  type=str,                      default=GUFI_QUERY,           help='gufi_query')
-    server_parser.add_argument('IndexRoot',     type=str,                      nargs='+', default=[],        help='Root directory of GUFI trees')
-
-    args = parser.parse_args()
-
-    if args.action == 'read':
-        print read_config(args.filename)
-    elif args.action == 'dump':
-        if args.mode == 'client':
-            print dump_client(args.server, args.port, args.paramiko)
-        elif args.mode == 'server':
-            print dump_server(args.threads, args.gufi_query, args.IndexRoot)
