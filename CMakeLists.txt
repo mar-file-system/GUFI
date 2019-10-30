@@ -361,10 +361,15 @@ set(CPACK_PACKAGE_VERSION_MAJOR ${GUFI_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${GUFI_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
 
+# get the architecture of this machine
+# assumes that we are not cross compiling
+execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 # Generate RPMs
 find_program(RPMBUILD REQUIRED rpmbuild)
 set(CPACK_GENERATOR "RPM")
 set(CPACK_RPM_COMPONENT_INSTALL On)
+set(CPACK_RPM_FILE_NAME "gufi-${GUFI_VERSION}.${ARCH}.rpm")
 set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
 set(CPACK_RPM_PACKAGE_NAME "GUFI")
 set(CPACK_RPM_PACKAGE_VERSION "${GUFI_VERSION}")
@@ -374,10 +379,13 @@ set(CPACK_RPM_PACKAGE_VENDOR "LANL")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python >= 2.7, python < 3, coreutils")
 set(CPACK_RPM_PACKAGE_RELOCATABLE On)
+set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
+set(CPACK_RPM_Server_FILE_NAME "gufi_server-${GUFI_VERSION}.${ARCH}.rpm")
 set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
 
 if (CLIENT)
-  # python libraries are probably installed through pip, and won't be found by rpm
+  set(CPACK_RPM_Client_FILE_NAME "gufi_client-${GUFI_VERSION}.${ARCH}.rpm")
+  # python libraries are installed through pip, and won't be found by rpm
   set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh, python2-pip")
   set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
   set(CPACK_RPM_Client_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/contrib/python/pip_install.sh")
