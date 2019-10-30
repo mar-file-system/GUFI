@@ -142,7 +142,7 @@ Environment:
 CMake (-D<VAR>=<VALUE>):
     - CMAKE_INSTALL_PREFIX=<PATH> to install to a custom directory when running `make install`
     - CMAKE_BUILD_TYPE=Debug to build with warnings and debugging symbols turned on.
-    - PARAMIKO=ON to install paramiko and gufi_client
+    - CLIENT=ON to install paramiko and gufi_client
     - DEP_DOWNLOAD_PREFIX=<PATH> to select a location to find downloaded dependencies.
         If the expected files are found, they will not be downloaded.
         The default path points to the bundled dependencies.

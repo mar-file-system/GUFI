@@ -76,7 +76,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 
 # list this first so that make install will overwrite these files
-if (PARAMIKO)
+if (CLIENT)
   # add the paramiko source for installing
   # keep the trailing / to rename the directory
   install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION lib/GUFI/paramiko COMPONENT Client)

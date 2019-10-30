@@ -10,7 +10,7 @@ export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
 mkdir -p build
 cd build
-cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PATH}" -DPARAMIKO=On ..
+cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PATH}" -DCLIENT=On ..
 
 # use files from the generated tar
 if  [[ "${BUILD}" = "make" ]]; then
