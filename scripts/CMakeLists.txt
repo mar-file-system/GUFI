@@ -101,6 +101,9 @@ if (CLIENT)
   set(TOOL stats)
   configure_file(gufi_client gufi_client_stats @ONLY)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stats RENAME gufi_stats DESTINATION bin COMPONENT Client)
+
+  # install the client configuration file
+  install(CODE "execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/generate_client_config)" COMPONENT Client)
 endif()
 
 # list of scripts that act as tools on the server
@@ -121,3 +124,6 @@ install(FILES gufi_common.py DESTINATION bin COMPONENT Server)
 
 # gufi_jail.sh is used by sshd_config to prevent commands other than gufi_* from running
 install(PROGRAMS gufi_jail.sh DESTINATION bin COMPONENT Server)
+
+# install at least an example server configuration file
+install(CODE "execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/generate_server_config)" COMPONENT Server)
