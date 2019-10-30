@@ -95,7 +95,7 @@ Client:
 | ----------- | ------------------- | --------------------------------------------------- |
 | `Server`    | String              | Hostname                                            |
 | `Port`      | Positive Integer    | SSH port                                            |
-| `Paramiko`  | Path String         | Absolute path of of the Paramiko install            |
+| `Paramiko`  | Single Path String  | Absolute path of the Paramiko install               |
 
 Comments are lines that begin with `#`.
 

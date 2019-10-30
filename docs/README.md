@@ -52,6 +52,7 @@ Please see [INSTALL](/INSTALL).
 - [userfilespacehogusesummary](/examples/userfilespacehogusesummary)
 
 ## Extra Information
+- [Configuration Files](config)
 - [SQL Schemas](SQLSchemas)
 - [SQL Functions](SQLFunctions)
 - [Tests](tests)
