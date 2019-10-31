@@ -525,12 +525,28 @@ if __name__=='__main__':
                                       summary_order_by,
                                       args.num_results)
 
-    initial = gufi_common.build_query(entries_select,
-                                      ['summary' if args.type == 'd' else 'entries'],
-                                      entries_where,
-                                      entries_group_by,
-                                      entries_order_by,
-                                      args.num_results)
+    initial = None
+    if args.type:
+        initial = gufi_common.build_query(entries_select,
+                                          ['summary' if args.type == 'd' else 'entries'],
+                                          entries_where,
+                                          entries_group_by,
+                                          entries_order_by,
+                                          args.num_results)
+    else:
+        initial = gufi_common.build_query(entries_select,
+                                          ['summary'],
+                                          entries_where,
+                                          entries_group_by,
+                                          entries_order_by,
+                                          args.num_results) + \
+                  ' UNION ' + \
+                  gufi_common.build_query(entries_select,
+                                          ['entries'],
+                                          entries_where,
+                                          entries_group_by,
+                                          entries_order_by,
+                                          args.num_results)
 
     intermediate = final = gufi_common.build_query(['*'],
                                                    ['entries'],
