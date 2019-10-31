@@ -908,12 +908,12 @@ char * modetostr(char * str, const mode_t mode)
         if (mode &  S_IRUSR) str[1] = 'r';
         if (mode &  S_IWUSR) str[2] = 'w';
         if (mode &  S_IXUSR) str[3] = 'x';
-        if (mode &  S_IRUSR) str[4] = 'r';
-        if (mode &  S_IWUSR) str[5] = 'w';
-        if (mode &  S_IXUSR) str[6] = 'x';
-        if (mode &  S_IRUSR) str[7] = 'r';
-        if (mode &  S_IWUSR) str[8] = 'w';
-        if (mode &  S_IXUSR) str[9] = 'x';
+        if (mode &  S_IRGRP) str[4] = 'r';
+        if (mode &  S_IWGRP) str[5] = 'w';
+        if (mode &  S_IXGRP) str[6] = 'x';
+        if (mode &  S_IROTH) str[7] = 'r';
+        if (mode &  S_IWOTH) str[8] = 'w';
+        if (mode &  S_IXOTH) str[9] = 'x';
     }
 
     return str;
