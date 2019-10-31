@@ -207,6 +207,7 @@ int process_path(const char * path) {
         if (sqlite3_exec(db, query, print_callback, &ca, &err) != SQLITE_OK) {
             fprintf(stderr, "Error: %s: %s\n", err, dbname);
             sqlite3_free(err);
+            ca.found = 0;
         }
     }
 
@@ -222,7 +223,7 @@ int process_path(const char * path) {
 }
 
 void sub_help() {
-    printf("path         path to stat\n");
+    printf("path                 path to stat\n");
     printf("\n");
 }
 
@@ -238,7 +239,7 @@ int main(int argc, char *argv[])
     if (idx < 0)
         return -1;
 
-    /* enqueue all input paths */
+    /* process all input paths */
     for(int i = idx; i < argc; i++) {
         process_path(argv[i]);
     }
