@@ -101,10 +101,10 @@ def build_select(config, args):
         select += ['type', 'mode', 'nlink', 'uid']
         if not args.no_group:
             select += ['gid']
-        select += ['size', 'mtime', ('(path() || "/" || name)' if args.recursive or (len(config['IndexRoot']) > 1) else 'name') + ' as fullpath', 'linkname']
+        select += ['size', 'mtime', 'name', 'linkname']
     else:
         # at minimum, print the file name
-        select += [('(path() || "/" ||  name)' if args.recursive or (len(config['IndexRoot']) > 1) else 'name') + ' as fullpath']
+        select += ['name']
 
     return select
 
@@ -125,10 +125,10 @@ def build_aggregate_select(args):
         select += ['printf("%03o", mode)', 'nlink', 'uid']
         if not args.no_group:
             select += ['gid']
-        select += ['size', 'strftime("%m %d %H:%M", mtime, "unixepoch")', 'case when (type == "l") then (fullpath' + ' || " -> " || linkname) else fullpath end']
+        select += ['size', 'strftime("%m %d %H:%M", mtime, "unixepoch")', 'case when (type == "l") then (name' + ' || " -> " || linkname) else name end']
     else:
         # at minimum, print the file name
-        select += ['fullpath']
+        select += ['name']
 
     return select
 
@@ -139,15 +139,15 @@ def build_where(args):
 
     # everything
     if not args.all:
-        where += ['fullpath REGEXP "^(?![\.]).*$"']
+        where += ['name REGEXP "^(?![\.]).*$"']
 
     # ignore . and ..
     elif args.almost_all:
-        where += ['fullpath REGEXP "(?!(\.|\.\.))"']
+        where += ['name REGEXP "(?!(\.|\.\.))"']
 
     # ignore files that end with ~
     elif args.ignore_backups == True:
-        where += ['fullpath REGEXP "^.*(?<![\~])$"']
+        where += ['name REGEXP "^.*(?<![\~])$"']
 
     return where
 
@@ -156,7 +156,7 @@ def build_order_by(args):
     order_by = []
 
     if args.reverse:
-        order_by += ['fullpath DESC']
+        order_by += ['name DESC']
 
     if args.sort_largest:
         order_by += ['size DESC']
@@ -165,7 +165,7 @@ def build_order_by(args):
         order_by += ['mtime DESC']
 
     if len(order_by) == 0:
-        return ['fullpath ASC']
+        return ['name ASC']
 
     if args.no_sort:
         order_by = []
@@ -235,7 +235,7 @@ if __name__=='__main__':
                  '-E', first_query,
                  '-J', 'SELECT * FROM entries;',
                  '-G', second_query,
-                 '-z', '-1' if args.recursive else '1']
+                 '-z', '-1' if args.recursive else '0']
 
     if args.delim:
         query_cmd += ['-d', args.delim]
