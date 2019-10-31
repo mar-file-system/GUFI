@@ -592,3 +592,37 @@ TEST(mkpath, childfirst) {
     EXPECT_EQ(orig_child_stat.st_uid,            child_stat.st_uid);
     EXPECT_EQ(orig_child_stat.st_gid,            child_stat.st_gid);
 }
+
+static char * another_modetostr(char * str, const mode_t mode) {
+    static const char rwx[] = "rwx";
+    snprintf(str, 11, "----------");
+    if (mode & S_IFDIR) {
+        str[0] = 'd';
+    }
+    str++;
+
+    for(size_t i = 0; i < 9; i++) {
+        if (mode & (1U << (8 - i))) {
+            str[i] = rwx[i % 3];
+        }
+    }
+
+    return --str;
+}
+
+TEST(modetostr, files) {
+    char actual[11];
+    char expected[11];
+    for(mode_t i = 0; i < 01000; i++) {
+        EXPECT_STREQ(modetostr(actual, i), another_modetostr(expected, i));
+    }
+}
+
+TEST(modetostr, directories) {
+    char actual[11];
+    char expected[11];
+    for(mode_t i = 0; i < 01000; i++) {
+        const mode_t mode = i | S_IFDIR;
+        EXPECT_STREQ(modetostr(actual, mode), another_modetostr(expected, mode));
+    }
+}
