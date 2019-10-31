@@ -898,3 +898,23 @@ size_t descend(struct work *passmywork, DIR * dir, const size_t max_level) {
 
     return pushed;
 }
+
+/* convert a mode to a human readable string */
+char * modetostr(char * str, const mode_t mode)
+{
+    if (str) {
+        snprintf(str, 64, "----------");
+        if (mode &  S_IFDIR) str[0] = 'd';
+        if (mode &  S_IRUSR) str[1] = 'r';
+        if (mode &  S_IWUSR) str[2] = 'w';
+        if (mode &  S_IXUSR) str[3] = 'x';
+        if (mode &  S_IRUSR) str[4] = 'r';
+        if (mode &  S_IWUSR) str[5] = 'w';
+        if (mode &  S_IXUSR) str[6] = 'x';
+        if (mode &  S_IRUSR) str[7] = 'r';
+        if (mode &  S_IWUSR) str[8] = 'w';
+        if (mode &  S_IXUSR) str[9] = 'x';
+    }
+
+    return str;
+}

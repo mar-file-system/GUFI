@@ -848,17 +848,7 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     char tmode[64];
     if (argc == 1) {
         fmode = sqlite3_value_int(argv[0]);
-        SNPRINTF(tmode,64,"----------");
-        if (fmode &  S_IFDIR) tmode[0] = 'd';
-        if (fmode &  S_IRUSR) tmode[1] = 'r';
-        if (fmode &  S_IWUSR) tmode[2] = 'w';
-        if (fmode &  S_IXUSR) tmode[3] = 'x';
-        if (fmode &  S_IRUSR) tmode[4] = 'r';
-        if (fmode &  S_IWUSR) tmode[5] = 'w';
-        if (fmode &  S_IXUSR) tmode[6] = 'x';
-        if (fmode &  S_IRUSR) tmode[7] = 'r';
-        if (fmode &  S_IWUSR) tmode[8] = 'w';
-        if (fmode &  S_IXUSR) tmode[9] = 'x';
+        modetostr(tmode, fmode);
         sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
         return;
     }
