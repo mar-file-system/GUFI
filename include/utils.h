@@ -177,4 +177,7 @@ int processdirs(DirFunc dir_fn);
 size_t descend(struct work *passmywork, DIR *dir,
                const size_t max_level);
 
+/* convert a mode to a human readable string */
+char * modetostr(char * str, const mode_t mode);
+
 #endif
