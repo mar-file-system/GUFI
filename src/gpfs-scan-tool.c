@@ -31,19 +31,6 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
------
-NOTE:
------
-
-GUFI uses the C-Thread-Pool library.  The original version, written by
-Johan Hanssen Seferidis, is found at
-https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
-released under the MIT License.  LANS, LLC added functionality to the
-original work.  The original work, plus LANS, LLC added functionality is
-found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
-License.  The MIT License can be found at
-https://opensource.org/licenses/MIT.
-
 
 From Los Alamos National Security, LLC:
 LA-CC-15-039
@@ -123,18 +110,18 @@ char *format_xattrs(char returnStr[], gpfs_iscan_t *iscanP,
        fprintf(stderr, "gpfs_next_xattr: %s\n", strerror(rc));
        break;
      }
- 
+
      if (nameP == NULL) {
        continue;
      }
-    
+
       //We don't need user.marfs xattrs
      if (strstr(nameP, "user.marfs") != NULL) {
        continue;
      }
-     
+
      snprintf(xattrStr, xattrLen, " \"%s\"=", nameP);
-      
+
       if (valueLen == 0) {
        printable = 0;
        }  else {
@@ -150,12 +137,12 @@ char *format_xattrs(char returnStr[], gpfs_iscan_t *iscanP,
              printable = 0;
          }
        }
-         if (printable) 
+         if (printable)
          strcat(xattrStr, valueP);
-         else 
-           continue;  
-     
-     strcat(returnStr, xattrStr); 
+         else
+           continue;
+
+     strcat(returnStr, xattrStr);
   }
   free(xattrStr);
   xattrStr = NULL;
@@ -181,20 +168,20 @@ void *proc_inodes (void *args) {
   long long stride;
   int bigmoves;
   char *delim;
-  int nxattrs; 
+  int nxattrs;
   const char **xattrNames = NULL;
   const char *xattrBuf = NULL;
   unsigned int xattrBufLen;
   char *returnStr = NULL;
   char linkBuf[4096];
- 
+
   mythread=pargs->threadnum;
   totthreads=pargs->numthreads;
   intimell=pargs->intime;
   stride=pargs->stride;
   delim=in.delim;
-  // We always want to return all xattrs, so we set nxattrs to -1 
-  // which will make gpfs_open_inodescan_with_xatttrs64() return all xattrs 
+  // We always want to return all xattrs, so we set nxattrs to -1
+  // which will make gpfs_open_inodescan_with_xatttrs64() return all xattrs
   nxattrs=-1;
 
   sprintf(outfilename,"%s.%d",pargs->passoutfile,mythread);
@@ -248,9 +235,9 @@ void *proc_inodes (void *args) {
 
     bzero(type,sizeof(type));
     printit=0;
- 
+
   // This conditional is for incremental scans, and will receive an epoch time value from the file
-  // .lastrun  
+  // .lastrun
   if ((iattrp->ia_mtime.tv_sec >= intimell) || (iattrp->ia_ctime.tv_sec >= intimell)) {
 
       if (S_ISDIR(iattrp->ia_mode)) {
@@ -268,7 +255,7 @@ void *proc_inodes (void *args) {
           sprintf(type,"f");
       }
   }
- 
+
   // This conditional is for loading a full
   if (intimell == 0) {
       fprintf(outfile,"%llu%s",iattrp->ia_inode,delim);
@@ -299,7 +286,7 @@ void *proc_inodes (void *args) {
       } else {
         fprintf(outfile,"%s", delim);
       }
-     
+
       if (xattrBufLen > 0) {
         returnStr = format_xattrs(returnStr,iscanp, xattrBuf, xattrBufLen);
         fprintf(outfile,"%s%s",returnStr,delim);
@@ -309,8 +296,8 @@ void *proc_inodes (void *args) {
         fprintf(outfile,"%s", delim);
       }
       fprintf(outfile,"%lld%s\n",iattrp->ia_createtime.tv_sec,delim);
-    } 
-    
+    }
+
   if (printit == 1 && intimell > 0) {
         fprintf(outfile,"%llu %s\n",iattrp->ia_inode,type);
   }
@@ -396,7 +383,7 @@ int main(int argc, char *argv[]) {
     if (validate_inputs(intime))
       return -1;
 
-  starttime  = time(NULL); 
+  starttime  = time(NULL);
   timenow = localtime(&starttime);
   strftime(outfilename,sizeof(outfilename),"scan-results-%Y-%m-%d_%H:%M",timenow);
 
@@ -415,7 +402,7 @@ int main(int argc, char *argv[]) {
   args->fsp=fsp;
   args->intime=intime;
   args->stride=in.stride;
-  
+
   if (pthread_mutex_init(&lock, NULL) != 0)
     {
         printf("\n mutex init has failed\n");

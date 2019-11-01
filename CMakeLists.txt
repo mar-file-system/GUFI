@@ -30,19 +30,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# -----
-# NOTE:
-# -----
-#
-# GUFI uses the C-Thread-Pool library.  The original version, written by
-# Johan Hanssen Seferidis, is found at
-# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
-# released under the MIT License.  LANS, LLC added functionality to the
-# original work.  The original work, plus LANS, LLC added functionality is
-# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
-# License.  The MIT License can be found at
-# https://opensource.org/licenses/MIT.
-#
 #
 # From Los Alamos National Security, LLC:
 # LA-CC-15-039
@@ -258,8 +245,7 @@ set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include
   ${XATTR_INCLUDEDIR}
   ${DEP_INSTALL_PREFIX}/sqlite3/include
-  ${DEP_INSTALL_PREFIX}/sqlite3-pcre
-  ${DEP_INSTALL_PREFIX}/C-Thread-Pool/include)
+  ${DEP_INSTALL_PREFIX}/sqlite3-pcre)
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries

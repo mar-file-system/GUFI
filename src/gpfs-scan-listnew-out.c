@@ -1,3 +1,67 @@
+/*
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+*/
+
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -57,10 +121,10 @@ void *proc_inodes (void *args) {
   stride=pargs->stride;
   sprintf(outfilename,"%s.%d",pargs->passoutfile,mythread);
   fsp=pargs->fsp;
-  /* copied all the variables, release the lock */ 
+  /* copied all the variables, release the lock */
   gotit=1;
- 
-  // to test out the thread launch and pass 
+
+  // to test out the thread launch and pass
   //printf("thread %d working tot threads %d passoutfile %s intime %llu stride %lld \n",mythread,totthreads,outfilename,intimell,stride);
   //return 0;
 
@@ -97,8 +161,8 @@ void *proc_inodes (void *args) {
       goto scanexit;
     }
 
-    // check to see if we are done with this batch 
-    // check to see if we are done with all batches 
+    // check to see if we are done with this batch
+    // check to see if we are done with all batches
     if (iattrp == NULL) break;
     if (iattrp->ia_inode > ((bigmoves*totthreads*stride)+((mythread+1)*stride) ) ) {
       bigmoves++;
@@ -196,16 +260,16 @@ int main(int argc, char *argv[]) {
   args->intime=intime;
   args->stride=stride;
 
-  if (pthread_mutex_init(&lock, NULL) != 0) 
-    { 
-        printf("\n mutex init has failed\n"); 
-        return 1; 
-    } 
+  if (pthread_mutex_init(&lock, NULL) != 0)
+    {
+        printf("\n mutex init has failed\n");
+        return 1;
+    }
 
   i=0;
   while (i < numthreads) {
     gotit=0;
-    pthread_mutex_lock(&lock); 
+    pthread_mutex_lock(&lock);
     args->threadnum=i;
     printf("starting threadnum %d\n",args->threadnum);
     if(pthread_create(&workers[i], NULL, proc_inodes, args)) {
@@ -215,18 +279,18 @@ int main(int argc, char *argv[]) {
       exit(-1);
     }
     while (gotit==0) {
-       //printf("."); 
+       //printf(".");
     }
-    pthread_mutex_unlock(&lock); 
+    pthread_mutex_unlock(&lock);
     i++;
   }
-  
+
      /* Telling the main thread to wait for the task completion of all its spawned threads.*/
   for (i = 0; i < numthreads; i++) {
     pthread_join (workers[i], NULL);
   }
 
- 
+
   free(args);
   pthread_mutex_destroy(&lock);
   lastrun = fopen(".lastrun", "w");
