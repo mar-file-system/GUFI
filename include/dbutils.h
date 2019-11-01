@@ -81,6 +81,7 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sqlite3.h>
 
+#include "QueuePerThreadPool.h"
 #include "utils.h"
 
 
@@ -135,6 +136,7 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
 
 int addqueryfuncs(sqlite3 *db);
+int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 

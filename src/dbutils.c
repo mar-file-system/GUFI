@@ -77,9 +77,10 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
-#include <pwd.h>
 #include <grp.h>
+#include <pwd.h>
 #include "pcre.h"
 
 #include "dbutils.h"
@@ -779,40 +780,41 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-    struct passwd *fmypasswd;
-    int fuid;
+    const unsigned char *text = sqlite3_value_text(argv[0]);
+
     char fname[256];
-    if (argc == 1) {
-        const unsigned char *text = sqlite3_value_text(argv[0]);
-        //printf("uidtouser %d %s\n",argc,text);
-        SNPRINTF(fname,256,"%s",text);
-        fuid=atoi(fname);
-        fmypasswd = getpwuid(fuid);
-        if (fmypasswd != NULL) {
-          sqlite3_result_text(context, fmypasswd->pw_name, -1, SQLITE_TRANSIENT);
-          return;
-        }
+    SNPRINTF(fname,256,"%s",text);
+
+    const int fuid=atoi(fname);
+
+    struct passwd *fmypasswd = getpwuid(fuid);
+    if (fmypasswd != NULL) {
+        sqlite3_result_text(context, fmypasswd->pw_name, -1, SQLITE_TRANSIENT);
     }
-    sqlite3_result_null(context);
+    else {
+        sqlite3_result_text(context, fname, -1, SQLITE_TRANSIENT);
+    }
+
+    return;
 }
 
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-    struct group *fmygroup;
-    int fgid;
+    const unsigned char *text = sqlite3_value_text(argv[0]);
+
     char fgroup[256];
-    if (argc == 1) {
-        const unsigned char *text = sqlite3_value_text(argv[0]);
-        //printf("gidtouser %d %s\n",argc,text);
-        SNPRINTF(fgroup,256,"%s",text);
-        fgid=atoi(fgroup);
-        fmygroup = getgrgid(fgid);
-        if (fmygroup != NULL) {
-          sqlite3_result_text(context, fmygroup->gr_name, -1, SQLITE_TRANSIENT);
-          return;
-        }
+    SNPRINTF(fgroup,256,"%s",text);
+
+    const int fgid=atoi(fgroup);
+
+    struct group * fmygroup = getgrgid(fgid);
+    if (fmygroup != NULL) {
+        sqlite3_result_text(context, fmygroup->gr_name, -1, SQLITE_TRANSIENT);
     }
-    sqlite3_result_null(context);
+    else {
+          sqlite3_result_text(context, fgroup, -1, SQLITE_TRANSIENT);
+    }
+    return;
 }
 
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -821,6 +823,14 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 
     mytid=gettid();
     sqlite3_result_text(context, gps[mytid].gpath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
+static void path2(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const size_t id = QPTPool_get_index((struct QPTPool *) sqlite3_user_data(context), pthread_self());
+    sqlite3_result_text(context, gps[id].gpath, -1, SQLITE_TRANSIENT);
+
     return;
 }
 
@@ -855,6 +865,77 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_null(context);
 }
 
+static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    const char * fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
+    const time_t t = sqlite3_value_int64(argv[1]);           /* timestamp */
+
+    char buf[MAXPATH];
+    strftime(buf, sizeof(buf), fmt, localtime(&t));
+    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
+
+    return;
+}
+
+static const char SIZE[] = {' ', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
+
+/* Returns the number of blocks required to store a given size */
+/* Unfilled blocks count as one full block (round up)          */
+static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    const size_t size  = sqlite3_value_int64(argv[0]);
+    const char * unit  = (char *) sqlite3_value_text(argv[1]);
+    const int    align = sqlite3_value_int(argv[2]);
+
+    size_t unit_size = 1;
+
+    const size_t len = strlen(unit);
+    if (len) {
+        for(size_t i = 1; i < sizeof(SIZE); i++) {
+            if (len == 1)
+                unit_size *= 1024;
+            if ((len == 2) && (unit[1] == 'B'))
+                unit_size *= 1000;
+            if ((len == 3) && (unit[1] == 'i') && (unit[2] == 'B'))
+                unit_size *= 1024;
+
+            if (unit[0] == SIZE[i]) {
+                break;
+            }
+        }
+    }
+
+    char fmt[MAXPATH];
+    SNPRINTF(fmt, sizeof(fmt), "%%%dzu%s", align, unit);
+
+    char buf[MAXPATH];
+    snprintf(buf, sizeof(buf), fmt, size / unit_size + (!!(size % unit_size)));
+
+    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
+
+    return;
+}
+
+/* Returns a string containg the size with as large of a unit as reasonable */
+static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    double size  = sqlite3_value_double(argv[0]);
+    if (size) {
+        size_t unit_index = 0;
+        while (size > 1024) {
+            size /= 1024;
+            unit_index++;
+        }
+
+        char buf[MAXPATH];
+        snprintf(buf, sizeof(buf), "%.1f%c", size, SIZE[unit_index]);
+
+        sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
+    }
+    else {
+        sqlite3_result_text(context, "0", -1, SQLITE_TRANSIENT);
+    }
+
+    return;
+}
+
 int addqueryfuncs(sqlite3 *db) {
     return ((sqlite3_create_function(db, "uidtouser",  1, SQLITE_UTF8, NULL, &uidtouser,  NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL) == SQLITE_OK) &&
@@ -862,6 +943,17 @@ int addqueryfuncs(sqlite3 *db) {
             (sqlite3_create_function(db, "fpath",      0, SQLITE_UTF8, NULL, &fpath,      NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "epath",      0, SQLITE_UTF8, NULL, &epath,      NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "modetotxt",  1, SQLITE_UTF8, NULL, &modetotxt,  NULL, NULL) == SQLITE_OK))?0:1;
+}
+
+int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
+    return !((sqlite3_create_function(db, "uidtouser",           1, SQLITE_UTF8, NULL, &uidtouser,           NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "gidtogroup",          1, SQLITE_UTF8, NULL, &gidtogroup,          NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "path",                0, SQLITE_UTF8, ctx,  &path2,               NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8, NULL, &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "modetotxt",           1, SQLITE_UTF8, NULL, &modetotxt,           NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8, NULL, &blocksize,           NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "human_readable_size", 1, SQLITE_UTF8, NULL, &human_readable_size, NULL, NULL) == SQLITE_OK) &&
+             1);
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {

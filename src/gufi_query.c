@@ -500,21 +500,6 @@ static size_t descend2(struct QPTPool *ctx,
     return pushed;
 }
 
-/* ////////////////////////////////////////////////// */
-/* these functions need to be moved back into dbutils */
-static void path2(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    const size_t id = QPTPool_get_index((struct QPTPool *) sqlite3_user_data(context), pthread_self());
-    sqlite3_result_text(context, gps[id].gpath, -1, SQLITE_TRANSIENT);
-
-    return;
-}
-
-int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
-    return !(sqlite3_create_function(db, "path", 0, SQLITE_UTF8, ctx, &path2, NULL, NULL) == SQLITE_OK);
-}
-/* ////////////////////////////////////////////////// */
-
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
     struct OutputBuffers * output_buffers;
