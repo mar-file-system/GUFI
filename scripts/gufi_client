@@ -76,13 +76,11 @@
 
 import argparse
 import getpass
-import imp
 import os
 import sys
 
 import gufi_common
-
-gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'gufi_config'))
+import gufi_config
 
 def talk_to_server(config, args):
     '''

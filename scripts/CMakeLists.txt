@@ -106,16 +106,24 @@ if (CLIENT)
   install(CODE "execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/generate_client_config)" COMPONENT Client)
 endif()
 
-# list of scripts that act as tools on the server
-set(TOOLS gufi_find gufi_stats gufi_ls gufi_config)
+# scripts that act as executables on the server
+set(TOOLS
+  gufi_find
+  gufi_stats
+  gufi_ls)
+
+# python libraries installed into bin for convenience
+set(LIBRARIES
+  gufi_config.py
+  gufi_common.py)
 
 # copy and install scripts that act like binaries
-foreach(TOOL ${TOOLS})
+foreach(SCRIPT ${TOOLS} ${LIBRARIES})
   # copy the tools into the build directory for easy access
-  configure_file(${TOOL} ${TOOL} @ONLY)
+  configure_file(${SCRIPT} ${SCRIPT} @ONLY)
 
-  # install these tools into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${TOOL} DESTINATION bin COMPONENT Server)
+  # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} DESTINATION bin COMPONENT Server)
 endforeach()
 
 # gufi_common.py is not an executable, but is installed in bin for convenience

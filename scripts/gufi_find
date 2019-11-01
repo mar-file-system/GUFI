@@ -76,18 +76,16 @@
 
 import argparse
 import exceptions
-import imp
 import os
 import subprocess
 import sys
 import time
 
 import gufi_common
+import gufi_config
 
 # location of this file
 PATH = os.path.realpath(__file__)
-
-gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(PATH), 'gufi_config'))
 
 SECONDS_PER_DAY = str(24 * 60 * 60)
 
