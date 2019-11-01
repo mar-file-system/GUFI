@@ -82,11 +82,11 @@ if (CLIENT)
   install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION lib/GUFI/paramiko COMPONENT Client)
 
   # copy the configuration handling script into both the Server and Client RPMs
-  configure_file(gufi_config gufi_config @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_config DESTINATION bin COMPONENT Client)
+  configure_file(gufi_config.py gufi_config.py COPONLY)
+  install(FILES gufi_config.py DESTINATION bin COMPONENT Client)
 
   # gufi_common.py is also needed by the client
-  configure_file(gufi_common.py gufi_common.py @ONLY)
+  configure_file(gufi_common.py gufi_common.py COPONLY)
   install(FILES gufi_common.py DESTINATION bin COMPONENT Client)
 
   # create individual client scripts
@@ -123,7 +123,7 @@ foreach(SCRIPT ${TOOLS} ${LIBRARIES})
   configure_file(${SCRIPT} ${SCRIPT} @ONLY)
 
   # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} DESTINATION bin COMPONENT Server)
+  install(PROGRAMS ${SCRIPT} DESTINATION bin COMPONENT Server)
 endforeach()
 
 # gufi_common.py is not an executable, but is installed in bin for convenience
