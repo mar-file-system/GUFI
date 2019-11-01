@@ -1,5 +1,5 @@
 CP=cp
-SCRIPTS=gufi_config gufi_find gufi_ls gufi_stats gufi_common.py
+SCRIPTS=gufi_find gufi_ls gufi_stats gufi_config.py gufi_common.py
 
 TARGETS=$(SCRIPTS)
 
