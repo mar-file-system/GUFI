@@ -232,7 +232,7 @@ if __name__=='__main__':
         args.paths = ['']
 
     # prepend the provided paths with the GUFI root path
-    args.paths = [os.path.sep.join([config['IndexRoot'], path]) for path in args.paths]
+    args.paths = [os.path.normpath(os.path.sep.join([config['IndexRoot'], path])) for path in args.paths]
 
     if args.order:
         args.order = ORDER[args.order]

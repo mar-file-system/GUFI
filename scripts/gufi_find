@@ -492,7 +492,7 @@ if __name__=='__main__':
         paths = ['']
 
     # prepend the provided paths with the GUFI root path
-    paths = [os.path.sep.join([config['IndexRoot'], path]) for path in paths]
+    paths = [os.path.normpath(os.path.sep.join([config['IndexRoot'], path])) for path in paths]
 
     # parse expressions without the 'real' and path arguments
     args, unknown = expression_parser.parse_known_args(sys.argv[i:])
