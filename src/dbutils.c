@@ -364,23 +364,16 @@ int rawquerydb(const char *name,
 
 int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int ts)
 {
-     sqlite3_stmt    *res;
-     int     error = 0;
-     const char      *tail;
-     char sqlstmt[MAXSQL];
-     //struct sum sumin;
+     static const char *ts_str[] = {
+         "select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
+         "from summary where rectype=0;",
+         "select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize "
+         "from treesummary where rectype=0;"
+     };
 
-     if (ts) {
-       SNPRINTF(sqlstmt,MAXSQL,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize "
-               "from treesummary where rectype=0;");
-     } else {
-         SNPRINTF(sqlstmt,MAXSQL,"select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
-               "from summary where rectype=0;;");
-     }
-
-     // WARNING: passing length-arg that is longer than SQL text
-     error = sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, &tail);
-     if (error != SQLITE_OK) {
+     const char *sqlstmt = ts_str[ts];
+     sqlite3_stmt *res = NULL;
+     if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, NULL) != SQLITE_OK) {
           fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
                   sqlstmt,name,sqlite3_errmsg(db));
           return -1;
@@ -815,33 +808,6 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_null(context);
 }
 
-static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    int mytid;
-
-    mytid=gettid();
-    sqlite3_result_text(context, gps[mytid].gpath, -1, SQLITE_TRANSIENT);
-    return;
-}
-
-static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    int mytid;
-
-    mytid=gettid();
-    sqlite3_result_text(context, gps[mytid].gfpath, -1, SQLITE_TRANSIENT);
-    return;
-}
-
-static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    int mytid;
-
-    mytid=gettid();
-    sqlite3_result_text(context, gps[mytid].gepath, -1, SQLITE_TRANSIENT);
-    return;
-}
-
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int fmode;
@@ -858,9 +824,6 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 int addqueryfuncs(sqlite3 *db) {
     return ((sqlite3_create_function(db, "uidtouser",  1, SQLITE_UTF8, NULL, &uidtouser,  NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "path",       0, SQLITE_UTF8, NULL, &path,       NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "fpath",      0, SQLITE_UTF8, NULL, &fpath,      NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "epath",      0, SQLITE_UTF8, NULL, &epath,      NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "modetotxt",  1, SQLITE_UTF8, NULL, &modetotxt,  NULL, NULL) == SQLITE_OK))?0:1;
 }
 

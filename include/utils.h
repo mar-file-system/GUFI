@@ -82,11 +82,11 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <sys/types.h>
 
-#include "C-Thread-Pool/thpool.h"
 #include <sqlite3.h>
 
 #include "config.h"
 #include "bf.h"
+#include "QueuePerThreadPool.h"
 
 #define SNPRINTF(STR, N, FMT, ...)                                      \
     do {                                                                \
@@ -125,8 +125,6 @@ int haveChildren(struct Trie* curr);
 int deletionll(struct Trie* *curr, char* str);
 void cleanup(struct Trie *head);
 
-extern threadpool mythpool;
-
 // global variable to hold per thread state goes here
 struct globalthreadstate {
    FILE*    outfd[MAXPTHREAD];
@@ -153,16 +151,6 @@ int mkpath(char* path, mode_t mode);
 
 int dupdir(char* path, struct stat * stat);
 
-int incrthread();
-
-int decrthread();
-
-int getqent();
-
-int pushdir( void  * qqwork);
-
-int gettid();
-
 int shortpath(const char *name, char *nameout, char *endname);
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode);
@@ -174,7 +162,9 @@ typedef void(DirFunc)(void*);
 int processdirs(DirFunc dir_fn);
 
 // Function used in processdir to decend into subdirectories.
-size_t descend(struct work *passmywork, DIR *dir,
+size_t descend(struct QPTPool * ctx, const size_t id,
+               struct work *passmywork, DIR *dir,
+               QPTPoolFunc_t func,
                const size_t max_level);
 
 /* convert a mode to a human readable string */

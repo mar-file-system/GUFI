@@ -134,7 +134,6 @@ set(GUFI_SOURCES
   OutputBuffers.c
   QueuePerThreadPool.c
   SinglyLinkedList.c
-  structq.c
   template_db.c
   trace.c
   utils.c)

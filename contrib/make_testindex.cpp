@@ -73,9 +73,9 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 */
 
-#include <condition_variable>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstring>
 #include <ctime>
 #include <functional>
@@ -88,13 +88,13 @@ OF SUCH DAMAGE.
 #include <sstream>
 #include <sys/stat.h>
 #include <thread>
-#include <vector>
 #include <unistd.h>
+#include <vector>
 
 extern "C" {
 
 #include <sqlite3.h>
-#include "C-Thread-Pool/thpool.h"
+#include "QueuePerThreadPool.h"
 
 #include "bf.h"
 #include "dbutils.h"
@@ -318,7 +318,6 @@ struct ThreadArgs {
     std::size_t seed;                    // seed for seeding the RNGs inside this thread
 
     static Settings *settings;
-    static threadpool *pool;
 
     static std::mutex mutex;
     static std::size_t files;            // runtime sum of file counts (so summing stats is not necessary)
@@ -362,7 +361,6 @@ std::ostream &operator<<(std::ostream &stream, const ThreadArgs::Timed &stats) {
 }
 
 Settings *ThreadArgs::settings = nullptr;
-threadpool *ThreadArgs::pool = nullptr;
 std::mutex ThreadArgs::mutex = {};
 std::size_t ThreadArgs::files = 0;
 off_t ThreadArgs::size = 0;
@@ -629,10 +627,10 @@ std::size_t random_from_bucket(const std::size_t seed,
 }
 
 template <typename DirGenerator, typename DBGenerator, typename BucketDistribution>
-void generatedir(void *args) {
-    ThreadArgs *arg = (ThreadArgs *) args;
+int generatedir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+    ThreadArgs *arg = (ThreadArgs *) data;
     if (!arg) {
-        return;
+        return 1;
     }
 
     // make sure there are still files to generate
@@ -640,7 +638,7 @@ void generatedir(void *args) {
         std::lock_guard <std::mutex> lock(arg->mutex);
         if (arg->files >= arg->settings->files) {
             delete arg;
-            return;
+            return 1;
         }
     }
 
@@ -677,7 +675,7 @@ void generatedir(void *args) {
             std::cerr << "mkdir error: " << arg->path << ": " << strerror(err) << std::endl;
             if (err != EEXIST) {
                 delete arg;
-                return;
+                return 1;
             }
         }
 
@@ -706,7 +704,7 @@ void generatedir(void *args) {
 
         if (arg->files >= arg->settings->files) {
             delete arg;
-            return;
+            return 1;
         }
     }
 
@@ -722,8 +720,10 @@ void generatedir(void *args) {
         sub_args->gid = arg->uid;
         sub_args->seed = gen();
 
-        thpool_add_work(*arg->pool, generatedir <DirGenerator, DBGenerator, BucketDistribution>, sub_args);
+        QPTPool_enqueue(ctx, id, generatedir <DirGenerator, DBGenerator, BucketDistribution>, sub_args);
     }
+
+    return 0;
 }
 
 std::ostream &print_help(std::ostream &stream, const char *argv0) {
@@ -1023,17 +1023,16 @@ int main(int argc, char *argv[]) {
     }
 
     // start up thread pool
-    threadpool pool = thpool_init(settings.threads);
-    if (thpool_null(pool)) {
-        std::cerr << "Failed to create thread pool" << std::endl;
-        return 1;
+    struct QPTPool * pool = QPTPool_init(settings.threads);
+    if (!pool) {
+        fprintf(stderr, "Failed to initialize thread pool\n");
+        return -1;
     }
 
     // initialize static values
     {
         std::lock_guard <std::mutex> lock(ThreadArgs::mutex);
         ThreadArgs::settings = &settings;
-        ThreadArgs::pool = &pool;
         ThreadArgs::stats.clear();
     }
 
@@ -1062,13 +1061,13 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     // set up progress thread
-    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex, &start, &pool](){
+    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex, &start, &pool, &settings](){
             std::lock_guard <std::mutex> print_lock(print_mutex);
 
             struct timespec now = {};
             clock_gettime(CLOCK_MONOTONIC, &now);
 
-            std::cout << "Progress: " << ThreadArgs::stats.size() << " directories with " << ThreadArgs::files << " files in " << elapsed(start, now) << " seconds. " << thpool_num_threads_working(pool) << " threads running" << std::endl;
+            std::cout << "Progress: " << ThreadArgs::stats.size() << " directories with " << ThreadArgs::files << " files in " << elapsed(start, now) << " seconds. " << settings.threads << " threads running" << std::endl;
         });
 
     // push each subdirectory generation into the thread pool
@@ -1084,10 +1083,10 @@ int main(int argc, char *argv[]) {
         args->gid = settings.gid + offset;
         args->seed = gen();
 
-        thpool_add_work(pool, generatedir <std::knuth_b, std::minstd_rand, std::normal_distribution <double> >, args);
+        QPTPool_enqueue(pool, offset % settings.threads, generatedir <std::knuth_b, std::minstd_rand, std::normal_distribution <double> >, args);
     }
 
-    thpool_wait(pool);
+    QPTPool_wait(pool);
 
     struct timespec end = {};
     clock_gettime(CLOCK_MONOTONIC, &end);
@@ -1096,7 +1095,7 @@ int main(int argc, char *argv[]) {
     timed_stats.stop();
     progress.stop();
 
-    thpool_destroy(pool);
+    QPTPool_destroy(pool);
 
     // print stats
     std::cout << std::endl

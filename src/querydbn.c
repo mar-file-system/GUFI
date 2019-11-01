@@ -95,7 +95,6 @@ OF SUCH DAMAGE.
 //#include <uuid/uuid.h>
 
 #include "bf.h"
-#include "structq.h"
 #include "utils.h"
 #include "dbutils.h"
 

@@ -279,6 +279,7 @@ static size_t descend2(struct QPTPool *ctx,
                        const size_t id,
                        struct work *passmywork,
                        DIR *dir,
+                       QPTPoolFunc_t func,
                        const size_t max_level
                        #ifdef DEBUG
                        , struct descend_timers * timers
@@ -787,7 +788,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         #endif
         #endif
         /* push subdirectories into the queue */
-        descend2(ctx, id, work, dir, in.max_level
+        descend2(ctx, id, work, dir, processdir, in.max_level
                  #ifdef DEBUG
                  , descend_timers
                  #endif

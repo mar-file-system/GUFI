@@ -268,7 +268,6 @@ set(COMMON_LIBRARIES
   ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
   ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
   pcre
-  ${DEP_INSTALL_PREFIX}/C-Thread-Pool/lib/libthpool.a
   Threads::Threads
   ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
   m

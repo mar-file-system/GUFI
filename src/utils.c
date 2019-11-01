@@ -87,18 +87,8 @@ OF SUCH DAMAGE.
 
 #include "config.h"
 #include "utils.h"
-#include "structq.h"
 
 extern int errno;
-
-// --- threading
-threadpool mythpool;
-
-volatile int runningthreads = 0;
-pthread_mutex_t running_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-volatile int queuelock = 0;
-pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 volatile int sumlock = 0;
 struct sum sumout;
@@ -484,53 +474,6 @@ int dupdir(char * path, struct stat * stat)
     return 0;
 }
 
-int incrthread() {
-  pthread_mutex_lock(&running_mutex);
-  runningthreads++;
-  pthread_mutex_unlock(&running_mutex);
-  return 0;
-}
-
-int decrthread() {
-  pthread_mutex_lock(&running_mutex);
-  runningthreads--;
-  pthread_mutex_unlock(&running_mutex);
-  return 0;
-}
-
-int getqent() {
-  int mylqent;
-  pthread_mutex_lock(&queue_mutex);
-  mylqent=addrqent();
-  pthread_mutex_unlock(&queue_mutex);
-  return mylqent;
-}
-
-int pushdir( void  * qqwork) {
-
-#if 0
-  pthread_mutex_lock(&queue_mutex);
-  pushn(qqwork);
-  pthread_mutex_unlock(&queue_mutex);
-
-#else
-  // probably not much contention for the work-queue lock in most cases,
-  // but this minimizes the time spent holding it.
-  struct work* queued = pushn2_part1((struct work*)qqwork);
-
-  pthread_mutex_lock(&queue_mutex);
-  pushn2_part2(queued);
-  pthread_mutex_unlock(&queue_mutex);
-#endif
-
-  return 0;
-}
-
-// get the index of this thread in the threadpool
-int gettid() {
-   return thpool_thread_index(mythpool, pthread_self());
-}
-
 int shortpath(const char *name, char *nameout, char *endname) {
      char prefix[MAXPATH];
      char *pp;
@@ -561,41 +504,6 @@ int shortpath(const char *name, char *nameout, char *endname) {
      } else
         sprintf(nameout,"%s",prefix);
      return 0;
-}
-
-
-int processdirs(DirFunc dir_fn) {
-
-     struct work * workp;
-     int thread_count = 0;
-
-     // loop over queue entries and running threads and do all work until
-     // running threads zero and queue empty
-     while (1) {
-        if (runningthreads == 0) {
-          if (getqent() == 0) {
-            break;
-          }
-        }
-        if (runningthreads < in.maxthreads) {
-          // we have to lock around all queue ops
-          pthread_mutex_lock(&queue_mutex);
-          if (addrqent() > 0) {
-            workp=addrcurrents();
-            incrthread();
-            delQueuenofree();
-
-            // this takes this entry off the queue but does NOT free the
-            // buffer, that has to be done in dir_fn(), something like:
-            // "free(((struct work*)workp)->freeme)"
-            thpool_add_work(mythpool, dir_fn, (void *)workp);
-            thread_count++;
-          }
-          pthread_mutex_unlock(&queue_mutex);
-        }
-     }
-
-     return thread_count;
 }
 
 int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
@@ -840,59 +748,89 @@ void cleanup(struct Trie *head) {
 
 /* end of  the triell */
 
-// Push the subdirectories in the current directory onto the queue
-size_t descend(struct work *passmywork, DIR * dir, const size_t max_level) {
-    if (!passmywork) {
-        fprintf(stderr, "Got NULL work\n");
-        return 0;
-    }
+/* Push the subdirectories in the current directory onto the queue */
+size_t descend(struct QPTPool *ctx, const size_t id,
+               struct work *passmywork, DIR *dir,
+               QPTPoolFunc_t func,
+               const size_t max_level
+    ) {
+    /* passmywork was already checked in the calling thread */
+    /* if (!passmywork) { */
+    /*     fprintf(stderr, "Got NULL work\n"); */
+    /*     return 0; */
+    /* } */
 
-    if (!dir) {
-        fprintf(stderr, "Could not open %s: %d %s\n", passmywork->name, errno, strerror(errno));
-        return 0;
-    }
+    /* dir was already checked in the calling thread */
+    /* if (!dir) { */
+    /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
+    /*     return 0; */
+    /* } */
 
     size_t pushed = 0;
+
     const size_t next_level = passmywork->level + 1;
-    if (next_level <= max_level) {
-        // go ahead and send the subdirs to the queue since we need to look
-        // further down the tree.  loop over dirents, if link push it on the
-        // queue, if file or link print it, fill up qwork structure for
-        // each
-        struct dirent *entry = NULL;
-        while ((entry = readdir(dir))) {
+    const int level_check = (next_level <= max_level);
+
+    if (level_check) {
+        /* go ahead and send the subdirs to the queue since we need to look */
+        /* further down the tree.  loop over dirents, if link push it on the */
+        /* queue, if file or link print it, fill up qwork structure for */
+        /* each */
+        while (1) {
+            struct dirent * entry = readdir(dir);
+
+            if (!entry) {
+                break;
+            }
+
             const size_t len = strlen(entry->d_name);
-            if (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
-                ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0))) {
+            const int skip = (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
+                              ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)));
+
+            if (skip) {
                 continue;
             }
 
             struct work qwork;
-            memset(&qwork, 0, sizeof(qwork));
-            SNPRINTF(qwork.name, MAXPATH, "%s/%s", passmywork->name, entry->d_name);
+            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
 
-            lstat(qwork.name, &qwork.statuso);
-            if (S_ISDIR(qwork.statuso.st_mode)) {
-                if (!access(qwork.name, R_OK | X_OK)) {
+            /* #ifdef DEBUG */
+            /* struct start_end * lstat_call = buffer_get(&timers->lstat); */
+            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->start); */
+            /* #endif */
+            /* lstat(qwork.name, &qwork.statuso); */
+            /* #ifdef DEBUG */
+            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->end); */
+            /* #endif */
+
+            const int isdir = (entry->d_type == DT_DIR);
+            /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
+
+            if (isdir) {
+                /* const int accessible = !access(qwork.name, R_OK | X_OK); */
+
+                /* if (accessible) { */
                     qwork.level = next_level;
-                    qwork.type[0] = 'd';
+                    /* qwork.type[0] = 'd'; */
 
-                    // this is how the parent gets passed on
-                    qwork.pinode = passmywork->statuso.st_ino;
+                    /* this is how the parent gets passed on */
+                    /* qwork.pinode = passmywork->statuso.st_ino; */
 
-                    // this pushes the dir onto queue - pushdir does locking around queue update
-                    pushdir(&qwork);
+                    /* make a clone here so that the data can be pushed into the queue */
+                    /* this is more efficient than malloc+free for every single entry */
+                    struct work * clone = (struct work *) malloc(sizeof(struct work));
+                    memcpy(clone, &qwork, sizeof(struct work));
+
+                    /* push the subdirectory into the queue for processing */
+                    QPTPool_enqueue(ctx, id, func, clone);
+
                     pushed++;
-                }
+                /* } */
                 /* else { */
                 /*     fprintf(stderr, "couldn't access dir '%s': %s\n", */
-                /*             qwork.name, strerror(errno)); */
+                /*             qwork->name, strerror(errno)); */
                 /* } */
             }
-            /* else { */
-            /*     fprintf(stderr, "not a dir '%s': %s\n", */
-            /*             qwork.name, strerror(errno)); */
-            /* } */
         }
     }
 

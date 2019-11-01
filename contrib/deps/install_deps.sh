@@ -66,9 +66,6 @@ export BUILD_DIR
 export INSTALL_DIR
 export CMAKE
 
-echo "Installing C-Thread-Pool"
-. ${SCRIPT_PATH}/thpool.sh
-
 echo "Installing SQLite3"
 . ${SCRIPT_PATH}/sqlite3.sh
 

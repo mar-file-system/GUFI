@@ -75,99 +75,75 @@ OF SUCH DAMAGE.
 
 
 
-#include <unistd.h>
-#include <sys/types.h>
+#include <ctype.h>
 #include <dirent.h>
-#include <stdio.h>
-#include <string.h>
+#include <errno.h>
+#include <grp.h>
+#include <pthread.h>
+#include <pwd.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
-#include <utime.h>
+#include <sys/types.h>
 #include <sys/xattr.h>
-#include <sqlite3.h>
-#include <ctype.h>
-#include <errno.h>
-#include <pthread.h>
-
-#include <pwd.h>
-#include <grp.h>
-//#include <uuid/uuid.h>
+#include <unistd.h>
+#include <utime.h>
 
 #include "bf.h"
-#include "structq.h"
 #include "utils.h"
 #include "dbutils.h"
+#include "QueuePerThreadPool.h"
 
 extern int errno;
 
-// This becomes an argument to thpool_add_work(), so it must return void,
-// instead of void*.
-static void processdir(void * passv)
+static int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 {
-    struct work *passmywork = passv;
+    struct work *passmywork = data;
     DIR *dir;
-    int mytid;
     sqlite3 *db;
     struct sum sumin;
     int recs;
     int trecs;
 
-    // get thread id so we can get access to thread state we need to keep
-    // until the thread ends
-    mytid=0;
-    if (in.outfile > 0) mytid=gettid();
+    (void) args;
 
-    // open directory
     if (!(dir = opendir(passmywork->name)))
-       goto out_free; // return NULL;
+       goto out_free;
 
     SNPRINTF(passmywork->type,2,"%s","d");
     if (in.printing || in.printdir) {
-      printits(passmywork,mytid);
+      printits(passmywork,id);
     }
-
-    // push subdirectories into the queue
-    //descend(passmywork, dir, in.max_level);
 
     if ((db=opendb(passmywork->name,3,0))) {
        zeroit(&sumin);
 
-       trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
+       trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(passmywork, dir, in.max_level);
+         descend(ctx, id, passmywork, dir, processdir, in.max_level);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {
          querytsdb(passmywork->name,&sumin,db,&recs,1);
-         //printf("using treesummary %s\n",passmywork->name);
        }
 
-       //querytsdb(passmywork->name,&sumin,db,&recs,0);
        tsumit(&sumin,&sumout);
-
-       //printf("after tsumit %s dminuid %lld dmaxuid %lld minuid %lld maxuid %lld maxsize %lld totfiles %lld totsubdirs %lld\n",
-       //       passmywork->name,sumin.minuid,sumin.maxuid,sumout.minuid,sumout.maxuid,sumout.maxsize,
-       //       sumout.totfiles,sumout.totsubdirs);
-       closedb(db);
     }
 
-    // close dir
+    closedb(db);
     closedir(dir);
 
  out_free:
-    // one less thread running
-    decrthread();
+    free(passmywork);
 
-    // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
-
-    // return NULL;
+    return 0;
 }
 
-int processinit(void * myworkin) {
+int processinit(struct QPTPool * ctx) {
 
-     struct work * mywork = myworkin;
+     struct work * mywork = malloc(sizeof(struct work));
 
      // process input directory and put it on the queue
      SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
@@ -182,7 +158,9 @@ int processinit(void * myworkin) {
         return 1;
      }
 
-     pushdir(mywork);
+     /* push the path onto the queue */
+     QPTPool_enqueue(ctx, 0, processdir, mywork);
+
      return 0;
 }
 
@@ -253,9 +231,6 @@ int validate_inputs() {
 
 int main(int argc, char *argv[])
 {
-     //char nameo[MAXPATH];
-     struct work mywork;
-
      // process input args - all programs share the common 'struct input',
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
@@ -279,34 +254,24 @@ int main(int argc, char *argv[])
      if (validate_inputs())
         return -1;
 
-
-     // start threads and loop watching threads needing work and queue size
-     // - this always stays in main right here
-     mythpool = thpool_init(in.maxthreads);
-     if (thpool_null(mythpool)) {
-        fprintf(stderr, "thpool_init() failed!\n");
-        return -1;
+     struct QPTPool * pool = QPTPool_init(in.maxthreads);
+     if (!pool) {
+         fprintf(stderr, "Failed to initialize thread pool\n");
+         return -1;
      }
 
-     // process initialization, this is work done once the threads are up
-     // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are statting the directory passed in and
-     // putting that directory on the queue
-     processinit(&mywork);
+     if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+         fprintf(stderr, "Failed to start threads\n");
+         return -1;
+     }
 
-     // processdirs - if done properly, this routine is common and does not
-     // have to be done per instance of a bf program loops through and
-     // processes all directories that enter the queue by farming the work
-     // out to the threadpool
-     processdirs(processdir);
+     processinit(pool);
 
-     // processfin - this is work done after the threads are done working
-     // before they are taken down - this will be different for each
-     // instance of a bf program
+     QPTPool_wait(pool);
+
+     QPTPool_destroy(pool);
+
      processfin();
 
-     // clean up threads and exit
-     thpool_wait(mythpool);
-     thpool_destroy(mythpool);
      return 0;
 }

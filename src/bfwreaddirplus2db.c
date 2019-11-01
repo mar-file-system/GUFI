@@ -75,29 +75,28 @@ OF SUCH DAMAGE.
 
 
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <utime.h>
-#include <sys/xattr.h>
-#include <sqlite3.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sqlite3.h>
+#include <stdio.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/xattr.h>
+#include <unistd.h>
+#include <utime.h>
 
 #include <pwd.h>
 #include <grp.h>
-//#include <uuid/uuid.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "structq.h"
-#include "utils.h"
 #include "dbutils.h"
+#include "utils.h"
 
 extern int errno;
 pthread_mutex_t outdb_mutex[MAXPTHREAD];
@@ -191,8 +190,10 @@ int reprocessdir(void * passv, DIR *dir)
         }
     }
 
-    if (!(db = opendb(dbpath,8,1)))
+    if (!(db = opendb(dbpath,8,1))) {
+       closedb(db);
        return -1;
+    }
     res=insertdbprep(db);
     startdb(db);
     records=malloc(MAXRECS);
@@ -275,13 +276,12 @@ int reprocessdir(void * passv, DIR *dir)
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
-static void processdir(void * passv)
+static int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 {
-    struct work *passmywork = passv;
+    struct work *passmywork = data;
     struct work qwork;
     DIR *dir;
     struct dirent *entry;
-    int mytid;
     char dbpath[MAXPATH];
     char sortf[MAXPATH];
     int transcnt;
@@ -294,10 +294,7 @@ static void processdir(void * passv)
     int locsuspecttime;
     struct stat sst;
 
-    // get thread id so we can get access to thread state we need to keep
-    // until the thread ends
-    //mytid=0;
-    mytid=gettid();
+    (void) args;
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
@@ -327,13 +324,13 @@ static void processdir(void * passv)
     if (in.outdb > 0) {
          if (in.insertdir > 0) {
            if (in.suspectmethod == 0) {
-             todb=mytid;
+             todb=id;
              if (in.stride > 0) {
                todb=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
                //******** start a lock
                pthread_mutex_lock(&outdb_mutex[todb]);
              }
-             //printf("in processdirs in.outdb=%d in.insertdir=%d mytid=%d in.insertfl=%d\n",in.outdb,in.insertdir,mytid,in.insertfl);
+             //printf("in processdirs in.outdb=%d in.insertdir=%d id=%d in.insertfl=%d\n",in.outdb,in.insertdir,id,in.insertfl);
              startdb(gts.outdbd[todb]);
              insertdbgor(passmywork,gts.outdbd[todb],global_res[todb]);
              if (in.stride > 0) {
@@ -361,13 +358,13 @@ static void processdir(void * passv)
     }
 
     if (in.outfile > 0) {
-      tooutfile=mytid;
+      tooutfile=id;
       if (in.stride > 0) {
         tooutfile=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
         //******** start a lock
         pthread_mutex_lock(&outfile_mutex[todb]);
       }
-      //fprintf(stderr,"threadd %d inode %lld file %d\n",mytid,passmywork->statuso.st_ino,tooutfile);
+      //fprintf(stderr,"threadd %d inode %lld file %d\n",id,passmywork->statuso.st_ino,tooutfile);
       /* only directories are here so sortf is set to the directory full pathname */
       SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
       fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim,sortf,in.delim);
@@ -377,7 +374,7 @@ static void processdir(void * passv)
     }
 /*
     if (in.printing > 0 || in.printdir > 0) {
-      printits(passmywork,mytid);
+      printits(passmywork,id);
     }
 */
     // loop over dirents, if dir push it on the queue, if file or link
@@ -400,8 +397,9 @@ static void processdir(void * passv)
         if (entry->d_type==DT_DIR) {
             if (!access(qwork.name, R_OK | X_OK)) {
                 SNPRINTF(qwork.type,2,"d");
-                // this pushes the dir onto queue - pushdir does locking around queue update
-                pushdir(&qwork);
+                struct work * work = malloc(sizeof(struct work));
+                *work = qwork;
+                QPTPool_enqueue(ctx, id, processdir, work);
             }
         } else if (entry->d_type==DT_LNK) {
             SNPRINTF(qwork.type,2,"%s","l");
@@ -413,14 +411,14 @@ static void processdir(void * passv)
         if (wentry==1) {
 /*
           if (in.printing > 0) {
-            printits(&qwork,mytid);
+            printits(&qwork,id);
           }
 */
           /* if suspect method is not zero then we can insert files and links, if not we dont care about files and links in db */
           if (in.suspectmethod == 0) {
             if (in.outdb > 0) {
               if (in.insertfl > 0) {
-                todb=mytid;
+                todb=id;
                 if (in.stride > 0) {
                   todb=(qwork.statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
                   //************** start a lock
@@ -462,13 +460,13 @@ static void processdir(void * passv)
             }
           }
           if (in.outfile > 0) {
-            tooutfile=mytid;
+            tooutfile=id;
             if (in.stride > 0) {
               tooutfile=(qwork.statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
               //******** start a lock
               pthread_mutex_lock(&outfile_mutex[todb]);
             }
-            //fprintf(stderr,"threadf %d inode %lld file %d\n",mytid,qwork.statuso.st_ino,tooutfile);
+            //fprintf(stderr,"threadf %d inode %lld file %d\n",id,qwork.statuso.st_ino,tooutfile);
             /* since this is a file or link, we need the path to the file or link without the name as the sortf */
             SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
             fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim,sortf,in.delim);
@@ -483,14 +481,14 @@ static void processdir(void * passv)
     if (in.suspectmethod > 0) {
       if (in.outdb > 0) {
          if (in.insertdir > 0) {
-           todb=mytid;
+           todb=id;
            if (in.stride > 0) {
              todb=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
              //******** start a lock
              pthread_mutex_lock(&outdb_mutex[todb]);
            }
            startdb(gts.outdbd[todb]);
-           //printf("in processdirs in.outdb=%d in.insertdir=%d mytid=%d in.insertfl=%d\n",in.outdb,in.insertdir,mytid,in.insertfl);
+           //printf("in processdirs in.outdb=%d in.insertdir=%d id=%d in.insertfl=%d\n",in.outdb,in.insertdir,id,in.insertfl);
            insertdbgor(passmywork,gts.outdbd[todb],global_res[todb]);
            if (in.stride > 0) {
              stopdb(gts.outdbd[todb]); //striping inodes
@@ -503,7 +501,7 @@ static void processdir(void * passv)
 
     if (in.outdb > 0) {
       if (in.stride == 0) {
-        todb=mytid;
+        todb=id;
         stopdb(gts.outdbd[todb]);
       }
     }
@@ -522,18 +520,16 @@ static void processdir(void * passv)
     closedir(dir);
 
  out_free:
-    // one less thread running
-    decrthread();
 
     // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
+    free(passmywork);
 
-    /// return NULL;
+    return 0;
 }
 
-int processinit(void * myworkin) {
+int processinit(struct QPTPool * ctx) {
 
-     struct work * mywork = myworkin;
+     struct work * mywork = malloc(sizeof(struct work));
      int i;
      char outdbn[MAXPATH];
      FILE *isf = NULL;
@@ -644,7 +640,7 @@ int processinit(void * myworkin) {
 
      // set top parent inode to zero
      mywork->pinode=0;
-     pushdir(mywork);
+     QPTPool_enqueue(ctx, 0, processdir, mywork);
 
      return 0;
 }
@@ -705,8 +701,6 @@ void sub_help() {
 
 int main(int argc, char *argv[])
 {
-     //char nameo[MAXPATH];
-     struct work mywork;
      struct stat st;
      int rc;
 
@@ -754,33 +748,24 @@ int main(int argc, char *argv[])
 
      if (in.buildinindir == 1) gltodirmode=1;
 
-     // start threads and loop watching threads needing work and queue size
-     // - this always stays in main right here
-     mythpool = thpool_init(in.maxthreads);
-     if (thpool_null(mythpool)) {
-        fprintf(stderr, "thpool_init() failed!\n");
-        return -1;
+     struct QPTPool * pool = QPTPool_init(in.maxthreads);
+     if (!pool) {
+         fprintf(stderr, "Failed to initialize thread pool\n");
+         return -1;
      }
 
-     // process initialization, this is work done once the threads are up
-     // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are stating the directory passed in and
-     // putting that directory on the queue
-     processinit(&mywork);
+     if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+         fprintf(stderr, "Failed to start threads\n");
+         return -1;
+     }
 
-     // processdirs - if done properly, this routine is common and does not
-     // have to be done per instance of a bf program loops through and
-     // processes all directories that enter the queue by farming the work
-     // out to the threadpool
-     processdirs(processdir);
+     processinit(pool);
 
-     // processfin - this is work done after the threads are done working
-     // before they are taken down - this will be different for each
-     // instance of a bf program
+     QPTPool_wait(pool);
+
+     QPTPool_destroy(pool);
+
      processfin();
 
-     // clean up threads and exit
-     thpool_wait(mythpool);
-     thpool_destroy(mythpool);
      return 0;
 }
