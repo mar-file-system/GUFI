@@ -380,11 +380,11 @@ set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python >= 2.7, python < 3, coreutils")
 set(CPACK_RPM_PACKAGE_RELOCATABLE On)
 set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
-set(CPACK_RPM_Server_FILE_NAME "gufi_server-${GUFI_VERSION}.${ARCH}.rpm")
+set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
 set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
 
 if (CLIENT)
-  set(CPACK_RPM_Client_FILE_NAME "gufi_client-${GUFI_VERSION}.${ARCH}.rpm")
+  set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
   # python libraries are installed through pip, and won't be found by rpm
   set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh, python2-pip")
   set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
