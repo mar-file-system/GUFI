@@ -13,7 +13,7 @@ set -f
 
 set -- ${SSH_ORIGINAL_COMMAND}
 case "$1" in
-    gufi_find|gufi_ls|gufi_stat|gufi_stats|gufi_query)
+    gufi_find|gufi_ls|gufi_stat|gufi_stats)
         ;;
     *)
         exit 1
