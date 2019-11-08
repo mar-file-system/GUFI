@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -30,6 +31,19 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+# -----
+# NOTE:
+# -----
+#
+# GUFI uses the C-Thread-Pool library.  The original version, written by
+# Johan Hanssen Seferidis, is found at
+# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
+# released under the MIT License.  LANS, LLC added functionality to the
+# original work.  The original work, plus LANS, LLC added functionality is
+# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
+# License.  The MIT License can be found at
+# https://opensource.org/licenses/MIT.
+#
 #
 # From Los Alamos National Security, LLC:
 # LA-CC-15-039
@@ -60,63 +74,33 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+__gufi() {
+    root="$(readlink -m $(grep "IndexRoot=" /etc/GUFI/config | sed "s/^.*=//"))"
+    curr=$(printf "%s" "${COMP_WORDS[@]:1}")
+    path="${root}/${curr}"
 
-# list this first so that make install will overwrite these files
-if (CLIENT)
-  # add the paramiko source for installing
-  # keep the trailing / to rename the directory
-  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION lib/GUFI/paramiko COMPONENT Client)
+    if [[ -d "${path}" ]]
+    then
+        path="${path}/"
+    fi
 
-  # copy the configuration handling script into both the Server and Client RPMs
-  configure_file(gufi_config.py gufi_config.py COPYONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_config.py DESTINATION bin COMPONENT Client)
+    for entry in $(compgen -d ${path})
+    do
+        if [[ -d "${entry}" ]]
+        then
+            COMPREPLY+=("/$(basename ${entry})")
+        fi
+    done
 
-  # gufi_common.py is also needed by the client
-  configure_file(gufi_common.py gufi_common.py COPYONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_common.py DESTINATION bin COMPONENT Client)
+    return 0
+}
 
-  # create individual client scripts
-  set(TOOL find)
-  configure_file(gufi_client gufi_client_find @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_find  RENAME gufi_find  DESTINATION bin COMPONENT Client)
+# register gufi_find, gufi_ls, and gufi_stats to be able to expand paths
+complete -F __gufi gufi_find
+complete -F __gufi gufi_ls
+complete -F __gufi gufi_stats
 
-  set(TOOL ls)
-  configure_file(gufi_client gufi_client_ls @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_ls    RENAME gufi_ls    DESTINATION bin COMPONENT Client)
-
-  set(TOOL stats)
-  configure_file(gufi_client gufi_client_stats @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stats RENAME gufi_stats DESTINATION bin COMPONENT Client)
-endif()
-
-# scripts that act as executables on the server
-set(TOOLS
-  gufi_find
-  gufi_stats
-  gufi_ls)
-
-# python libraries installed into bin for convenience
-set(LIBRARIES
-  gufi_config.py
-  gufi_common.py)
-
-# copy and install scripts that act like binaries
-foreach(SCRIPT ${TOOLS} ${LIBRARIES})
-  # copy the tools into the build directory for easy access
-  configure_file(${SCRIPT} ${SCRIPT} @ONLY)
-
-  # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} DESTINATION bin COMPONENT Server)
-endforeach()
-
-# gufi_common.py is not an executable, but is installed in bin for convenience
-configure_file(gufi_common.py gufi_common.py @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_common.py DESTINATION bin COMPONENT Server)
-
-# gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
-configure_file(gufi_jail gufi_jail COPYONLY)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_jail DESTINATION bin COMPONENT Server)
-
-# bash completions for the tools so paths can be tab completed
-install(FILES completions DESTINATION /etc/bash_completion.d COMPONENT Server RENAME gufi)
+# don't append spaces after tab completion
+compopt -o nospace gufi_find
+compopt -o nospace gufi_ls
+compopt -o nospace gufi_stats
