@@ -137,9 +137,8 @@ off_t create_template(int * fd) {
 int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid) {
     // ignore errors here
     const int src_db = dup(src_fd);
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     const ssize_t sf = gufi_sendfile(src_db, dst_db, 0, size);
-    fchmod(dst_db, S_IRWXU | S_IRWXG | S_IRWXO);
     fchown(dst_db, uid, gid);
     close(src_db);
     close(dst_db);
