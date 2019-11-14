@@ -506,7 +506,7 @@ struct CallbackArgs {
     int id;
 };
 
-static int print_callback(void * args, int count, char **data, char **columns) {
+static int print_callback(void * args, int count, char **data, char **columns, const int lock) {
     /* skip argument checking */
     /* if (!args) { */
     /*     return 1; */
@@ -528,7 +528,12 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         if (row_len < capacity) {
             /* if there's not enough space in the buffer to fit the new row, flush it first */
             if ((ca->output_buffers->buffers[id].filled + row_len) >= capacity) {
-                OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+                if (lock) {
+                    OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+                }
+                else {
+                    OutputBuffer_flush_nolock(&ca->output_buffers->buffers[id], gts.outfd[id]);
+                }
             }
 
             char * buf = ca->output_buffers->buffers[id].buf;
@@ -549,19 +554,33 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         }
         else {
             /* if the row does not fit the buffer, output immediately instead of buffering */
-            pthread_mutex_lock(&ca->output_buffers->mutex);
+            if (lock) {
+                pthread_mutex_lock(&ca->output_buffers->mutex);
+            }
+
             for(int i = 0; i < count; i++) {
                 fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
                 fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
             }
             fwrite("\n", sizeof(char), 1, gts.outfd[id]);
             ca->output_buffers->buffers[id].count++;
-            pthread_mutex_unlock(&ca->output_buffers->mutex);
+
+            if (lock) {
+                pthread_mutex_unlock(&ca->output_buffers->mutex);
+            }
         }
 
         free(lens);
     /* } */
     return 0;
+}
+
+static int buffered_print_callback(void * args, int count, char **data, char **columns) {
+    return print_callback(args, count, data, columns, 1); /* lock when printing */
+}
+
+static int stanza_print_callback(void * args, int count, char **data, char **columns) {
+    return print_callback(args, count, data, columns, 0); /* do not lock when printing */
 }
 
 struct ThreadArgs {
@@ -817,7 +836,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                          #ifdef DEBUG
                          clock_gettime(CLOCK_MONOTONIC, &attach_start);
                          #endif
-                         if (in.aggregate_or_print == AGGREGATE) {
+                         if (in.show_results == AGGREGATE) {
                              /* attach in-memory result aggregation database */
                              char intermediate_name[MAXSQL];
                              SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) id);
@@ -844,11 +863,30 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
                         #endif
+
+                        /* print all of the data for this thread before allowing another thread to print */
+                        if (in.show_results == STANZA) {
+                            pthread_mutex_lock(&ta->output_buffers.mutex);
+                            const size_t len = strlen(gps[id].gpath);
+                            fwrite(gps[id].gpath, sizeof(char), len, gts.outfd[id]);
+                            fwrite(":",  sizeof(char), 1, gts.outfd[id]);
+                            fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+                            ca.output_buffers->buffers[id].filled = 0; /* empty out the buffer, in case it was not emptied previously */
+                        }
+
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s: %s\n", err, dbname);
                             sqlite3_free(err);
                         }
+
+                        if (in.show_results == STANZA) {
+                            /* force flush the buffer once this thread is done querying */
+                            OutputBuffer_flush_nolock(&ca.output_buffers->buffers[id], gts.outfd[id]);
+                            fwrite("\0\n", sizeof(char), 2, gts.outfd[id]);
+                            pthread_mutex_unlock(&ca.output_buffers->mutex);
+                        }
+
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         #endif
@@ -857,7 +895,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &detach_start);
                         #endif
-                        if (in.aggregate_or_print == AGGREGATE) {
+                        if (in.show_results == AGGREGATE) {
                             /* detach in-memory result aggregation database */
                             if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
                                 closedb(db);
@@ -1087,7 +1125,7 @@ int main(int argc, char *argv[])
     sqlite3 *aggregate = NULL;
     sqlite3 **intermediates = NULL;
     char aggregate_name[MAXSQL] = {};
-    if (in.aggregate_or_print == AGGREGATE) {
+    if (in.show_results == AGGREGATE) {
         if (setup_aggregate(AGGREGATE_NAME, AGGREGATE_NAME, AGGREGATE_ATTACH_NAME, in.maxthreads,
                            in.sqlent, &in.sqlent_len,
                            aggregate_name, &aggregate, &intermediates) != 0) {
@@ -1113,7 +1151,18 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
+    switch (in.show_results) {
+        case AGGREGATE:
+            args.print_callback_func = NULL;
+            break;
+        case BUFFERED:
+            args.print_callback_func = buffered_print_callback;
+            break;
+        case STANZA:
+            args.print_callback_func = stanza_print_callback;
+            break;
+    }
+
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
@@ -1170,7 +1219,7 @@ int main(int argc, char *argv[])
     long double output_time = 0;
     #endif
 
-    if (in.aggregate_or_print == AGGREGATE) {
+    if (in.show_results == AGGREGATE) {
         /* prepend the intermediate database query with "INSERT INTO" to move */
         /* the data from the databases into the final aggregation database */
         char intermediate[MAXSQL];
@@ -1221,7 +1270,7 @@ int main(int argc, char *argv[])
         ca.id = in.maxthreads;
 
         char * err;
-        if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
+        if (sqlite3_exec(aggregate, in.aggregate, buffered_print_callback, &ca, &err) != SQLITE_OK) {
             fprintf(stderr, "Cannot print from aggregate database: %s\n", err);
             sqlite3_free(err);
         }

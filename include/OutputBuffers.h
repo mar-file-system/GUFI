@@ -101,6 +101,7 @@ struct OutputBuffer {
 };
 
 size_t OutputBuffer_flush(pthread_mutex_t * print_mutex, struct OutputBuffer * obuf, FILE * out);
+size_t OutputBuffer_flush_nolock(struct OutputBuffer * obuf, FILE * out);
 
 /* Buffers for all threads */
 struct OutputBuffers {

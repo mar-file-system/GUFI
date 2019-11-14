@@ -95,7 +95,7 @@ SIZES = ['K',  'KB', 'KiB',
          'Z',  'ZB', 'ZiB',
          'Y',  'YB', 'YiB']
 
-def build_select(config, args):
+def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''
     select = []
 
@@ -116,59 +116,26 @@ def build_select(config, args):
         if args.human_readable:
             select += ['human_readable_size(size)']
         else:
+            # in GNU ls, order of arguments determines which one has precedence
+            # here, --block-size has precedence
             if args.blocksize:
                 select += ['blocksize(size, "' + args.blocksize + '", 0)']
             else:
                 select += ['printf("% ' + str(args.size_width) + 'z", size)']
 
-        select += ['strftime("%b  %e %H:%M", mtime)', 'name', 'linkname']
+        select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name' + ' || " -> " || linkname) else name end']
     else:
         # at minimum, print the file name
         select += ['name']
 
     return select
-
-
-def build_aggregate_select(args):
-    '''Build the SELECT portion of the query on the aggregate data'''
-    select = []
-
-    # ordering of concatenation matters
-
-    if args.inode:
-        select = ['inode'] + select
-
-    if args.size:
-        select += ['blocks']
-
-    if args.long_listing:
-        select += ['printf("%03o", mode)', 'nlink', 'uidtouser(uid)']
-
-        if not args.no_group:
-            select += ['gidtogroup(gid)']
-
-        if args.human_readable:
-            select += ['human_readable_size(size)']
-        else:
-            if args.blocksize:
-                select += ['blocksize(size, "' + args.blocksize + '", 0)']
-            else:
-                select += ['printf("% ' + str(args.size_width) + 'z", size)']
-
-        select += ['strftime("%m %d %H:%M", mtime)', 'case when (type == "l") then (name' + ' || " -> " || linkname) else name end']
-    else:
-        # at minimum, print the file name
-        select += ['name']
-
-    return select
-
 
 def build_where(args):
     '''Build the WHERE portion of the query'''
     where = []
 
     # everything
-    if not args.all:
+    if args.all:
         where += ['name REGEXP "^(?![\.]).*$"']
 
     # ignore . and ..
@@ -176,7 +143,7 @@ def build_where(args):
         where += ['name REGEXP "(?!(\.|\.\.))"']
 
     # ignore files that end with ~
-    elif args.ignore_backups == True:
+    if args.ignore_backups == True:
         where += ['name REGEXP "^.*(?<![\~])$"']
 
     return where
@@ -248,26 +215,18 @@ if __name__=='__main__':
     where = build_where(args)
     order_by = build_order_by(args)
 
-    first_query = gufi_common.build_query(build_select(config, args),
-                                          ['entries'],
-                                          where,
-                                          None,
-                                          order_by,
-                                          args.num_results)
-    second_query = gufi_common.build_query(build_aggregate_select(args),
-                                           ['entries'],
-                                           where,
-                                           None,
-                                           order_by,
-                                           args.num_results)
+    query = gufi_common.build_query(build_select(args),
+                                    ['entries'],
+                                    where,
+                                    None,
+                                    order_by,
+                                    args.num_results)
 
     # create the query command
     query_cmd = [config['Exec'],
-                 '-e', str(int(not args.recursive)),
+                 '-e', '2' if args.recursive else '1',
                  '-n', str(config['Threads']),
-                 '-E', first_query,
-                 '-J', 'SELECT * FROM entries;',
-                 '-G', second_query,
+                 '-E', query,
                  '-z', '-1' if args.recursive else '0']
 
     if args.delim:

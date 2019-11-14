@@ -146,8 +146,9 @@ struct sum {
 };
 
 typedef enum ShowResults {
-    AGGREGATE,
-    PRINT
+    AGGREGATE,    /* don't print while querying; run BUFFERED at the very end */
+    BUFFERED,     /* print each row into a buffer as soon as it is returned */
+    STANZA,       /* each thread prints its data atomically; locking is done by the thread, not when flushing */
 } ShowResults_t;
 
 struct input {
@@ -195,7 +196,7 @@ struct input {
    size_t max_level;          // maximum level of recursion to run queries on
    char aggregate[MAXSQL];    // SQL query to run on aggregated data
    char intermediate[MAXSQL]; // SQL query to run on intermediate tables
-   ShowResults_t aggregate_or_print;
+   ShowResults_t show_results;
    int keep_matime;
    size_t output_buffer_size;
    int readonly;

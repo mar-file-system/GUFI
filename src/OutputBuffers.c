@@ -104,6 +104,17 @@ size_t OutputBuffer_flush(pthread_mutex_t * print_mutex, struct OutputBuffer * o
     return rc;
 }
 
+size_t OutputBuffer_flush_nolock(struct OutputBuffer * obuf, FILE * out) {
+    /* /\* skip argument checking *\/ */
+    /* if (!output_buffer || !out) { */
+    /*     return 0; */
+    /* } */
+
+    const size_t rc = fwrite(obuf->buf, sizeof(char), obuf->filled, out);
+    obuf->filled = 0;
+    return rc;
+}
+
 static void OutputBuffer_destroy(struct OutputBuffer * obuf) {
     if (obuf) {
         free(obuf->buf);

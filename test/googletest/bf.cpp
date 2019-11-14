@@ -133,7 +133,7 @@ TEST(parse_cmd_line, options) {
     ASSERT_STREQ(in.insuspect,        W_arg.c_str());
     ASSERT_EQ(in.suspectmethod,       1);
     ASSERT_EQ(in.suspecttime,         1);
-    ASSERT_EQ(in.aggregate_or_print,  0);
+    ASSERT_EQ(in.show_results,  0);
     ASSERT_EQ(in.min_level,           (std::size_t) 1);
     ASSERT_EQ(in.max_level,           (std::size_t) 1);
     ASSERT_STREQ(in.aggregate,        G_arg.c_str());
@@ -170,7 +170,7 @@ TEST(parse_cmd_line, positional) {
     EXPECT_EQ(in.max_level,          (size_t) -1);
     EXPECT_STREQ(in.intermediate,    "");
     EXPECT_STREQ(in.aggregate,       "");
-    EXPECT_EQ(in.aggregate_or_print, PRINT);
+    EXPECT_EQ(in.show_results,       BUFFERED);
 }
 
 TEST(INSTALL_STR, good) {

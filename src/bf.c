@@ -150,7 +150,7 @@ void print_help(const char* prog_name,
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
-      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
+      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O), 2 for atomic per-thread printing\n"); break;
       case 'm': printf("  -m                 Keep mtime and atime same on the database files\n"); break;
       case 'B': printf("  -B <buffer size>   size of each thread's output buffer in bytes\n"); break;
       case 'w': printf("  -w                 open the database files in read-write mode instead of read only mode\n"); break;
@@ -200,7 +200,7 @@ void show_input(struct input* in, int retval) {
    printf("in.max_level          = %zu\n",   in->max_level);
    printf("in.aggregate          = '%s'\n",  in->aggregate);
    printf("in.intermediate       = '%s'\n",  in->intermediate);
-   printf("in.aggregate_or_print = %d\n",    in->aggregate_or_print);
+   printf("in.show_results       = %d\n",    in->show_results);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
    printf("in.readonly           = %d\n",    in->readonly);
@@ -247,7 +247,7 @@ int parse_cmd_line(int         argc,
    memset(in->sqlent,       0, MAXSQL);
    memset(in->intermediate, 0, MAXSQL);
    memset(in->aggregate,    0, MAXSQL);
-   in->aggregate_or_print = PRINT;     // print without aggregating by default
+   in->show_results       = BUFFERED;  // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
    in->readonly           = 1;         // default to read-only opens
 
@@ -319,13 +319,13 @@ int parse_cmd_line(int         argc,
       case 'o':
          in->outfile = 1;
          INSTALL_STR(in->outfilen, optarg, MAXPATH, "-o");
-         in->aggregate_or_print = PRINT;
+         in->show_results = BUFFERED;
          break;
 
       case 'O':
          in->outdb = 1;
          INSTALL_STR(in->outdbn, optarg, MAXPATH, "-O");
-         in->aggregate_or_print = PRINT;
+         in->show_results = BUFFERED;
          break;
 
       case 't':
@@ -400,14 +400,18 @@ int parse_cmd_line(int         argc,
 
       case 'e':
          {
-            int aggregate_or_print = 0;
-            INSTALL_INT(aggregate_or_print, optarg, 0, 1, "-e");
-
-            if (aggregate_or_print == 0) {
-               in->aggregate_or_print = AGGREGATE;
-            }
-            else if (aggregate_or_print == 1) {
-               in->aggregate_or_print = PRINT;
+            int show_results = 0;
+            INSTALL_INT(show_results, optarg, 0, 2, "-e");
+            switch(show_results) {
+                case 0:
+                    in->show_results = AGGREGATE;
+                    break;
+                case 1:
+                    in->show_results = BUFFERED;
+                    break;
+                case 2:
+                    in->show_results = STANZA;
+                    break;
             }
          }
          break;
@@ -457,7 +461,7 @@ int parse_cmd_line(int         argc,
    }
 
    // aggregating requires 2 more SQL queries
-   if (in->aggregate_or_print == AGGREGATE) {
+   if (in->show_results == AGGREGATE) {
        if (!strlen(in->aggregate) || !strlen(in->intermediate)) {
            retval = -1;
            return retval;

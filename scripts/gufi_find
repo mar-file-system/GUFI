@@ -1,25 +1,25 @@
 #!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
-
-
+#
+#
 # Copyright (c) 2017, Los Alamos National Security (LANS), LLC
 # All rights reserved.
-
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
-
+#
 # 1. Redistributions of source code must retain the above copyright notice, this
 # list of conditions and the following disclaimer.
-
+#
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 # this list of conditions and the following disclaimer in the documentation and/or
 # other materials provided with the distribution.
-
+#
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
 # specific prior written permission.
-
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -30,11 +30,11 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+#
 # -----
 # NOTE:
 # -----
-
+#
 # GUFI uses the C-Thread-Pool library.  The original version, written by
 # Johan Hanssen Seferidis, is found at
 # https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
@@ -43,11 +43,11 @@
 # found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
 # License.  The MIT License can be found at
 # https://opensource.org/licenses/MIT.
-
-
+#
+#
 # From Los Alamos National Security, LLC:
 # LA-CC-15-039
-
+#
 # Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
 # Copyright 2017. Los Alamos National Security, LLC. This software was produced
 # under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
@@ -92,21 +92,34 @@ gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(PATH),
 SECONDS_PER_DAY = str(24 * 60 * 60)
 
 '''file size units specified in GNU find.'''
-filesize = {'b' : 512,
-            'c' : 1,
-            'w' : 2,
-            'k' : 1024,
-            'M' : 1048576,
-            'G' : 1073741824}
+filesize = {
+    'b' : 512,
+    'c' : 1,
+    'w' : 2,
+    'k' : 1024,
+    'M' : 1048576,
+    'G' : 1073741824,
+}
+
+'''list of allowed -type values'''
+allowed_types = {
+    None : None,      # all
+    'd'  : '== "d"',
+    'f'  : '== "f"',
+    'l'  : '== "l"',
+    # specific to GUFI (because logical operations are not supported)
+    'nd' : '!= "d"', # non-directories
+    'nf' : '!= "f"', # non-files
+    'nl' : '!= "l"', # non-links
+}
 
 def validate_args(args):
     '''Validate known arguments here'''
 
     # GUFI directories do not have source tree size/timestamps
-    if args.type:
-        if 'd' in args.type:
-            if args.size or args.atime or args.mtime or args.ctime:
-                raise exceptions.RuntimeError('size, atime, mtime, and ctime cannot be used with -type d')
+    if args.type in ['d', 'nf', 'nl']:
+        if args.size or args.atime or args.mtime or args.ctime:
+            raise exceptions.RuntimeError('size, atime, mtime, and ctime cannot be used with -type {}'.format(args.type))
 
 def parse_size(size):
     prefix = None
@@ -123,30 +136,19 @@ def parse_size(size):
     size = int(size) * filesize[unit]
     return prefix, size
 
-def build_select(args):
+def build_select(args, append_name = True):
     '''Build the SELECT portion of the queries for the treesummary, summary, and entries tables.'''
     tsummary = []
     summary  = []
     entries  = []
 
-    # select must exist
-    if args.select == None:
-        # args.select = [['id', 'path() || "/" || name', 'type',
-        #                 'inode', 'mode', 'nlink', 'uid', 'gid',
-        #                 'size', 'blksize', 'blocks', 'atime',
-        #                 'mtime', 'ctime', 'linkname', 'xattrs',
-        #                 'crtime', 'ossint1', 'ossint2', 'ossint3',
-        #                 'ossint4', 'osstext1', 'osstext2', 'pinode']]
-        if args.type != 'd':
-            args.select = [['path() || "/" || name']]
-        else:
-            args.select = [['path()']]
-
-    select = []
-    for columns in args.select:
-        select += columns
-
-    entries += [','.join(select)]
+    # entries = ['id', 'path() || "/" || name', 'type',
+    #            'inode', 'mode', 'nlink', 'uid', 'gid',
+    #            'size', 'blksize', 'blocks', 'atime',
+    #            'mtime', 'ctime', 'linkname', 'xattrs',
+    #            'crtime', 'ossint1', 'ossint2', 'ossint3',
+    #            'ossint4', 'osstext1', 'osstext2', 'pinode']
+    entries = ['path()' + (' || "/" || name' if append_name else '')]
 
     return tsummary, summary, entries
 
@@ -307,7 +309,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         entries += ['1']
 
     if args.type is not None:
-        entries += ['(type == "{}")'.format(args.type)]
+        entries += ['(type {})'.format(allowed_types[args.type])]
 
     if args.uid is not None:
         summary += ['minuid <= {}'.format(args.uid), '{} <= maxuid'.format(args.uid)]
@@ -334,13 +336,6 @@ def build_group_by(args):
     tsummary = []
     summary  = []
     entries  = []
-
-    if args.group_by:
-        group_by = []
-        for columns in args.group_by:
-            group_by += columns
-
-        entries += [','.join(group_by)]
 
     return tsummary, summary, entries
 
@@ -418,7 +413,7 @@ def build_expression_parser():
     parser.add_argument('-samefile',           metavar='name',       dest='samefile',              type=os.stat,                                       help='File refers to the same inode as name.')
     parser.add_argument('-size',               metavar='n',          dest='size', action='append', type=gufi_common.get_size,                          help='')
     parser.add_argument('-true',                                     dest='true',                  action='store_true',                                help='Always true')
-    parser.add_argument('-type',               metavar='c',          dest='type',                  type=gufi_common.get_char,                          help='File is of type c')
+    parser.add_argument('-type',               metavar='c',          dest='type',                  choices=allowed_types.keys(), default=None,         help='File is of type c')
     parser.add_argument('-uid',                metavar='n',          dest='uid',                   type=gufi_common.get_uid,  action='append',         help='File\'s numeric user ID is n.')
     # parser.add_argument('-used',               metavar='n',          dest='used',                  type=gufi_common.get_non_negative,                  help='File was last accessed n days after its status was last changed.')
     parser.add_argument('-user',               metavar='uname',      dest='user',                  type=gufi_common.get_user,                          help='File is owned by user uname (numeric user ID allowed).')
@@ -432,8 +427,6 @@ def build_expression_parser():
     parser.add_argument('-fprint',             metavar='file',       dest='fprint',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
 
     # GUFI specific arguments
-    parser.add_argument('--select',            metavar='cols',       dest='select',                action='append', nargs='*',                         help='comma separated columns (default: *)')
-    parser.add_argument('--group_by',          metavar='cols',       dest='group_by',              type=str,                                           help='comma separated columns (default: None)')
     parser.add_argument('--delim',             metavar='c',          dest='delim',                 type=gufi_common.get_char, default=' ',             help='delimiter separating output columns')
     parser.add_argument('--size%',             metavar='n',          dest='size_percent_range',    type=float, nargs=2,                                help='Modifier to the -size flag. Expects 2 values that define the min and max percentage from the size.')
     parser.add_argument('--num_results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
@@ -505,7 +498,7 @@ if __name__=='__main__':
     validate_args(args)
 
     # generate the queries
-    tsummary_select,   summary_select,   entries_select   = build_select(args)
+    tsummary_select,   summary_select,   entries_select   = build_select(args, (args.type != 'd'))
     tsummary_where,    summary_where,    entries_where    = build_where(args)
     tsummary_group_by, summary_group_by, entries_group_by = build_group_by(args)
     tsummary_order_by, summary_order_by, entries_order_by = build_order_by(args)
@@ -525,11 +518,21 @@ if __name__=='__main__':
                                       args.num_results)
 
     initial = gufi_common.build_query(entries_select,
-                                      ['summary' if args.type == 'd' else 'entries'],
+                                      ['entries' if args.type != 'd' else 'summary'],
                                       entries_where,
                                       entries_group_by,
                                       entries_order_by,
                                       args.num_results)
+
+    # query the summary table in addition to the entries table
+    if args.type == None:
+        _, _, path_select = build_select(args, False)
+        initial += ' UNION ' + gufi_common.build_query(path_select,
+                                          ['summary'],
+                                          entries_where,
+                                          entries_group_by,
+                                          entries_order_by,
+                                          args.num_results)
 
     # create the query command
     query_cmd = [config['Exec'],
