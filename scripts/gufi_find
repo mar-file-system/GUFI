@@ -439,7 +439,6 @@ def build_expression_parser():
     parser.add_argument('--num_results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
-    parser.add_argument('--aggregate',                               dest='aggregate',             action='store_true',                                help='Aggregate results before printing')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     # parser.add_argument('--path-index',        metavar='i',          dest='path_index',            type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
     parser.add_argument('--read-write',                              dest='readwrite',             action='store_true',                                help='Open databases in read-write mode')
@@ -532,16 +531,8 @@ if __name__=='__main__':
                                       entries_order_by,
                                       args.num_results)
 
-    intermediate = final = gufi_common.build_query(['*'],
-                                                   ['entries'],
-                                                   entries_where,
-                                                   entries_group_by,
-                                                   entries_order_by,
-                                                   args.num_results)
-
     # create the query command
     query_cmd = [config['Exec'],
-                 '-e', str(int(not args.aggregate)),
                  '-n', str(config['Threads'])]
 
     # if len(tsummary):
@@ -552,12 +543,6 @@ if __name__=='__main__':
 
     if len(initial):
         query_cmd += ['-E', initial]
-
-    if args.aggregate and len(intermediate):
-        query_cmd += ['-J', intermediate]
-
-    if args.aggregate and len(final):
-        query_cmd += ['-G', final]
 
     if args.delim:
         query_cmd += ['-d', args.delim]

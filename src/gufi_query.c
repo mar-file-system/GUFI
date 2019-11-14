@@ -1022,13 +1022,6 @@ void sub_help() {
    printf("\n");
 }
 
-static void cleanup_intermediates(sqlite3 **intermediates, const size_t count) {
-    for(size_t i = 0; i < count; i++) {
-        closedb(intermediates[i]);
-    }
-    free(intermediates);
-}
-
 int main(int argc, char *argv[])
 {
     #if defined(DEBUG) || BENCHMARK
@@ -1095,27 +1088,14 @@ int main(int argc, char *argv[])
     sqlite3 **intermediates = NULL;
     char aggregate_name[MAXSQL] = {};
     if (in.aggregate_or_print == AGGREGATE) {
-        /* modify in.sqlent to insert the results into the aggregate table */
-        char orig_sqlent[MAXSQL];
-        SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, strlen(in.sqlent));
-        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, orig_sqlent, strlen(orig_sqlent));
-
-        /* create the aggregate database */
-        SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
-        if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
+        if (setup_aggregate(AGGREGATE_NAME, AGGREGATE_NAME, AGGREGATE_ATTACH_NAME, in.maxthreads,
+                           in.sqlent, &in.sqlent_len,
+                           aggregate_name, &aggregate, &intermediates) != 0) {
+            fprintf(stderr, "Could not set up databases for aggregation\n");
+            OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
+            outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
+            outfiles_fin(gts.outfd,  in.maxthreads);
             return -1;
-        }
-
-        intermediates = (sqlite3 **) malloc(sizeof(sqlite3 *) * in.maxthreads);
-        for(int i = 0; i < in.maxthreads; i++) {
-            char intermediate_name[MAXSQL];
-            SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
-            if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
-                fprintf(stderr, "Could not open %s\n", intermediate_name);
-                cleanup_intermediates(intermediates, i);
-                closedb(aggregate);
-                return -1;
-            }
         }
     }
 
@@ -1137,11 +1117,17 @@ int main(int argc, char *argv[])
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
+        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
+        outfiles_fin(gts.outfd,  in.maxthreads);
         return -1;
     }
 
     if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
+        OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
+        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
+        outfiles_fin(gts.outfd,  in.maxthreads);
         return -1;
     }
 

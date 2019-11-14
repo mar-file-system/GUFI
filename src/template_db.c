@@ -112,13 +112,7 @@ extern int errno;
 off_t create_template(int * fd) {
     static const char name[] = "tmp.db";
 
-    sqlite3 * db = NULL;
-    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
-        fprintf(stderr, "Cannot create template database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
-        return -1;
-    }
-
-    create_tables(name, db);
+    sqlite3 * db = opendb2(name, 0, 1, 0);
     sqlite3_close(db);
 
     if ((*fd = open(name, O_RDONLY)) == -1) {

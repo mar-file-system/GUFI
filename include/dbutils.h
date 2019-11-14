@@ -140,6 +140,36 @@ int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query);
+/*
+ * setup_aggregate
+ * Opens all of the databases required to hold intermediate results and the final database to aggregate all results.
+ *
+ * @param aggregate_name_format       IN        A format string with a '%d' in it somewhere
+ * @param intermediate_name_format    IN        A format string with a '%d' in it somewhere
+ * @param attach_name                 IN        The name that threads will use to attach to an intermediate database
+ * @param count                       IN        how many databases are needed
+ * @param query                       IN/OUT    the original query; modified to insert into the intermediate databases
+ * @param query_len                   IN/OUT    the length of the original query
+ * @param aggregate_name              OUT       the name of the aggregate database
+ * @param aggregate                   OUT       A pointer to the aggregate database; should be cleaned up with closedb
+ * @param intermediates               OUT       A pointer to an array of intermediate databases; should be cleaned up with cleanup_intermediates
+ * @return 0 on success, -1 on error
+ */
+int setup_aggregate(const char *aggregate_name_format, const char *intermediate_name_format, const char *attach_name, const size_t count,
+                    char *query, size_t *query_len,
+                    char *aggregate_name, sqlite3 **aggregate, sqlite3 ***intermediates);
+
+/*
+ * cleanup_intermediates
+ * Cleans up the intermediate databases created by setup_aggregate.
+ * This is done because the intermediate databases do not have to exist once the aggregate database is written.
+ */
+int cleanup_intermediates(sqlite3 **intermediates, const size_t count);
+
+/*
+ * cleanup_aggregate
+ * Convenience function for cleaning up both intermediate databases and the aggregate database.
+ */
+int cleanup_aggregate(sqlite3 *aggregate, sqlite3 **intermediates, const size_t count);
 
 #endif

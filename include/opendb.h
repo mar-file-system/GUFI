@@ -80,8 +80,6 @@ OF SUCH DAMAGE.
 
 #include <sqlite3.h>
 
-int create_tables(const char *name, sqlite3 *db);
-
 sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, const int setpragmas);
 
 #endif

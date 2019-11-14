@@ -83,8 +83,9 @@ OF SUCH DAMAGE.
 #include <pwd.h>
 #include "pcre.h"
 
-#include "dbutils.h"
 #include "bf.h"
+#include "dbutils.h"
+#include "opendb.h"
 
 extern int errno;
 
@@ -1022,56 +1023,84 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
     return rec_count;
 }
 
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query) {
-    // copy and sanitize query
-    char buf[MAXSQL];
-    SNPRINTF(buf, MAXSQL, "%s", query);
+static sqlite3 *open_temporary(const char *aggregate_name_format, const int id, const char *query, char *name) {
+    sqlite3 * db = NULL;
 
-    // find the first clause after FROM
-    // more clauses are probably needed
-    static const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
-    char *after_from = NULL;
-    for(size_t i = 0; (i < sizeof(clauses) / sizeof(char *)) && !after_from; i++) {
-        after_from = strstr(buf, clauses[i]);
+    SNPRINTF(name, MAXSQL, aggregate_name_format, id);
+
+    char create_intermediate_table[MAXSQL];
+    SNPRINTF(create_intermediate_table, MAXSQL, "CREATE TABLE IF NOT EXISTS intermediate AS %s", query);
+
+    char * err = NULL;
+    if (!(db = opendb2(name, 0, 0, 1))                                                                   ||    /* create the temporary database */
+        (sqlite3_exec(db, esql, NULL, NULL, NULL) != SQLITE_OK)                                          ||    /* create an empty table to select from */
+        (addqueryfuncs(db) != 0)                                                                         ||    /* add custom functions */
+        (sqlite3_exec(db, create_intermediate_table, NULL, NULL, &err) != SQLITE_OK)                     ||    /* create a table to get required columns */
+        (sqlite3_exec(db, "DROP TABLE entries;", NULL, NULL, &err) != SQLITE_OK)                         ||    /* drop the original entries table */
+        (sqlite3_exec(db, "ALTER TABLE intermediate RENAME TO entries;", NULL, NULL, &err) != SQLITE_OK)) {    /* rename the table to entries */
+        fprintf(stderr, "failed to create result aggregation database %s: %s: \"%s\"\n", name, err, query);
+        closedb(db);
+        db = NULL;
     }
 
-    // create the aggregate table using the SELECT and FROM portions of the original query
-    char create_results_table[MAXSQL];
-    char af = 0;
-    if (after_from) {
-        af = *after_from;
-        *after_from = 0;
+    sqlite3_free(err);
+
+    return db;
+}
+
+int setup_aggregate(const char *aggregate_name_format, const char *intermediate_name_format, const char *attach_name, const size_t count,
+                    char *query, size_t *query_len,
+                    char *aggregate_name, sqlite3 **aggregate, sqlite3 ***intermediates) {
+    if (!query || !query_len || !aggregate_name || !aggregate || !intermediates) {
+        return -1;
     }
 
-    // there is no need to modify the query, since the entries table is empty (but will generate a NULL row, which will be removed)
-    SNPRINTF(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, buf);
-    if (after_from) {
-        *after_from = af;
+    *aggregate = NULL;
+    *intermediates = NULL;
+
+    /* create the final aggregate database */
+    if (!(*aggregate = open_temporary(aggregate_name_format, -1, query, aggregate_name))) {
+        cleanup_aggregate(*aggregate, *intermediates, 0);
+        return -1;
     }
 
-    char alter[MAXSQL];
-    SNPRINTF(alter, MAXSQL, "ALTER TABLE %s RENAME TO entries;", attach_name);
-
-    sqlite3 *aggregate = NULL;
-    char *err_msg = NULL;
-    if ((sqlite3_open_v2(name, &aggregate,
-                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI,
-                         GUFI_SQLITE_VFS)                                                                          != SQLITE_OK) || // create the aggregate database
-        (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                              != SQLITE_OK) || // enable extension loading
-        (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                         != SQLITE_OK) || // load the sqlite3-pcre extension
-        (addqueryfuncs(aggregate)                                                                                  != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
-        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                       != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
-        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                       != SQLITE_OK) || // create the aggregate table
-        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                      != SQLITE_OK) || // drop the entries table
-        (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                      != SQLITE_OK) || // rename the aggregate table to entries
-        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                     != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
-        fprintf(stderr, "failed to create result aggregation database %s: %s: \"%s\"\n", name, err_msg, query);
-        sqlite3_free(err_msg);
-        sqlite3_close(aggregate);
-        aggregate = NULL;
+    /* create the intermediate database array  */
+    if (!(*intermediates = (sqlite3 **) malloc(sizeof(sqlite3 *) * count))) {
+        cleanup_aggregate(*aggregate, *intermediates, 0);
+        return -1;
     }
 
-    sqlite3_free(err_msg);
+    /* create the intermeidate databases */
+    for(size_t i = 0; i < count; i++) {
+        char intermediate_name[MAXSQL];
+        if (!((*intermediates)[i] = open_temporary(aggregate_name_format, (int) i, query, intermediate_name))) {
+            fprintf(stderr, "Could not open %s\n", intermediate_name);
+            cleanup_aggregate(*aggregate, *intermediates, i);
+            return -1;
+        }
+    }
 
-    return aggregate;
+    /* modify the original query to insert the results into the intermediate tables */
+    char insert_query[MAXSQL];               /* have to write to another buffer because overlapping buffers causes undefined behavior */
+    SNFORMAT_S(insert_query, MAXSQL, 4, "INSERT INTO ", 12, attach_name, strlen(attach_name), ".entries ", (size_t) 9, query, *query_len);
+    *query_len = strlen(insert_query);
+    memcpy(query, insert_query, *query_len); /* have to copy here because query might be in static memory*/
+
+    return 0;
+}
+
+int cleanup_intermediates(sqlite3 **intermediates, const size_t count) {
+    if (intermediates) {
+        for(size_t i = 0; i < count; i++) {
+            closedb(intermediates[i]);
+        }
+        free(intermediates);
+    }
+
+    return 0;
+}
+
+int cleanup_aggregate(sqlite3 *aggregate, sqlite3 **intermediates, const size_t count) {
+    closedb(aggregate);
+    return cleanup_intermediates(intermediates, count);
 }
