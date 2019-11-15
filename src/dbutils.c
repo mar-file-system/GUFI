@@ -799,6 +799,26 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+static void uidtouser2(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const char *text = (char *) sqlite3_value_text(argv[0]);
+    const size_t width = sqlite3_value_int64(argv[1]);
+
+    static const char FORMAT[] = "%%%zus";
+    char format[256];
+    SNPRINTF(format, 256, FORMAT, width);
+
+    const int fuid = atoi(text);
+    struct passwd *fmypasswd = getpwuid(fuid);
+    const char *show = fmypasswd?fmypasswd->pw_name:text;
+
+    char fname[256];
+    SNPRINTF(fname, 256, format, text);
+    sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
+
+    return;
+}
+
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     const unsigned char *text = sqlite3_value_text(argv[0]);
@@ -815,6 +835,26 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     else {
           sqlite3_result_text(context, fgroup, -1, SQLITE_TRANSIENT);
     }
+    return;
+}
+
+static void gidtogroup2(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const char *text = (char *) sqlite3_value_text(argv[0]);
+    const size_t width = sqlite3_value_int64(argv[1]);
+
+    static const char FORMAT[] = "%%%zus";
+    char format[256];
+    SNPRINTF(format, 256, FORMAT, width);
+
+    const int fgid = atoi(text);
+    struct group * fmygroup = getgrgid(fgid);
+    const char *show = fmygroup?fmygroup->gr_name:text;
+
+    char fgroup[256];
+    SNPRINTF(fgroup, 256, format, show);
+    sqlite3_result_text(context, fgroup, -1, SQLITE_TRANSIENT);
+
     return;
 }
 
@@ -947,8 +987,8 @@ int addqueryfuncs(sqlite3 *db) {
 }
 
 int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
-    return !((sqlite3_create_function(db, "uidtouser",           1, SQLITE_UTF8, NULL, &uidtouser,           NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db, "gidtogroup",          1, SQLITE_UTF8, NULL, &gidtogroup,          NULL, NULL) == SQLITE_OK) &&
+    return !((sqlite3_create_function(db, "uidtouser",           2, SQLITE_UTF8, NULL, &uidtouser2,          NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "gidtogroup",          2, SQLITE_UTF8, NULL, &gidtogroup2,         NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db, "path",                0, SQLITE_UTF8, ctx,  &path2,               NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8, NULL, &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db, "modetotxt",           1, SQLITE_UTF8, NULL, &modetotxt,           NULL, NULL) == SQLITE_OK) &&
@@ -1070,7 +1110,7 @@ int setup_aggregate(const char *aggregate_name_format, const char *intermediate_
         return -1;
     }
 
-    /* create the intermeidate databases */
+    /* create the intermediate databases */
     for(size_t i = 0; i < count; i++) {
         char intermediate_name[MAXSQL];
         if (!((*intermediates)[i] = open_temporary(aggregate_name_format, (int) i, query, intermediate_name))) {
@@ -1082,9 +1122,8 @@ int setup_aggregate(const char *aggregate_name_format, const char *intermediate_
 
     /* modify the original query to insert the results into the intermediate tables */
     char insert_query[MAXSQL];               /* have to write to another buffer because overlapping buffers causes undefined behavior */
-    SNFORMAT_S(insert_query, MAXSQL, 4, "INSERT INTO ", 12, attach_name, strlen(attach_name), ".entries ", (size_t) 9, query, *query_len);
-    *query_len = strlen(insert_query);
-    memcpy(query, insert_query, *query_len); /* have to copy here because query might be in static memory*/
+    *query_len = SNFORMAT_S(insert_query, MAXSQL, 4, "INSERT INTO ", 12, attach_name, strlen(attach_name), ".entries ", (size_t) 9, query, *query_len);
+    memcpy(query, insert_query, *query_len); /* have to copy here because query might be in static memory */
 
     return 0;
 }

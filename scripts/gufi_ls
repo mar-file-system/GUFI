@@ -108,10 +108,10 @@ def build_select(args):
         select += ['blocks']
 
     if args.long_listing:
-        select += ['modetotxt(mode)', 'nlink', 'uidtouser(uid)']
+        select += ['modetotxt(mode)', 'nlink', 'uidtouser(uid, ' + str(args.user_width) + ')']
 
-        if not args.no_group:
-            select += ['gidtogroup(gid)']
+        if args.no_group == False:
+            select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
 
         if args.human_readable:
             select += ['human_readable_size(size)']
@@ -201,6 +201,8 @@ if __name__=='__main__':
     parser.add_argument('--output',                         dest='output',         type=str,                                        help='Output file prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer', metavar='bytes', dest='output_buffer',  type=gufi_common.get_positive,     default=4096, help='Size of each thread\'s output buffer')
     parser.add_argument('--size-width',    metavar='chars', dest='size_width',     type=gufi_common.get_non_negative, default=16,   help='Width of size column')
+    parser.add_argument('--user-width',    metavar='chars', dest='user_width',     type=gufi_common.get_non_negative, default=5,    help='Width of user column')
+    parser.add_argument('--group-width',   metavar='chars', dest='group_width',    type=gufi_common.get_non_negative, default=5,    help='Width of group column')
 
     args = parser.parse_args();
 

@@ -506,7 +506,7 @@ struct CallbackArgs {
     int id;
 };
 
-static int print_callback(void * args, int count, char **data, char **columns, const int lock) {
+static int print_callback(void * args, int count, char **data, char **columns, const int lock, const int newline) {
     /* skip argument checking */
     /* if (!args) { */
     /*     return 1; */
@@ -546,8 +546,10 @@ static int print_callback(void * args, int count, char **data, char **columns, c
                 filled++;
             }
 
-            buf[filled] = '\n';
-            filled++;
+            if (newline) {
+                buf[filled] = '\n';
+                filled++;
+            }
 
             ca->output_buffers->buffers[id].filled = filled;
             ca->output_buffers->buffers[id].count++;
@@ -562,8 +564,11 @@ static int print_callback(void * args, int count, char **data, char **columns, c
                 fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
                 fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
             }
-            fwrite("\n", sizeof(char), 1, gts.outfd[id]);
-            ca->output_buffers->buffers[id].count++;
+
+            if (newline) {
+                fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+                ca->output_buffers->buffers[id].count++;
+            }
 
             if (lock) {
                 pthread_mutex_unlock(&ca->output_buffers->mutex);
@@ -575,12 +580,14 @@ static int print_callback(void * args, int count, char **data, char **columns, c
     return 0;
 }
 
+static const char * COLON = ":";
+
 static int buffered_print_callback(void * args, int count, char **data, char **columns) {
-    return print_callback(args, count, data, columns, 1); /* lock when printing */
+    return print_callback(args, count, data, columns, 1, 1); /* lock when printing */
 }
 
 static int stanza_print_callback(void * args, int count, char **data, char **columns) {
-    return print_callback(args, count, data, columns, 0); /* do not lock when printing */
+    return print_callback(args, count, data, columns, 0, 1); /* do not lock when printing */
 }
 
 struct ThreadArgs {
@@ -866,12 +873,16 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                         /* print all of the data for this thread before allowing another thread to print */
                         if (in.show_results == STANZA) {
+                            /* lock here instead of in print_callback to get all of the results printed contiguously */
                             pthread_mutex_lock(&ta->output_buffers.mutex);
-                            const size_t len = strlen(gps[id].gpath);
-                            fwrite(gps[id].gpath, sizeof(char), len, gts.outfd[id]);
-                            fwrite(":",  sizeof(char), 1, gts.outfd[id]);
-                            fwrite("\n", sizeof(char), 1, gts.outfd[id]);
-                            ca.output_buffers->buffers[id].filled = 0; /* empty out the buffer, in case it was not emptied previously */
+
+                            /* ignore previously written data (should have been flushed) */
+                            /* also don't want the extra space pasted after the path name from print_callback */
+                            const size_t len = strlen(work->name);
+                            memcpy(ca.output_buffers->buffers[id].buf, work->name, len);
+                            ca.output_buffers->buffers[id].filled = len;
+
+                            print_callback(&ca, 1, (char **) &COLON, NULL, 0, 1);
                         }
 
                         char *err = NULL;
@@ -882,8 +893,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                         if (in.show_results == STANZA) {
                             /* force flush the buffer once this thread is done querying */
+                            print_callback(&ca, 0, NULL, NULL, 0, 1);
                             OutputBuffer_flush_nolock(&ca.output_buffers->buffers[id], gts.outfd[id]);
-                            fwrite("\0\n", sizeof(char), 2, gts.outfd[id]);
                             pthread_mutex_unlock(&ca.output_buffers->mutex);
                         }
 
@@ -1357,7 +1368,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "clean up globals:                            %.2Lfs\n", cleanup_globals_time);
     fprintf(stderr, "\n");
     fprintf(stderr, "Rows returned:                               %zu\n",    rows);
-    fprintf(stderr, "Queries performed:                           %zu\n",    thread_count);
+    fprintf(stderr, "Queries performed:                           %zu\n",    thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len));
     fprintf(stderr, "Real time:                                   %.2Lfs\n", total_time);
     #endif
 
