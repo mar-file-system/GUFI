@@ -113,6 +113,14 @@ allowed_types = {
     'nl' : '!= "l"', # non-links
 }
 
+# check if the summary table is necessary
+def use_summary(type):
+    return (type in [None, 'd', 'nf', 'nl'])
+
+# check if the entries table is necessary
+def use_entries(type):
+    return (type in [None, 'f', 'l', 'nd', 'nf', 'nl'])
+
 def validate_args(args):
     '''Validate known arguments here'''
 
@@ -136,7 +144,7 @@ def parse_size(size):
     size = int(size) * filesize[unit]
     return prefix, size
 
-def build_select(args, append_name = True):
+def build_select(args):
     '''Build the SELECT portion of the queries for the treesummary, summary, and entries tables.'''
     tsummary = []
     summary  = []
@@ -148,7 +156,11 @@ def build_select(args, append_name = True):
     #            'mtime', 'ctime', 'linkname', 'xattrs',
     #            'crtime', 'ossint1', 'ossint2', 'ossint3',
     #            'ossint4', 'osstext1', 'osstext2', 'pinode']
-    entries = ['path()' + (' || "/" || name' if append_name else '')]
+    if use_summary(args.type):
+        summary = ['path()']
+
+    if use_entries(args.type):
+        entries = ['path() || "/" || name']
 
     return tsummary, summary, entries
 
@@ -157,6 +169,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
     tsummary = []
     summary  = []
     entries  = []
+    shared   = [] # shared between summary and entries
 
     now = time.time()
 
@@ -165,31 +178,30 @@ def build_where(args, root_uid = 0, root_gid = 0):
     #     # entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
-        entries += ['({} - atime) / 60 == {}'.format(now, args.amin)]
+        shared += ['({} - atime) / 60 == {}'.format(now, args.amin)]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        entries += ['({} - atime) / {} == {} '.format(now, SECONDS_PER_DAY, args.atime)]
+        shared += ['({} - atime) / {} == {} '.format(now, SECONDS_PER_DAY, args.atime)]
 
     if args.cmin is not None:
-        entries += ['({} - ctime) / 60 == {}'.format(now, args.cmin)]
+        shared += ['({} - ctime) / 60 == {}'.format(now, args.cmin)]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        entries += ['({} - ctime) / {} == {} '.format(now, SECONDS_PER_DAY, args.ctime)]
+        shared += ['({} - ctime) / {} == {} '.format(now, SECONDS_PER_DAY, args.ctime)]
 
     if args.empty == True:
-        summary += ['minsize == 0']
-        entries += ['size == 0', '(type == \'f\') OR (type == \'d\')']
+        summary += ['maxsize == 0']
+        entries += ['size == 0', '(type == \'f\') OR (type == \'d\')'] # -empty File is empty and is either a regular file or a directory.
 
     if args.executable == True:
-        entries += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        shared += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     if args.false == True:
-        summary += ['0']
-        entries += ['0']
+        shared += ['0']
 
     if args.gid is not None:
         summary += ['mingid <= {}'.format(args.gid), '{} <= maxgid'.format(args.gid)]
@@ -201,10 +213,10 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.ilname is not None:
 
     if args.iname is not None:
-        entries += ['name REGEXP \'(?i){}\'"'.format(args.iname)]
+        shared += ['name REGEXP \'(?i){}\'"'.format(args.iname)]
 
     if args.inum is not None:
-        entries += ['inode == {}'.format(args.inum)]
+        shared += ['inode == {}'.format(args.inum)]
 
     # Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.
     # if args.ipath is not None:
@@ -214,13 +226,13 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.iwholename is not None:
 
     if args.links is not None:
-        entries += ['nlink == {}'.format(args.links)]
+        shared += ['nlink == {}'.format(args.links)]
 
     if args.lname is not None:
-        entries += ['type == \'f\'', 'linkname REGEXP \'(?i){}\'"'.format(args.lname)]
+        shared += ['type == \'f\'', 'linkname REGEXP \'(?i){}\'"'.format(args.lname)]
 
     if args.mmin is not None:
-        entries += ['({} - mtime) / 60 == {}'.format(now, args.mmin)]
+        shared += ['({} - mtime) / 60 == {}'.format(now, args.mmin)]
 
     if args.mtime is not None:
         if len(args.mtime) > 2:
@@ -236,13 +248,13 @@ def build_where(args, root_uid = 0, root_gid = 0):
                 comp = '>'
                 mtime = mtime[1:]
 
-            entries += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, comp, mtime)]
+            shared += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, comp, mtime)]
 
     if args.name is not None:
-        entries += [' OR '.join(['(name REGEXP \'{}\')'.format(name) for name in args.name])]
+        shared += [' OR '.join(['(name REGEXP \'{}\')'.format(name) for name in args.name])]
 
     if args.newer is not None:
-        entries += ['mtime > {}'.format(args.newer.st_mtime)]
+        shared += ['mtime > {}'.format(args.newer.st_mtime)]
 
     # if args.newerXY is not None:
 
@@ -254,13 +266,13 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.perm is not None:
 
     if args.readable == True:
-        entries += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        shared += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # # not handled here
     # if args.regex is not None:
 
     if args.samefile is not None:
-        entries += ['inode == {}'.format(args.samefile.st_ino)]
+        shared += ['inode == {}'.format(args.samefile.st_ino)]
 
     if args.size is not None:
         if len(args.size) == 1:
@@ -305,11 +317,10 @@ def build_where(args, root_uid = 0, root_gid = 0):
             raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}: {}.'.format(len(args.size), args.size))
 
     if args.true == True:
-        summary += ['1']
-        entries += ['1']
+        shared += ['1']
 
     if args.type is not None:
-        entries += ['(type {})'.format(allowed_types[args.type])]
+        shared += ['(type {})'.format(allowed_types[args.type])]
 
     if args.uid is not None:
         summary += ['minuid <= {}'.format(args.uid), '{} <= maxuid'.format(args.uid)]
@@ -318,18 +329,18 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.used is not None:
 
     if args.user is not None:
-        entries += ['uid == {}'.format(args.user)]
+        shared += ['uid == {}'.format(args.user)]
 
     # if args.wholename is not None:
 
     if args.writable == True:
-        entries += ['(mode & 128) == 128'] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        shared += ['(mode & 128) == 128'] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # if args.xtype is not None:
 
     # if args.context is not None:
 
-    return tsummary, summary, entries
+    return tsummary, summary + shared, entries + shared
 
 def build_group_by(args):
     '''Build the GROUP BY portion of the queries for the treesummary, summary, and entries tables.'''
@@ -498,7 +509,7 @@ if __name__=='__main__':
     validate_args(args)
 
     # generate the queries
-    tsummary_select,   summary_select,   entries_select   = build_select(args, (args.type != 'd'))
+    tsummary_select,   summary_select,   entries_select   = build_select(args)
     tsummary_where,    summary_where,    entries_where    = build_where(args)
     tsummary_group_by, summary_group_by, entries_group_by = build_group_by(args)
     tsummary_order_by, summary_order_by, entries_order_by = build_order_by(args)
@@ -517,22 +528,20 @@ if __name__=='__main__':
                                       summary_order_by,
                                       args.num_results)
 
-    initial = gufi_common.build_query(entries_select,
-                                      ['entries' if args.type != 'd' else 'summary'],
+    entries = gufi_common.build_query(entries_select,
+                                      ['entries'],
                                       entries_where,
                                       entries_group_by,
                                       entries_order_by,
                                       args.num_results)
 
-    # query the summary table in addition to the entries table
-    if args.type == None:
-        _, _, path_select = build_select(args, False)
-        initial += ' UNION ' + gufi_common.build_query(path_select,
-                                          ['summary'],
-                                          entries_where,
-                                          entries_group_by,
-                                          entries_order_by,
-                                          args.num_results)
+    if args.type == 'd':
+        entries = summary
+    elif args.type == 'nd':
+        pass
+    else:
+        # query the summary table in addition to the entries table
+        entries += ' UNION ' + summary
 
     # create the query command
     query_cmd = [config['Exec'],
@@ -544,8 +553,8 @@ if __name__=='__main__':
     # if len(summary):
     #     query_cmd += ['-S', summary]
 
-    if len(initial):
-        query_cmd += ['-E', initial]
+    if len(entries):
+        query_cmd += ['-E', entries]
 
     if args.delim:
         query_cmd += ['-d', args.delim]
