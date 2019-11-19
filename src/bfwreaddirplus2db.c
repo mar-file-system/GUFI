@@ -144,6 +144,26 @@ int searchmyll(long long int lull, int lutype) {
    return(ret);
 }
 
+static int create_tables(const char * name, sqlite3 * db, void * args) {
+    if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int create_readdirplus_tables(const char * name, sqlite3 * db, void * args) {
+    if (create_table_wrapper(name, db, "rsql",         rsql,        NULL, NULL) != SQLITE_OK) {
+        return -1;
+    }
+
+    return 0;
+}
 
 int reprocessdir(void * passv, DIR *dir)
 {
@@ -190,8 +210,15 @@ int reprocessdir(void * passv, DIR *dir)
           truncate(dbpath,0);
         }
     }
-
-    if (!(db = opendb(dbpath,8,1)))
+    if (!(db = opendb(dbpath, RDWR, 1, 1,
+                      create_tables, NULL
+                      #ifdef DEBUG
+                      , NULL, NULL
+                      , NULL, NULL
+                      , NULL, NULL
+                      , NULL, NULL
+                      #endif
+                      )))
        return -1;
     res=insertdbprep(db);
     startdb(db);
@@ -602,7 +629,15 @@ int processinit(void * myworkin) {
        i=0;
        while (i < in.maxthreads) {
            SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
-         gts.outdbd[i]=opendb(outdbn,7,1);
+           gts.outdbd[i]=opendb(outdbn, RDWR, 1, 1,
+                                create_readdirplus_tables, NULL
+                                #ifdef DEBUG
+                                , NULL, NULL
+                                , NULL, NULL
+                                , NULL, NULL
+                                , NULL, NULL
+                                #endif
+                                );
          global_res[i]=insertdbprepr(gts.outdbd[i]);
          if (in.stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {

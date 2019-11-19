@@ -150,6 +150,11 @@ typedef enum ShowResults {
     PRINT
 } ShowResults_t;
 
+typedef enum OpenMode {
+    RDONLY,
+    RDWR
+} OpenMode;
+
 struct input {
    char name[MAXPATH];
    char nameto[MAXPATH];
@@ -198,7 +203,7 @@ struct input {
    ShowResults_t aggregate_or_print;
    int keep_matime;
    size_t output_buffer_size;
-   int readonly;
+   OpenMode open_mode;
 };
 extern struct input in;
 

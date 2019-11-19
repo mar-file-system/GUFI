@@ -77,7 +77,6 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
-#include "opendb.h"
 #include "outdbs.h"
 #include "utils.h"
 
@@ -95,14 +94,22 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
         for(int i = 0; i < count; i++) {
             char buf[MAXPATH];
             SNPRINTF(buf, MAXPATH, "%s.%d", prefix, i);
-            if (!(dbs[i] = opendb2(buf, 0, 0, 1))) {
+            if (!(dbs[i] = opendb(buf, RDWR, 1, 0,
+                                  NULL, NULL
+                                  #ifdef DEBUG
+                                  , NULL, NULL
+                                  , NULL, NULL
+                                  , NULL, NULL
+                                  , NULL, NULL
+                                  #endif
+                                  ))) {
                 outdbs_fin(dbs, i, NULL);
                 fprintf(stderr, "Could not open output database file %s\n", buf);
                 return NULL;
             }
         }
 
-        if (strlen(sqlinit)) {
+        if (sqlinit && strlen(sqlinit)) {
             for(int i = 0; i < count; i++) {
                 char * err = NULL;
                 if (sqlite3_exec(dbs[i], sqlinit, NULL, NULL, &err) != SQLITE_OK) {
@@ -120,7 +127,7 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
 // close all output dbs
 int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin) {
     if (dbs) {
-        if (strlen(sqlfin)) {
+        if (sqlfin && strlen(sqlfin)) {
             for(int i = 0; i < end; i++) {
                 char * err = NULL;
                 if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {

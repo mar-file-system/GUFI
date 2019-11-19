@@ -92,7 +92,6 @@ OF SUCH DAMAGE.
 
 #include <pwd.h>
 #include <grp.h>
-//#include <uuid/uuid.h>
 
 #include "bf.h"
 #include "structq.h"
@@ -101,11 +100,24 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
+static int create_tables(const char *name, sqlite3 *db, void * args) {
+     printf("writetsum %d\n", in.writetsum);
+    if ((create_table_wrapper(name, db, "tsql",        tsql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir,   NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser,  NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup, NULL, NULL) != SQLITE_OK)) {
+        return -1;
+    }
+
+    return 0;
+}
+
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 static void processdir(void * passv)
 {
     struct work *passmywork = passv;
+    char dbname[MAXPATH];
     DIR *dir;
     int mytid;
     sqlite3 *db;
@@ -130,7 +142,16 @@ static void processdir(void * passv)
     // push subdirectories into the queue
     //descend(passmywork, dir, in.max_level);
 
-    if ((db=opendb(passmywork->name,3,0))) {
+    SNPRINTF(dbname, MAXPATH, "%s/%s", passmywork->name, DBNAME);
+    if ((db=opendb(dbname, RDONLY, 1, 1,
+                   NULL, NULL
+                   #ifdef DEBUG
+                   , NULL, NULL
+                   , NULL, NULL
+                   , NULL, NULL
+                   , NULL, NULL
+                   #endif
+                   ))) {
        zeroit(&sumin);
 
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, mytid);
@@ -186,7 +207,6 @@ int processinit(void * myworkin) {
      return 0;
 }
 
-
 int processfin() {
 
      sqlite3 *tdb;
@@ -199,7 +219,15 @@ int processfin() {
      rc=1;
      rc=lstat(dbpath,&smt);
      if (in.writetsum) {
-        if (! (tdb = opendb(in.name,3,1)))
+        if (! (tdb = opendb(dbpath, RDWR, 1, 1,
+                            create_tables, NULL
+                            #ifdef DEBUG
+                            , NULL, NULL
+                            , NULL, NULL
+                            , NULL, NULL
+                            , NULL, NULL
+                            #endif
+                            )))
            return -1;
         inserttreesumdb(in.name,tdb,&sumout,0,0,0);
         closedb(tdb);

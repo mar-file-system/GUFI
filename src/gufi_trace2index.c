@@ -85,7 +85,6 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "debug.h"
 #include "dbutils.h"
-#include "opendb.h"
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
@@ -298,7 +297,15 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #endif
 
     /* process the work */
-    sqlite3 * db = opendb2(dbname, 0, 0, 1);
+    sqlite3 * db = opendb(dbname, RDWR, 1, 0,
+                          NULL, NULL
+                          #ifdef DEBUG
+                          , NULL, NULL
+                          , NULL, NULL
+                          , NULL, NULL
+                          , NULL, NULL
+                          #endif
+                          );
 
     #ifdef DEBUG
     struct timespec opendb_end;

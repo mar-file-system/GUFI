@@ -160,7 +160,15 @@ int main(int argc, char *argv[])
 
 
      // run the query
-     db = opendb(name,0,0);
+     db = opendb(dbname, RDONLY, 1, 1,
+                 NULL, NULL
+                 #ifdef DEBUG
+                 , NULL, NULL
+                 , NULL, NULL
+                 , NULL, NULL
+                 , NULL, NULL
+                 #endif
+                 );
 
      //add query funcs to get uidtouser() gidtogroup() and path()
      addqueryfuncs(db);
