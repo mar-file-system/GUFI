@@ -289,7 +289,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
             else:
                 comp = '=='
                 if prefix == '+':
-                    summary += ['minsize => {}'.format(size)]
+                    summary += ['minsize >= {}'.format(size)]
                     comp = '>'
                 elif prefix == '-':
                     summary += ['maxsize <= {}'.format(size)]
@@ -537,7 +537,7 @@ if __name__=='__main__':
 
     if args.type == 'd':
         entries = summary
-    elif args.type == 'nd':
+    elif not use_summary(args.type):
         pass
     else:
         # query the summary table in addition to the entries table

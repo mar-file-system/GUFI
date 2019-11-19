@@ -108,9 +108,9 @@ def space(args, order=''):
 
 def files(args, order=''):
     select, where = build(args)
-    entries       = gufi_common.build_query(select + ['uid', 'COUNT(*) AS files'],     ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
+    entries       = gufi_common.build_query(select + ['uid', 'COUNT(*) AS files'],     ['entries'], where + ['type == "f"'], ['uid'], ['files {}'.format(order)], args.num_results)
     intermediate  = None
-    aggregate     = gufi_common.build_query(select + ['uid', 'TOTAL(files) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
+    aggregate     = gufi_common.build_query(select + ['uid', 'TOTAL(files) AS files'], ['entries'], where,                   ['uid'], ['files {}'.format(order)], args.num_results)
     return entries, intermediate, aggregate
 
 def total_space(args, *ignored):
@@ -121,8 +121,8 @@ def total_space(args, *ignored):
 
 def total_files(args, *ignored):
     _, where      = build(args)
-    entries       = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    aggregate     = gufi_common.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    entries       = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where + ['type == "f"'], None, None, None, None)
+    aggregate     = gufi_common.build_query(['TOTAL(count) AS count'], ['entries'], None,                    None, None, None, None)
     return entries, None, aggregate
 
 def directory_count(args, order = ''):
