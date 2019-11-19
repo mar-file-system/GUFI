@@ -68,6 +68,10 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sqlite3.h>
 
+#ifdef DEBUG
+#include <time.h>
+#endif
+
 #include "utils.h"
 
 
@@ -96,7 +100,21 @@ sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
 
 sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 
-sqlite3 * opendb(const char *name, int openwhat, int createtables);
+int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args);
+
+sqlite3 * opendb(const char * name, const OpenMode mode, const int setpragmas, const int load_extensions,
+                 int (*modifydb)(const char * name, sqlite3 * db, void * args), void * modifydb_args
+                 #ifdef DEBUG
+                 , struct timespec * sqlite3_open_start
+                 , struct timespec * sqlite3_open_end
+                 , struct timespec * create_tables_start
+                 , struct timespec * create_tables_end
+                 , struct timespec * set_pragmas_start
+                 , struct timespec * set_pragmas_end
+                 , struct timespec * load_extension_start
+                 , struct timespec * load_extension_end
+                 #endif
+                 );
 
 int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
                int printpath, int printheader, int printing, int ptid);

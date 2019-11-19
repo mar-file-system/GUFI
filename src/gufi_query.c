@@ -75,16 +75,13 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
-#include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
-#ifndef DEBUG
-#include "opendb.h"
-#endif
 #include "outdbs.h"
 #include "outfiles.h"
 #include "OutputBuffers.h"
 #include "pcre.h"
+#include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "utils.h"
 
@@ -189,75 +186,23 @@ long double buffer_sum(struct buffer * timer) {
 }
 #endif
 
-static const char GUFI_SQLITE_VFS[] = "unix-none";
+#endif
 
-int create_tables(const char *name, sqlite3 *db);
-int set_pragmas(sqlite3 * db);
-
-static sqlite3 * opendb2(const char * name, const int rdonly, const int createtables, const int setpragmas
-                         , struct timespec * sqlite3_open_start
-                         , struct timespec * sqlite3_open_end
-                         , struct timespec * create_tables_start
-                         , struct timespec * create_tables_end
-                         , struct timespec * set_pragmas_start
-                         , struct timespec * set_pragmas_end
-                         , struct timespec * load_extension_start
-                         , struct timespec * load_extension_end
-    ) {
-    sqlite3 * db = NULL;
-
-    if (rdonly && createtables) {
-        fprintf(stderr, "Cannot open database: readonly and createtables cannot both be set at the same time\n");
-        return NULL;
-    }
-
-    clock_gettime(CLOCK_MONOTONIC, sqlite3_open_start);
-
-    int flags = SQLITE_OPEN_URI;
-    if (rdonly) {
-        flags |= SQLITE_OPEN_READONLY;
-    }
-    else {
-        flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
-    }
-
-    if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
-        clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
-        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
-        sqlite3_close(db); /* close db even if it didn't open to avoid memory leaks */
-        return NULL;
-    }
-    clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
-
-    clock_gettime(CLOCK_MONOTONIC, create_tables_start);
-    if (createtables) {
-        if (create_tables(name, db) != 0) {
-            fprintf(stderr, "Cannot create tables: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
-            sqlite3_close(db);
-            return NULL;
+static int create_tables(const char * name, sqlite3 *db, void * args) {
+    OpenMode * mode = (OpenMode *) args;
+    if (*mode == RDWR) {
+        if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+            return -1;
         }
     }
-    clock_gettime(CLOCK_MONOTONIC, create_tables_end);
 
-    clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
-    if (setpragmas) {
-        /* ignore errors */
-        set_pragmas(db);
-    }
-    clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
-
-    clock_gettime(CLOCK_MONOTONIC, load_extension_start);
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || /* enable loading of extensions */
-        (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { /* load the sqlite3-pcre extension */
-        fprintf(stderr, "Unable to load regex extension\n");
-        sqlite3_close(db);
-        db = NULL;
-    }
-    clock_gettime(CLOCK_MONOTONIC, load_extension_end);
-
-    return db;
+    return 0;
 }
-#endif
 
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args);
 
@@ -713,18 +658,15 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
       db = gts.outdbd[id];
       attachdb(dbname, db, "tree");
     } else {
-      db = opendb2(dbname, in.readonly, 0, 0
-                   #ifdef DEBUG
-                   , &sqlite3_open_start
-                   , &sqlite3_open_end
-                   , &create_tables_start
-                   , &create_tables_end
-                   , &set_pragmas_start
-                   , &set_pragmas_end
-                   , &load_extension_start
-                   , &load_extension_end
-                   #endif
-          );
+      db = opendb(dbname, in.open_mode, 1, 1,
+                  create_tables, &in.open_mode
+                  #ifdef DEBUG
+                  , &sqlite3_open_start,   &sqlite3_open_end
+                  , &create_tables_start,  &create_tables_end
+                  , &set_pragmas_start,    &set_pragmas_end
+                  , &load_extension_start, &load_extension_end
+                  #endif
+                  );
     }
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_end);
@@ -849,7 +791,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         #endif
                         char *err = NULL;
                         if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
-                            fprintf(stderr, "Error: %s: %s\n", err, dbname);
+                            fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                             sqlite3_free(err);
                         }
                         #ifdef DEBUG

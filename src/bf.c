@@ -190,7 +190,7 @@ void show_input(struct input* in, int retval) {
    printf("in.aggregate_or_print = %d\n",    in->aggregate_or_print);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
-   printf("in.readonly           = %d\n",    in->readonly);
+   printf("in.open_mode          = %d\n",    in->open_mode);
    printf("\n");
    printf("retval                = %d\n",    retval);
    printf("\n");
@@ -236,7 +236,7 @@ int parse_cmd_line(int         argc,
    memset(in->aggregate,    0, MAXSQL);
    in->aggregate_or_print = PRINT;     // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
-   in->readonly           = 1;         // default to read-only opens
+   in->open_mode          = RDONLY;    // default to read-only opens
 
    int show   = 0;
    int retval = 0;
@@ -426,8 +426,9 @@ int parse_cmd_line(int         argc,
       case 'B':
          INSTALL_UINT(in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-z");
          break;
+
       case 'w':
-         in->readonly = 0;
+         in->open_mode = RDWR;
          break;
 
       case '?':

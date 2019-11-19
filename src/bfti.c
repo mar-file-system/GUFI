@@ -78,6 +78,9 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
+#include <pwd.h>
+#include <grp.h>
+
 #include "bf.h"
 #include "utils.h"
 #include "dbutils.h"
@@ -85,9 +88,22 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
+static int create_tables(const char *name, sqlite3 *db, void * args) {
+     printf("writetsum %d\n", in.writetsum);
+    if ((create_table_wrapper(name, db, "tsql",        tsql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir,   NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser,  NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup, NULL, NULL) != SQLITE_OK)) {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 {
     struct work *passmywork = data;
+    char dbname[MAXPATH];
     DIR *dir;
     sqlite3 *db;
     struct sum sumin;
@@ -104,7 +120,19 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
       printits(passmywork,id);
     }
 
-    if ((db=opendb(passmywork->name,3,0))) {
+    // push subdirectories into the queue
+    //descend(passmywork, dir, in.max_level);
+
+    SNPRINTF(dbname, MAXPATH, "%s/%s", passmywork->name, DBNAME);
+    if ((db=opendb(dbname, RDONLY, 1, 1,
+                   NULL, NULL
+                   #ifdef DEBUG
+                   , NULL, NULL
+                   , NULL, NULL
+                   , NULL, NULL
+                   , NULL, NULL
+                   #endif
+                   ))) {
        zeroit(&sumin);
 
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
@@ -151,7 +179,6 @@ int processinit(struct QPTPool * ctx) {
      return 0;
 }
 
-
 int processfin() {
 
      sqlite3 *tdb;
@@ -164,7 +191,15 @@ int processfin() {
      rc=1;
      rc=lstat(dbpath,&smt);
      if (in.writetsum) {
-        if (! (tdb = opendb(in.name,3,1)))
+        if (! (tdb = opendb(dbpath, RDWR, 1, 1,
+                            create_tables, NULL
+                            #ifdef DEBUG
+                            , NULL, NULL
+                            , NULL, NULL
+                            , NULL, NULL
+                            , NULL, NULL
+                            #endif
+                            )))
            return -1;
         inserttreesumdb(in.name,tdb,&sumout,0,0,0);
         closedb(tdb);

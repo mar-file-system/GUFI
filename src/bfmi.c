@@ -104,6 +104,19 @@ int mysql_execute_sql(MYSQL *mysql,const char *create_definition)
    return mysql_real_query(mysql, create_definition, strlen(create_definition));
 }
 
+static int create_tables(const char * name, sqlite3 *db, void * args) {
+    if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+        return -1;
+    }
+
+    return 0;
+}
+
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
@@ -144,8 +157,22 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
        memset(records, 0, MAXRECS);
        //sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
        zeroit(&summary);
-       db = opendb(passmywork->name,4,1);
-       res=insertdbprep(db);
+       char dbname[MAXPATH];
+       SNPRINTF(dbname, MAXPATH, "%s/%s", passmywork->name, DBNAME);
+       db = opendb2(dbname, RDWR, 1, 1,
+                    create_tables, NULL
+                    #ifdef DEBUG
+                    , NULL
+                    , NULL
+                    , NULL
+                    , NULL
+                    , NULL
+                    , NULL
+                    , NULL
+                    , NULL
+                    #endif
+                    );
+       res=insertdbprep(db,reso);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);
     }

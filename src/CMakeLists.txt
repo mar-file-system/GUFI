@@ -115,7 +115,6 @@ set(GUFI_SOURCES
   bf.c
   dbutils.c
   debug.c
-  opendb.c
   outfiles.c
   outdbs.c
   OutputBuffers.c

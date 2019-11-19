@@ -70,11 +70,10 @@ OF SUCH DAMAGE.
 #include "pcre.h"
 
 #include "dbutils.h"
-#include "bf.h"
 
 extern int errno;
 
-const char * GUFI_SQLITE_VFS = "unix-none";
+static const char GUFI_SQLITE_VFS[] = "unix-none";
 
 char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
             "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
@@ -145,7 +144,7 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
   return db;
 }
 
-static int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args) {
+int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args) {
     char *err_msg = NULL;
     const int rc = sqlite3_exec(db, sql, callback, args, &err_msg);
     if (rc != SQLITE_OK) {
@@ -156,104 +155,161 @@ static int create_table_wrapper(const char *name, sqlite3 * db, const char * sql
     return rc;
 }
 
-static int create_tables(const char *name, const int openwhat, sqlite3 *db) {
-    if (openwhat==1 || openwhat==4 || openwhat==8) {
-        if (create_table_wrapper(name, db, "esql",         esql,        NULL, NULL) != SQLITE_OK)  {
-            return -1;
-        }
+static int set_pragmas(sqlite3 * db) {
+    int rc = 0;
+
+    // try to turn sychronization off
+    if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not turn off synchronization\n");
+        rc = 1;
     }
 
-    if (openwhat==3) {
-        if ((create_table_wrapper(name, db, "tsql",        tsql,        NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vtssqldir",   vtssqldir,   NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vtssqluser",  vtssqluser,  NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup, NULL, NULL) != SQLITE_OK)) {
-            return -1;
-        }
+    // try to turn journaling off
+    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not turn off journaling\n");
+        rc = 1;
     }
 
-    if (openwhat==2 || openwhat==4 || openwhat==8) {
-        if ((create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
-            return -1;
-        }
+    // try to store temp_store in memory
+    if (sqlite3_exec(db, "PRAGMA temp_store = 2", NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not set temporary storage to in-memory\n");
+        rc = 1;
     }
 
-    if (openwhat==7) {
-        if (create_table_wrapper(name, db, "rsql",         rsql,        NULL, NULL) != SQLITE_OK) {
-            return -1;
-        }
+    // try to increase the page size
+    if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not set page size\n");
+        rc = 1;
     }
 
-    return 0;
+    // try to increase the cache size
+    if (sqlite3_exec(db, "PRAGMA cache_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not set cache size\n");
+        rc = 1;
+    }
+
+    // try to get an exclusive lock
+    if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not set locking mode\n");
+        rc = 1;
+    }
+
+    return rc;
 }
 
-sqlite3 * opendb(const char *name, int openwhat, int createtables)
-{
+sqlite3 * opendb(const char * name, const OpenMode mode, const int setpragmas, const int load_extensions,
+                 int (*modifydb)(const char * name, sqlite3 * db, void * args), void * modifydb_args
+                 #ifdef DEBUG
+                 , struct timespec * sqlite3_open_start
+                 , struct timespec * sqlite3_open_end
+                 , struct timespec * set_pragmas_start
+                 , struct timespec * set_pragmas_end
+                 , struct timespec * load_extension_start
+                 , struct timespec * load_extension_end
+                 , struct timespec * modifydb_start
+                 , struct timespec * modifydb_end
+                 #endif
+    ) {
     sqlite3 * db = NULL;
-    char *err_msg = NULL;
-    char dbn[MAXPATH];
 
-    // sqlite3_snprintf(MAXSQL, dbn, "%s/%s/%s", in.nameto, name, DBNAME);
+    #ifdef DEBUG
+    if (sqlite3_open_start) {
+        clock_gettime(CLOCK_MONOTONIC, sqlite3_open_start);
+    }
+    #endif
 
-    sqlite3_snprintf(MAXSQL, dbn, "%s/" DBNAME, name);
-
-    if (createtables) {
-        if (openwhat != 3)
-            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
-        if (openwhat==7 || openwhat==8)
-            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+    int flags = SQLITE_OPEN_URI;
+    if (mode == RDONLY) {
+        flags |= SQLITE_OPEN_READONLY;
     }
     else {
-        if (openwhat == 6)
-            sqlite3_snprintf(MAXSQL, dbn, "%s/%s/" DBNAME, in.nameto, name);
-        if (openwhat == 5)
-            sqlite3_snprintf(MAXSQL, dbn, "%s", name);
+        flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
     }
 
-    if (sqlite3_open_v2(dbn, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
-        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db)); */
+    if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
+        #ifdef DEBUG
+        if (sqlite3_open_end) {
+            clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
+        }
+        #endif
+        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
+        sqlite3_close(db); /* close db even if it didn't open to avoid memory leaks */
         return NULL;
     }
 
-    /* // try to turn sychronization off */
-    /* if (sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    #ifdef DEBUG
+    if (sqlite3_open_end) {
+        clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
+    }
+    #endif
 
-    /* // try to turn journaling off */
-    /* if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    #ifdef DEBUG
+    if (set_pragmas_start) {
+        clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
+    }
+    #endif
 
-    /* // try to get an exclusive lock */
-    /* if (sqlite3_exec(db, "PRAGMA locking_mode = EXCLUSIVE", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    if (setpragmas) {
+        /* ignore errors */
+        set_pragmas(db);
+    }
 
-    /* // try increasing the page size */
-    /* if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    #ifdef DEBUG
+    if (set_pragmas_end) {
+        clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
+    }
+    #endif
 
-    /* // try increasing the cache size */
-    /* if (sqlite3_exec(db, "PRAGMA cache_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) { */
-    /* } */
+    #ifdef DEBUG
+    if (load_extension_start) {
+        clock_gettime(CLOCK_MONOTONIC, load_extension_start);
+    }
+    #endif
 
-    if (createtables) {
-        if (create_tables(dbn, openwhat, db) != 0) {
-            fprintf(stderr, "Cannot create tables: %s %s rc %d\n", dbn, sqlite3_errmsg(db), sqlite3_errcode(db));
+    if (load_extensions) {
+        if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || /* enable loading of extensions */
+            (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { /* load the sqlite3-pcre extension */
+            #ifdef DEBUG
+            if (load_extension_end) {
+                clock_gettime(CLOCK_MONOTONIC, load_extension_end);
+            }
+            #endif
+            fprintf(stderr, "Unable to load regex extension\n");
             sqlite3_close(db);
             return NULL;
         }
     }
 
-    if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || // enable loading of extensions
-        (sqlite3_extension_init(db, &err_msg, NULL)                            != SQLITE_OK)) { // load the sqlite3-pcre extension
-        fprintf(stderr, "Unable to load regex extension\n");
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-        db = NULL;
+    #ifdef DEBUG
+    if (load_extension_end) {
+        clock_gettime(CLOCK_MONOTONIC, load_extension_end);
     }
+    #endif
+
+    #ifdef DEBUG
+    if (modifydb_start) {
+        clock_gettime(CLOCK_MONOTONIC, modifydb_start);
+    }
+    #endif
+
+    if (modifydb) {
+        if (modifydb(name, db, modifydb_args) != 0) {
+            #ifdef DEBUG
+            if (modifydb_end) {
+                clock_gettime(CLOCK_MONOTONIC, modifydb_end);
+            }
+            #endif
+            fprintf(stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
+            sqlite3_close(db);
+            return NULL;
+        }
+    }
+
+    #ifdef DEBUG
+    if (modifydb_end) {
+        clock_gettime(CLOCK_MONOTONIC, modifydb_end);
+    }
+    #endif
 
     return db;
 }

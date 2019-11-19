@@ -88,7 +88,6 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
-#include "opendb.h"
 #include "utils.h"
 
 extern int errno;
@@ -201,7 +200,15 @@ int process_path(const char * path) {
     ca.found = 0;
     ca.path = path;
 
-    if ((db = opendb2(dbname, 1, 0, 0))) {
+    if ((db = opendb(dbname, RDONLY, 0, 1,
+                     NULL, NULL
+                     #ifdef DEBUG
+                     , NULL, NULL
+                     , NULL, NULL
+                     , NULL, NULL
+                     , NULL, NULL
+                     #endif
+                     ))) {
         /* query the database */
         char *err = NULL;
         if (sqlite3_exec(db, query, print_callback, &ca, &err) != SQLITE_OK) {

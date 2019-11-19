@@ -61,6 +61,7 @@ OF SUCH DAMAGE.
 */
 
 
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sqlite3.h>
@@ -69,7 +70,7 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "opendb.h"
+#include "dbutils.h"
 #include "template_db.h"
 
 // OSX's sendfile is slightly different
@@ -95,17 +96,32 @@ static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) 
 
 extern int errno;
 
+static int create_tables(const char * name, sqlite3 *db, void * args) {
+    if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+        return -1;
+    }
+
+    return 0;
+}
+
 // create the initial database file to copy from
 off_t create_template(int * fd) {
     static const char name[] = "tmp.db";
 
-    sqlite3 * db = NULL;
-    if (sqlite3_open_v2(name, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI, "unix-none") != SQLITE_OK) {
-        fprintf(stderr, "Cannot create template database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
-        return -1;
-    }
-
-    create_tables(name, db);
+    sqlite3 * db = opendb(name, RDWR, 0, 0,
+                          create_tables, NULL
+                          #ifdef DEBUG
+                          , NULL, NULL
+                          , NULL, NULL
+                          , NULL, NULL
+                          , NULL, NULL
+                          #endif
+                          );
     sqlite3_close(db);
 
     if ((*fd = open(name, O_RDONLY)) == -1) {

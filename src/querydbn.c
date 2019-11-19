@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 
 #include <pwd.h>
 #include <grp.h>
-//#include <uuid/uuid.h>
 
 #include "bf.h"
 #include "utils.h"
@@ -155,8 +154,16 @@ int main(int argc, char *argv[])
 
 
    //printf("processing query name %s  numb dbs %d\n",name, numdbs);
-   SNPRINTF(dbname,MAXPATH,"%s",name);
-   db = opendb(name,5,0);
+   SNPRINTF(dbname,MAXPATH,"%s/%s",name,DBNAME);
+   db = opendb(dbname, RDONLY, 1, 1,
+               NULL, NULL
+               #ifdef DEBUG
+               , NULL, NULL
+               , NULL, NULL
+               , NULL, NULL
+               , NULL, NULL
+               #endif
+               );
 
    // add query funcs to get path() uidtouser() gidtogroup()
    addqueryfuncs(db);
