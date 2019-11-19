@@ -87,8 +87,7 @@ import gufi_common
 gufi_config = imp.load_source('gufi_config', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'gufi_config'))
 
 def build(args, root_uid = 0, root_gid = 0):
-    select = [args.select] if args.select else []
-
+    select = []
     where = []
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
@@ -115,21 +114,21 @@ def files(args, order=''):
     return entries, intermediate, aggregate
 
 def total_space(args, *ignored):
-    _, where = build(args)
-    entries      = gufi_common.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, None, None)
-    intermediate = gufi_common.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, None, None)
+    _, where      = build(args)
+    entries       = gufi_common.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, None, None)
+    intermediate  = gufi_common.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, None, None)
     return entries, intermediate, intermediate
 
 def total_files(args, *ignored):
-    _, where = build(args)
-    entries      = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    aggregate    = gufi_common.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
+    _, where      = build(args)
+    entries       = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
+    aggregate     = gufi_common.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
     return entries, None, aggregate
 
 def directory_count(args, order = ''):
-    _, where = build(args)
-    entries      = gufi_common.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    aggregate    = gufi_common.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
+    _, where      = build(args)
+    entries       = gufi_common.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    aggregate     = gufi_common.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
     return entries, None, aggregate
 
 def get_leaf_dirs(path):
@@ -141,22 +140,22 @@ def leaf_count(args, order = ''):
     return directory_count(args, order)
 
 def total_in_leaf(args, *ignored):
-    _, where = build(args)
-    entries        = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    intermediate   = gufi_common.build_query(['count'],                 ['entries'], None,  None, None, None, None)
-    aggregate      = gufi_common.build_query(['TOTAL(count)'],          ['entries'], None,  None, None, None, None)
+    _, where      = build(args)
+    entries       = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
+    intermediate  = gufi_common.build_query(['count'],                 ['entries'], None,  None, None, None, None)
+    aggregate     = gufi_common.build_query(['TOTAL(count)'],          ['entries'], None,  None, None, None, None)
 
-    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
+    args.paths    = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
     return entries, intermediate, aggregate
 
 def median_in_leaf(args, *ignored):
     '''https://stackoverflow.com/a/15766121'''
     _, where = build(args)
-    entries      = gufi_common.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    intermediate = gufi_common.build_query(['count'],             ['entries'], None,  None, ['count'], '(2 - (SELECT COUNT(*) FROM entries) % 2)', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
-    aggregate    = gufi_common.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
+    entries       = gufi_common.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
+    intermediate  = gufi_common.build_query(['count'],             ['entries'], None,  None, ['count'], '(2 - (SELECT COUNT(*) FROM entries) % 2)', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
+    aggregate     = gufi_common.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
 
-    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
+    args.paths    = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
     return entries, intermediate, aggregate
 
 def get_depth(path, sep = '/'):
@@ -210,18 +209,17 @@ if __name__=='__main__':
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
     # override help to not use -h
-    parser.add_argument('--help',                                                 action='help',                                                  help='show this help message and exit')
+    parser.add_argument('--help',                                                 action='help',                                     help='show this help message and exit')
     parser.add_argument('--version', '-v',                                        action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--order',         metavar='order', dest='order',         choices=ORDER.keys(),      default='',                          help='sort output (if applicable)')
-    parser.add_argument('--delim',         metavar='c',     dest='delim',         type=gufi_common.get_char,                                      help='delimiter separating output columns')
-    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',      type=gufi_common.get_non_negative,                              help='the maximum number of levels to search')
-    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',      type=gufi_common.get_non_negative,                              help='the minimum number of levels to search')
-    parser.add_argument('--num_results',   metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                              help='first n results')
-    parser.add_argument('--select',        metavar='cols',  dest='select',        type=str,                                                       help='comma separated columns')
-    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',           type=gufi_common.get_uid,                                       help='restrict to user')
-    parser.add_argument('--output',                         dest='output',        type=str,                                                       help='Output file prefix (Creates file <output>.tid)')
-    parser.add_argument('--output-buffer', metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,               help='Size of each thread\'s output buffer')
-    parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),                     help='operation to perform')
+    parser.add_argument('--order',         metavar='order', dest='order',         choices=ORDER.keys(),      default='',             help='sort output (if applicable)')
+    parser.add_argument('--delim',         metavar='c',     dest='delim',         type=gufi_common.get_char,                         help='delimiter separating output columns')
+    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',      type=gufi_common.get_non_negative,                 help='the maximum number of levels to search')
+    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',      type=gufi_common.get_non_negative,                 help='the minimum number of levels to search')
+    parser.add_argument('--num_results',   metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                 help='first n results')
+    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',           type=gufi_common.get_uid,                          help='restrict to user')
+    parser.add_argument('--output',                         dest='output',        type=str,                                          help='Output file prefix (Creates file <output>.tid)')
+    parser.add_argument('--output-buffer', metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,  help='Size of each thread\'s output buffer')
+    parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),        help='operation to perform')
     parser.add_argument('paths',                                                  type=str, action='append', nargs='*')
 
     args = parser.parse_args();

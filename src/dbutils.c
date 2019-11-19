@@ -1069,7 +1069,7 @@ static sqlite3 *open_temporary(const char *aggregate_name_format, const int id, 
     SNPRINTF(name, MAXSQL, aggregate_name_format, id);
 
     char create_intermediate_table[MAXSQL];
-    SNPRINTF(create_intermediate_table, MAXSQL, "CREATE TABLE IF NOT EXISTS intermediate AS (%s)", query);
+    SNPRINTF(create_intermediate_table, MAXSQL, "CREATE TABLE IF NOT EXISTS intermediate AS %s", query);
 
     char * err = NULL;
     if (!(db = opendb2(name, 0, 0, 1))                                                                   ||    /* create the temporary database */
