@@ -1003,9 +1003,9 @@ int main(int argc, char *argv[])
     struct ThreadArgs args;
 
     /* initialize globals */
-    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads + 1)              ||
-        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit)      ||
-        !OutputBuffers_init(&args.output_buffers, in.maxthreads + 1, in.output_buffer_size)) {
+    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads + 1)                         ||
+        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit, in.sqlinit_len) ||
+        !OutputBuffers_init(&args.output_buffers, in.maxthreads + 1, in.output_buffer_size))            {
         return -1;
     }
 
@@ -1208,7 +1208,7 @@ int main(int argc, char *argv[])
 
     /* clean up globals */
     OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
-    outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin);
+    outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(gts.outfd,  in.maxthreads);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)

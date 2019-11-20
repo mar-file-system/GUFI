@@ -68,9 +68,9 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 /* opens an array of sqlite3 *s; if opendbs == 0, uses stdout */
-sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit);
+sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit, const size_t sqlinit_len);
 
 /* closes the sqlite3 *s */
-int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin);
+int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin, const size_t sqlfin_len);
 
 #endif
