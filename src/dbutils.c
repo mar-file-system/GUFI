@@ -957,7 +957,11 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
 /* Returns a string containg the size with as large of a unit as reasonable */
 static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    double size  = sqlite3_value_double(argv[0]);
+    const int align = sqlite3_value_int(argv[1]);
+    char format[MAXPATH];
+    char buf[MAXPATH];
+
+    double size = sqlite3_value_double(argv[0]);
     if (size) {
         size_t unit_index = 0;
         while (size > 1024) {
@@ -965,14 +969,21 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
             unit_index++;
         }
 
-        char buf[MAXPATH];
-        snprintf(buf, sizeof(buf), "%.1f%c", size, SIZE[unit_index]);
-
-        sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
+        if (unit_index == 0) {
+            snprintf(format, sizeof(format), "%%%d.1f", align);
+            snprintf(buf, sizeof(buf), format, size);
+        }
+        else {
+            snprintf(format, sizeof(format), "%%%d.1f%%c", align - 1);
+            snprintf(buf, sizeof(buf), format, size, SIZE[unit_index]);
+        }
     }
     else {
-        sqlite3_result_text(context, "0", -1, SQLITE_TRANSIENT);
+        snprintf(format, sizeof(format), "%%%dd", align);
+        snprintf(buf, sizeof(buf), format, 0);
     }
+
+    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
 
     return;
 }
@@ -993,7 +1004,7 @@ int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
              (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8, NULL, &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db, "modetotxt",           1, SQLITE_UTF8, NULL, &modetotxt,           NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8, NULL, &blocksize,           NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db, "human_readable_size", 1, SQLITE_UTF8, NULL, &human_readable_size, NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8, NULL, &human_readable_size, NULL, NULL) == SQLITE_OK) &&
              1);
 }
 

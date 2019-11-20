@@ -113,15 +113,14 @@ def build_select(args):
         if args.no_group == False:
             select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
 
+        # in GNU ls, order of arguments determines which one has precedence
+        # here, --human-readable has precedence
         if args.human_readable:
-            select += ['human_readable_size(size)']
+            select += ['human_readable_size(size, ' + str(args.size_width) + ')']
+        elif args.blocksize:
+            select += ['blocksize(size, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
-            # in GNU ls, order of arguments determines which one has precedence
-            # here, --block-size has precedence
-            if args.blocksize:
-                select += ['blocksize(size, "' + args.blocksize + '", 0)']
-            else:
-                select += ['printf("% ' + str(args.size_width) + 'z", size)']
+            select += ['printf("% ' + str(args.size_width) + 'z", size)']
 
         select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name' + ' || " -> " || linkname) else name end']
     else:
@@ -136,14 +135,15 @@ def build_where(args):
 
     # everything
     if args.all:
-        where += ['name REGEXP "^(?![\.]).*$"']
+        pass
 
     # ignore . and ..
-    elif args.almost_all:
-        where += ['name REGEXP "(?!(\.|\.\.))"']
+    # if args.almost_all:
+    else:
+        where += ['name REGEXP "^(?![\.]).*$"']
 
     # ignore files that end with ~
-    if args.ignore_backups == True:
+    if args.ignore_backups:
         where += ['name REGEXP "^.*(?<![\~])$"']
 
     return where

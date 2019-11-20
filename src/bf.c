@@ -150,7 +150,7 @@ void print_help(const char* prog_name,
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
       case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results (deaults to \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (deaults to \"SELECT * FROM entries\")\n"); break;
-      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O), 2 for atomic per-thread printing\n"); break;
+      case 'e': printf("  -e <0, 1, or 2>    0 for aggregate, 1 for print without aggregating (implied by -o and -O), 2 for atomic per-thread printing\n"); break;
       case 'm': printf("  -m                 Keep mtime and atime same on the database files\n"); break;
       case 'B': printf("  -B <buffer size>   size of each thread's output buffer in bytes\n"); break;
       case 'w': printf("  -w                 open the database files in read-write mode instead of read only mode\n"); break;
@@ -443,6 +443,7 @@ int parse_cmd_line(int         argc,
       case 'B':
          INSTALL_UINT(in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-z");
          break;
+
       case 'w':
          in->readonly = 0;
          break;
