@@ -85,7 +85,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 // allocate the array of sqlite3 * and open file
-sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit) {
+sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit, const size_t sqlinit_len) {
     if (!dbs) {
         return NULL;
     }
@@ -103,21 +103,22 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
                                   , NULL, NULL
                                   #endif
                                   ))) {
-                outdbs_fin(dbs, i, NULL);
+                outdbs_fin(dbs, i, NULL, 0);
                 fprintf(stderr, "Could not open output database file %s\n", buf);
                 return NULL;
             }
         }
 
-        if (sqlinit && strlen(sqlinit)) {
+        if (sqlinit && sqlinit_len) {
             for(int i = 0; i < count; i++) {
                 char * err = NULL;
                 if (sqlite3_exec(dbs[i], sqlinit, NULL, NULL, &err) != SQLITE_OK) {
-                    outdbs_fin(dbs, i, NULL);
+                    outdbs_fin(dbs, i, NULL, 0);
                     fprintf(stderr, "Initial SQL Error: %s\n", err);
                     sqlite3_free(err);
                     return NULL;
                 }
+                sqlite3_free(err);
             }
         }
     }
@@ -125,16 +126,16 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
 }
 
 // close all output dbs
-int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin) {
+int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin, const size_t sqlfin_len) {
     if (dbs) {
-        if (sqlfin && strlen(sqlfin)) {
+        if (sqlfin && sqlfin_len) {
             for(int i = 0; i < end; i++) {
                 char * err = NULL;
                 if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {
                     fprintf(stderr, "Final SQL Error: %s\n", err);
-                    sqlite3_free(err);
                     // ignore errors, since the database is closing anyways
                 }
+                sqlite3_free(err);
             }
         }
 
