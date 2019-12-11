@@ -666,23 +666,6 @@ int printload(const char *name, const struct stat *status, char *type, char *lin
   return(0);
 }
 
-int SNPRINTF(char * str, size_t size, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    const int n = vsnprintf(str, size, format, args);
-    va_end(args);
-    if (n < 0) {
-        fprintf(stderr, "%s:%d Error printing\n",
-                __FILE__, __LINE__);
-    }
-    if ((size_t) n >= size) {
-        fprintf(stderr, "%s:%d Warning: Message "
-                "was truncated to %d characters\n",
-                __FILE__, __LINE__, n);
-    }
-    return n;
-}
-
 /* Equivalent to snprintf printing only strings. Variadic arguments
    should be pairs of strings and their lengths (to try to prevent
    unnecessary calls to strlen). Make sure to typecast the lengths
