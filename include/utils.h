@@ -76,7 +76,19 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 
 /* Wrapper around snprintf to catch issues and print them to stderr */
-int SNPRINTF(char * str, size_t size, const char *format, ...);
+#define SNPRINTF(STR, N, FMT, ...)                                     \
+    do {                                                               \
+        const int n = snprintf(STR, N, FMT, ##__VA_ARGS__);            \
+        if (n < 0) {                                                   \
+            fprintf(stderr, "%s:%d Error printing \"" FMT "\"\n",      \
+                    __FILE__, __LINE__, ##__VA_ARGS__);                \
+        }                                                              \
+        if ((size_t) n >= N) {                                         \
+            fprintf(stderr, "%s:%d Warning: Message %s "               \
+                    "was truncated to %d characters: \"" FMT "\"\n",   \
+                    __FILE__, __LINE__, FMT, n, ##__VA_ARGS__);        \
+        }                                                              \
+    } while (0)
 
 /* Equivalent to snprintf printing only strings. Variadic arguments
    should be pairs of strings and their lengths (to try to prevent
