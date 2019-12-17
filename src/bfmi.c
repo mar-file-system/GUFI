@@ -62,29 +62,27 @@ OF SUCH DAMAGE.
 
 
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <utime.h>
-#include <sys/xattr.h>
-#include <sqlite3.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sqlite3.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/xattr.h>
+#include <unistd.h>
+#include <utime.h>
 
 #include <pwd.h>
 #include <grp.h>
-//#include <uuid/uuid.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "structq.h"
-#include "utils.h"
 #include "dbutils.h"
+#include "utils.h"
 
 #include <pwd.h>
 #include <grp.h>
@@ -108,36 +106,26 @@ int mysql_execute_sql(MYSQL *mysql,const char *create_definition)
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
-static void processdir(void * passv)
+int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 {
-    struct work *passmywork = passv;
+    struct work *passmywork = data;
     struct work qwork;
-    DIR *dir;
-    struct dirent *entry;
-    struct dirent myentry;
-    char lpatho[MAXPATH];
-    int mytid;
     sqlite3 *db;
     char *records;
     struct sum summary;
     sqlite3_stmt *res;
-    sqlite3_stmt *reso;
     char dbpath[MAXPATH];
     int transcnt;
-    MYSQL lmysql;
     MYSQL_RES *lresult;
     MYSQL_ROW lrow;
     char lpinodec[128];
-    unsigned int lnum_fields;
     char ltchar[256];
     struct passwd *lmypasswd;
     struct group *lmygrp;
     char myinsql[MAXSQL];
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
-    mytid=0;
-    mytid=gettid();
-    //printf("mytid is %d\n",mytid);
+    //printf("id is %zu\n",id);
 
     // open directory
     //if (!(dir = opendir(passmywork->name)))
@@ -147,39 +135,39 @@ static void processdir(void * passv)
     SNPRINTF(passmywork->type,2,"%s","d");
     // print?
     if (in.printing > 0 || in.printdir > 0) {
-      printits(passmywork,mytid);
+      printits(passmywork,id);
     }
 
     if (in.buildindex > 0) {
-       dupdir(passmywork);
+       dupdir(passmywork->name, &passmywork->statuso);
        records=malloc(MAXRECS);
        memset(records, 0, MAXRECS);
        //sqlite3 *  opendb(const char *name, sqlite3 *db, int openwhat, int createtables)
        zeroit(&summary);
        db = opendb(passmywork->name,4,1);
-       res=insertdbprep(db,reso);
+       res=insertdbprep(db);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);
     }
 
     SNPRINTF(myinsql,MAXSQL,"select name, type, n.id, n.parent_id, mode, uid, gid, size, last_access, last_mod, last_mdchange, blocks, nlink, replace(replace(replace(replace(replace(replace(replace(replace(n.id,\":\",\"\"),\"0x\",\"\"),\"a\",\"10\"),\"b\",\"11\"),\"c\",\"12\"),\"d\",\"13\"),\"e\",\"14\"),\"f\",\"15\") from entries e left join names n on n.id=e.id  where parent_id = \'%s\'",passmywork->pinodec);
     //printf("select name, type, n.id, n.parent_id, mode, uid, gid, size, last_access, last_mod, last_mdchange, blocks, nlink, replace(replace(replace(replace(replace(replace(replace(replace(n.id,\":\",\"\"),\"0x\",\"\"),\"a\",\"10\"),\"b\",\"11\"),\"c\",\"12\"),\"d\",\"13\"),\"e\",\"14\"),\"f\",\"15\") from entries e left join names n on n.id=e.id  where parent_id = \'%s\'\n",passmywork->pinodec);
-    if(mysql_execute_sql(&msn.mysql[mytid],myinsql)!=0) {
-      printf( "select  %s failed\n", mysql_error(&msn.mysql[mytid]));
-      printf( "%ld Record Found\n",(long)mysql_affected_rows(&msn.mysql[mytid]));
+    if(mysql_execute_sql(&msn.mysql[id],myinsql)!=0) {
+      printf( "select  %s failed\n", mysql_error(&msn.mysql[id]));
+      printf( "%ld Record Found\n",(long)mysql_affected_rows(&msn.mysql[id]));
     } else {
-      lresult = mysql_store_result(&msn.mysql[mytid]);
+      lresult = mysql_store_result(&msn.mysql[id]);
     }
     if (lresult) {
-      lnum_fields = mysql_num_fields(lresult);
+      /* lnum_fields = mysql_num_fields(lresult); */
       //printf("lnum_fields = %d\n",lnum_fields);
       transcnt = 0;
       while ((lrow = mysql_fetch_row(lresult))) {
         //printf("fetching row\n");
-        entry = &myentry;
+        /* entry = &myentry; */
         SNPRINTF(ltchar,128,"%s",lrow[0]);  SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name,ltchar);
         SNPRINTF(ltchar,128,"%s",lrow[1]);  SNPRINTF(qwork.type, 2, "%1s", ltchar);
-        SNPRINTF(ltchar,128,"%s",lrow[2]);  /* this is char inode*/ SNPRINTF(lpinodec,"%s",ltchar); /* the inode becomes the pinodec */
+        SNPRINTF(ltchar,128,"%s",lrow[2]);  /* this is char inode*/ SNPRINTF(lpinodec,128,"%s",ltchar); /* the inode becomes the pinodec */
         SNPRINTF(ltchar,128,"%s",lrow[3]);  /* this is the character pinode*/
         SNPRINTF(ltchar,128,"%s",lrow[4]);  qwork.statuso.st_mode = atol(ltchar);
         SNPRINTF(ltchar,128,"%s",lrow[5]);  lmypasswd = getpwnam(ltchar); qwork.statuso.st_uid = lmypasswd->pw_uid;
@@ -205,11 +193,13 @@ static void processdir(void * passv)
             if (strcmp(qwork.name, ".") == 0 || strcmp(qwork.name, "..") == 0)
                 continue;
             SNPRINTF(qwork.pinodec,128,"%s",lpinodec);
-            // this pushes the dir onto queue - pushdir does locking around queue update
-            pushdir(&qwork);
+            struct work * clone = (struct work *) malloc(sizeof(struct work));
+            memcpy(clone, &qwork, sizeof(struct work));
+            QPTPool_enqueue(ctx, 0, processdir, clone);
+
         } else if (!strncmp(qwork.type,"l",1)) {
             if (in.printing > 0 || in.printdir > 0) {
-               printits(&qwork,mytid);
+               printits(&qwork,id);
             }
             if (in.buildindex > 0) {
               sumit(&summary,&qwork);
@@ -222,7 +212,7 @@ static void processdir(void * passv)
               }
             }
             if (in.printing > 0 || in.printdir > 0) {
-               printits(&qwork,mytid);
+               printits(&qwork,id);
             }
         }
         else if (!strncmp(qwork.type,"f",1)) {
@@ -237,7 +227,7 @@ static void processdir(void * passv)
               }
             }
             if (in.printing > 0 || in.printdir > 0) {
-               printits(&qwork,mytid);
+               printits(&qwork,id);
             }
         }
       }
@@ -246,7 +236,7 @@ static void processdir(void * passv)
 
     if (in.buildindex > 0) {
       stopdb(db);
-      insertdbfin(db,res);
+      insertdbfin(res);
 
       // this i believe has to be after we close off the entries transaction
       insertsumdb(db,passmywork,&summary);
@@ -258,18 +248,16 @@ static void processdir(void * passv)
       free(records);
     }
 
-    // one less thread running
-    decrthread();
 
     // free the queue entry - this has to be here or there will be a leak
-    free(passmywork->freeme);
+    free(data);
 
-    // return NULL;
+    return 0;
 }
 
 
-int processinit(void * myworkin) {
-     struct work * mywork = myworkin;
+int processinit(struct QPTPool * ctx) {
+     struct work * mywork = malloc(sizeof(struct work));
      int i;
      char outfn[MAXPATH];
      FILE *robinfd;
@@ -327,10 +315,9 @@ int processinit(void * myworkin) {
        i++;
      }
 
-     pushdir(mywork);
+     QPTPool_enqueue(ctx, 0, processdir, mywork);
      return 0;
 }
-
 
 int processfin() {
      int i;
@@ -387,59 +374,45 @@ void sub_help() {
 
 int main(int argc, char *argv[])
 {
-     //char nameo[MAXPATH];
-     struct work mywork;
-     int i;
-
-     // process input args - all programs share the common 'struct input',
-     // but allow different fields to be filled at the command-line.
-     // Callers provide the options-string for get_opt(), which will
-     // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbt:o:", 1, "robin_in");
-     if (in.helped)
+    // process input args - all programs share the common 'struct input',
+    // but allow different fields to be filled at the command-line.
+    // Callers provide the options-string for get_opt(), which will
+    // control which options are parsed for each program.
+    int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbt:o:", 1, "robin_in", &in);
+    if (in.helped)
         sub_help();
-     if (idx < 0)
-         return -1;
-     else {
+    if (idx < 0)
+        return -1;
+    else {
         // parse positional args, following the options
         int retval = 0;
         INSTALL_STR(msn.robinin,  argv[idx++], MAXPATH, "robin_in");
 
         if (retval)
-           return retval;
-     }
+            return retval;
+    }
 
-     if (validate_inputs())
+    if (validate_inputs())
         return -1;
 
-     // start threads and loop watching threads needing work and queue size
-     // - this always stays in main right here
-     mythpool = thpool_init(in.maxthreads);
-     if (thpool_null(mythpool)) {
-        fprintf(stderr, "thpool_init() failed!\n");
+    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    if (!pool) {
+        fprintf(stderr, "Failed to initialize thread pool\n");
         return -1;
-     }
+    }
 
-     // process initialization, this is work done once the threads are up
-     // but not busy yet - this will be different for each instance of a bf
-     // program in this case we are stat'ing the directory passed in and
-     // putting that directory on the queue
-     processinit(&mywork);
+    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+        fprintf(stderr, "Failed to start threads\n");
+        return -1;
+    }
 
-     // processdirs - if done properly, this routine is common and does not
-     // have to be done per instance of a bf program.  Loops through and
-     // processes all directories that enter the queue by farming the work
-     // out to the threadpool
-     processdirs(processdir);
+    processinit(pool);
 
-     // processfin - this is work done after the threads are done working
-     // before they are taken down - this will be different for each
-     // instance of a bf program
-     processfin();
+    QPTPool_wait(pool);
 
+    QPTPool_destroy(pool);
 
-     // clean up threads and exit
-     thpool_wait(mythpool);
-     thpool_destroy(mythpool);
-     return 0;
+    processfin();
+
+    return 0;
 }

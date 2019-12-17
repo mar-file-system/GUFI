@@ -212,7 +212,7 @@ else()
 endif()
 
 # Find MySQL
-pkg_search_module(MYSQL mysql)
+find_package(MYSQL)
 if (MYSQL_FOUND)
   message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
   message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
@@ -246,6 +246,7 @@ set(COMMON_INCLUDES
   ${XATTR_INCLUDEDIR}
   ${DEP_INSTALL_PREFIX}/sqlite3/include
   ${DEP_INSTALL_PREFIX}/sqlite3-pcre)
+
 include_directories(${COMMON_INCLUDES})
 
 # set of libraries needed by the final binaries

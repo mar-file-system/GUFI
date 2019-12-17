@@ -210,13 +210,10 @@ endif()
 
 # only build bfmi if MySQL is found
 if (MYSQL_FOUND)
-  string(REPLACE ";" " " MYSQL_CFLAGS "${MYSQL_CFLAGS}")
-  string(REPLACE ";" " " MYSQL_LDFLAGS "${MYSQL_LDFLAGS}")
-
   # create the bfmi executable
   add_executable(bfmi bfmi.c)
-  set_target_properties(bfmi PROPERTIES COMPILE_FLAGS "${MYSQL_CFLAGS}")
-  target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LDFLAGS})
+  target_include_directories(bfmi SYSTEM PRIVATE ${MYSQL_INCLUDEDIR})
+  target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LIBDIR})
 
   # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
   install(TARGETS bfmi DESTINATION bin COMPONENT Server)
