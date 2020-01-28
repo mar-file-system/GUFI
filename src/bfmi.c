@@ -172,7 +172,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
                    , NULL
                    #endif
                    );
-       res=insertdbprep(db,reso);
+       res=insertdbprep(db);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);
     }
