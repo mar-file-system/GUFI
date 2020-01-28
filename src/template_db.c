@@ -73,23 +73,22 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "template_db.h"
 
-// OSX's sendfile is slightly different
 #ifdef __APPLE__
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
+#include <copyfile.h>
 
-static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) {
-    off_t len = size;
-    return sendfile(src_fd, dst_fd, offset, &len, NULL, 0);
+static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
+    (void) size;
+    lseek(src_fd, 0, SEEK_SET);
+    return fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
 }
 
 #else
 
 #include <sys/sendfile.h>
 
-static ssize_t gufi_sendfile(int src_fd, int dst_fd, off_t offset, size_t size) {
+static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
+    off_t offset = 0;
     return sendfile(dst_fd, src_fd, &offset, size);
 }
 #endif
@@ -141,7 +140,7 @@ int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid
     // ignore errors here
     const int src_db = dup(src_fd);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-    const ssize_t sf = gufi_sendfile(src_db, dst_db, 0, size);
+    const ssize_t sf = gufi_copyfd(src_db, dst_db, size);
     fchown(dst_db, uid, gid);
     close(src_db);
     close(dst_db);

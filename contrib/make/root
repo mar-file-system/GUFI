@@ -30,11 +30,6 @@ DEP_DOWNLOAD_PREFIX  ?= $(MAKEFILE_PATH)/contrib/deps
 DEP_BUILD_PREFIX     ?= $(MAKEFILE_PATH)/deps/build
 DEP_INSTALL_PREFIX   ?= $(MAKEFILE_PATH)/deps/install
 
-THPOOL_PATH          ?= $(DEP_INSTALL_PREFIX)/C-Thread-Pool
-THPOOL_CFLAGS        ?= -I$(THPOOL_PATH)/include
-THPOOL_LDFLAGS       ?= -pthread
-THPOOL_LIB           ?= $(THPOOL_PATH)/lib/libthpool.a
-
 SQLITE3_PATH         ?= $(DEP_INSTALL_PREFIX)/sqlite3
 SQLITE3_CFLAGS       ?= -I$(SQLITE3_PATH)/include
 SQLITE3_LDFLAGS      ?=
@@ -50,10 +45,10 @@ JEMALLOC_CFLAGS       ?= -I$(JEMALLOC_PATH)/include
 JEMALLOC_LDFLAGS      ?=
 JEMALLOC_LIB          ?= $(JEMALLOC_PATH)/lib/libjemalloc.a
 
-CFLAGS               += $(THPOOL_CFLAGS)  $(SQLITE3_PCRE_CFLAGS)
-CXXFLAGS             += $(THPOOL_CFLAGS)  $(SQLITE3_PCRE_CFLAGS)
-LDFLAGS              += $(THPOOL_LDFLAGS) $(SQLITE3_PCRE_LDFLAGS)
-STATIC_DEPS           = ${THPOOL_LIB} ${SQLITE3_PCRE_LIB} ${SQLITE3_LIB} $(JEMALLOC_LIB)
+CFLAGS               += $(SQLITE3_PCRE_CFLAGS)
+CXXFLAGS             += $(SQLITE3_PCRE_CFLAGS)
+LDFLAGS              += $(SQLITE3_PCRE_LDFLAGS) -pthread
+STATIC_DEPS           = ${SQLITE3_PCRE_LIB} ${SQLITE3_LIB} $(JEMALLOC_LIB)
 
 # CFLAGS += -std=c11 -D_POSIX_C_SOURCE=2
 ifneq ($(DEBUG),)

@@ -420,7 +420,7 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(char* path, mode_t mode) {
+int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
   for (char* p=strchr(path+1, '/'); p; p=strchr(p+1, '/')) {
     //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
@@ -431,6 +431,10 @@ int mkpath(char* path, mode_t mode) {
          *p='/';
          return -1;
       }
+    }
+    else {
+      chmod(path, mode);
+      chown(path, uid, gid);
     }
     *p='/';
   }
@@ -447,7 +451,7 @@ int dupdir(char * path, struct stat * stat)
       //perror("mkdir");
       if (errno == ENOENT) {
         //printf("calling mkpath on %s\n",path);
-        mkpath(path, stat->st_mode);
+        mkpath(path, stat->st_mode, stat->st_uid, stat->st_gid);
       } else if (errno != EEXIST) {
         return 1;
       }
