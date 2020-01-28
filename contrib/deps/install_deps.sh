@@ -14,7 +14,7 @@ elif [ -x "$(command -v cmake3)" ]
   CMAKE=$(command -v cmake3)
 else
   echo "No cmake available!"
-  exit 0
+  exit 1
 fi
 
 BUILD_CXX="false"

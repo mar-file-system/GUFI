@@ -596,7 +596,10 @@ TEST(mkpath, parentfirst) {
 
     const mode_t prev_umask = umask(0);
     ASSERT_EQ(mkdir (parent, orig_parent_stat.st_mode), 0);
-    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode),  0);
+    #ifdef __APPLE__
+    ASSERT_EQ(chown (parent, orig_parent_stat.st_uid, orig_parent_stat.st_gid), 0);
+    #endif
+    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid),  0);
 
     struct stat parent_stat;
     struct stat child_stat;
@@ -635,8 +638,8 @@ TEST(mkpath, childfirst) {
     rmdir(parent);
 
     const mode_t prev_umask = umask(0);
-    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode),   0);
-    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode),  -1); // EEXISTS
+    ASSERT_EQ(mkpath(child,  orig_child_stat.st_mode, orig_child_stat.st_uid, orig_child_stat.st_gid),   0);
+    ASSERT_EQ(mkpath(parent, orig_parent_stat.st_mode, orig_parent_stat.st_uid, orig_parent_stat.st_gid),  -1); // EEXISTS
 
     struct stat parent_stat;
     struct stat child_stat;

@@ -259,7 +259,6 @@ set(COMMON_LIBRARIES
   ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
   m
   dl
-  -static-libgcc
 )
 
 # build contrib executables

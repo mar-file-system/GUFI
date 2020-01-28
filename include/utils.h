@@ -135,7 +135,7 @@ int tsumit (struct sum *sumin,struct sum *smout);
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(char* path, mode_t mode);
+int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid);
 
 int dupdir(char* path, struct stat * stat);
 

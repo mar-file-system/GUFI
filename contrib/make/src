@@ -1,5 +1,5 @@
 # libGUFI files
-LIBFILES = bf dbutils debug opendb outfiles outdbs OutputBuffers QueuePerThreadPool SinglyLinkedList structq template_db trace utils
+LIBFILES = bf dbutils debug opendb outfiles outdbs OutputBuffers QueuePerThreadPool SinglyLinkedList template_db trace utils
 
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
@@ -19,7 +19,7 @@ TARGETS   = $(DFW) $(BFW) $(C_TOOLS) $(CXX_TOOLS)
 all: $(TARGETS)
 
 %.o: %.c $(LIB_H)
-	$(CC) $(CFLAGS) -c -o $@ $< -pthread
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- library
 
@@ -29,11 +29,11 @@ $(LIB_A): $(LIB_O)
 # --- apps
 
 %: %.c $(LIB_A) $(STATIC_DEPS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 ifneq ("$(CXX)", "false")
 %: %.cpp $(LIB_A) $(STATIC_DEPS)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 endif
 
 # recursive make of the '%' part
