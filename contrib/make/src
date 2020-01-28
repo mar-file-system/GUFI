@@ -1,5 +1,5 @@
 # libGUFI files
-LIBFILES = bf dbutils debug opendb outfiles outdbs OutputBuffers QueuePerThreadPool SinglyLinkedList template_db trace utils
+LIBFILES = bf dbutils debug outfiles outdbs OutputBuffers QueuePerThreadPool SinglyLinkedList template_db trace utils
 
 LIB_C = $(addsuffix .c,$(LIBFILES))
 LIB_O = $(addsuffix .o,$(LIBFILES))
