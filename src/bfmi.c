@@ -159,19 +159,19 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
        zeroit(&summary);
        char dbname[MAXPATH];
        SNPRINTF(dbname, MAXPATH, "%s/%s", passmywork->name, DBNAME);
-       db = opendb2(dbname, RDWR, 1, 1,
-                    create_tables, NULL
-                    #ifdef DEBUG
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    #endif
-                    );
+       db = opendb(dbname, RDWR, 1, 1,
+                   create_tables, NULL
+                   #ifdef DEBUG
+                   , NULL
+                   , NULL
+                   , NULL
+                   , NULL
+                   , NULL
+                   , NULL
+                   , NULL
+                   , NULL
+                   #endif
+                   );
        res=insertdbprep(db,reso);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);
