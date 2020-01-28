@@ -73,15 +73,12 @@ OF SUCH DAMAGE.
 #include <time.h>
 #endif
 
-#include <sched.h>
 #include <stdlib.h>
-#include <sys/sysinfo.h>
 
 /* struct to pass into pthread_create */
 struct worker_function_args {
     struct QPTPool * ctx;
     size_t id;
-    int cpus;
     void * args;
 };
 
@@ -114,19 +111,6 @@ static void * worker_function(void * args) {
 
     struct worker_function_args * wf_args = (struct worker_function_args *) args;
     struct QPTPool * ctx = wf_args->ctx;
-
-    /* assumes that all cpus are available for use */
-    cpu_set_t cpu;
-    CPU_ZERO(&cpu);
-    if (ctx->size > wf_args->cpus) {
-        CPU_SET(wf_args->id % wf_args->cpus, &cpu);
-    }
-    else {
-        CPU_SET(wf_args->id, &cpu);
-    }
-
-    /* ignore errors; at worst, thread is not pinned */
-    sched_setaffinity(0, sizeof(cpu_set_t), &cpu);
 
     if (!ctx) {
         free(args);
@@ -379,13 +363,11 @@ size_t QPTPool_start(struct QPTPool * ctx, void * args) {
         return 0;
     }
 
-    const int cpus = get_nprocs();
     size_t started = 0;
     for(size_t i = 0; i < ctx->size; i++) {
         struct worker_function_args * wf_args = calloc(1, sizeof(struct worker_function_args));
         wf_args->ctx = ctx;
         wf_args->id = i;
-        wf_args->cpus = cpus;
         wf_args->args = args;
         started += !pthread_create(&ctx->data[i].thread, NULL, worker_function, wf_args);
     }
