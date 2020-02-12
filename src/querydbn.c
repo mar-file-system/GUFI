@@ -100,7 +100,6 @@ void sub_help() {
 int main(int argc, char *argv[])
 {
    char name[MAXPATH];
-   char dbname[MAXPATH];
    char rsqlstmt[MAXSQL];
    int rc;
    sqlite3 *db;
@@ -154,8 +153,7 @@ int main(int argc, char *argv[])
 
 
    //printf("processing query name %s  numb dbs %d\n",name, numdbs);
-   SNPRINTF(dbname,MAXPATH,"%s/%s",name,DBNAME);
-   db = opendb(dbname, RDONLY, 1, 1,
+   if (!(db = opendb(name, RDWR, 1, 1,
                NULL, NULL
                #ifdef DEBUG
                , NULL, NULL
@@ -163,13 +161,16 @@ int main(int argc, char *argv[])
                , NULL, NULL
                , NULL, NULL
                #endif
-               );
+             ))) {
+       fprintf(stderr, "Error: Unable to create database file \"%s\".\n", name);
+       return -1;
+   }
 
    // add query funcs to get path() uidtouser() gidtogroup()
-   addqueryfuncs(db);
+   addqueryfuncs(db, 0);
 
    // just zero out the global path so path() for this query is useless
-   bzero(gps[0].gpath,sizeof(gps[0].gpath));
+   memset(gps[0].gpath, 0, sizeof(gps[0].gpath));
 
    SNPRINTF(sqlu,MAXSQL,"create temp view v%s as ",tabnam);
    i=0;

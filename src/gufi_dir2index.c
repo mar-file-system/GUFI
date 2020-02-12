@@ -387,7 +387,7 @@ struct work * validate_inputs() {
 }
 
 void sub_help() {
-   printf("input_dir         walk this tree to produce GUFI-tree\n");
+   printf("input_dir         walk this tree to produce GUFI index\n");
    printf("output_dir        build GUFI index here\n");
    printf("\n");
 }
