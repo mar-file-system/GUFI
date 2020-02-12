@@ -318,7 +318,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
 
     SNPRINTF(passmywork->type,2,"%s","d");
     passmywork->suspect=in.suspectd;
-    /* if we are putting the gufi tree into the source tree we can modify the suspecttime to be the mtime of the gufi db */
+    /* if we are putting the gufi index into the source tree we can modify the suspecttime to be the mtime of the gufi db */
     /* this way we will just be looking at dirs or files that have changed since the gufi db was last updated */
     locsuspecttime=in.suspecttime;
     if (in.buildinindir == 1) {
@@ -716,7 +716,7 @@ int validate_inputs() {
 }
 
 void sub_help() {
-   printf("input_dir         walk this tree to produce GUFI-tree\n");
+   printf("input_dir         walk this tree to produce GUFI index\n");
    printf("\n");
 }
 

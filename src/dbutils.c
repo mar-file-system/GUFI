@@ -62,8 +62,9 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <pwd.h>
 #include <grp.h>
@@ -813,6 +814,27 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return 0;
 }
 
+static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const size_t id = (int) (uintptr_t) sqlite3_user_data(context);
+    sqlite3_result_text(context, gps[id].gpath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
+static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const size_t id = (int) (uintptr_t) sqlite3_user_data(context);
+    sqlite3_result_text(context, gps[id].gfpath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
+static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const size_t id = (int) (uintptr_t) sqlite3_user_data(context);
+    sqlite3_result_text(context, gps[id].gepath, -1, SQLITE_TRANSIENT);
+    return;
+}
+
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     struct passwd *fmypasswd;
@@ -864,10 +886,13 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_null(context);
 }
 
-int addqueryfuncs(sqlite3 *db) {
-    return ((sqlite3_create_function(db, "uidtouser",  1, SQLITE_UTF8, NULL, &uidtouser,  NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL, &gidtogroup, NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "modetotxt",  1, SQLITE_UTF8, NULL, &modetotxt,  NULL, NULL) == SQLITE_OK))?0:1;
+int addqueryfuncs(sqlite3 *db, int id) {
+    return ((sqlite3_create_function(db, "path",       0, SQLITE_UTF8, (void *) (uintptr_t) id,  &path,       NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "fpath",      0, SQLITE_UTF8, (void *) (uintptr_t) id,  &fpath,      NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "epath",      0, SQLITE_UTF8, (void *) (uintptr_t) id,  &epath,      NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "uidtouser",  1, SQLITE_UTF8, NULL,                     &uidtouser,  NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "gidtogroup", 1, SQLITE_UTF8, NULL,                     &gidtogroup, NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "modetotxt",  1, SQLITE_UTF8, NULL,                     &modetotxt,  NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
@@ -936,7 +961,7 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
     return rec_count;
 }
 
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query) {
+sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query, int id) {
     // copy and sanitize query
     char buf[MAXSQL];
     SNPRINTF(buf, MAXSQL, "%s", query);
@@ -973,7 +998,7 @@ sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *q
                          GUFI_SQLITE_VFS)                                                                          != SQLITE_OK) || // create the aggregate database
         (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                              != SQLITE_OK) || // enable extension loading
         (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                         != SQLITE_OK) || // load the sqlite3-pcre extension
-        (addqueryfuncs(aggregate)                                                                                  != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
+        (addqueryfuncs(aggregate, id)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
         (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                       != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
         (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                       != SQLITE_OK) || // create the aggregate table
         (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                      != SQLITE_OK) || // drop the entries table

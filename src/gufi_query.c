@@ -433,25 +433,11 @@ static size_t descend2(struct QPTPool *ctx,
     return pushed;
 }
 
-/* ////////////////////////////////////////////////// */
-/* these functions need to be moved back into dbutils */
-static void path2(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    const size_t id = QPTPool_get_index((struct QPTPool *) sqlite3_user_data(context), pthread_self());
-    sqlite3_result_text(context, gps[id].gpath, -1, SQLITE_TRANSIENT);
-
-    return;
-}
-
-int addqueryfuncs2(sqlite3 *db, struct QPTPool * ctx) {
-    return !(sqlite3_create_function(db, "path", 0, SQLITE_UTF8, ctx, &path2, NULL, NULL) == SQLITE_OK);
-}
-/* ////////////////////////////////////////////////// */
-
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
     struct OutputBuffers * output_buffers;
     int id;
+    size_t count;
 };
 
 static int print_callback(void * args, int count, char **data, char **columns) {
@@ -508,6 +494,8 @@ static int print_callback(void * args, int count, char **data, char **columns) {
         }
 
         free(lens);
+
+        ca->count++;
     /* } */
     return 0;
 }
@@ -679,7 +667,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #endif
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
-        addqueryfuncs2(db, ctx);
+        addqueryfuncs(db, id);
     }
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_end);
@@ -747,8 +735,23 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                     SNFORMAT_S(gps[id].gpath, MAXPATH, 1, shortname, strlen(shortname));
                     /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
                     realpath(work->name,gps[id].gfpath);
-                    recs = rawquerydb(work->name, 1, db, in.sqlsum, 1, 0, 0, id);
-                    /* printf("summary ran %s on %s returned recs %d\n",in.sqlsum,work->name,recs); */
+
+                    #ifndef NO_SQL_EXEC
+                    struct ThreadArgs * ta = (struct ThreadArgs *) args;
+                    struct CallbackArgs ca;
+                    ca.output_buffers = &ta->output_buffers;
+                    ca.id = id;
+                    ca.count = 0;
+
+                    /* this probably needs a timer */
+                    char *err = NULL;
+                    if (sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
+                        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
+                        sqlite3_free(err);
+                    }
+                    #endif
+
+                    recs = ca.count;
                 } else {
                     recs = 1;
                 }
@@ -963,7 +966,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 }
 
 void sub_help() {
-   printf("GUFI_tree         find GUFI index-tree here\n");
+   printf("GUFI_index        find GUFI index here\n");
    printf("\n");
 }
 
@@ -989,7 +992,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:w", 1, "GUFI_tree ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:w", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -1003,7 +1006,7 @@ int main(int argc, char *argv[])
     struct ThreadArgs args;
 
     /* initialize globals */
-    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads + 1)                         ||
+    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads)                             ||
         !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit, in.sqlinit_len) ||
         !OutputBuffers_init(&args.output_buffers, in.maxthreads + 1, in.output_buffer_size))            {
         return -1;
@@ -1040,14 +1043,15 @@ int main(int argc, char *argv[])
     sqlite3 **intermediates = NULL;
     char aggregate_name[MAXSQL] = {};
     if (in.aggregate_or_print == AGGREGATE) {
-        /* modify in.sqlent to insert the results into the aggregate table */
+        /* modify in.sqlent to insert the results into the intermediate table (named 'aggregate') it is associated with */
         char orig_sqlent[MAXSQL];
-        SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, strlen(in.sqlent));
-        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, orig_sqlent, strlen(orig_sqlent));
+        SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, in.sqlent_len);
+        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, orig_sqlent, in.sqlent_len);
 
         /* create the aggregate database */
+        /* functions that use global values, like path might not work correctly */
         SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
-        if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
+        if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent, in.maxthreads))) {
             return -1;
         }
 
@@ -1055,7 +1059,7 @@ int main(int argc, char *argv[])
         for(int i = 0; i < in.maxthreads; i++) {
             char intermediate_name[MAXSQL];
             SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
-            if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent))) {
+            if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent, i))) {
                 fprintf(stderr, "Could not open %s\n", intermediate_name);
                 cleanup_intermediates(intermediates, i);
                 closedb(aggregate);
@@ -1204,7 +1208,7 @@ int main(int argc, char *argv[])
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     const size_t rows =
     #endif
-    OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads + 1, gts.outfd);
+    OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads, gts.outfd);
 
     /* clean up globals */
     OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);

@@ -139,10 +139,10 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
 
-int addqueryfuncs(sqlite3 *db);
+int addqueryfuncs(sqlite3 *db, int id);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query);
+sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query, int id);
 
 #endif

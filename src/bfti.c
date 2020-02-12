@@ -238,7 +238,7 @@ int processfin() {
 
 
 void sub_help() {
-   printf("GUFI_tree         path to GUFI tree-dir\n");
+   printf("GUFI_index        path to GUFI index\n");
    printf("\n");
 }
 
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_tree", &in);
+     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_index", &in);
      if (in.helped)
         sub_help();
      if (idx < 0)
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
      else {
         // parse positional args, following the options
         int retval = 0;
-        INSTALL_STR(in.name, argv[idx++], MAXPATH, "GUFI_tree");
+        INSTALL_STR(in.name, argv[idx++], MAXPATH, "GUFI_index");
 
         if (retval)
            return retval;
