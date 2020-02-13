@@ -153,6 +153,9 @@ else()
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_GNU_XATTRS")
 endif()
 
+set(BIN "bin" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
+set(LIB "lib" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
+
 # Need pthread
 find_package(Threads REQUIRED)
 
@@ -261,20 +264,23 @@ set(COMMON_LIBRARIES
   dl
 )
 
-# build contrib executables
-add_subdirectory(contrib)
-
-# tell CMake to look at the src directory
+# build the core executables
 add_subdirectory(src)
 
-# process the scripts directory
+# build the core scripts
 add_subdirectory(scripts)
+
+# build documentation
+add_subdirectory(docs)
 
 # enable "make test"
 enable_testing()
 
 # recurse down into the test subdirectory
 add_subdirectory(test)
+
+# build contrib executables
+add_subdirectory(contrib)
 
 #
 # Define commands and tools for "make gary"
@@ -351,35 +357,37 @@ set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
 execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # Generate RPMs
-find_program(RPMBUILD REQUIRED rpmbuild)
-set(CPACK_GENERATOR "RPM")
-set(CPACK_RPM_COMPONENT_INSTALL On)
-set(CPACK_RPM_FILE_NAME "gufi-${GUFI_VERSION}.${ARCH}.rpm")
-set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
-set(CPACK_RPM_PACKAGE_NAME "GUFI")
-set(CPACK_RPM_PACKAGE_VERSION "${GUFI_VERSION}")
-set(CPACK_RPM_PACKAGE_RELEASE 1)
-set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
-set(CPACK_RPM_PACKAGE_VENDOR "LANL")
-set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
-set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python >= 2.7, python < 3, coreutils")
-set(CPACK_RPM_PACKAGE_RELOCATABLE On)
-set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
-set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
-set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
-set(CPACK_RPM_Server_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/scripts/generate_server_config")
+find_program(RPMBUILD rpmbuild)
+if (RPMBUILD)
+  set(CPACK_GENERATOR "RPM")
+  set(CPACK_RPM_COMPONENT_INSTALL On)
+  set(CPACK_RPM_FILE_NAME "gufi-${GUFI_VERSION}.${ARCH}.rpm")
+  set(CPACK_RPM_PACKAGE_SUMMARY "Grand Unified File Index")
+  set(CPACK_RPM_PACKAGE_NAME "GUFI")
+  set(CPACK_RPM_PACKAGE_VERSION "${GUFI_VERSION}")
+  set(CPACK_RPM_PACKAGE_RELEASE 1)
+  set(CPACK_RPM_PACKAGE_LICENSE "BSD/LANL")
+  set(CPACK_RPM_PACKAGE_VENDOR "LANL")
+  set(CPACK_RPM_PACKAGE_URL "https://github.com/mar-file-system/GUFI")
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, python >= 2.7, python < 3, coreutils")
+  set(CPACK_RPM_PACKAGE_RELOCATABLE On)
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
+  set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
+  set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
+  set(CPACK_RPM_Server_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/scripts/generate_server_config")
 
-if (CLIENT)
-  set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
-  # python libraries are installed through pip, and won't be found by rpm
-  set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh, python2-pip")
-  set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
-  set(CPACK_RPM_Client_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/contrib/python/pip_install.sh")
-  set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/scripts/generate_client_config")
+  if (CLIENT)
+    set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
+    # python libraries are installed through pip, and won't be found by rpm
+    set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh, python2-pip")
+    set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
+    set(CPACK_RPM_Client_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/contrib/python/pip_install.sh")
+    set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/scripts/generate_client_config")
+  endif()
+
+  # Generate source RPM
+  set(CPACK_SOURCE_GENERATOR "RPM")
+  set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.gitignore")
+
+  include(CPack)
 endif()
-
-# Generate source RPM
-set(CPACK_SOURCE_GENERATOR "RPM")
-set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.gitignore")
-
-include(CPack)

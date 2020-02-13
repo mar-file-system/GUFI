@@ -181,11 +181,11 @@ set(C_SOURCES
 )
 
 # build the C executables
-build_and_install(bin TRUE ${C_SOURCES})
+build_and_install(${BIN} TRUE ${C_SOURCES})
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
-build_and_install(bin FALSE ${MISC_SOURCES})
+build_and_install(${BIN} FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
 if (MY_FUSE_FOUND)
@@ -203,8 +203,8 @@ if (MY_FUSE_FOUND)
   set_target_properties(bfresultfuse PROPERTIES COMPILE_FLAGS "${MY_FUSE_CFLAGS}")
   target_link_libraries(bfresultfuse ${COMMON_LIBRARIES} ${MY_FUSE_LDFLAGS})
 
-  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS bffuse bfresultfuse DESTINATION bin COMPONENT Server)
+  # install the fuse binaries in ${CMAKE_INSTALL_PREFIX}/${BIN}
+  install(TARGETS bffuse bfresultfuse DESTINATION ${BIN} COMPONENT Server)
 endif()
 
 # only build bfmi if MySQL is found
@@ -214,8 +214,8 @@ if (MYSQL_FOUND)
   target_include_directories(bfmi SYSTEM PRIVATE ${MYSQL_INCLUDEDIR})
   target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LIBDIR})
 
-  # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/bin
-  install(TARGETS bfmi DESTINATION bin COMPONENT Server)
+  # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/${BIN}
+  install(TARGETS bfmi DESTINATION ${BIN} COMPONENT Server)
 endif()
 
 # only build db2 sources if db2 is found
