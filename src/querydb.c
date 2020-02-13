@@ -76,7 +76,7 @@ OF SUCH DAMAGE.
 extern int errno;
 
 void sub_help() {
-   printf("DB_path           path to dir containinng %s.*\n",DBNAME);
+   printf("DB_path           path to dir containing %s.*\n",DBNAME);
    printf("SQL               arbitrary SQL on DB\n");
    printf("\n");
 }

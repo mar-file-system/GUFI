@@ -440,7 +440,7 @@ struct CallbackArgs {
     size_t count;
 };
 
-static int print_callback(void * args, int count, char **data, char **columns) {
+static int print_callback(void *args, int count, char **data, char **columns) {
     /* skip argument checking */
     /* if (!args) { */
     /*     return 1; */
@@ -1006,9 +1006,10 @@ int main(int argc, char *argv[])
     struct ThreadArgs args;
 
     /* initialize globals */
-    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, in.maxthreads)                             ||
+    const size_t output_count = in.maxthreads + !!(in.aggregate_or_print == AGGREGATE);
+    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, output_count)                              ||
         !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit, in.sqlinit_len) ||
-        !OutputBuffers_init(&args.output_buffers, in.maxthreads + 1, in.output_buffer_size))            {
+        !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size))                 {
         return -1;
     }
 
@@ -1133,6 +1134,7 @@ int main(int argc, char *argv[])
     long double output_time = 0;
     #endif
 
+    int rc = 0;
     if (in.aggregate_or_print == AGGREGATE) {
         /* prepend the intermediate database query with "INSERT INTO" to move */
         /* the data from the databases into the final aggregation database */
@@ -1187,6 +1189,7 @@ int main(int argc, char *argv[])
         if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
             fprintf(stderr, "Cannot print from aggregate database: %s\n", err);
             sqlite3_free(err);
+            rc = -1;
         }
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
@@ -1211,9 +1214,9 @@ int main(int argc, char *argv[])
     OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads, gts.outfd);
 
     /* clean up globals */
-    OutputBuffers_destroy(&args.output_buffers, in.maxthreads + 1);
+    OutputBuffers_destroy(&args.output_buffers, output_count);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
-    outfiles_fin(gts.outfd,  in.maxthreads);
+    outfiles_fin(gts.outfd, output_count);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     struct timespec cleanup_globals_end;
@@ -1283,5 +1286,5 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time);
     #endif
 
-    return 0;
+    return rc;
 }

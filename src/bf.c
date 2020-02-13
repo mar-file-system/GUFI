@@ -213,7 +213,6 @@ int parse_cmd_line(int         argc,
                    int         n_positional,
                    const char* positional_args_help_str,
                    struct input *in) {
-
    in->maxthreads         = 1;         // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), "|");
    in->sqlinit_len        = 0;
@@ -229,6 +228,10 @@ int parse_cmd_line(int         argc,
    in->suspectmethod      = 0;
    in->stride             = 0;         // default striping of inodes
    in->infile             = 0;         // default infile being used
+   in->outfile            = 0;         // no default outfile name
+   memset(in->outfilen,     0, MAXPATH);
+   in->outdb              = 0;         // no default outdb name
+   memset(in->outdbn,       0, MAXPATH);
    in->min_level          = 0;         // default to the top
    in->max_level          = -1;        // default to all the way down
    memset(in->sqlent,       0, MAXSQL);
@@ -306,13 +309,11 @@ int parse_cmd_line(int         argc,
       case 'o':
          in->outfile = 1;
          INSTALL_STR(in->outfilen, optarg, MAXPATH, "-o");
-         in->aggregate_or_print = PRINT;
          break;
 
       case 'O':
          in->outdb = 1;
          INSTALL_STR(in->outdbn, optarg, MAXPATH, "-O");
-         in->aggregate_or_print = PRINT;
          break;
 
       case 't':
@@ -390,11 +391,16 @@ int parse_cmd_line(int         argc,
             int aggregate_or_print = 0;
             INSTALL_INT(aggregate_or_print, optarg, 0, 1, "-e");
 
-            if (aggregate_or_print == 0) {
-               in->aggregate_or_print = AGGREGATE;
-            }
-            else if (aggregate_or_print == 1) {
-               in->aggregate_or_print = PRINT;
+            switch (aggregate_or_print) {
+                case 0:
+                    in->aggregate_or_print = AGGREGATE;
+                    break;
+                case 1:
+                    in->aggregate_or_print = PRINT;
+                    break;
+                default:
+                    retval = -1;
+                    break;
             }
          }
          break;
@@ -444,12 +450,30 @@ int parse_cmd_line(int         argc,
       };
    }
 
-   // aggregating requires 2 more SQL queries
+   // -o and -O imply -e 1
+   if ((in->outfile || in->outdb) && (in->aggregate_or_print == AGGREGATE)) {
+       fprintf(stderr, "Warning: An output prefix has been specified with aggregation. Turning off aggregation.\n");
+       in->aggregate_or_print = PRINT;
+   }
+
+   // aggregating requires -E and 2 more SQL queries (-G and -J)
    if (in->aggregate_or_print == AGGREGATE) {
-       if (!strlen(in->aggregate) || !strlen(in->intermediate)) {
-           retval = -1;
-           return retval;
+       if (!in->sqlent_len || !strlen(in->aggregate) || !strlen(in->intermediate)) {
+           fprintf(stderr, "Missing SQL statements. Need: -E (entries), -J (intermediate), and -G (aggregate)\n");
+           return retval = -1;
        }
+   }
+
+   // only one output type is allowed
+   if (in->outfile && in->outdb) {
+       fprintf(stderr, "Cannot specify -o and -O at the same time\n");
+       return retval = -1;
+   }
+
+   // writing to databases requires -I
+   if (in->outdb && !in->sqlinit_len) {
+       fprintf(stderr, "Missing -I SQL statement\n");
+       return retval = -1;
    }
 
    // if there were no other errors,
