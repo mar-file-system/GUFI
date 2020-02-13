@@ -91,7 +91,7 @@ void sub_help() {
    // printf("  -N <DB_count>   query DBs written by multiple threads (\n");}
    printf("\n");
    printf("DB_path           path to dir containinng %s.*\n",DBNAME);
-   printf("DB_count          number of DBs (should match thread-count used in 'bfq')\n");
+   printf("DB_count          number of DBs (should match thread-count used in 'gufi_query')\n");
    printf("SQL               arbitrary SQL on each DB (unified into single view)\n");
    printf("table_name        name of view table = 'v<table_name>'\n");
    printf("\n");
