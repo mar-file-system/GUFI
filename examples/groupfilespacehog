@@ -2,25 +2,25 @@
 
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
-# 
-# 
+#
+#
 # Copyright (c) 2017, Los Alamos National Security (LANS), LLC
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
-# 
+#
 # 1. Redistributions of source code must retain the above copyright notice, this
 # list of conditions and the following disclaimer.
-# 
+#
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 # this list of conditions and the following disclaimer in the documentation and/or
 # other materials provided with the distribution.
-# 
+#
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software without
 # specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -31,24 +31,11 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
-# -----
-# NOTE:
-# -----
-# 
-# GUFI uses the C-Thread-Pool library.  The original version, written by
-# Johan Hanssen Seferidis, is found at
-# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
-# released under the MIT License.  LANS, LLC added functionality to the
-# original work.  The original work, plus LANS, LLC added functionality is
-# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
-# License.  The MIT License can be found at
-# https://opensource.org/licenses/MIT.
-# 
-# 
+#
+#
 # From Los Alamos National Security, LLC:
 # LA-CC-15-039
-# 
+#
 # Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
 # Copyright 2017. Los Alamos National Security, LLC. This software was produced
 # under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
@@ -60,7 +47,7 @@
 # modified to produce derivative works, such modified software should be
 # clearly marked, so as not to confuse it with the version available from
 # LANL.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -82,6 +69,6 @@ QUERYDBN=$DIR/../querydbn
 echo "query to create db insert recs from entry query into out db group file space hog"
 rm -f outdb*
 $BFQ -Pp -E "insert into sument select gidtogroup(gid), count(*), sum(size) from entries where type='f' group by gid;" -n $2 -O outdb -I "create table sument (groupname text, totfiles int64, totsize int64);" $1
-#ls -l 
+#ls -l
 #$EPATH/querydbn outdb "select groupname, totfiles, totsize from vsument group by groupname;" 0 1 1 $2 sument
 $QUERYDBN -NV outdb $2 "select groupname, sum(totfiles), sum(totsize) from vsument group by groupname;" sument
