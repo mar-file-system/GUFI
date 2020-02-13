@@ -105,8 +105,6 @@ int printits(struct work *pwork,int ptid) {
   fprintf(out, "%s%s",             pwork->name,               ffielddelim);
   fprintf(out, "%c%s",             pwork->type[0],            ffielddelim);
   fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino,     ffielddelim);
-  /* moved this to end because we would like to use this for input to bfwi load from file */
-  //fprintf(out, "%lld%s", pwork->pinode,         ffielddelim);
   fprintf(out, "%d%s",             pwork->statuso.st_mode,    ffielddelim);
   fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink,   ffielddelim);
   fprintf(out, "%d%s",             pwork->statuso.st_uid,     ffielddelim);
@@ -118,7 +116,7 @@ int printits(struct work *pwork,int ptid) {
   fprintf(out, "%ld%s",            pwork->statuso.st_mtime,   ffielddelim);
   fprintf(out, "%ld%s",            pwork->statuso.st_ctime,   ffielddelim);
 
-/* we need this field even if its not populated for bfwi load from file */
+/* we need this field even if its not populated for gufi_trace2index */
 /*
   if (!strncmp(pwork->type,"l",1)) {
     fprintf(out, "%s%s", pwork->linkname,ffielddelim);
@@ -126,7 +124,7 @@ int printits(struct work *pwork,int ptid) {
 */
   fprintf(out, "%s%s", pwork->linkname,ffielddelim);
 
-/* we need this field even if its not populated for bfwi load from file */
+/* we need this field even if its not populated for gufi_trace2index */
 /*
   if (pwork->xattrs > 0) {
     //printf("xattr: ");
@@ -137,7 +135,7 @@ int printits(struct work *pwork,int ptid) {
 
   /* this one is for create tiem which posix doesnt have */
   fprintf(out,"%s", ffielddelim);
-  /* moved this to end because we would like to use this for input to bfwi load from file */
+  /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
   fprintf(out, "%lld%s", pwork->pinode, ffielddelim);
   fprintf(out, "%d%s", pwork->suspect, ffielddelim);
   fprintf(out,"\n");
