@@ -219,7 +219,7 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
     if extra:
         query += ' ' + ' '.join(extra)
 
-    return query + ';'
+    return query
 
 def cpus():
     '''Try to get the number of hardware threads'''
