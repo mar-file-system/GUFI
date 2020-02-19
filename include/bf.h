@@ -187,7 +187,7 @@ struct input {
    size_t max_level;          // maximum level of recursion to run queries on
    char aggregate[MAXSQL];    // SQL query to run on aggregated data
    char intermediate[MAXSQL]; // SQL query to run on intermediate tables
-   ShowResults_t aggregate_or_print;
+   ShowResults_t show_results;
    int keep_matime;
    size_t output_buffer_size;
    OpenMode open_mode;
