@@ -122,7 +122,7 @@ sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn)
   }
 
   if (sqlite3_exec(db, attach, NULL, NULL, NULL) != SQLITE_OK) {
-      fprintf(stderr, "Cannot attach database: %s %s\n", name, sqlite3_errmsg(db));
+      fprintf(stderr, "Cannot attach database \"%s\" as \"%s\": %s\n", name, dbn, sqlite3_errmsg(db));
       return NULL;
   }
 
@@ -959,58 +959,4 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
     }
 
     return rec_count;
-}
-
-sqlite3 *open_aggregate(const char *name, const char *attach_name, const char *query, int id) {
-    // copy and sanitize query
-    char buf[MAXSQL];
-    SNPRINTF(buf, MAXSQL, "%s", query);
-
-    // find the first clause after FROM
-    // more clauses are probably needed
-    static const char *clauses[] = {"WHERE", "GROUP", "ORDER", "LIMIT", ";"};
-    char *after_from = NULL;
-    for(size_t i = 0; (i < sizeof(clauses) / sizeof(char *)) && !after_from; i++) {
-        after_from = strstr(buf, clauses[i]);
-    }
-
-    // create the aggregate table using the SELECT and FROM portions of the original query
-    char create_results_table[MAXSQL];
-    char af = 0;
-    if (after_from) {
-        af = *after_from;
-        *after_from = 0;
-    }
-
-    // there is no need to modify the query, since the entries table is empty (but will generate a NULL row, which will be removed)
-    SNPRINTF(create_results_table, MAXSQL, "CREATE TABLE %s AS %s;", attach_name, buf);
-    if (after_from) {
-        *after_from = af;
-    }
-
-    char alter[MAXSQL];
-    SNPRINTF(alter, MAXSQL, "ALTER TABLE %s RENAME TO entries;", attach_name);
-
-    sqlite3 *aggregate = NULL;
-    char *err_msg = NULL;
-    if ((sqlite3_open_v2(name, &aggregate,
-                         SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI,
-                         GUFI_SQLITE_VFS)                                                                          != SQLITE_OK) || // create the aggregate database
-        (sqlite3_db_config(aggregate, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL)                              != SQLITE_OK) || // enable extension loading
-        (sqlite3_extension_init(aggregate, &err_msg, NULL)                                                         != SQLITE_OK) || // load the sqlite3-pcre extension
-        (addqueryfuncs(aggregate, id)                                                                              != 0)         || // this is needed to add some query functions like path() uidtouser() gidtogroup()
-        (sqlite3_exec(aggregate, esql, NULL, NULL, &err_msg)                                                       != SQLITE_OK) || // create the original entries table for the aggregate table to copy from
-        (sqlite3_exec(aggregate, create_results_table, NULL, NULL, &err_msg)                                       != SQLITE_OK) || // create the aggregate table
-        (sqlite3_exec(aggregate, "DROP TABLE entries;", NULL, NULL, &err_msg)                                      != SQLITE_OK) || // drop the entries table
-        (sqlite3_exec(aggregate, alter, NULL, NULL, &err_msg)                                                      != SQLITE_OK) || // rename the aggregate table to entries
-        (sqlite3_exec(aggregate, "DELETE FROM entries;", NULL, NULL, &err_msg)                                     != SQLITE_OK)) { // delete all rows from the entries table, since there shouldn't be anything in the table at this point
-        fprintf(stderr, "failed to create result aggregation database %s: %s: \"%s\"\n", name, err_msg, query);
-        sqlite3_free(err_msg);
-        sqlite3_close(aggregate);
-        aggregate = NULL;
-    }
-
-    sqlite3_free(err_msg);
-
-    return aggregate;
 }

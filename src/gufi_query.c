@@ -637,15 +637,17 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         goto out_free;
     }
 
-    /* if we have out db then we have that db open so we just attach the gufi db */
     #ifndef NO_OPENDB
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &open_start);
     #endif
-    if (in.outdb > 0) {
+    if (gts.outdbd[id]) {
+      /* if we have an out db then only have to attach the gufi db */
       db = gts.outdbd[id];
       attachdb(dbname, db, "tree");
-    } else {
+    }
+    else {
+      /* otherwise, open a standalone database to query from */
       db = opendb(dbname, in.open_mode, 1, 1,
                   create_tables, &in.open_mode
                   #ifdef DEBUG
@@ -762,22 +764,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                 /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
                     if (in.sqlent_len > 1) {
-                         #ifdef DEBUG
-                         clock_gettime(CLOCK_MONOTONIC, &attach_start);
-                         #endif
-                         if (in.aggregate_or_print == AGGREGATE) {
-                             /* attach in-memory result aggregation database */
-                             char intermediate_name[MAXSQL];
-                             SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) id);
-                             if (db && !attachdb(intermediate_name, db, AGGREGATE_ATTACH_NAME)) {
-                                 fprintf(stderr, "Could not attach database\n");
-                                 closedb(db);
-                                 goto out_dir;
-                             }
-                         }
-                        #ifdef DEBUG
-                        clock_gettime(CLOCK_MONOTONIC, &attach_end);
-                        #endif
                         /* set the path so users can put path() in their queries */
                         /* printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent)); */
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
@@ -826,7 +812,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     clock_gettime(CLOCK_MONOTONIC, &close_start);
     #endif
     /* if we have an out db we just detach gufi db */
-    if (in.outdb > 0) {
+    if (gts.outdbd[id]) {
       detachdb(dbname, db, "tree");
     } else {
       closedb(db);
@@ -965,16 +951,70 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     return 0;
 }
 
+/* create aggregate database and intermediate per-thread databases
+ * the user must create the intermediate table with -I and insert into it
+ * the per-thread databases reuse outdb array
+ */
+static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
+                               char *aggregate_name, size_t count) {
+    for(int i = 0; i < in.maxthreads; i++) {
+        char intermediate_name[MAXSQL];
+        SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
+        if (!(gts.outdbd[i] = opendb(intermediate_name, RDWR, 1, 1, NULL, NULL,
+                                     #ifdef DEBUG
+                                     NULL, NULL,
+                                     NULL, NULL,
+                                     NULL, NULL,
+                                     NULL, NULL
+                                     #endif
+                  ))) {
+            fprintf(stderr, "Could not open %s\n", intermediate_name);
+            outdbs_fin(gts.outdbd, i, NULL, 0);
+            return NULL;
+        }
+
+        // create table
+        if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
+            fprintf(stderr, "Could not run SQL Init on %s\n", intermediate_name);
+            outdbs_fin(gts.outdbd, i, NULL, 0);
+            return NULL;
+        }
+    }
+
+    SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, (int) -1);
+    sqlite3 *aggregate = NULL;
+    if (!(aggregate = opendb(aggregate_name, RDWR, 1, 1, NULL, NULL,
+                             #ifdef DEBUG
+                             NULL, NULL,
+                             NULL, NULL,
+                             NULL, NULL,
+                             NULL, NULL
+                             #endif
+              ))) {
+        fprintf(stderr, "Could not open %s\n", aggregate_name);
+        outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
+        closedb(aggregate);
+        return NULL;
+    }
+
+    // create table
+    if (sqlite3_exec(aggregate, in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not run SQL Init on %s\n", aggregate_name);
+        outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
+        closedb(aggregate);
+        return NULL;
+    }
+
+    return aggregate;
+}
+
+static void aggregate_fin(sqlite3 *aggregate) {
+    closedb(aggregate);
+}
+
 void sub_help() {
    printf("GUFI_index        find GUFI index here\n");
    printf("\n");
-}
-
-static void cleanup_intermediates(sqlite3 **intermediates, const size_t count) {
-    for(size_t i = 0; i < count; i++) {
-        closedb(intermediates[i]);
-    }
-    free(intermediates);
 }
 
 int main(int argc, char *argv[])
@@ -1040,33 +1080,10 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &setup_aggregate_start);
     #endif
 
-    sqlite3 *aggregate = NULL;
-    sqlite3 **intermediates = NULL;
-    char aggregate_name[MAXSQL] = {};
+    char aggregate_name[MAXSQL];
+    sqlite3 * aggregate = NULL;
     if (in.aggregate_or_print == AGGREGATE) {
-        /* modify in.sqlent to insert the results into the intermediate table (named 'aggregate') it is associated with */
-        char orig_sqlent[MAXSQL];
-        SNFORMAT_S(orig_sqlent, MAXSQL, 1, in.sqlent, in.sqlent_len);
-        SNFORMAT_S(in.sqlent, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, orig_sqlent, in.sqlent_len);
-
-        /* create the aggregate database */
-        /* functions that use global values, like path might not work correctly */
-        SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, -1);
-        if (!(aggregate = open_aggregate(aggregate_name, AGGREGATE_ATTACH_NAME, orig_sqlent, in.maxthreads))) {
-            return -1;
-        }
-
-        intermediates = (sqlite3 **) malloc(sizeof(sqlite3 *) * in.maxthreads);
-        for(int i = 0; i < in.maxthreads; i++) {
-            char intermediate_name[MAXSQL];
-            SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
-            if (!(intermediates[i] = open_aggregate(intermediate_name, AGGREGATE_ATTACH_NAME, orig_sqlent, i))) {
-                fprintf(stderr, "Could not open %s\n", intermediate_name);
-                cleanup_intermediates(intermediates, i);
-                closedb(aggregate);
-                return -1;
-            }
-        }
+        aggregate = aggregate_init(AGGREGATE_NAME, aggregate_name, in.maxthreads);
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -1136,11 +1153,6 @@ int main(int argc, char *argv[])
 
     int rc = 0;
     if (in.aggregate_or_print == AGGREGATE) {
-        /* prepend the intermediate database query with "INSERT INTO" to move */
-        /* the data from the databases into the final aggregation database */
-        char intermediate[MAXSQL];
-        SNFORMAT_S(intermediate, MAXSQL, 4, "INSERT INTO ", 12, AGGREGATE_ATTACH_NAME, strlen(AGGREGATE_ATTACH_NAME), ".entries ", (size_t) 9, in.intermediate, strlen(in.intermediate));
-
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec aggregate_start;
         clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
@@ -1148,9 +1160,9 @@ int main(int argc, char *argv[])
 
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
-            if (!attachdb(aggregate_name, intermediates[i], AGGREGATE_ATTACH_NAME)            ||
-                (sqlite3_exec(intermediates[i], intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
-                printf("Final aggregation error: %s\n", sqlite3_errmsg(intermediates[i]));
+            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME)               ||
+                (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
+                printf("Final aggregation error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }
         }
 
@@ -1161,21 +1173,7 @@ int main(int argc, char *argv[])
         total_time += aggregate_time;
         #endif
 
-        #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        struct timespec cleanup_start;
-        clock_gettime(CLOCK_MONOTONIC, &cleanup_start);
-        #endif
-
-        /* cleanup the intermediate databases (no need to detach) */
-        cleanup_intermediates(intermediates, in.maxthreads);
-
-        #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        struct timespec cleanup_end;
-        clock_gettime(CLOCK_MONOTONIC, &cleanup_end);
-        cleanup_time = elapsed(&cleanup_start, &cleanup_end);
-        total_time += cleanup_time;
-        #endif
-
+        /* final query on aggregate results */
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec output_start;
         clock_gettime(CLOCK_MONOTONIC, &output_start);
@@ -1199,7 +1197,7 @@ int main(int argc, char *argv[])
         total_time += output_time;
         #endif
 
-        closedb(aggregate);
+        aggregate_fin(aggregate);
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -1211,7 +1209,7 @@ int main(int argc, char *argv[])
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     const size_t rows =
     #endif
-    OutputBuffers_flush_multiple(&args.output_buffers, in.maxthreads, gts.outfd);
+    OutputBuffers_flush_multiple(&args.output_buffers, output_count, gts.outfd);
 
     /* clean up globals */
     OutputBuffers_destroy(&args.output_buffers, output_count);
