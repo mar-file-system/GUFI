@@ -71,10 +71,14 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-// allocate the array of sqlite3 * and open file
+/* the array of db handles should already be allocated */
 sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit, const size_t sqlinit_len) {
     if (!dbs) {
         return NULL;
+    }
+
+    for(int i = 0; i < count; i++) {
+        dbs[i] = NULL;
     }
 
     if (opendbs) {
@@ -112,7 +116,7 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
     return dbs;
 }
 
-// close all output dbs
+/* close all output dbs */
 int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin, const size_t sqlfin_len) {
     if (dbs) {
         if (sqlfin && sqlfin_len) {
@@ -120,7 +124,7 @@ int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin, const size_t 
                 char * err = NULL;
                 if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {
                     fprintf(stderr, "Final SQL Error: %s\n", err);
-                    // ignore errors, since the database is closing anyways
+                    /* ignore errors, since the database is closing anyways */
                 }
                 sqlite3_free(err);
             }
