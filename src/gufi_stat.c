@@ -161,9 +161,8 @@ int process_path(const char * path) {
 
     /* assume the provided path is a directory */
     DIR * dir = opendir(path);
-    const int err = errno;
     if (!dir) {
-        /* searched for it in the entries table */
+        /* search for it in the entries table */
 
         /* remove file name from the path */
         char dir[MAXPATH];
@@ -187,6 +186,7 @@ int process_path(const char * path) {
     ca.found = 0;
     ca.path = path;
 
+    int rc = 1;
     if ((db = opendb(dbname, RDONLY, 0, 1,
                      NULL, NULL
                      #ifdef DEBUG
@@ -196,24 +196,31 @@ int process_path(const char * path) {
                      , NULL, NULL
                      #endif
                      ))) {
+        rc = 0;
+
         /* query the database */
         char *err = NULL;
         if (sqlite3_exec(db, query, print_callback, &ca, &err) != SQLITE_OK) {
-            fprintf(stderr, "Error: %s: %s\n", err, dbname);
-            sqlite3_free(err);
-            ca.found = 0;
+            fprintf(stderr, "gufi_stat: cannot stat '%s': %s\n", path, err);
+            rc = 1;
         }
+
+        sqlite3_free(err);
+
+        /* if the query was successful, but nothing was found, error */
+        if (!ca.found) {
+            fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);
+            rc = 1;
+        }
+    }
+    else {
+        fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);
     }
 
     /* close no matter what to avoid memory leaks */
     closedb(db);
 
-    if (!ca.found) {
-        fprintf(stderr, "gufi_stat: cannot stat '%s': %s\n", path, strerror(err));
-        return 1;
-    }
-
-    return 0;
+    return rc;
 }
 
 void sub_help() {
@@ -234,9 +241,10 @@ int main(int argc, char *argv[])
         return -1;
 
     /* process all input paths */
+    int rc = 0;
     for(int i = idx; i < argc; i++) {
-        process_path(argv[i]);
+        rc |= process_path(argv[i]);
     }
 
-    return 0;
+    return rc;
 }
