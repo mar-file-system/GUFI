@@ -787,20 +787,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
                         #endif
                         #endif
-
-                        #ifdef DEBUG
-                        clock_gettime(CLOCK_MONOTONIC, &detach_start);
-                        #endif
-                        if (in.aggregate_or_print == AGGREGATE) {
-                            /* detach in-memory result aggregation database */
-                            if (db && !detachdb(AGGREGATE_NAME, db, AGGREGATE_ATTACH_NAME)) {
-                                closedb(db);
-                                goto out_dir;
-                            }
-                        }
-                        #ifdef DEBUG
-                        clock_gettime(CLOCK_MONOTONIC, &detach_end);
-                        #endif
                     }
                 }
             }
@@ -960,12 +946,12 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
     for(int i = 0; i < in.maxthreads; i++) {
         char intermediate_name[MAXSQL];
         SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
-        if (!(gts.outdbd[i] = opendb(intermediate_name, RDWR, 1, 1, NULL, NULL,
+        if (!(gts.outdbd[i] = opendb(intermediate_name, RDWR, 1, 1, NULL, NULL
                                      #ifdef DEBUG
-                                     NULL, NULL,
-                                     NULL, NULL,
-                                     NULL, NULL,
-                                     NULL, NULL
+                                     , NULL, NULL
+                                     , NULL, NULL
+                                     , NULL, NULL
+                                     , NULL, NULL
                                      #endif
                   ))) {
             fprintf(stderr, "Could not open %s\n", intermediate_name);
@@ -973,9 +959,11 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
             return NULL;
         }
 
+        addqueryfuncs(gts.outdbd[i], i);
+
         // create table
         if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
-            fprintf(stderr, "Could not run SQL Init on %s\n", intermediate_name);
+            fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, intermediate_name);
             outdbs_fin(gts.outdbd, i, NULL, 0);
             return NULL;
         }
@@ -983,12 +971,12 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
 
     SNPRINTF(aggregate_name, MAXSQL, AGGREGATE_NAME, (int) -1);
     sqlite3 *aggregate = NULL;
-    if (!(aggregate = opendb(aggregate_name, RDWR, 1, 1, NULL, NULL,
+    if (!(aggregate = opendb(aggregate_name, RDWR, 1, 1, NULL, NULL
                              #ifdef DEBUG
-                             NULL, NULL,
-                             NULL, NULL,
-                             NULL, NULL,
-                             NULL, NULL
+                             , NULL, NULL
+                             , NULL, NULL
+                             , NULL, NULL
+                             , NULL, NULL
                              #endif
               ))) {
         fprintf(stderr, "Could not open %s\n", aggregate_name);
@@ -997,9 +985,11 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
         return NULL;
     }
 
+    addqueryfuncs(aggregate, in.maxthreads);
+
     // create table
     if (sqlite3_exec(aggregate, in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Could not run SQL Init on %s\n", aggregate_name);
+        fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
         outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
         closedb(aggregate);
         return NULL;
@@ -1046,10 +1036,13 @@ int main(int argc, char *argv[])
     struct ThreadArgs args;
 
     /* initialize globals */
-    const size_t output_count = in.maxthreads + !!(in.aggregate_or_print == AGGREGATE);
+    const size_t output_count = in.maxthreads + !!(in.show_results == AGGREGATE);
     if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, output_count)                              ||
         !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit, in.sqlinit_len) ||
         !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size))                 {
+        OutputBuffers_destroy(&args.output_buffers, output_count);
+        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outfiles_fin(gts.outfd, output_count);
         return -1;
     }
 
@@ -1082,8 +1075,13 @@ int main(int argc, char *argv[])
 
     char aggregate_name[MAXSQL];
     sqlite3 * aggregate = NULL;
-    if (in.aggregate_or_print == AGGREGATE) {
-        aggregate = aggregate_init(AGGREGATE_NAME, aggregate_name, in.maxthreads);
+    if (in.show_results == AGGREGATE) {
+        if (!(aggregate = aggregate_init(AGGREGATE_NAME, aggregate_name, in.maxthreads))) {
+            OutputBuffers_destroy(&args.output_buffers, output_count);
+            outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+            outfiles_fin(gts.outfd, output_count);
+            return -1;
+        }
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -1100,15 +1098,21 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    args.print_callback_func = ((in.aggregate_or_print == PRINT)?print_callback:NULL);
+    args.print_callback_func = ((in.show_results == PRINT)?print_callback:NULL);
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        OutputBuffers_destroy(&args.output_buffers, output_count);
+        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outfiles_fin(gts.outfd, output_count);
         return -1;
     }
 
     if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
+        OutputBuffers_destroy(&args.output_buffers, output_count);
+        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outfiles_fin(gts.outfd, output_count);
         return -1;
     }
 
@@ -1152,7 +1156,7 @@ int main(int argc, char *argv[])
     #endif
 
     int rc = 0;
-    if (in.aggregate_or_print == AGGREGATE) {
+    if (in.show_results == AGGREGATE) {
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         struct timespec aggregate_start;
         clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
@@ -1162,7 +1166,7 @@ int main(int argc, char *argv[])
         for(int i = 0; i < in.maxthreads; i++) {
             if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME)               ||
                 (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
-                printf("Final aggregation error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
+                printf("Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }
         }
 
@@ -1185,7 +1189,7 @@ int main(int argc, char *argv[])
 
         char * err;
         if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
-            fprintf(stderr, "Cannot print from aggregate database: %s\n", err);
+            fprintf(stderr, "Final aggregation error: %s\n", err);
             sqlite3_free(err);
             rc = -1;
         }
@@ -1272,7 +1276,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "clean up globals:                            %.2Lfs\n", cleanup_globals_time);
     fprintf(stderr, "\n");
     fprintf(stderr, "Rows returned:                               %zu\n",    rows);
-    fprintf(stderr, "Queries performed:                           %zu\n",    thread_count);
+    fprintf(stderr, "Queries performed:                           %zu\n",    thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len));
     fprintf(stderr, "Real time:                                   %.2Lfs\n", total_time);
     #endif
 
