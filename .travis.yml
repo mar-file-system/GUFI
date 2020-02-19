@@ -163,6 +163,7 @@ matrix:
           script:
             - contrib/travis/centos7.sh
             - docker exec "${TRAVIS_JOB_NUMBER}" yum install -y rpm-build
+            - docker exec "${TRAVIS_JOB_NUMBER}" cmake build
             - docker exec "${TRAVIS_JOB_NUMBER}" make -C build package
           deploy:
             provider: releases
