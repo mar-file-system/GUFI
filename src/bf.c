@@ -187,7 +187,7 @@ void show_input(struct input* in, int retval) {
    printf("in.max_level          = %zu\n",   in->max_level);
    printf("in.aggregate          = '%s'\n",  in->aggregate);
    printf("in.intermediate       = '%s'\n",  in->intermediate);
-   printf("in.aggregate_or_print = %d\n",    in->aggregate_or_print);
+   printf("in.show_results       = %d\n",    in->show_results);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
    printf("in.open_mode          = %d\n",    in->open_mode);
@@ -237,7 +237,7 @@ int parse_cmd_line(int         argc,
    memset(in->sqlent,       0, MAXSQL);
    memset(in->intermediate, 0, MAXSQL);
    memset(in->aggregate,    0, MAXSQL);
-   in->aggregate_or_print = PRINT;     // print without aggregating by default
+   in->show_results       = PRINT;     // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
    in->open_mode          = RDONLY;    // default to read-only opens
 
@@ -388,15 +388,15 @@ int parse_cmd_line(int         argc,
 
       case 'e':
          {
-            int aggregate_or_print = 0;
-            INSTALL_INT(aggregate_or_print, optarg, 0, 1, "-e");
+            int show_results = 0;
+            INSTALL_INT(show_results, optarg, 0, 1, "-e");
 
-            switch (aggregate_or_print) {
+            switch (show_results) {
                 case 0:
-                    in->aggregate_or_print = AGGREGATE;
+                    in->show_results = AGGREGATE;
                     break;
                 case 1:
-                    in->aggregate_or_print = PRINT;
+                    in->show_results = PRINT;
                     break;
                 default:
                     retval = -1;
@@ -451,13 +451,13 @@ int parse_cmd_line(int         argc,
    }
 
    // -o and -O imply -e 1
-   if ((in->outfile || in->outdb) && (in->aggregate_or_print == AGGREGATE)) {
+   if ((in->outfile || in->outdb) && (in->show_results == AGGREGATE)) {
        fprintf(stderr, "Warning: An output prefix has been specified with aggregation. Turning off aggregation.\n");
-       in->aggregate_or_print = PRINT;
+       in->show_results = PRINT;
    }
 
-   // aggregating requires -E and 2 more SQL queries (-G and -J)
-   if (in->aggregate_or_print == AGGREGATE) {
+   // aggregating requires -E and 2 more SQL queries (-J and -G)
+   if (in->show_results == AGGREGATE) {
        if (!in->sqlent_len || !strlen(in->aggregate) || !strlen(in->intermediate)) {
            fprintf(stderr, "Missing SQL statements. Need: -E (entries), -J (intermediate), and -G (aggregate)\n");
            return retval = -1;
