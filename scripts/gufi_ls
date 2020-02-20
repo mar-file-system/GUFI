@@ -93,7 +93,7 @@ def build_select(args):
         select += ['blocks']
 
     if args.long_listing:
-        select += ['modetotxt(mode)', 'nlink', 'uidtouser(uid, ' + str(args.user_width) + ')']
+        select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", "nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
         if not args.no_group:
             select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
 
@@ -105,7 +105,7 @@ def build_select(args):
             select += ['blocksize(size, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
             select += ['printf("% ' + str(args.size_width) + 'z", size)']
-        select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name' + ' || " -> " || linkname) else name end']
+        select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name || " -> " || linkname) else name end']
 
     else:
         # at minimum, print the file name
@@ -126,7 +126,7 @@ def build_recursive_select(args):
         select += ['ublocks']
 
     if args.long_listing:
-        select += ['modetotxt(umode)', 'unlink', 'uidtouser(uuid, ' + str(args.user_width) + ')']
+        select += ['modetotxt(umode)', 'printf("%' + str(args.nlink_width) + 'd", unlink)', 'uidtouser(uuid, ' + str(args.user_width) + ')']
         if not args.no_group:
             select += ['gidtogroup(ugid, ' + str(args.group_width) + ')']
 
@@ -138,11 +138,11 @@ def build_recursive_select(args):
             select += ['blocksize(usize, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
             select += ['printf("% ' + str(args.size_width) + 'z", usize)']
-        select += ['strftime("%b  %e %H:%M", umtime)', 'case when (utype == "l") then (uname' + ' || " -> " || ulinkname) else uname end']
+        select += ['strftime("%b  %e %H:%M", umtime)', 'case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
 
     else:
         # at minimum, print the file name
-        select += ['uname']
+        select += ['ufullpath || "/" || uname']
 
     return select
 
@@ -226,6 +226,7 @@ if __name__=='__main__':
     parser.add_argument('--output-db',                       dest='output_db',      type=str,                                         help='Output database prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',  metavar='bytes', dest='output_buffer',  type=gufi_common.get_non_negative, default=4096,  help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name', metavar='name',  dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
+    parser.add_argument('--nlink-width',    metavar='chars', dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
     parser.add_argument('--size-width',     metavar='chars', dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
     parser.add_argument('--user-width',     metavar='chars', dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
     parser.add_argument('--group-width',    metavar='chars', dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
@@ -250,6 +251,9 @@ if __name__=='__main__':
             path, match_name = os.path.split(path)
             recursive = False
 
+        # WHERE clause is common
+        where = build_where(args, match_name)
+
         # create the base command
         query_cmd = [config['Exec'],
                      '-e', str(int(not recursive))]
@@ -259,9 +263,22 @@ if __name__=='__main__':
         if recursive:
             I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT(64), nlink INT(64), size INT(64), mode INT(64), uid INT(64), gid INT(64), blksize INT(64), blocks INT(64), mtime INT(64), atime INT(64), ctime INT(64), linkname TEXT, xattrs TEXT, pinode INT(64));'.format(args.inmemory_name)
 
-            common = 'INSERT INTO {0} SELECT fpath(), name, type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattrs, pinode FROM '.format(args.inmemory_name)
-            S = common + 'summary'
-            E = common + 'pentries'
+            # there is a duplicate pinode column in pentries
+            common_columns = ['fpath()', 'name', 'type', 'inode', 'nlink', 'size', 'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime', 'atime', 'ctime', 'linkname', 'xattrs']
+            S = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(common_columns + ['pinode'],
+                                                                                        ['summary'],
+                                                                                        where,
+                                                                                        None,
+                                                                                        None,
+                                                                                        args.num_results)
+
+            E = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(common_columns + ['`pinode:1`'],
+                                                                                        ['pentries'],
+                                                                                        where,
+                                                                                        None,
+                                                                                        None,
+                                                                                        args.num_results)
+
             J = 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name)
 
             column_names = ['fullpath', 'name', 'type', 'inode', 'nlink', 'size', 'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime', 'atime', 'ctime', 'linkname', 'xattrs', 'pinode']
@@ -293,7 +310,7 @@ if __name__=='__main__':
             query_cmd += ['-n', '1',
                           '-E', gufi_common.build_query(build_select(args),
                                                         ['entries'],
-                                                        build_where(args, match_name),
+                                                        where,
                                                         None,
                                                         build_order_by(args),
                                                         args.num_results),
