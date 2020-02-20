@@ -93,7 +93,7 @@ def build_select(args):
         select += ['blocks']
 
     if args.long_listing:
-        select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", "nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
+        select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
         if not args.no_group:
             select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
 
@@ -104,7 +104,7 @@ def build_select(args):
         elif args.blocksize:
             select += ['blocksize(size, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
-            select += ['printf("% ' + str(args.size_width) + 'z", size)']
+            select += ['printf("%' + str(args.size_width) + 'd", size)']
         select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name || " -> " || linkname) else name end']
 
     else:
@@ -137,7 +137,7 @@ def build_recursive_select(args):
         elif args.blocksize:
             select += ['blocksize(usize, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
-            select += ['printf("% ' + str(args.size_width) + 'z", usize)']
+            select += ['printf("%' + str(args.size_width) + 'd", usize)']
         select += ['strftime("%b  %e %H:%M", umtime)', 'case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
 
     else:
@@ -175,17 +175,32 @@ def build_order_by(args):
     '''Build the ORDER BY portion of the query.'''
     order_by = []
 
-    if args.reverse:
-        order_by += ['name COLLATE NOCASE DESC']
-
     if args.sort_largest:
-        order_by += ['size DESC']
+        order_by += ['size ' + ('ASC' if args.reverse else 'DESC')]
 
     if args.mtime:
-        order_by += ['mtime DESC']
+        order_by += ['mtime ' + ('ASC' if args.reverse else 'DESC')]
 
     if len(order_by) == 0:
-        return ['name COLLATE NOCASE ASC']
+        order_by += ['name COLLATE NOCASE ASC']
+
+    if args.no_sort:
+        order_by = []
+
+    return order_by
+
+def build_order_by_recursive(args):
+    '''Build the ORDER BY portion of the query.'''
+    order_by = []
+
+    if args.sort_largest:
+        order_by += ['usize ' + ('ASC' if args.reverse else 'DESC')]
+
+    if args.mtime:
+        order_by += ['umtime ' + ('ASC' if args.reverse else 'DESC')]
+
+    if len(order_by) == 0:
+        order_by += ['ufullpath || "/" || uname COLLATE NOCASE ASC']
 
     if args.no_sort:
         order_by = []
@@ -251,7 +266,7 @@ if __name__=='__main__':
             path, match_name = os.path.split(path)
             recursive = False
 
-        # WHERE clause is common
+        # common clauses
         where = build_where(args, match_name)
 
         # create the base command
@@ -263,20 +278,29 @@ if __name__=='__main__':
         if recursive:
             I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT(64), nlink INT(64), size INT(64), mode INT(64), uid INT(64), gid INT(64), blksize INT(64), blocks INT(64), mtime INT(64), atime INT(64), ctime INT(64), linkname TEXT, xattrs TEXT, pinode INT(64));'.format(args.inmemory_name)
 
-            SE = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(['fpath()', 'name', 'type',
-                                                                                          'inode', 'nlink', 'size',
-                                                                                          'mode', 'uid', 'gid',
-                                                                                          'blksize', 'blocks', 'mtime',
-                                                                                          'atime', 'ctime', 'linkname',
-                                                                                          'xattrs', 'pinode'],
-                                                                                         ['{}'],
-                                                                                         where,
-                                                                                         None,
-                                                                                         None,
-                                                                                         args.num_results)
+            S = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(['fpath()', '"" as name', 'type',
+                                                                                         'inode', 'nlink', 'size',
+                                                                                         'mode', 'uid', 'gid',
+                                                                                         'blksize', 'blocks', 'mtime',
+                                                                                         'atime', 'ctime', 'linkname',
+                                                                                         'xattrs', 'pinode'],
+                                                                                        ['summary'],
+                                                                                        where,
+                                                                                        None,
+                                                                                        None,
+                                                                                        None)
 
-            S = SE.format('summary')
-            E = SE.format('pentries')
+            E = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(['fpath()', 'name', 'type',
+                                                                                         'inode', 'nlink', 'size',
+                                                                                         'mode', 'uid', 'gid',
+                                                                                         'blksize', 'blocks', 'mtime',
+                                                                                         'atime', 'ctime', 'linkname',
+                                                                                         'xattrs', 'pinode'],
+                                                                                        ['pentries'],
+                                                                                        where,
+                                                                                        None,
+                                                                                        None,
+                                                                                        None)
 
             J = 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name)
 
@@ -291,12 +315,16 @@ if __name__=='__main__':
                                  underm.pinode=under.uinode
                     )
 
-                    SELECT {4} FROM under;'''.format(args.inmemory_name,
+                    {4};'''.format(args.inmemory_name,
                                                      'u' + ', u'.join(column_names),
                                                      ', '.join(column_names),
                                                      path,
-                                                     ', '.join(build_recursive_select(args))
-                                                 )
+                                                     gufi_common.build_query(build_recursive_select(args),
+                                                                             ['under'],
+                                                                             ['u' + w for w in where],
+                                                                             None,
+                                                                             build_order_by_recursive(args),
+                                                                             args.num_results))
 
             query_cmd += ['-n', str(config['Threads']),
                           '-I', I,
@@ -305,6 +333,7 @@ if __name__=='__main__':
                           '-J', J,
                           '-G', G,
                           '-a']
+
         else:
             query_cmd += ['-n', '1',
                           '-E', gufi_common.build_query(build_select(args),
