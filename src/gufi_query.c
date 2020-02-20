@@ -188,22 +188,6 @@ long double buffer_sum(struct buffer * timer) {
 
 #endif
 
-static int create_tables(const char * name, sqlite3 *db, void * args) {
-    OpenMode * mode = (OpenMode *) args;
-    if (*mode == RDWR) {
-        if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args);
 
 /* Push the subdirectories in the current directory onto the queue */
@@ -649,7 +633,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     else {
       /* otherwise, open a standalone database to query from */
       db = opendb(dbname, in.open_mode, 1, 1,
-                  create_tables, &in.open_mode
+                  NULL, NULL
                   #ifdef DEBUG
                   , &sqlite3_open_start,   &sqlite3_open_end
                   , &create_tables_start,  &create_tables_end
@@ -807,9 +791,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     clock_gettime(CLOCK_MONOTONIC, &close_end);
     #endif
     #endif
-
-  out_dir:
-    ;
 
     #ifdef DEBUG
     clock_gettime(CLOCK_MONOTONIC, &closedir_start);

@@ -64,9 +64,9 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-SCR=$DIR/../scripts
+SCR=$DIR/../examples
 
 #echo "runnig rungroupfilespacehog SCR is $SCR"
 #pwd
-rm outdb*
-$SCR/groupfilespacehog testdirdup/testdir 2
+rm -f outdb*
+$SCR/groupfilespacehog $1 $2

@@ -62,10 +62,10 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-BFQ=$DIR/../bfq
-QUERYDBN=$DIR/../querydbn
+BFQ=$DIR/../src/gufi_query
+QUERYDBN=$DIR/../src/querydbn
 
 echo "query to create db insert recs from entry query into out db user file space hog use user summary"
 rm -f outdb*
-$BFQ -E "insert into sumsum select uidtouser(uid), totfiles, totsize from vsummaryuser;" -n $2 -O outdb -I "create table sumsum (username text, totfiles int64, totsize int64);" $1
+$BFQ -E "insert into sumsum select uidtouser(uid, 0), totfiles, totsize from vsummaryuser;" -n $2 -O outdb -I "create table sumsum (username text, totfiles int64, totsize int64);" $1
 $QUERYDBN -NV outdb $2 "select username, sum(totfiles), sum(totsize) from vsumsum group by username;" sumsum

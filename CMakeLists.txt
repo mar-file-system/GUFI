@@ -279,6 +279,9 @@ add_subdirectory(test)
 # build contrib executables
 add_subdirectory(contrib)
 
+# copy examples
+add_subdirectory(examples)
+
 #
 # Define commands and tools for "make gary"
 # build tarball out of ${CMAKE_SOURCE_DIR}

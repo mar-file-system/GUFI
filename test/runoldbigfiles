@@ -64,7 +64,7 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-SCR=$DIR/../scripts
+SCR=$DIR/../examples
 
-rm outdb*
-$SCR/oldbigfiles testdirdup/testdir 2
+rm -f outdb*
+$SCR/oldbigfiles $1 $2

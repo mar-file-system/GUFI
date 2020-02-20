@@ -62,7 +62,7 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-BFQ=$DIR/../bfq
+BFQ=$DIR/../src/gufi_query
 
 echo "delete all uid and gid summary records from summary tables in $1"
-$BFQ -S "delete from summary where rectype>0;" -Pp -n 2 $1
+$BFQ -S "delete from summary where rectype>0;" -n 2 -w $1
