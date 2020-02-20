@@ -1,13 +1,18 @@
 export
 
+TESTTAR  = testdir.tar
+TESTDIR  = testdir
+TESTDST  = $(TESTDIR).gufi
+TESTGUFI = $(TESTDST)/$(TESTDIR)
+
 ifneq ("$(CXX)", "false")
 SUBDIRECTORIES=googletest
 endif
 
-TESTS = runtests verifyknowntree $(SUBDIRECTORIES)
+TESTS    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles verifyknowntree $(SUBDIRECTORIES)
 
 # these are trashable files and dirs produced by the test/run* tests
-TEST_PRODUCTS = testout.* testdirdup outdb* outq.* core.*
+TEST_PRODUCTS = testout.* outdb* outq.* core.* bfwreaddirplusdb* $(TESTDIR) $(TESTDST) testbwrpdb
 
 .PHONY: $(SUBDIRECTORIES) $(TESTS)
 
@@ -16,9 +21,35 @@ all: $(TESTS) $(SUBDIRECTORIES)
 $(SUBDIRECTORIES):
 	$(MAKE) -C $@ run
 
-runtests: runbfwi runbfti runbfq runquerydb testdir.tar
-	./$@ testdir.tar testdir testdir.gufi
-	rm -rf testdir
+# extract the tarball
+$(TESTDIR): $(TESTTAR)
+	mkdir -p $(TESTDIR)
+	tar -xf $(TESTTAR)
+
+# generate the GUFI index
+bfwi $(TESTDST) $(TESTGUFI): runbfti $(TESTDIR)
+	./runbfwi $(TESTDIR) $(TESTDST)
+
+bfti:                        runbfti bfwi
+bfq:                         runbfq bfti
+bfwreaddirplus2db:           runbfwreaddirplus2db bfti
+querydb:                     runquerydb bfti
+dfw:                         rundfw
+listschemadb:                runlistschemadb
+listtablesdb:                runlisttablesdb
+
+bfti bfq bfwreaddirplus2db querydb dfw:
+	./$< $(TESTGUFI)
+
+querydbn:                    runquerydbn bfti
+groupfilespacehogusesummary: rungroupfilespacehogusesummary
+userfilespacehogusesummary:  runuserfilespacehogusesummary
+groupfilespacehog:           rungroupfilespacehog
+userfilespacehog:            runuserfilespacehog
+oldbigfiles:                 runoldbigfiles
+
+querydbn groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles:
+	./$< $(TESTGUFI) 2
 
 verifyknowntree:
 	./$@

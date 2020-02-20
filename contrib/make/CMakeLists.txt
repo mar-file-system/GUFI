@@ -62,80 +62,56 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# build the simple source tree generator
-add_executable(gendir gendir.c)
-target_link_libraries(gendir ${COMMON_LIBRARIES})
-add_dependencies(gendir GUFI)
+#
+# Generate a tarball         (make gary)
+# build and test the tarball (make test_gary)
+#
 
-# potentially useful C++ executables
-if (CMAKE_CXX_COMPILER)
-  # a more complex index generator
-  add_executable(make_testindex make_testindex.cpp)
-  target_link_libraries(make_testindex ${COMMON_LIBRARIES})
-  add_dependencies(make_testindex GUFI)
+# List of entries from the root
+# directory that will be tarred
+set(ROOT
+  CMakeLists.txt
+  INSTALL
+  LICENSE.txt
+  Makefile
+  README.md
+  contrib
+  docs
+  examples
+  include
+  scripts
+  src
+  test
+)
 
-  add_executable(verifytrace verifytrace.cpp)
+# Set the output name
+set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
-  add_executable(verifytreeintrace verifytreeintrace.cpp)
-  target_link_libraries(verifytreeintrace ${COMMON_LIBRARIES})
-  add_dependencies(verifytreeintrace install_dependencies)
-endif()
+add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/root       ${CMAKE_SOURCE_DIR}/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src        ${CMAKE_SOURCE_DIR}/src/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/scripts    ${CMAKE_SOURCE_DIR}/scripts/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test       ${CMAKE_SOURCE_DIR}/test/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${ROOT} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                       DEPENDS ${CMAKE_SOURCE_DIR}/test/googletest)
 
-# potentially useful scripts
-configure_file(canned_queries.sh canned_queries.sh COPYONLY)
-configure_file(gentrace.py gentrace.py COPYONLY)
-configure_file(trace_anonymizer.py trace_anonymizer.py COPYONLY)
+# Test the tarball
+set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
 
-# make benchmark
-#    clean up old benchmark directory and create a new one
-#    generate a tree
-#    index the tree with bfwi
-#    query the tree with gufi_find
-#    delete the benchmark directory
-set(BENCHMARK Off CACHE BOOL "Whether or not to enable the benchmark target")
-if (BENCHMARK)
-  if (NOT DEFINED BENCHMARK_ROOT)
-    message(FATAL_ERROR "BENCHMARK_ROOT is not set")
-  endif()
+add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
+                                   COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
 
-  function(check_int VAR)
-    string(REGEX MATCH "^[0-9]+$" PARSED "${${VAR}}")
-    if ("${PARSED}" STREQUAL "")
-      message(FATAL_ERROR "Invalid ${VAR} value: \"${${VAR}}\"")
-    endif()
-  endfunction()
+add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make DEBUG=1
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make test
+                             WORKING_DIRECTORY ${TARBALL_TEST_DIR}
+                             DEPENDS gary make_tarball_dir)
 
-  set(BENCHMARK_DIRS  "5" CACHE STRING "Number of directories per level in the benchmark tree")
-  check_int(BENCHMARK_DIRS)
-
-  set(BENCHMARK_FILES "5" CACHE STRING "Number of files per directory in the benchmark tree")
-  check_int(BENCHMARK_FILES)
-
-  set(BENCHMARK_DEPTH "5" CACHE STRING "Number of levels in the benchmark tree")
-  check_int(BENCHMARK_DEPTH)
-
-  include(ProcessorCount)
-  ProcessorCount(N)
-  set(BENCHMARK_THREADS "${N}" CACHE STRING "Number of levels in the benchmark tree")
-  check_int(BENCHMARK_DEPTH)
-  if (NOT "${BENCHMARK_THREADS}" GREATER "0")
-    message(FATAL_ERROR "Need at least one thread to run executables")
-  endif()
-
-  set(BENCHMARK_TREE "${BENCHMARK_ROOT}/tree")
-  set(BENCHMARK_GUFI_TREE "${BENCHMARK_ROOT}/gufi_tree")
-  add_custom_target(benchmark_init COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
-                                   COMMAND ${CMAKE_COMMAND} -E make_directory "${BENCHMARK_ROOT}")
-  add_custom_target(benchmark_generate_dir COMMAND $<TARGET_FILE:gendir> "${BENCHMARK_TREE}" "${BENCHMARK_DIRS}" "${BENCHMARK_FILES}" "${BENCHMARK_DEPTH}" "${BENCHMARK_THREADS}"
-                    DEPENDS benchmark_init gendir)
-  add_custom_target(benchmark_dir2index COMMAND $<TARGET_FILE:gufi_dir2index> -n "${BENCHMARK_THREADS}" "${BENCHMARK_TREE}" "${BENCHMARK_GUFI_TREE}"
-                    DEPENDS benchmark_generate_dir gufi_dir2index)
-  add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find > /dev/null
-                    DEPENDS benchmark_dir2index gufi_query ${CMAKE_BINARY_DIR}/scripts/gufi_find)
-  add_custom_target(benchmark_fin COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
-                    DEPENDS benchmark_query)
-  add_custom_target(benchmark DEPENDS benchmark_fin)
-endif()
-
-# add target to build with makefiles
-add_subdirectory(make)
+add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
+                            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                            DEPENDS build_gary)
