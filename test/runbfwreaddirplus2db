@@ -102,7 +102,7 @@ usage() {
 
 SOURCE=$1
 
-if (( $# -ne 1 )); then
+if [[ $# -ne 1 ]]; then
     usage $0
 elif [ ! -d $SOURCE ]; then
     usage $0
@@ -134,7 +134,7 @@ $BFWREADDIRPLUS2DB -n 1 $DEST
 echo
 echo "send to output to a db both files and dirs"
 
-rm bfwreaddirplusdb.*
+rm -f bfwreaddirplusdb.*
 echo $BFWREADDIRPLUS2DB -n 1 -r -R -O bfwreaddirplusdb $DEST
 $BFWREADDIRPLUS2DB -n 1 -r -R -O bfwreaddirplusdb $DEST
 

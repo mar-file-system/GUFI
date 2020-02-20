@@ -283,67 +283,6 @@ add_subdirectory(contrib)
 add_subdirectory(examples)
 
 #
-# Define commands and tools for "make gary"
-# build tarball out of ${CMAKE_SOURCE_DIR}
-#
-
-# Collect all files into variables
-set(OTHER_FILES
-  CMakeLists.txt
-  INSTALL
-  LICENSE.txt
-  Makefile
-  README.md
-)
-set(PATHS
-  contrib
-  docs
-  examples
-  include
-  scripts
-  src
-  test
-)
-
-# Set the output name
-set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
-
-add_custom_target(cp_files COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/root ${CMAKE_SOURCE_DIR}/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/src ${CMAKE_SOURCE_DIR}/src/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/scripts ${CMAKE_SOURCE_DIR}/scripts/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/test ${CMAKE_SOURCE_DIR}/test/Makefile
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/contrib/make/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                           DEPENDS test/googletest)
-
-# Generate the tarball
-add_custom_target(create_tarball COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${PATHS} ${TOOLS} ${OTHER_FILES} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                                 DEPENDS cp_files)
-
-# The actual target
-add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
-                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
-                       DEPENDS create_tarball)
-
-# Test the tarball
-set(TARBALL_TEST_DIR "${CMAKE_BINARY_DIR}/tarball")
-
-add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
-                                   COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
-
-add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make DEBUG=1
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make test
-                             WORKING_DIRECTORY ${TARBALL_TEST_DIR}
-                             DEPENDS gary make_tarball_dir)
-
-add_custom_target(test_gary COMMAND ${CMAKE_COMMAND} -E remove_directory ${TARBALL_TEST_DIR}
-                            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                            DEPENDS build_gary)
-
-#
 # Generate Packages
 #
 

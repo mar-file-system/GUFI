@@ -237,19 +237,6 @@ TEST(parse_cmd_line, output_arguments) {
         EXPECT_STREQ(in.outdbn,       O_arg.c_str());
     }
 
-    // -O without -I
-    {
-        const char *argv[] = {
-            exec.c_str(),
-            O.c_str(), O_arg.c_str(),
-        };
-
-        int argc = sizeof(argv) / sizeof(argv[0]);
-
-        struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
-    }
-
     // both -o and -O
     {
         const char *argv[] = {

@@ -100,12 +100,12 @@ foreach(SCRIPT
     runuserfilespacehogusesummary
     testdir.tar
     verifyknowntree)
-  # copy the scropt into the build directory for easy access
+  # copy the script into the build directory for easy access
   configure_file(${SCRIPT} ${SCRIPT} COPYONLY)
 endforeach()
 
 # create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR  "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
+set(TESTTAR  "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
 set(TESTDIR  "${CMAKE_CURRENT_BINARY_DIR}/testdir")
 set(TESTDST  "${TESTDIR}.gufi")
 set(TESTGUFI "${TESTDST}/${TESTDIR}")

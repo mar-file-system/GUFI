@@ -470,12 +470,6 @@ int parse_cmd_line(int         argc,
        return retval = -1;
    }
 
-   // writing to databases requires -I
-   if (in->outdb && !in->sqlinit_len) {
-       fprintf(stderr, "Missing -I SQL statement\n");
-       return retval = -1;
-   }
-
    // if there were no other errors,
    // make sure min_level <= max_level
    if (retval == 0) {
