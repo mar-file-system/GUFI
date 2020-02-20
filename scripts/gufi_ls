@@ -263,21 +263,20 @@ if __name__=='__main__':
         if recursive:
             I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT(64), nlink INT(64), size INT(64), mode INT(64), uid INT(64), gid INT(64), blksize INT(64), blocks INT(64), mtime INT(64), atime INT(64), ctime INT(64), linkname TEXT, xattrs TEXT, pinode INT(64));'.format(args.inmemory_name)
 
-            # there is a duplicate pinode column in pentries
-            common_columns = ['fpath()', 'name', 'type', 'inode', 'nlink', 'size', 'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime', 'atime', 'ctime', 'linkname', 'xattrs']
-            S = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(common_columns + ['pinode'],
-                                                                                        ['summary'],
-                                                                                        where,
-                                                                                        None,
-                                                                                        None,
-                                                                                        args.num_results)
+            SE = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(['fpath()', 'name', 'type',
+                                                                                          'inode', 'nlink', 'size',
+                                                                                          'mode', 'uid', 'gid',
+                                                                                          'blksize', 'blocks', 'mtime',
+                                                                                          'atime', 'ctime', 'linkname',
+                                                                                          'xattrs', 'pinode'],
+                                                                                         ['{}'],
+                                                                                         where,
+                                                                                         None,
+                                                                                         None,
+                                                                                         args.num_results)
 
-            E = 'INSERT INTO {0} '.format(args.inmemory_name) + gufi_common.build_query(common_columns + ['`pinode:1`'],
-                                                                                        ['pentries'],
-                                                                                        where,
-                                                                                        None,
-                                                                                        None,
-                                                                                        args.num_results)
+            S = SE.format('summary')
+            E = SE.format('pentries')
 
             J = 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name)
 
