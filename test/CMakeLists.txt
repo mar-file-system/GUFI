@@ -62,6 +62,12 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
+# make sure unit tests work first
+add_subdirectory(googletest)
+
+# simple create known tree and query test
+add_test(NAME verifyknowntree COMMAND verifyknowntree)
+
 # copy test scripts into the test directory within the build directory
 # list these explicitly to prevent random garbage from getting in
 foreach(SCRIPT
@@ -88,7 +94,6 @@ foreach(SCRIPT
     runoldbigfiles
     runquerydb
     runquerydbn
-    runtests
     runuidgidsummary
     runuidgidummary
     runuserfilespacehog
@@ -96,16 +101,38 @@ foreach(SCRIPT
     testdir.tar
     verifyknowntree)
   # copy the scropt into the build directory for easy access
-  configure_file(${SCRIPT} ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} COPYONLY)
+  configure_file(${SCRIPT} ${SCRIPT} COPYONLY)
 endforeach()
 
-# # create an empty directory and extract testdir.tar into it for runtests
-set(TESTDIR ${CMAKE_CURRENT_BINARY_DIR}/testdir)
-add_test(NAME runtests COMMAND ${CMAKE_CURRENT_BINARY_DIR}/runtests "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar" "${TESTDIR}" "${TESTDIR}.gufi" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+# create an empty directory and extract testdir.tar into it for runtests
+set(TESTTAR  "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
+set(TESTDIR  "${CMAKE_CURRENT_BINARY_DIR}/testdir")
+set(TESTDST  "${TESTDIR}.gufi")
+set(TESTGUFI "${TESTDST}/${TESTDIR}")
+
+add_custom_target(cleanup_tree ALL COMMAND rm -rf "${TESTDIR}" "${TESTGUFI}")
+add_custom_target(mkdir ALL COMMAND mkdir -p "${TESTDIR}"
+                  DEPENDS cleanup_tree)
+add_custom_target(untar_tree ALL COMMAND tar -xf "${TESTTAR}" -C "${TESTDIR}"
+                  DEPENDS mkdir)
+
+# run individual tests
+# bfwi must run first
+add_test(NAME bfwi                            COMMAND runbfwi                        ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME bfti                            COMMAND runbfti                        ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME bfq                             COMMAND runbfq                         ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME bfwreaddirplus2db               COMMAND runbfwreaddirplus2db           ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME querydb                         COMMAND runquerydb                     ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME querydbn                        COMMAND runquerydbn                    ${TESTGUFI} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME dfw                             COMMAND rundfw                         ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# other tests
+add_test(NAME listschemadb                    COMMAND runlistschemadb                ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME listtablesdb                    COMMAND runlisttablesdb                ${TESTGUFI}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME groupfilespacehogusesummary     COMMAND rungroupfilespacehogusesummary ${TESTGUFI} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME userfilespacehogusesummary      COMMAND runuserfilespacehogusesummary  ${TESTGUFI} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME groupfilespacehog               COMMAND rungroupfilespacehog           ${TESTGUFI} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME userfilespacehog                COMMAND runuserfilespacehog            ${TESTGUFI} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME oldbigfiles                     COMMAND runoldbigfiles                 ${TESTGUFI} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # add_test(NAME gufitest COMMAND gufitest.py all)
-
-add_test(NAME verifyknowntree COMMAND verifyknowntree)
-
-# recurse down into the googletest subdirectory
-add_subdirectory(googletest)

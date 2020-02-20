@@ -64,6 +64,6 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-SCR=$DIR/../scripts
+SCR=$DIR/../examples
 
-$SCR/listtablesdb testdirdup/testdir/db.db
+$SCR/listtablesdb $1/db.db

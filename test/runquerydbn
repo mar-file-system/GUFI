@@ -67,11 +67,11 @@
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
 SCR=$DIR/../scripts
-BFQ=$DIR/../bfq
-QUERYDBN=$DIR/../querydbn
+BFQ=$DIR/../src/gufi_query
+QUERYDBN=$DIR/../src/querydbn
 
 echo "query to create db insert recs from entry query into out db big files and run querydbn"
 rm -f outdb*
 # if you want to be fancy then use date functions to provide this in user readable date/time
-$BFQ -E "insert into sument select uidtouser(uid), path(), name, size, mtime from entries where type='f'and size>4;" -n $2 -O outdb -I "create table sument (username text, pathname text, name text, size int64, mtime int64);" $1
+$BFQ -E "insert into sument select uidtouser(uid, 5), path(), name, size, mtime from entries where type='f'and size>4;" -n $2 -O outdb -I "create table sument (username text, pathname text, name text, size int64, mtime int64);" $1
 $QUERYDBN -NV outdb $2 "select username, pathname,name,size,mtime from vsument order by size;" sument

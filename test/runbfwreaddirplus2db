@@ -64,8 +64,8 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-BFWREADDIRPLUS2DB=$DIR/../bfwreaddirplus2db
-QUERYDBN=$DIR/../querydbn
+BFWREADDIRPLUS2DB=$DIR/../src/bfwreaddirplus2db
+QUERYDBN=$DIR/../src/querydbn
 
 
 # NOTE: The destination GUFI-tree is optional
@@ -101,9 +101,8 @@ usage() {
 }
 
 SOURCE=$1
-GUFI_BASE=$2
 
-if (( $# < 1 || $# > 2 )); then
+if (( $# -ne 1 )); then
     usage $0
 elif [ ! -d $SOURCE ]; then
     usage $0
@@ -157,7 +156,7 @@ sqlite3 -line bfwreaddirplusdb.0 'select * from readdirplus;'
 echo
 echo "send to output to a db files and links only"
 
-rm bfwreaddirplusdb.*
+rm -f bfwreaddirplusdb.*
 echo $BFWREADDIRPLUS2DB -n 1 -r -O bfwreaddirplusdb $DEST
 $BFWREADDIRPLUS2DB -n 1 -r -O bfwreaddirplusdb $DEST
 

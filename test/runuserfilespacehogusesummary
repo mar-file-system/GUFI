@@ -64,8 +64,8 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-SCR=$DIR/../scripts
-BFQ=$DIR/../bfq
+SCR=$DIR/../examples
+BFQ=$DIR/../src/gufi_query
 
-rm outdb*
-$SCR/userfilespacehogusesummary testdirdup/testdir 2
+rm -f outdb*
+$SCR/userfilespacehogusesummary $1 $2

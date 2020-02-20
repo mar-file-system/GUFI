@@ -64,7 +64,7 @@
 
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
-DFW=$DIR/../dfw
+DFW=$DIR/../src/dfw
 
 # cc -DBSDXATTRS dfw.c -o dfw
 #cc dfw.c -o dfw

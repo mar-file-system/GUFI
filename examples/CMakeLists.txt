@@ -1,5 +1,3 @@
-#!/bin/bash -e
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,43 +60,26 @@
 
 
 
-SCRIPT="$(dirname $BASH_SOURCE)" # Must be at the top
+cmake_minimum_required(VERSION 3.0.0)
 
-function usage() {
-    echo "Usage: $0 tar dir GUFI_tree"
-}
-
-if [[ "$#" -lt "3" ]]; then
-    usage
-    exit 1
-fi
-
-TAR="$1"
-TEST="$2"
-COPY="$3"
-
-function cleanup {
-    rm -rf "$COPY"
-}
-
-trap cleanup EXIT
-
-rm -rf $TEST
-mkdir $TEST
-tar -xf $TAR -C $TEST
-
-# example
-$SCRIPT/runbfwi $TEST $COPY
-COPY="$COPY/$TEST"
-
-$SCRIPT/runbfti $COPY
-$SCRIPT/runbfq  $COPY
-$SCRIPT/runquerydb  $COPY
-
-
-
-# TBD
-
-# runbfmi ...
-
-# runquerydbn ...
+# copy test scripts into the test directory within the build directory
+# list these explicitly to prevent random garbage from getting in
+foreach(EXAMPLE
+    deluidgidsummaryrecs
+    diffreadirplusdb
+    example_run
+    generategidsummary
+    generateuidsummary
+    gengidsummaryavoidentriesscan
+    genuidsummaryavoidentriesscan
+    groupfilespacehog
+    groupfilespacehogusesummary
+    listschemadb
+    listtablesdb
+    oldbigfiles
+    runtsm
+    userfilespacehog
+    userfilespacehogusesummary)
+  # copy the scropt into the build directory for easy access
+  configure_file(${EXAMPLE} ${CMAKE_CURRENT_BINARY_DIR}/${EXAMPLE} COPYONLY)
+endforeach()

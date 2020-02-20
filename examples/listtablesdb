@@ -61,4 +61,4 @@
 # OF SUCH DAMAGE.
 
 
-echo ".tables" | sqlite3 $1
+sqlite3 $1 ".tables"
