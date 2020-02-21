@@ -95,7 +95,7 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
 
 extern int errno;
 
-static int create_tables(const char * name, sqlite3 *db, void * args) {
+static int create_tables(const char *name, sqlite3 *db, void *args) {
     if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
         (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
@@ -121,6 +121,7 @@ off_t create_template(int * fd) {
                           , NULL, NULL
                           #endif
                           );
+
     sqlite3_close(db);
 
     if ((*fd = open(name, O_RDONLY)) == -1) {

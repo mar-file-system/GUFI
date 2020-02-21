@@ -3,7 +3,7 @@ export
 TESTTAR  = testdir.tar
 TESTDIR  = testdir
 TESTDST  = $(TESTDIR).gufi
-TESTGUFI = $(TESTDST)/$(TESTDIR)
+TESTGUFI = $(TESTDST)
 
 ifneq ("$(CXX)", "false")
 SUBDIRECTORIES=googletest

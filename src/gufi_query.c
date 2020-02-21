@@ -1147,7 +1147,7 @@ int main(int argc, char *argv[])
         for(int i = 0; i < in.maxthreads; i++) {
             if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME)               ||
                 (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
-                printf("Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
+                fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }
         }
 

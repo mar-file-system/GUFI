@@ -114,6 +114,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     DIR * dir = opendir(work->name);
     if (!dir) {
         closedir(dir);
+        fprintf(stderr, "Could not open directory \"%s\"\n", work->name);
         return 1;
     }
 
@@ -126,8 +127,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     // create the directory
     char topath[MAXPATH];
-    SNPRINTF(topath, MAXPATH, "%s/%s", in.nameto, work->name);
-    int rc = mkdir(topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // don't need recursion because parent is guaranteed to exist
+    SNPRINTF(topath, MAXPATH, "%s/%s", in.nameto, work->name + in.name_len); /* offset by in.name_len to remove prefix */
+    int rc = mkdir(topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);           /* don't need recursion because parent is guaranteed to exist */
     if (rc < 0) {
         const int err = errno;
         if (err != EEXIST) {
@@ -172,47 +173,59 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     struct dirent * entry = NULL;
     size_t rows = 0;
     while ((entry = readdir(dir))) {
+        const size_t len = strlen(entry->d_name);
+
         // skip . and ..
         if (entry->d_name[0] == '.') {
-            size_t len = strlen(entry->d_name);
             if ((len == 1) ||
                 ((len == 2) && (entry->d_name[1] == '.'))) {
                 continue;
             }
         }
 
+
         // get entry path
-        struct work * e = (struct work *) calloc(1, sizeof(struct work));
-        SNPRINTF(e->name, MAXPATH, "%s/%s", work->name, entry->d_name);
+        struct work e;
+        memset(&e, 0, sizeof(struct work));
+        SNFORMAT_S(e.name, MAXPATH, 3, work->name, strlen(work->name), "/", 1, entry->d_name, len);
 
         // get the entry's metadata
-        if (lstat(e->name, &e->statuso) < 0) {
+        if (lstat(e.name, &e.statuso) < 0) {
             continue;
         }
 
-        e->xattrs=0;
+        e.xattrs=0;
         if (in.doxattrs > 0) {
-            memset(e->xattr, 0, sizeof(e->xattr));
-            e->xattrs = pullxattrs(e->name, e->xattr);
+            memset(e.xattr, 0, sizeof(e.xattr));
+            e.xattrs = pullxattrs(e.name, e.xattr);
         }
 
         // push subdirectories onto the queue
-        if (S_ISDIR(e->statuso.st_mode)) {
-            e->type[0] = 'd';
-            e->pinode = work->statuso.st_ino;
-            QPTPool_enqueue(ctx, id, processdir, e);
-            continue;
+        if (S_ISDIR(e.statuso.st_mode)) {
+            if (work->level <= in.max_level) {
+                e.type[0] = 'd';
+                e.pinode = work->statuso.st_ino;
+                e.level = work->level + 1;
+
+                /* make a copy here so that the data can be pushed into the queue */
+                /* this is more efficient than malloc+free for every single entry */
+                struct work * copy = (struct work *) calloc(1, sizeof(struct work));
+                memcpy(copy, &e, sizeof(struct work));
+
+                QPTPool_enqueue(ctx, id, processdir, copy);
+                continue;
+            }
         }
 
         rows++;
 
         // non directories
-        if (S_ISLNK(e->statuso.st_mode)) {
-            e->type[0] = 'l';
-            readlink(e->name, e->linkname, MAXPATH);
+        if (S_ISLNK(e.statuso.st_mode)) {
+            e.type[0] = 'l';
+            readlink(e.name, e.linkname, MAXPATH);
         }
-        else if (S_ISREG(e->statuso.st_mode)) {
-            e->type[0] = 'f';
+        else if (S_ISREG(e.statuso.st_mode)) {
+            e.type[0] = 'f';
         }
 
         #if BENCHMARK
@@ -221,13 +234,18 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         pthread_mutex_unlock(&global_mutex);
         #endif
 
+        // get entry relative path
+        char e_name[MAXPATH];
+        SNPRINTF(e_name, MAXPATH, "%s", e.name + in.name_len);
+
+        // overwrite full path with relative path
+        SNFORMAT_S(e.name, MAXPATH, 1, e_name, strlen(e.name) - in.name_len);
+
         // update summary table
-        sumit(&summary, e);
+        sumit(&summary, &e);
 
         // add entry into bulk insert
-        insertdbgo(e, db, res);
-
-        free(e);
+        insertdbgo(&e, db, res);
     }
 
     stopdb(db);
@@ -372,7 +390,7 @@ struct work * validate_inputs() {
     // the source directory's permissions and owners
     // this allows for the threads to not have to recursively create directories
     char dst_path[MAXPATH];
-    SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name);
+    SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name + in.name_len);
     if (dupdir(dst_path, &root->statuso)) {
         fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
         free(root);
@@ -382,6 +400,8 @@ struct work * validate_inputs() {
     if (in.doxattrs > 0) {
         root->xattrs = pullxattrs(in.name, root->xattr);
     }
+
+    root->level = 0;
 
     return root;
 }
@@ -393,7 +413,7 @@ void sub_help() {
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:x", 2, "input_dir output_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xz:", 2, "input_dir output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -406,6 +426,9 @@ int main(int argc, char * argv[]) {
 
         if (retval)
             return retval;
+
+        /* add 1 more for the separator that is placed between this string and the entry */
+        in.name_len = strlen(in.name) + 1;
     }
 
     // get first work item by validating inputs

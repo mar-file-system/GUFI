@@ -108,7 +108,7 @@ endforeach()
 set(TESTTAR  "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
 set(TESTDIR  "${CMAKE_CURRENT_BINARY_DIR}/testdir")
 set(TESTDST  "${TESTDIR}.gufi")
-set(TESTGUFI "${TESTDST}/${TESTDIR}")
+set(TESTGUFI "${TESTDST}")
 
 add_custom_target(cleanup_tree ALL COMMAND rm -rf "${TESTDIR}" "${TESTGUFI}")
 add_custom_target(mkdir ALL COMMAND mkdir -p "${TESTDIR}"
