@@ -114,5 +114,5 @@ endforeach()
 configure_file(gufi_common.py gufi_common.py @ONLY)
 install(FILES gufi_common.py DESTINATION bin COMPONENT Server)
 
-# gufi_jail.sh is used by sshd_config to prevent commands other than gufi_* from running
-install(PROGRAMS gufi_jail.sh DESTINATION bin COMPONENT Server)
+# gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
+install(PROGRAMS gufi_jail DESTINATION bin COMPONENT Server)
