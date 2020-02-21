@@ -3,7 +3,6 @@ export
 TESTTAR  = testdir.tar
 TESTDIR  = testdir
 TESTDST  = $(TESTDIR).gufi
-TESTGUFI = $(TESTDST)
 
 ifneq ("$(CXX)", "false")
 SUBDIRECTORIES=googletest
@@ -27,7 +26,7 @@ $(TESTDIR): $(TESTTAR)
 	tar -xf $(TESTTAR)
 
 # generate the GUFI index
-bfwi $(TESTDST) $(TESTGUFI): runbfti $(TESTDIR)
+bfwi $(TESTDST) $(TESTDST): runbfti $(TESTDIR)
 	./runbfwi $(TESTDIR) $(TESTDST)
 
 bfti:                        runbfti bfwi
@@ -39,7 +38,7 @@ listschemadb:                runlistschemadb
 listtablesdb:                runlisttablesdb
 
 bfti bfq bfwreaddirplus2db querydb dfw:
-	./$< $(TESTGUFI)
+	./$< $(TESTDST)
 
 querydbn:                    runquerydbn bfti
 groupfilespacehogusesummary: rungroupfilespacehogusesummary
@@ -49,7 +48,7 @@ userfilespacehog:            runuserfilespacehog
 oldbigfiles:                 runoldbigfiles
 
 querydbn groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles:
-	./$< $(TESTGUFI) 2
+	./$< $(TESTDST) 2
 
 verifyknowntree:
 	./$@
