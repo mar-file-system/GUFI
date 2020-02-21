@@ -270,6 +270,9 @@ add_subdirectory(src)
 # build the core scripts
 add_subdirectory(scripts)
 
+# add configuration examples
+add_subdirectory(config)
+
 # build documentation
 add_subdirectory(docs)
 
