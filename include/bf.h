@@ -144,6 +144,7 @@ typedef enum OpenMode {
 
 struct input {
    char name[MAXPATH];
+   size_t name_len;
    char nameto[MAXPATH];
    char sqltsum[MAXSQL];
    size_t sqltsum_len;

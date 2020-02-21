@@ -161,6 +161,7 @@ void show_input(struct input* in, int retval) {
    printf("in.dodelim            = %d\n",    in->dodelim);
    printf("in.delim              = '%s'\n",  in->delim);
    printf("in.name               = '%s'\n",  in->name);
+   printf("in.name_len           = '%zu'\n", in->name_len);
    printf("in.outfile            = %d\n",    in->outfile);
    printf("in.outfilen           = '%s'\n",  in->outfilen);
    printf("in.outdb              = %d\n",    in->outdb);
@@ -215,6 +216,7 @@ int parse_cmd_line(int         argc,
                    struct input *in) {
    in->maxthreads         = 1;         // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), "|");
+   in->name_len           = 0;
    in->sqlinit_len        = 0;
    in->sqltsum_len        = 0;
    in->sqlsum_len         = 0;

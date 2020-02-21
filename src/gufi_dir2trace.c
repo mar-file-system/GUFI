@@ -90,8 +90,8 @@ size_t total_dirs = 0;
 size_t total_files = 0;
 #endif
 
-// process the work under one directory (no recursion)
-// deletes work
+/* process the work under one directory (no recursion) */
+/* deletes work */
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
@@ -119,7 +119,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         return 1;
     }
 
-    // get source directory info
+    /* get source directory info */
     struct stat dir_st;
     if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
@@ -127,12 +127,19 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         return 1;
     }
 
+    /* get a copy of the full source path */
+    char work_name[MAXPATH];
+    size_t work_name_len = strlen(work->name);
+    SNFORMAT_S(work_name, MAXPATH, 1, work->name, work_name_len);
+
+    /* remove this directory's path prefix for writing to the trace file */
+    SNFORMAT_S(work->name, MAXPATH, 1, work_name + in.name_len, work_name_len - in.name_len);
     worktofile(gts.outfd[id], in.delim, work);
 
     struct dirent * entry = NULL;
     size_t rows = 0;
     while ((entry = readdir(dir))) {
-        // skip . and ..
+        /* skip . and .. */
         if (entry->d_name[0] == '.') {
             size_t len = strlen(entry->d_name);
             if ((len == 1) ||
@@ -141,12 +148,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             }
         }
 
-        // get entry path
+        /* get entry path */
         struct work e;
         memset(&e, 0, sizeof(struct work));
-        SNPRINTF(e.name, MAXPATH, "%s/%s", work->name, entry->d_name);
+        SNPRINTF(e.name, MAXPATH, "%s/%s", work_name, entry->d_name);
 
-        // get the entry's metadata
+        /* get the entry's metadata */
         if (lstat(e.name, &e.statuso) < 0) {
             continue;
         }
@@ -156,13 +163,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             e.xattrs = pullxattrs(e.name, e.xattr);
         }
 
-        // push subdirectories onto the queue
+        /* push subdirectories onto the queue */
         if (S_ISDIR(e.statuso.st_mode)) {
             e.type[0] = 'd';
             e.pinode = work->statuso.st_ino;
 
-            // make a copy here so that the data can be pushed into the queue
-            // this is more efficient than malloc+free for every single entry
+            /* make a copy here so that the data can be pushed into the queue */
+            /* this is more efficient than malloc+free for every single entry */
             struct work * copy = (struct work *) calloc(1, sizeof(struct work));
             memcpy(copy, &e, sizeof(struct work));
 
@@ -172,7 +179,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
         rows++;
 
-        // non directories
+        /* non directories */
         if (S_ISLNK(e.statuso.st_mode)) {
             e.type[0] = 'l';
             readlink(e.name, e.linkname, MAXPATH);
@@ -186,6 +193,16 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         total_files++;
         pthread_mutex_unlock(&global_mutex);
         #endif
+
+        if (work_name_len <= in.name_len) {
+            SNPRINTF(e.name, MAXPATH, "%s", entry->d_name);
+        }
+        else {
+            /* offset by in.name_len to remove prefix */
+            SNPRINTF(e.name, MAXPATH, "%s/%s", work_name + in.name_len, entry->d_name);
+        }
+
+        fprintf(stderr, "%s\n", e.name);
 
         worktofile(gts.outfd[id], in.delim, &e);
     }
@@ -205,14 +222,14 @@ struct work * validate_inputs() {
 
     SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
-    // get input path metadata
+    /* get input path metadata */
     if (lstat(root->name, &root->statuso) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
         free(root);
         return NULL;
     }
 
-    // check that the input path is a directory
+    /* check that the input path is a directory */
     if (S_ISDIR(root->statuso.st_mode)) {
         root->type[0] = 'd';
     }
@@ -222,7 +239,7 @@ struct work * validate_inputs() {
         return NULL;
     }
 
-    // check if the source directory can be accessed
+    /* check if the source directory can be accessed */
     static mode_t PERMS = R_OK | X_OK;
     if ((root->statuso.st_mode & PERMS) != PERMS) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
@@ -231,7 +248,7 @@ struct work * validate_inputs() {
         return NULL;
     }
 
-    // check the output files, if a prefix was provided
+    /* check the output files, if a prefix was provided */
     if (in.outfile) {
         if (!strlen(in.outfilen)) {
             fprintf(stderr, "No output file name specified\n");
@@ -239,7 +256,7 @@ struct work * validate_inputs() {
             return NULL;
         }
 
-        // check if the destination path already exists (not an error)
+        /* check if the destination path already exists (not an error) */
         for(int i = 0; i < in.maxthreads; i++) {
             char outname[MAXPATH];
             SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
@@ -248,7 +265,7 @@ struct work * validate_inputs() {
             if (lstat(in.outfilen, &dst_st) == 0) {
                 fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-                // if the destination path is not a directory (error)
+                /* if the destination path is not a directory (error) */
                 if (S_ISDIR(dst_st.st_mode)) {
                     fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
                     free(root);
@@ -277,15 +294,18 @@ int main(int argc, char * argv[]) {
     if (idx < 0)
         return -1;
     else {
-        // parse positional args, following the options
+        /* parse positional args, following the options */
         int retval = 0;
         INSTALL_STR(in.name,     argv[idx++], MAXPATH, "input_dir");
 
         if (retval)
             return retval;
+
+        /* add 1 more for the separator that is placed between this string and the entry */
+        in.name_len = strlen(in.name) + 1;
     }
 
-    // get first work item by validating inputs
+    /* get first work item by validating inputs */
     struct work * root = validate_inputs();
     if (!root) {
         return -1;

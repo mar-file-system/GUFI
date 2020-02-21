@@ -35,12 +35,6 @@ ${ORIGIN}/../${SRC}/gufi_dir2index "${src}" "${dst}"
 dst="$(echo ${dst} | tr -s /)" # clean up slashes
 dst="${dst%/}"                 # remove last slash
 
-if [[ "${src}" =~ ^/ ]]; then
-    dst="${dst}${src}"
-else
-    dst="${dst}/${src}"
-fi
-
 # do not exit after first error
 set +e
 

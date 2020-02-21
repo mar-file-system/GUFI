@@ -182,7 +182,7 @@ def build_order_by(args):
         order_by += ['mtime ' + ('ASC' if args.reverse else 'DESC')]
 
     if len(order_by) == 0:
-        order_by += ['name COLLATE NOCASE ASC']
+        order_by += ['name COLLATE NOCASE ' + ('DESC' if args.reverse else 'ASC')]
 
     if args.no_sort:
         order_by = []
@@ -200,7 +200,7 @@ def build_order_by_recursive(args):
         order_by += ['umtime ' + ('ASC' if args.reverse else 'DESC')]
 
     if len(order_by) == 0:
-        order_by += ['ufullpath || "/" || uname COLLATE NOCASE ASC']
+        order_by += ['ufullpath || "/" || uname COLLATE NOCASE ' + ('DESC' if args.reverse else 'ASC')]
 
     if args.no_sort:
         order_by = []
@@ -248,6 +248,7 @@ if __name__=='__main__':
 
     args = parser.parse_args();
 
+    # at least 1 argument
     if len(args.paths[0]) == 0:
         args.paths= [['']]
 

@@ -136,7 +136,7 @@ CLEAN_GUFI=":"
 
 if [ -n "$GUFI_BASE" ]; then
     DEST="$GUFI_BASE"
-    GUFI="$GUFI_BASE/$SOURCE"
+    GUFI="$GUFI_BASE"
     CLEAN_GUFI="rm -rf $GUFI"
 fi
 
