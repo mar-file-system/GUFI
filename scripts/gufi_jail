@@ -6,20 +6,18 @@
 # Add a section like this to /etc/ssh/sshd_config:
 #
 # Match Group gufi
-#       ForceCommand gufi_jail.sh
+#       ForceCommand /path/to/gufi_jail
 #
 
 set -f
 
 set -- ${SSH_ORIGINAL_COMMAND}
 case "$1" in
-    gufi_find|gufi_ls|gufi_stat|gufi_stats)
+    gufi_find|gufi_ls|gufi_stats)
         ;;
     *)
+        echo "Error: Command \"$1\" is not allowed" >&2
         exit 1
 esac
 
-command="$1"
-shift
-
-exec "${command}" "$@"
+exec "$@"
