@@ -70,7 +70,7 @@ add_test(NAME verifyknowntree COMMAND verifyknowntree)
 
 # copy test scripts into the test directory within the build directory
 # list these explicitly to prevent random garbage from getting in
-foreach(SCRIPT
+foreach(TEST
     bfwiflat2gufitest
     dfw2gufitest
     generatetree
@@ -101,7 +101,7 @@ foreach(SCRIPT
     testdir.tar
     verifyknowntree)
   # copy the script into the build directory for easy access
-  configure_file(${SCRIPT} ${SCRIPT} COPYONLY)
+  configure_file(${TEST} ${TEST} COPYONLY)
 endforeach()
 
 # create an empty directory and extract testdir.tar into it for runtests
