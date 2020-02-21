@@ -60,59 +60,15 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+# Server Config
 
-# list this first so that make install will overwrite these files
-if (CLIENT)
-  # add the paramiko source for installing
-  # keep the trailing / to rename the directory
-  install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION lib/GUFI/paramiko COMPONENT Client)
+# positive integer
+Threads=@CORES@
 
-  # copy the configuration handling script into both the Server and Client RPMs
-  configure_file(gufi_config.py gufi_config.py COPYONLY)
-  install(FILES gufi_config.py DESTINATION bin COMPONENT Client)
+# absolute path to gufi_query
+# single string
+Exec=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
 
-  # gufi_common.py is also needed by the client
-  configure_file(gufi_common.py gufi_common.py COPYONLY)
-  install(FILES gufi_common.py DESTINATION bin COMPONENT Client)
-
-  # create individual client scripts
-  set(TOOL find)
-  configure_file(gufi_client gufi_client_find @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_find  RENAME gufi_find  DESTINATION bin COMPONENT Client)
-
-  set(TOOL ls)
-  configure_file(gufi_client gufi_client_ls @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_ls    RENAME gufi_ls    DESTINATION bin COMPONENT Client)
-
-  set(TOOL stats)
-  configure_file(gufi_client gufi_client_stats @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stats RENAME gufi_stats DESTINATION bin COMPONENT Client)
-endif()
-
-# scripts that act as executables on the server
-set(TOOLS
-  gufi_find
-  gufi_stats
-  gufi_ls)
-
-# python libraries installed into bin for convenience
-set(LIBRARIES
-  gufi_config.py
-  gufi_common.py)
-
-# copy and install scripts that act like binaries
-foreach(SCRIPT ${TOOLS} ${LIBRARIES})
-  # copy the tools into the build directory for easy access
-  configure_file(${SCRIPT} ${SCRIPT} @ONLY)
-
-  # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${SCRIPT} DESTINATION bin COMPONENT Server)
-endforeach()
-
-# gufi_common.py is not an executable, but is installed in bin for convenience
-configure_file(gufi_common.py gufi_common.py @ONLY)
-install(FILES gufi_common.py DESTINATION bin COMPONENT Server)
-
-# gufi_jail.sh is used by sshd_config to prevent commands other than gufi_* from running
-install(PROGRAMS gufi_jail.sh DESTINATION bin COMPONENT Server)
+# prefix of directories used by GUFI
+# single string
+IndexRoot=/search/root
