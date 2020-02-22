@@ -76,7 +76,7 @@ de yum -y install epel-release centos-release-scl
 de yum -y install fuse-devel libattr1 pcre-devel
 
 # install extra packages
-de yum -y install autoconf cmake3 make patch pkgconfig
+de yum -y install autoconf cmake3 make patch pkgconfig sudo
 
 # create symlinks
 de ln -sf /usr/bin/cmake3 /usr/bin/cmake

@@ -63,14 +63,15 @@
 
 set -e
 
+mkdir -p build
+cd build
+
 export CC="${C_COMPILER}"
 export CXX="${CXX_COMPILER}"
 export GTEST_COLOR=1
 export DEP_PATH="/tmp"
 export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
-mkdir -p build
-cd build
 cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PATH}" ..
 
 # use files from the generated tar
@@ -82,6 +83,16 @@ if  [[ "${BUILD}" = "make" ]]; then
 fi
 
 make
+
+SUDO=
+if [[ -x "$(command -v sudo)" ]]
+then
+    SUDO=sudo
+fi
+
+${SUDO} make install
+${SUDO} cp /etc/GUFI/config.example /etc/GUFI/config
+${SUDO} chmod 644 /etc/GUFI/config
 
 if [[ "${BUILD}" = "cmake" ]]; then
     ctest --verbose
