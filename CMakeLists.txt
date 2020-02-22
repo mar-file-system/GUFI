@@ -264,6 +264,9 @@ set(COMMON_LIBRARIES
   dl
 )
 
+# enable "make test"
+enable_testing()
+
 # build the core executables
 add_subdirectory(src)
 
@@ -275,9 +278,6 @@ add_subdirectory(config)
 
 # build documentation
 add_subdirectory(docs)
-
-# enable "make test"
-enable_testing()
 
 # recurse down into the test subdirectory
 add_subdirectory(test)
