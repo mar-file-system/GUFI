@@ -1,0 +1,37 @@
+.Dd Feb 24, 2020
+.Dt gufi_stat
+.Os Linux
+.Sh NAME
+.Nm gufi_stat
+.Nd display file status
+.Sh SYNOPSIS
+.Nm
+.Op options
+path
+.Sh DESCRIPTION
+Display file status.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It path
+path to stat
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_stat
+.El
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
