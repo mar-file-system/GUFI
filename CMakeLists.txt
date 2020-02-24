@@ -270,6 +270,9 @@ add_subdirectory(src)
 # build the core scripts
 add_subdirectory(scripts)
 
+# build documentation
+add_subdirectory(docs)
+
 # enable "make test"
 enable_testing()
 
