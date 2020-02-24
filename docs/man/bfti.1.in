@@ -1,0 +1,67 @@
+.Dd Feb 24, 2020
+.Dt bfti
+.Os Linux
+.Sh NAME
+.Nm bfti
+.Nd Summary GUFI index directories
+.Sh SYNOPSIS
+.Nm
+.Op options
+GUFI_index
+
+.Sh DESCRIPTION
+Walks breadth first below the input directory path and summarizes all directories below it into a tree summary table record by reading all the directory summaries in the tree below.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl P
+print directories as they are encountered
+.It Fl n\ <threads>
+number of threads
+.It Fl s
+generate tree-summary table (in top-level DB)
+.It GUFI_index
+path to GUFI index
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/bfti
+.El
+
+.Sh NOTES
+.Nm
+attempts to save the mtime and atime of the database before adding the tree summary table and then attempts to set the atime and mtime of the database back to its saved value, as if you put your GUFI inside your source tree, you want to keep the mtime of the database the same as when it was last updated by a full or incremental update for comparison on incrementals.
+
+.Nm
+has a feature that it will use tree summaries below to create a new higher level tree summary for efficiency. This means you need to replace the lowest tree summary first and so on up the tree in order for
+.Nm
+to produce correct tree summaries should you choose to put tree summaries at multiple levels in the tree.
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.Sh FLOW
+ input directory is put on a queue
+ threads are started
+ loop assigning work (directories) from queue to threads
+ each thread reads the directory and the  summary table for each the dir
+   if directory put it on the queue
+   accumulate each directory summary into a global summary for all directories below the input directory
+   close directory
+ end
+ open/create and write tree summary record into treesummary table that summarizes all the directories below it
+
+.Sh SEE ALSO
+.Xr gufi_query 1
