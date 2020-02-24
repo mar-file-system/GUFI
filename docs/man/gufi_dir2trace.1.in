@@ -1,0 +1,71 @@
+.Dd Feb 24, 2020
+.Dt gufi_dir2trace
+.Os Linux
+.Sh NAME
+.Nm gufi_dir2trace
+.Nd generates a trace file from a source directory
+.Sh SYNOPSIS
+.Nm
+.Op options
+input_dir
+
+.Sh DESCRIPTION
+Generate a trace file by walking the source directory breadth first. By default, all metadata from the input_dir is written to stdout. When out_fname is specified, the metadata is written to per-thread files that should be concatenated for processing by gufi_trace2index.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl n\ <threads>
+number of threads
+.It Fl x
+pull xattrs from source file-sys into GUFI
+.It Fl d\ <delim>
+delimiter (one char)  [use 'x' for 0x1E]
+.It Fl o\ <out_fname>
+output file (one-per-thread, with thread-id suffix), implies -e 1
+.It input_dir
+walk this tree to produce a trace file.
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_dir2trace
+.El
+
+
+.Sh NOTES
+.Nm
+was once part of the executable "bfwi".
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.Sh FLOW
+ threads are started
+ input directory is put on a queue
+ loop assigning work (directories) from queue to threads
+   Open the directory
+   Create the corresponding directory in the GUFI index
+   Create and open an empty database file
+   for each entry in the source directory
+     Subdirectories are pushed onto the queue
+     Non directories are staged for insertion into the database
+   Execute the insertions
+   Close the database file
+   Change the permissions and owners of the database file
+   Close the directory
+ end
+
+.Sh SEE ALSO
+.Xr gufi_dir2index 1 ,
+.Xr gufi_trace2index 1
