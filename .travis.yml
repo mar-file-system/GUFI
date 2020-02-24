@@ -4,13 +4,14 @@ git:
     depth: 5
 
 stages:
-    - build_and_test
+    - test
+    - install
     - deploy
 
 matrix:
     include:
         # Ubuntu Xenial
-        - stage: build_and_test
+        - stage: test
           os: linux
           sudo: false
           dist: xenial
@@ -36,7 +37,7 @@ matrix:
           script: contrib/travis/xenial.sh
 
         # OpenSUSE 12.3 + Tumbleweed Repo
-        - stage: build_and_test
+        - stage: test
           os: linux
           sudo: true
           dist: xenial
@@ -53,7 +54,7 @@ matrix:
           script: contrib/travis/suse12.3.sh
 
         # CentOS 7
-        - stage: build_and_test
+        - stage: test
           os: linux
           sudo: true
           dist: xenial
@@ -70,7 +71,7 @@ matrix:
           script: contrib/travis/centos7.sh
 
         # macOS 10.13 CMake
-        - stage: build_and_test
+        - stage: test
           os: osx
           osx_image: xcode10.1
           sudo: false
@@ -93,7 +94,7 @@ matrix:
           script: contrib/travis/osx.sh
 
         # macOS 10.13 make
-        - stage: build_and_test
+        - stage: test
           os: osx
           osx_image: xcode10.1
           sudo: false
@@ -114,6 +115,48 @@ matrix:
               - HOMEBREW_NO_INSTALL_CLEANUP=1
               - FORMULAE=llvm@7
           script: contrib/travis/osx.sh
+
+        # Test make install and the generic RPM
+        - stage: install
+          os: linux
+          sudo: true
+          dist: xenial
+          addons:
+              apt:
+                  update: false
+          services: docker
+          env:
+            - C_COMPILER=clang
+            - CXX_COMPILER=clang++
+            - BUILD=cmake
+            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
+            - DOCKER_IMAGE=centos:7
+          script:
+            - contrib/travis/centos7.sh
+            # install with make
+            - contrib/travis/make_install.sh
+            # install generic RPM
+            - contrib/travis/generic_rpm.sh
+
+        # Test Server and Client RPMs
+        - stage: install
+          os: linux
+          sudo: true
+          dist: xenial
+          addons:
+              apt:
+                  update: false
+          services: docker
+          env:
+            - C_COMPILER=clang
+            - CXX_COMPILER=clang++
+            - BUILD=cmake
+            - CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug -DCLIENT=On"
+            - DOCKER_IMAGE=centos:7
+          script:
+            - contrib/travis/centos7.sh
+            # install the server and client RPMs
+            - contrib/travis/rpms.sh
 
         # Upload a tarball if the job was triggered by a user or cron
         - stage: deploy

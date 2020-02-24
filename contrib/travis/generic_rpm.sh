@@ -63,10 +63,24 @@
 
 set -e
 
-# get the image
-docker pull "${DOCKER_IMAGE}"
-
-# start container
-docker run -it -d --name "${TRAVIS_JOB_NUMBER}" -v $(realpath .):/GUFI -w /GUFI "${DOCKER_IMAGE}" bash
-
+# get docker exec function
+SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 . ${SCRIPT_PATH}/docker_exec.sh
+
+# install rpmbuild
+de bash -c "yum install -y rpm-build"
+
+# reconfigure CMake
+de bash -c "cd /GUFI/build && cmake .."
+
+# make the rpm
+de bash -c "cd /GUFI/build && make package"
+
+# install the RPM
+de bash -c "cd /GUFI/build && yum install -y gufi-*.rpm"
+
+# compare the configuration files
+de bash -c "cd /GUFI/build && diff server.example /etc/GUFI/config.example"
+
+# remove the configuration file
+de bash -c "rm -r /etc/GUFI"
