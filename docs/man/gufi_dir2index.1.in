@@ -1,0 +1,72 @@
+.Dd Feb 24, 2020
+.Dt gufi_dir2index
+.Os Linux
+.Sh NAME
+.Nm gufi_dir2index
+.Nd generates a GUFI index from a source directory
+.Sh SYNOPSIS
+.Nm
+.Op options
+input_dir
+output_dir
+
+.Sh DESCRIPTION
+Generate a GUFI-index by walking the source directory.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl n\ <threads>
+number of threads
+.It Fl x
+pull xattrs from source file-sys into GUFI
+.It Fl z\ <max\ level>
+maximum level to go down
+.It input_dir
+walk this tree to produce GUFI index
+.It output_dir
+build GUFI index here
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_dir2index
+.El
+
+
+.Sh NOTES
+.Nm
+was once part of the executable "bfwi".
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.Sh FLOW
+ threads are started
+ input directory is put on a queue
+ loop assigning work (directories) from queue to threads
+   Open the directory
+   Create the corresponding directory in the GUFI index
+   Create and open an empty database file
+   for each entry in the source directory
+     Subdirectories are pushed onto the queue
+     Non directories are staged for insertion into the database
+   Execute the insertions
+   Close the database file
+   Change the permissions and owners of the database file
+   Close the directory
+ end
+
+.Sh SEE ALSO
+.Xr gufi_dir2trace 1 ,
+.Xr gufi_trace2index 1
