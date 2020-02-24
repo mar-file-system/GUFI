@@ -1,0 +1,64 @@
+.Dd Feb 24, 2020
+.Dt querydb
+.Os Linux
+.Sh NAME
+.Nm querydb
+.Nd Query a database file
+.Sh SYNOPSIS
+.Nm
+.Op options
+DB_path
+SQL
+
+.Sh DESCRIPTION
+Run an SQL query against a table in a single level directory GUFI db - just point it at the directory containing the db.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl N
+print column-names (header) for DB results
+.It Fl V
+print column-values (rows) for DB results
+.It DB_path
+path to dir containing db.db.*
+.It SQL
+arbitrary SQL on DB
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/querydb
+.El
+
+.Sh NOTES
+When providing SQL statements to
+.Nm
+you can put more than one SQL statement in the same string using semicolons at the end of each statement, however the only SQL statement that will have output displayed if you have chosen to display output is the last SQL statement in the string. This enables complex things like attaching an input database to join with on each query (issued at ever level/directory found), or other highly powerful but complex things.
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.Sh FLOW
+ input directory is put on a queue
+ threads are started
+ loop assigning work (directories) from queue to threads
+ each thread reads the directory and the  summary table for each the dir
+   if directory put it on the queue
+   accumulate each directory summary into a global summary for all directories below the input directory
+   close directory
+ end
+ open/create and write tree summary record into treesummary table that summarizes all the directories below it
+
+.Sh SEE ALSO
+.Xr querydbn 1
