@@ -108,86 +108,94 @@ def parse_size(size):
     size = int(size) * filesize[unit]
     return prefix, size
 
+def build_init(args):
+    '''Build the CREATE TABLE query'''
+    init = ['name TEXT', 'type TEXT']
+
+    if args.amin or args.atime:
+        init += ['atime INT64']
+
+    if args.cmin or args.ctime:
+        init += ['ctime INT64']
+
+    if args.mmin or args.mtime or args.newer:
+        init += ['mtime INT64']
+
+    if args.empty or args.size or args.smallest or args.largest:
+        init += ['size INT64']
+
+    if args.executable or args.readable or args.writable:
+        init += ['mode INT64']
+
+    if args.uid or args.user:
+        init += ['uid INT64']
+
+    if args.gid or args.group:
+        init += ['gid INT64']
+
+    if args.links:
+        init += ['nlinks INT64']
+
+    if args.type:
+        init += ['type TEXT']
+
+    return init
+
 def build_select(args):
-    '''Build the SELECT portion of the queries for the treesummary, summary, and entries tables.'''
-    tsummary = []
-    summary  = []
-    entries  = []
+    '''Build the SELECT clause'''
 
-    # select must exist
-    if args.select == None:
-        # args.select = [['id', 'path() || "/" || name', 'type',
-        #                 'inode', 'mode', 'nlink', 'uid', 'gid',
-        #                 'size', 'blksize', 'blocks', 'atime',
-        #                 'mtime', 'ctime', 'linkname', 'xattrs',
-        #                 'crtime', 'ossint1', 'ossint2', 'ossint3',
-        #                 'ossint4', 'osstext1', 'osstext2', 'pinode']]
-        if args.type != 'd':
-            args.select = [['path() || "/" || name']]
-        else:
-            args.select = [['path()']]
+    select = ['(path() || "/" || name) as name', 'type']
 
-    select = []
-    for columns in args.select:
-        select += columns
-
-    entries += [','.join(select)]
-
-    return tsummary, summary, entries
+    return select
 
 def build_where(args, root_uid = 0, root_gid = 0):
-    '''Build the WHERE portion of the queries for the treesummary, summary, and entries tables.'''
-    tsummary = []
-    summary  = []
-    entries  = []
+    '''Build the WHERE clause'''
+    where = []
 
     now = time.time()
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-    #     entries  += ['(uid == {})'.format(os.getuid())]
-    #     # entries  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
+    #     where  += ['(uid == {})'.format(os.getuid())]
+    #     # where  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
-        entries += ['({} - atime) / 60 == {}'.format(now, args.amin)]
+        where += ['({} - atime) / 60 == {}'.format(now, args.amin)]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        entries += ['({} - atime) / {} == {} '.format(now, SECONDS_PER_DAY, args.atime)]
+        where += ['({} - atime) / {} == {} '.format(now, SECONDS_PER_DAY, args.atime)]
 
     if args.cmin is not None:
-        entries += ['({} - ctime) / 60 == {}'.format(now, args.cmin)]
+        where += ['({} - ctime) / 60 == {}'.format(now, args.cmin)]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        entries += ['({} - ctime) / {} == {} '.format(now, SECONDS_PER_DAY, args.ctime)]
+        where += ['({} - ctime) / {} == {} '.format(now, SECONDS_PER_DAY, args.ctime)]
 
     if args.empty == True:
-        summary += ['minsize == 0']
-        entries += ['size == 0', '(type == \'f\') OR (type == \'d\')']
+        where += ['size == 0', '(type == \'f\') OR (type == \'d\')']
 
     if args.executable == True:
-        entries += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     if args.false == True:
-        summary += ['0']
-        entries += ['0']
+        where += ['0']
 
     if args.gid is not None:
-        summary += ['mingid <= {}'.format(args.gid), '{} <= maxgid'.format(args.gid)]
-        entries += ['gid == {}'.format(args.gid)]
+        where += ['gid == {}'.format(args.gid)]
 
     if args.group is not None:
-        entries += ['gid == {}'.format(args.group)]
+        where += ['gid == {}'.format(args.group)]
 
     # if args.ilname is not None:
 
     if args.iname is not None:
-        entries += ['name REGEXP \'(?i){}\'"'.format(args.iname)]
+        where += ['name REGEXP \'(?i){}\'"'.format(args.iname)]
 
     if args.inum is not None:
-        entries += ['inode == {}'.format(args.inum)]
+        where += ['inode == {}'.format(args.inum)]
 
     # Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.
     # if args.ipath is not None:
@@ -197,13 +205,13 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.iwholename is not None:
 
     if args.links is not None:
-        entries += ['nlink == {}'.format(args.links)]
+        where += ['nlink == {}'.format(args.links)]
 
     if args.lname is not None:
-        entries += ['type == \'f\'', 'linkname REGEXP \'(?i){}\'"'.format(args.lname)]
+        where += ['type == \'f\'', 'linkname REGEXP \'(?i){}\'"'.format(args.lname)]
 
     if args.mmin is not None:
-        entries += ['({} - mtime) / 60 == {}'.format(now, args.mmin)]
+        where += ['({} - mtime) / 60 == {}'.format(now, args.mmin)]
 
     if args.mtime is not None:
         if len(args.mtime) > 2:
@@ -219,13 +227,13 @@ def build_where(args, root_uid = 0, root_gid = 0):
                 comp = '>'
                 mtime = mtime[1:]
 
-            entries += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, comp, mtime)]
+            where += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, comp, mtime)]
 
     if args.name is not None:
-        entries += [' OR '.join(['(name REGEXP \'{}\')'.format(name) for name in args.name])]
+        where += [' OR '.join(['(name REGEXP \'{}\')'.format(name) for name in args.name])]
 
     if args.newer is not None:
-        entries += ['mtime > {}'.format(args.newer.st_mtime)]
+        where += ['mtime > {}'.format(args.newer.st_mtime)]
 
     # if args.newerXY is not None:
 
@@ -237,13 +245,13 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.perm is not None:
 
     if args.readable == True:
-        entries += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # # not handled here
     # if args.regex is not None:
 
     if args.samefile is not None:
-        entries += ['inode == {}'.format(args.samefile.st_ino)]
+        where += ['inode == {}'.format(args.samefile.st_ino)]
 
     if args.size is not None:
         if len(args.size) == 1:
@@ -255,7 +263,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
                 percent_range = sorted(args.size_percent_range)
                 lower = size + size * percent_range[0] / 100.0
                 higher = size + size * percent_range[1] / 100.0
-                entries += ['{} < size'.format(lower), 'size <= {}'.format(higher)]
+                where += ['{} < size'.format(lower), 'size <= {}'.format(higher)]
             # size <=/=/>= x
             else:
                 comp = '=='
@@ -266,7 +274,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
                     summary += ['maxsize <= {}'.format(size)]
                     comp = '<'
 
-                entries += ['size {} {}'.format(comp, size)]
+                where += ['size {} {}'.format(comp, size)]
         # if there are multiple sizes, do not process args.size_percent_range
         elif len(args.size) == 2:
             if args.size_percent_range is not None:
@@ -283,65 +291,52 @@ def build_where(args, root_uid = 0, root_gid = 0):
                     summary += ['maxsize <= {}'.format(size)]
                     comp = '<'
 
-                entries += ['size {} {}'.format(comp, size)]
+                where += ['size {} {}'.format(comp, size)]
         else:
             raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}: {}.'.format(len(args.size), args.size))
 
     if args.true == True:
-        summary += ['1']
-        entries += ['1']
+        where += ['1']
 
     if args.type is not None:
-        entries += ['(type == "{}")'.format(args.type)]
+        where += ['(type == "{}")'.format(args.type)]
 
     if args.uid is not None:
-        summary += ['minuid <= {}'.format(args.uid), '{} <= maxuid'.format(args.uid)]
-        entries += [' OR '.join(['(uid == {})'.format(uid) for uid in args.uid])]
+        where += [' OR '.join(['(uid == {})'.format(uid) for uid in args.uid])]
 
     # if args.used is not None:
 
     if args.user is not None:
-        entries += ['uid == {}'.format(args.user)]
+        where += ['uid == {}'.format(args.user)]
 
     # if args.wholename is not None:
 
     if args.writable == True:
-        entries += ['(mode & 128) == 128'] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['(mode & 128) == 128'] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # if args.xtype is not None:
 
     # if args.context is not None:
 
-    return tsummary, summary, entries
+    return where
 
 def build_group_by(args):
-    '''Build the GROUP BY portion of the queries for the treesummary, summary, and entries tables.'''
-    tsummary = []
-    summary  = []
-    entries  = []
+    '''Build the GROUP BY clause'''
+    group_by = []
 
-    if args.group_by:
-        group_by = []
-        for columns in args.group_by:
-            group_by += columns
-
-        entries += [','.join(group_by)]
-
-    return tsummary, summary, entries
+    return group_by
 
 def build_order_by(args):
-    '''Build the ORDER BY portion of the queries for the treesummary, summary, and entries tables.'''
-    tsummary = []
-    summary  = []
-    entries  = []
+    '''Build the ORDER BY clause'''
+    order_by = []
 
     if args.smallest:
-        entries += ['size ASC']
+        order_by += ['size ASC']
 
     if args.largest:
-        entries += ['size DESC']
+        order_by += ['size DESC']
 
-    return tsummary, summary, entries
+    return order_by
 
 def help(parser):
     # generate list of expressions
@@ -417,17 +412,13 @@ def build_expression_parser():
     parser.add_argument('-fprint',             metavar='file',       dest='fprint',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
 
     # GUFI specific arguments
-    parser.add_argument('--select',            metavar='cols',       dest='select',                action='append', nargs='*',                         help='comma separated columns (default: *)')
-    parser.add_argument('--group_by',          metavar='cols',       dest='group_by',              type=str,                                           help='comma separated columns (default: None)')
     parser.add_argument('--delim',             metavar='c',          dest='delim',                 type=gufi_common.get_char, default=' ',             help='delimiter separating output columns')
     parser.add_argument('--size%',             metavar='n',          dest='size_percent_range',    type=float, nargs=2,                                help='Modifier to the -size flag. Expects 2 values that define the min and max percentage from the size.')
     parser.add_argument('--num_results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
-    parser.add_argument('--aggregate',                               dest='aggregate',             action='store_true',                                help='Aggregate results before printing')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
-    # parser.add_argument('--path-index',        metavar='i',          dest='path_index',            type=gufi_common.get_non_negative,                  help='Use one of the provided paths')
-    parser.add_argument('--read-write',                              dest='readwrite',             action='store_true',                                help='Open databases in read-write mode')
+    parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
     return parser
 
 if __name__=='__main__':
@@ -490,59 +481,76 @@ if __name__=='__main__':
 
     validate_args(args)
 
-    # generate the queries
-    tsummary_select,   summary_select,   entries_select   = build_select(args)
-    tsummary_where,    summary_where,    entries_where    = build_where(args)
-    tsummary_group_by, summary_group_by, entries_group_by = build_group_by(args)
-    tsummary_order_by, summary_order_by, entries_order_by = build_order_by(args)
-
-    tsummary = gufi_common.build_query(tsummary_select,
-                                       ['treesummary'],
-                                       tsummary_where,
-                                       tsummary_group_by,
-                                       tsummary_order_by,
-                                       args.num_results)
-
-    summary = gufi_common.build_query(summary_select,
-                                      ['summary'],
-                                      summary_where,
-                                      summary_group_by,
-                                      summary_order_by,
-                                      args.num_results)
-
-    initial = gufi_common.build_query(entries_select,
-                                      ['summary' if args.type == 'd' else 'entries'],
-                                      entries_where,
-                                      entries_group_by,
-                                      entries_order_by,
-                                      args.num_results)
-
-    intermediate = final = gufi_common.build_query(['*'],
-                                                   ['entries'],
-                                                   entries_where,
-                                                   entries_group_by,
-                                                   entries_order_by,
-                                                   args.num_results)
+    # generate the query clauses
+    select   = build_select(args)
+    where    = build_where(args)
+    group_by = build_group_by(args)
+    order_by = build_order_by(args)
 
     # create the query command
     query_cmd = [config['Exec'],
-                 '-e', str(int(not args.aggregate)),
                  '-n', str(config['Threads'])]
 
-    # if len(tsummary):
-    #     query_cmd += ['-T', tsummary]
+    S = None
+    E = None
 
-    # if len(summary):
-    #     query_cmd += ['-S', summary]
+    # aggregation is required
+    if args.num_results or args.smallest or args.largest:
+        I = 'CREATE TABLE {0} ({1})'.format(args.inmemory_name, ', '.join(build_init(args)))
 
-    if len(initial):
-        query_cmd += ['-E', initial]
+        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(select + ['type'],
+                                                                                     ['summary'],
+                                                                                     where,
+                                                                                     group_by,
+                                                                                     order_by,
+                                                                                     args.num_results))
 
-    if args.aggregate and len(intermediate):
-        query_cmd += ['-J', intermediate]
+        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(select + ['type'],
+                                                                                     ['entries'],
+                                                                                     where,
+                                                                                     group_by,
+                                                                                     order_by,
+                                                                                     args.num_results))
 
-    if args.aggregate and len(final):
-        query_cmd += ['-G', final]
+        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name, S)
+
+        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name, E)
+
+        J = "INSERT INTO aggregate.{0} {1}".format(args.inmemory_name, gufi_common.build_query(['name', 'type'],
+                                                                                               [args.inmemory_name],
+                                                                                               where,
+                                                                                               group_by,
+                                                                                               order_by,
+                                                                                               args.num_results))
+        G = gufi_common.build_query(['name'],
+                                    [args.inmemory_name],
+                                    where,
+                                    group_by,
+                                    order_by,
+                                    args.num_results)
+
+        query_cmd += ['-e', '0',
+                      '-I', I,
+                      '-J', J,
+                      '-G', G]
+    else:
+        S = gufi_common.build_query(['(path() || "/" || name)'],
+                                    ['summary'],
+                                    where,
+                                    group_by,
+                                    order_by,
+                                    args.num_results)
+
+        E = gufi_common.build_query(['(path() || "/" || name)'],
+                                    ['entries'],
+                                    where,
+                                    group_by,
+                                    order_by,
+                                    args.num_results)
+        query_cmd += ['-a']
+
+    query_cmd += ['-S', S,
+                  '-E', E]
 
     if args.delim:
         query_cmd += ['-d', args.delim]
@@ -558,9 +566,6 @@ if __name__=='__main__':
 
     if args.output_buffer:
         query_cmd += ['-B', str(args.output_buffer)]
-
-    if args.readwrite:
-        query_cmd += ['-w']
 
     query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
     query.communicate()                         # block until query finishes
