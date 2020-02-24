@@ -1,0 +1,96 @@
+.Dd Feb 24, 2020
+.Dt bfwreaddirplus2db
+.Os Linux
+.Sh NAME
+.Nm bfwreaddirplus2db
+.Nd
+.Sh SYNOPSIS
+.Nm
+.Op options
+input_dir
+
+.Sh DESCRIPTION
+Breadth first readdirplus walk of input tree to list the tree, or create an output db and/or output files of encountered directories and or files.  This program has two primary uses: to find suspect directories that have changed in some way that need to be used to incrementally update a GUFI index from source file system changes and to create a full dump of all directories and or files/links either in walk order (directory then all files in that dir, etc.) or striding inodes into multiple files to merge against attribute list files that are also inode strided.
+
+.Nm
+can also be used to do a full GUFI if you are writing the GUFI index into the source tree.
+.Nm
+can replace all directory databases that are suspect (based on the various suspect modes (stat dir, stat dir and file, provided an input file with dirs and or files that are suspect (inodes).  You can also tell
+.Nm
+that all directories are suspect using the -Y flag and the -b flag tells it to create a GUFI in the source tree.  Of course you can use it to incrementally update (replace suspect directory databases) as well using the suspect mode methods.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl o\ <outfile>
+output file one per thread writes path, inode, pinode, type, sortfield to file (sortfield enables sorting for bfwi load from flat file)
+.It Fl r
+insert files and links into db
+.It Fl b
+build GUFI index tree in the src tree
+-b is in conflict with -t in bfwreaddirplus2db
+.It Fl R
+insert dirs into db snapshot the dir structure
+.It Fl n\ <threads>
+number of threads
+.It Fl d\ <delimiter>
+delimiter for output file
+.It Fl O\ <outdb>
+write a set of output dbs one per thread with directories and/or files and mark Suspect directories output path, inode, pinode, type and suspect flag
+.It Fl Y
+default all directories as suspect
+.It Fl Z
+default all files links as suspect
+.It Fl W\ <insuspectfile>
+path to input suspect file, if suspects are generated via another program like a GPFS Inode Scan
+.It Fl A\ <suspectmethod>
+suspect method (0 no suspects, 1 suspect File for dirs, files/links, 2 suspect stat dirs and file for files/links, 3 suspect stat dirs, files/links)
+.It Fl c\ <suspecttime>
+time in seconds since epoch for suspect Comparison, (ignored if GUFI index in src tree)
+.It Fl g\ <stridesize>
+stride size for striping inodes into separate output db's and or files. It Fl t <to_dir> if this is provided suspect directories will have GUFI dbs created into this directory named by the suspect dirs inode, this flag is in conflict with -b flag in bfwreaddirplus2db
+.It Fl x
+process xattrs if you are creating GUFI dbs of suspect directories
+.It input_dir         walk this tree to produce GUFI index
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/bfwreaddirplus2db
+.El
+
+.\" .Sh NOTES
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.Sh FLOW
+ if using input suspect file (inode and type), read that in and put into memory trie for lookups
+ input directory is put on a queue
+ threads are started
+ loop assigning work (directories) from queue to threads
+ each thread lists the directory readdirplus
+   if using suspect file, see if this inode matches a suspect file or dir or link
+   if using suspect mode involving stat then use that to help determine of a directory is suspect
+   if we are striping the inodes into different outdb's and/or files, we have to lock on the output db/file to place records into proper outdbs/files
+   if directory put it on the queue write to outdb/file
+   if link or file write to outdb/file if writing files
+   put dirs and/or files into output db (path, inode, pinode, type, suspect) into output dir
+   if to_dir provided suspect directories will have GUFI dbs created into this directory named by the suspect dirs inode
+   if to_dir is directly in the source tree then place the GUFI dbs in the source tree and on incremental just use the mtime of the GUFI db to determine new changes to the directory to know if the db needs to be refreshed
+   if writing output file write files, links, and directories to output files per thread (can use striping of inodes across files)
+   close directory
+ end
+ close outdb/outfile if needed
+
+.\" .Sh SEE ALSO
