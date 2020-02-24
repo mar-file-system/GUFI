@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
    // numdbs=atoi(argv[6]);
    // sprintf(tabnam,"%s",argv[7]);
 
-   const char* pos_args = "[-s] DB_path DB_count SQL tabname";
+   const char* pos_args = "[-s] DB_path DB_count SQL table_name";
    int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args, &in);
    if (in.helped)
       sub_help();
