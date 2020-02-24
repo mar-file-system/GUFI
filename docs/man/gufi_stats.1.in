@@ -1,0 +1,91 @@
+.Dd Feb 24, 2020
+.Dt gufi_stats
+.Os Linux
+.Sh NAME
+.Nm gufi_stats
+.Nd Calculate handy statistics of a directory within a GUFI index
+.Sh SYNOPSIS
+.Nm
+.Op options
+statistic
+.Op path ...
+
+.Sh DESCRIPTION
+.Nm
+calculates statistics of a directory within a GUFI index through several ways. Most statistics are calulated by wrapping
+.Xr gufi_query 1 ,
+which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1
+are predefined pieces that are deterministically combined. However, a few are not calculated through
+.Xr gufi_query 1 ,
+and are instead calculated through serial methods using Python.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl -help
+show this help message and exit
+.It Fl -version, v
+show program's version number and exit
+.It Fl -order order
+sort output (if applicable)
+.It Fl -delim c
+delimiter separating output columns
+.It Fl -maxdepth d
+the maximum number of levels to search
+.It Fl -mindepth d
+the minimum number of levels to search
+.It Fl -num_results n
+first n results
+.It Fl -select cols
+comma separated columns
+.It Fl -uid u, --user u
+restrict to user
+.It Fl -output OUTPUT
+Output file prefix (Creates file <output>.tid)
+.It Fl -output-buffer bytes
+Size of each thread's output buffer
+.El
+
+.Sh STATISTIC
+.Bl -tag -width -indent
+.It depth
+Get the depth of all subdirectories relative to the provided path
+.It leaf-depth
+Get the depth of all leaf subdirectories relative to the provided path
+.It files
+Get the number of files in the provided path
+.It leaf-count
+Get the number of leaf directories in the provided path
+.It median-leaf
+Get the median number of leaf directories under each directory
+.It directory-count
+Count the number of directories under the the provided path
+.It space
+Space taken up by the files in the provided path
+.It total-files
+Total number of files are under the provided path
+.It total-space
+Total amount of space taken up by the files under the provided path
+.It total-leaf
+Total number of leaf directories under the provided path
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_stats
+.It Pa /etc/GUFI/config
+.El
+
+.\" .Sh BUGS
+.Sh EXAMPLE
+
+.Sh SEE ALSO
+.Xr gufi_query 1 ,
+.Xr gufi_find 1 ,
+.Xr gufi_ls 1
