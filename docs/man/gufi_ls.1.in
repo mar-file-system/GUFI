@@ -1,0 +1,81 @@
+.Dd Feb 24, 2020
+.Dt gufi_ls
+.Os Linux
+.Sh NAME
+.Nm gufi_ls
+.Nd GUFI version of GNU
+.Xr ls 1
+.Sh SYNOPSIS
+.Nm
+.Op options
+.Op file ...
+
+.Sh DESCRIPTION
+.Nm
+is a wrapper around
+.Xr gufi_query 1 ,
+which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1
+are predefined pieces that are deterministically combined.
+
+The input arguments and output are intended to be reminicent of GNU
+.Xr ls 1 .
+
+.Sh OPTIONS
+
+.Bl -tag -width -indent
+.It Fl -help
+show this help message and exit
+.It Fl -version, v
+show program's version number and exit
+.It Fl a, -all
+do not ignore entries starting with .
+.It Fl B, -almost-all
+do not list implied . and ..
+.It Fl G, -no-group
+in a long listing, don't print group names
+.It Fl i, -inode
+print the index number of each file
+.It Fl l
+use a long listing format
+.It Fl r, -reverse
+reverse order while sorting
+.It Fl R, -recursive
+list subdirectories recursively
+.It Fl s, -size
+print the allocated size of each file, in blocks
+.It Fl S
+sort by file size, largest first
+.It Fl t
+sort by modification time, newest first
+.It Fl U
+do not sort; list entries in directory order
+.It Fl -delim\ c
+delimiter separating output columns
+.It Fl -num_results\ n
+first n results
+.It Fl -output\ OUTPUT
+Output file prefix (Creates file <output>.tid)
+.It Fl -output-buffer bytes
+Size of each thread's output buffer
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_ls
+.It Pa /etc/GUFI/config
+.El
+
+.\" .Sh BUGS
+.Sh EXAMPLE
+
+.Sh SEE ALSO
+.Xr gufi_query 1 ,
+.Xr gufi_find 1 ,
+.Xr gufi_stats 1
