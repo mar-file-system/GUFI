@@ -1,0 +1,119 @@
+.Dd Feb 24, 2020
+.Dt gufi_find
+.Os Linux
+.Sh NAME
+.Nm gufi_find
+.Nd GUFI version of GNU
+.Xr find 1
+.Sh SYNOPSIS
+.Nm
+.Op -P
+.Op path
+.Op expression
+.Sh DESCRIPTION
+.Nm
+is a wrapper around
+.Xr gufi_query 1 ,
+which performs queries on the contents of a GUFI index in a parallel manner. The queries that are passed into
+.Xr gufi_query 1
+are predefined pieces that are deterministically combined.
+
+The input arguments and output are intended to be reminicent of GNU
+.Xr find 1 .
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h, -help
+show this help message and exit
+.It Fl -version, v
+show program's version number and exit
+.It Fl amin\ n
+File was last accessed n minutes ago.
+.It Fl atime\ n
+File was last accessed n*24 hours ago.
+.It Fl cmin\ n
+File's status was last changed n minutes ago.
+.It Fl ctime\ n
+File's status was last changed n*24 hours ago.
+.It Fl empty
+File is empty and is either a regular file or a directory.
+.It Fl executable
+Matches files which are executable and directories which are searchable (in a file name resolution sense).
+.It Fl false
+File is false and is either a regular file or a directory.
+.It Fl gid\ n
+File's numeric group ID is n.
+.It Fl group\ gname
+File belongs to group gname (numeric group ID allowed).
+.It Fl iname\ pattern
+Like name, but the match is case insensitive.
+.It Fl inum\ n
+File has inode number n. It is normally easier to use the -samefile test instead.
+.It Fl links\ n
+File has n links.
+.It Fl lname\ pattern
+File is a symbolic link whose contents match shell pattern pattern.
+.It Fl mmin\ n
+File's data was last modified n minutes ago.
+.It Fl mtime\ n
+File's data was last modified n*24 hours ago.
+.It Fl name\ pattern
+Base of file name (the path with the leading directories removed) matches shell pattern pattern.
+.It Fl newer\ file
+File was modified more recently than file.
+.It Fl path\ pattern
+File name matches shell pattern pattern.
+.It Fl readable
+Matches files which are readable.
+.It Fl samefile\ name
+File refers to the same inode as name.
+.It Fl size\ n
+.It Fl true
+Always true
+.It Fl type\ c
+File is of type c
+.It Fl uid\ n
+File's numeric user ID is n.
+.It Fl user\ uname
+File is owned by user uname (numeric user ID allowed).
+.It Fl writable
+Matches files which are writable.
+.It Fl maxdepth\ levels
+Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.
+.It Fl mindepth\ levels
+Do not apply any tests or actions at levels less than levels (a non-negative integer). mindepth 1 means process all files except the command line arguments.
+.It Fl fprint\ file
+Output file prefix (Creates file <output>.tid)
+.It Fl -delim\ c
+delimiter separating output columns
+.It Fl -size%\ n\ n
+Modifier to the size flag. Expects 2 values that define the min and max percentage from the size.
+.It Fl -num_results\ n
+first n results
+.It Fl -smallest\ n
+top n smallest files
+.It Fl -largest\ n
+top n largest files
+.It Fl -output-buffer\ bytes
+Size of each thread's output buffer
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_find
+.It Pa /etc/GUFI/config
+.El
+
+.\" .Sh BUGS
+.Sh EXAMPLE
+
+.Sh SEE ALSO
+.Xr gufi_query 1 ,
+.Xr gufi_ls 1 ,
+.Xr gufi_stats 1
