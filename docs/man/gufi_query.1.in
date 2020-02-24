@@ -1,0 +1,99 @@
+.Dd Feb 24, 2020
+.Dt gufi_query
+.Os Linux
+.Sh NAME
+.Nm gufi_query
+.Nd Breadth first walk of a GUFI index
+.Sh SYNOPSIS
+.Nm
+.Op options
+GUFI_index
+.Op ...
+.Sh DESCRIPTION
+.Nm
+performs queries on the contents of a GUFI index in a parallel manner. Users supply their own SQL queries to run on the entries table, directory table, and, if generated, the tree summary table. Output usually writes to stdout, but can be redirected to per-thread files or per-thread databases.
+
+.Xr gufi_find 1 ,
+.Xr gufi_ls 1 ,
+and
+.Xr gufi_stats 1
+wrap
+.Nm
+to perform their operations.
+
+.Nm
+is meant to be a Swiss Army knife utility for advanced GUFI users. Databases can not only be queried, but also modified, if desired.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl T\ <SQL_tsum>
+SQL for tree-summary table
+.It Fl S\ <SQL_sum>
+SQL for summary table
+.It Fl E\ <SQL_ent>
+SQL for entries table
+.It Fl a
+AND/OR (SQL query combination)
+.It Fl n\ <threads>
+number of threads
+.It Fl o\ <out_fname>
+output file (one-per-thread, with thread-id suffix), implies e 1
+.It Fl d\ <delim>
+delimiter (one char)  [use 'x' for 0x1E]
+.It Fl O\ <out_DB>
+output DB, implies e 1
+.It Fl I\ <SQL_init>
+SQL init
+.It Fl F\ <SQL_fin>
+SQL cleanup
+.It Fl y\ <min\ level>
+minimum level to go down
+.It Fl z\ <max\ level>
+maximum level to go down
+.It Fl G\ <SQL_aggregate>
+SQL for aggregated results
+.It Fl J\ <SQL_interm>
+SQL for intermediate results
+.It Fl e\ <0\ or\ 1>
+0 for aggregate, 1 for print without aggregating (implied by o and O)
+.It Fl m
+Keep mtime and atime same on the database files
+.It Fl B\ <buffer\ size>
+size of each thread's output buffer in bytes
+.It Fl w
+open the database files in read-write mode instead of read only mode
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, -1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_query
+.El
+
+.Sh NOTES
+.Nm
+was once called "bfq".
+
+Databases are by default opened in read-only mode, so although the SQL queries are able to modify the databases in the GUFI index, the –w flag must be used in order for writes to be successful.
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.Sh FLOW
+.Nm
+is the command that should be used to perform advanced operations on a GUFI index. The GUFI index is traversed breadth first. Queries can be performed on the tree-summary, the directory-summary, and/or the directory contents tables. POSIX permission are obeyed, as the original directory permissions were replicated in the GUFI index. Users supply SQL statements for querying the tree, summary, and entries tables, and select AND/OR logic between tree/directory/entry queries. The output can be directed to three different places: stdout, a per-thread file, or a per-thread database file. If an output database prefix was specified, SQL_init can be provided to run a SQL statement on each output thread’s database before starting the walk. This can be used to create the database into which output from queries are placed. Similarly, SQL_fin runs a SQL statement per thread on the output database after the walk.
+
+.Sh SEE ALSO
+.Xr gufi_find 1 ,
+.Xr gufi_ls 1 ,
+.Xr gufi_stats 1
