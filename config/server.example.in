@@ -66,9 +66,9 @@
 Threads=@CORES@
 
 # absolute path to gufi_query
-# single string
+# single path string
 Exec=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
 
-# prefix of directories used by GUFI
-# single string
-IndexRoot=/search/root
+# directory where all GUFI indicies are placed under
+# single path string
+IndexRoot=@CMAKE_BINARY_DIR@
