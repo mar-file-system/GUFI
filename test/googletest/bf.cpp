@@ -310,7 +310,7 @@ TEST(parse_cmd_line, aggregate_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
-        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
     }
 }
 

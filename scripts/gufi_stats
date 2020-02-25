@@ -71,9 +71,29 @@ import sys
 import gufi_common
 import gufi_config
 
-def build(args, root_uid = 0, root_gid = 0):
-    select = [args.select] if args.select else []
+# Examples with their commands prefixed by '#' are run as root.
+# Examples with their commands prefixed by '$' are run as user 1001.
+# The source directory indexed into <prefix>.gufi has the following structure:
+#
+# <prefix>/                  #
+# |---- 1001/                # owned by 1001:1001
+#       |---- f1             # size 1
+# |---- 1002/                # owned by 1002:1002
+#       |---- dir/           # empty
+#             |---- f1       # size 2
+#             |---- f2       # size 2
+#       |---- f1             # size 2
+#       |---- f2             # size 2
+# |---- 1003/                # owned by 1001:1001
+#       |---- f1             # size 3
+#       |---- f2             # size 3
+#       |---- f3             # size 3
+#
 
+def build_create(name, columns):
+    return 'CREATE TABLE {0}({1})'.format(name, ', '.join(columns))
+
+def build_where(args, root_uid = 0, root_gid = 0):
     where = []
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
@@ -83,102 +103,785 @@ def build(args, root_uid = 0, root_gid = 0):
     if args.uid:
         where += ['uid == "{}"'.format(args.uid)]
 
-    return select, where
+    return where
 
-def space(args, order=''):
-    select, where = build(args)
-    entries       = gufi_common.build_query(select + ['uid', 'TOTAL(size) AS space'],  ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
-    intermediate  = None
-    aggregate     = gufi_common.build_query(select + ['uid', 'TOTAL(space) AS space'], ['entries'], where, ['uid'], ['space {}'.format(order)], args.num_results)
-    return entries, intermediate, aggregate
+def depth(config, args, where):
+    '''
+    get the depths of the provided directories relative to the root directory
 
-def files(args, order=''):
-    select, where = build(args)
-    entries       = gufi_common.build_query(select + ['uid', 'COUNT(*) AS files'],     ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
-    intermediate  = None
-    aggregate     = gufi_common.build_query(select + ['uid', 'TOTAL(files) AS files'], ['entries'], where, ['uid'], ['files {}'.format(order)], args.num_results)
-    return entries, intermediate, aggregate
+    using --recursive/-r here will search for all directories under the provided directory as well
 
-def total_space(args, *ignored):
-    _, where = build(args)
-    entries      = gufi_common.build_query(['TOTAL(size) AS size'], ['entries'], where, None, None, None, None)
-    intermediate = gufi_common.build_query(['TOTAL(size) AS size'], ['entries'], None,  None, None, None, None)
-    return entries, intermediate, intermediate
+    # gufi_stats depth
+    0
 
-def total_files(args, *ignored):
-    _, where = build(args)
-    entries      = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    aggregate    = gufi_common.build_query(['TOTAL(count) AS count'], ['entries'], None,  None, None, None, None)
-    return entries, None, aggregate
+    # gufi_stats depth -r
+    . 0
+    1001 1
+    1002 1
+    1002/dir 2
+    1003 1
 
-def directory_count(args, order = ''):
-    _, where = build(args)
-    entries      = gufi_common.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    aggregate    = gufi_common.build_query(['count'],             ['entries'], where, None, ['count {}'.format(order)], args.num_results, None)
-    return entries, None, aggregate
+    # gufi_stats depth 1002
+    1
 
-def get_leaf_dirs(path):
-    '''Return an array containing path names of leaf directories under path'''
-    return [dirpath for dirpath, dirnames, filenames in os.walk(path) if not dirnames]
+    # gufi_stats depth 1002/dir
+    2
 
-def leaf_count(args, order = ''):
-    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
-    return directory_count(args, order)
+    # gufi_stats -r depth 1002
+    1002 1
+    1002/dir 2
 
-def total_in_leaf(args, *ignored):
-    _, where = build(args)
-    entries        = gufi_common.build_query(['COUNT(*)     AS count'], ['entries'], where, None, None, None, None)
-    intermediate   = gufi_common.build_query(['count'],                 ['entries'], None,  None, None, None, None)
-    aggregate      = gufi_common.build_query(['TOTAL(count)'],          ['entries'], None,  None, None, None, None)
+    $ gufi_stats -r depth
+    . 0
+    1001 1
+    '''
 
-    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
-    return entries, intermediate, aggregate
+    root_slash_count = config['IndexRoot'].count('/')
+    root_len = len(config['IndexRoot'])
 
-def median_in_leaf(args, *ignored):
-    '''https://stackoverflow.com/a/15766121'''
-    _, where = build(args)
-    entries      = gufi_common.build_query(['COUNT(*) AS count'], ['entries'], where, None, None, None, None)
-    intermediate = gufi_common.build_query(['count'],             ['entries'], None,  None, ['count'], '(2 - (SELECT COUNT(*) FROM entries) % 2)', ['OFFSET (SELECT (COUNT(*) - 1) / 2 FROM entries)'])
-    aggregate    = gufi_common.build_query(['AVG(count)'],        ['entries'], None,  None, None, None, None)
+    queries = [
+        '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
 
-    args.paths = list(itertools.chain.from_iterable([get_leaf_dirs(path) for path in args.paths]))
-    return entries, intermediate, aggregate
+        '-S', 'INSERT INTO {} {} '.format(args.inmemory_name,
+                                          gufi_common.build_query(['path() || "/" || name AS fullpath', '0'],
+                                                                  ['summary'],
+                                                                  where,
+                                                                  None,
+                                                                  None,
+                                                                  args.num_results,
+                                                                  None)),
 
-def get_depth(path, sep = '/'):
-    ret = []
+        '-J', 'INSERT INTO aggregate.{} {} '.format(args.inmemory_name,
+                                                    gufi_common.build_query(['substr(name, {})'.format(root_len + 2),
+                                                                             '(length(name) - length(replace(name, "/", ""))) - {}'.format(root_slash_count)],
+                                                                            [args.inmemory_name],
+                                                                            None,
+                                                                            None,
+                                                                            None,
+                                                                            None,
+                                                                            None)),
+
+        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN "." ELSE name END'] if args.recursive else []) +
+                                      ['level'],
+                                      [args.inmemory_name],
+                                      None,
+                                      None,
+                                      ['name ' + ORDER[args.order]] if args.order else None,
+                                      args.num_results,
+                                      None),
+    ]
+
+    if not args.recursive:
+        queries += ['-y', '0',
+                    '-z', '0']
+
+    return queries
+
+def filesize(config, args, where):
+    '''
+    get the size the files in the immediate directory
+
+    using --recursive here will get the size taken up by all of files in all subdirectories, without adding them
+
+    # gufi_stats filesize
+    0
+
+    # gufi_stats -r filesize
+    . 0
+    1001 1
+    1002 4
+    1002/dir 4
+    1003 9
+
+    # gufi_stats filesize 1002
+    4
+
+    # gufi_stats -r filesize 1002
+    1002 4
+    1002/dir 4
+
+    $ gufi_stats -r filesize
+    . 0
+    1001 1
+    '''
+
+    root_len = len(config['IndexRoot'])
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
+
+        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                          gufi_common.build_query(['path()', 'CAST(TOTAL(size) as INT64)'],
+                                                                  ['entries'],
+                                                                  where,
+                                                                  None,
+                                                                  None,
+                                                                  args.num_results,
+                                                                  None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['substr(name, {})'.format(root_len + 2), 'size'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           ['name ' + ORDER[args.order]] if args.order else None,
+                                                                           args.num_results,
+                                                                           None)),
+
+        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN "." ELSE name END'] if args.recursive else []) +
+                                      ['size'],
+                                      [args.inmemory_name],
+                                      None,
+                                      None,
+                                      ['name ' + ORDER[args.order]] if args.order else None,
+                                      args.num_results,
+                                      None),
+    ]
+
+    if not args.recursive:
+        queries += ['-y', '0',
+                    '-z', '0']
+
+    return queries
+
+def filecount(config, args, where):
+    '''
+    get the number of files in the immediate directory
+
+    using --recursive here will get the number of files in all subdirectories, without adding them
+
+    # gufi_stats filecount
+    0
+
+    # gufi_stats -r filecount
+    . 0
+    1001 1
+    1002 2
+    1002/dir 2
+    1003 3
+
+    # gufi_stats filecount 1002
+    2
+
+    # gufi_stats -r filecount 1002
+    1002 2
+    1002/dir 2
+
+    $ gufi_stats -r filecount
+    . 0
+    1001 1
+    '''
+
+    root_len = len(config['IndexRoot'])
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
+
+        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['path() AS fullpath', 'COUNT(*)'],
+                                                                 ['entries'],
+                                                                 where,
+                                                                 None,
+                                                                 None,
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['substr(name, {})'.format(root_len + 2), 'count'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           ['name ' + ORDER[args.order]] if args.order else None,
+                                                                           args.num_results,
+                                                                           None)),
+
+        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN "." ELSE name END'] if args.recursive else []) +
+                                      ['count'],
+                                      [args.inmemory_name],
+                                      None,
+                                      None,
+                                      ['name ' + ORDER[args.order]] if args.order else None,
+                                      args.num_results,
+                                      None),
+    ]
+
+    if not args.recursive:
+        queries += ['-y', '0',
+                    '-z', '0']
+
+    return queries
+
+def total_filesize(config, args, where):
+    '''
+    get the total size taken up by the entire directory
+
+    --cumulative collects all values and sums them instead of reporting by uid
+
+    # gufi_stats total-filesize
+    1001 1
+    1002 8
+    1003 9
+
+    # gufi_stats -r total-filesize
+    18
+
+    # gufi_stats total-filesize 1002
+    1002 8
+
+    # gufi_stats -r total-filesize 1002
+    8
+
+    $ gufi_stats -r total-filesize
+    1
+    '''
+
+    root_len = len(config['IndexRoot'])
+    group_by = None if args.recursive else ['uid']
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'size INT64']),
+
+        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
+                                                                 ['entries'],
+                                                                 where,
+                                                                 group_by,
+                                                                 ['uid {}'.format(ORDER[args.order]), 'size {}'.format(ORDER[args.order])],
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL', 'uid', 'size'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           ['uid {}'.format(ORDER[args.order]), 'size {}'.format(ORDER[args.order])],
+                                                                           args.num_results,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(([] if args.recursive else ['uid']) + ['SUM(size)'],
+                                      [args.inmemory_name],
+                                      None,
+                                      group_by,
+                                      ['uid {}'.format(ORDER[args.order]), 'size {}'.format(ORDER[args.order])],
+                                      args.num_results,
+                                      None),
+    ]
+
+    return queries
+
+def total_filecount(config, args, where):
+    '''
+    get the total number of files under the directory
+
+    --cumulative collects all values and sums them instead of reporting by uid
+
+    # gufi_stats total-filecount
+    1001 1
+    1002 4
+    1003 3
+
+    # gufi_stats -r total-filecount
+    8
+
+    # gufi_stats total-filecount 1002
+    1002 4
+
+    # gufi_stats -r total-filecount 1002
+    4
+
+    $ gufi_stats -r total-filecount
+    1
+    '''
+
+    group_by = None if args.recursive else ['uid']
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
+
+        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL', 'uid', 'COUNT(*) AS count'],
+                                                                 ['entries'],
+                                                                 where,
+                                                                 group_by,
+                                                                 ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL', 'uid', 'count'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                                                           args.num_results,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(([] if args.recursive else ['uid']) + ['SUM(count) AS count'],
+                                      [args.inmemory_name],
+                                      None,
+                                      group_by,
+                                      ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                      args.num_results,
+                                      None),
+    ]
+
+    return queries
+
+def dir_count(config, args, where):
+    '''
+    get the number of directories in the immediate directory
+
+    using --recursive here will get the number of directoriess in all subdirectories, without adding them
+
+    # gufi_stats dir-count
+    3
+
+    # gufi_stats -r dir-count
+    . 3
+    1001 0
+    1002 1
+    1003 0
+
+    # gufi_stats dir-count 1002
+    1
+
+    # gufi_stats -r dir-count 1002
+    1002 1
+    1002/dir 0
+
+    ###########################################
+    # This is wrong. This should be 3 but     #
+    # without root, the other databases can't #
+    # be accessed.                            #
+    ###########################################
+    $ gufi_stats -r dir-count
+    . 1
+    1001 0
+    '''
+
+    root_len = len(config['IndexRoot'])
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['path TEXT', 'inode INT64', 'pinode INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['fpath()', 'inode', 'pinode'],
+                                                                 ['summary'],
+                                                                 where,
+                                                                 None,
+                                                                 None,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name),
+
+        '-G', gufi_common.build_query((['CASE (length(parent.path) - {0}) WHEN 0 THEN "." ELSE substr(parent.path, {1}) END'.format(root_len, root_len + 2)] if args.recursive else []) +
+                                      ['IFNULL(COUNT(child.pinode), 0) END'],
+                                      ['out parent LEFT JOIN out child On parent.inode == child.pinode'],
+                                      where + ([] if args.recursive else ['parent.path == "{}"'.format(args.path)]),
+                                      ['parent.inode'],
+                                      ['parent.path'],
+                                      args.num_results,
+                                      None),
+    ]
+
+    if not args.recursive:
+        queries += [
+            '-y', '0',
+            '-z', '1']
+
+    return queries
+
+def leaf_dirs(config, args, where):
+    '''
+    get the leaf directories immediately under the current directory
+
+    using --recursive/-r here will search for leaf directories under the provided directory as well
+
+    # gufi_stats leaf-dirs
+    1001
+    1003
+
+    # gufi_stats -r leaf-dirs
+    1001
+    1002/dir
+    1003
+
+    # gufi_stats leaf-dirs 1002
+    1002/dir
+
+    # gufi_stats -r leaf-dirs 1002
+    1002/dir
+
+    # gufi_stats -r leaf-dirs
+    1001
+    '''
+
+    root_len = len(config['IndexRoot'])
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['name TEXT']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['path() || "/" || name'],
+                                                                 ['summary'],
+                                                                 ['nlink == 2'],
+                                                                 None,
+                                                                 None,
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['substr(name, {})'.format(root_len + 2)],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(['CASE length(name) WHEN 0 THEN "." ELSE name END'],
+                                      [args.inmemory_name],
+                                      None,
+                                      None,
+                                      ['name ' + ORDER[args.order]] if args.order else None,
+                                      args.num_results,
+                                      None),
+    ]
+
+    if not args.recursive:
+        queries += ['-y', '1',
+                    '-z', '1']
+
+    return queries
+
+def leaf_depth(config, args, where):
+    '''
+    get the leaf directories immediately under the current directory
+
+    using --recursive/-r here will search for leaf directories under the provided directory as well
+
+    # gufi_stats leaf-depth
+    1001 1
+    1003 1
+
+    # gufi_stats -r leaf-depth
+    1001 1
+    1002/dir 2
+    1003 1
+
+    # gufi_stats leaf-depth 1002
+    1002/dir 2
+
+    # gufi_stats -r leaf-depth 1002
+    1002/dir 2
+
+    $ gufi_stats -r leaf-depth
+    1001 1
+    '''
+
+    root_slash_count = config['IndexRoot'].count('/')
+    root_len = len(config['IndexRoot'])
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['(path() || "/" || name) AS fullpath', '0'],
+                                                                 ['summary'],
+                                                                 ['nlink == 2'],
+                                                                 None,
+                                                                 None,
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['substr(name, {})'.format(root_len + 2),
+                                                                            '(length(name) - length(replace(name, "/", ""))) - {}'.format(root_slash_count)],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(['name', 'level'],
+                                      [args.inmemory_name],
+                                      None,
+                                      None,
+                                      ['name ' + ORDER[args.order]] if args.order else None,
+                                      args.num_results,
+                                      None),
+    ]
+
+    if not args.recursive:
+        queries += ['-y', '1',
+                    '-z', '1']
+
+    return queries
+
+def leaf_files(config, args, where):
+    '''
+    get number of files in the leaf directories immediately under the current directory
+
+    using --recursive/-r here will search for leaf directories under the provided directory as well
+
+    # gufi_stats leaf-files
+    1001 1
+    1003 3
+
+    # gufi_stats leaf-files -r
+    1001 1
+    1002/dir 2
+    1003 3
+
+    # gufi_stats leaf-files 1002
+    1002/dir 2
+
+    # gufi_stats leaf-files -r 1002
+    1002/dir 2
+
+    $ gufi_stats leaf-files -r
+    1001 1
+    '''
+
+    root_len = len(config['IndexRoot'])
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['path() || "/" || name', '(SELECT COUNT(*) FROM entries)'],
+                                                                 ['summary'],
+                                                                 ['nlink == 2'],
+                                                                 None,
+                                                                 None,
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.out ' + gufi_common.build_query(['substr(name, {})'.format(root_len + 2),
+                                                                      'count'],
+                                                                     [args.inmemory_name],
+                                                                     None,
+                                                                     None,
+                                                                     None,
+                                                                     None,
+                                                                     None),
+
+        '-G',                                gufi_common.build_query(['name', 'count'],
+                                                                     [args.inmemory_name],
+                                                                     None,
+                                                                     None,
+                                                                     ['name ' + ORDER[args.order]] if args.order else None,
+                                                                     args.num_results,
+                                                                     None),
+    ]
+
+    if not args.recursive:
+        queries += ['-y', '1',
+                    '-z', '1']
+
+    return queries
+
+def total_leaf_files(config, args, where):
+    '''
+    get total number of files in the leaf directories under this directory
+
+    --cumulative collects all values and sums them instead of reporting by uid
+
+    # gufi_stats total-leaf-files
+    1001 1
+    1002 2
+    1003 3
+
+    # gufi_stats -r total-leaf-files
+    6
+
+    # gufi_stats total-leaf-files 1002
+    1002 2
+
+    # gufi_stats -r total-leaf-files 1002
+    2
+
+    $ gufi_stats -r total-leaf-files
+    1
+    '''
+
+    group_by = None if args.recursive else ['uid']
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries) AS count'],
+                                                                 ['summary'],
+                                                                 where + ['nlink == 2'],
+                                                                 group_by,
+                                                                 ['uid {}'.format(ORDER[args.order]), 'count {}'.format(ORDER[args.order])],
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['uid', 'SUM(count) AS count'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           group_by,
+                                                                           ['uid {}'.format(ORDER[args.order]), 'count {}'.format(ORDER[args.order])],
+                                                                           args.num_results,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(([] if args.recursive else ['uid']) + ['SUM(count) AS count'],
+                                      [args.inmemory_name],
+                                      None,
+                                      group_by,
+                                      ['uid {}'.format(ORDER[args.order]), 'count {}'.format(ORDER[args.order])],
+                                      args.num_results,
+                                      None),
+    ]
+
+    return queries
+
+def median_leaf_files(config, args, where):
+    '''
+    get median number of leaf directories under the provided directory
+
+    --recursive is ignored
+
+    # gufi_stats median-leaf-files
+    2.0
+
+    # gufi_stats median-leaf-files 1002
+    2.0
+
+    $ gufi_stats median-leaf-files
+    1.0
+    '''
+
+    group_by = None if args.recursive else ['uid']
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries) AS count'],
+                                                                 ['summary'],
+                                                                 where + ['nlink == 2'],
+                                                                 None,
+                                                                 None,
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['uid', 'count'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None)),
+
+        # Adapter from answer by CL
+        # https://stackoverflow.com/a/15766121
+        '-G', '''SELECT AVG(count)
+                 FROM (SELECT count
+                       FROM {0}
+                       ORDER BY count
+                       LIMIT 2 - (SELECT COUNT(*) FROM {0}) % 2    -- odd 1, even 2
+                                  OFFSET (SELECT (COUNT(*) - 1) / 2
+                                          FROM {0})
+                      )'''.format(args.inmemory_name)
+    ]
+
+    return queries
+
+def level_distribution(config, args, where):
+    '''
+    get counts of how many distributions are in each level of the tree, by uid
+
+    --cumulative combines the results into one set of distributions
+
+    # gufi_stats level-distribution
+    1001 0 1
+    1001 1 1
+    1002 1 1
+    1003 1 1
+    1002 2 1
+
+    # gufi_stats -r level-distribution
+    0 1
+    1 3
+    2 1
+
+    # gufi_stats level-distribution 1002
+    1002 1 1
+    1002 2 1
+
+    # gufi_stats -r level-distribution 1002
+    1 1
+    2 1
+
+    $ gufi_stats -r level-distribution
+    0 1
+    1 1
+    '''
+
+    root = os.path.normpath(config['IndexRoot'])
+    root_len = len(root)
+    path = os.path.normpath(args.path)
     path_len = len(path)
-    sub = path[-1] != sep # subtract 1 if the provided path did not include a separator because the split string will start with a separator
+    starting_depth = 0
+    if path_len != root_len:
+        starting_depth = path[root_len - path_len:].count('/')
 
-    for dirpath, _, _ in os.walk(path):
-        ret += [[dirpath, len(dirpath[path_len:].split(sep)) - sub]]
-    return ret
+    group_by = ['level']
+    uid = [] if args.recursive else ['uid']
 
-def depth(args, sep = '/'):
-    ret = []
-    for path in args.paths:
-        ret += get_depth(path);
-    return ret
+    queries = [
+        '-I', build_create(args.inmemory_name, ['id INT PRIMARY KEY'] + ([] if args.recursive else ['uid INT64']) + ['level INT64', 'count INT64']),
 
-def leaf_depth(args, sep = '/'):
-    ret = []
-    for path in args.paths:
-        for leaf in get_leaf_dirs(path):
-            ret += get_depth(leaf, sep)
-    return ret
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL'] + uid + ['level() + {}'.format(starting_depth), '1'],
+                                                                 ['summary'],
+                                                                 None,
+                                                                 ['uid'],
+                                                                 None,
+                                                                 None,
+                                                                 None)),
 
-# mapping of valid non-query 'operation' argument values
-NONQUERIES  = {'depth'      : depth,
-               'leaf-depth' : leaf_depth}
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           group_by + uid,
+                                                                           None,
+                                                                           None,
+                                                                           None)),
 
-# mapping of valid query 'operation' argument values to array generators
-QUERIES = {'space'           : space,
-           'files'           : files,
-           'total-space'     : total_space,
-           'total-files'     : total_files,
-           'directory-count' : directory_count,
-           'leaf-count'      : leaf_count,
-           'total-leaf'      : total_in_leaf,
-           'median-leaf'     : median_in_leaf}
+        '-G', gufi_common.build_query(uid + ['level', 'SUM(count)'],
+                                      [args.inmemory_name],
+                                      None,
+                                      group_by + uid,
+                                      None,
+                                      None,
+                                      None),
+
+    ]
+
+    return queries
+
+# mapping of desired statistics to functions
+STATS = {'depth'              : depth,
+         'filesize'           : filesize,
+         'filecount'          : filecount,
+         'total-filesize'     : total_filesize,
+         'total-filecount'    : total_filecount,
+         'dir-count'          : dir_count,
+         'leaf-dirs'          : leaf_dirs,
+         'leaf-depth'         : leaf_depth,
+         'leaf-files'         : leaf_files,
+         'total-leaf-files'   : total_leaf_files,
+         'median-leaf-files'  : median_leaf_files,
+         'level-distribution' : level_distribution,
+        }
 
 # allowed keywords for sorting output (if applicable)
 ASCENDING  = 'ASC'
@@ -195,77 +898,32 @@ if __name__=='__main__':
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
     # override help to not use -h
-    parser.add_argument('--help',                                                 action='help',                                                  help='show this help message and exit')
-    parser.add_argument('--version', '-v',                                        action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--order',         metavar='order', dest='order',         choices=ORDER.keys(),      default='',                          help='sort output (if applicable)')
-    parser.add_argument('--delim',         metavar='c',     dest='delim',         type=gufi_common.get_char,                                      help='delimiter separating output columns')
-    parser.add_argument('--maxdepth',      metavar='d',     dest='maxdepth',      type=gufi_common.get_non_negative,                              help='the maximum number of levels to search')
-    parser.add_argument('--mindepth',      metavar='d',     dest='mindepth',      type=gufi_common.get_non_negative,                              help='the minimum number of levels to search')
-    parser.add_argument('--num_results',   metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                              help='first n results')
-    parser.add_argument('--select',        metavar='cols',  dest='select',        type=str,                                                       help='comma separated columns')
-    parser.add_argument('--uid', '--user', metavar='u',     dest='uid',           type=gufi_common.get_uid,                                       help='restrict to user')
-    parser.add_argument('--output',                         dest='output',        type=str,                                                       help='Output file prefix (Creates file <output>.tid)')
-    parser.add_argument('--output-buffer', metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,               help='Size of each thread\'s output buffer')
-    parser.add_argument('operation',                                              choices=NONQUERIES.keys() + QUERIES.keys(),                     help='operation to perform')
-    parser.add_argument('paths',                                                  type=str, action='append', nargs='*')
+    parser.add_argument('--help',                                                   action='help',                                     help='show this help message and exit')
+    parser.add_argument('--version', '-v',                                          action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('--recursive', '-r',                  dest='recursive',     action='store_true',                               help='run command recursively (if applicable)')
+    parser.add_argument('--order',           metavar='order', dest='order',         choices=ORDER.keys(),      default=ASCENDING,      help='sort output (if applicable)')
+    parser.add_argument('--delim',           metavar='c',     dest='delim',         type=gufi_common.get_char,                         help='delimiter separating output columns')
+    parser.add_argument('--num_results',     metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                 help='first n results')
+    parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',           type=gufi_common.get_uid,                          help='restrict to user')
+    parser.add_argument('--output',                           dest='output',        type=str,                                          help='Output file prefix (Creates file <output>.tid)')
+    parser.add_argument('--output-buffer',   metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,  help='Size of each thread\'s output buffer')
+    parser.add_argument('--in-memory-name',  metavar='name',  dest='inmemory_name', type=str,                           default='out', help='Name of in-memory database when -R is used')
+    parser.add_argument('stat',                                                     choices=STATS.keys(),                              help='statistic to get')
+    parser.add_argument('path',                                                     type=str, nargs='?',                default='')
 
     args = parser.parse_args();
 
-    # default to IndexRoot
-    args.paths = args.paths[0]
-    if not args.paths:
-        args.paths = ['']
-
     # prepend the provided paths with the GUFI root path
-    args.paths = [os.path.normpath(os.path.sep.join([config['IndexRoot'], path])) for path in args.paths]
+    args.path = os.path.normpath(os.path.sep.join([config['IndexRoot'], args.path]))
 
-    if args.order:
-        args.order = ORDER[args.order]
+    # create the query command
+    query_cmd = [config['Exec'],
+                 '-e', '0',
+                 '-n', str(config['Threads']),
+                 '-B', str(args.output_buffer),
+                 '-d', ' '] + STATS[args.stat](config, args, build_where(args))
 
-    if args.operation in NONQUERIES:
-        res = NONQUERIES[args.operation](args)
-        res.sort(key = lambda pair: pair[1], reverse=(args.order==DESCENDING))
-        for path, count in res[:args.num_results]:
-            print path, count
-    elif args.operation in QUERIES:
-        entries, intermediate, aggregate = QUERIES[args.operation](args, ORDER[args.order] if args.order in ORDER else '')
+    query = subprocess.Popen(query_cmd + [args.path])
+    query.communicate() # block until query finishes
 
-        # create the query command
-        query_cmd = [config['Exec'],
-                     '-e', '0',
-                     '-n', str(config['Threads'])]
-
-        if entries is not None:
-            query_cmd += ['-E', entries]
-        else:
-            query_cmd += ['-E', 'SELECT * FROM entries']
-
-        if intermediate is not None:
-            query_cmd += ['-J', intermediate]
-        else:
-            query_cmd += ['-J', 'SELECT * FROM entries']
-
-        if aggregate is not None:
-            query_cmd += ['-G', aggregate]
-        else:
-            query_cmd += ['-G', 'SELECT * FROM entries']
-
-        if args.delim:
-            query_cmd += ['-d', args.delim]
-
-        if args.maxdepth:
-            query_cmd += ['-z', str(args.maxdepth)]
-
-        if args.mindepth:
-            query_cmd += ['-y', str(args.mindepth)]
-
-        if args.output:
-            query_cmd += ['-o', args.output]
-
-        if args.output_buffer:
-            query_cmd += ['-B', str(args.output_buffer)]
-
-        query = subprocess.Popen(query_cmd + args.paths)
-        query.communicate() # block until query finishes
-
-        sys.exit(query.returncode)
+    sys.exit(query.returncode)

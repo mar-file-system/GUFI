@@ -77,25 +77,25 @@ GUFI_PREFIX="$(realpath $1)"
 echo
 echo "Top 10 Users taking up the most space"
 echo 3 > /proc/sys/vm/drop_caches
-sudo ${GUFI_PREFIX}/gufi_stats --order most --num_results 10 space
+sudo ${GUFI_PREFIX}/gufi_stats --order most --num_results 10 total-filesize
 
 echo
 echo "Total Number of Files"
 echo 3 > /proc/sys/vm/drop_caches
-sudo ${GUFI_PREFIX}/gufi_stats total-files
+sudo ${GUFI_PREFIX}/gufi_stats -r total-filecount
 
 echo
 echo "Total Space Taken"
 echo 3 > /proc/sys/vm/drop_caches
-sudo ${GUFI_PREFIX}/gufi_stats total-space
+sudo ${GUFI_PREFIX}/gufi_stats -r total-filesize
 
 echo
 echo "Top 10 Users with the most files"
 echo 3 > /proc/sys/vm/drop_caches
-MOST_FILES="$(sudo ${GUFI_PREFIX}/gufi_stats --order most --num_results 10 files)"
+MOST_FILES="$(sudo ${GUFI_PREFIX}/gufi_stats --order most --num_results 10 total-filecount)"
 echo "${MOST_FILES}"
 
-MOST_FILES="$(echo "${MOST_FILES}" | head -n 1 | awk -F'|' '{printf $1}')"
+MOST_FILES="$(echo "${MOST_FILES}" | head -n 1 | awk -F' ' '{printf $1}')"
 
 echo
 echo "Number of files owned by user ${MOST_FILES} (gufi_find)"
@@ -105,7 +105,7 @@ sudo -u \#"${MOST_FILES}" ${GUFI_PREFIX}/gufi_find -type f | wc -l
 echo
 echo "Number of files owned by user ${MOST_FILES} (gufi_stats)"
 echo 3 > /proc/sys/vm/drop_caches
-sudo -u \#"${MOST_FILES}" ${GUFI_PREFIX}/gufi_stats total-files
+sudo -u \#"${MOST_FILES}" ${GUFI_PREFIX}/gufi_stats total-filecount
 
 echo
 echo "Number of files owned by user ${MOST_FILES} larger than 1KB (gufi_find)"
