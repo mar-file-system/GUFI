@@ -526,7 +526,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     debug_start(addqueryfuncs_call);
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
-        addqueryfuncs(db, id);
+        addqueryfuncs(db, id, work->level);
     }
     debug_end(addqueryfuncs_call);
     #endif
@@ -811,7 +811,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
             return NULL;
         }
 
-        addqueryfuncs(gts.outdbd[i], i);
+        addqueryfuncs(gts.outdbd[i], i, 0);
 
         // create table
         if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
@@ -837,7 +837,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
         return NULL;
     }
 
-    addqueryfuncs(aggregate, in.maxthreads);
+    addqueryfuncs(aggregate, in.maxthreads, 0);
 
     // create table
     if (sqlite3_exec(aggregate, in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {

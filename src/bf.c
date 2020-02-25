@@ -135,8 +135,8 @@ void print_help(const char* prog_name,
       case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
       case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
       case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
-      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results   (no default: recommend using \"SELECT * FROM entries\")\n"); break;
       case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (no default: recommend using \"SELECT * FROM entries\")\n"); break;
+      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results   (no default: recommend using \"SELECT * FROM entries\")\n"); break;
       case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
       case 'm': printf("  -m                 Keep mtime and atime same on the database files\n"); break;
       case 'B': printf("  -B <buffer size>   size of each thread's output buffer in bytes\n"); break;
@@ -186,8 +186,8 @@ void show_input(struct input* in, int retval) {
    printf("in.infile             = '%d'\n",  in->infile);
    printf("in.min_level          = %zu\n",   in->min_level);
    printf("in.max_level          = %zu\n",   in->max_level);
-   printf("in.aggregate          = '%s'\n",  in->aggregate);
    printf("in.intermediate       = '%s'\n",  in->intermediate);
+   printf("in.aggregate          = '%s'\n",  in->aggregate);
    printf("in.show_results       = %d\n",    in->show_results);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
@@ -419,12 +419,12 @@ int parse_cmd_line(int         argc,
          in->infile = 1;
          break;
 
-      case 'G':
-         INSTALL_STR(in->aggregate, optarg, MAXSQL, "-G");
-         break;
-
       case 'J':
          INSTALL_STR(in->intermediate, optarg, MAXSQL, "-J");
+         break;
+
+      case 'G':
+         INSTALL_STR(in->aggregate, optarg, MAXSQL, "-G");
          break;
 
       case 'm':
@@ -458,7 +458,7 @@ int parse_cmd_line(int         argc,
        in->show_results = PRINT;
    }
 
-   // aggregating requires -E and 2 more SQL queries (-J and -G)
+   // aggregating requires -S or -E, and 2 more SQL queries (-J and -G)
    if (in->show_results == AGGREGATE) {
        if ((!in->sqlsum_len && !in->sqlent_len) || !strlen(in->aggregate) || !strlen(in->intermediate)) {
            fprintf(stderr, "Missing SQL statements. Need: -S (summary) or -E (entries), and -J (intermediate) and -G (aggregate)\n");

@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
    }
 
    // add query funcs to get path() uidtouser() gidtogroup()
-   addqueryfuncs(db, 0);
+   addqueryfuncs(db, 0, 0);
 
    // just zero out the global path so path() for this query is useless
    memset(gps[0].gpath, 0, sizeof(gps[0].gpath));
