@@ -76,14 +76,14 @@ de yum -y install epel-release centos-release-scl
 de yum -y install fuse-devel libattr1 pcre-devel
 
 # install extra packages
-de yum -y install autoconf cmake3 make patch pkgconfig sudo
+de yum -y install autoconf cmake3 make patch pkgconfig
 
 # create symlinks
 de ln -sf /usr/bin/cmake3 /usr/bin/cmake
 de ln -sf /usr/bin/ctest3 /usr/bin/ctest
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
-    VERSIONN="${C_COMPILER##*-}"
+    VERSION="${C_COMPILER##*-}"
     C_PACKAGE="devtoolset-${VERSION}"
     CENTOS_C_COMPILER="gcc-${VERSION}"
     de update-alternatives --install /usr/bin/gcc-${VERSION} gcc-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/gcc 10

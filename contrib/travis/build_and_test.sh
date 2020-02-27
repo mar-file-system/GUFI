@@ -84,16 +84,6 @@ fi
 
 make
 
-SUDO=
-if [[ -x "$(command -v sudo)" ]]
-then
-    SUDO=sudo
-fi
-
-${SUDO} make install
-${SUDO} cp /etc/GUFI/config.example /etc/GUFI/config
-${SUDO} chmod 644 /etc/GUFI/config
-
 if [[ "${BUILD}" = "cmake" ]]; then
     ctest --verbose
 elif [[ "${BUILD}" = "make" ]]; then

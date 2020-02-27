@@ -117,32 +117,3 @@ install(FILES gufi_common.py DESTINATION bin COMPONENT Server)
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail COPYONLY)
 install(PROGRAMS gufi_jail DESTINATION bin COMPONENT Server)
-
-# gufi_jail tests
-add_test(NAME jail:gufi_find COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=gufi_find
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-add_test(NAME jail:gufi_ls COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=gufi_ls
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-add_test(NAME jail:gufi_stats COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=gufi_stats\ depth
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-add_test(NAME jail:gufi COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=gufi
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-add_test(NAME jail:find COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=find
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-add_test(NAME jail:ls COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=ls
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-add_test(NAME jail:bash COMMAND ${CMAKE_COMMAND} -E env SSH_ORIGINAL_COMMAND=bash
-  gufi_jail WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-# group these tests under gufi_jail
-set_tests_properties(jail:gufi_find jail:gufi_ls jail:gufi_stats
-                     jail:gufi jail:find jail:ls jail:bash PROPERTIES LABELS "gufi_jail")
-
-# tests that are expected to fail
-set_tests_properties(jail:gufi jail:find jail:ls jail:bash PROPERTIES WILL_FAIL TRUE)
