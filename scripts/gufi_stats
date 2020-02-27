@@ -322,21 +322,21 @@ def total_filesize(config, args, where):
     1002 8
     1003 9
 
-    # gufi_stats -r total-filesize
+    # gufi_stats -c total-filesize
     18
 
     # gufi_stats total-filesize 1002
     1002 8
 
-    # gufi_stats -r total-filesize 1002
+    # gufi_stats -c total-filesize 1002
     8
 
-    $ gufi_stats -r total-filesize
+    $ gufi_stats -c total-filesize
     1
     '''
 
     root_len = len(config['IndexRoot'])
-    group_by = None if args.recursive else ['uid']
+    group_by = None if args.cumulative else ['uid']
 
     queries = [
         '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'size INT64']),
@@ -359,7 +359,7 @@ def total_filesize(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.recursive else ['uid']) + ['SUM(size)'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uid']) + ['SUM(size)'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -381,20 +381,20 @@ def total_filecount(config, args, where):
     1002 4
     1003 3
 
-    # gufi_stats -r total-filecount
+    # gufi_stats -c total-filecount
     8
 
     # gufi_stats total-filecount 1002
     1002 4
 
-    # gufi_stats -r total-filecount 1002
+    # gufi_stats -c total-filecount 1002
     4
 
-    $ gufi_stats -r total-filecount
+    $ gufi_stats -c total-filecount
     1
     '''
 
-    group_by = None if args.recursive else ['uid']
+    group_by = None if args.cumulative else ['uid']
 
     queries = [
         '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
@@ -417,7 +417,7 @@ def total_filecount(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.recursive else ['uid']) + ['SUM(count) AS count'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uid']) + ['SUM(count) AS count'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -525,7 +525,7 @@ def leaf_dirs(config, args, where):
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['path() || "/" || name'],
                                                                  ['summary'],
-                                                                 ['nlink == 2'],
+                                                                 where + ['nlink == 2'],
                                                                  None,
                                                                  None,
                                                                  args.num_results,
@@ -589,7 +589,7 @@ def leaf_depth(config, args, where):
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['(path() || "/" || name) AS fullpath', '0'],
                                                                  ['summary'],
-                                                                 ['nlink == 2'],
+                                                                 where + ['nlink == 2'],
                                                                  None,
                                                                  None,
                                                                  args.num_results,
@@ -653,7 +653,7 @@ def leaf_files(config, args, where):
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['path() || "/" || name', '(SELECT COUNT(*) FROM entries)'],
                                                                  ['summary'],
-                                                                 ['nlink == 2'],
+                                                                 where + ['nlink == 2'],
                                                                  None,
                                                                  None,
                                                                  args.num_results,
@@ -694,20 +694,20 @@ def total_leaf_files(config, args, where):
     1002 2
     1003 3
 
-    # gufi_stats -r total-leaf-files
+    # gufi_stats -c total-leaf-files
     6
 
     # gufi_stats total-leaf-files 1002
     1002 2
 
-    # gufi_stats -r total-leaf-files 1002
+    # gufi_stats -c total-leaf-files 1002
     2
 
-    $ gufi_stats -r total-leaf-files
+    $ gufi_stats -c total-leaf-files
     1
     '''
 
-    group_by = None if args.recursive else ['uid']
+    group_by = None if args.cumulative else ['uid']
 
     queries = [
         '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
@@ -730,7 +730,7 @@ def total_leaf_files(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.recursive else ['uid']) + ['SUM(count) AS count'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uid']) + ['SUM(count) AS count'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -806,7 +806,7 @@ def level_distribution(config, args, where):
     1003 1 1
     1002 2 1
 
-    # gufi_stats -r level-distribution
+    # gufi_stats -c level-distribution
     0 1
     1 3
     2 1
@@ -815,11 +815,11 @@ def level_distribution(config, args, where):
     1002 1 1
     1002 2 1
 
-    # gufi_stats -r level-distribution 1002
+    # gufi_stats -c level-distribution 1002
     1 1
     2 1
 
-    $ gufi_stats -r level-distribution
+    $ gufi_stats -c level-distribution
     0 1
     1 1
     '''
@@ -833,15 +833,16 @@ def level_distribution(config, args, where):
         starting_depth = path[root_len - path_len:].count('/')
 
     group_by = ['level']
-    uid = [] if args.recursive else ['uid']
+    order_by = None if args.cumulative else ['level {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])]
+    uid = [] if args.cumulative else ['uid']
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['id INT PRIMARY KEY'] + ([] if args.recursive else ['uid INT64']) + ['level INT64', 'count INT64']),
+        '-I', build_create(args.inmemory_name, ['id INT PRIMARY KEY'] + ([] if args.cumulative else ['uid INT64']) + ['level INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['NULL'] + uid + ['level() + {}'.format(starting_depth), '1'],
                                                                  ['summary'],
-                                                                 None,
+                                                                 where,
                                                                  ['uid'],
                                                                  None,
                                                                  None,
@@ -852,7 +853,7 @@ def level_distribution(config, args, where):
                                                                            [args.inmemory_name],
                                                                            None,
                                                                            group_by + uid,
-                                                                           None,
+                                                                           order_by,
                                                                            None,
                                                                            None)),
 
@@ -860,8 +861,8 @@ def level_distribution(config, args, where):
                                       [args.inmemory_name],
                                       None,
                                       group_by + uid,
-                                      None,
-                                      None,
+                                      order_by,
+                                      args.num_results,
                                       None),
 
     ]
@@ -869,19 +870,29 @@ def level_distribution(config, args, where):
     return queries
 
 # mapping of desired statistics to functions
-STATS = {'depth'              : depth,
-         'filesize'           : filesize,
-         'filecount'          : filecount,
-         'total-filesize'     : total_filesize,
-         'total-filecount'    : total_filecount,
-         'dir-count'          : dir_count,
-         'leaf-dirs'          : leaf_dirs,
-         'leaf-depth'         : leaf_depth,
-         'leaf-files'         : leaf_files,
-         'total-leaf-files'   : total_leaf_files,
-         'median-leaf-files'  : median_leaf_files,
-         'level-distribution' : level_distribution,
-        }
+# uses --recursive
+RECURSIVE = {
+    'depth'              : depth,
+    'filesize'           : filesize,
+    'filecount'          : filecount,
+    'dir-count'          : dir_count,
+    'leaf-dirs'          : leaf_dirs,
+    'leaf-depth'         : leaf_depth,
+    'leaf-files'         : leaf_files,
+}
+
+# uses --cumulative
+CUMULATIVE = {
+    'total-filesize'     : total_filesize,
+    'total-filecount'    : total_filecount,
+    'total-leaf-files'   : total_leaf_files,
+    'level-distribution' : level_distribution,
+}
+
+# does not use either
+OTHERS = {
+    'median-leaf-files'  : median_leaf_files,
+}
 
 # allowed keywords for sorting output (if applicable)
 ASCENDING  = 'ASC'
@@ -892,26 +903,40 @@ ORDER = {'ASC'   : ASCENDING,
          'most'  : DESCENDING}
 
 if __name__=='__main__':
+    STATS = {}
+    STATS.update(RECURSIVE)
+    STATS.update(CUMULATIVE)
+    STATS.update(OTHERS)
+
     # find and parse the configuration file first
     config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
 
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
+
     # override help to not use -h
-    parser.add_argument('--help',                                                   action='help',                                     help='show this help message and exit')
+    parser.add_argument('--help',                                                   action='help',                                         help='show this help message and exit')
     parser.add_argument('--version', '-v',                                          action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--recursive', '-r',                  dest='recursive',     action='store_true',                               help='run command recursively (if applicable)')
-    parser.add_argument('--order',           metavar='order', dest='order',         choices=ORDER.keys(),      default=ASCENDING,      help='sort output (if applicable)')
-    parser.add_argument('--delim',           metavar='c',     dest='delim',         type=gufi_common.get_char,                         help='delimiter separating output columns')
-    parser.add_argument('--num_results',     metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                 help='first n results')
-    parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',           type=gufi_common.get_uid,                          help='restrict to user')
-    parser.add_argument('--output',                           dest='output',        type=str,                                          help='Output file prefix (Creates file <output>.tid)')
-    parser.add_argument('--output-buffer',   metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,  help='Size of each thread\'s output buffer')
-    parser.add_argument('--in-memory-name',  metavar='name',  dest='inmemory_name', type=str,                           default='out', help='Name of in-memory database when -R is used')
-    parser.add_argument('stat',                                                     choices=STATS.keys(),                              help='statistic to get')
+    parser.add_argument('--recursive', '-r',                  dest='recursive',     action='store_true',                                   help='run command recursively ({})'.format(', '.join(RECURSIVE.keys())))
+    parser.add_argument('--cumulative', '-c',                 dest='cumulative',    action='store_true',                                   help='return cumulative values ({})'.format(', '.join(CUMULATIVE.keys())))
+    parser.add_argument('--order',           metavar='order', dest='order',         choices=ORDER.keys(),               default=ASCENDING, help='sort output (if applicable)')
+    parser.add_argument('--delim',           metavar='c',     dest='delim',         type=gufi_common.get_char,          default=' ',       help='delimiter separating output columns')
+    parser.add_argument('--num_results',     metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                     help='first n results')
+    parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',           type=gufi_common.get_uid,                              help='restrict to user')
+    parser.add_argument('--output-buffer',   metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,      help='Size of each thread\'s output buffer')
+    parser.add_argument('--in-memory-name',  metavar='name',  dest='inmemory_name', type=str,                           default='out',     help='Name of in-memory database when -R is used')
+    parser.add_argument('stat',                                                     choices=STATS.keys(), help='statistic to get')
     parser.add_argument('path',                                                     type=str, nargs='?',                default='')
 
     args = parser.parse_args();
+
+    # check args
+    if args.recursive and (args.stat in CUMULATIVE):
+        sys.stderr.write('--recursive/-r has no effect on "{}" statistic\n'.format(args.stat))
+    if args.cumulative and (args.stat in RECURSIVE):
+        sys.stderr.write('--cumulative/-c has no effect on "{}" statistic\n'.format(args.stat))
+    if (args.recursive or args.cumulative) and (args.stat in OTHERS):
+        sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{}" statistic\n'.format(args.stat))
 
     # prepend the provided paths with the GUFI root path
     args.path = os.path.normpath(os.path.sep.join([config['IndexRoot'], args.path]))
@@ -921,7 +946,7 @@ if __name__=='__main__':
                  '-e', '0',
                  '-n', str(config['Threads']),
                  '-B', str(args.output_buffer),
-                 '-d', ' '] + STATS[args.stat](config, args, build_where(args))
+                 '-d', args.delim] + STATS[args.stat](config, args, build_where(args))
 
     query = subprocess.Popen(query_cmd + [args.path])
     query.communicate() # block until query finishes
