@@ -82,12 +82,12 @@ sudo ${GUFI_PREFIX}/gufi_stats --order most --num_results 10 total-filesize
 echo
 echo "Total Number of Files"
 echo 3 > /proc/sys/vm/drop_caches
-sudo ${GUFI_PREFIX}/gufi_stats -r total-filecount
+sudo ${GUFI_PREFIX}/gufi_stats -c total-filecount
 
 echo
 echo "Total Space Taken"
 echo 3 > /proc/sys/vm/drop_caches
-sudo ${GUFI_PREFIX}/gufi_stats -r total-filesize
+sudo ${GUFI_PREFIX}/gufi_stats -c total-filesize
 
 echo
 echo "Top 10 Users with the most files"
@@ -105,7 +105,7 @@ sudo -u \#"${MOST_FILES}" ${GUFI_PREFIX}/gufi_find -type f | wc -l
 echo
 echo "Number of files owned by user ${MOST_FILES} (gufi_stats)"
 echo 3 > /proc/sys/vm/drop_caches
-sudo -u \#"${MOST_FILES}" ${GUFI_PREFIX}/gufi_stats total-filecount
+sudo -u \#"${MOST_FILES}" ${GUFI_PREFIX}/gufi_stats -c total-filecount
 
 echo
 echo "Number of files owned by user ${MOST_FILES} larger than 1KB (gufi_find)"
