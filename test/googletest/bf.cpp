@@ -130,7 +130,7 @@ TEST(parse_cmd_line, flags) {
 }
 
 TEST(parse_cmd_line, options) {
-    const char opts[] = "n:g:d:o:O:t:i:I:T:S:E:F:W:A:c:e:v:w:y:z:G:J:";
+    const char opts[] = "n:g:d:t:i:I:T:S:E:F:W:A:c:e:v:w:y:z:";
     const std::string exec = "exec";
     const std::string n = "-n"; const std::string n_arg = "1";
     const std::string g = "-g"; const std::string g_arg = "1";
@@ -148,8 +148,6 @@ TEST(parse_cmd_line, options) {
     const std::string e = "-e"; const std::string e_arg = "1";
     const std::string y = "-y"; const std::string y_arg = "1";
     const std::string z = "-z"; const std::string z_arg = "1";
-    const std::string G = "-G"; const std::string G_arg = "G arg";
-    const std::string J = "-J"; const std::string J_arg = "J arg";
 
     // options without conflicts
     {
@@ -200,7 +198,7 @@ TEST(parse_cmd_line, options) {
 }
 
 TEST(parse_cmd_line, output_arguments) {
-    const char opts[] = "n:g:d:o:O:t:i:I:T:S:E:F:W:A:c:e:v:w:y:z:G:J:";
+    const char opts[] = "o:O:I:";
     const std::string exec = "exec";
     const std::string I = "-I"; const std::string I_arg = "I arg";
     const std::string o = "-o"; const std::string o_arg = "filename";
@@ -253,21 +251,24 @@ TEST(parse_cmd_line, output_arguments) {
 }
 
 TEST(parse_cmd_line, aggregate_arguments) {
-    const char opts[] = "n:g:d:o:O:t:i:I:T:S:E:F:W:A:c:e:v:w:y:z:G:J:";
+    const char opts[] = "e:I:S:E:J:G:";
     const std::string exec = "exec";
-    const std::string E = "-E"; const std::string E_arg = "E arg";
     const std::string e = "-e"; const std::string e_arg = "0";
-    const std::string G = "-G"; const std::string G_arg = "G arg";
+    const std::string I = "-I"; const std::string I_arg = "I arg";
+    const std::string S = "-S"; const std::string S_arg = "S arg";
+    const std::string E = "-E"; const std::string E_arg = "E arg";
     const std::string J = "-J"; const std::string J_arg = "J arg";
+    const std::string G = "-G"; const std::string G_arg = "G arg";
 
-    // -E with -G and -J
+    // -E with -I, -J, and -G
     {
         const char *argv[] = {
             exec.c_str(),
-            E.c_str(), E_arg.c_str(),
             e.c_str(), e_arg.c_str(),
-            G.c_str(), G_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            E.c_str(), E_arg.c_str(),
             J.c_str(), J_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
             // no nullptr since getopt will try to dereference it
         };
 
@@ -275,19 +276,22 @@ TEST(parse_cmd_line, aggregate_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_STREQ(in.sqlinit,          I_arg.c_str());
         EXPECT_STREQ(in.sqlent,           E_arg.c_str());
         EXPECT_EQ(in.show_results,        AGGREGATE);
-        EXPECT_STREQ(in.aggregate,        G_arg.c_str());
         EXPECT_STREQ(in.intermediate,     J_arg.c_str());
+        EXPECT_STREQ(in.aggregate,        G_arg.c_str());
 
     }
 
-    // -E without -G and -J
+    // -E without -I
     {
         const char *argv[] = {
             exec.c_str(),
-            E.c_str(), E_arg.c_str(),
             e.c_str(), e_arg.c_str(),
+            E.c_str(), E_arg.c_str(),
+            J.c_str(), J_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
             // no nullptr since getopt will try to dereference it
         };
 
@@ -297,11 +301,46 @@ TEST(parse_cmd_line, aggregate_arguments) {
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
     }
 
-    // without -E with -G and -J
+    // -E without -J
     {
         const char *argv[] = {
             exec.c_str(),
             e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            E.c_str(), E_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    }
+
+    // -E without -G
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            E.c_str(), E_arg.c_str(),
+            J.c_str(), J_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    }
+
+    // without -E with -I, -G, and -J
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
             G.c_str(), G_arg.c_str(),
             J.c_str(), J_arg.c_str(),
             // no nullptr since getopt will try to dereference it
@@ -310,7 +349,99 @@ TEST(parse_cmd_line, aggregate_arguments) {
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    }
+
+    // -S with -I, -J, and -G
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            S.c_str(), S_arg.c_str(),
+            J.c_str(), J_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_STREQ(in.sqlinit,          I_arg.c_str());
+        EXPECT_STREQ(in.sqlsum,           S_arg.c_str());
+        EXPECT_EQ(in.show_results,        AGGREGATE);
+        EXPECT_STREQ(in.intermediate,     J_arg.c_str());
+        EXPECT_STREQ(in.aggregate,        G_arg.c_str());
+
+    }
+
+    // -S without -I
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            S.c_str(), S_arg.c_str(),
+            J.c_str(), J_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    }
+
+    // -S without -J
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            S.c_str(), S_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    }
+
+    // -S without -G
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            S.c_str(), S_arg.c_str(),
+            J.c_str(), J_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+    }
+
+    // without -S with -I, -G, and -J
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            e.c_str(), e_arg.c_str(),
+            I.c_str(), I_arg.c_str(),
+            G.c_str(), G_arg.c_str(),
+            J.c_str(), J_arg.c_str(),
+            // no nullptr since getopt will try to dereference it
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
     }
 }
 
