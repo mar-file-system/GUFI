@@ -84,7 +84,7 @@ import gufi_config
 #             |---- f2       # size 2
 #       |---- f1             # size 2
 #       |---- f2             # size 2
-# |---- 1003/                # owned by 1001:1001
+# |---- 1003/                # owned by 1003:1003
 #       |---- f1             # size 3
 #       |---- f2             # size 3
 #       |---- f3             # size 3
@@ -793,34 +793,104 @@ def median_leaf_files(config, args, where):
 
     return queries
 
-def level_distribution(config, args, where):
+def files_per_level(config, args, where):
     '''
-    get counts of how many distributions are in each level of the tree, by uid
+    get counts of how many files are in each level of the tree, by uid
 
     --cumulative combines the results into one set of distributions
 
-    # gufi_stats level-distribution
-    1001 0 1
+    # gufi_stats files-per-level
+    1001 1 1
+    1002 1 2
+    1003 1 3
+    1002 2 2
+
+    # gufi_stats -c files-per-level
+    1 6
+    2 2
+
+    # gufi_stats files-per-level 1002
+    1002 1 2
+    1002 2 2
+
+    # gufi_stats -c files-per-level 1002
+    1 2
+    2 2
+
+    $ gufi_stats -c files-per-level
+    1 1
+    '''
+
+    root = os.path.normpath(config['IndexRoot'])
+    root_len = len(root)
+    path = os.path.normpath(args.path)
+    path_len = len(path)
+    starting_depth = 0
+    if path_len != root_len:
+        starting_depth = path[root_len - path_len:].count('/')
+
+    group_by = ['level']
+    order_by = None if args.cumulative else ['level {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])]
+    uid = [] if args.cumulative else ['uid']
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['id INT PRIMARY KEY'] + ([] if args.cumulative else ['uid INT64']) + ['level INT64', 'count INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL'] + uid + ['level() + {}'.format(starting_depth), '(SELECT COUNT(*) FROM entries)'],
+                                                                 ['summary'],
+                                                                 where,
+                                                                 ['uid'],
+                                                                 None,
+                                                                 None,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           group_by + uid,
+                                                                           order_by,
+                                                                           None,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(uid + ['level', 'SUM(count)'],
+                                      [args.inmemory_name],
+                                      ['level <> 0', 'count <> 0'],
+                                      group_by + uid,
+                                      order_by,
+                                      args.num_results,
+                                      None),
+
+    ]
+
+    return queries
+
+def dirs_per_level(config, args, where):
+    '''
+    get counts of how many directories are in each level of the tree, by uid
+
+    --cumulative combines the results into one set of distributions
+
+    # gufi_stats dirs-per-level
     1001 1 1
     1002 1 1
     1003 1 1
     1002 2 1
 
-    # gufi_stats -c level-distribution
-    0 1
+    # gufi_stats -c dirs-per-level
     1 3
     2 1
 
-    # gufi_stats level-distribution 1002
+    # gufi_stats dirs-per-level 1002
     1002 1 1
     1002 2 1
 
-    # gufi_stats -c level-distribution 1002
+    # gufi_stats -c dirs-per-level 1002
     1 1
     2 1
 
-    $ gufi_stats -c level-distribution
-    0 1
+    $ gufi_stats -c dirs-per-level
     1 1
     '''
 
@@ -859,7 +929,7 @@ def level_distribution(config, args, where):
 
         '-G', gufi_common.build_query(uid + ['level', 'SUM(count)'],
                                       [args.inmemory_name],
-                                      None,
+                                      ['level <> 0'],
                                       group_by + uid,
                                       order_by,
                                       args.num_results,
@@ -886,7 +956,8 @@ CUMULATIVE = {
     'total-filesize'     : total_filesize,
     'total-filecount'    : total_filecount,
     'total-leaf-files'   : total_leaf_files,
-    'level-distribution' : level_distribution,
+    'files-per-level'    : files_per_level,
+    'dirs-per-level'     : dirs_per_level,
 }
 
 # does not use either
