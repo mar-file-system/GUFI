@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include <utime.h>
 
 #include "bf.h"
+#include "debug.h"
 #include "dbutils.h"
 #include "outdbs.h"
 #include "outfiles.h"
@@ -89,18 +90,7 @@ extern int errno;
 #define AGGREGATE_NAME         "file:aggregate%d?mode=memory&cache=shared"
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
-#if BENCHMARK
-#include "debug.h"
-#endif
-
 #ifdef DEBUG
-#include "debug.h"
-
-struct start_end {
-    struct timespec start;
-    struct timespec end;
-};
-
 struct buffer {
     struct start_end data[7000];
     size_t i;
@@ -113,22 +103,29 @@ struct start_end * buffer_get(struct buffer * buffer) {
 struct descend_timers {
     struct buffer within_descend;
     struct buffer check_args;
-    struct buffer level;
+    struct buffer level_cmp;
     struct buffer level_branch;
     struct buffer while_branch;
-    struct buffer readdir;
+    struct buffer readdir_call;
     struct buffer readdir_branch;
-    struct buffer strncmp;
+    struct buffer strncmp_call;
     struct buffer strncmp_branch;
-    struct buffer snprintf;
-    struct buffer lstat;
-    struct buffer isdir;
+    struct buffer snprintf_call;
+    struct buffer lstat_call;
+    struct buffer isdir_cmp;
     struct buffer isdir_branch;
-    struct buffer access;
+    struct buffer access_call;
     struct buffer set;
-    struct buffer clone;
+    struct buffer make_clone;
     struct buffer pushdir;
 };
+
+#define buffered_start(name)                                \
+    struct start_end * name = buffer_get(&timers->name);    \
+    start((*(name)));
+
+#define buffered_end(name)                                  \
+    end((*(name)));
 
 struct descend_timers * global_timers = NULL;
 
@@ -137,7 +134,7 @@ extern struct OutputBuffers debug_output_buffers;
 
 void print_timers(struct OutputBuffers * obufs, const size_t id, char * buf, const size_t size, const char * name, struct buffer * timers) {
     for(size_t i = 0; i < timers->i; i++) {
-        print_debug(obufs, id, buf, size, name, &timers->data[i].start, &timers->data[i].end);
+        print_debug(obufs, id, buf, size, name, &timers->data[i]);
     }
 }
 #endif
@@ -168,7 +165,8 @@ long double total_set_time = 0;
 long double total_clone_time = 0;
 long double total_pushdir_time = 0;
 long double total_attach_time = 0;
-long double total_exec_time = 0;
+long double total_sqlsum_time = 0;
+long double total_sqlent_time = 0;
 long double total_detach_time = 0;
 long double total_close_time = 0;
 long double total_closedir_time = 0;
@@ -179,13 +177,15 @@ long double total_output_timestamps_time = 0;
 long double buffer_sum(struct buffer * timer) {
     long double sum = 0;
     for(size_t i = 0; i < timer->i; i++) {
-        sum += elapsed(&timer->data[i].start, &timer->data[i].end);
+        sum += elapsed(&timer->data[i]);
     }
 
     return sum;
 }
 #endif
-
+#else
+#define buffered_start(name)
+#define buffered_end(name)
 #endif
 
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args);
@@ -201,15 +201,9 @@ static size_t descend2(struct QPTPool *ctx,
                        , struct descend_timers * timers
                        #endif
     ) {
-    #ifdef DEBUG
-    struct start_end * within_descend = buffer_get(&timers->within_descend);
-    clock_gettime(CLOCK_MONOTONIC, &within_descend->start);
-    #endif
+    buffered_start(within_descend);
 
-    #ifdef DEBUG
-    struct start_end * check_args = buffer_get(&timers->check_args);
-    clock_gettime(CLOCK_MONOTONIC, &check_args->start);
-    #endif
+    /* buffered_start(check_args); */
     /* passmywork was already checked in the calling thread */
     /* if (!passmywork) { */
     /*     fprintf(stderr, "Got NULL work\n"); */
@@ -221,171 +215,92 @@ static size_t descend2(struct QPTPool *ctx,
     /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
     /*     return 0; */
     /* } */
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &check_args->end);
-    #endif
+    /* buffered_end(check_args); */
 
-    #ifdef DEBUG
-    struct start_end * level_cmp = buffer_get(&timers->level);
-    clock_gettime(CLOCK_MONOTONIC, &level_cmp->start);
-    #endif
+    buffered_start(level_cmp);
     size_t pushed = 0;
-
     const size_t next_level = passmywork->level + 1;
     const int level_check = (next_level <= max_level);
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &level_cmp->end);
-    #endif
+    buffered_end(level_cmp);
 
-    #ifdef DEBUG
-    struct start_end * level_branch = buffer_get(&timers->level_branch);
-    clock_gettime(CLOCK_MONOTONIC, &level_branch->start);
-    #endif
-
+    buffered_start(level_branch);
     if (level_check) {
-        #ifdef DEBUG
-        clock_gettime(CLOCK_MONOTONIC, &level_branch->end);
-        #endif
+        buffered_end(level_branch);
 
         /* go ahead and send the subdirs to the queue since we need to look */
         /* further down the tree.  loop over dirents, if link push it on the */
         /* queue, if file or link print it, fill up qwork structure for */
         /* each */
-        #ifdef DEBUG
-        struct start_end * while_branch = buffer_get(&timers->while_branch);
-        clock_gettime(CLOCK_MONOTONIC, &while_branch->start);
-        #endif
+        buffered_start(while_branch);
         while (1) {
-            #ifdef DEBUG
-            struct start_end * readdir_call = buffer_get(&timers->readdir);
-            clock_gettime(CLOCK_MONOTONIC, &readdir_call->start);
-            #endif
+            buffered_start(readdir_call);
             struct dirent * entry = readdir(dir);
-            #ifdef DEBUG
-            clock_gettime(CLOCK_MONOTONIC, &readdir_call->end);
-            #endif
+            buffered_end(readdir_call);
 
-            #ifdef DEBUG
-            struct start_end * readdir_branch = buffer_get(&timers->readdir_branch);
-            clock_gettime(CLOCK_MONOTONIC, &readdir_branch->start);
-            #endif
+            buffered_start(readdir_branch);
             if (!entry) {
-                #ifdef DEBUG
-                clock_gettime(CLOCK_MONOTONIC, &readdir_branch->end);
-                #endif
+                buffered_end(readdir_branch);
                 break;
             }
             else {
-                #ifdef DEBUG
-                clock_gettime(CLOCK_MONOTONIC, &readdir_branch->end);
-                #endif
+                buffered_end(readdir_branch);
             }
 
-            #ifdef DEBUG
-            struct start_end * strncmp_call = buffer_get(&timers->strncmp);
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_call->start);
-            #endif
+            buffered_start(strncmp_call);
             const size_t len = strlen(entry->d_name);
             const int skip = (((len == 1) && (strncmp(entry->d_name, ".",  1) == 0)) ||
                               ((len == 2) && (strncmp(entry->d_name, "..", 2) == 0)));
-            #ifdef DEBUG
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_call->end);
-            #endif
+            buffered_end(strncmp_call);
 
-            #ifdef DEBUG
-            struct start_end * strncmp_branch = buffer_get(&timers->strncmp_branch);
-            clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->start);
-            #endif
+            buffered_start(strncmp_branch);
             if (skip) {
-                #ifdef DEBUG
-                clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->end);
-                #endif
-
+                buffered_end(strncmp_branch);
                 continue;
             }
             else {
-                #ifdef DEBUG
-                clock_gettime(CLOCK_MONOTONIC, &strncmp_branch->end);
-                #endif
+                buffered_end(strncmp_branch);
             }
 
-            #ifdef DEBUG
-            struct start_end * snprintf_call = buffer_get(&timers->snprintf);
-            clock_gettime(CLOCK_MONOTONIC, &snprintf_call->start);
-            #endif
+            buffered_start(snprintf_call);
             struct work qwork;
             SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
-            #ifdef DEBUG
-            clock_gettime(CLOCK_MONOTONIC, &snprintf_call->end);
-            #endif
+            buffered_end(snprintf_call);
 
-            /* #ifdef DEBUG */
-            /* struct start_end * lstat_call = buffer_get(&timers->lstat); */
-            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->start); */
-            /* #endif */
+            /* buffered_end(lstat_call); */
             /* lstat(qwork.name, &qwork.statuso); */
-            /* #ifdef DEBUG */
-            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->end); */
-            /* #endif */
+            /* buffered_end(lstat_call); */
 
-            #ifdef DEBUG
-            struct start_end * isdir_call = buffer_get(&timers->isdir);
-            clock_gettime(CLOCK_MONOTONIC, &isdir_call->start);
-            #endif
+            buffered_start(isdir_cmp);
             const int isdir = (entry->d_type == DT_DIR);
             /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
-            #ifdef DEBUG
-            clock_gettime(CLOCK_MONOTONIC, &isdir_call->end);
-            #endif
+            buffered_end(isdir_cmp);
 
-            #ifdef DEBUG
-            struct start_end * isdir_branch = buffer_get(&timers->isdir_branch);
-            clock_gettime(CLOCK_MONOTONIC, &isdir_branch->start);
-            #endif
+            buffered_start(isdir_branch);
             if (isdir) {
-                #ifdef DEBUG
-                clock_gettime(CLOCK_MONOTONIC, &isdir_branch->end);
-                #endif
+                buffered_end(isdir_branch);
 
                 /* const int accessible = !access(qwork.name, R_OK | X_OK); */
 
                 /* if (accessible) { */
-                    #ifdef DEBUG
-                    struct start_end * set = buffer_get(&timers->set);
-                    clock_gettime(CLOCK_MONOTONIC, &set->start);
-                    #endif
+                    buffered_start(set);
                     qwork.level = next_level;
                     /* qwork.type[0] = 'd'; */
 
                     /* this is how the parent gets passed on */
                     /* qwork.pinode = passmywork->statuso.st_ino; */
-                    #ifdef DEBUG
-                    clock_gettime(CLOCK_MONOTONIC, &set->end);
-                    #endif
-
-                    #ifdef DEBUG
-                    struct start_end * make_clone = buffer_get(&timers->clone);
-                    clock_gettime(CLOCK_MONOTONIC, &make_clone->start);
-                    #endif
+                    buffered_end(set);
 
                     /* make a clone here so that the data can be pushed into the queue */
                     /* this is more efficient than malloc+free for every single entry */
+                    buffered_start(make_clone);
                     struct work * clone = (struct work *) malloc(sizeof(struct work));
                     memcpy(clone, &qwork, sizeof(struct work));
+                    buffered_end(make_clone);
 
-                    #ifdef DEBUG
-                    clock_gettime(CLOCK_MONOTONIC, &make_clone->end);
-                    #endif
-
-                    #ifdef DEBUG
-                    struct start_end * pushdir = buffer_get(&timers->pushdir);
-                    clock_gettime(CLOCK_MONOTONIC, &pushdir->start);
-                    #endif
                     /* push the subdirectory into the queue for processing */
+                    buffered_start(pushdir);
                     QPTPool_enqueue(ctx, id, processdir, clone);
-                    #ifdef DEBUG
-                    clock_gettime(CLOCK_MONOTONIC, &pushdir->end);
-                    #endif
+                    buffered_end(pushdir);
 
                     pushed++;
                 /* } */
@@ -395,24 +310,15 @@ static size_t descend2(struct QPTPool *ctx,
                 /* } */
             }
             else {
-                #ifdef DEBUG
-                clock_gettime(CLOCK_MONOTONIC, &isdir_branch->end);
-                #endif
+                buffered_end(isdir_branch);
             }
         }
-        #ifdef DEBUG
-        clock_gettime(CLOCK_MONOTONIC, &while_branch->end);
-        #endif
+        buffered_end(while_branch);
     }
     else {
-        #ifdef DEBUG
-        clock_gettime(CLOCK_MONOTONIC, &level_branch->end);
-        #endif
+        buffered_end(level_branch);
     }
-
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &within_descend->end);
-    #endif
+    buffered_end(within_descend);
 
     return pushed;
 }
@@ -525,95 +431,63 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     #ifdef DEBUG
-    struct timespec opendir_start;
-    struct timespec opendir_end;
-    struct timespec open_start;
-    struct timespec open_end;
-    struct timespec sqlite3_open_start;
-    struct timespec sqlite3_open_end;
-    struct timespec create_tables_start;
-    struct timespec create_tables_end;
-    struct timespec set_pragmas_start;
-    struct timespec set_pragmas_end;
-    struct timespec load_extension_start;
-    struct timespec load_extension_end;
-    struct timespec addqueryfuncs_start;
-    struct timespec addqueryfuncs_end;
-    struct timespec descend_start;
-    struct timespec descend_end;
+    struct start_end opendir_call;
+    struct start_end open_call;
+    struct start_end sqlite3_open_call;
+    struct start_end create_tables_call;
+    struct start_end set_pragmas;
+    struct start_end load_extension;
+    struct start_end addqueryfuncs_call;
+    struct start_end descend_call;
     struct descend_timers * descend_timers = &global_timers[id];
-    struct timespec attach_start;
-    struct timespec attach_end;
-    struct timespec exec_start;
-    struct timespec exec_end;
-    struct timespec detach_start;
-    struct timespec detach_end;
-    struct timespec close_start;
-    struct timespec close_end;
-    struct timespec closedir_start;
-    struct timespec closedir_end;
-    struct timespec utime_start;
-    struct timespec utime_end;
-    struct timespec free_work_start;
-    struct timespec free_work_end;
+    struct start_end attach_call;
+    struct start_end sqlsum;
+    struct start_end sqlent;
+    struct start_end detach_call;
+    struct start_end close_call;
+    struct start_end closedir_call;
+    struct start_end utime_call;
+    struct start_end free_work;
 
-    memset(&opendir_start, 0, sizeof(struct timespec));
-    memset(&opendir_end, 0, sizeof(struct timespec));
-    memset(&open_start, 0, sizeof(struct timespec));
-    memset(&open_end, 0, sizeof(struct timespec));
-    memset(&sqlite3_open_start, 0, sizeof(struct timespec));
-    memset(&sqlite3_open_end, 0, sizeof(struct timespec));
-    memset(&create_tables_start, 0, sizeof(struct timespec));
-    memset(&create_tables_end, 0, sizeof(struct timespec));
-    memset(&set_pragmas_start, 0, sizeof(struct timespec));
-    memset(&set_pragmas_end, 0, sizeof(struct timespec));
-    memset(&load_extension_start, 0, sizeof(struct timespec));
-    memset(&load_extension_end, 0, sizeof(struct timespec));
-    memset(&addqueryfuncs_start, 0, sizeof(struct timespec));
-    memset(&addqueryfuncs_end, 0, sizeof(struct timespec));
-    memset(&descend_start, 0, sizeof(struct timespec));
-    memset(&descend_end, 0, sizeof(struct timespec));
+    memset(&opendir_call,              0, sizeof(struct start_end));
+    memset(&open_call,                 0, sizeof(struct start_end));
+    memset(&sqlite3_open_call,         0, sizeof(struct start_end));
+    memset(&create_tables_call,        0, sizeof(struct start_end));
+    memset(&set_pragmas,               0, sizeof(struct start_end));
+    memset(&load_extension,            0, sizeof(struct start_end));
+    memset(&addqueryfuncs_call,        0, sizeof(struct start_end));
+    memset(&descend_call,              0, sizeof(struct start_end));
     descend_timers->within_descend.i = 0;
-    descend_timers->check_args.i = 0;
-    descend_timers->level.i = 0;
-    descend_timers->level_branch.i = 0;
-    descend_timers->while_branch.i = 0;
-    descend_timers->readdir.i = 0;
+    descend_timers->check_args.i     = 0;
+    descend_timers->level_cmp.i      = 0;
+    descend_timers->level_branch.i   = 0;
+    descend_timers->while_branch.i   = 0;
+    descend_timers->readdir_call.i   = 0;
     descend_timers->readdir_branch.i = 0;
-    descend_timers->strncmp.i = 0;
+    descend_timers->strncmp_call.i   = 0;
     descend_timers->strncmp_branch.i = 0;
-    descend_timers->snprintf.i = 0;
-    descend_timers->lstat.i = 0;
-    descend_timers->isdir.i = 0;
-    descend_timers->isdir_branch.i = 0;
-    descend_timers->access.i = 0;
-    descend_timers->set.i = 0;
-    descend_timers->clone.i = 0;
-    descend_timers->pushdir.i = 0;
-    memset(&attach_start, 0, sizeof(struct timespec));
-    memset(&attach_end, 0, sizeof(struct timespec));
-    memset(&exec_start, 0, sizeof(struct timespec));
-    memset(&exec_end, 0, sizeof(struct timespec));
-    memset(&detach_start, 0, sizeof(struct timespec));
-    memset(&detach_end, 0, sizeof(struct timespec));
-    memset(&close_start, 0, sizeof(struct timespec));
-    memset(&close_end, 0, sizeof(struct timespec));
-    memset(&closedir_start, 0, sizeof(struct timespec));
-    memset(&closedir_end, 0, sizeof(struct timespec));
-    memset(&utime_start, 0, sizeof(struct timespec));
-    memset(&utime_end, 0, sizeof(struct timespec));
-    memset(&free_work_start, 0, sizeof(struct timespec));
-    memset(&free_work_end, 0, sizeof(struct timespec));
+    descend_timers->snprintf_call.i  = 0;
+    descend_timers->lstat_call.i     = 0;
+    descend_timers->isdir_cmp.i      = 0;
+    descend_timers->isdir_branch.i   = 0;
+    descend_timers->access_call.i    = 0;
+    descend_timers->set.i            = 0;
+    descend_timers->make_clone.i     = 0;
+    descend_timers->pushdir.i        = 0;
+    memset(&attach_call,               0, sizeof(struct start_end));
+    memset(&sqlsum,                    0, sizeof(struct start_end));
+    memset(&sqlent,                    0, sizeof(struct start_end));
+    memset(&detach_call,               0, sizeof(struct start_end));
+    memset(&close_call,                0, sizeof(struct start_end));
+    memset(&closedir_call,             0, sizeof(struct start_end));
+    memset(&utime_call,                0, sizeof(struct start_end));
+    memset(&free_work,                 0, sizeof(struct start_end));
     #endif
 
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &opendir_start);
-    #endif
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
+    start(opendir_call);
     dir = opendir(work->name);
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &opendir_end);
-    #endif
+    end(opendir_call);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
@@ -622,9 +496,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
 
     #ifndef NO_OPENDB
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &open_start);
-    #endif
+    start(open_call);
     if (gts.outdbd[id]) {
       /* if we have an out db then only have to attach the gufi db */
       db = gts.outdbd[id];
@@ -635,29 +507,23 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
       db = opendb(dbname, in.open_mode, 1, 1,
                   NULL, NULL
                   #ifdef DEBUG
-                  , &sqlite3_open_start,   &sqlite3_open_end
-                  , &create_tables_start,  &create_tables_end
-                  , &set_pragmas_start,    &set_pragmas_end
-                  , &load_extension_start, &load_extension_end
+                  , &sqlite3_open_call.start,  &sqlite3_open_call.end
+                  , &create_tables_call.start, &create_tables_call.end
+                  , &set_pragmas.start,        &set_pragmas.end
+                  , &load_extension.start,     &load_extension.end
                   #endif
                   );
     }
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &open_end);
-    #endif
+    end(open_call);
     #endif
 
     #ifndef NO_ADDQUERYFUNCS
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_start);
-    #endif
+    start(addqueryfuncs_call);
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
         addqueryfuncs(db, id);
     }
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &addqueryfuncs_end);
-    #endif
+    end(addqueryfuncs_call);
     #endif
 
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
@@ -684,8 +550,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
     /* so we have to go on and query summary and entries possibly */
     if (recs > 0) {
+        start(descend_call);
         #ifdef DEBUG
-        clock_gettime(CLOCK_MONOTONIC, &descend_start);
         #ifdef SUBDIRECTORY_COUNTS
         const size_t pushed =
         #endif
@@ -696,8 +562,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                  , descend_timers
                  #endif
             );
+        end(descend_call);
+
         #ifdef DEBUG
-        clock_gettime(CLOCK_MONOTONIC, &descend_end);
         #ifdef SUBDIRECTORY_COUNTS
         pthread_mutex_lock(&print_mutex);
         fprintf(stderr, "%s %zu\n", work->name, pushed);
@@ -731,6 +598,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                     /* this probably needs a timer */
                     #ifdef DEBUG
+                    start(sqlsum);
                     char *err = NULL;
                     if (
                     #endif
@@ -740,6 +608,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                         sqlite3_free(err);
                     }
+                    end(sqlsum);
                     #else
                     NULL);
                     #endif
@@ -768,7 +637,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         ca.id = id;
 
                         #ifdef DEBUG
-                        clock_gettime(CLOCK_MONOTONIC, &exec_start);
+                        start(sqlent);
                         char *err = NULL;
                         if (
                         #endif
@@ -778,9 +647,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                             fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                             sqlite3_free(err);
                         }
-                        clock_gettime(CLOCK_MONOTONIC, &exec_end);
+                        end(sqlent);
                         #else
-                        NULL) ;
+                        NULL);
                         #endif
                         #endif
                     }
@@ -790,31 +659,21 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
 
     #ifndef NO_OPENDB
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &close_start);
-    #endif
+    start(close_call);
     /* if we have an out db we just detach gufi db */
     if (gts.outdbd[id]) {
       detachdb(dbname, db, "tree");
     } else {
       closedb(db);
     }
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &close_end);
-    #endif
+    end(close_call);
     #endif
 
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &closedir_start);
-    #endif
+    start(closedir_call);
     closedir(dir);
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &closedir_end);
-    #endif
+    end(closedir_call);
 
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &utime_start);
-    #endif
+    start(utime_call);
     /* restore mtime and atime */
     if (in.keep_matime) {
         struct utimbuf dbtime = {};
@@ -822,107 +681,103 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         dbtime.modtime = work->statuso.st_mtime;
         utime(dbname, &dbtime);
     }
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &utime_end);
-    #endif
+    end(utime_call);
 
   out_free:
     ;
 
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &free_work_start);
-    #endif
+    start(free_work);
     free(work);
-    #ifdef DEBUG
-    clock_gettime(CLOCK_MONOTONIC, &free_work_end);
-    #endif
+    end(free_work);
 
     #ifdef DEBUG
-    struct timespec output_timestamps_start;
-    clock_gettime(CLOCK_MONOTONIC, &output_timestamps_start);
+    struct start_end output_timestamps;
+    start(output_timestamps);
 
     #ifdef PER_THREAD_STATS
     char buf[4096];
     const size_t size = sizeof(buf);
-    print_debug(         &debug_output_buffers, id, buf, size, "opendir",         &opendir_start, &opendir_end);
+    print_debug(         &debug_output_buffers, id, buf, size, "opendir",         &opendir_call);
     if (dir) {
-        print_debug(     &debug_output_buffers, id, buf, size, "opendb",          &open_start, &open_end);
+        print_debug(     &debug_output_buffers, id, buf, size, "opendb",          &open_call);
         if (db) {
-            print_debug (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_start, &sqlite3_open_end);
-            print_debug (&debug_output_buffers, id, buf, size, "create_tables",   &create_tables_start, &create_tables_end);
-            print_debug (&debug_output_buffers, id, buf, size, "set_pragmas",     &set_pragmas_start, &set_pragmas_end);
-            print_debug (&debug_output_buffers, id, buf, size, "load_extensions", &load_extension_start, &load_extension_end);
-            print_debug (&debug_output_buffers, id, buf, size, "addqueryfuncs",   &addqueryfuncs_start, &addqueryfuncs_end);
-            print_debug (&debug_output_buffers, id, buf, size, "descend",         &descend_start, &descend_end);
+            print_debug (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_call);
+            print_debug (&debug_output_buffers, id, buf, size, "create_tables",   &create_tables_call);
+            print_debug (&debug_output_buffers, id, buf, size, "set_pragmas",     &set_pragmas);
+            print_debug (&debug_output_buffers, id, buf, size, "load_extensions", &load_extension);
+            print_debug (&debug_output_buffers, id, buf, size, "addqueryfuncs",   &addqueryfuncs_call);
+            print_debug (&debug_output_buffers, id, buf, size, "descend",         &descend_call);
             print_timers(&debug_output_buffers, id, buf, size, "within_descend",  &descend_timers->within_descend);
             print_timers(&debug_output_buffers, id, buf, size, "check_args",      &descend_timers->check_args);
-            print_timers(&debug_output_buffers, id, buf, size, "level",           &descend_timers->level);
+            print_timers(&debug_output_buffers, id, buf, size, "level",           &descend_timers->level_cmp);
             print_timers(&debug_output_buffers, id, buf, size, "level_branch",    &descend_timers->level_branch);
             print_timers(&debug_output_buffers, id, buf, size, "while_branch",    &descend_timers->while_branch);
-            print_timers(&debug_output_buffers, id, buf, size, "readdir",         &descend_timers->readdir);
+            print_timers(&debug_output_buffers, id, buf, size, "readdir",         &descend_timers->readdir_call);
             print_timers(&debug_output_buffers, id, buf, size, "readdir_branch",  &descend_timers->readdir_branch);
-            print_timers(&debug_output_buffers, id, buf, size, "strncmp",         &descend_timers->strncmp);
+            print_timers(&debug_output_buffers, id, buf, size, "strncmp",         &descend_timers->strncmp_call);
             print_timers(&debug_output_buffers, id, buf, size, "strncmp_branch",  &descend_timers->strncmp_branch);
-            print_timers(&debug_output_buffers, id, buf, size, "snprintf",        &descend_timers->snprintf);
-            print_timers(&debug_output_buffers, id, buf, size, "lstat",           &descend_timers->lstat);
-            print_timers(&debug_output_buffers, id, buf, size, "isdir",           &descend_timers->isdir);
+            print_timers(&debug_output_buffers, id, buf, size, "snprintf",        &descend_timers->snprintf_call);
+            print_timers(&debug_output_buffers, id, buf, size, "lstat",           &descend_timers->lstat_call);
+            print_timers(&debug_output_buffers, id, buf, size, "isdir",           &descend_timers->isdir_cmp);
             print_timers(&debug_output_buffers, id, buf, size, "isdir_branch",    &descend_timers->isdir_branch);
-            print_timers(&debug_output_buffers, id, buf, size, "access",          &descend_timers->access);
+            print_timers(&debug_output_buffers, id, buf, size, "access",          &descend_timers->access_call);
             print_timers(&debug_output_buffers, id, buf, size, "set",             &descend_timers->set);
-            print_timers(&debug_output_buffers, id, buf, size, "clone",           &descend_timers->clone);
+            print_timers(&debug_output_buffers, id, buf, size, "clone",           &descend_timers->make_clone);
             print_timers(&debug_output_buffers, id, buf, size, "pushdir",         &descend_timers->pushdir);
-            print_debug (&debug_output_buffers, id, buf, size, "attach",          &attach_start, &attach_end);
-            print_debug (&debug_output_buffers, id, buf, size, "sqlite3_exec",    &exec_start, &exec_end);
-            print_debug (&debug_output_buffers, id, buf, size, "detach",          &detach_start, &detach_end);
-            print_debug (&debug_output_buffers, id, buf, size, "closedb",         &close_start, &close_end);
+            print_debug (&debug_output_buffers, id, buf, size, "attach",          &attach_call);
+            print_debug (&debug_output_buffers, id, buf, size, "sqlsum",          &sqlsum);
+            print_debug (&debug_output_buffers, id, buf, size, "sqlent",          &sqlent);
+            print_debug (&debug_output_buffers, id, buf, size, "detach",          &detach_call);
+            print_debug (&debug_output_buffers, id, buf, size, "closedb",         &close_call);
         }
-        print_debug(     &debug_output_buffers, id, buf, size, "closedir",        &closedir_start, &closedir_end);
-        print_debug(     &debug_output_buffers, id, buf, size, "utime",           &utime_start, &utime_end);
+        print_debug(     &debug_output_buffers, id, buf, size, "closedir",        &closedir_call);
+        print_debug(     &debug_output_buffers, id, buf, size, "utime",           &utime_call);
+        print_debug(     &debug_output_buffers, id, buf, size, "free_work",       &free_work);
     }
     #endif
 
-    struct timespec output_timestamps_end;
-    clock_gettime(CLOCK_MONOTONIC, &output_timestamps_end);
+    end(output_timestamps);
 
     #ifdef CUMULATIVE_TIMES
     pthread_mutex_lock(&print_mutex);
-    total_opendir_time           += elapsed(&opendir_start, &opendir_end);
-    total_open_time              += elapsed(&open_start, &open_end);
-    total_sqlite3_open_time      += elapsed(&sqlite3_open_start, &sqlite3_open_end);
-    total_create_tables_time     += elapsed(&create_tables_start, &create_tables_end);
-    total_set_pragmas_time       += elapsed(&set_pragmas_start, &set_pragmas_end);
-    total_load_extension_time    += elapsed(&load_extension_start, &load_extension_end);
-    total_addqueryfuncs_time     += elapsed(&addqueryfuncs_start, &addqueryfuncs_end);
-    total_descend_time           += elapsed(&descend_start, &descend_end);
+    total_opendir_time           += elapsed(&opendir_call);
+    total_open_time              += elapsed(&open_call);
+    total_sqlite3_open_time      += elapsed(&sqlite3_open_call);
+    total_create_tables_time     += elapsed(&create_tables_call);
+    total_set_pragmas_time       += elapsed(&set_pragmas);
+    total_load_extension_time    += elapsed(&load_extension);
+    total_addqueryfuncs_time     += elapsed(&addqueryfuncs_call);
+    total_descend_time           += elapsed(&descend_call);
     total_check_args_time        += buffer_sum(&descend_timers->check_args);
-    total_level_time             += buffer_sum(&descend_timers->level);
+    total_level_time             += buffer_sum(&descend_timers->level_cmp);
     total_level_branch_time      += buffer_sum(&descend_timers->level_branch);
     total_while_branch_time      += buffer_sum(&descend_timers->while_branch);
-    total_readdir_time           += buffer_sum(&descend_timers->readdir);
+    total_readdir_time           += buffer_sum(&descend_timers->readdir_call);
     total_readdir_branch_time    += buffer_sum(&descend_timers->readdir_branch);
-    total_strncmp_time           += buffer_sum(&descend_timers->strncmp);
+    total_strncmp_time           += buffer_sum(&descend_timers->strncmp_call);
     total_strncmp_branch_time    += buffer_sum(&descend_timers->strncmp_branch);
-    total_snprintf_time          += buffer_sum(&descend_timers->snprintf);
-    total_lstat_time             += buffer_sum(&descend_timers->lstat);
-    total_isdir_time             += buffer_sum(&descend_timers->isdir);
+    total_snprintf_time          += buffer_sum(&descend_timers->snprintf_call);
+    total_lstat_time             += buffer_sum(&descend_timers->lstat_call);
+    total_isdir_time             += buffer_sum(&descend_timers->isdir_cmp);
     total_isdir_branch_time      += buffer_sum(&descend_timers->isdir_branch);
-    total_access_time            += buffer_sum(&descend_timers->access);
+    total_access_time            += buffer_sum(&descend_timers->access_call);
     total_set_time               += buffer_sum(&descend_timers->set);
-    total_clone_time             += buffer_sum(&descend_timers->clone);
+    total_clone_time             += buffer_sum(&descend_timers->make_clone);
     total_pushdir_time           += buffer_sum(&descend_timers->pushdir);
-    total_closedir_time          += elapsed(&closedir_start, &closedir_end);
-    total_attach_time            += elapsed(&attach_start, &attach_end);
-    total_exec_time              += elapsed(&exec_start, &exec_end);
-    total_detach_time            += elapsed(&detach_start, &detach_end);
-    total_close_time             += elapsed(&close_start, &close_end);
-    total_utime_time             += elapsed(&utime_start, &utime_end);
-    total_free_work_time         += elapsed(&free_work_start, &free_work_end);
-    total_output_timestamps_time += elapsed(&output_timestamps_start, &output_timestamps_end);
+    total_closedir_time          += elapsed(&closedir_call);
+    total_attach_time            += elapsed(&attach_call);
+    total_sqlsum_time            += elapsed(&sqlsum);
+    total_sqlent_time            += elapsed(&sqlent);
+    total_detach_time            += elapsed(&detach_call);
+    total_close_time             += elapsed(&close_call);
+    total_utime_time             += elapsed(&utime_call);
+    total_free_work_time         += elapsed(&free_work);
+    total_output_timestamps_time += elapsed(&output_timestamps);
     pthread_mutex_unlock(&print_mutex);
     #endif
 
     #ifdef PER_THREAD_STATS
-    print_debug(&debug_output_buffers, id, buf, size, "output_timestamps", &output_timestamps_start, &output_timestamps_end);
+    print_debug(&debug_output_buffers, id, buf, size, "output_timestamps", &output_timestamps);
     #endif
 
     #endif
@@ -1002,13 +857,10 @@ void sub_help() {
 
 int main(int argc, char *argv[])
 {
-    #if defined(DEBUG) || BENCHMARK
-    struct timespec start;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    #endif
-
     #ifdef DEBUG
-    epoch = timestamp(&start);
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    epoch = since_epoch(&now);
     #endif
 
     /* process input args - all programs share the common 'struct input', */
@@ -1022,8 +874,7 @@ int main(int argc, char *argv[])
         return -1;
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    struct timespec setup_globals_start;
-    clock_gettime(CLOCK_MONOTONIC, &setup_globals_start);
+    define_start(setup_globals)
     #endif
 
     struct ThreadArgs args;
@@ -1047,9 +898,8 @@ int main(int argc, char *argv[])
     global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
 
     #ifdef CUMULATIVE_TIMES
-    struct timespec setup_globals_end;
-    clock_gettime(CLOCK_MONOTONIC, &setup_globals_end);
-    const long double setup_globals_time = elapsed(&setup_globals_start, &setup_globals_end);
+    end(setup_globals);
+    const long double setup_globals_time = elapsed(&setup_globals);
     #endif
     #endif
 
@@ -1062,8 +912,7 @@ int main(int argc, char *argv[])
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    struct timespec setup_aggregate_start;
-    clock_gettime(CLOCK_MONOTONIC, &setup_aggregate_start);
+    define_start(setup_aggregate);
     #endif
 
     char aggregate_name[MAXSQL];
@@ -1078,16 +927,14 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    struct timespec setup_aggregate_end;
-    clock_gettime(CLOCK_MONOTONIC, &setup_aggregate_end);
-    const long double setup_aggregate_time = elapsed(&setup_aggregate_start, &setup_aggregate_end);
+    end(setup_aggregate);
+    const long double setup_aggregate_time = elapsed(&setup_aggregate);
     #endif
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     long double total_time = 0;
 
-    struct timespec work_start;
-    clock_gettime(CLOCK_MONOTONIC, &work_start);
+    define_start(work);
     #endif
 
     /* provide a function to print if PRINT is set */
@@ -1136,9 +983,9 @@ int main(int argc, char *argv[])
     QPTPool_destroy(pool);
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-    struct timespec work_end;
-    clock_gettime(CLOCK_MONOTONIC, &work_end);
-    const long double work_time = elapsed(&work_start, &work_end);
+    end(work);
+
+    const long double work_time = elapsed(&work);
     total_time += work_time;
     #endif
 
@@ -1151,8 +998,7 @@ int main(int argc, char *argv[])
     int rc = 0;
     if (in.show_results == AGGREGATE) {
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        struct timespec aggregate_start;
-        clock_gettime(CLOCK_MONOTONIC, &aggregate_start);
+        define_start(aggregation);
         #endif
 
         /* aggregate the intermediate results */
@@ -1164,16 +1010,14 @@ int main(int argc, char *argv[])
         }
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        struct timespec aggregate_end;
-        clock_gettime(CLOCK_MONOTONIC, &aggregate_end);
-        aggregate_time = elapsed(&aggregate_start, &aggregate_end);
+        end(aggregation);
+        aggregate_time = elapsed(&aggregation);
         total_time += aggregate_time;
         #endif
 
         /* final query on aggregate results */
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        struct timespec output_start;
-        clock_gettime(CLOCK_MONOTONIC, &output_start);
+        define_start(output);
         #endif
 
         struct CallbackArgs ca;
@@ -1188,9 +1032,8 @@ int main(int argc, char *argv[])
         }
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        struct timespec output_end;
-        clock_gettime(CLOCK_MONOTONIC, &output_end);
-        output_time = elapsed(&output_start, &output_end);
+        end(output);
+        output_time = elapsed(&output);
         total_time += output_time;
         #endif
 
@@ -1198,8 +1041,7 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    struct timespec cleanup_globals_start;
-    clock_gettime(CLOCK_MONOTONIC, &cleanup_globals_start);
+    define_start(cleanup_globals);
     #endif
 
     /* clear out buffered data */
@@ -1214,9 +1056,8 @@ int main(int argc, char *argv[])
     outfiles_fin(gts.outfd, output_count);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    struct timespec cleanup_globals_end;
-    clock_gettime(CLOCK_MONOTONIC, &cleanup_globals_end);
-    const long double cleanup_globals_time = elapsed(&cleanup_globals_start, &cleanup_globals_end);
+    end(cleanup_globals);
+    const long double cleanup_globals_time = elapsed(&cleanup_globals);
     #endif
 
     #ifdef DEBUG
@@ -1256,7 +1097,8 @@ int main(int argc, char *argv[])
     fprintf(stderr, "             clone:                          %.2Lfs\n", total_clone_time);
     fprintf(stderr, "             pushdir:                        %.2Lfs\n", total_pushdir_time);
     fprintf(stderr, "     attach intermediate databases:          %.2Lfs\n", total_attach_time);
-    fprintf(stderr, "     sqlite3_exec                            %.2Lfs\n", total_exec_time);
+    fprintf(stderr, "     sqlsum                                  %.2Lfs\n", total_sqlsum_time);
+    fprintf(stderr, "     sqlent                                  %.2Lfs\n", total_sqlent_time);
     fprintf(stderr, "     detach intermediate databases:          %.2Lfs\n", total_detach_time);
     fprintf(stderr, "     close databases:                        %.2Lfs\n", total_close_time);
     fprintf(stderr, "     close directories:                      %.2Lfs\n", total_closedir_time);

@@ -104,8 +104,8 @@ The number of files generated is
 #include <unistd.h>
 
 #include "QueuePerThreadPool.h"
-#include "utils.h"
 #include "debug.h"
+#include "utils.h"
 
 extern int errno;
 
@@ -219,8 +219,8 @@ int main(int argc, char * argv[]) {
     printf("Total Dirs:            %zu\n", total_dirs);
     printf("Total Files:           %zu\n", total_files);
 
-    struct timespec start;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    struct start_end generation;
+    clock_gettime(CLOCK_MONOTONIC, &generation.start);
 
     // generate the top level
     // each thread only generates the contents of its directory, not the directory itself
@@ -259,10 +259,9 @@ int main(int argc, char * argv[]) {
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
-    struct timespec end;
-    clock_gettime(CLOCK_MONOTONIC, &end);
+    clock_gettime(CLOCK_MONOTONIC, &generation.end);
 
-    const long double gen_time = elapsed(&start, &end);
+    const long double gen_time = elapsed(&generation);
 
     printf("Time Spent Generating: %.2Lfs\n", gen_time);
     printf("Dirs/Sec:              %.2Lf\n",  total_dirs / gen_time);
