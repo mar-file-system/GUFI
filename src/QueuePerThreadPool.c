@@ -195,7 +195,9 @@ static void * worker_function(void * args) {
         QPTPool_timestamp_end(wf_get_queue_head);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head);
+        if (debug_output_buffers.buffers) {
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head);
+        }
         #endif
 
         while (w) {
@@ -207,7 +209,9 @@ static void * worker_function(void * args) {
             QPTPool_timestamp_end(wf_process_work);
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work);
+            if (debug_output_buffers.buffers) {
+                print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work);
+            }
             #endif
 
             QPTPool_timestamp_start(wf_next_work);
@@ -215,7 +219,9 @@ static void * worker_function(void * args) {
             QPTPool_timestamp_end(wf_next_work);
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work);
+            if (debug_output_buffers.buffers) {
+                print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work);
+            }
             #endif
 
             work_count++;
