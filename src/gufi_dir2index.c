@@ -447,8 +447,8 @@ int main(int argc, char * argv[]) {
     }
 
     #if BENCHMARK
-    struct timespec start;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    struct start_end benchmark;
+    clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
@@ -470,9 +470,8 @@ int main(int argc, char * argv[]) {
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     #if BENCHMARK
-    struct timespec end;
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    const long double processtime = elapsed(&start, &end);
+    clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
+    const long double processtime = elapsed(&benchmark);
 
     fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
     fprintf(stderr, "Total Files:           %zu\n",    total_files);

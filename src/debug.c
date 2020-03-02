@@ -68,21 +68,21 @@ pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint64_t epoch = 0;
 
-uint64_t timestamp(struct timespec * ts) {
+uint64_t since_epoch(const struct timespec * ts) {
     uint64_t ns = ts->tv_sec;
     ns *= 1000000000ULL;
     ns += ts->tv_nsec;
     return ns;
 }
 
-long double elapsed(const struct timespec *start, const struct timespec *end) {
-    const long double s = ((long double) start->tv_sec) + ((long double) start->tv_nsec) / 1000000000ULL;
-    const long double e = ((long double) end->tv_sec)   + ((long double) end->tv_nsec)   / 1000000000ULL;
+long double elapsed(const struct start_end * se) {
+    const long double s = ((long double) se->start.tv_sec) + ((long double) se->start.tv_nsec) / 1000000000ULL;
+    const long double e = ((long double) se->end.tv_sec)   + ((long double) se->end.tv_nsec)   / 1000000000ULL;
     return e - s;
 }
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct timespec * start, struct timespec * end) {
-    const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, timestamp(start) - epoch, timestamp(end) - epoch);
+int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, const struct start_end * se) {
+    const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
     const size_t capacity = obufs->buffers[id].capacity;
 
     /* if the row can fit within an empty buffer, try to add the new row to the buffer */

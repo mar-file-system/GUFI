@@ -99,13 +99,12 @@ static void * worker_function(void * args) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     char buf[4096];
     const size_t size = 4096;
-    struct timespec wf_start;
-    clock_gettime(CLOCK_MONOTONIC, &wf_start);
     #endif
 
+    define_start(wf);
+
     if (!args) {
-        struct timespec wf_end;
-        clock_gettime(CLOCK_MONOTONIC, &wf_end);
+        end(wf);
         return NULL;
     }
 
@@ -114,11 +113,10 @@ static void * worker_function(void * args) {
 
     if (!ctx) {
         free(args);
-        struct timespec wf_end;
-        clock_gettime(CLOCK_MONOTONIC, &wf_end);
+        end(wf);
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf_start, &wf_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
         }
         #endif
         return NULL;
@@ -127,54 +125,27 @@ static void * worker_function(void * args) {
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
 
     while (1) {
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_sll_init_start;
-        struct timespec wf_sll_init_end;
-        struct timespec wf_tw_mutex_lock_start;
-        struct timespec wf_tw_mutex_lock_end;
-        struct timespec wf_ctx_mutex_lock_start;
-        struct timespec wf_ctx_mutex_lock_end;
-        struct timespec wf_wait_start;
-        struct timespec wf_wait_end;
-        struct timespec wf_move_queue_start;
-        struct timespec wf_move_queue_end;
-
-        clock_gettime(CLOCK_MONOTONIC, &wf_sll_init_start);
-        #endif
+        define_start(wf_sll_init);
         struct sll work; /* don't bother initializing */
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_sll_init_end);
-        #endif
+        end(wf_sll_init);
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_tw_mutex_lock_start);
-        #endif
+        define_start(wf_tw_mutex_lock);
         pthread_mutex_lock(&tw->mutex);
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_tw_mutex_lock_end);
-        #endif
+        end(wf_tw_mutex_lock);
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_ctx_mutex_lock_start);
-        #endif
+        define_start(wf_ctx_mutex_lock);
         pthread_mutex_lock(&ctx->mutex);
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_ctx_mutex_lock_end);
-        #endif
+        end(wf_ctx_mutex_lock);
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_wait_start);
-        #endif
         /* wait for work */
+        define_start(wf_wait);
         while ((ctx->running && (!ctx->incomplete || !tw->queue.head)) ||
                (!ctx->running && (ctx->incomplete && !tw->queue.head))) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_cond_wait(&tw->cv, &tw->mutex);
             pthread_mutex_lock(&ctx->mutex);
         }
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_wait_end);
-        #endif
+        end(wf_wait);
 
         if (!ctx->running && !ctx->incomplete && !tw->queue.head) {
             pthread_mutex_unlock(&ctx->mutex);
@@ -184,14 +155,10 @@ static void * worker_function(void * args) {
 
         pthread_mutex_unlock(&ctx->mutex);
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_move_queue_start);
-        #endif
         /* moves entire queue into work and clears out queue */
+        define_start(wf_move_queue);
         sll_move(&work, &tw->queue);
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        clock_gettime(CLOCK_MONOTONIC, &wf_move_queue_end);
-        #endif
+        end(wf_move_queue);
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
         pthread_mutex_lock(&print_mutex);
@@ -199,7 +166,7 @@ static void * worker_function(void * args) {
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        fprintf(stderr, "%" PRIu64 " ", timestamp(&now) - epoch);
+        fprintf(stderr, "%" PRIu64 " ", since_epoch(&now) - epoch);
 
         size_t sum = 0;
         for(size_t i = 0; i < wf_args->ctx->size; i++) {
@@ -213,112 +180,85 @@ static void * worker_function(void * args) {
 
         pthread_mutex_unlock(&tw->mutex);
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_process_queue_start;
-        clock_gettime(CLOCK_MONOTONIC, &wf_process_queue_start);
-        #endif
+        define_start(wf_process_queue);
+
         /* process all work */
         size_t work_count = 0;
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_get_queue_head_start;
-        clock_gettime(CLOCK_MONOTONIC, &wf_get_queue_head_start);
-        #endif
-
+        define_start(wf_get_queue_head);
         struct node * w = sll_head_node(&work);
+        end(wf_get_queue_head);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_get_queue_head_end;
-        clock_gettime(CLOCK_MONOTONIC, &wf_get_queue_head_end);
-        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head_start, &wf_get_queue_head_end);
+        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head);
         #endif
 
         while (w) {
-            #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            struct timespec wf_process_work_start;
-            clock_gettime(CLOCK_MONOTONIC, &wf_process_work_start);
-            #endif
+            define_start(wf_process_work);
             struct queue_item * qi = sll_node_data(w);
 
             tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, wf_args->args);
 
-            #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            struct timespec wf_process_work_end;
-            clock_gettime(CLOCK_MONOTONIC, &wf_process_work_end);
-
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work_start, &wf_process_work_end);
-            #endif
+            end(wf_process_work);
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            struct timespec wf_next_work_start;
-            clock_gettime(CLOCK_MONOTONIC, &wf_next_work_start);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work);
             #endif
+
+            define_start(wf_next_work);
             w = sll_next_node(w);
+            end(wf_next_work);
+
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            struct timespec wf_next_work_end;
-            clock_gettime(CLOCK_MONOTONIC, &wf_next_work_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work_start, &wf_next_work_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work);
             #endif
 
             work_count++;
         }
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_process_queue_end;
-        clock_gettime(CLOCK_MONOTONIC, &wf_process_queue_end);
-        #endif
+        end(wf_process_queue);
 
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_cleanup_start;
-        clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_start);
-        #endif
+        define_start(wf_cleanup);
         sll_destroy(&work, 1);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
         ctx->incomplete -= work_count;
         pthread_mutex_unlock(&ctx->mutex);
-        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        struct timespec wf_cleanup_end;
-        clock_gettime(CLOCK_MONOTONIC, &wf_cleanup_end);
-        #endif
+        end(wf_cleanup);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_sll_init",       &wf_sll_init_start, &wf_sll_init_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_tw_mutex_lock",  &wf_tw_mutex_lock_start, &wf_tw_mutex_lock_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_ctx_mutex_lock", &wf_ctx_mutex_lock_start, &wf_ctx_mutex_lock_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_wait",           &wf_wait_start, &wf_wait_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_move",           &wf_move_queue_start, &wf_move_queue_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_queue",  &wf_process_queue_start, &wf_process_queue_end);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_cleanup",        &wf_cleanup_start, &wf_cleanup_end);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_sll_init",       &wf_sll_init);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_tw_mutex_lock",  &wf_tw_mutex_lock);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_ctx_mutex_lock", &wf_ctx_mutex_lock);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_wait",           &wf_wait);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_move",           &wf_move_queue);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_queue",  &wf_process_queue);
+            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_cleanup",        &wf_cleanup);
         }
         #endif
     }
 
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct timespec wf_broadcast_start;
-    clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_start);
-    #endif
+    define_start(wf_broadcast);
     for(size_t i = 0; i < ctx->size; i++) {
         pthread_cond_broadcast(&ctx->data[i].cv);
     }
+    end(wf_broadcast);
+
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct timespec wf_broadcast_end;
-    clock_gettime(CLOCK_MONOTONIC, &wf_broadcast_end);
     if (debug_output_buffers.buffers) {
-        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_broadcast", &wf_broadcast_start, &wf_broadcast_end);
+        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_broadcast", &wf_broadcast);
     }
     #endif
 
     free(args);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct timespec wf_end;
-    clock_gettime(CLOCK_MONOTONIC, &wf_end);
+    end(wf);
 
     if (debug_output_buffers.buffers) {
-        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf_start, &wf_end);
+        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
     }
     #endif
 
