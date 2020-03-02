@@ -116,9 +116,8 @@ void row_destroy(struct row * row) {
 
 #ifdef DEBUG
 
-#define define_start(name) \
-    struct start_end name;  \
-    start(name);
+#define debug_start(name) define_start(name)
+#define debug_end(name) timestamp_end(name)
 
 #ifdef CUMULATIVE_TIMES
 size_t total_handle_args      = 0;
@@ -147,7 +146,8 @@ size_t total_files            = 0;
 #endif
 
 #else
-#define define_start(name)
+#define debug_start(name)
+#define debug_end(name)
 #endif
 
 /* process the work under one directory (no recursion) */
@@ -187,7 +187,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #endif
     #endif
 
-    define_start(handle_args);
+    debug_start(handle_args);
 
     /* skip argument checking */
     /* if (!data) { */
@@ -204,20 +204,20 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     struct row * w = (struct row *) data;
     FILE * trace = ((FILE **) args)[id];
 
-    end(handle_args);
+    debug_end(handle_args);
 
-    define_start(memset_work);
+    debug_start(memset_work);
     struct work dir;
     /* memset(&dir, 0, sizeof(struct work)); */
-    end(memset_work);
+    debug_end(memset_work);
 
     /* parse the directory data */
-    define_start(dir_linetowork);
+    debug_start(dir_linetowork);
     linetowork(w->line, in.delim, &dir);
-    end(dir_linetowork);
+    debug_end(dir_linetowork);
 
     /* create the directory */
-    define_start(dupdir_call);
+    debug_start(dupdir_call);
     char topath[MAXPATH];
     SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", (size_t) 1, dir.name, strlen(dir.name));
     if (dupdir(topath, &dir.statuso)) {
@@ -226,9 +226,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         row_destroy(w);
         return 1;
     }
-    end(dupdir_call);
+    debug_end(dupdir_call);
 
-    define_start(copy_template_call);
+    debug_start(copy_template_call);
 
     /* create the database name */
     char dbname[MAXPATH];
@@ -247,10 +247,10 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         return 1;
     }
 
-    end(copy_template_call);
+    debug_end(copy_template_call);
 
     /* process the work */
-    define_start(opendb_call);
+    debug_start(opendb_call);
     sqlite3 * db = opendb(dbname, RDWR, 1, 0,
                           NULL, NULL
                           #ifdef DEBUG
@@ -260,51 +260,51 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                           , NULL, NULL
                           #endif
                           );
-    end(opendb_call);
+    debug_end(opendb_call);
 
     if (db) {
-        define_start(zero_summary);
+        debug_start(zero_summary);
         struct sum summary;
         zeroit(&summary);
-        end(zero_summary);
+        debug_end(zero_summary);
 
-        define_start(insertdbprep_call);
+        debug_start(insertdbprep_call);
         sqlite3_stmt * res = insertdbprep(db);
-        end(insertdbprep_call);
+        debug_end(insertdbprep_call);
 
-        define_start(startdb_call);
+        debug_start(startdb_call);
         startdb(db);
-        end(startdb_call);
+        debug_end(startdb_call);
 
         /* move the trace file to the offet */
-        define_start(fseek_call);
+        debug_start(fseek_call);
         fseek(trace, w->offset, SEEK_SET);
-        end(fseek_call);
+        debug_end(fseek_call);
 
-        define_start(read_entries);
+        debug_start(read_entries);
         size_t row_count = 0;
         for(size_t i = 0; i < w->entries; i++) {
-            define_start(getline_call);
+            debug_start(getline_call);
             char * line = NULL;
             size_t len = 0;
             if (getline(&line, &len, trace) == -1) {
                 free(line);
                 break;
             }
-            end(getline_call);
+            debug_end(getline_call);
 
-            define_start(memset_row);
+            debug_start(memset_row);
             struct work row;
             memset(&row, 0, sizeof(struct work));
-            end(memset_row);
+            debug_end(memset_row);
 
-            define_start(entry_linetowork);
+            debug_start(entry_linetowork);
             linetowork(line, in.delim, &row);
-            end(entry_linetowork)
+            debug_end(entry_linetowork)
 
-            define_start(free_call);
+            debug_start(free_call);
             free(line);
-            end(free_call);
+            debug_end(free_call);
 
             /* /\* don't need this now because this loop uses the count acquired by the scout function *\/ */
             /* /\* stop on directories, since files are listed first *\/ */
@@ -313,35 +313,35 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             /* } */
 
             /* update summary table */
-            define_start(sumit_call);
+            debug_start(sumit_call);
             sumit(&summary,&row);
-            end(sumit_call);
+            debug_end(sumit_call);
 
             /* dont't record pinode */
             row.pinode = 0;
 
             /* add row to bulk insert */
-            define_start(insertdbgo_call);
+            debug_start(insertdbgo_call);
             insertdbgo(&row,db,res);
-            end(insertdbgo_call);
+            debug_end(insertdbgo_call);
 
             row_count++;
             if (row_count > 100000) {
-                define_start(stopdb_call);
+                debug_start(stopdb_call);
                 stopdb(db);
-                end(stopdb_call);
+                debug_end(stopdb_call);
 
-                define_start(startdb_call);
+                debug_start(startdb_call);
                 startdb(db);
-                end(startdb_call);
+                debug_end(startdb_call);
 
                 #ifdef DEBUG
-                start(print_timestamps);
+                timestamp_start(print_timestamps);
                 #ifdef PER_THREAD_STATS
                 print_debug(&debug_output_buffers, id, buf, size, "startdb",          &startdb_call);
                 print_debug(&debug_output_buffers, id, buf, size, "stopdb",           &stopdb_call);
                 #endif
-                end(print_timestamps);
+                debug_end(print_timestamps);
                 #ifdef CUMULATIVE_TIMES
                 thread_startdb      += since_epoch(&startdb_call.end) - since_epoch(&startdb_call.start);
                 thread_stopdb       += since_epoch(&stopdb_call.end) - since_epoch(&stopdb_call.start);
@@ -355,7 +355,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             }
 
             #ifdef DEBUG
-            start(print_timestamps);
+            timestamp_start(print_timestamps);
             #ifdef PER_THREAD_STATS
             print_debug(&debug_output_buffers, id, buf, size, "getline",          &getline_call);
             print_debug(&debug_output_buffers, id, buf, size, "memset_row",       &memset_row);
@@ -364,7 +364,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             print_debug(&debug_output_buffers, id, buf, size, "sumit",            &sumit_call);
             print_debug(&debug_output_buffers, id, buf, size, "insertdbgo",       &insertdbgo_call);
             #endif
-            end(print_timestamps);
+            debug_end(print_timestamps);
 
             #ifdef CUMULATIVE_TIMES
             thread_getline          += since_epoch(&getline_call.end) - since_epoch(&getline_call.start);
@@ -381,26 +381,26 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             #endif
         }
 
-        end(read_entries);
+        debug_end(read_entries);
 
-        define_start(stopdb_call);
+        debug_start(stopdb_call);
         stopdb(db);
-        end(stopdb_call);
+        debug_end(stopdb_call);
 
-        define_start(insertdbfin_call);
+        debug_start(insertdbfin_call);
         insertdbfin(res);
-        end(insertdbfin_call);
+        debug_end(insertdbfin_call);
 
-        define_start(insertsumdb_call);
+        debug_start(insertsumdb_call);
         insertsumdb(db, &dir, &summary);
-        end(insertsumdb_call);
+        debug_end(insertsumdb_call);
 
-        define_start(closedb_call);
+        debug_start(closedb_call);
         closedb(db); /* don't set to nullptr */
-        end(closedb_call);
+        debug_end(closedb_call);
 
         #ifdef DEBUG
-        start(print_timestamps);
+        timestamp_start(print_timestamps);
         #ifdef PER_THREAD_STATS
         print_debug(&debug_output_buffers, id, buf, size, "zero_summary", &zero_summary);
         print_debug(&debug_output_buffers, id, buf, size, "insertdbprep", &insertdbprep_call);
@@ -413,7 +413,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         print_debug(&debug_output_buffers, id, buf, size, "insertsumdb",  &insertsumdb_call);
         print_debug(&debug_output_buffers, id, buf, size, "closedb",      &closedb_call);
         #endif
-        end(print_timestamps);
+        debug_end(print_timestamps);
 
         #ifdef CUMULATIVE_TIMES
         thread_zero_summary += since_epoch(&zero_summary.end) - since_epoch(&zero_summary.start);
@@ -434,12 +434,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         #endif
     }
 
-    define_start(row_destroy_call);
+    debug_start(row_destroy_call);
     row_destroy(w);
-    end(row_destroy_call);
+    debug_end(row_destroy_call);
 
     #ifdef DEBUG
-    start(print_timestamps);
+    timestamp_start(print_timestamps);
     #ifdef PER_THREAD_STATS
     print_debug(&debug_output_buffers, id, buf, size, "handle_args",      &handle_args);
     print_debug(&debug_output_buffers, id, buf, size, "memset_work",      &memset_work);
@@ -449,7 +449,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     print_debug(&debug_output_buffers, id, buf, size, "opendb",           &opendb_call);
     print_debug(&debug_output_buffers, id, buf, size, "row_destroy",      &row_destroy_call);
     #endif
-    end(print_timestamps);
+    debug_end(print_timestamps);
     #ifdef CUMULATIVE_TIMES
     thread_handle_args     += since_epoch(&handle_args.end) - since_epoch(&handle_args.start);
     thread_memset_work     += since_epoch(&memset_work.end) - since_epoch(&memset_work.start);

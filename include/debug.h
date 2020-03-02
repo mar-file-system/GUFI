@@ -81,22 +81,17 @@ struct start_end {
     struct timespec end;
 };
 
-#ifdef DEBUG
-#define start(name)                                 \
+/* these macros are meant to be wrapped with another macro for executable-specific use   */
+/* such as when DEBUG is defined, or if only when DEBUG and PER_THREAD_STATS are defined */
+#define timestamp_start(name)                       \
     clock_gettime(CLOCK_MONOTONIC, &(name).start);
 
-#define end(name)                                   \
+#define timestamp_end(name)                         \
     clock_gettime(CLOCK_MONOTONIC, &(name).end);
 
-#define define_start(name) \
+#define define_start(name)  \
     struct start_end name;  \
-    start(name);
-
-#else
-#define start(name)
-#define end(name)
-#define define_start(name)
-#endif
+    timestamp_start(name);
 
 // get a timespec's value in nanoseconds
 uint64_t since_epoch(const struct timespec * ts);

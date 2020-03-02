@@ -87,6 +87,11 @@ struct worker_function_args {
 #include <string.h>
 #include "OutputBuffers.h"
 struct OutputBuffers debug_output_buffers = {};
+#define QPTPool_timestamp_start(name) define_start(name)
+#define QPTPool_timestamp_end(name) timestamp_end(name)
+#else
+#define QPTPool_timestamp_start(name)
+#define QPTPool_timestamp_end(name)
 #endif
 
 /* struct that is created when something is enqueued */
@@ -101,10 +106,10 @@ static void * worker_function(void * args) {
     const size_t size = 4096;
     #endif
 
-    define_start(wf);
+    QPTPool_timestamp_start(wf);
 
     if (!args) {
-        end(wf);
+        QPTPool_timestamp_end(wf);
         return NULL;
     }
 
@@ -113,7 +118,7 @@ static void * worker_function(void * args) {
 
     if (!ctx) {
         free(args);
-        end(wf);
+        QPTPool_timestamp_end(wf);
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
             print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
@@ -125,27 +130,27 @@ static void * worker_function(void * args) {
     struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
 
     while (1) {
-        define_start(wf_sll_init);
+        QPTPool_timestamp_start(wf_sll_init);
         struct sll work; /* don't bother initializing */
-        end(wf_sll_init);
+        QPTPool_timestamp_end(wf_sll_init);
 
-        define_start(wf_tw_mutex_lock);
+        QPTPool_timestamp_start(wf_tw_mutex_lock);
         pthread_mutex_lock(&tw->mutex);
-        end(wf_tw_mutex_lock);
+        QPTPool_timestamp_end(wf_tw_mutex_lock);
 
-        define_start(wf_ctx_mutex_lock);
+        QPTPool_timestamp_start(wf_ctx_mutex_lock);
         pthread_mutex_lock(&ctx->mutex);
-        end(wf_ctx_mutex_lock);
+        QPTPool_timestamp_end(wf_ctx_mutex_lock);
 
         /* wait for work */
-        define_start(wf_wait);
+        QPTPool_timestamp_start(wf_wait);
         while ((ctx->running && (!ctx->incomplete || !tw->queue.head)) ||
                (!ctx->running && (ctx->incomplete && !tw->queue.head))) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_cond_wait(&tw->cv, &tw->mutex);
             pthread_mutex_lock(&ctx->mutex);
         }
-        end(wf_wait);
+        QPTPool_timestamp_end(wf_wait);
 
         if (!ctx->running && !ctx->incomplete && !tw->queue.head) {
             pthread_mutex_unlock(&ctx->mutex);
@@ -156,9 +161,9 @@ static void * worker_function(void * args) {
         pthread_mutex_unlock(&ctx->mutex);
 
         /* moves entire queue into work and clears out queue */
-        define_start(wf_move_queue);
+        QPTPool_timestamp_start(wf_move_queue);
         sll_move(&work, &tw->queue);
-        end(wf_move_queue);
+        QPTPool_timestamp_end(wf_move_queue);
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
         pthread_mutex_lock(&print_mutex);
@@ -180,34 +185,34 @@ static void * worker_function(void * args) {
 
         pthread_mutex_unlock(&tw->mutex);
 
-        define_start(wf_process_queue);
+        QPTPool_timestamp_start(wf_process_queue);
 
         /* process all work */
         size_t work_count = 0;
 
-        define_start(wf_get_queue_head);
+        QPTPool_timestamp_start(wf_get_queue_head);
         struct node * w = sll_head_node(&work);
-        end(wf_get_queue_head);
+        QPTPool_timestamp_end(wf_get_queue_head);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head);
         #endif
 
         while (w) {
-            define_start(wf_process_work);
+            QPTPool_timestamp_start(wf_process_work);
             struct queue_item * qi = sll_node_data(w);
 
             tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, wf_args->args);
 
-            end(wf_process_work);
+            QPTPool_timestamp_end(wf_process_work);
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work);
             #endif
 
-            define_start(wf_next_work);
+            QPTPool_timestamp_start(wf_next_work);
             w = sll_next_node(w);
-            end(wf_next_work);
+            QPTPool_timestamp_end(wf_next_work);
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work);
@@ -216,16 +221,16 @@ static void * worker_function(void * args) {
             work_count++;
         }
 
-        end(wf_process_queue);
+        QPTPool_timestamp_end(wf_process_queue);
 
-        define_start(wf_cleanup);
+        QPTPool_timestamp_start(wf_cleanup);
         sll_destroy(&work, 1);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
         ctx->incomplete -= work_count;
         pthread_mutex_unlock(&ctx->mutex);
-        end(wf_cleanup);
+        QPTPool_timestamp_end(wf_cleanup);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
@@ -240,11 +245,11 @@ static void * worker_function(void * args) {
         #endif
     }
 
-    define_start(wf_broadcast);
+    QPTPool_timestamp_start(wf_broadcast);
     for(size_t i = 0; i < ctx->size; i++) {
         pthread_cond_broadcast(&ctx->data[i].cv);
     }
-    end(wf_broadcast);
+    QPTPool_timestamp_end(wf_broadcast);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     if (debug_output_buffers.buffers) {
@@ -255,7 +260,7 @@ static void * worker_function(void * args) {
     free(args);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    end(wf);
+    QPTPool_timestamp_end(wf);
 
     if (debug_output_buffers.buffers) {
         print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);

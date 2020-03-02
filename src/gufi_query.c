@@ -120,12 +120,15 @@ struct descend_timers {
     struct buffer pushdir;
 };
 
+#define debug_start(name) timestamp_start(name)
+#define debug_end(name) timestamp_end(name)
+
 #define buffered_start(name)                                \
     struct start_end * name = buffer_get(&timers->name);    \
-    start((*(name)));
+    timestamp_start((*(name)));
 
 #define buffered_end(name)                                  \
-    end((*(name)));
+    timestamp_end((*(name)));
 
 struct descend_timers * global_timers = NULL;
 
@@ -184,6 +187,8 @@ long double buffer_sum(struct buffer * timer) {
 }
 #endif
 #else
+#define debug_start(name)
+#define debug_end(name)
 #define buffered_start(name)
 #define buffered_end(name)
 #endif
@@ -485,9 +490,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #endif
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
-    start(opendir_call);
+    debug_start(opendir_call);
     dir = opendir(work->name);
-    end(opendir_call);
+    debug_end(opendir_call);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
@@ -496,7 +501,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
 
     #ifndef NO_OPENDB
-    start(open_call);
+    debug_start(open_call);
     if (gts.outdbd[id]) {
       /* if we have an out db then only have to attach the gufi db */
       db = gts.outdbd[id];
@@ -514,16 +519,16 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                   #endif
                   );
     }
-    end(open_call);
+    debug_end(open_call);
     #endif
 
     #ifndef NO_ADDQUERYFUNCS
-    start(addqueryfuncs_call);
+    debug_start(addqueryfuncs_call);
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
         addqueryfuncs(db, id);
     }
-    end(addqueryfuncs_call);
+    debug_end(addqueryfuncs_call);
     #endif
 
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
@@ -550,7 +555,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
     /* so we have to go on and query summary and entries possibly */
     if (recs > 0) {
-        start(descend_call);
+        debug_start(descend_call);
         #ifdef DEBUG
         #ifdef SUBDIRECTORY_COUNTS
         const size_t pushed =
@@ -562,7 +567,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                  , descend_timers
                  #endif
             );
-        end(descend_call);
+        debug_end(descend_call);
 
         #ifdef DEBUG
         #ifdef SUBDIRECTORY_COUNTS
@@ -598,7 +603,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                     /* this probably needs a timer */
                     #ifdef DEBUG
-                    start(sqlsum);
+                    debug_start(sqlsum);
                     char *err = NULL;
                     if (
                     #endif
@@ -608,7 +613,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                         sqlite3_free(err);
                     }
-                    end(sqlsum);
+                    debug_end(sqlsum);
                     #else
                     NULL);
                     #endif
@@ -637,7 +642,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         ca.id = id;
 
                         #ifdef DEBUG
-                        start(sqlent);
+                        debug_start(sqlent);
                         char *err = NULL;
                         if (
                         #endif
@@ -647,7 +652,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                             fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                             sqlite3_free(err);
                         }
-                        end(sqlent);
+                        debug_end(sqlent);
                         #else
                         NULL);
                         #endif
@@ -659,21 +664,21 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
 
     #ifndef NO_OPENDB
-    start(close_call);
+    debug_start(close_call);
     /* if we have an out db we just detach gufi db */
     if (gts.outdbd[id]) {
       detachdb(dbname, db, "tree");
     } else {
       closedb(db);
     }
-    end(close_call);
+    debug_end(close_call);
     #endif
 
-    start(closedir_call);
+    debug_start(closedir_call);
     closedir(dir);
-    end(closedir_call);
+    debug_end(closedir_call);
 
-    start(utime_call);
+    debug_start(utime_call);
     /* restore mtime and atime */
     if (in.keep_matime) {
         struct utimbuf dbtime = {};
@@ -681,18 +686,18 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         dbtime.modtime = work->statuso.st_mtime;
         utime(dbname, &dbtime);
     }
-    end(utime_call);
+    debug_end(utime_call);
 
   out_free:
     ;
 
-    start(free_work);
+    debug_start(free_work);
     free(work);
-    end(free_work);
+    debug_end(free_work);
 
     #ifdef DEBUG
     struct start_end output_timestamps;
-    start(output_timestamps);
+    debug_start(output_timestamps);
 
     #ifdef PER_THREAD_STATS
     char buf[4096];
@@ -736,7 +741,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     }
     #endif
 
-    end(output_timestamps);
+    debug_end(output_timestamps);
 
     #ifdef CUMULATIVE_TIMES
     pthread_mutex_lock(&print_mutex);
@@ -898,7 +903,7 @@ int main(int argc, char *argv[])
     global_timers = malloc(in.maxthreads * sizeof(struct descend_timers));
 
     #ifdef CUMULATIVE_TIMES
-    end(setup_globals);
+    debug_end(setup_globals);
     const long double setup_globals_time = elapsed(&setup_globals);
     #endif
     #endif
@@ -927,7 +932,7 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    end(setup_aggregate);
+    debug_end(setup_aggregate);
     const long double setup_aggregate_time = elapsed(&setup_aggregate);
     #endif
 
@@ -983,7 +988,7 @@ int main(int argc, char *argv[])
     QPTPool_destroy(pool);
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-    end(work);
+    debug_end(work);
 
     const long double work_time = elapsed(&work);
     total_time += work_time;
@@ -991,7 +996,6 @@ int main(int argc, char *argv[])
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     long double aggregate_time = 0;
-    long double cleanup_time = 0;
     long double output_time = 0;
     #endif
 
@@ -1010,7 +1014,7 @@ int main(int argc, char *argv[])
         }
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        end(aggregation);
+        debug_end(aggregation);
         aggregate_time = elapsed(&aggregation);
         total_time += aggregate_time;
         #endif
@@ -1032,7 +1036,7 @@ int main(int argc, char *argv[])
         }
 
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        end(output);
+        debug_end(output);
         output_time = elapsed(&output);
         total_time += output_time;
         #endif
@@ -1056,7 +1060,7 @@ int main(int argc, char *argv[])
     outfiles_fin(gts.outfd, output_count);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    end(cleanup_globals);
+    debug_end(cleanup_globals);
     const long double cleanup_globals_time = elapsed(&cleanup_globals);
     #endif
 
@@ -1106,7 +1110,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "     free work:                              %.2Lfs\n", total_free_work_time);
     fprintf(stderr, "output timestamps:                           %.2Lfs\n", total_output_timestamps_time);
     fprintf(stderr, "aggregate into final databases:              %.2Lfs\n", aggregate_time);
-    fprintf(stderr, "clean up intermediate databases:             %.2Lfs\n", cleanup_time);
     fprintf(stderr, "print aggregated results:                    %.2Lfs\n", output_time);
     fprintf(stderr, "clean up globals:                            %.2Lfs\n", cleanup_globals_time);
     fprintf(stderr, "\n");
