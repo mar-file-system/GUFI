@@ -402,18 +402,18 @@ static int gufir_access(const char *path, int mask) {
             }
             else {
                 fprintf(stderr, "access could not query database %s: %s\n", dbn, err);
-                rc = -1;
+                rc = EPERM;
             }
 
             sqlite3_free(err);
         }
         else {
             fprintf(stderr, "access could not open %s: %s\n", dbn, sqlite3_errmsg(db));
-            rc = -1;
+            rc = ENOENT;
         }
 
         sqlite3_close(db);
-        return rc;
+        return -rc;
 }
 
 static int gufir_statfs(const char *path, struct statvfs *stbuf) {
@@ -673,7 +673,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
         rc = sqlite3_open(dbn, &mydb);
         if (rc != SQLITE_OK) {
           fprintf(stderr, "Error opening %s: %s", dbn, sqlite3_errmsg(mydb));
-          rc = -1;
+          rc = EPERM;
           goto readlink_done;
         }
 
@@ -694,20 +694,20 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
         if (sqlite3_exec(mydb, sqlstmt, count_char_results, &res, &err) != rc) {
             fprintf(stderr, "%s\n", err);
             sqlite3_free(err);
-            rc = -1;
+            rc = ENOENT;
             goto readlink_done;
         }
 
         /* there should have been only 1 match */
         if (res.count != 1) {
             fprintf(stderr, "Did not get exactly 1 result, which should not happen\n");
-            rc = -1;
+            rc = EBADF;
             goto readlink_done;
         }
 
   readlink_done:
         sqlite3_close(mydb);
-        return rc;
+        return -rc;
 }
 
 static struct fuse_operations gufir_oper = {
