@@ -122,6 +122,7 @@ struct descend_timers {
 
 #define debug_start(name) timestamp_start(name)
 #define debug_end(name) timestamp_end(name)
+#define debug_define_start(name) define_start(name)
 
 #define buffered_start(name)                                \
     struct start_end * name = buffer_get(&timers->name);    \
@@ -189,6 +190,7 @@ long double buffer_sum(struct buffer * timer) {
 #else
 #define debug_start(name)
 #define debug_end(name)
+#define debug_define_start(name)
 #define buffered_start(name)
 #define buffered_end(name)
 #endif
@@ -873,11 +875,11 @@ int main(int argc, char *argv[])
         return -1;
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    debug_start(setup_globals)
+    debug_define_start(setup_globals)
     #endif
 
-    #ifdef DEBUG
     struct ThreadArgs args;
+    #ifdef DEBUG
     args.start_time = &now;
     #endif
 
@@ -914,7 +916,7 @@ int main(int argc, char *argv[])
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    debug_start(setup_aggregate);
+    debug_define_start(setup_aggregate);
     #endif
 
     char aggregate_name[MAXSQL];
@@ -936,7 +938,7 @@ int main(int argc, char *argv[])
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     long double total_time = 0;
 
-    debug_start(work);
+    debug_define_start(work);
     #endif
 
     /* provide a function to print if PRINT is set */
@@ -999,7 +1001,7 @@ int main(int argc, char *argv[])
     int rc = 0;
     if (in.show_results == AGGREGATE) {
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        debug_start(aggregation);
+        debug_define_start(aggregation);
         #endif
 
         /* aggregate the intermediate results */
@@ -1018,7 +1020,7 @@ int main(int argc, char *argv[])
 
         /* final query on aggregate results */
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        debug_start(output);
+        debug_define_start(output);
         #endif
 
         struct CallbackArgs ca;
@@ -1042,7 +1044,7 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    debug_start(cleanup_globals);
+    debug_define_start(cleanup_globals);
     #endif
 
     /* clear out buffered data */

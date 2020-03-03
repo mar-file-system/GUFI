@@ -54,11 +54,11 @@ while_branch
 within_descend
 "
 
-# for name in ${names}
-# do
-#     grep -E "[0-9]+ ${name} [0-9]+ [0-9]+" "${file}" > "${file}.${name}" &
-# done
-# wait
+for name in ${names}
+do
+    grep -E "[0-9]+ ${name} [0-9]+ [0-9]+" "${file}" > "${file}.${name}" &
+done
+wait
 
 thread_ids=$(awk '{ print $1 }' ${file}.wf | sort -n | uniq)
 lowest=$(echo "${thread_ids}" | head -n 1)
