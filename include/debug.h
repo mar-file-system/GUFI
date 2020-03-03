@@ -94,11 +94,11 @@ struct start_end {
     timestamp_start(name);
 
 /* nanoseconds since an unspecified epoch */
-uint64_t since_epoch(const struct timespec * ts);
+uint64_t since_epoch(struct timespec * ts);
 
 /* Get number of seconds between two events recorded in struct timespecs */
-long double elapsed(const struct start_end * se);
+long double elapsed(struct start_end * se);
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, const struct start_end * se);
+int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se);
 
 #endif

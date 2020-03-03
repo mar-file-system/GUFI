@@ -68,20 +68,20 @@ pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint64_t epoch = 0;
 
-uint64_t since_epoch(const struct timespec * ts) {
+uint64_t since_epoch(struct timespec * ts) {
     uint64_t ns = ts->tv_sec;
     ns *= 1000000000ULL;
     ns += ts->tv_nsec;
     return ns;
 }
 
-long double elapsed(const struct start_end * se) {
+long double elapsed(struct start_end * se) {
     const long double s = ((long double) se->start.tv_sec) + ((long double) se->start.tv_nsec) / 1000000000ULL;
     const long double e = ((long double) se->end.tv_sec)   + ((long double) se->end.tv_nsec)   / 1000000000ULL;
     return e - s;
 }
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, const struct start_end * se) {
+int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se) {
     const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
     const size_t capacity = obufs->buffers[id].capacity;
 
