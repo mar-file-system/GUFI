@@ -343,8 +343,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                 #endif
                 debug_end(print_timestamps);
                 #ifdef CUMULATIVE_TIMES
-                thread_startdb      += since_epoch(&startdb_call.end) - since_epoch(&startdb_call.start);
-                thread_stopdb       += since_epoch(&stopdb_call.end) - since_epoch(&stopdb_call.start);
+                thread_startdb      += elapsed(&startdb_call);
+                thread_stopdb       += elapsed(&stopdb_call);
                 #endif
                 #ifdef PER_THREAD_STATS
                 print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
@@ -367,12 +367,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             debug_end(print_timestamps);
 
             #ifdef CUMULATIVE_TIMES
-            thread_getline          += since_epoch(&getline_call.end) - since_epoch(&getline_call.start);
-            thread_memset_row       += since_epoch(&memset_row.end) - since_epoch(&memset_row.start);
-            thread_entry_linetowork += since_epoch(&entry_linetowork.end) - since_epoch(&entry_linetowork.start);
-            thread_free             += since_epoch(&free_call.end) - since_epoch(&free_call.start);
-            thread_sumit            += since_epoch(&sumit_call.end) - since_epoch(&sumit_call.start);
-            thread_insertdbgo       += since_epoch(&insertdbgo_call.end) - since_epoch(&insertdbgo_call.start);
+            thread_getline          += elapsed(&getline_call);
+            thread_memset_row       += elapsed(&memset_row);
+            thread_entry_linetowork += elapsed(&entry_linetowork);
+            thread_free             += elapsed(&free_call);
+            thread_sumit            += elapsed(&sumit_call);
+            thread_insertdbgo       += elapsed(&insertdbgo_call);
             #endif
 
             #ifdef PER_THREAD_STATS
@@ -416,15 +416,15 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         debug_end(print_timestamps);
 
         #ifdef CUMULATIVE_TIMES
-        thread_zero_summary += since_epoch(&zero_summary.end) - since_epoch(&zero_summary.start);
-        thread_insertdbprep += since_epoch(&insertdbprep_call.end) - since_epoch(&insertdbprep_call.start);
-        thread_startdb      += since_epoch(&startdb_call.end) - since_epoch(&startdb_call.start);
-        thread_fseek        += since_epoch(&fseek_call.end) - since_epoch(&fseek_call.start);
-        thread_read_entries += since_epoch(&read_entries.end) - since_epoch(&read_entries.start);
-        thread_stopdb       += since_epoch(&stopdb_call.end) - since_epoch(&stopdb_call.start);
-        thread_insertdbfin  += since_epoch(&insertdbfin_call.end) - since_epoch(&insertdbfin_call.start);
-        thread_insertsumdb  += since_epoch(&insertsumdb_call.end) - since_epoch(&insertsumdb_call.start);
-        thread_closedb      += since_epoch(&closedb_call.end) - since_epoch(&closedb_call.start);
+        thread_zero_summary += elapsed(&zero_summary);
+        thread_insertdbprep += elapsed(&insertdbprep_call);
+        thread_startdb      += elapsed(&startdb_call);
+        thread_fseek        += elapsed(&fseek_call);
+        thread_read_entries += elapsed(&read_entries);
+        thread_stopdb       += elapsed(&stopdb_call);
+        thread_insertdbfin  += elapsed(&insertdbfin_call);
+        thread_insertsumdb  += elapsed(&insertsumdb_call);
+        thread_closedb      += elapsed(&closedb_call);
         thread_files        += row_count;
         #endif
 
@@ -451,13 +451,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #endif
     debug_end(print_timestamps);
     #ifdef CUMULATIVE_TIMES
-    thread_handle_args     += since_epoch(&handle_args.end) - since_epoch(&handle_args.start);
-    thread_memset_work     += since_epoch(&memset_work.end) - since_epoch(&memset_work.start);
-    thread_dir_linetowork  += since_epoch(&dir_linetowork.end) - since_epoch(&dir_linetowork.start);
-    thread_dupdir          += since_epoch(&dupdir_call.end) - since_epoch(&dupdir_call.start);
-    thread_copy_template   += since_epoch(&copy_template_call.end) - since_epoch(&copy_template_call.start);
-    thread_opendb          += since_epoch(&opendb_call.end) - since_epoch(&opendb_call.start);
-    thread_row_destroy     += since_epoch(&row_destroy_call.end) - since_epoch(&row_destroy_call.start);
+    thread_handle_args     += elapsed(&handle_args);
+    thread_memset_work     += elapsed(&memset_work);
+    thread_dir_linetowork  += elapsed(&dir_linetowork);
+    thread_dupdir          += elapsed(&dupdir_call);
+    thread_copy_template   += elapsed(&copy_template_call);
+    thread_opendb          += elapsed(&opendb_call);
+    thread_row_destroy     += elapsed(&row_destroy_call);
 
     pthread_mutex_lock(&print_mutex);
     total_handle_args      += thread_handle_args;
