@@ -873,7 +873,7 @@ int main(int argc, char *argv[])
         return -1;
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    define_start(setup_globals)
+    debug_start(setup_globals)
     #endif
 
     #ifdef DEBUG
@@ -914,7 +914,7 @@ int main(int argc, char *argv[])
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    define_start(setup_aggregate);
+    debug_start(setup_aggregate);
     #endif
 
     char aggregate_name[MAXSQL];
@@ -936,7 +936,7 @@ int main(int argc, char *argv[])
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     long double total_time = 0;
 
-    define_start(work);
+    debug_start(work);
     #endif
 
     /* provide a function to print if PRINT is set */
@@ -999,7 +999,7 @@ int main(int argc, char *argv[])
     int rc = 0;
     if (in.show_results == AGGREGATE) {
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        define_start(aggregation);
+        debug_start(aggregation);
         #endif
 
         /* aggregate the intermediate results */
@@ -1018,7 +1018,7 @@ int main(int argc, char *argv[])
 
         /* final query on aggregate results */
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        define_start(output);
+        debug_start(output);
         #endif
 
         struct CallbackArgs ca;
@@ -1042,7 +1042,7 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    define_start(cleanup_globals);
+    debug_start(cleanup_globals);
     #endif
 
     /* clear out buffered data */
