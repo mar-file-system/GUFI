@@ -398,7 +398,17 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 struct ThreadArgs {
     struct OutputBuffers output_buffers;
     int (*print_callback_func)(void*,int,char**,char**);
+    #ifdef DEBUG
+    struct timespec *start_time;
+    #endif
 };
+
+#ifdef DEBUG
+#define init_start_end(name, zero)              \
+    struct start_end name;                      \
+    memcpy(&name.start, zero, sizeof(*zero));   \
+    memcpy(&name.end, zero, sizeof(*zero));
+#endif
 
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     sqlite3 *db = NULL;
@@ -435,33 +445,27 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     char dbname[MAXSQL];
     SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
-    #ifdef DEBUG
-    struct start_end opendir_call;
-    struct start_end open_call;
-    struct start_end sqlite3_open_call;
-    struct start_end create_tables_call;
-    struct start_end set_pragmas;
-    struct start_end load_extension;
-    struct start_end addqueryfuncs_call;
-    struct start_end descend_call;
-    struct descend_timers * descend_timers = &global_timers[id];
-    struct start_end attach_call;
-    struct start_end sqlsum;
-    struct start_end sqlent;
-    struct start_end detach_call;
-    struct start_end close_call;
-    struct start_end closedir_call;
-    struct start_end utime_call;
-    struct start_end free_work;
+    struct ThreadArgs * ta = (struct ThreadArgs *) args;
 
-    memset(&opendir_call,              0, sizeof(struct start_end));
-    memset(&open_call,                 0, sizeof(struct start_end));
-    memset(&sqlite3_open_call,         0, sizeof(struct start_end));
-    memset(&create_tables_call,        0, sizeof(struct start_end));
-    memset(&set_pragmas,               0, sizeof(struct start_end));
-    memset(&load_extension,            0, sizeof(struct start_end));
-    memset(&addqueryfuncs_call,        0, sizeof(struct start_end));
-    memset(&descend_call,              0, sizeof(struct start_end));
+    #ifdef DEBUG
+    init_start_end(opendir_call, ta->start_time);
+    init_start_end(open_call, ta->start_time);
+    init_start_end(sqlite3_open_call, ta->start_time);
+    init_start_end(create_tables_call, ta->start_time);
+    init_start_end(set_pragmas, ta->start_time);
+    init_start_end(load_extension, ta->start_time);
+    init_start_end(addqueryfuncs_call, ta->start_time);
+    init_start_end(descend_call, ta->start_time);
+    struct descend_timers * descend_timers = &global_timers[id];
+    init_start_end(attach_call, ta->start_time);
+    init_start_end(sqlsum, ta->start_time);
+    init_start_end(sqlent, ta->start_time);
+    init_start_end(detach_call, ta->start_time);
+    init_start_end(close_call, ta->start_time);
+    init_start_end(closedir_call, ta->start_time);
+    init_start_end(utime_call, ta->start_time);
+    init_start_end(free_work, ta->start_time);
+
     descend_timers->within_descend.i = 0;
     descend_timers->check_args.i     = 0;
     descend_timers->level_cmp.i      = 0;
@@ -479,14 +483,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     descend_timers->set.i            = 0;
     descend_timers->make_clone.i     = 0;
     descend_timers->pushdir.i        = 0;
-    memset(&attach_call,               0, sizeof(struct start_end));
-    memset(&sqlsum,                    0, sizeof(struct start_end));
-    memset(&sqlent,                    0, sizeof(struct start_end));
-    memset(&detach_call,               0, sizeof(struct start_end));
-    memset(&close_call,                0, sizeof(struct start_end));
-    memset(&closedir_call,             0, sizeof(struct start_end));
-    memset(&utime_call,                0, sizeof(struct start_end));
-    memset(&free_work,                 0, sizeof(struct start_end));
     #endif
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
@@ -595,7 +591,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                     realpath(work->name,gps[id].gfpath);
 
                     #ifndef NO_SQL_EXEC
-                    struct ThreadArgs * ta = (struct ThreadArgs *) args;
                     struct CallbackArgs ca;
                     ca.output_buffers = &ta->output_buffers;
                     ca.id = id;
@@ -636,7 +631,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         realpath(work->name,gps[id].gfpath);
 
                         #ifndef NO_SQL_EXEC
-                        struct ThreadArgs * ta = (struct ThreadArgs *) args;
                         struct CallbackArgs ca;
                         ca.output_buffers = &ta->output_buffers;
                         ca.id = id;
@@ -882,7 +876,10 @@ int main(int argc, char *argv[])
     define_start(setup_globals)
     #endif
 
+    #ifdef DEBUG
     struct ThreadArgs args;
+    args.start_time = &now;
+    #endif
 
     /* initialize globals */
     const size_t output_count = in.maxthreads + !!(in.show_results == AGGREGATE);
