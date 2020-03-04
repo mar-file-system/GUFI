@@ -118,20 +118,25 @@ add_custom_target(untar_tree ALL COMMAND tar -xf "${TESTTAR}" -C "${TESTDIR}"
 # run individual tests
 # bfwi must run first
 add_test(NAME bfwi                            COMMAND runbfwi                        ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME bfti                            COMMAND runbfti                        ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME bfq                             COMMAND runbfq                         ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME bfwreaddirplus2db               COMMAND runbfwreaddirplus2db           ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME querydb                         COMMAND runquerydb                     ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME querydbn                        COMMAND runquerydbn                    ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME dfw                             COMMAND rundfw                         ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME bfti                            COMMAND runbfti                        ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME bfq                             COMMAND runbfq                         ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME bfwreaddirplus2db               COMMAND runbfwreaddirplus2db           ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME querydb                         COMMAND runquerydb                     ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME querydbn                        COMMAND runquerydbn                    ${TESTDST} 2          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME dfw                             COMMAND rundfw                         ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+if (MY_FUSE_FOUND)
+  add_test(NAME bffuse                        COMMAND runbffuse                                            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_test(NAME bfresultfuse                  COMMAND runbfqforfuse                                        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 # other tests
-add_test(NAME listschemadb                    COMMAND runlistschemadb                ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME listtablesdb                    COMMAND runlisttablesdb                ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME groupfilespacehogusesummary     COMMAND rungroupfilespacehogusesummary ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME userfilespacehogusesummary      COMMAND runuserfilespacehogusesummary  ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME groupfilespacehog               COMMAND rungroupfilespacehog           ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME userfilespacehog                COMMAND runuserfilespacehog            ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME oldbigfiles                     COMMAND runoldbigfiles                 ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME listschemadb                    COMMAND runlistschemadb                ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME listtablesdb                    COMMAND runlisttablesdb                ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME groupfilespacehogusesummary     COMMAND rungroupfilespacehogusesummary ${TESTDST} 2          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME userfilespacehogusesummary      COMMAND runuserfilespacehogusesummary  ${TESTDST} 2          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME groupfilespacehog               COMMAND rungroupfilespacehog           ${TESTDST} 2          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME userfilespacehog                COMMAND runuserfilespacehog            ${TESTDST} 2          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME oldbigfiles                     COMMAND runoldbigfiles                 ${TESTDST} 2          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # add_test(NAME gufitest COMMAND gufitest.py all)

@@ -1,39 +1,105 @@
+#!/bin/bash -e
+
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR=$(dirname ${SCRIPT})/..
+cd ${DIR}
+
 #test of running bfq and creating an output database and then running bfresultfuse which is a fuse daemon
 #that makes a file system over the result of a bfq query
 # first do a query and show the entire tree just to the screen
 # the query selects all the fields required for all the needed file system calls the fuse will honor
-echo " clear out testdirdup2 gufi tree"
-rm -rf testdirdup2
-echo " create testdirdup2 gufi tree"
-./runbfwi testdir testdirdup2
+echo " clear out testdir.gufi gufi tree"
+rm -rf testdir.gufi
+echo " create testdir.gufi gufi tree"
+${DIR}/test/runbfwi testdir testdir.gufi
 echo "run query and show entire tree to screen"
-../bfq -Pp -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdirdup2/testdir
+${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdir.gufi/testdir
 echo "run query and show entire tree to screen but elimiate files bigger than 50000 bytes in size"
-../bfq -Pp -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdirdup2/testdir
+${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdir.gufi/testdir
 echo "run query where size < 50000 and create 2 output dbs"
 rm outfpdb*
-../bfq -Pp -n2 -O outfpdb -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text);" -a testdirdup2/testdir
+${DIR}/src/gufi_query  -n2 -O outfpdb -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from pentries where size < 50000;" -S "insert into qout select fpath(),'',type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text, pinode int(64));" -a testdir.gufi
 ls -l outfpdb*
 sqlite3 -line outfpdb.0 'select * from qout;'
 sqlite3 -line outfpdb.1 'select * from qout;'
 echo "ensure fuse is not mounted"
-umount mnt
+fusermount -u mnt || true
 rm -rf mnt
 echo "mount fuse"
 mkdir mnt
 #../bfresultfuse -s -o rdonly mnt qout outfpdb 2>debug
 #../bfresultfuse -s -r mnt qout /tmp/outfpdb 2 2>debug
-../bfresultfuse -d -s mnt qout outfpdb 2 2>/dev/null &
-echo " run an ls and an ls -l and an ls -lr and stat and xattr -l"
+${DIR}/src/bfresultfuse -d -s mnt qout outfpdb 2 2>/dev/null &
+echo "run an ls and an ls -l and an ls -lr and stat and xattr -l"
 sleep 2
-ls mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir
-ls -l mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir
-stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718
-ls -lR mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir
-stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir/a
-stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2
-stat mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test
-xattr -l mnt/Users/ggrider/sqlite/sqlite-src-3180000/gufi-111718/test/testdirdup2/testdir/a
-#/Users/ggrider/tree/tree-1.8.0/tree mnt
-umount mnt
+ls mnt/$(pwd)/testdir.gufi
+ls -l mnt/$(pwd)/testdir.gufi
+ls -lR mnt/$(pwd)/testdir.gufi/
+stat mnt/$(pwd)/testdir.gufi/a
+stat mnt/$(pwd)/testdir.gufi
+stat mnt/$(pwd)
+xattr -l mnt/$(pwd)/testdir.gufi/a
+fusermount -u mnt
 rm -rf mnt

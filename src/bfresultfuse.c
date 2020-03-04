@@ -315,7 +315,6 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
     /* path is shorter than the mount point path */
     /* assume all directories up to the mount point have the same permissions as the mount point */
     if (strlen(path) < globalmntlen) {
-        printf("too short %s\n", path);
         /* find start of entry name */
         char *start = globalmnt + strlen(path);
         while (*start && (*start == '/')) {
@@ -338,8 +337,6 @@ static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
         filler(buf, entry, &globalst, 0);
         return 0;
     }
-
-    printf("too long %s\n", path);
 
     /* inside the index, so need to query result databases */
     if (sqlite3_open(":memory:", &db) == SQLITE_OK) {
