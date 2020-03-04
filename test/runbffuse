@@ -66,39 +66,37 @@ SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
 DIR=$(dirname ${SCRIPT})/..
 cd ${DIR}
 
+GUFI=$1
+
 #test of running bffuse over a gufi index
-echo " clear out testdir.gufi gufi tree"
-rm -rf testdir.gufi
-echo " create testdir.gufi gufi tree"
-${DIR}/test/runbfwi testdir testdir.gufi
 echo "run query and show entire tree to screen"
-${DIR}/src/gufi_query -n1 -E "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdir.gufi
+${DIR}/src/gufi_query -n1 -E "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a ${GUFI}
 echo "ensure fuse is not mounted"
 fusermount -u mnt || true
 rm -rf mnt
 echo "mount fuse"
 mkdir mnt
 echo "run bffuse with no where clause"
-${DIR}/src/bffuse -d -s mnt testdir.gufi "" 2>/dev/null &
-echo " run an ls and an ls -l and an ls -lr and stat and xattr -l"
+${DIR}/src/bffuse -d -s mnt ${GUFI} "" 2>/dev/null &
+echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 sleep 1
-ls mnt
-ls -l mnt
-ls -lR mnt
-stat mnt/a
-xattr -l mnt/a
+ls mnt/${GUFI}
+ls -l mnt/${GUFI}
+ls -lR mnt/${GUFI}
+stat mnt/${GUFI}/a
+xattr -l mnt/${GUFI}/a
 fusermount -u mnt
 rm -rf mnt
 mkdir mnt
 echo "run bffuse with  size < 5000 where clause"
-${DIR}/src/bffuse -d -s mnt testdir.gufi "size < 5000" 2>/dev/null &
-echo "run an ls and an ls -l and an ls -lr and stat and xattr -l"
+${DIR}/src/bffuse -d -s mnt ${GUFI} "size < 5000" 2>/dev/null &
+echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 echo "the large file should be gone from the ls"
 sleep 1
-ls mnt
-ls -l mnt
-ls -lR mnt
-stat mnt/a
-xattr -l mnt/a
+ls mnt/${GUFI}
+ls -l mnt/${GUFI}
+ls -lR mnt/${GUFI}
+stat mnt/${GUFI}/a
+xattr -l mnt/${GUFI}/a
 fusermount -u mnt
 rm -rf mnt

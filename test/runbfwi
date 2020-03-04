@@ -115,20 +115,11 @@ fi
 #   command line.  For example:
 #
 #       source   = /a/b/c
-#       to_dir   = .
+#       to_dir   = /q/r/s
 #
-#       actual GUFI-tree = ./
-#
-#   We must be very careful during cleanup to avoid e.g. "rm -rf
-#   to_dir" (i.e. the dir that is optionally provided on the
-#   command-line).
-#
-# THEREFORE:
-#
-#   Use "$CLEAN_GUFI", to be safe
+#       actual GUFI-tree = /q/r/s
 #
 # ...........................................................................
-
 
 # defaults
 DEST=

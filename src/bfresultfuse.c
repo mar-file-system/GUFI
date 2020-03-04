@@ -87,14 +87,6 @@ OF SUCH DAMAGE.
 #include <bf.h>
 #include <dbutils.h>
 
-static int print(void *args, int count, char **data, char **columns) {
-    for(int i = 0; i < count; i++) {
-        printf("%s ", data[i]);
-    }
-    printf("\n");
-    return 0;
-}
-
 extern int errno;
 char globalmnt[MAXPATH];
 size_t  globalmntlen;
@@ -306,7 +298,6 @@ static int readdir_results(void *args, int count, char **data, char **columns) {
 static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
     int rc = 0;
     sqlite3 *db = NULL;
-    char tpath[MAXPATH];
     char sqlstmt[MAXSQL];
 
     filler(buf, ".", NULL, 0 );
@@ -615,7 +606,6 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
     char *p;
     char shortpathc[MAXPATH];
     char endpath[MAXPATH];
-    char treadlink[MAXPATH];
     sqlite3 *mydb;
 
     if (strlen(path) <= globalmntlen) {
@@ -669,7 +659,6 @@ static struct fuse_operations gufir_oper = {
 
 int main(int argc, char *argv[]) {
         sqlite3 *mydb;
-        int i;
         int rc;
         char sqlu[MAXSQL];
         sqlite3_stmt *res;

@@ -113,6 +113,7 @@ add_custom_target(cleanup_tree ALL COMMAND rm -rf "${TESTDIR}" "${TESTDST}")
 add_custom_target(mkdir ALL COMMAND mkdir -p "${TESTDIR}"
                   DEPENDS cleanup_tree)
 add_custom_target(untar_tree ALL COMMAND tar -xf "${TESTTAR}" -C "${TESTDIR}"
+                                 COMMAND find "${TESTDIR}" -name "._*" -o -name "*gary*" -delete
                   DEPENDS mkdir)
 
 # run individual tests
@@ -126,8 +127,8 @@ add_test(NAME querydbn                        COMMAND runquerydbn               
 add_test(NAME dfw                             COMMAND rundfw                         ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 if (MY_FUSE_FOUND)
-  add_test(NAME bffuse                        COMMAND runbffuse                                            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  add_test(NAME bfresultfuse                  COMMAND runbfqforfuse                                        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_test(NAME bffuse                        COMMAND runbffuse                      ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_test(NAME bfresultfuse                  COMMAND runbfqforfuse                  ${TESTDST}            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 # other tests

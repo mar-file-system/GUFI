@@ -66,21 +66,19 @@ SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
 DIR=$(dirname ${SCRIPT})/..
 cd ${DIR}
 
+GUFI=$1
+
 #test of running bfq and creating an output database and then running bfresultfuse which is a fuse daemon
 #that makes a file system over the result of a bfq query
 # first do a query and show the entire tree just to the screen
 # the query selects all the fields required for all the needed file system calls the fuse will honor
-echo " clear out testdir.gufi gufi tree"
-rm -rf testdir.gufi
-echo " create testdir.gufi gufi tree"
-${DIR}/test/runbfwi testdir testdir.gufi
 echo "run query and show entire tree to screen"
-${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdir.gufi/testdir
+${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a ${GUFI}
 echo "run query and show entire tree to screen but elimiate files bigger than 50000 bytes in size"
-${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a testdir.gufi/testdir
+${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a ${GUFI}
 echo "run query where size < 50000 and create 2 output dbs"
-rm outfpdb*
-${DIR}/src/gufi_query  -n2 -O outfpdb -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from pentries where size < 50000;" -S "insert into qout select fpath(),'',type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text, pinode int(64));" -a testdir.gufi
+rm -f outfpdb*
+${DIR}/src/gufi_query  -n2 -O outfpdb -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from pentries where size < 50000;" -S "insert into qout select fpath(),'',type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text, pinode int(64));" -a ${GUFI}
 ls -l outfpdb*
 sqlite3 -line outfpdb.0 'select * from qout;'
 sqlite3 -line outfpdb.1 'select * from qout;'
@@ -92,14 +90,14 @@ mkdir mnt
 #../bfresultfuse -s -o rdonly mnt qout outfpdb 2>debug
 #../bfresultfuse -s -r mnt qout /tmp/outfpdb 2 2>debug
 ${DIR}/src/bfresultfuse -d -s mnt qout outfpdb 2 2>/dev/null &
-echo "run an ls and an ls -l and an ls -lr and stat and xattr -l"
+echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 sleep 2
-ls mnt/$(pwd)/testdir.gufi
-ls -l mnt/$(pwd)/testdir.gufi
-ls -lR mnt/$(pwd)/testdir.gufi/
-stat mnt/$(pwd)/testdir.gufi/a
-stat mnt/$(pwd)/testdir.gufi
-stat mnt/$(pwd)
-xattr -l mnt/$(pwd)/testdir.gufi/a
+ls mnt/${GUFI}
+ls -l mnt/${GUFI}
+ls -lR mnt/${GUFI}
+stat mnt/${GUFI}/a
+stat mnt/${GUFI}
+stat mnt
+xattr -l mnt/${GUFI}/a
 fusermount -u mnt
 rm -rf mnt
