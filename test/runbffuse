@@ -80,11 +80,11 @@ echo "run bffuse with no where clause"
 ${DIR}/src/bffuse -d -s mnt ${GUFI} "" 2>/dev/null &
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 sleep 1
-ls mnt/${GUFI}
-ls -l mnt/${GUFI}
-ls -lR mnt/${GUFI}
-stat mnt/${GUFI}/a
-xattr -l mnt/${GUFI}/a
+ls mnt
+ls -l mnt
+ls -lR mnt
+stat mnt/a
+xattr -l mnt/a
 fusermount -u mnt
 rm -rf mnt
 mkdir mnt
@@ -93,10 +93,10 @@ ${DIR}/src/bffuse -d -s mnt ${GUFI} "size < 5000" 2>/dev/null &
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 echo "the large file should be gone from the ls"
 sleep 1
-ls mnt/${GUFI}
-ls -l mnt/${GUFI}
-ls -lR mnt/${GUFI}
-stat mnt/${GUFI}/a
-xattr -l mnt/${GUFI}/a
+ls mnt
+ls -l mnt
+ls -lR mnt
+stat mnt/a
+xattr -l mnt/a
 fusermount -u mnt
 rm -rf mnt

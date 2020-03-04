@@ -8,7 +8,7 @@ ifneq ("$(CXX)", "false")
 SUBDIRECTORIES=googletest
 endif
 
-TESTS    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles verifyknowntree $(SUBDIRECTORIES)
+TESTS    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw bffuse bfresultfuse listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles verifyknowntree $(SUBDIRECTORIES)
 
 # these are trashable files and dirs produced by the test/run* tests
 TEST_PRODUCTS = testout.* outdb* outq.* core.* bfwreaddirplusdb* $(TESTDIR) $(TESTDST) testbwrpdb
@@ -34,6 +34,8 @@ bfq:                         runbfq bfti
 bfwreaddirplus2db:           runbfwreaddirplus2db bfti
 querydb:                     runquerydb bfti
 dfw:                         rundfw
+bffuse:                      runbffuse
+bfresultfuse:                runbfqforfuse
 listschemadb:                runlistschemadb
 listtablesdb:                runlisttablesdb
 
