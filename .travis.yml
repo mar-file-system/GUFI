@@ -28,6 +28,7 @@ matrix:
                 - libfuse-dev
                 - libpcre3-dev
                 - pkg-config
+                - python-xattr
               update: true
           env:
             - C_COMPILER=clang-7
@@ -42,8 +43,10 @@ matrix:
           sudo: true
           dist: xenial
           addons:
-              apt:
-                  update: false
+            apt:
+              packages:
+                - fuse
+              update: false
           services: docker
           env:
             - C_COMPILER=clang-7
@@ -60,8 +63,10 @@ matrix:
           sudo: true
           dist: xenial
           addons:
-              apt:
-                  update: false
+          apt:
+              packages:
+                - fuse
+              update: false
           services: docker
           env:
             - C_COMPILER=clang

@@ -126,5 +126,14 @@ export LD_LIBRARY_PATH="/opt/rh/httpd24/root/usr/lib64/:${LD_LIBRARY_PATH}"
 export PKG_CONFIG_PATH="/tmp/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
 export PATH="${HOME}/.local/bin:${PATH}"
 
+# add the travis user
+de useradd travis -m -s /sbin/nologin || true
+de chown -R travis /GUFI
+
+# install xattr
+de yum -y install python2-devel python-cffi
+de ln -sf ${CENTOS_C_COMPILER} /usr/bin/gcc
+docker exec --user travis "${TRAVIS_JOB_NUMBER}" bash -c "yes | pip install --user xattr"
+
 # build and test GUFI
 ${SCRIPT_PATH}/build_and_test.sh

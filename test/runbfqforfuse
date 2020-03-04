@@ -62,11 +62,16 @@
 
 
 
+set -x
 SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
-DIR=$(dirname ${SCRIPT})/..
+DIR=$(realpath $(dirname ${SCRIPT})/..)
+MNT=$(realpath ${DIR})/mnt
+OUTFPDB=$(realpath ${DIR})/outfpdb
 cd ${DIR}
 
 GUFI=$1
+
+ls ${GUFI}
 
 #test of running bfq and creating an output database and then running bfresultfuse which is a fuse daemon
 #that makes a file system over the result of a bfq query
@@ -77,27 +82,28 @@ ${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid
 echo "run query and show entire tree to screen but elimiate files bigger than 50000 bytes in size"
 ${DIR}/src/gufi_query -n1 -E "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries where size < 50000;" -S "select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a ${GUFI}
 echo "run query where size < 50000 and create 2 output dbs"
-rm -f outfpdb*
-${DIR}/src/gufi_query  -n2 -O outfpdb -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from pentries where size < 50000;" -S "insert into qout select fpath(),'',type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text, pinode int(64));" -a ${GUFI}
-ls -l outfpdb*
-sqlite3 -line outfpdb.0 'select * from qout;'
-sqlite3 -line outfpdb.1 'select * from qout;'
+rm -f ${OUTFPDB}*
+${DIR}/src/gufi_query  -n2 -O ${OUTFPDB} -E "insert into qout select fpath(),name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from pentries where size < 50000;" -S "insert into qout select fpath(),'',type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs,pinode from summary;" -I "create table qout (fullpath text, name text, type text, inode int(64),nlink int(64),size int(64), mode int(64),uid int(64),gid int(64), blksize int(64), blocks int(64), mtime int(64), atime int(64), ctime int(64), linkname text, xattrs text, pinode int(64));" -a ${GUFI}
+ls -l ${OUTFPDB}*
+sqlite3 -line ${OUTFPDB}.0 'select * from qout;'
+sqlite3 -line ${OUTFPDB}.1 'select * from qout;'
 echo "ensure fuse is not mounted"
-fusermount -u mnt || true
-rm -rf mnt
+fusermount -u ${MNT} || true
+rm -rf ${MNT}
 echo "mount fuse"
-mkdir mnt
-#../bfresultfuse -s -o rdonly mnt qout outfpdb 2>debug
-#../bfresultfuse -s -r mnt qout /tmp/outfpdb 2 2>debug
-${DIR}/src/bfresultfuse -d -s mnt qout outfpdb 2 2>/dev/null &
+mkdir ${MNT}
+#../bfresultfuse -s -o rdonly ${MNT} qout ${OUTFPDB} 2>debug
+#../bfresultfuse -s -r ${MNT} qout /tmp/${OUTFPDB} 2 2>debug
+${DIR}/src/bfresultfuse -s ${MNT} qout ${OUTFPDB} 2
+while ! mountpoint -q ${MNT} ; do :; done
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
-sleep 2
-ls mnt/${GUFI}
-ls -l mnt/${GUFI}
-ls -lR mnt/${GUFI}
-stat mnt/${GUFI}/a
-stat mnt/${GUFI}
-stat mnt
-xattr -l mnt/${GUFI}/a
-fusermount -u mnt
-rm -rf mnt
+mountpoint ${MNT}
+ls ${MNT}/${GUFI}
+ls -l ${MNT}/${GUFI}
+ls -lR ${MNT}/${GUFI}
+stat ${MNT}/${GUFI}/a
+stat ${MNT}/${GUFI}
+stat ${MNT}
+xattr -l ${MNT}/${GUFI}/a
+fusermount -u ${MNT}
+rm -rf ${MNT}

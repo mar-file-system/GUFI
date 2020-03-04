@@ -289,7 +289,7 @@ static int readdir_results(void *args, int count, char **data, char **columns) {
 
     }
 
-    res->filler(res->buf, entry, NULL, 0);
+    res->filler(res->buf, entry, &st, 0);
     res->count++;
 
     return 0;

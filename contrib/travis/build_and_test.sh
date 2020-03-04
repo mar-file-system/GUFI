@@ -87,5 +87,5 @@ make
 if [[ "${BUILD}" = "cmake" ]]; then
     ctest --verbose
 elif [[ "${BUILD}" = "make" ]]; then
-    make test
+    make FUSE=1 test
 fi

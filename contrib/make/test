@@ -2,16 +2,21 @@ export
 
 TESTTAR  = testdir.tar
 TESTDIR  = testdir
-TESTDST  = $(TESTDIR).gufi
+TESTDST  = $(realpath $(TESTDIR)).gufi
 
 ifneq ("$(CXX)", "false")
 SUBDIRECTORIES=googletest
 endif
 
-TESTS    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw bffuse bfresultfuse listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles verifyknowntree $(SUBDIRECTORIES)
+TESTS    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles verifyknowntree $(SUBDIRECTORIES)
 
 # these are trashable files and dirs produced by the test/run* tests
 TEST_PRODUCTS = testout.* outdb* outq.* core.* bfwreaddirplusdb* $(TESTDIR) $(TESTDST) testbwrpdb
+
+ifneq ($(FUSE),)
+	TESTS := $(TEST) bffuse bfresultfuse
+	TEST_PRODUCTS := $(TEST_PRODUCTS) outfpdb.*
+endif
 
 .PHONY: $(SUBDIRECTORIES) $(TESTS)
 
@@ -23,10 +28,11 @@ $(SUBDIRECTORIES):
 # extract the tarball
 $(TESTDIR): $(TESTTAR)
 	mkdir -p $(TESTDIR)
-	tar -xf $(TESTTAR)
+	tar -xf $(TESTTAR) -C $(TESTDIR)
+	find $(TESTDIR) -name "._*" -o -name "gary*" -delete
 
 # generate the GUFI index
-bfwi $(TESTDST) $(TESTDST): runbfti $(TESTDIR)
+bfwi $(TESTDST): runbfti $(TESTDIR)
 	./runbfwi $(TESTDIR) $(TESTDST)
 
 bfti:                        runbfti bfwi
@@ -34,13 +40,18 @@ bfq:                         runbfq bfti
 bfwreaddirplus2db:           runbfwreaddirplus2db bfti
 querydb:                     runquerydb bfti
 dfw:                         rundfw
-bffuse:                      runbffuse
-bfresultfuse:                runbfqforfuse
+bffuse:                      runbffuse bfwi
+bfresultfuse:                runbfqforfuse bfwi
 listschemadb:                runlistschemadb
 listtablesdb:                runlisttablesdb
 
 bfti bfq bfwreaddirplus2db querydb dfw:
 	./$< $(TESTDST)
+
+ifneq ($(FUSE),)
+bffuse bfresultfuse:
+	./$< $(TESTDST)
+endif
 
 querydbn:                    runquerydbn bfti
 groupfilespacehogusesummary: rungroupfilespacehogusesummary

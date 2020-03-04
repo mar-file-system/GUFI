@@ -210,6 +210,7 @@ endif()
 
 if (MY_FUSE_FOUND)
   set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, fuse-libs")
+  set(MAKE_FUSE "FUSE=1")
 else()
   message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
 endif()

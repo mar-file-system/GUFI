@@ -63,40 +63,41 @@
 
 
 SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
-DIR=$(dirname ${SCRIPT})/..
+DIR=$(realpath $(dirname ${SCRIPT})/..)
+MNT=${DIR}/mnt
 cd ${DIR}
 
-GUFI=$1
+GUFI=$(realpath $1)
 
 #test of running bffuse over a gufi index
 echo "run query and show entire tree to screen"
 ${DIR}/src/gufi_query -n1 -E "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a ${GUFI}
 echo "ensure fuse is not mounted"
-fusermount -u mnt || true
-rm -rf mnt
+fusermount -u ${MNT} || true
+rm -rf ${MNT}
 echo "mount fuse"
-mkdir mnt
+mkdir ${MNT}
 echo "run bffuse with no where clause"
-${DIR}/src/bffuse -d -s mnt ${GUFI} "" 2>/dev/null &
+${DIR}/src/bffuse -s ${MNT} ${GUFI} ""
+while ! mountpoint -q ${MNT} ; do :; done
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
-sleep 1
-ls mnt
-ls -l mnt
-ls -lR mnt
-stat mnt/a
-xattr -l mnt/a
-fusermount -u mnt
-rm -rf mnt
-mkdir mnt
+ls ${MNT}
+ls -l ${MNT}
+ls -lR ${MNT}
+stat ${MNT}/a
+xattr -l ${MNT}/a
+fusermount -u ${MNT}
+rm -rf ${MNT}
+mkdir ${MNT}
 echo "run bffuse with  size < 5000 where clause"
-${DIR}/src/bffuse -d -s mnt ${GUFI} "size < 5000" 2>/dev/null &
+${DIR}/src/bffuse -s ${MNT} ${GUFI} "size < 5000"
+while ! mountpoint -q ${MNT} ; do :; done
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 echo "the large file should be gone from the ls"
-sleep 1
-ls mnt
-ls -l mnt
-ls -lR mnt
-stat mnt/a
-xattr -l mnt/a
-fusermount -u mnt
-rm -rf mnt
+ls ${MNT}
+ls -l ${MNT}
+ls -lR ${MNT}
+stat ${MNT}/a
+xattr -l ${MNT}/a
+fusermount -u ${MNT}
+rm -rf ${MNT}
