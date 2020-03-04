@@ -629,14 +629,14 @@ finishlx:
         return  strlen(txattr)+1;
 }
 
-struct CharResults {
+struct ReadlinkResults {
     char *buf;        /* buffer to write column to (allocated by fuse) */
     size_t size;      /* size of buf */
     size_t count;     /* how many results have been obtained; should be 1 at the end */
 };
 
 static int count_char_results(void *args, int count, char **data, char **columns) {
-    struct CharResults *res = (struct CharResults *) args;
+    struct ReadlinkResults *res = (struct ReadlinkResults *) args;
 
     /* only expect 1 column */
     if (count > 1) {
@@ -670,8 +670,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
 
         /* open the database */
         SNPRINTF(dbn,MAXPATH,"%s/%s",shortpathc,DBNAME);
-        rc = sqlite3_open(dbn, &mydb);
-        if (rc != SQLITE_OK) {
+        if (sqlite3_open(dbn, &mydb) != SQLITE_OK) {
           fprintf(stderr, "Error opening %s: %s", dbn, sqlite3_errmsg(mydb));
           rc = EPERM;
           goto readlink_done;
@@ -684,7 +683,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
           SNPRINTF(sqlstmt,MAXSQL,"select linkname from entries where name='%s';",endpath);
         }
 
-        struct CharResults res;
+        struct ReadlinkResults res;
         res.buf = buf;
         res.size = size;
         res.count = 0;
@@ -694,7 +693,7 @@ static int gufir_readlink(const char *path, char *buf, size_t size) {
         if (sqlite3_exec(mydb, sqlstmt, count_char_results, &res, &err) != rc) {
             fprintf(stderr, "%s\n", err);
             sqlite3_free(err);
-            rc = ENOENT;
+            rc = EIO;
             goto readlink_done;
         }
 
