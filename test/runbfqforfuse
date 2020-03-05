@@ -62,14 +62,13 @@
 
 
 
-set -x
 SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
 DIR=$(realpath $(dirname ${SCRIPT})/..)
 MNT=$(realpath ${DIR})/mnt
 OUTFPDB=$(realpath ${DIR})/outfpdb
 cd ${DIR}
 
-GUFI=$1
+GUFI=$(realpath $1)
 
 ls ${GUFI}
 
@@ -88,16 +87,15 @@ ls -l ${OUTFPDB}*
 sqlite3 -line ${OUTFPDB}.0 'select * from qout;'
 sqlite3 -line ${OUTFPDB}.1 'select * from qout;'
 echo "ensure fuse is not mounted"
-fusermount -u ${MNT} || true
+fusermount -u ${MNT} || umount ${MNT} || true
 rm -rf ${MNT}
 echo "mount fuse"
-mkdir ${MNT}
+mkdir -p ${MNT}
 #../bfresultfuse -s -o rdonly ${MNT} qout ${OUTFPDB} 2>debug
 #../bfresultfuse -s -r ${MNT} qout /tmp/${OUTFPDB} 2 2>debug
-${DIR}/src/bfresultfuse -s ${MNT} qout ${OUTFPDB} 2
-while ! mountpoint -q ${MNT} ; do :; done
+${DIR}/src/bfresultfuse -s ${MNT} qout ${OUTFPDB} 2 2> /dev/null &
+sleep 2
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
-mountpoint ${MNT}
 ls ${MNT}/${GUFI}
 ls -l ${MNT}/${GUFI}
 ls -lR ${MNT}/${GUFI}
@@ -105,5 +103,5 @@ stat ${MNT}/${GUFI}/a
 stat ${MNT}/${GUFI}
 stat ${MNT}
 xattr -l ${MNT}/${GUFI}/a
-fusermount -u ${MNT}
+fusermount -u ${MNT} || umount ${MNT} || true
 rm -rf ${MNT}

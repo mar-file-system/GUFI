@@ -73,25 +73,25 @@ GUFI=$(realpath $1)
 echo "run query and show entire tree to screen"
 ${DIR}/src/gufi_query -n1 -E "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from entries;" -S "select name,type,inode,nlink,size,mode,uid,gid,blksize,blocks,mtime,atime,ctime,linkname,xattrs from summary;" -a ${GUFI}
 echo "ensure fuse is not mounted"
-fusermount -u ${MNT} || true
+fusermount -u ${MNT} || umount ${MNT} || true
 rm -rf ${MNT}
 echo "mount fuse"
-mkdir ${MNT}
+mkdir -p ${MNT}
 echo "run bffuse with no where clause"
-${DIR}/src/bffuse -s ${MNT} ${GUFI} ""
-while ! mountpoint -q ${MNT} ; do :; done
+${DIR}/src/bffuse -d -s ${MNT} ${GUFI} "" 2> /dev/null &
+sleep 2
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 ls ${MNT}
 ls -l ${MNT}
 ls -lR ${MNT}
 stat ${MNT}/a
 xattr -l ${MNT}/a
-fusermount -u ${MNT}
+fusermount -u ${MNT} || umount ${MNT} || true
 rm -rf ${MNT}
-mkdir ${MNT}
+mkdir -p ${MNT}
 echo "run bffuse with  size < 5000 where clause"
-${DIR}/src/bffuse -s ${MNT} ${GUFI} "size < 5000"
-while ! mountpoint -q ${MNT} ; do :; done
+${DIR}/src/bffuse -s ${MNT} ${GUFI} "size < 5000" 2> /dev/null &
+sleep 2
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 echo "the large file should be gone from the ls"
 ls ${MNT}
@@ -99,5 +99,5 @@ ls -l ${MNT}
 ls -lR ${MNT}
 stat ${MNT}/a
 xattr -l ${MNT}/a
-fusermount -u ${MNT}
+fusermount -u ${MNT} || umount ${MNT} || true
 rm -rf ${MNT}
