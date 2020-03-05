@@ -659,45 +659,21 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
 
 int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
 {
-    int cnt;
-    int found;
     char *err_msg = 0;
     char sqlstmt[MAXSQL];
     int rc;
-    int len=0;
-    const char *shortname;
-    int depth;
-    size_t i;
-    int rectype;
+    int depth = 0;
+    int rectype = 0;
 
-    rectype=0; // directory summary record type
-    depth=0;
-    i=0;
-    while (i < strlen(pwork->name)) {
-      if (!strncmp(pwork->name+i,"/",1)) depth++;
-      i++;
+    /* remove trailing path separators (pwork->name is a directory, not a file) */
+    for(size_t i = strlen(pwork->name) - 1; i && (pwork->name[i] == '/'); i--) {
+        pwork->name[i] = '\0';
     }
-    //printf("dbutil insertsum name %s depth %d\n",pwork->name,depth);
-    shortname=pwork->name;
-    len=strlen(pwork->name);
-    cnt=0;
-    found=0;
-    while (len > 0) {
-       if (!memcmp(shortname,"/",1)) {
-          found=cnt;
-       }
-       cnt++;
-       len--;
-       shortname++;
-    }
-    if (found > 0) {
-      shortname=pwork->name+found+1;
-    } else {
-      shortname=pwork->name;
-    }
-    if (strlen(shortname) < 1) printf("***** shortname is < 1 %s\n",pwork->name);
 
-
+    /* get the basename */
+    char nameout[MAXPATH];
+    char shortname[MAXPATH];
+    shortpath(pwork->name, nameout, shortname);
 
 /*
 CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlink INT, uid INT, gid INT, size INT, blksize INT, blocks INT, atime INT, mtime INT, ctime INT, linkname TEXT, xattrs TEXT, totfiles INT, totlinks INT, minuid INT, maxuid INT, mingid INT, maxgid INT, minsize INT, maxsize INT, totltk INT, totmtk INT, totltm INT, totmtm INT, totmtg INT, totmtt INT, totsize INT, minctime INT, maxctime INT, minmtime INT, maxmtime INT, minatime INT, maxatime INT, minblocks INT, maxblocks INT, totxattr INT,depth INT, mincrtime INT, maxcrtime INT, minossint1 INT, maxossint1 INT, totossint1 INT, minossint2 INT, maxossint2, totossint2 INT, minossint3 INT, maxossint3, totossint3 INT,minossint4 INT, maxossint4 INT, totossint4 INT, rectype INT, pinode INT);
