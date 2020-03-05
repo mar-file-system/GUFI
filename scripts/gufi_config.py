@@ -103,6 +103,8 @@ def read_config(filename):
                 value = gufi_common.get_port(value)
             elif name == 'Threads':
                 value = gufi_common.get_positive(value)
+            elif name in ['Paramiko', 'IndexRoot']:
+                value = os.path.normpath(value)
             out[name] = value
         return out
 
