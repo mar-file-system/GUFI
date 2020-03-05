@@ -460,8 +460,8 @@ int parse_cmd_line(int         argc,
 
    // aggregating requires -E and 2 more SQL queries (-J and -G)
    if (in->show_results == AGGREGATE) {
-       if (!in->sqlent_len || !strlen(in->aggregate) || !strlen(in->intermediate)) {
-           fprintf(stderr, "Missing SQL statements. Need: -E (entries), -J (intermediate), and -G (aggregate)\n");
+       if ((!in->sqlsum_len && !in->sqlent_len) || !strlen(in->aggregate) || !strlen(in->intermediate)) {
+           fprintf(stderr, "Missing SQL statements. Need: -S (summary) or -E (entries), and -J (intermediate) and -G (aggregate)\n");
            return retval = -1;
        }
    }
