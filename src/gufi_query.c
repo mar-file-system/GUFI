@@ -730,11 +730,19 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                     ca.count = 0;
 
                     /* this probably needs a timer */
+                    #ifdef DEBUG
                     char *err = NULL;
-                    if (sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
+                    if (
+                    #endif
+                        sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca,
+                    #ifdef DEBUG
+                        &err) != SQLITE_OK) {
                         fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                         sqlite3_free(err);
                     }
+                    #else
+                    NULL);
+                    #endif
                     #endif
 
                     recs = ca.count;
@@ -761,14 +769,18 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                         #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_start);
-                        #endif
                         char *err = NULL;
-                        if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
+                        if (
+                        #endif
+                        sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca,
+                        #ifdef DEBUG
+                        &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                             sqlite3_free(err);
                         }
-                        #ifdef DEBUG
                         clock_gettime(CLOCK_MONOTONIC, &exec_end);
+                        #else
+                        NULL) ;
                         #endif
                         #endif
                     }
