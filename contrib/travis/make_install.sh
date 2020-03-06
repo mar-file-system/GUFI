@@ -63,15 +63,13 @@
 
 set -e
 
-# get docker exec function
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-. ${SCRIPT_PATH}/docker_exec.sh
+cd /GUFI/build
 
 # install GUFI
-de bash -c "cd /GUFI/build && make install"
+make install
 
 # compare the configuration files
-de bash -c "cd /GUFI/build && diff server.example /etc/GUFI/config.example"
+diff server.example /etc/GUFI/config.example
 
 # remove the configuration file
-de bash -c "rm -r /etc/GUFI"
+rm -r /etc/GUFI

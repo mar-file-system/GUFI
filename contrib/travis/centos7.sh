@@ -61,37 +61,33 @@
 
 
 
+SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
+
 set -e
 
-# start at repository root
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-cd ${SCRIPT_PATH}/../..
-
-. ${SCRIPT_PATH}/start_docker.sh
-
 # install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
-de yum -y install epel-release centos-release-scl
+yum -y install epel-release centos-release-scl
 
 # install libraries
-de yum -y install fuse-devel libattr1 pcre-devel
+yum -y install fuse-devel libattr1 pcre-devel
 
 # install extra packages
-de yum -y install autoconf cmake3 make patch pkgconfig
+yum -y install autoconf cmake3 fuse make patch pkgconfig python-pip
 
 # create symlinks
-de ln -sf /usr/bin/cmake3 /usr/bin/cmake
-de ln -sf /usr/bin/ctest3 /usr/bin/ctest
+ln -sf /usr/bin/cmake3 /usr/bin/cmake
+ln -sf /usr/bin/ctest3 /usr/bin/ctest
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     VERSION="${C_COMPILER##*-}"
     C_PACKAGE="devtoolset-${VERSION}"
-    CENTOS_C_COMPILER="gcc-${VERSION}"
-    de update-alternatives --install /usr/bin/gcc-${VERSION} gcc-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/gcc 10
+    CENTOS_C_COMPILER="/usr/bin/gcc-${VERSION}"
+    update-alternatives --install ${CENTOS_C_COMPILER} gcc-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/gcc 10
 elif [[ "${C_COMPILER}" = clang ]]; then
     # llvm-toolset-7 installs clang-5.0
     C_PACKAGE="llvm-toolset-7"
-    CENTOS_C_COMPILER="clang-5.0"
-    de update-alternatives --install /usr/bin/clang-5.0 clang-5.0 /opt/rh/llvm-toolset-7/root/usr/bin/clang-5.0 10
+    CENTOS_C_COMPILER="/usr/bin/clang-5.0"
+    update-alternatives --install ${CENTOS_C_COMPILER} clang-5.0 /opt/rh/llvm-toolset-7/root/usr/bin/clang-5.0 10
 else
     echo "Unknown C compiler: ${C_COMPILER}"
     exit 1
@@ -100,20 +96,35 @@ fi
 if [[ "${CXX_COMPILER}" = g++-* ]]; then
     VERSION="${CXX_COMPILER##*-}"
     CXX_PACKAGE="devtoolset-${VERSION}-gcc-c++"
-    CENTOS_CXX_COMPILER="g++-${VERSION}"
-    de update-alternatives --install /usr/bin/g++-${VERSION} g++-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/g++ 10
+    CENTOS_CXX_COMPILER="/usr/bin/g++-${VERSION}"
+    update-alternatives --install ${CENTOS_CXX_COMPILER} g++-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/g++ 10
 elif [[ "${CXX_COMPILER}" = clang++ ]]; then
     # llvm-toolset-7 installs clang-5.0
     CXX_PACKAGE="llvm-toolset-7"
-    CENTOS_CXX_COMPILER="clang++"
-    de update-alternatives --install /usr/bin/clang++ clang++ /opt/rh/llvm-toolset-7/root/usr/bin/clang++ 10
+    CENTOS_CXX_COMPILER="/usr/bin/clang++"
+    update-alternatives --install ${CENTOS_CXX_COMPILER} clang++ /opt/rh/llvm-toolset-7/root/usr/bin/clang++ 10
 else
     echo "Unknown C++ compiler: ${CXX_COMPILER}"
     exit 1
 fi
 
 # install the compilers
-de yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
+yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
+
+# add the travis user
+useradd travis -m -s /sbin/nologin || true
+chown -R travis /GUFI
+
+# install xattr
+yum -y install python2-devel python-cffi
+ln -sf ${CENTOS_C_COMPILER} /usr/bin/gcc
+yes | pip install --user xattr
+
+export C_COMPILER=${CENTOS_C_COMPILER}
+export CXX_COMPILER=${CENTOS_CXX_COMPILER}
+export LD_LIBRARY_PATH="/opt/rh/httpd24/root/usr/lib64/:${LD_LIBRARY_PATH}"
+export PKG_CONFIG_PATH="/tmp/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
+export PATH="${HOME}/.local/bin:${PATH}"
 
 # build and test GUFI
-docker exec --env C_COMPILER="${CENTOS_C_COMPILER}" --env CXX_COMPILER="${CENTOS_CXX_COMPILER}" --env BUILD="${BUILD}" --env CMAKE_FLAGS="${CMAKE_FLAGS}" "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && LD_LIBRARY_PATH=\"/opt/rh/httpd24/root/usr/lib64/:\$(printenv LD_LIBRARY_PATH)\" PKG_CONFIG_PATH=\"/tmp/sqlite3/lib/pkgconfig:\$(printenv PKG_CONFIG_PATH)\" ${SCRIPT_PATH}/build_and_test.sh"
+${SCRIPT_PATH}/build_and_test.sh

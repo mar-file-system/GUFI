@@ -51,7 +51,8 @@ matrix:
             - BUILD=cmake
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
             - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
-          script: contrib/travis/suse12.3.sh
+          script:
+            - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/suse12.3.sh
 
         # CentOS 7
         - stage: test
@@ -68,7 +69,8 @@ matrix:
             - BUILD=cmake
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
             - DOCKER_IMAGE=centos:7
-          script: contrib/travis/centos7.sh
+          script:
+            - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/centos7.sh
 
         # macOS 10.13 CMake
         - stage: test
@@ -108,11 +110,12 @@ matrix:
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
             - DOCKER_IMAGE=centos:7
           script:
-            - contrib/travis/centos7.sh
+            - docker run -it -d --name "${TRAVIS_JOB_NUMBER}" --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}"
+            - docker exec "${TRAVIS_JOB_NUMBER}" bash -c contrib/travis/centos7.sh
             # install with make
-            - contrib/travis/make_install.sh
+            - docker exec "${TRAVIS_JOB_NUMBER}" bash -c contrib/travis/make_install.sh
             # install generic RPM
-            - contrib/travis/generic_rpm.sh
+            - docker exec "${TRAVIS_JOB_NUMBER}" bash -c contrib/travis/generic_rpm.sh
 
         # Test Server and Client RPMs
         - stage: install
@@ -130,9 +133,10 @@ matrix:
             - CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug -DCLIENT=On"
             - DOCKER_IMAGE=centos:7
           script:
-            - contrib/travis/centos7.sh
+            - docker run -it -d --name "${TRAVIS_JOB_NUMBER}" --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}"
+            - docker exec "${TRAVIS_JOB_NUMBER}" bash -c contrib/travis/centos7.sh
             # install the server and client RPMs
-            - contrib/travis/rpms.sh
+            - docker exec "${TRAVIS_JOB_NUMBER}" bash -c contrib/travis/rpms.sh
 
         # Upload a tarball if the job was triggered by a user or cron
         - stage: deploy
@@ -180,7 +184,8 @@ matrix:
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Release
             - DOCKER_IMAGE=centos:7
           script:
-            - contrib/travis/centos7.sh
+            - docker run -it -d --name "${TRAVIS_JOB_NUMBER}" --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}"
+            - docker exec "${TRAVIS_JOB_NUMBER}" bash -c contrib/travis/centos7.sh
             - docker exec "${TRAVIS_JOB_NUMBER}" yum install -y rpm-build
             - docker exec "${TRAVIS_JOB_NUMBER}" cmake build
             - docker exec "${TRAVIS_JOB_NUMBER}" make -C build package
