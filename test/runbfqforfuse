@@ -94,7 +94,7 @@ mkdir -p ${MNT}
 #../bfresultfuse -s -o rdonly ${MNT} qout ${OUTFPDB} 2>debug
 #../bfresultfuse -s -r ${MNT} qout /tmp/${OUTFPDB} 2 2>debug
 ${DIR}/src/bfresultfuse -s ${MNT} qout ${OUTFPDB} 2 2> /dev/null &
-sleep 2
+sleep 5
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 ls ${MNT}/${GUFI}
 ls -l ${MNT}/${GUFI}
