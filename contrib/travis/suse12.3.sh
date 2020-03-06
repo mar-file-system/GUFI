@@ -61,27 +61,23 @@
 
 
 
+SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
+
 set -e
 
-# start at repository root
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-cd ${SCRIPT_PATH}/../..
-
-. ${SCRIPT_PATH}/start_docker.sh
-
 # remove unnecessary repositories
-de bash -c "zypper repos | grep Yes | cut -f2 -d '|' | xargs zypper removerepo"
-de zypper --non-interactive remove libapparmor* libgmodule* libX11* libxcb* mozilla* ncurses* qemu* vim*
+zypper repos | grep Yes | cut -f2 -d '|' | xargs zypper removerepo
+zypper --non-interactive remove libapparmor* libgmodule* libX11* libxcb* mozilla* ncurses* qemu* vim*
 
 # add the tumbleweed oss repo
-de zypper ar -f -c http://download.opensuse.org/tumbleweed/repo/oss tumbleweed-oss
-de zypper --non-interactive --no-gpg-checks update
+zypper ar -f -c http://download.opensuse.org/tumbleweed/repo/oss tumbleweed-oss
+zypper --non-interactive --no-gpg-checks update
 
 # install libraries
-de zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
+zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
 
 # install extra packages
-de zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config
+zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python-setuptools python-xattr
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"
@@ -107,11 +103,14 @@ fi
 
 # install the compilers
 # gcc must be installed even if compiling with clang
-de zypper --non-interactive install gcc ${C_PACKAGE} ${CXX_PACKAGE}
+zypper --non-interactive install gcc ${C_PACKAGE} ${CXX_PACKAGE}
 
 # add the travis user
-de useradd travis -m -s /sbin/nologin || true
-de chown -R travis /GUFI
+useradd travis -m -s /sbin/nologin || true
+chown -R travis /GUFI
+
+export C_COMPILER=${SUSE_C_COMPILER}
+export CXX_COMPILER=${SUSE_CXX_COMPILER}
 
 # build and test GUFI
-docker exec --env C_COMPILER="${SUSE_C_COMPILER}" --env CXX_COMPILER="${SUSE_CXX_COMPILER}" --env BUILD="${BUILD}" --env CMAKE_FLAGS="${CMAKE_FLAGS}" --user travis "${TRAVIS_JOB_NUMBER}" bash -c "cd /GUFI && ${SCRIPT_PATH}/build_and_test.sh"
+${SCRIPT_PATH}/build_and_test.sh

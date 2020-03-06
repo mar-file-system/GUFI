@@ -63,24 +63,22 @@
 
 set -e
 
-# get docker exec function
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-. ${SCRIPT_PATH}/docker_exec.sh
-
 # install rpmbuild
-de bash -c "yum install -y rpm-build"
+yum install -y rpm-build
+
+cd /GUFI/build
 
 # reconfigure CMake
-de bash -c "cd /GUFI/build && cmake .."
+cmake ..
 
 # make the rpm
-de bash -c "cd /GUFI/build && make package"
+make package
 
 # install the RPM
-de bash -c "cd /GUFI/build && yum install -y gufi-*.rpm"
+yum install -y gufi-*.rpm
 
 # compare the configuration files
-de bash -c "cd /GUFI/build && diff server.example /etc/GUFI/config.example"
+diff server.example /etc/GUFI/config.example
 
 # remove the configuration file
-de bash -c "rm -r /etc/GUFI"
+rm -r /etc/GUFI
