@@ -113,12 +113,20 @@ char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
 
 
 
-sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn)
+sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const OpenMode mode)
 {
   char attach[MAXSQL];
-  if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn)) {
-      fprintf(stderr, "Cannot create ATTACH command\n");
-      return NULL;
+  if (mode == RDONLY) {
+      if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro' AS %Q", name, dbn)) {
+          fprintf(stderr, "Cannot create ATTACH command\n");
+          return NULL;
+      }
+  }
+  else if (mode == RDWR) {
+      if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn)) {
+          fprintf(stderr, "Cannot create ATTACH command\n");
+          return NULL;
+      }
   }
 
   if (sqlite3_exec(db, attach, NULL, NULL, NULL) != SQLITE_OK) {

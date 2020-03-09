@@ -96,7 +96,7 @@ extern char *vtssqlgroup;
 
 
 
-sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn);
+sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const OpenMode mode);
 
 sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn);
 

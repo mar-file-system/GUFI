@@ -503,7 +503,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     if (gts.outdbd[id]) {
       /* if we have an out db then only have to attach the gufi db */
       db = gts.outdbd[id];
-      attachdb(dbname, db, "tree");
+      if (!attachdb(dbname, db, "tree", in.open_mode)) {
+          goto close_dir;
+      }
     }
     else {
       /* otherwise, open a standalone database to query from */
@@ -670,6 +672,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     debug_end(close_call);
     #endif
 
+  close_dir:
     debug_start(closedir_call);
     closedir(dir);
     debug_end(closedir_call);
@@ -1006,7 +1009,7 @@ int main(int argc, char *argv[])
 
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
-            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME)               ||
+            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, RDONLY)       ||
                 (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
                 fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }
