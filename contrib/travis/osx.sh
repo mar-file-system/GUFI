@@ -67,11 +67,20 @@ set -e
 SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 cd ${SCRIPT_PATH}/../..
 
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_CLEANUP=1
+
+# remove unneeded packages before installing needed ones
+# to save time while updating
+brew uninstall poppler gdal postgis protobuf protobuf-c
+
+# install required packages
+brew install cmake mysql pcre
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew cask install osxfuse
 
-# use the compiler installed by brew
+# add the executables found in the homebrew bin directory
 export PATH="$(brew --prefix $FORMULAE)/bin:$PATH"
 
 # use the sqlite3 installed by brew
