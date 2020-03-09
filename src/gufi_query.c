@@ -811,7 +811,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
             return NULL;
         }
 
-        addqueryfuncs(gts.outdbd[i], i, 0);
+        addqueryfuncs(gts.outdbd[i], i, -1);
 
         // create table
         if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
@@ -837,7 +837,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
         return NULL;
     }
 
-    addqueryfuncs(aggregate, in.maxthreads, 0);
+    addqueryfuncs(aggregate, in.maxthreads, -1);
 
     // create table
     if (sqlite3_exec(aggregate, in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {

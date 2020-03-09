@@ -85,7 +85,7 @@ sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const i
         for(int i = 0; i < count; i++) {
             char buf[MAXPATH];
             SNPRINTF(buf, MAXPATH, "%s.%d", prefix, i);
-            if (!(dbs[i] = opendb(buf, RDWR, 1, 0,
+            if (!(dbs[i] = opendb(buf, RDWR, 1, 1,
                                   NULL, NULL
                                   #ifdef DEBUG
                                   , NULL, NULL
