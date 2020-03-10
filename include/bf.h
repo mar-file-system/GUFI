@@ -192,6 +192,7 @@ struct input {
    int keep_matime;
    size_t output_buffer_size;
    OpenMode open_mode;
+   char format[MAXPATH];      // only used by gufi_stat
 };
 extern struct input in;
 

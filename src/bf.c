@@ -141,6 +141,7 @@ void print_help(const char* prog_name,
       case 'm': printf("  -m                 Keep mtime and atime same on the database files\n"); break;
       case 'B': printf("  -B <buffer size>   size of each thread's output buffer in bytes\n"); break;
       case 'w': printf("  -w                 open the database files in read-write mode instead of read only mode\n"); break;
+      case 'f': printf("  -f <FORMAT>        use the specified FORMAT instead of the default; output a newline after each use of FORMAT");
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -192,6 +193,7 @@ void show_input(struct input* in, int retval) {
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
    printf("in.open_mode          = %d\n",    in->open_mode);
+   printf("in.format             = '%s'\n",  in->format);
    printf("\n");
    printf("retval                = %d\n",    retval);
    printf("\n");
@@ -242,6 +244,7 @@ int parse_cmd_line(int         argc,
    in->show_results       = PRINT;     // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
    in->open_mode          = RDONLY;    // default to read-only opens
+   memset(in->format,       0, MAXPATH);
 
    int show   = 0;
    int retval = 0;
@@ -438,6 +441,10 @@ int parse_cmd_line(int         argc,
       case 'w':
          in->open_mode = RDWR;
          break;
+
+      case 'f':
+          INSTALL_STR(in->format, optarg, MAXPATH, "-f");
+          break;
 
       case '?':
          // getopt returns '?' when there is a problem.  In this case it
