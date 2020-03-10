@@ -187,6 +187,7 @@ add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/d
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
   pkg_search_module(FUSE fuse)
   if (FUSE_FOUND)
+    message(STATUS "Found FUSE ${FUSE_VERSION}")
     message(STATUS "FUSE headers located in ${FUSE_INCLUDEDIR}")
     message(STATUS "FUSE libraries located in ${FUSE_LIBDIR}")
 
@@ -198,6 +199,7 @@ if (UNIX AND NOT APPLE AND NOT CYGWIN)
 elseif (APPLE)
   pkg_search_module(OSXFUSE osxfuse)
   if (OSXFUSE_FOUND)
+    message(STATUS "Found OSXFUSE ${OSXFUSE_VERSION}")
     message(STATUS "OSXFUSE headers located in ${OSXFUSE_INCLUDEDIR}")
     message(STATUS "OSXFUSE libraries located in ${OSXFUSE_LIBDIR}")
 
