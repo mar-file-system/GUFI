@@ -80,6 +80,7 @@ mkdir -p ${MNT}
 echo "run bffuse with no where clause"
 ${DIR}/src/bffuse -d -s ${MNT} ${GUFI} "" 2> /dev/null &
 sleep 5
+mount
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 ls ${MNT}
 ls -l ${MNT}
@@ -92,6 +93,7 @@ mkdir -p ${MNT}
 echo "run bffuse with  size < 5000 where clause"
 ${DIR}/src/bffuse -s ${MNT} ${GUFI} "size < 5000" 2> /dev/null &
 sleep 5
+mount
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
 echo "the large file should be gone from the ls"
 ls ${MNT}
