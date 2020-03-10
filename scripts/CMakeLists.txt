@@ -70,11 +70,11 @@ if (CLIENT)
 
   # copy the configuration handling script into both the Server and Client RPMs
   configure_file(gufi_config.py gufi_config.py COPYONLY)
-  install(FILES gufi_config.py DESTINATION bin COMPONENT Client)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_config.py DESTINATION bin COMPONENT Client)
 
   # gufi_common.py is also needed by the client
   configure_file(gufi_common.py gufi_common.py COPYONLY)
-  install(FILES gufi_common.py DESTINATION bin COMPONENT Client)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_common.py DESTINATION bin COMPONENT Client)
 
   # create individual client scripts
   set(TOOL find)
@@ -107,13 +107,13 @@ foreach(SCRIPT ${TOOLS} ${LIBRARIES})
   configure_file(${SCRIPT} ${SCRIPT} @ONLY)
 
   # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${SCRIPT} DESTINATION bin COMPONENT Server)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} DESTINATION bin COMPONENT Server)
 endforeach()
 
 # gufi_common.py is not an executable, but is installed in bin for convenience
 configure_file(gufi_common.py gufi_common.py @ONLY)
-install(FILES gufi_common.py DESTINATION bin COMPONENT Server)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_common.py DESTINATION bin COMPONENT Server)
 
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail COPYONLY)
-install(PROGRAMS gufi_jail DESTINATION bin COMPONENT Server)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_jail DESTINATION bin COMPONENT Server)
