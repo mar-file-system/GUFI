@@ -236,8 +236,6 @@ if __name__=='__main__':
 
     # GUFI specific arguments
     parser.add_argument('--delim',          metavar='c',     dest='delim',          type=gufi_common.get_char, default=' ',           help='delimiter separating output columns')
-    parser.add_argument('--output-file',                     dest='output_file',    type=str,                                         help='Output file prefix (Creates file <output>.tid)')
-    parser.add_argument('--output-db',                       dest='output_db',      type=str,                                         help='Output database prefix (Creates file <output>.tid)')
     parser.add_argument('--output-buffer',  metavar='bytes', dest='output_buffer',  type=gufi_common.get_non_negative, default=4096,  help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name', metavar='name',  dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
     parser.add_argument('--nlink-width',    metavar='chars', dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
@@ -385,12 +383,6 @@ if __name__=='__main__':
 
         if args.delim:
             query_cmd += ['-d', args.delim]
-
-        if args.output_file:
-            query_cmd += ['-o', args.output_file]
-
-        if args.output_db:
-            query_cmd += ['-O', args.output_db]
 
         if args.output_buffer:
             query_cmd += ['-B', str(args.output_buffer)]
