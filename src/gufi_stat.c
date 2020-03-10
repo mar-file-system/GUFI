@@ -85,7 +85,7 @@ const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, m
 /* user/group name */
 const char unknown[] = "UNKNOWN";
 
-/* default format used by GNU stat*/
+/* default format used by GNU stat */
 const char default_format[] = "  File: %N\n"
                               "  Size: %-15s Blocks: %-10b IO Block: %-6o %F\n"
                               "Device: %-4Dh/%-5dd    Inode: %-11i Links: %h\n"
@@ -95,6 +95,9 @@ const char default_format[] = "  File: %N\n"
                               "Modify: %y\n"
                               "Change: %z\n"
                               " Birth: %w\n";
+
+/* terse format used by GNU stat -t/--terse */
+const char terse_format[] = "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o\n";
 
 struct callback_args {
     size_t found;
@@ -157,10 +160,13 @@ int print_callback(void * args, int count, char **data, char **columns) {
                 width *= multiplier;
             }
 
-            char format[MAXPATH];
-            SNPRINTF(format, sizeof(format), "%%%d", width);
+            char format[MAXPATH] = "%";
+            if (width) {
+                SNPRINTF(format, sizeof(format), "%%%d", width);
+            }
 
             char line[MAXPATH];
+            SNPRINTF(line, sizeof(line), "%ss", format);  /* most columns are strings */
             switch (*f) {
                 case 'a': /* access rights in octal */
                     SNPRINTF(line, sizeof(line), "%so", format);
@@ -170,25 +176,20 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     ;
                     char mode_str[11];
                     modetostr(mode_str, mode);
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, mode_str);
                     break;
                 case 'b': /* number of blocks allocated (see %B) */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[2]);
                     break;
                 case 'B': /* the size in bytes of each block reported by %b */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[3]);
                     break;
                 case 'C': /* SELinux security context string */
                     break;
                 case 'd': /* device number in decimal */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, " ");
                     break;
                 case 'D': /* device number in hex */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, " ");
                     break;
                 case 'f': /* raw mode in hex */
@@ -196,7 +197,6 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, mode);
                     break;
                 case 'F': /* file type */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     switch (data[0][0]) {
                         case 'f':
                             fprintf(out, line, "regular file");
@@ -214,107 +214,94 @@ int print_callback(void * args, int count, char **data, char **columns) {
 
                     break;
                 case 'g': /* group ID of owner */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[8]);
                     break;
                 case 'G': /* group name of owner */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
-                    struct group * grp = getgrgid(atoi(data[8]));
-                    const char * group = grp?grp->gr_name:unknown;
-                    fprintf(out, line, group);
+                    {
+                        struct group * grp = getgrgid(atoi(data[8]));
+                        const char * group = grp?grp->gr_name:unknown;
+                        fprintf(out, line, group);
+                    }
                     break;
                 case 'h': /* number of hard links */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[5]);
                     break;
                 case 'i': /* inode number */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[4]);
                     break;
                 case 'm': /* mount point */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, " ");
                     break;
                 case 'n': /* file name */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, ca->path);
                     break;
                 case 'N': /* quoted file name with dereference if symbolic link */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
-                    char name[MAXPATH];
-                    switch (data[0][0]) {
-                        case 'l':
-                            SNPRINTF(name, sizeof(name), "'%s' -> '%s'", ca->path, data[12]);
-                            break;
-                        case 'f':
-                        case 'd':
-                        default:
-                            SNPRINTF(name, sizeof(name), "'%s'", ca->path);
-                            break;
+                    {
+                        char name[MAXPATH];
+                        switch (data[0][0]) {
+                            case 'l':
+                                SNPRINTF(name, sizeof(name), "'%s' -> '%s'", ca->path, data[12]);
+                                break;
+                            case 'f':
+                            case 'd':
+                            default:
+                                SNPRINTF(name, sizeof(name), "'%s'", ca->path);
+                                break;
+                        }
+                        fprintf(out, line, name);
                     }
-                    fprintf(out, line, name);
                     break;
                 case 'o': /* optimal I/O transfer size hint */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[3]);
                     break;
                 case 's': /* total size, in bytes */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[1]);
                     break;
                 case 't': /* major device type in hex, for character/block device special files */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
-                    fprintf(out, line, " ");
+                    SNPRINTF(line, sizeof(line), "%sd", format);
+                    fprintf(out, line, 0);
                     break;
                 case 'T': /* minor device type in hex, for character/block device special files */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
-                    fprintf(out, line, " ");
+                    SNPRINTF(line, sizeof(line), "%sd", format);
+                    fprintf(out, line, 0);
                     break;
                 case 'u': /* user ID of owner */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, data[7]);
                     break;
                 case 'U': /* user name of owner */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
-                    struct passwd * usr = getpwuid(atoi(data[7]));
-                    const char * user = usr?usr->pw_name:unknown;
-                    fprintf(out, line, user);
+                    {
+                        struct passwd * usr = getpwuid(atoi(data[7]));
+                        const char * user = usr?usr->pw_name:unknown;
+                        fprintf(out, line, user);
+                    }
                     break;
                 case 'w': /* time of file birth, human-readable; - if unknown */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, "-");
                     break;
                 case 'W': /* time of file birth, seconds since Epoch; 0 if unknown */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     fprintf(out, line, "0");
                     break;
                 case 'x': /* time of last access, human-readable */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     strftime(atime_str, MAXPATH, "%F %T %z", atm);
                     fprintf(out, line, atime_str);
                     break;
                 case 'X': /* time of last access, seconds since Epoch */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     strftime(atime_str, MAXPATH, "%s", atm);
                     fprintf(out, line, atime_str);
                     break;
                 case 'y': /* time of last modification, human-readable */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     strftime(mtime_str, MAXPATH, "%F %T %z", mtm);
                     fprintf(out, line, mtime_str);
                     break;
                 case 'Y': /* time of last modification, seconds since Epoch */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     strftime(mtime_str, MAXPATH, "%s", mtm);
                     fprintf(out, line, mtime_str);
                     break;
                 case 'z': /* time of last change, human-readable */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     strftime(ctime_str, MAXPATH, "%F %T %z", ctm);
                     fprintf(out, line, ctime_str);
                     break;
                 case 'Z': /* time of last change, seconds since Epoch */
-                    SNPRINTF(line, sizeof(line), "%ss", format);
                     strftime(ctime_str, MAXPATH, "%s", ctm);
                     fprintf(out, line, ctime_str);
                     break;
@@ -414,21 +401,26 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHf:", 1, "path ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHf:j", 1, "path ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
         return -1;
 
-    /* use the default print format if nothing was specified */
-    if (strlen(in.format) == 0) {
-        memcpy(in.format, default_format, sizeof(default_format));
+    const char *format = default_format;
+
+    /* the print format has precedence over the terse format */
+    if (in.format_set) {
+        format = in.format;
+    }
+    else if (in.terse) {
+        format = terse_format;
     }
 
     /* process all input paths */
     int rc = 0;
     for(int i = idx; i < argc; i++) {
-        rc |= process_path(argv[i], stdout, in.format);
+        rc |= process_path(argv[i], stdout, format);
     }
 
     return rc;
