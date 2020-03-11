@@ -110,7 +110,7 @@ def parse_size(size):
 
 def build_init(args):
     '''Build the CREATE TABLE query'''
-    init = ['name TEXT', 'type TEXT']
+    init = ['name TEXT']
 
     if args.amin or args.atime:
         init += ['atime INT64']
@@ -144,7 +144,34 @@ def build_init(args):
 def build_select(args):
     '''Build the SELECT clause'''
 
-    select = ['(path() || "/" || name) as name', 'type']
+    select = ['name']
+
+    if args.amin or args.atime:
+        select += ['atime']
+
+    if args.cmin or args.ctime:
+        select += ['ctime']
+
+    if args.mmin or args.mtime or args.newer:
+        select += ['mtime']
+
+    if args.empty or args.size or args.smallest or args.largest:
+        select += ['size']
+
+    if args.executable or args.readable or args.writable:
+        select += ['mode']
+
+    if args.uid or args.user:
+        select += ['uid']
+
+    if args.gid or args.group:
+        select += ['gid']
+
+    if args.links:
+        select += ['nlinks']
+
+    if args.type:
+        select += ['type']
 
     return select
 
@@ -496,33 +523,29 @@ if __name__=='__main__':
 
     # aggregation is required
     if args.num_results or args.smallest or args.largest:
-        I = 'CREATE TABLE {0} ({1})'.format(args.inmemory_name, ', '.join(build_init(args)))
+        I = 'CREATE TABLE {0} ({1})'.format(args.inmemory_name, ', '.join(['path TEXT'] + build_init(args)))
 
-        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(select + ['type'],
+        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(['path()'] + select,
                                                                                      ['summary'],
                                                                                      where,
                                                                                      group_by,
                                                                                      order_by,
                                                                                      args.num_results))
 
-        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(select + ['type'],
+        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(['path()'] + select,
                                                                                      ['entries'],
                                                                                      where,
                                                                                      group_by,
                                                                                      order_by,
                                                                                      args.num_results))
 
-        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name, S)
-
-        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name, E)
-
-        J = "INSERT INTO aggregate.{0} {1}".format(args.inmemory_name, gufi_common.build_query(['name', 'type'],
+        J = "INSERT INTO aggregate.{0} {1}".format(args.inmemory_name, gufi_common.build_query(['path'] + select,
                                                                                                [args.inmemory_name],
                                                                                                where,
                                                                                                group_by,
                                                                                                order_by,
                                                                                                args.num_results))
-        G = gufi_common.build_query(['name'],
+        G = gufi_common.build_query(['(path || "/" || name)'],
                                     [args.inmemory_name],
                                     where,
                                     group_by,
@@ -547,10 +570,10 @@ if __name__=='__main__':
                                     group_by,
                                     order_by,
                                     args.num_results)
-        query_cmd += ['-a']
 
     query_cmd += ['-S', S,
-                  '-E', E]
+                  '-E', E,
+                  '-a']
 
     if args.delim:
         query_cmd += ['-d', args.delim]
