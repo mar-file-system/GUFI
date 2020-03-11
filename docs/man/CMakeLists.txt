@@ -83,6 +83,12 @@ foreach(MAN_PAGE ${MAN_PAGES})
   set(MAN_PAGE_DST "${CMAKE_CURRENT_BINARY_DIR}/${MAN_PAGE}")
   configure_file(${MAN_PAGE_SRC} ${MAN_PAGE_DST} @ONLY)
   string(REGEX MATCH "[^.]+$" SECTION "${MAN_PAGE}")
+  if (CLIENT)
+    install(FILES ${MAN_PAGE_DST}
+      DESTINATION share/man/man${SECTION}
+      COMPONENT Client)
+  endif()
   install(FILES ${MAN_PAGE_DST}
-    DESTINATION share/man/man${SECTION})
+    DESTINATION share/man/man${SECTION}
+    COMPONENT Server)
 endforeach()
