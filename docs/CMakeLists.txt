@@ -64,3 +64,7 @@ cmake_minimum_required(VERSION 3.0.0)
 
 # build man pages
 add_subdirectory(man)
+
+# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
+# in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
