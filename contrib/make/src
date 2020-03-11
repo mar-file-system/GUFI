@@ -10,7 +10,7 @@ LIB_A = lib$(LIB).a
 DFW       = dfw
 BFW       = bfti bfwreaddirplus2db gufi_dir2trace gufi_dir2index gufi_trace2index gufi_query
 BFW_MYSQL = bfmi.mysql
-C_TOOLS   = querydb querydbn
+C_TOOLS   = gufi_stat querydb querydbn
 ifneq ("$(CXX)", "false")
 CXX_TOOLS =
 endif
