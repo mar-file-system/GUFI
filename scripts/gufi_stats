@@ -378,8 +378,8 @@ def total_filecount(config, args, where):
 
     # gufi_stats total-filecount
     1001 1
-    1002 4
     1003 3
+    1002 4
 
     # gufi_stats -c total-filecount
     8
@@ -402,7 +402,7 @@ def total_filecount(config, args, where):
         '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['NULL', 'uid', 'COUNT(*) AS count'],
                                                                  ['entries'],
-                                                                 where,
+                                                                 where + ['type == "f"'],
                                                                  group_by,
                                                                  ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
                                                                  args.num_results,
