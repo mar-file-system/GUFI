@@ -359,7 +359,7 @@ def total_filesize(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.cumulative else ['uid']) + ['SUM(size)'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(size)'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -417,7 +417,7 @@ def total_filecount(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.cumulative else ['uid']) + ['SUM(count) AS count'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(count) AS count'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -730,7 +730,7 @@ def total_leaf_files(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.cumulative else ['uid']) + ['SUM(count) AS count'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(count) AS count'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -829,9 +829,8 @@ def files_per_level(config, args, where):
     if path_len != root_len:
         starting_depth = path[root_len - path_len:].count('/')
 
-    group_by = ['level']
+    group_by = ['level'] + ([] if args.cumulative else ['uid'])
     order_by = None if args.cumulative else ['level {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])]
-    uid = [] if args.cumulative else ['uid']
 
     queries = [
         '-I', build_create(args.inmemory_name, ['id INT PRIMARY KEY'] + ([] if args.cumulative else ['uid INT64']) + ['level INT64', 'count INT64']),
@@ -849,15 +848,15 @@ def files_per_level(config, args, where):
                                                    gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
                                                                            [args.inmemory_name],
                                                                            None,
-                                                                           group_by + uid,
+                                                                           group_by,
                                                                            order_by,
                                                                            None,
                                                                            None)),
 
-        '-G', gufi_common.build_query(uid + ['level', 'SUM(count)'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['level', 'SUM(count)'],
                                       [args.inmemory_name],
                                       ['level <> 0', 'count <> 0'],
-                                      group_by + uid,
+                                      group_by,
                                       order_by,
                                       args.num_results,
                                       None),
@@ -902,7 +901,7 @@ def dirs_per_level(config, args, where):
     if path_len != root_len:
         starting_depth = path[root_len - path_len:].count('/')
 
-    group_by = ['level']
+    group_by = ['level'] + ([] if args.cumulative else ['uid'])
     order_by = None if args.cumulative else ['level {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])]
     uid = [] if args.cumulative else ['uid']
 
@@ -922,15 +921,15 @@ def dirs_per_level(config, args, where):
                                                    gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
                                                                            [args.inmemory_name],
                                                                            None,
-                                                                           group_by + uid,
+                                                                           group_by,
                                                                            order_by,
                                                                            None,
                                                                            None)),
 
-        '-G', gufi_common.build_query(uid + ['level', 'SUM(count)'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['level', 'SUM(count)'],
                                       [args.inmemory_name],
                                       ['level <> 0'],
-                                      group_by + uid,
+                                      group_by,
                                       order_by,
                                       args.num_results,
                                       None),
