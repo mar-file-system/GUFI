@@ -78,16 +78,24 @@ import gufi_config
 # <prefix>/                  #
 # |---- 1001/                # owned by 1001:1001
 #       |---- f1             # size 1
+#       |---- l1 -> f1
 # |---- 1002/                # owned by 1002:1002
 #       |---- dir/           # empty
 #             |---- f1       # size 2
 #             |---- f2       # size 2
+#             |---- l1 -> f1
+#             |---- l2 -> f2
 #       |---- f1             # size 2
 #       |---- f2             # size 2
+#       |---- l1 -> f1
+#       |---- l2 -> f2
 # |---- 1003/                # owned by 1003:1003
 #       |---- f1             # size 3
 #       |---- f2             # size 3
 #       |---- f3             # size 3
+#       |---- l1 -> f1
+#       |---- l2 -> f2
+#       |---- l3 -> f3
 #
 
 def build_create(name, columns):
@@ -244,30 +252,30 @@ def filesize(config, args, where):
 
     return queries
 
-def filecount(config, args, where):
+def entries_count(config, args, where, type):
     '''
-    get the number of files in the immediate directory
+    get the number of <type> in the immediate directory
 
-    using --recursive here will get the number of files in all subdirectories, without adding them
+    using --recursive here will get the number of <type> in all subdirectories, without adding them
 
-    # gufi_stats filecount
+    # gufi_stats <type>count
     0
 
-    # gufi_stats -r filecount
+    # gufi_stats -r <type>count
     . 0
     1001 1
     1002 2
     1002/dir 2
     1003 3
 
-    # gufi_stats filecount 1002
+    # gufi_stats <type>count 1002
     2
 
-    # gufi_stats -r filecount 1002
+    # gufi_stats -r <type>count 1002
     1002 2
     1002/dir 2
 
-    $ gufi_stats -r filecount
+    $ gufi_stats -r <type>count
     . 0
     1001 1
     '''
@@ -280,7 +288,7 @@ def filecount(config, args, where):
         '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['path() AS fullpath', 'COUNT(*)'],
                                                                  ['entries'],
-                                                                 where + ['type == "f"'],
+                                                                 where + ['type == "{}"'.format(type)],
                                                                  None,
                                                                  None,
                                                                  args.num_results,
@@ -310,6 +318,12 @@ def filecount(config, args, where):
                     '-z', '0']
 
     return queries
+
+def filecount(config, args, where):
+    return entries_count(config, args, where, 'f')
+
+def linkcount(config, args, where):
+    return entries_count(config, args, where, 'l')
 
 def total_filesize(config, args, where):
     '''
@@ -1002,6 +1016,7 @@ RECURSIVE = {
     'depth'              : depth,
     'filesize'           : filesize,
     'filecount'          : filecount,
+    'linkcount'          : linkcount,
     'dircount'           : dircount,
     'leaf-dirs'          : leaf_dirs,
     'leaf-depth'         : leaf_depth,
