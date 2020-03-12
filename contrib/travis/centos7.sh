@@ -111,10 +111,6 @@ fi
 # install the compilers
 yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
 
-# add the travis user
-useradd travis -m -s /sbin/nologin || true
-chown -R travis /GUFI
-
 # install xattr
 yum -y install python2-devel python-cffi
 ln -sf ${CENTOS_C_COMPILER} /usr/bin/gcc
