@@ -428,25 +428,25 @@ def total_filecount(config, args, where):
 
     return queries
 
-def dir_count(config, args, where):
+def dircount(config, args, where):
     '''
     get the number of directories in the immediate directory
 
     using --recursive here will get the number of directoriess in all subdirectories, without adding them
 
-    # gufi_stats dir-count
+    # gufi_stats dircount
     3
 
-    # gufi_stats -r dir-count
+    # gufi_stats -r dircount
     . 3
     1001 0
     1002 1
     1003 0
 
-    # gufi_stats dir-count 1002
+    # gufi_stats dircount 1002
     1
 
-    # gufi_stats -r dir-count 1002
+    # gufi_stats -r dircount 1002
     1002 1
     1002/dir 0
 
@@ -489,6 +489,64 @@ def dir_count(config, args, where):
         queries += [
             '-y', '0',
             '-z', '1']
+
+    return queries
+
+def total_dircount(config, args, where):
+    '''
+    get the total number of directories under the directory
+
+    --cumulative collects all values and sums them instead of reporting by uid
+
+    # gufi_stats total-dircount
+    1001 1
+    1003 1
+    1002 2
+
+    # gufi_stats -c total-dircount
+    4
+
+    # gufi_stats total-dircount 1002
+    1002 1
+
+    # gufi_stats -c total-dircount 1002
+    1
+
+    $ gufi_stats -c total-dircount
+    1
+    '''
+
+    group_by = None if args.cumulative else ['uid']
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL', 'uid', '1 as count'],
+                                                                 ['summary'],
+                                                                 where + ['level() > 0'],
+                                                                 group_by,
+                                                                 ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL', 'uid', 'count'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                                                           args.num_results,
+                                                                           None)),
+
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(count) AS count'],
+                                      [args.inmemory_name],
+                                      None,
+                                      group_by,
+                                      ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                      args.num_results,
+                                      None),
+    ]
 
     return queries
 
@@ -944,7 +1002,7 @@ RECURSIVE = {
     'depth'              : depth,
     'filesize'           : filesize,
     'filecount'          : filecount,
-    'dir-count'          : dir_count,
+    'dircount'           : dircount,
     'leaf-dirs'          : leaf_dirs,
     'leaf-depth'         : leaf_depth,
     'leaf-files'         : leaf_files,
@@ -954,6 +1012,7 @@ RECURSIVE = {
 CUMULATIVE = {
     'total-filesize'     : total_filesize,
     'total-filecount'    : total_filecount,
+    'total-dircount'     : total_dircount,
     'total-leaf-files'   : total_leaf_files,
     'files-per-level'    : files_per_level,
     'dirs-per-level'     : dirs_per_level,
