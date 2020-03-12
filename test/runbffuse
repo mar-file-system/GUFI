@@ -78,7 +78,7 @@ rm -rf ${MNT}
 echo "mount fuse"
 mkdir -p ${MNT}
 echo "run bffuse with no where clause"
-${DIR}/src/bffuse -d -s ${MNT} ${GUFI} "" 2> /dev/null &
+${DIR}/src/bffuse -d -s ${MNT} ${GUFI} "" &
 sleep 5
 mount
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
@@ -91,7 +91,7 @@ fusermount -u ${MNT} || umount ${MNT} || true
 rm -rf ${MNT}
 mkdir -p ${MNT}
 echo "run bffuse with  size < 5000 where clause"
-${DIR}/src/bffuse -s ${MNT} ${GUFI} "size < 5000" 2> /dev/null &
+${DIR}/src/bffuse -s ${MNT} ${GUFI} "size < 5000" &
 sleep 5
 mount
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"

@@ -93,7 +93,7 @@ echo "mount fuse"
 mkdir -p ${MNT}
 #../bfresultfuse -s -o rdonly ${MNT} qout ${OUTFPDB} 2>debug
 #../bfresultfuse -s -r ${MNT} qout /tmp/${OUTFPDB} 2 2>debug
-${DIR}/src/bfresultfuse -s ${MNT} qout ${OUTFPDB} 2 2> /dev/null &
+${DIR}/src/bfresultfuse -s ${MNT} qout ${OUTFPDB} 2 &
 sleep 5
 mount
 echo "run ls, ls -l, ls -lr, stat, and xattr -l"
