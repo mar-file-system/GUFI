@@ -72,6 +72,24 @@ matrix:
           script:
             - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/centos7.sh
 
+        # CentOS 8
+        - stage: test
+          os: linux
+          sudo: true
+          dist: xenial
+          addons:
+              apt:
+                  update: false
+          services: docker
+          env:
+            - C_COMPILER=clang
+            - CXX_COMPILER=clang++
+            - BUILD=cmake
+            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
+            - DOCKER_IMAGE=centos:8
+          script:
+            - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/centos8.sh
+
         # macOS 10.13 CMake
         - stage: test
           os: osx
