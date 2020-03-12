@@ -1009,7 +1009,7 @@ int main(int argc, char *argv[])
 
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
-            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, RDONLY)       ||
+            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, RDWR)         ||
                 (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK)) {
                 fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }
