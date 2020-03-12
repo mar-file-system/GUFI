@@ -384,27 +384,27 @@ def total_filesize(config, args, where):
 
     return queries
 
-def total_filecount(config, args, where):
+def total_entries_count(config, args, where, type):
     '''
-    get the total number of files under the directory
+    get the total number of <type> under the directory
 
     --cumulative collects all values and sums them instead of reporting by uid
 
-    # gufi_stats total-filecount
+    # gufi_stats total-<type>count
     1001 1
     1003 3
     1002 4
 
-    # gufi_stats -c total-filecount
+    # gufi_stats -c total-<type>count
     8
 
-    # gufi_stats total-filecount 1002
+    # gufi_stats total-<type>count 1002
     1002 4
 
-    # gufi_stats -c total-filecount 1002
+    # gufi_stats -c total-<type>count 1002
     4
 
-    $ gufi_stats -c total-filecount
+    $ gufi_stats -c total-<type>count
     1
     '''
 
@@ -416,7 +416,7 @@ def total_filecount(config, args, where):
         '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
                                          gufi_common.build_query(['NULL', 'uid', 'COUNT(*) AS count'],
                                                                  ['entries'],
-                                                                 where + ['type == "f"'],
+                                                                 where + ['type == "{}"'.format(type)],
                                                                  group_by,
                                                                  ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
                                                                  args.num_results,
@@ -441,6 +441,12 @@ def total_filecount(config, args, where):
     ]
 
     return queries
+
+def total_filecount(config, args, where):
+    return total_entries_count(config, args, where, 'f')
+
+def total_linkcount(config, args, where):
+    return total_entries_count(config, args, where, 'l')
 
 def dircount(config, args, where):
     '''
@@ -1027,6 +1033,7 @@ RECURSIVE = {
 CUMULATIVE = {
     'total-filesize'     : total_filesize,
     'total-filecount'    : total_filecount,
+    'total-linkcount'    : total_linkcount,
     'total-dircount'     : total_dircount,
     'total-leaf-files'   : total_leaf_files,
     'files-per-level'    : files_per_level,
