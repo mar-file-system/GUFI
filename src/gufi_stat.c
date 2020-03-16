@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 extern int errno;
 
 /* query to extract data fom databases - this determines the indexing in the print callback */
-const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname FROM %s %s";
+const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattrs FROM %s %s";
 
 /* user/group name */
 const char unknown[] = "UNKNOWN";
@@ -96,8 +96,8 @@ const char default_format[] = "  File: %N\n"
                               "Change: %z\n"
                               " Birth: %w\n";
 
-/* terse format used by GNU stat -t/--terse */
-const char terse_format[] = "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o\n";
+/* terse format used by GNU stat -t/--terse when selinux is available */
+const char terse_format[] = "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C\n";
 
 struct callback_args {
     size_t found;
@@ -107,7 +107,7 @@ struct callback_args {
 };
 
 int print_callback(void * args, int count, char **data, char **columns) {
-    if (count != 13) {
+    if (count != 14) {
         fprintf(stderr, "Returned wrong number of columns: %d\n", count);
         return 1;
     }
@@ -173,10 +173,11 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, mode & 0777);
                     break;
                 case 'A': /* access rights in human readable form */
-                    ;
-                    char mode_str[11];
-                    modetostr(mode_str, mode);
-                    fprintf(out, line, mode_str);
+                    {
+                        char mode_str[11];
+                        modetostr(mode_str, mode);
+                        fprintf(out, line, mode_str);
+                    }
                     break;
                 case 'b': /* number of blocks allocated (see %B) */
                     fprintf(out, line, data[2]);
@@ -185,6 +186,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, data[3]);
                     break;
                 case 'C': /* SELinux security context string */
+                    fprintf(out, line, data[13] + (strlen(data[13])?16:0)); /* offset by "security.selinux" */
                     break;
                 case 'd': /* device number in decimal */
                     fprintf(out, line, " ");
@@ -211,7 +213,6 @@ int print_callback(void * args, int count, char **data, char **columns) {
                         default:
                             break;
                     }
-
                     break;
                 case 'g': /* group ID of owner */
                     fprintf(out, line, data[8]);
