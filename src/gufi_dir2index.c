@@ -194,10 +194,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             continue;
         }
 
-        e.xattrs=0;
+        /* e.xattrs_len = 0; */
         if (in.doxattrs > 0) {
-            memset(e.xattr, 0, sizeof(e.xattr));
-            e.xattrs = pullxattrs(e.name, e.xattr);
+            e.xattrs_len = pullxattrs(e.name, e.xattrs, sizeof(e.xattrs));
         }
 
         // push subdirectories onto the queue
@@ -401,7 +400,7 @@ struct work * validate_inputs() {
     }
 
     if (in.doxattrs > 0) {
-        root->xattrs = pullxattrs(in.name, root->xattr);
+        root->xattrs_len = pullxattrs(in.name, root->xattrs, sizeof(root->xattrs));
     }
 
     root->level = 0;

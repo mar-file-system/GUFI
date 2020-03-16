@@ -274,8 +274,8 @@ struct work {
    struct stat   statuso;
    long long int pinode;
    long long int offset;
-   int           xattrs;
-   char          xattr[MAXXATTR];
+   ssize_t       xattrs_len;
+   char          xattrs[MAXXATTR];
    void*         freeme;
    int           crtime;
    int           ossint1;

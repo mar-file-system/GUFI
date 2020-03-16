@@ -82,12 +82,12 @@ char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
 char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode,@suspect);";
 
 char *esql = // "DROP TABLE IF EXISTS entries;"
-            "CREATE TABLE entries(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+            "CREATE TABLE entries(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
 
 char *esqli = "INSERT INTO entries VALUES (NULL,@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
 
 char *ssql = "DROP TABLE IF EXISTS summary;"
-             "CREATE TABLE summary(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs TEXT, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
+             "CREATE TABLE summary(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
 
 char *tsql = "DROP TABLE IF EXISTS treesummary;"
              "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
@@ -563,7 +563,6 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     char *zname;
     char *ztype;
     char *zlinkname;
-    char *zxattr;
     char *zosstext1;
     char *zosstext2;
     int len=0;;
@@ -592,7 +591,6 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     zname = sqlite3_mprintf("%q",shortname);
     ztype = sqlite3_mprintf("%q",pwork->type);
     zlinkname = sqlite3_mprintf("%q",pwork->linkname);
-    zxattr = sqlite3_mprintf("%q",pwork->xattr);
     zosstext1 = sqlite3_mprintf("%q",pwork->osstext1);
     zosstext2 = sqlite3_mprintf("%q",pwork->osstext2);
     error=sqlite3_bind_text(res,1,zname,-1,SQLITE_STATIC);
@@ -610,8 +608,7 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_bind_int64(res,12,pwork->statuso.st_mtime);
     sqlite3_bind_int64(res,13,pwork->statuso.st_ctime);
     sqlite3_bind_text(res,14,zlinkname,-1,SQLITE_STATIC);
-    error=sqlite3_bind_text(res,15,zxattr,-1,SQLITE_STATIC);
-    if (error != SQLITE_OK) printf("insertdbgo bind xattr: error %d %s %s %s %s\n",error,pwork->name,pwork->type,pwork->xattr,sqlite3_errmsg(db));
+    sqlite3_bind_blob64(res, 15, pwork->xattrs, pwork->xattrs_len, SQLITE_STATIC);
     sqlite3_bind_int64(res,16,pwork->crtime);
     sqlite3_bind_int64(res,17,pwork->ossint1);
     sqlite3_bind_int64(res,18,pwork->ossint2);
@@ -624,7 +621,6 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_free(zname);
     sqlite3_free(ztype);
     sqlite3_free(zlinkname);
-    sqlite3_free(zxattr);
     sqlite3_free(zosstext1);
     sqlite3_free(zosstext2);
     /* if (error != SQLITE_ROW)  { */
@@ -684,7 +680,7 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
     char *zname     = sqlite3_mprintf("%q",shortname);
     char *ztype     = sqlite3_mprintf("%q",pwork->type);
     char *zlinkname = sqlite3_mprintf("%q",pwork->linkname);
-    char *zxattr    = sqlite3_mprintf("%q",pwork->xattr);
+    char *zxattr    = sqlite3_mprintf("%q",pwork->xattrs);
 
     SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
             "(NULL, \'%s\', \'%s\', "

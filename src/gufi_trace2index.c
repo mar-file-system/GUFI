@@ -213,7 +213,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     /* parse the directory data */
     debug_start(dir_linetowork);
-    linetowork(w->line, in.delim, &dir);
+    linetowork(w->line, w->len, in.delim, &dir);
     debug_end(dir_linetowork);
 
     /* create the directory */
@@ -305,7 +305,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             debug_end(memset_row);
 
             debug_start(entry_linetowork);
-            linetowork(line, in.delim, &row);
+            linetowork(line, len, in.delim, &row);
             debug_end(entry_linetowork)
 
             debug_start(free_call);

@@ -131,7 +131,8 @@ int printits(struct work *pwork,int ptid) {
     fprintf(out,"%s%s",pwork->xattr,ffielddelim);
   }
 */
-  fprintf(out,"%s%s",pwork->xattr,ffielddelim);
+  fwrite(pwork->xattrs, sizeof(char), pwork->xattrs_len, out);
+  fprintf(out,"%s",ffielddelim);
 
   /* this one is for create tiem which posix doesnt have */
   fprintf(out,"%s", ffielddelim);
@@ -142,48 +143,74 @@ int printits(struct work *pwork,int ptid) {
   return 0;
 }
 
-int pullxattrs( const char *name, char *bufx) {
-    char buf[MAXXATTR];
-    char bufv[MAXXATTR];
-    char * key;
-    size_t keylen;
-    ssize_t buflen;
-    ssize_t bufvlen;
-    char *bufxp;
-    int xattrs;
-    unsigned int ptest;
-    bufxp=bufx;
-    memset(buf, 0, sizeof(buf));
+ssize_t pullxattrs(const char *filename, char *xattrs, const size_t xattrs_buf_size) {
+    char key_list[MAXXATTR];
+    ssize_t key_list_len = LISTXATTR(filename, key_list, sizeof(key_list));
 
-    buflen = LISTXATTR(name, buf, sizeof(buf));
+    ssize_t xattr_len = 0;
+    if (key_list_len > 0) {
+        char *key = key_list;
+        char *curr = xattrs;
+        while ((xattr_len < xattrs_buf_size) && (key_list_len > 0)) {
+            size_t key_len = strlen(key); /* does not include the NULL terminator */
 
-    xattrs=0;
+            char value[MAXXATTR];
+            const ssize_t value_len = GETXATTR(filename, key, value, sizeof(value));  /* includes the NULL terminator */
 
-    if (buflen > 0) {
-       //printf("xattr exists len %zu %s\n",buflen,buf);
-       key=buf;
-       while (buflen > 0) {
-         memset(bufv, 0, sizeof(bufv));
+            /* can't fit buffer */
+            const size_t pair_len = key_len + 1 + value_len;
+            if (pair_len > (MAXXATTR - xattr_len)) {
+                fprintf(stderr, "Warning: Cannot fit xattrs from %s into buffer: %s:%s\n", filename, key, value);
+                break;
+            }
 
-         bufvlen = GETXATTR(name, key, bufv, sizeof(bufv));
+            /* write the pair into the buffer */
+            memcpy(curr, key, key_len);
+            curr += key_len;
+            *curr = xattrdelim[0];
+            curr++;
+            memcpy(curr, value, value_len);
+            curr += value_len;
+            xattr_len += pair_len;
 
-         keylen=strlen(key) + 1;
-         //printf("key: %s value: %s len %zd keylen %d\n",key,bufv,bufvlen,keylen);
-         sprintf(bufxp,"%s%s",key,xattrdelim); bufxp=bufxp+keylen;
-         ptest = *(bufv);
-         if (isprint(ptest)) {
-           sprintf(bufxp,"%s%s",bufv,xattrdelim);
-           bufxp=bufxp+bufvlen+1;
-         } else {
-           bufxp=bufxp+1;
-         }
-         buflen=buflen-keylen;
-         key=key+keylen;
-         xattrs++;
-       }
+            /* go to the next key */
+            key += key_len + 1;
+            key_list_len -= key_len + 1;
+        }
+
+        *curr = '\x00';
     }
-       /* ??????? i think this is bsd version of xattrs - needs to be posixizedr  */
-    return xattrs;
+
+    return xattr_len;
+}
+
+const char *get_xattr_value(const char *xattrs, const size_t xattrs_len, const char *key, const size_t key_len) {
+    const char *curr = xattrs;
+    const char *end = curr + xattrs_len;
+
+    while (curr < end) {
+        /* find the delimiter */
+        size_t i = 0;
+        while (((curr + i) < end) && (curr[i] != xattrdelim[0])) {
+            i++;
+        }
+
+        if ((curr + i) == end) {
+            return 0;
+        }
+
+        /* if the length matches, check if the key matches */
+        if (i == key_len) {
+            if (strncmp(curr, key, key_len) == 0) {
+                return curr + key_len + 1;
+            }
+        }
+
+        /* go to the next pair */
+        curr += strlen(curr) + 1;
+    }
+
+    return 0;
 }
 
 int zeroit(struct sum *summary)
@@ -315,7 +342,16 @@ int sumit (struct sum *summary,struct work *pwork) {
   if (pwork->ossint4 > summary->maxossint4) summary->maxossint4=pwork->ossint4;
   summary->totossint4=summary->totossint4+pwork->ossint4;
 
-  if (pwork->xattrs > 0) summary->totxattr++;
+  size_t xattrdelim_counter = 0;
+  for(ssize_t i = 0; i < pwork->xattrs_len; i++) {
+      if (pwork->xattrs[i] == xattrdelim[0]) {
+          xattrdelim_counter++;
+          if ((xattrdelim_counter & 1) == 0) {
+              summary->totxattr++;
+          }
+      }
+  }
+
   return 0;
 }
 

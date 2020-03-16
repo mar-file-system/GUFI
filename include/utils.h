@@ -112,7 +112,8 @@ extern struct sum sumout;
 
 int printits(struct work *pwork,int ptid);
 
-int pullxattrs( const char *name, char *bufx);
+ssize_t pullxattrs(const char *filename, char *xattrs, const size_t xattrs_buf_size);
+const char *get_xattr_value(const char *xattrs, const size_t xattr_len, const char *key, const size_t key_len);
 
 int zeroit(struct sum *summary);
 

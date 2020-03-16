@@ -117,6 +117,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
 
     SNPRINTF(passmywork->type,2,"%s","d");
     if (in.printing || in.printdir) {
+      passmywork->xattrs_len = 0;
       printits(passmywork,id);
     }
 

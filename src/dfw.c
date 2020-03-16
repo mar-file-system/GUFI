@@ -112,7 +112,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     bzero(xattr, sizeof(xattr));
     xattrs=0;
     if (xattrit) {
-      xattrs=pullxattrs(name,xattr);
+      xattrs=pullxattrs(name,xattr,sizeof(xattr));
     }
     if (statit+xattrit > 0) {
       bzero(lpath,sizeof(lpath));
@@ -167,7 +167,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
        xattrs=0;
        bzero(xattr, sizeof(xattr));
        if (xattrit) {
-         xattrs=pullxattrs(path,xattr);
+         xattrs=pullxattrs(path,xattr,sizeof(xattr));
        }
         //if (entry->d_type == DT_DIR) {
         if (S_ISDIR(st.st_mode) ) {

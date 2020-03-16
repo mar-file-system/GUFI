@@ -208,13 +208,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
         SNPRINTF(ltchar,128,"%s",lrow[12]); qwork.statuso.st_nlink = atol(ltchar);
         SNPRINTF(ltchar,128,"%s",lrow[13]); qwork.statuso.st_ino = atoll(ltchar);
         memset(qwork.linkname, 0, sizeof(qwork.linkname)); /* dont have linkname yet */
-        memset(qwork.xattr, 0, sizeof(qwork.xattr));
+        memset(qwork.xattrs, 0, sizeof(qwork.xattrs));
         /* need to get xattre right here */
-        qwork.xattrs=0;
-        qwork.xattrs=strlen(qwork.xattr);
-        if (qwork.xattrs > 0) {
-          qwork.xattrs = 1;
-        }
+        qwork.xattrs_len=0;
         qwork.pinode=passmywork->statuso.st_ino;
         if (!strncmp(qwork.type,"d",1)) {
             if (strcmp(qwork.name, ".") == 0 || strcmp(qwork.name, "..") == 0)
@@ -321,7 +317,7 @@ int processinit(struct QPTPool * ctx) {
      mywork->statuso.st_blksize= 4096;
      mywork->statuso.st_blocks= 1;
      mywork->pinode = 0;
-     memset(mywork->xattr, 0, sizeof(mywork->xattr));
+     memset(mywork->xattrs, 0, sizeof(mywork->xattrs));
      memset(mywork->linkname, 0, sizeof(mywork->linkname));
      //printf("name %s pinodec %s\n",mywork->name,mywork->pinodec);
 
