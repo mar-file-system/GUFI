@@ -304,6 +304,7 @@ execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHIT
 # Generate RPMs
 find_program(RPMBUILD rpmbuild)
 if (RPMBUILD)
+  message(STATUS "Found rpmbuild: ${RPMBUILD_EXECUTABLE}")
   set(CPACK_GENERATOR "RPM")
   set(CPACK_RPM_COMPONENT_INSTALL On)
   set(CPACK_RPM_FILE_NAME "gufi-${GUFI_VERSION}.${ARCH}.rpm")
@@ -335,4 +336,6 @@ if (RPMBUILD)
   set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.gitignore")
 
   include(CPack)
+else()
+  message(STATUS "rpmbuild not found. Not 'make package' will not be available.")
 endif()
