@@ -90,7 +90,9 @@ int worktofile(FILE * file, char * delim, struct work * work) {
     count += fprintf(file, "%ld%c",              work->statuso.st_mtime,   delim[0]);
     count += fprintf(file, "%ld%c",              work->statuso.st_ctime,   delim[0]);
     count += fprintf(file, "%s%c",               work->linkname,           delim[0]);
-    count += fprintf(file, "%s%c",               work->xattr,              delim[0]);
+    fwrite(work->xattrs, sizeof(char), work->xattrs_len, file);
+    count += work->xattrs_len;
+    count += fprintf(file, "%c",                                           delim[0]);
     count += fprintf(file, "%d%c",               work->crtime,             delim[0]);
     count += fprintf(file, "%d%c",               work->ossint1,            delim[0]);
     count += fprintf(file, "%d%c",               work->ossint2,            delim[0]);
@@ -110,48 +112,68 @@ int filetowork(FILE * file, char * delim, struct work * work) {
     }
 
     char * line = NULL;
-    size_t n = 0;
-    if (getline(&line, &n, file) == -1) {
+    size_t len = 0;
+    if (getline(&line, &len, file) == -1) {
         return -1;
     }
 
-    int rc = linetowork(line, delim, work);
+    const int rc = linetowork(line, len, delim, work);
     free(line);
 
     return rc;
 }
 
-int linetowork(char * line, char * delim, struct work * work) {
+/* strstr replacement */
+/* does not terminate on NULL character */
+/* automatically adds NULL character to matching delimiter */
+static char * split(char * src, char * delim, const char * end) {
+    while (src < end) {
+        for(char * d = delim; *d; d++) {
+            if (*src == *d) {
+                *src = '\x00';
+                return src + 1;
+            }
+        }
+
+        src++;
+    }
+
+    return NULL;
+}
+
+int linetowork(char * line, const size_t len, char * delim, struct work * work) {
     if (!line || !delim || !work) {
         return -1;
     }
 
+    const char * end = line + len;
+
     char *p;
     char *q;
 
-    p=line;    q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->name,MAXPATH,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->type,2,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_ino=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_mode=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_nlink=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_uid=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_gid=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_size=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_blksize=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_blocks=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_atime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_mtime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_ctime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->linkname,MAXPATH,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->xattr,MAXXATTR,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->crtime=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint1=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint2=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint3=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->ossint4=atol(p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->osstext1,MAXXATTR,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->osstext2,MAXXATTR,"%s",p);
-    p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->pinode=atol(p);
+    p=line; q = split(p, delim, end); SNPRINTF(work->name,MAXPATH,"%s",p);
+    p = q;  q = split(p, delim, end); SNPRINTF(work->type,2,"%s",p);
+    p = q;  q = split(p, delim, end); work->statuso.st_ino=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_mode=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_nlink=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_uid=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_gid=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_size=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_blksize=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_blocks=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_atime=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_mtime=atol(p);
+    p = q;  q = split(p, delim, end); work->statuso.st_ctime=atol(p);
+    p = q;  q = split(p, delim, end); SNPRINTF(work->linkname,MAXPATH,"%s",p);
+    p = q;  q = split(p, delim, end); work->xattrs_len = SNPRINTF(work->xattrs,MAXPATH,"%s",p);
+    p = q;  q = split(p, delim, end); work->crtime=atol(p);
+    p = q;  q = split(p, delim, end); work->ossint1=atol(p);
+    p = q;  q = split(p, delim, end); work->ossint2=atol(p);
+    p = q;  q = split(p, delim, end); work->ossint3=atol(p);
+    p = q;  q = split(p, delim, end); work->ossint4=atol(p);
+    p = q;  q = split(p, delim, end); SNPRINTF(work->osstext1,MAXXATTR,"%s",p);
+    p = q;  q = split(p, delim, end); SNPRINTF(work->osstext2,MAXXATTR,"%s",p);
+    p = q;  q = split(p, delim, end); work->pinode=atol(p);
 
     return 0;
 }

@@ -172,12 +172,12 @@ int reprocessdir(void * passv, DIR *dir)
     //printf(" in reprocessdir rebuilding gufi for %s\n",passmywork->name);
 
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
-    bzero(passmywork->xattr,sizeof(passmywork->xattr));
+    passmywork->xattrs_len = 0;
+    bzero(passmywork->xattrs,sizeof(passmywork->xattrs));
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
     SNPRINTF(passmywork->type,2,"d");
     if (in.doxattrs > 0) {
-       passmywork->xattrs=0;
-       passmywork->xattrs=pullxattrs(passmywork->name,passmywork->xattr);
+      passmywork->xattrs_len = pullxattrs(passmywork->name,passmywork->xattrs, sizeof(passmywork->xattrs));
     }
 
 
@@ -235,9 +235,9 @@ int reprocessdir(void * passv, DIR *dir)
         //   continue;
         SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
         lstat(qwork.name, &qwork.statuso);
-        qwork.xattrs=0;
+        /* qwork.xattrs_len = 0; */
         if (in.doxattrs > 0) {
-          qwork.xattrs=pullxattrs(qwork.name,qwork.xattr);
+          qwork.xattrs_len = pullxattrs(qwork.name,qwork.xattrs, sizeof(qwork.xattrs));
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {
             // this is how the parent gets passed on

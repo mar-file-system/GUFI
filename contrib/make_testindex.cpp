@@ -480,7 +480,8 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         SNPRINTF(work.name, MAXPATH, "%s", s.str().c_str());
         SNPRINTF(work.type, 2, "f");
         work.linkname[0] = '\0';
-        SNPRINTF(work.xattr, MAXPATH, "xattr %zu", i);
+        SNPRINTF(work.xattrs,   MAXXATTR, "xattr %zu\x1fvalue %zu\x00", i);
+        work.xattrs_len = strlen(work.xattrs);
         SNPRINTF(work.osstext1, MAXXATTR, "osstext1 %zu", i);
         SNPRINTF(work.osstext2, MAXXATTR, "osstext2 %zu", i);
 
@@ -496,13 +497,13 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         work.statuso.st_atime = std::max(work.statuso.st_ctime, (time_t) time_rng(gen));
         work.statuso.st_mtime = std::max(work.statuso.st_ctime, (time_t) time_rng(gen));
 
-        work.pinode  = rng(gen);
-        work.xattrs  = rng(gen);
-        work.crtime  = rng(gen);
-        work.ossint1 = rng(gen);
-        work.ossint2 = rng(gen);
-        work.ossint3 = rng(gen);
-        work.ossint4 = rng(gen);
+        work.pinode     = rng(gen);
+        work.xattrs_len = 0;
+        work.crtime     = rng(gen);
+        work.ossint1    = rng(gen);
+        work.ossint2    = rng(gen);
+        work.ossint3    = rng(gen);
+        work.ossint4    = rng(gen);
 
         // add this data to the summary
         sumit(&summary, &work);
@@ -548,7 +549,8 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     SNPRINTF(work.name, MAXPATH, "%s", arg->path.c_str());
     SNPRINTF(work.type, 2, "d");
     work.linkname[0] = '\0';
-    SNPRINTF(work.xattr, MAXPATH, "xattr");
+    SNPRINTF(work.xattrs, MAXXATTR, "xattr.key\x1fxattr.value\x00");
+    work.xattrs_len = strlen(work.xattrs);
     SNPRINTF(work.osstext1, MAXXATTR, "osstext1");
     SNPRINTF(work.osstext2, MAXXATTR, "osstext2");
 

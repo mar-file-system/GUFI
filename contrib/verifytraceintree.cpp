@@ -167,7 +167,7 @@ int check_stanza(struct QPTPool * ctx, const size_t id, void * data, void * args
         char buf[MAXPATH] = {};
         memcpy(buf, sa->line.c_str(), sa->line.size());
         struct work work;
-        linetowork(buf, csa->delim, &work);
+        linetowork(buf, sa->line.size(), csa->delim, &work);
 
         // make sure the permissions are correct
         if (st.st_mode != work.statuso.st_mode) {
@@ -246,7 +246,7 @@ int check_stanza(struct QPTPool * ctx, const size_t id, void * data, void * args
         char buf[MAXPATH] = {};
         memcpy(buf, line.c_str(), line.size());
         struct work work;
-        linetowork(buf, csa->delim, &work);
+        linetowork(buf, line.size(), csa->delim, &work);
 
         // extract the basename from the entry name
         char * bufbase = basename(work.name);

@@ -93,7 +93,10 @@ static struct work * get_work() {
     work->statuso.st_atime   = 0x1234;
     work->statuso.st_mtime   = 0x5678;
     work->statuso.st_ctime   = 0x9abc;
-    snprintf(work->xattr,    sizeof(work->xattr), "xattr");
+    const char xattrs[] = "xattr.key0\x1fxattr.value0\0"
+                          "xattr.key1\x1fxattr.value1\0";
+    work->xattrs_len = strlen(xattrs);
+    memcpy(work->xattrs, xattrs, work->xattrs_len);
     work->crtime             = 0x9abc;
     work->ossint1            = 1;
     work->ossint2            = 2;
@@ -106,54 +109,72 @@ static struct work * get_work() {
 }
 
 static int to_string(char * line, const size_t size, struct work * work) {
-    return snprintf(line, size,
-                    "%s%c"
-                    "%c%c"
-                    "%" STAT_ino "%c"
-                    "%d%c"
-                    "%" STAT_nlink"%c"
-                    "%d%c"
-                    "%d%c"
-                    "%" STAT_size "%c"
-                    "%" STAT_bsize "%c"
-                    "%" STAT_blocks "%c"
-                    "%ld%c"
-                    "%ld%c"
-                    "%ld%c"
-                    "%s%c"
-                    "%s%c"
-                    "%d%c"
-                    "%d%c"
-                    "%d%c"
-                    "%d%c"
-                    "%d%c"
-                    "%s%c"
-                    "%s%c"
-                    "%lld%c"
-                    "\n",
-                    work->name,               delim[0],
-                    work->type[0],            delim[0],
-                    work->statuso.st_ino,     delim[0],
-                    work->statuso.st_mode,    delim[0],
-                    work->statuso.st_nlink,   delim[0],
-                    work->statuso.st_uid,     delim[0],
-                    work->statuso.st_gid,     delim[0],
-                    work->statuso.st_size,    delim[0],
-                    work->statuso.st_blksize, delim[0],
-                    work->statuso.st_blocks,  delim[0],
-                    work->statuso.st_atime,   delim[0],
-                    work->statuso.st_mtime,   delim[0],
-                    work->statuso.st_ctime,   delim[0],
-                    work->linkname,           delim[0],
-                    work->xattr,              delim[0],
-                    work->crtime,             delim[0],
-                    work->ossint1,            delim[0],
-                    work->ossint2,            delim[0],
-                    work->ossint3,            delim[0],
-                    work->ossint4,            delim[0],
-                    work->osstext1,           delim[0],
-                    work->osstext2,           delim[0],
-                    work->pinode,             delim[0]);
+    const int part1 = snprintf(line, size,
+                               "%s%c"
+                               "%c%c"
+                               "%" STAT_ino "%c"
+                               "%d%c"
+                               "%" STAT_nlink"%c"
+                               "%d%c"
+                               "%d%c"
+                               "%" STAT_size "%c"
+                               "%" STAT_bsize "%c"
+                               "%" STAT_blocks "%c"
+                               "%ld%c"
+                               "%ld%c"
+                               "%ld%c"
+                               "%s%c",
+                               work->name,               delim[0],
+                               work->type[0],            delim[0],
+                               work->statuso.st_ino,     delim[0],
+                               work->statuso.st_mode,    delim[0],
+                               work->statuso.st_nlink,   delim[0],
+                               work->statuso.st_uid,     delim[0],
+                               work->statuso.st_gid,     delim[0],
+                               work->statuso.st_size,    delim[0],
+                               work->statuso.st_blksize, delim[0],
+                               work->statuso.st_blocks,  delim[0],
+                               work->statuso.st_atime,   delim[0],
+                               work->statuso.st_mtime,   delim[0],
+                               work->statuso.st_ctime,   delim[0],
+                               work->linkname,           delim[0]);
+    if (part1 < 0) {
+        return -1;
+    }
+
+    line += part1;
+
+    memcpy(line, work->xattrs, work->xattrs_len);
+    line += work->xattrs_len;
+
+    const int part2 = snprintf(line, size,
+                               "%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%d%c"
+                               "%s%c"
+                               "%s%c"
+                               "%lld%c"
+                               "\n",
+                                               delim[0],
+                               work->crtime,   delim[0],
+                               work->ossint1,  delim[0],
+                               work->ossint2,  delim[0],
+                               work->ossint3,  delim[0],
+                               work->ossint4,  delim[0],
+                               work->osstext1, delim[0],
+                               work->osstext2, delim[0],
+                               work->pinode,   delim[0]);
+    if (part2 < 0) {
+        return -1;
+    }
+
+    line += part2;
+    *line = '\0';
+
+    return part1 + work->xattrs_len + part2;
 }
 
 TEST(trace, worktofile) {
@@ -197,7 +218,8 @@ TEST(trace, worktofile) {
     EXPECT_EQ(dst.statuso.st_mtime,   src->statuso.st_mtime);      \
     EXPECT_EQ(dst.statuso.st_ctime,   src->statuso.st_ctime);      \
     EXPECT_STREQ(dst.linkname,        src->linkname);              \
-    EXPECT_STREQ(dst.xattr,           src->xattr);                 \
+    EXPECT_EQ(dst.xattrs_len,         src->xattrs_len);            \
+    EXPECT_EQ(memcmp(dst.xattrs, src->xattrs, dst.xattrs_len), 0); \
     EXPECT_EQ(dst.crtime,             src->crtime);                \
     EXPECT_EQ(dst.ossint1,            src->ossint1);               \
     EXPECT_EQ(dst.ossint2,            src->ossint2);               \
@@ -243,7 +265,7 @@ TEST(trace, linetowork) {
 
     // read the string
     struct work work;
-    EXPECT_EQ(linetowork(line, delim, &work), 0);
+    EXPECT_EQ(linetowork(line, rc, delim, &work), 0);
 
     COMPARE(src, work);
 

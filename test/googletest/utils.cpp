@@ -66,6 +66,8 @@ OF SUCH DAMAGE.
 #include <cstdlib>
 #include <cstring>
 #include <random>
+#include <sys/types.h>
+#include <sys/xattr.h>
 
 #include <gtest/gtest.h>
 
@@ -260,7 +262,7 @@ TEST(summary, sumit_file) {
     pwork.ossint2           = dist(gen);
     pwork.ossint3           = dist(gen);
     pwork.ossint4           = dist(gen);
-    pwork.xattrs            = dist(gen);
+    pwork.xattrs_len        = 0;
 
     ASSERT_EQ(sumit(&summary, &pwork), 0);
 
@@ -291,7 +293,7 @@ TEST(summary, sumit_file) {
     EXPECT_EQ(summary.minossint4, pwork.ossint4);
     EXPECT_EQ(summary.maxossint4, pwork.ossint4);
     EXPECT_EQ(summary.setit,      1);
-    EXPECT_EQ(summary.totxattr,   1);
+    EXPECT_EQ(summary.totxattr,   0);
 }
 
 TEST(summary, sumit_link) {
@@ -322,7 +324,7 @@ TEST(summary, sumit_link) {
     pwork.ossint2           = dist(gen);
     pwork.ossint3           = dist(gen);
     pwork.ossint4           = dist(gen);
-    pwork.xattrs            = dist(gen);
+    pwork.xattrs_len        = 0;
 
     ASSERT_EQ(sumit(&summary, &pwork), 0);
 
@@ -353,7 +355,7 @@ TEST(summary, sumit_link) {
     EXPECT_EQ(summary.minossint4, pwork.ossint4);
     EXPECT_EQ(summary.maxossint4, pwork.ossint4);
     EXPECT_EQ(summary.setit,      1);
-    EXPECT_EQ(summary.totxattr,   1);
+    EXPECT_EQ(summary.totxattr,   0);
 }
 
 TEST(summary, tsumit) {
@@ -692,4 +694,35 @@ TEST(modetostr, directories) {
         const mode_t mode = i | S_IFDIR;
         EXPECT_STREQ(modetostr(actual, mode), another_modetostr(expected, mode));
     }
+}
+
+TEST(xattrs, get_xattr_value) {
+    const char xattrs[] = "key.0\x1fvalue0\x00"
+                          "key.1\x1fvalue1\x00"
+                          "key.2\x1fvalue2\x00";
+    const size_t xattr_len = sizeof(xattrs) - 1;
+
+    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, "key.2", 5), "value2");
+    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, "key.1", 5), "value1");
+    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, "key.0", 5), "value0");
+}
+
+TEST(xattrs, pullxattrs) {
+    char name[] = "XXXXXX";
+    const int fd = mkstemp(name);
+    ASSERT_NE(fd, -1);
+    close(fd);
+
+    const char KEY[] = "user.key";
+    const char VALUE[] = "value";
+
+    ASSERT_EQ(SETXATTR(name, KEY, VALUE, strlen(VALUE)), 0);
+
+    char xattrs[MAXXATTR];
+    const size_t xattr_len = pullxattrs(name, xattrs, sizeof(xattrs));
+    ASSERT_NE(xattr_len, (size_t) 0);
+
+    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, KEY, strlen(KEY)), VALUE);
+
+    remove(name);
 }
