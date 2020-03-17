@@ -469,6 +469,7 @@ def dircount(config, args, where):
     . 3
     1001 0
     1002 1
+    1002/dir 0
     1003 0
 
     # gufi_stats dircount 1002
@@ -483,7 +484,7 @@ def dircount(config, args, where):
     # without root, the other databases can't #
     # be accessed.                            #
     ###########################################
-    $ gufi_stats -r dir-count
+    $ gufi_stats -r dircount
     . 1
     1001 0
     '''
@@ -599,7 +600,7 @@ def leaf_dirs(config, args, where):
     # gufi_stats -r leaf-dirs 1002
     1002/dir
 
-    # gufi_stats -r leaf-dirs
+    $ gufi_stats -r leaf-dirs
     1001
     '''
 
@@ -716,7 +717,7 @@ def leaf_files(config, args, where):
     1001 1
     1003 3
 
-    # gufi_stats leaf-files -r
+    # gufi_stats -r leaf-files
     1001 1
     1002/dir 2
     1003 3
@@ -724,10 +725,10 @@ def leaf_files(config, args, where):
     # gufi_stats leaf-files 1002
     1002/dir 2
 
-    # gufi_stats leaf-files -r 1002
+    # gufi_stats -r leaf-files 1002
     1002/dir 2
 
-    $ gufi_stats leaf-files -r
+    $ gufi_stats -r leaf-files
     1001 1
     '''
 
@@ -737,7 +738,7 @@ def leaf_files(config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path() || "/" || name', '(SELECT COUNT(*) FROM entries)'],
+                                         gufi_common.build_query(['path() || "/" || name', '(SELECT COUNT(*) FROM entries WHERE type=="f")'],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,
@@ -799,7 +800,7 @@ def total_leaf_files(config, args, where):
         '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries) AS count'],
+                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type=="f") AS count'],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  group_by,
@@ -849,7 +850,7 @@ def median_leaf_files(config, args, where):
         '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries) AS count'],
+                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type=="f") AS count'],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,

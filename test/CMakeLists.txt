@@ -75,6 +75,9 @@ foreach(TEST
     dfw2gufitest
     generatetree
     gitest.py
+    gufi_stats.expected
+    gufi_stats.py
+    gufi_stats.sh
     gufitest.py
     robinhoodin
     runbffuse
