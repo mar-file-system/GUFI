@@ -98,6 +98,14 @@ import gufi_config
 #       |---- l3 -> f3
 #
 
+# allowed keywords for sorting output (if applicable)
+ASCENDING  = 'ASC'
+DESCENDING = 'DESC'
+ORDER = {'ASC'   : ASCENDING,
+         'DESC'  : DESCENDING,
+         'least' : ASCENDING,
+         'most'  : DESCENDING}
+
 def build_create(name, columns):
     return 'CREATE TABLE {0}({1})'.format(name, ', '.join(columns))
 
@@ -983,52 +991,45 @@ def links_per_level(config, args, where):
 def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
-# mapping of desired statistics to functions
-# uses --recursive
-RECURSIVE = {
-    'depth'              : depth,
-    'filesize'           : filesize,
-    'filecount'          : filecount,
-    'linkcount'          : linkcount,
-    'dircount'           : dircount,
-    'leaf-dirs'          : leaf_dirs,
-    'leaf-depth'         : leaf_depth,
-    'leaf-files'         : leaf_files,
-}
+# argv[0] should be the command name
+def run(argv, config_path):
+    # mapping of desired statistics to functions
+    # uses --recursive
+    RECURSIVE = {
+        'depth'              : depth,
+        'filesize'           : filesize,
+        'filecount'          : filecount,
+        'linkcount'          : linkcount,
+        'dircount'           : dircount,
+        'leaf-dirs'          : leaf_dirs,
+        'leaf-depth'         : leaf_depth,
+        'leaf-files'         : leaf_files,
+    }
 
-# uses --cumulative
-CUMULATIVE = {
-    'total-filesize'     : total_filesize,
-    'total-filecount'    : total_filecount,
-    'total-linkcount'    : total_linkcount,
-    'total-dircount'     : total_dircount,
-    'total-leaf-files'   : total_leaf_files,
-    'files-per-level'    : files_per_level,
-    'links-per-level'    : links_per_level,
-    'dirs-per-level'     : dirs_per_level,
-}
+    # uses --cumulative
+    CUMULATIVE = {
+        'total-filesize'     : total_filesize,
+        'total-filecount'    : total_filecount,
+        'total-linkcount'    : total_linkcount,
+        'total-dircount'     : total_dircount,
+        'total-leaf-files'   : total_leaf_files,
+        'files-per-level'    : files_per_level,
+        'links-per-level'    : links_per_level,
+        'dirs-per-level'     : dirs_per_level,
+    }
 
-# does not use either
-OTHERS = {
-    'median-leaf-files'  : median_leaf_files,
-}
+    # does not use either
+    OTHERS = {
+        'median-leaf-files'  : median_leaf_files,
+    }
 
-# allowed keywords for sorting output (if applicable)
-ASCENDING  = 'ASC'
-DESCENDING = 'DESC'
-ORDER = {'ASC'   : ASCENDING,
-         'DESC'  : DESCENDING,
-         'least' : ASCENDING,
-         'most'  : DESCENDING}
-
-if __name__=='__main__':
     STATS = {}
     STATS.update(RECURSIVE)
     STATS.update(CUMULATIVE)
     STATS.update(OTHERS)
 
     # find and parse the configuration file first
-    config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
+    config = gufi_config.server_config(config_path)
 
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
@@ -1047,7 +1048,7 @@ if __name__=='__main__':
     parser.add_argument('stat',                                                     choices=STATS.keys(), help='statistic to get')
     parser.add_argument('path',                                                     type=str, nargs='?',                default='')
 
-    args = parser.parse_args();
+    args = parser.parse_args(argv[1:]);
 
     # check args
     if args.recursive and (args.stat in CUMULATIVE):
@@ -1070,4 +1071,7 @@ if __name__=='__main__':
     query = subprocess.Popen(query_cmd + [args.path])
     query.communicate() # block until query finishes
 
-    sys.exit(query.returncode)
+    return query.returncode
+
+if __name__=='__main__':
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_CONFIG_PATH))
