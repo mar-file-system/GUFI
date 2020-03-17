@@ -67,7 +67,7 @@ set -e
 
 # remove unnecessary repositories
 zypper repos | grep Yes | cut -f2 -d '|' | xargs zypper removerepo
-zypper --non-interactive remove libapparmor* libgmodule* libX11* libxcb* mozilla* ncurses* qemu* vim*
+zypper --non-interactive remove kernel-debug* libapparmor* libgmodule* libX11* libxcb* mozilla* ncurses* qemu* vim*
 
 # add the tumbleweed oss repo
 zypper ar -f -c http://download.opensuse.org/tumbleweed/repo/oss tumbleweed-oss
@@ -104,10 +104,6 @@ fi
 # install the compilers
 # gcc must be installed even if compiling with clang
 zypper --non-interactive install gcc ${C_PACKAGE} ${CXX_PACKAGE}
-
-# add the travis user
-useradd travis -m -s /sbin/nologin || true
-chown -R travis /GUFI
 
 export C_COMPILER=${SUSE_C_COMPILER}
 export CXX_COMPILER=${SUSE_CXX_COMPILER}

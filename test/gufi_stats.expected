@@ -1,0 +1,324 @@
+# gufi_stats depth
+0
+
+# gufi_stats depth -r
+. 0
+1001 1
+1002 1
+1002/dir 2
+1003 1
+
+# gufi_stats depth 1002
+1
+
+# gufi_stats depth 1002/dir
+2
+
+# gufi_stats -r depth 1002
+1002 1
+1002/dir 2
+
+$ gufi_stats -r depth
+. 0
+1001 1
+
+# gufi_stats filesize
+0
+
+# gufi_stats -r filesize
+. 0
+1001 1
+1002 4
+1002/dir 4
+1003 9
+
+# gufi_stats filesize 1002
+4
+
+# gufi_stats -r filesize 1002
+1002 4
+1002/dir 4
+
+$ gufi_stats -r filesize
+. 0
+1001 1
+
+# gufi_stats filecount
+0
+
+# gufi_stats -r filecount
+. 0
+1001 1
+1002 2
+1002/dir 2
+1003 3
+
+# gufi_stats filecount 1002
+2
+
+# gufi_stats -r filecount 1002
+1002 2
+1002/dir 2
+
+$ gufi_stats -r filecount
+. 0
+1001 1
+
+# gufi_stats linkcount
+0
+
+# gufi_stats -r linkcount
+. 0
+1001 1
+1002 2
+1002/dir 2
+1003 3
+
+# gufi_stats linkcount 1002
+2
+
+# gufi_stats -r linkcount 1002
+1002 2
+1002/dir 2
+
+$ gufi_stats -r linkcount
+. 0
+1001 1
+
+# gufi_stats total-filesize
+1001 1
+1002 8
+1003 9
+
+# gufi_stats -c total-filesize
+18
+
+# gufi_stats total-filesize 1002
+1002 8
+
+# gufi_stats -c total-filesize 1002
+8
+
+$ gufi_stats -c total-filesize
+1
+
+# gufi_stats total-filecount
+1001 1
+1003 3
+1002 4
+
+# gufi_stats -c total-filecount
+8
+
+# gufi_stats total-filecount 1002
+1002 4
+
+# gufi_stats -c total-filecount 1002
+4
+
+$ gufi_stats -c total-filecount
+1
+
+# gufi_stats total-linkcount
+1001 1
+1003 3
+1002 4
+
+# gufi_stats -c total-linkcount
+8
+
+# gufi_stats total-linkcount 1002
+1002 4
+
+# gufi_stats -c total-linkcount 1002
+4
+
+$ gufi_stats -c total-linkcount
+1
+
+# gufi_stats dircount
+3
+
+# gufi_stats -r dircount
+. 3
+1001 0
+1002 1
+1002/dir 0
+1003 0
+
+# gufi_stats dircount 1002
+1
+
+# gufi_stats -r dircount 1002
+1002 1
+1002/dir 0
+
+###########################################
+# This is wrong. This should be 3 but     #
+# without root, the other databases can't #
+# be accessed.                            #
+###########################################
+$ gufi_stats -r dircount
+. 1
+1001 0
+
+# gufi_stats total-dircount
+1001 1
+1003 1
+1002 2
+
+# gufi_stats -c total-dircount
+4
+
+# gufi_stats total-dircount 1002
+1002 1
+
+# gufi_stats -c total-dircount 1002
+1
+
+$ gufi_stats -c total-dircount
+1
+
+# gufi_stats leaf-dirs
+1001
+1003
+
+# gufi_stats -r leaf-dirs
+1001
+1002/dir
+1003
+
+# gufi_stats leaf-dirs 1002
+1002/dir
+
+# gufi_stats -r leaf-dirs 1002
+1002/dir
+
+$ gufi_stats -r leaf-dirs
+1001
+
+# gufi_stats leaf-depth
+1001 1
+1003 1
+
+# gufi_stats -r leaf-depth
+1001 1
+1002/dir 2
+1003 1
+
+# gufi_stats leaf-depth 1002
+1002/dir 2
+
+# gufi_stats -r leaf-depth 1002
+1002/dir 2
+
+$ gufi_stats -r leaf-depth
+1001 1
+
+# gufi_stats leaf-files
+1001 1
+1003 3
+
+# gufi_stats -r leaf-files
+1001 1
+1002/dir 2
+1003 3
+
+# gufi_stats leaf-files 1002
+1002/dir 2
+
+# gufi_stats -r leaf-files 1002
+1002/dir 2
+
+$ gufi_stats -r leaf-files
+1001 1
+
+# gufi_stats total-leaf-files
+1001 1
+1002 2
+1003 3
+
+# gufi_stats -c total-leaf-files
+6
+
+# gufi_stats total-leaf-files 1002
+1002 2
+
+# gufi_stats -c total-leaf-files 1002
+2
+
+$ gufi_stats -c total-leaf-files
+1
+
+# gufi_stats median-leaf-files
+2.0
+
+# gufi_stats median-leaf-files 1002
+2.0
+
+$ gufi_stats median-leaf-files
+1.0
+
+# gufi_stats files-per-level
+1001 1 1
+1002 1 2
+1003 1 3
+1002 2 2
+
+# gufi_stats -c files-per-level
+1 6
+2 2
+
+# gufi_stats files-per-level 1002
+1002 1 2
+1002 2 2
+
+# gufi_stats -c files-per-level 1002
+1 2
+2 2
+
+$ gufi_stats -c files-per-level
+1 1
+
+# gufi_stats links-per-level
+1001 1 1
+1002 1 2
+1003 1 3
+1002 2 2
+
+# gufi_stats -c links-per-level
+1 6
+2 2
+
+# gufi_stats links-per-level 1002
+1002 1 2
+1002 2 2
+
+# gufi_stats -c links-per-level 1002
+1 2
+2 2
+
+$ gufi_stats -c links-per-level
+1 1
+
+# gufi_stats dirs-per-level
+1001 1 1
+1002 1 1
+1003 1 1
+1002 2 1
+
+# gufi_stats -c dirs-per-level
+1 3
+2 1
+
+# gufi_stats dirs-per-level 1002
+1002 1 1
+1002 2 1
+
+# gufi_stats -c dirs-per-level 1002
+1 1
+2 1
+
+$ gufi_stats -c dirs-per-level
+1 1
+

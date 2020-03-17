@@ -76,6 +76,7 @@ brew uninstall poppler gdal postgis protobuf protobuf-c
 
 # install required packages
 brew install cmake mysql pcre
+
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew cask install osxfuse
