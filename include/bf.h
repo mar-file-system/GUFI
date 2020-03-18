@@ -172,22 +172,23 @@ struct input {
    size_t sqlinit_len;
    char sqlfin[MAXSQL];
    size_t sqlfin_len;
-   int  insertdir;            // added for bfwreaddirplus2db
-   int  insertfl;             // added for bfwreaddirplus2db
-   int  dontdescend;          // added to allow single level directory operations
-   int  buildinindir;         // added to notice when writing index dbs into the input dir
-   int  suspectd;             // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
-   int  suspectfl;            // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
-   char insuspect[MAXPATH];   // added for bfwreaddirplus2db input path for suspects file
-   int  suspectfile;          // added for bfwreaddirplus2db flag for if we are processing suspects file
-   int  suspectmethod;        // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
-   int  stride;               // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
-   int  suspecttime;          // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
-   int infile;                // added for gufi_query to be able to read input file to get dir/inode info
-   size_t min_level;          // minimum level of recursion to reach before running queries
-   size_t max_level;          // maximum level of recursion to run queries on
-   char aggregate[MAXSQL];    // SQL query to run on aggregated data
-   char intermediate[MAXSQL]; // SQL query to run on intermediate tables
+   int  insertdir;                // added for bfwreaddirplus2db
+   int  insertfl;                 // added for bfwreaddirplus2db
+   int  dontdescend;              // added to allow single level directory operations
+   int  buildinindir;             // added to notice when writing index dbs into the input dir
+   int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
+   int  suspectfl;                // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
+   char insuspect[MAXPATH];       // added for bfwreaddirplus2db input path for suspects file
+   int  suspectfile;              // added for bfwreaddirplus2db flag for if we are processing suspects file
+   int  suspectmethod;            // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
+   int  stride;                   // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
+   int  suspecttime;              // added for bfwreaddirplus2db time for suspect comparison in seconds since epoch
+   int infile;                    // added for gufi_query to be able to read input file to get dir/inode info
+   size_t min_level;              // minimum level of recursion to reach before running queries
+   size_t max_level;              // maximum level of recursion to run queries on
+   char intermediate[MAXSQL];     // SQL query to run on intermediate tables
+   char create_aggregate[MAXSQL]; // SQL query to create the aggregate table
+   char aggregate[MAXSQL];        // SQL query to run on aggregated data
    ShowResults_t show_results;
    int keep_matime;
    size_t output_buffer_size;

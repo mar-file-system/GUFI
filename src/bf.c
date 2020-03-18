@@ -102,47 +102,48 @@ void print_help(const char* prog_name,
    while ((ch = *opt++)) {
       switch (ch) {
       case ':': continue;
-      case 'h': printf("  -h                 help\n"); break;
-      case 'H': printf("  -H                 show assigned input values (debugging)\n"); break;
-      case 'x': printf("  -x                 pull xattrs from source file-sys into GUFI\n"); break;
-      case 'p': printf("  -p                 print file-names\n"); break;
-      case 'P': printf("  -P                 print directories as they are encountered\n"); break;
-      case 'N': printf("  -N                 print column-names (header) for DB results\n"); break;
-      case 'V': printf("  -V                 print column-values (rows) for DB results\n"); break;
-      case 's': printf("  -s                 generate tree-summary table (in top-level DB)\n"); break;
-      case 'b': printf("  -b                 build GUFI index tree\n"); break;
-      case 'a': printf("  -a                 AND/OR (SQL query combination)\n"); break;
-      case 'n': printf("  -n <threads>       number of threads\n"); break;
-      case 'd': printf("  -d <delim>         delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]); break;
-      case 'i': printf("  -i <input_dir>     input directory path\n"); break;
-      case 't': printf("  -t <to_dir>        build GUFI index (under) here\n"); break;
-      case 'o': printf("  -o <out_fname>     output file (one-per-thread, with thread-id suffix), implies -e 1\n"); break;
-      case 'O': printf("  -O <out_DB>        output DB, implies -e 1\n"); break;
-      case 'I': printf("  -I <SQL_init>      SQL init\n"); break;
-      case 'T': printf("  -T <SQL_tsum>      SQL for tree-summary table\n"); break;
-      case 'S': printf("  -S <SQL_sum>       SQL for summary table\n"); break;
-      case 'E': printf("  -E <SQL_ent>       SQL for entries table\n"); break;
-      case 'F': printf("  -F <SQL_fin>       SQL cleanup\n"); break;
-      case 'r': printf("  -r                 insert files and links into db (for bfwreaddirplus2db\n"); break;
-      case 'R': printf("  -R                 insert dires into db (for bfwreaddirplus2db\n"); break;
-      case 'D': printf("  -D                 dont descend the tree\n"); break;
-      case 'Y': printf("  -Y                 default to all directories suspect\n"); break;
-      case 'Z': printf("  -Z                 default to all files/links suspect\n"); break;
-      case 'W': printf("  -W <INSUSPECT>     suspect input file\n"); break;
-      case 'A': printf("  -A <suspectmethod> suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
-      case 'g': printf("  -g <stridesize>    stride size for striping inodes\n"); break;
-      case 'c': printf("  -c <suspecttime>   time in seconds since epoch for suspect comparision\n"); break;
-      case 'u': printf("  -u                 input mode is from a file so input is a file not a dir\n"); break;
-      case 'y': printf("  -y <min level>     minimum level to go down\n"); break;
-      case 'z': printf("  -z <max level>     maximum level to go down\n"); break;
-      case 'J': printf("  -J <SQL_interm>    SQL for intermediate results (no default: recommend using \"SELECT * FROM entries\")\n"); break;
-      case 'G': printf("  -G <SQL_aggregate> SQL for aggregated results   (no default: recommend using \"SELECT * FROM entries\")\n"); break;
-      case 'e': printf("  -e <0 or 1>        0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
-      case 'm': printf("  -m                 Keep mtime and atime same on the database files\n"); break;
-      case 'B': printf("  -B <buffer size>   size of each thread's output buffer in bytes\n"); break;
-      case 'w': printf("  -w                 open the database files in read-write mode instead of read only mode\n"); break;
-      case 'f': printf("  -f <FORMAT>        use the specified FORMAT instead of the default; output a newline after each use of FORMAT\n"); break;
-      case 'j': printf("  -j                 print the information in terse form\n"); break;
+      case 'h': printf("  -h                     help\n"); break;
+      case 'H': printf("  -H                     show assigned input values (debugging)\n"); break;
+      case 'x': printf("  -x                     pull xattrs from source file-sys into GUFI\n"); break;
+      case 'p': printf("  -p                     print file-names\n"); break;
+      case 'P': printf("  -P                     print directories as they are encountered\n"); break;
+      case 'N': printf("  -N                     print column-names (header) for DB results\n"); break;
+      case 'V': printf("  -V                     print column-values (rows) for DB results\n"); break;
+      case 's': printf("  -s                     generate tree-summary table (in top-level DB)\n"); break;
+      case 'b': printf("  -b                     build GUFI index tree\n"); break;
+      case 'a': printf("  -a                     AND/OR (SQL query combination)\n"); break;
+      case 'n': printf("  -n <threads>           number of threads\n"); break;
+      case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]); break;
+      case 'i': printf("  -i <input_dir>         input directory path\n"); break;
+      case 't': printf("  -t <to_dir>            build GUFI index (under) here\n"); break;
+      case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix), implies -e 1\n"); break;
+      case 'O': printf("  -O <out_DB>            output DB, implies -e 1\n"); break;
+      case 'I': printf("  -I <SQL_init>          SQL init\n"); break;
+      case 'T': printf("  -T <SQL_tsum>          SQL for tree-summary table\n"); break;
+      case 'S': printf("  -S <SQL_sum>           SQL for summary table\n"); break;
+      case 'E': printf("  -E <SQL_ent>           SQL for entries table\n"); break;
+      case 'F': printf("  -F <SQL_fin>           SQL cleanup\n"); break;
+      case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db\n"); break;
+      case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db\n"); break;
+      case 'D': printf("  -D                     dont descend the tree\n"); break;
+      case 'Y': printf("  -Y                     default to all directories suspect\n"); break;
+      case 'Z': printf("  -Z                     default to all files/links suspect\n"); break;
+      case 'W': printf("  -W <INSUSPECT>         suspect input file\n"); break;
+      case 'A': printf("  -A <suspectmethod>     suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl\n"); break;
+      case 'g': printf("  -g <stridesize>        stride size for striping inodes\n"); break;
+      case 'c': printf("  -c <suspecttime>       time in seconds since epoch for suspect comparision\n"); break;
+      case 'u': printf("  -u                     input mode is from a file so input is a file not a dir\n"); break;
+      case 'y': printf("  -y <min level>         minimum level to go down\n"); break;
+      case 'z': printf("  -z <max level>         maximum level to go down\n"); break;
+      case 'J': printf("  -J <SQL_interm>        SQL for intermediate results (no default: recommend using \"SELECT * FROM entries\")\n"); break;
+      case 'K': printf("  -K <create aggregate>  SQL to create the final aggregation table (if not specified, -I will be used)\n"); break;
+      case 'G': printf("  -G <SQL_aggregate>     SQL for aggregated results   (no default: recommend using \"SELECT * FROM entries\")\n"); break;
+      case 'e': printf("  -e <0 or 1>            0 for aggregate, 1 for print without aggregating (implied by -o and -O)\n"); break;
+      case 'm': printf("  -m                     Keep mtime and atime same on the database files\n"); break;
+      case 'B': printf("  -B <buffer size>       size of each thread's output buffer in bytes\n"); break;
+      case 'w': printf("  -w                     open the database files in read-write mode instead of read only mode\n"); break;
+      case 'f': printf("  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT\n"); break;
+      case 'j': printf("  -j                     print the information in terse form\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -189,6 +190,7 @@ void show_input(struct input* in, int retval) {
    printf("in.min_level          = %zu\n",   in->min_level);
    printf("in.max_level          = %zu\n",   in->max_level);
    printf("in.intermediate       = '%s'\n",  in->intermediate);
+   printf("in.create_aggregate   = '%s'\n",  in->create_aggregate);
    printf("in.aggregate          = '%s'\n",  in->aggregate);
    printf("in.show_results       = %d\n",    in->show_results);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
@@ -241,9 +243,10 @@ int parse_cmd_line(int         argc,
    memset(in->outdbn,       0, MAXPATH);
    in->min_level          = 0;         // default to the top
    in->max_level          = -1;        // default to all the way down
-   memset(in->sqlent,       0, MAXSQL);
-   memset(in->intermediate, 0, MAXSQL);
-   memset(in->aggregate,    0, MAXSQL);
+   memset(in->sqlent,           0, MAXSQL);
+   memset(in->create_aggregate, 0, MAXSQL);
+   memset(in->intermediate,     0, MAXSQL);
+   memset(in->aggregate,        0, MAXSQL);
    in->show_results       = PRINT;     // print without aggregating by default
    in->keep_matime        = 0;         // default to not keeping mtime and atime
    in->open_mode          = RDONLY;    // default to read-only opens
@@ -429,6 +432,10 @@ int parse_cmd_line(int         argc,
 
       case 'J':
          INSTALL_STR(in->intermediate, optarg, MAXSQL, "-J");
+         break;
+
+      case 'K':
+         INSTALL_STR(in->create_aggregate, optarg, MAXSQL, "-K");
          break;
 
       case 'G':
