@@ -826,7 +826,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
     addqueryfuncs(aggregate, in.maxthreads, -1, NULL);
 
     // create table
-    if (sqlite3_exec(aggregate, in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
+    if (sqlite3_exec(aggregate, strlen(in.create_aggregate)?in.create_aggregate:in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
         fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
         outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
         closedb(aggregate);
@@ -857,7 +857,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:G:J:e:m:B:w", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:o:d:O:I:F:y:z:J:K:G:e:m:B:w", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
