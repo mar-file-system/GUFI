@@ -89,7 +89,9 @@ int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const
     if (len <= capacity) {
         /* if there's not enough space in the buffer to fit the new row, flush it first */
         if ((obufs->buffers[id].filled + len) > capacity) {
-            OutputBuffer_flush(&obufs->mutex, &obufs->buffers[id], stderr);
+            pthread_mutex_lock(obufs->mutex);
+            OutputBuffer_flush(&obufs->buffers[id], stderr);
+            pthread_mutex_unlock(obufs->mutex);
         }
 
         char * buf = obufs->buffers[id].buf;

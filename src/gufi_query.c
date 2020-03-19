@@ -365,6 +365,9 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 
     struct CallbackArgs * ca = (struct CallbackArgs *) args;
     const int id = ca->id;
+    struct OutputBuffers * obs = ca->output_buffers;
+    struct OutputBuffer * ob = &obs->buffers[id];
+
     /* if (gts.outfd[id]) { */
         if (ca->output_buffers) {
             size_t * lens = malloc(count * sizeof(size_t));
@@ -374,17 +377,39 @@ static int print_callback(void *args, int count, char **data, char **columns) {
                 row_len += lens[i];
             }
 
-            const size_t capacity = ca->output_buffers->buffers[id].capacity;
-
-            /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-            if (row_len < capacity) {
-                /* if there's not enough space in the buffer to fit the new row, flush it first */
-                if ((ca->output_buffers->buffers[id].filled + row_len) >= capacity) {
-                    OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+            /* if a row cannot fit the buffer for whatever reason, flush the existing bufffer */
+            if ((ob->capacity - ob->filled) < row_len) {
+                if (obs->mutex) {
+                    pthread_mutex_lock(obs->mutex);
                 }
+                OutputBuffer_flush(ob, gts.outfd[id]);
+                if (obs->mutex) {
+                    pthread_mutex_unlock(obs->mutex);
+                }
+            }
 
-                char * buf = ca->output_buffers->buffers[id].buf;
-                size_t filled = ca->output_buffers->buffers[id].filled;
+            /* if the row is larger than the entire buffer, flush this row */
+            if (ob->capacity < row_len) {
+                /* the existing buffer will have been flushed a few lines ago, maintaining output order */
+                if (obs->mutex) {
+                    pthread_mutex_lock(obs->mutex);
+                }
+                for(int i = 0; i < count; i++) {
+                    fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
+                    fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
+                }
+                fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+                obs->buffers[id].count++;
+                if (obs->mutex) {
+                    pthread_mutex_unlock(obs->mutex);
+                }
+            }
+            /* otherwise, the row can fit into the buffer, so buffer it */
+            /* if the old data + this row cannot fit the buffer, works since old data has been flushed */
+            /* if the old data + this row fit the buffer, old data was not flushed, but no issue */
+            else {
+                char * buf = ob->buf;
+                size_t filled = ob->filled;
                 for(int i = 0; i < count; i++) {
                     memcpy(&buf[filled], data[i], lens[i]);
                     filled += lens[i];
@@ -396,24 +421,9 @@ static int print_callback(void *args, int count, char **data, char **columns) {
                 buf[filled] = '\n';
                 filled++;
 
-                ca->output_buffers->buffers[id].filled = filled;
-                ca->output_buffers->buffers[id].count++;
+                ob->filled = filled;
+                ob->count++;
             }
-            else {
-                /* if the row does not fit the buffer, output immediately instead of buffering */
-                pthread_mutex_lock(&ca->output_buffers->mutex);
-                for(int i = 0; i < count; i++) {
-                    fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
-                    fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
-                }
-                fwrite("\n", sizeof(char), 1, gts.outfd[id]);
-                ca->output_buffers->buffers[id].count++;
-                pthread_mutex_unlock(&ca->output_buffers->mutex);
-            }
-
-            free(lens);
-
-            /* ca->printed++; */
         }
     /* } */
 
@@ -892,11 +902,19 @@ int main(int argc, char *argv[])
     #endif
 
     /* initialize globals */
+    /* print_mutex is only needed if no output file prefix was specified */
+    /* (all output files point to the same file, probably stdout) */
+    pthread_mutex_t static_print_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t *print_mutex = NULL;
+    if (!in.outfile) {
+        print_mutex = &static_print_mutex;
+    }
+
     const size_t output_count = in.maxthreads + !!(in.show_results == AGGREGATE);
     if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, output_count)                              ||
         !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit, in.sqlinit_len) ||
-        !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size))                 {
-        OutputBuffers_destroy(&args.output_buffers, output_count);
+        !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size, print_mutex))    {
+        OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
         return -1;
@@ -904,7 +922,8 @@ int main(int argc, char *argv[])
 
     #ifdef DEBUG
     #ifdef PER_THREAD_STATS
-    OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL);
+    pthread_mutex_t debug_mutex = PTHREAD_MUTEX_INITIALIZER;
+    OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &debug_mutex);
     #endif
 
     #ifdef CUMULATIVE_TIMES
@@ -929,7 +948,7 @@ int main(int argc, char *argv[])
     sqlite3 * aggregate = NULL;
     if (in.show_results == AGGREGATE) {
         if (!(aggregate = aggregate_init(AGGREGATE_NAME, aggregate_name, in.maxthreads))) {
-            OutputBuffers_destroy(&args.output_buffers, output_count);
+            OutputBuffers_destroy(&args.output_buffers);
             outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
             outfiles_fin(gts.outfd, output_count);
             return -1;
@@ -952,7 +971,7 @@ int main(int argc, char *argv[])
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        OutputBuffers_destroy(&args.output_buffers, output_count);
+        OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
         return -1;
@@ -960,7 +979,7 @@ int main(int argc, char *argv[])
 
     if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
-        OutputBuffers_destroy(&args.output_buffers, output_count);
+        OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
         return -1;
@@ -1069,12 +1088,15 @@ int main(int argc, char *argv[])
 
     /* clear out buffered data */
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
-    const size_t rows =
+    const size_t rows = 0;
+    for(size_t i = 0; i < args.outbuf_buffers->count; i++) {
+        rows += args.outputbuffers->buffers[i].count;
+    }
     #endif
-    OutputBuffers_flush_multiple(&args.output_buffers, output_count, gts.outfd);
+    OutputBuffers_flush_to_multiple(&args.output_buffers, gts.outfd);
 
     /* clean up globals */
-    OutputBuffers_destroy(&args.output_buffers, output_count);
+    OutputBuffers_destroy(&args.output_buffers);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(gts.outfd, output_count);
 
@@ -1086,8 +1108,8 @@ int main(int argc, char *argv[])
 
     #ifdef DEBUG
     #ifdef PER_THREAD_STATS
-    OutputBuffers_flush_single(&debug_output_buffers, in.maxthreads, stderr);
-    OutputBuffers_destroy(&debug_output_buffers, in.maxthreads);
+    OutputBuffers_flush_to_single(&debug_output_buffers, stderr);
+    OutputBuffers_destroy(&debug_output_buffers);
     #endif
     #endif
 
