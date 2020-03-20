@@ -144,18 +144,8 @@ fi
 
 
 
-# run bfwi and send output to screen
-echo
-echo "out to screen"
-
 echo $CLEAN_GUFI
 $CLEAN_GUFI
-
-echo $DIR2TRACE -n 2 -x $SOURCE
-$DIR2TRACE -n 2 -x $SOURCE
-
-
-
 
 # run to output files testout.*
 echo
@@ -165,8 +155,8 @@ echo $CLEAN_GUFI
 $CLEAN_GUFI
 rm -f testout*
 
-echo $DIR2TRACE -n 2 -x -o testout $SOURCE
-$DIR2TRACE -n 2 -x -o testout $SOURCE
+echo $DIR2TRACE -n 2 -x $SOURCE testout
+$DIR2TRACE -n 2 -x $SOURCE testout
 
 ls -l testout*
 for F in testout*; do echo; echo $F; cat $F; done
