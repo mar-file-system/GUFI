@@ -202,8 +202,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             SNPRINTF(e.name, MAXPATH, "%s/%s", work_name + in.name_len, entry->d_name);
         }
 
-        fprintf(stderr, "%s\n", e.name);
-
         worktofile(gts.outfd[id], in.delim, &e);
     }
 
@@ -283,12 +281,13 @@ struct work * validate_inputs() {
 }
 
 void sub_help() {
-    printf("input_dir         walk this tree to produce trace file\n");
+    printf("input_dir            walk this tree to produce trace file\n");
+    printf("output_prefix        prefix of output files (<prefix>.<tid>)\n");
     printf("\n");
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:o:", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:", 1, "input_dir output_prefix", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -297,12 +296,14 @@ int main(int argc, char * argv[]) {
         /* parse positional args, following the options */
         int retval = 0;
         INSTALL_STR(in.name,     argv[idx++], MAXPATH, "input_dir");
+        INSTALL_STR(in.outfilen, argv[idx++], MAXPATH, "output_prefix");
 
         if (retval)
             return retval;
 
         /* add 1 more for the separator that is placed between this string and the entry */
         in.name_len = strlen(in.name) + 1;
+        in.outfile = 1;
     }
 
     /* get first work item by validating inputs */
