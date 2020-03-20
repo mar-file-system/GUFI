@@ -71,9 +71,9 @@ OF SUCH DAMAGE.
 #include <sys/xattr.h>
 #include <unistd.h>
 
+#include "SinglyLinkedList.h"
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "debug.h"
 #include "dbutils.h"
 #include "outfiles.h"
 #include "template_db.h"
@@ -134,7 +134,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     /* remove this directory's path prefix for writing to the trace file */
     SNFORMAT_S(work->name, MAXPATH, 1, work_name + in.name_len, work_name_len - in.name_len);
-    worktofile(gts.outfd[id], in.delim, work);
+
+    /* a stanza starts with the directory */
+    struct sll stanza_list;
+    sll_init(&stanza_list);
+    sll_push(&stanza_list, work);
+
+    size_t stanza_buffer_size = STANZA_SIZE;
 
     struct dirent * entry = NULL;
     size_t rows = 0;
@@ -149,43 +155,37 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         }
 
         /* get entry path */
-        struct work e;
-        memset(&e, 0, sizeof(struct work));
-        SNPRINTF(e.name, MAXPATH, "%s/%s", work_name, entry->d_name);
+        struct work * e = calloc(1, sizeof(struct work));
+        memset(e->name, 0, MAXPATH);
+        SNPRINTF(e->name, MAXPATH, "%s/%s", work_name, entry->d_name);
 
         /* get the entry's metadata */
-        if (lstat(e.name, &e.statuso) < 0) {
+        if (lstat(e->name, &e->statuso) < 0) {
             continue;
         }
 
-        e.xattrs=0;
+        e->xattrs=0;
         if (in.doxattrs > 0) {
-            e.xattrs = pullxattrs(e.name, e.xattr);
+            e->xattrs = pullxattrs(e->name, e->xattr);
         }
 
         /* push subdirectories onto the queue */
-        if (S_ISDIR(e.statuso.st_mode)) {
-            e.type[0] = 'd';
-            e.pinode = work->statuso.st_ino;
-
-            /* make a copy here so that the data can be pushed into the queue */
-            /* this is more efficient than malloc+free for every single entry */
-            struct work * copy = (struct work *) calloc(1, sizeof(struct work));
-            memcpy(copy, &e, sizeof(struct work));
-
-            QPTPool_enqueue(ctx, id, processdir, copy);
+        if (S_ISDIR(e->statuso.st_mode)) {
+            e->type[0] = 'd';
+            e->pinode = work->statuso.st_ino;
+            QPTPool_enqueue(ctx, id, processdir, e);
             continue;
         }
 
         rows++;
 
         /* non directories */
-        if (S_ISLNK(e.statuso.st_mode)) {
-            e.type[0] = 'l';
-            readlink(e.name, e.linkname, MAXPATH);
+        if (S_ISLNK(e->statuso.st_mode)) {
+            e->type[0] = 'l';
+            readlink(e->name, e->linkname, MAXPATH);
         }
-        else if (S_ISREG(e.statuso.st_mode)) {
-            e.type[0] = 'f';
+        else if (S_ISREG(e->statuso.st_mode)) {
+            e->type[0] = 'f';
         }
 
         #if BENCHMARK
@@ -195,20 +195,46 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         #endif
 
         if (work_name_len <= in.name_len) {
-            SNPRINTF(e.name, MAXPATH, "%s", entry->d_name);
+            SNPRINTF(e->name, MAXPATH, "%s", entry->d_name);
         }
         else {
             /* offset by in.name_len to remove prefix */
-            SNPRINTF(e.name, MAXPATH, "%s/%s", work_name + in.name_len, entry->d_name);
+            SNPRINTF(e->name, MAXPATH, "%s/%s", work_name + in.name_len, entry->d_name);
         }
 
-        fprintf(stderr, "%s\n", e.name);
-
-        worktofile(gts.outfd[id], in.delim, &e);
+        sll_push(&stanza_list, e);
+        stanza_buffer_size += STANZA_SIZE;
     }
 
     closedir(dir);
-    free(data);
+
+    /* write out the stanza */
+    void * stanza_buf = calloc(1, stanza_buffer_size);
+    if (stanza_buf)  {
+        /* convert the entries into text */
+        size_t offset = 0;
+        for(struct node * node = sll_head_node(&stanza_list); node; node = sll_next_node(node)) {
+            offset += worktobuf(stanza_buf + offset, stanza_buffer_size - offset, in.delim, sll_node_data(node));
+        }
+
+        /* write the text to the file in one pass */
+        pthread_mutex_t * print_mutex = (pthread_mutex_t *) args;
+        if (print_mutex) {
+            pthread_mutex_lock(print_mutex);
+        }
+
+        fwrite(stanza_buf, sizeof(char), offset, gts.outfd[id]);
+
+        if (print_mutex) {
+            pthread_mutex_unlock(print_mutex);
+        }
+    }
+    else {
+        fprintf(stderr, "Could not allocate buffer for %s\n", work_name);
+    }
+
+    free(stanza_buf);
+    sll_destroy(&stanza_list, 1);
 
     return 0;
 }
@@ -224,7 +250,7 @@ struct work * validate_inputs() {
 
     /* get input path metadata */
     if (lstat(root->name, &root->statuso) < 0) {
-        fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
+        fprintf(stderr, "Could not stat source directory \"%s\"\n", root->name);
         free(root);
         return NULL;
     }
@@ -234,16 +260,15 @@ struct work * validate_inputs() {
         root->type[0] = 'd';
     }
     else {
-        fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
+        fprintf(stderr, "Source path is not a directory \"%s\" %d\n", root->name, S_ISDIR(root->statuso.st_mode));
         free(root);
         return NULL;
     }
 
     /* check if the source directory can be accessed */
-    static mode_t PERMS = R_OK | X_OK;
-    if ((root->statuso.st_mode & PERMS) != PERMS) {
+    if (access(root->name, R_OK | X_OK) != 0) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in.name, strerror(errno));
+                root->name, strerror(errno));
         free(root);
         return NULL;
     }
@@ -262,8 +287,8 @@ struct work * validate_inputs() {
             SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
 
             struct stat dst_st;
-            if (lstat(in.outfilen, &dst_st) == 0) {
-                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+            if (lstat(outname, &dst_st) == 0) {
+                fprintf(stderr, "\"%s\" Already exists!\n", outname);
 
                 /* if the destination path is not a directory (error) */
                 if (S_ISDIR(dst_st.st_mode)) {
@@ -283,12 +308,13 @@ struct work * validate_inputs() {
 }
 
 void sub_help() {
-    printf("input_dir         walk this tree to produce trace file\n");
+    printf("input_dir            walk this tree to produce trace file\n");
+    printf("output_prefix        prefix of the per-thread output files\n");
     printf("\n");
 }
 
 int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:o:", 1, "input_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:o:", 1, "input_dir output_prefix", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -300,9 +326,6 @@ int main(int argc, char * argv[]) {
 
         if (retval)
             return retval;
-
-        /* add 1 more for the separator that is placed between this string and the entry */
-        in.name_len = strlen(in.name) + 1;
     }
 
     /* get first work item by validating inputs */
@@ -311,7 +334,15 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 
+    pthread_mutex_t initialized_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t * print_mutex = NULL;
+    /* no output file, so writing to stdout, and need to lock */
+    if (!in.outfile) {
+        print_mutex = &initialized_mutex;
+    }
+
     if (!outfiles_init(gts.outfd, in.outfile, in.outfilen, in.maxthreads)) {
+        outfiles_fin(gts.outfd, in.maxthreads);
         return -1;
     }
 
@@ -323,11 +354,13 @@ int main(int argc, char * argv[]) {
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        outfiles_fin(gts.outfd, in.maxthreads);
         return -1;
     }
 
-    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, print_mutex) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
+        outfiles_fin(gts.outfd, in.maxthreads);
         return -1;
     }
 

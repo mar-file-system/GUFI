@@ -69,8 +69,37 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 
-// write a work struct to a file
-int worktofile(FILE * file, char * delim, struct work * work);
+#define INT_CHARS 20 /* maximum number of characters of   */
+                     /* a 64 bit integer is 20 characters */
+
+#define STANZA_SIZE MAXPATH   + 1 + /* name */       \
+                    1         + 1 + /* type */       \
+                    INT_CHARS + 1 + /* st_ino */     \
+                    INT_CHARS + 1 + /* st_mode */    \
+                    INT_CHARS + 1 + /* st_nlink */   \
+                    INT_CHARS + 1 + /* st_uid */     \
+                    INT_CHARS + 1 + /* st_gid */     \
+                    INT_CHARS + 1 + /* st_size */    \
+                    INT_CHARS + 1 + /* st_blksize */ \
+                    INT_CHARS + 1 + /* st_blocks */  \
+                    INT_CHARS + 1 + /* st_atime */   \
+                    INT_CHARS + 1 + /* st_mtime */   \
+                    INT_CHARS + 1 + /* st_ctime */   \
+                    MAXPATH   + 1 + /* linkname */   \
+                    MAXXATTR  + 1 + /* xattr */      \
+                    INT_CHARS + 1 + /* crtime */     \
+                    INT_CHARS + 1 + /* ossint1 */    \
+                    INT_CHARS + 1 + /* ossint2 */    \
+                    INT_CHARS + 1 + /* ossint3 */    \
+                    INT_CHARS + 1 + /* ossint4 */    \
+                    MAXXATTR  + 1 + /* osstext1 */   \
+                    MAXXATTR  + 1 + /* osstext2 */   \
+                    INT_CHARS + 1 + /* pinode */     \
+                    1 +             /* newline */    \
+                    1               /* NULL terminator */
+
+// write a work struct to a buffer
+int worktobuf(char * buf, const size_t size, char * delim, struct work * work);
 
 // get a line from a file and convert the line to a work struct
 int filetowork(FILE * file, char * delim, struct work * work);

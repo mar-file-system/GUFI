@@ -69,37 +69,37 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-int worktofile(FILE * file, char * delim, struct work * work) {
-    if (!file || !delim || !work) {
+int worktobuf(char * buf, const size_t size, char * delim, struct work * work) {
+    if (!buf || (size < STANZA_SIZE) || !delim || !work) {
         return -1;
     }
 
     int count = 0;
 
-    count += fprintf(file, "%s%c",               work->name,               delim[0]);
-    count += fprintf(file, "%c%c",               work->type[0],            delim[0]);
-    count += fprintf(file, "%" STAT_ino "%c",    work->statuso.st_ino,     delim[0]);
-    count += fprintf(file, "%d%c",               work->statuso.st_mode,    delim[0]);
-    count += fprintf(file, "%" STAT_nlink"%c",   work->statuso.st_nlink,   delim[0]);
-    count += fprintf(file, "%d%c",               work->statuso.st_uid,     delim[0]);
-    count += fprintf(file, "%d%c",               work->statuso.st_gid,     delim[0]);
-    count += fprintf(file, "%" STAT_size "%c",   work->statuso.st_size,    delim[0]);
-    count += fprintf(file, "%" STAT_bsize "%c",  work->statuso.st_blksize, delim[0]);
-    count += fprintf(file, "%" STAT_blocks "%c", work->statuso.st_blocks,  delim[0]);
-    count += fprintf(file, "%ld%c",              work->statuso.st_atime,   delim[0]);
-    count += fprintf(file, "%ld%c",              work->statuso.st_mtime,   delim[0]);
-    count += fprintf(file, "%ld%c",              work->statuso.st_ctime,   delim[0]);
-    count += fprintf(file, "%s%c",               work->linkname,           delim[0]);
-    count += fprintf(file, "%s%c",               work->xattr,              delim[0]);
-    count += fprintf(file, "%d%c",               work->crtime,             delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint1,            delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint2,            delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint3,            delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint4,            delim[0]);
-    count += fprintf(file, "%s%c",               work->osstext1,           delim[0]);
-    count += fprintf(file, "%s%c",               work->osstext2,           delim[0]);
-    count += fprintf(file, "%lld%c",             work->pinode,             delim[0]);
-    count += fprintf(file, "\n");
+    count += SNPRINTF(buf + count, size - count, "%s%c",               work->name,               delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%c%c",               work->type[0],            delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%" STAT_ino "%c",    work->statuso.st_ino,     delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->statuso.st_mode,    delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%" STAT_nlink"%c",   work->statuso.st_nlink,   delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->statuso.st_uid,     delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->statuso.st_gid,     delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%" STAT_size "%c",   work->statuso.st_size,    delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%" STAT_bsize "%c",  work->statuso.st_blksize, delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%" STAT_blocks "%c", work->statuso.st_blocks,  delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%ld%c",              work->statuso.st_atime,   delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%ld%c",              work->statuso.st_mtime,   delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%ld%c",              work->statuso.st_ctime,   delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%s%c",               work->linkname,           delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%s%c",               work->xattr,              delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->crtime,             delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->ossint1,            delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->ossint2,            delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->ossint3,            delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%d%c",               work->ossint4,            delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%s%c",               work->osstext1,           delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%s%c",               work->osstext2,           delim[0]);
+    count += SNPRINTF(buf + count, size - count, "%lld%c",             work->pinode,             delim[0]);
+    count += SNPRINTF(buf + count, size - count, "\n");
 
     return count;
 }

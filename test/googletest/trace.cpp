@@ -156,18 +156,13 @@ static int to_string(char * line, const size_t size, struct work * work) {
                     work->pinode,             delim[0]);
 }
 
-TEST(trace, worktofile) {
+TEST(trace, worktobuf) {
     struct work * work = get_work();
     ASSERT_NE(work, nullptr);
 
     // write a known struct to a file
-    char buf[4096];
-    FILE * file = fmemopen(buf, sizeof(buf), "w");
-    ASSERT_NE(file, nullptr);
-
-    const int written = worktofile(file, delim, work);
-    fclose(file);
-
+    char buf[STANZA_SIZE];
+    const int written = worktobuf(buf, sizeof(buf), delim, work);
     ASSERT_GT(written, 0);
     ASSERT_LT(written, (int) sizeof(buf));
 
