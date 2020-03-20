@@ -305,8 +305,7 @@ struct work * validate_inputs() {
     }
 
     // check if the source directory can be accessed
-    static mode_t PERMS = R_OK | X_OK;
-    if ((root->statuso.st_mode & PERMS) != PERMS) {
+    if (access(root->name, R_OK | X_OK) != 0) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 in.name, strerror(errno));
         free(root);
