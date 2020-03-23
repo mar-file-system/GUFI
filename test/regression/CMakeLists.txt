@@ -65,6 +65,9 @@ cmake_minimum_required(VERSION 3.0.0)
 # copy test scripts into the test directory within the build directory
 # list these explicitly to prevent random garbage from getting in
 foreach(FILE
+    gufi_query.expected
+    gufi_query.sh
+
     setup.sh
     common.py
 
@@ -81,6 +84,9 @@ foreach(FILE
     gufi_stats.sh)
   configure_file(${FILE} ${FILE} COPYONLY)
 endforeach()
+
+add_test(NAME gufi_query COMMAND gufi_query.sh)
+set_tests_properties(gufi_query PROPERTIES LABELS regression)
 
 add_test(NAME gufi_find COMMAND gufi_find.sh)
 set_tests_properties(gufi_find PROPERTIES LABELS regression)
