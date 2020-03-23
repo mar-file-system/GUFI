@@ -27,7 +27,7 @@ function cleanup {
 trap cleanup EXIT
 
 # create the original tree
-${ORIGIN}/generatetree -d "${src}"
+${ORIGIN}/generatetree "${src}"
 
 # read it into GUFI
 ${ORIGIN}/../${SRC}/gufi_dir2index "${src}" "${dst}"
