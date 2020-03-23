@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,33 +62,53 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+set -e
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(FILE
-    setup.sh
-    common.py
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+# gufi_ls wrapper
+GUFI_LS="${ROOT}/test/regression/gufi_ls.py"
 
-    gufi_ls.expected
-    gufi_ls.py
-    gufi_ls.sh
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh)
-  configure_file(${FILE} ${FILE} COPYONLY)
-endforeach()
+function cleanup {
+    rm -rf "${SRCDIR}" "${INDEXROOT}"
+}
 
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
+# trap cleanup EXIT
 
-add_test(NAME gufi_ls COMMAND gufi_ls.sh)
-set_tests_properties(gufi_ls PROPERTIES LABELS regression)
+cleanup
 
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+
+OUTPUT="gufi_ls.out"
+
+function replace() {
+    echo "$@" | sed "s/[[:space:]]*$//g; s/${GUFI_LS//\//\\/}/gufi_ls/g; s/.*${INDEXROOT//\//\\/}\\/$/./g; s/${INDEXROOT//\//\\/}\\///g"
+}
+
+function run() {
+    replace "$ $@"
+    replace "$($@)"
+    echo
+}
+
+(
+run "${GUFI_LS}"
+run "${GUFI_LS} -a"
+run "${GUFI_LS} -h"
+run "${GUFI_LS} -R"
+run "${GUFI_LS} -r"
+run "${GUFI_LS} -s"
+run "${GUFI_LS} -ar"
+run "${GUFI_LS} -arR"
+
+) | tee "${OUTPUT}"
+
+diff -b ${ROOT}/test/regression/gufi_ls.expected "${OUTPUT}"
+rm "${OUTPUT}"
