@@ -71,4 +71,5 @@ if (CMAKE_CXX_COMPILER)
   target_link_libraries(googletests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 
   add_test(NAME googletests COMMAND googletests)
+set_tests_properties(googletests PROPERTIES LABELS unit)
 endif()
