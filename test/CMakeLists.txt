@@ -68,9 +68,6 @@ add_subdirectory(regression)
 # make sure unit tests work first
 add_subdirectory(googletest)
 
-# simple create known tree and query test
-add_test(NAME verifyknowntree COMMAND verifyknowntree)
-
 # copy test scripts into the test directory within the build directory
 # list these explicitly to prevent random garbage from getting in
 foreach(TEST
@@ -101,8 +98,7 @@ foreach(TEST
     runuidgidummary
     runuserfilespacehog
     runuserfilespacehogusesummary
-    testdir.tar
-    verifyknowntree)
+    testdir.tar)
   # copy the script into the build directory for easy access
   configure_file(${TEST} ${TEST} COPYONLY)
 endforeach()
