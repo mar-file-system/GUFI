@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,27 +62,13 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import imp
+import os
+import sys
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    setup.sh
-    common.py
+import common
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+gufi_find = imp.load_source('gufi_find', os.path.join(common.root, 'scripts', 'gufi_find'))
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
-
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
-
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+if __name__=='__main__':
+    sys.exit(gufi_find.run(sys.argv, common.config_path))

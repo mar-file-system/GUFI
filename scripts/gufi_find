@@ -448,9 +448,10 @@ def build_expression_parser():
     parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
     return parser
 
-if __name__=='__main__':
+# argv[0] should be the command name
+def run(argv, config_path):
     # find and parse the configuration file first
-    config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
+    config = gufi_config.server_config(config_path)
 
     expression_parser = build_expression_parser()
 
@@ -466,30 +467,30 @@ if __name__=='__main__':
         # 'D': False, # don't even handle here
         # 'O': False, # don't even handle here
     }
-    while (i < len(sys.argv)) and (sys.argv[i][0] == '-'):
-        if '-help' in sys.argv[i]:
+    while (i < len(argv)) and (argv[i][0] == '-'):
+        if '-help' in argv[i]:
             help(expression_parser)
 
         # must be separate arguments
         # if any flags are not H, L, or P, immediately treat the rest of the flags as expression flags
-        if sys.argv[i][1:] not in ['H', 'L', 'P']:
+        if argv[i][1:] not in ['H', 'L', 'P']:
             at_expressions = True
             break
 
-        if sys.argv[i][1:] in ['H', 'L']:
-            sys.stderr.write('Found flag {}. Ignoring.\n'.format(sys.argv[i][1:]))
+        if argv[i][1:] in ['H', 'L']:
+            sys.stderr.write('Found flag {}. Ignoring.\n'.format(argv[i][1:]))
         else:
-            real[sys.argv[i][1:]] = True
+            real[argv[i][1:]] = True
 
         i += 1
 
-    if at_expressions and (sys.argv[i][0] != '-'):
-        raise exceptions.RuntimeError('gufi_find: paths must preceed expression: {}'.format(sys.argv[i - 1]))
+    if at_expressions and (argv[i][0] != '-'):
+        raise exceptions.RuntimeError('gufi_find: paths must preceed expression: {}'.format(argv[i - 1]))
 
     # parse paths
     paths = []
-    while (i < len(sys.argv)) and (sys.argv[i][0] != '-'):
-        paths += [sys.argv[i]]
+    while (i < len(argv)) and (argv[i][0] != '-'):
+        paths += [argv[i]]
         i += 1
     if len(paths) == 0:
         paths = ['']
@@ -498,7 +499,7 @@ if __name__=='__main__':
     paths = [os.path.normpath(os.path.sep.join([config['IndexRoot'], path])) for path in paths]
 
     # parse expressions without the 'real' and path arguments
-    args, unknown = expression_parser.parse_known_args(sys.argv[i:])
+    args, unknown = expression_parser.parse_known_args(argv[i:])
 
     if args.help:
         help(expression_parser)
@@ -578,10 +579,10 @@ if __name__=='__main__':
     if args.delim:
         query_cmd += ['-d', args.delim]
 
-    if args.maxdepth:
+    if args.maxdepth is not None:
         query_cmd += ['-z', str(args.maxdepth)]
 
-    if args.mindepth:
+    if args.mindepth is not None:
         query_cmd += ['-y', str(args.mindepth)]
 
     if args.fprint:
@@ -593,4 +594,7 @@ if __name__=='__main__':
     query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
     query.communicate()                         # block until query finishes
 
-    sys.exit(query.returncode)
+    return query.returncode
+
+if __name__=='__main__':
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_CONFIG_PATH))

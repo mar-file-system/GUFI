@@ -66,10 +66,9 @@ import imp
 import os
 import sys
 
-file_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(file_dir)
-root_dir = os.path.dirname(parent_dir)
-gufi_stats = imp.load_source('gufi_stats', os.path.join(root_dir, 'scripts', 'gufi_stats'))
+import common
+
+gufi_stats = imp.load_source('gufi_stats', os.path.join(common.root, 'scripts', 'gufi_stats'))
 
 if __name__=='__main__':
-    sys.exit(gufi_stats.run(sys.argv, "config.test"))
+    sys.exit(gufi_stats.run(sys.argv, common.config_path))

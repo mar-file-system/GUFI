@@ -69,11 +69,12 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-export PATH=${ROOT}/scripts:${PATH}
-export PYTHONPATH=${ROOT}/scripts:${PYTHONPATH}
-
 # gufi_stats wrapper
 GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
+
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 
 function cleanup {
     rm -rf "${SRCDIR}" "${INDEXROOT}"
@@ -83,9 +84,7 @@ trap cleanup EXIT
 
 cleanup
 
-SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
-${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 OUTPUT="gufi_stats.out"
 
