@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,77 +62,101 @@
 
 
 
-#
-# This script generates a fixed tree with the following structure:
-#
-# ${DIR}/
-# |---- 1KB
-# |---- 1MB
-# |---- directory/
-#       |---- executable
-#       |---- readonly
-#       |---- writable
-#       |---- subdirectory/
-#             |---- directory_symlink -> subdirectory
-#             |---- repeat_name
-# |---- empty_file
-# |---- file_symlink -> 1KB
-# |---- .hidden
-# |---- leaf_directory/
-#       |---- leaf_file1
-#       |---- leaf_file2
-# |---- old_file
-# |---- repeat_name
-# |---- unusual, name?#
-#
-
 set -e
 
-if [[ "$#" -lt 1 ]]
-then
-    echo "Syntax: $0 directory"
-    return 1
-fi
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-DIR="$1"
+export PATH=${ROOT}/scripts:${PATH}
+export PYTHONPATH=${ROOT}/scripts:${PYTHONPATH}
 
-if [[ ! -d "${DIR}" ]]
-then
-    mkdir -p "${DIR}"
-fi
+# gufi_stats wrapper
+GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
 
-if [[ "$(find ${DIR} -mindepth 1 -maxdepth 1)" -ne "" ]]
-then
-    echo "Warning: Directory ${DIR} is not empty"
-fi
+function cleanup {
+    rm -rf "${SRCDIR}" "${INDEXROOT}"
+}
 
-# generate tree
-cd ${DIR}
-touch empty_file
-truncate -s 1024 1KB
-truncate -s 1048576 1MB
-touch "unusual, name?#"
-touch .hidden
-touch repeat_name
-ln -f -s $(realpath 1KB) file_symlink
-touch -amt 197001010000.00 old_file
-mkdir directory
+trap cleanup EXIT
 
-cd directory
-touch readonly
-chmod 444 readonly
-touch writable
-chmod 666 writable
-touch executable
-chmod 777 executable
-mkdir subdirectory
+cleanup
 
-cd subdirectory
-ln -f -s $(realpath .) directory_symlink
-touch repeat_name
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
-cd ../..
-mkdir leaf_directory
-cd leaf_directory
-touch leaf_file1
-touch leaf_file2
+OUTPUT="gufi_stats.out"
+
+function replace() {
+    echo "$@" | sed "s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/$(id -un)/1001/g"
+}
+
+# function root() {
+#     replace "# $@"
+#     output=$(sudo -E env "PATH=$PATH" env "PYTHONPATH=$PYTHONPATH" bash -c "$@")
+#     replace "${output}"
+#     echo
+# }
+
+function user() {
+    replace "$ $@"
+    replace "$($@)"
+    echo
+}
+
+(
+user "${GUFI_STATS}    depth"
+user "${GUFI_STATS} -r depth"
+
+user "${GUFI_STATS}    filesize"
+user "${GUFI_STATS} -r filesize"
+
+user "${GUFI_STATS}    filecount"
+user "${GUFI_STATS} -r filecount"
+
+user "${GUFI_STATS}    linkcount"
+user "${GUFI_STATS} -r linkcount"
+
+user "${GUFI_STATS}    total-filesize"
+user "${GUFI_STATS} -c total-filesize"
+
+user "${GUFI_STATS}    total-filecount"
+user "${GUFI_STATS} -c total-filecount"
+
+user "${GUFI_STATS}    total-linkcount"
+user "${GUFI_STATS} -c total-linkcount"
+
+user "${GUFI_STATS}    dircount"
+user "${GUFI_STATS} -r dircount"
+
+user "${GUFI_STATS}    total-dircount"
+user "${GUFI_STATS} -c total-dircount"
+
+user "${GUFI_STATS}    leaf-dirs"
+user "${GUFI_STATS} -r leaf-dirs"
+
+user "${GUFI_STATS}    leaf-depth"
+user "${GUFI_STATS} -r leaf-depth"
+
+user "${GUFI_STATS}    leaf-files"
+user "${GUFI_STATS} -r leaf-files"
+
+user "${GUFI_STATS}    total-leaf-files"
+user "${GUFI_STATS} -c total-leaf-files"
+
+user "${GUFI_STATS}    median-leaf-files"
+
+user "${GUFI_STATS}    files-per-level"
+user "${GUFI_STATS} -c files-per-level"
+
+user "${GUFI_STATS}    links-per-level"
+user "${GUFI_STATS} -c links-per-level"
+
+user "${GUFI_STATS}    dirs-per-level"
+user "${GUFI_STATS} -c dirs-per-level"
+) | tee "${OUTPUT}"
+
+diff -b ${ROOT}/test/regression/gufi_stats.expected "${OUTPUT}"
+rm "${OUTPUT}"

@@ -1,0 +1,127 @@
+$ gufi_stats    depth
+0
+
+$ gufi_stats -r depth
+. 0
+directory 1
+directory/subdirectory 2
+leaf_directory 1
+
+$ gufi_stats    filesize
+1049600
+
+$ gufi_stats -r filesize
+. 1049600
+directory 0
+directory/subdirectory 0
+leaf_directory 0
+
+$ gufi_stats    filecount
+7
+
+$ gufi_stats -r filecount
+. 7
+directory 3
+directory/subdirectory 1
+leaf_directory 2
+
+$ gufi_stats    linkcount
+1
+
+$ gufi_stats -r linkcount
+. 1
+directory 0
+directory/subdirectory 1
+leaf_directory 0
+
+$ gufi_stats    total-filesize
+1001 1049600
+
+$ gufi_stats -c total-filesize
+1049600
+
+$ gufi_stats    total-filecount
+1001 13
+
+$ gufi_stats -c total-filecount
+13
+
+$ gufi_stats    total-linkcount
+1001 2
+
+$ gufi_stats -c total-linkcount
+2
+
+$ gufi_stats    dircount
+2
+
+$ gufi_stats -r dircount
+. 2
+directory 1
+directory/subdirectory 0
+leaf_directory 0
+
+$ gufi_stats    total-dircount
+1001 3
+
+$ gufi_stats -c total-dircount
+3
+
+$ gufi_stats    leaf-dirs
+leaf_directory
+
+$ gufi_stats -r leaf-dirs
+directory/subdirectory
+leaf_directory
+
+$ gufi_stats    leaf-depth
+leaf_directory 1
+
+$ gufi_stats -r leaf-depth
+directory/subdirectory 2
+leaf_directory 1
+
+$ gufi_stats    leaf-files
+leaf_directory 2
+
+$ gufi_stats -r leaf-files
+directory/subdirectory 1
+leaf_directory 2
+
+$ gufi_stats    total-leaf-files
+1001 3
+
+$ gufi_stats -c total-leaf-files
+3
+
+$ gufi_stats    median-leaf-files
+1.5
+
+$ gufi_stats    files-per-level
+1001 0 7
+1001 1 5
+1001 2 1
+
+$ gufi_stats -c files-per-level
+0 7
+1 5
+2 1
+
+$ gufi_stats    links-per-level
+1001 0 1
+1001 2 1
+
+$ gufi_stats -c links-per-level
+0 1
+2 1
+
+$ gufi_stats    dirs-per-level
+1001 0 1
+1001 1 2
+1001 2 1
+
+$ gufi_stats -c dirs-per-level
+0 1
+1 2
+2 1
+

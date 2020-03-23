@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python2
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,77 +62,14 @@
 
 
 
-#
-# This script generates a fixed tree with the following structure:
-#
-# ${DIR}/
-# |---- 1KB
-# |---- 1MB
-# |---- directory/
-#       |---- executable
-#       |---- readonly
-#       |---- writable
-#       |---- subdirectory/
-#             |---- directory_symlink -> subdirectory
-#             |---- repeat_name
-# |---- empty_file
-# |---- file_symlink -> 1KB
-# |---- .hidden
-# |---- leaf_directory/
-#       |---- leaf_file1
-#       |---- leaf_file2
-# |---- old_file
-# |---- repeat_name
-# |---- unusual, name?#
-#
+import imp
+import os
+import sys
 
-set -e
+file_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(file_dir)
+root_dir = os.path.dirname(parent_dir)
+gufi_stats = imp.load_source('gufi_stats', os.path.join(root_dir, 'scripts', 'gufi_stats'))
 
-if [[ "$#" -lt 1 ]]
-then
-    echo "Syntax: $0 directory"
-    return 1
-fi
-
-DIR="$1"
-
-if [[ ! -d "${DIR}" ]]
-then
-    mkdir -p "${DIR}"
-fi
-
-if [[ "$(find ${DIR} -mindepth 1 -maxdepth 1)" -ne "" ]]
-then
-    echo "Warning: Directory ${DIR} is not empty"
-fi
-
-# generate tree
-cd ${DIR}
-touch empty_file
-truncate -s 1024 1KB
-truncate -s 1048576 1MB
-touch "unusual, name?#"
-touch .hidden
-touch repeat_name
-ln -f -s $(realpath 1KB) file_symlink
-touch -amt 197001010000.00 old_file
-mkdir directory
-
-cd directory
-touch readonly
-chmod 444 readonly
-touch writable
-chmod 666 writable
-touch executable
-chmod 777 executable
-mkdir subdirectory
-
-cd subdirectory
-ln -f -s $(realpath .) directory_symlink
-touch repeat_name
-
-cd ../..
-mkdir leaf_directory
-cd leaf_directory
-touch leaf_file1
-touch leaf_file2
+if __name__=='__main__':
+    sys.exit(gufi_stats.run(sys.argv, "config.test"))

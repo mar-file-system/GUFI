@@ -62,6 +62,9 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
+# add regression tests
+add_subdirectory(regression)
+
 # make sure unit tests work first
 add_subdirectory(googletest)
 
@@ -75,9 +78,6 @@ foreach(TEST
     dfw2gufitest
     generatetree
     gitest.py
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh
     gufitest.py
     robinhoodin
     runbffuse
