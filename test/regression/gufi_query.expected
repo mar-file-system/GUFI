@@ -1,0 +1,128 @@
+$ gufi_query -d " " -S "SELECT name FROM summary" prefix.gufi
+directory
+leaf_directory
+prefix
+subdirectory
+
+$ gufi_query -d " " -E SELECT name FROM entries prefix.gufi
+.hidden
+1KB
+1MB
+directory_symlink
+empty_file
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
+$ gufi_query -d " " -S "SELECT name FROM summary" -E "SELECT name FROM entries" prefix.gufi
+.hidden
+1KB
+1MB
+directory
+directory_symlink
+empty_file
+executable
+file_symlink
+leaf_directory
+leaf_file1
+leaf_file2
+old_file
+prefix
+readonly
+repeat_name
+repeat_name
+subdirectory
+unusual, name?#
+writable
+
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() || '/' || name FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" prefix.gufi
+.
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual, name?#
+
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() || '/' || name FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" prefix.gufi
+unusual, name?#
+repeat_name
+old_file
+leaf_directory/leaf_file2
+leaf_directory/leaf_file1
+leaf_directory
+file_symlink
+empty_file
+directory/writable
+directory/subdirectory/repeat_name
+directory/subdirectory/directory_symlink
+directory/subdirectory
+directory/readonly
+directory/executable
+directory
+1MB
+1KB
+.hidden
+.
+
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -S "INSERT INTO out SELECT path() || '/' || name, size FROM summary" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" prefix.gufi
+empty_file
+.hidden
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual, name?#
+leaf_directory
+file_symlink
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory
+.
+1KB
+1MB
+
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -S "INSERT INTO out SELECT path() || '/' || name, size FROM summary" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" prefix.gufi
+1MB
+1KB
+.
+directory
+directory/subdirectory/directory_symlink
+directory/subdirectory
+file_symlink
+leaf_directory
+unusual, name?#
+repeat_name
+old_file
+leaf_directory/leaf_file2
+leaf_directory/leaf_file1
+directory/writable
+directory/subdirectory/repeat_name
+directory/readonly
+directory/executable
+.hidden
+empty_file
+
