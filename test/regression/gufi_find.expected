@@ -1,0 +1,127 @@
+$ gufi_find
+empty_file 
+1KB 
+1MB 
+unusual, name?# 
+.hidden 
+repeat_name 
+file_symlink 
+old_file 
+directory/readonly 
+directory/writable 
+directory/executable 
+leaf_directory/leaf_file1 
+leaf_directory/leaf_file2 
+directory/subdirectory/directory_symlink 
+directory/subdirectory/repeat_name 
+
+$ gufi_find -empty
+empty_file 
+
+$ gufi_find -type d
+. 
+directory 
+leaf_directory 
+directory/subdirectory 
+
+$ gufi_find -type f
+empty_file 
+1KB 
+1MB 
+unusual, name?# 
+.hidden 
+repeat_name 
+old_file 
+directory/readonly 
+directory/writable 
+directory/executable 
+leaf_directory/leaf_file1 
+leaf_directory/leaf_file2 
+directory/subdirectory/repeat_name 
+
+$ gufi_find -type l
+file_symlink 
+directory/subdirectory/directory_symlink 
+
+$ gufi_find -readable
+empty_file 
+1KB 
+1MB 
+unusual, name?# 
+.hidden 
+repeat_name 
+file_symlink 
+old_file 
+directory/readonly 
+directory/writable 
+directory/executable 
+leaf_directory/leaf_file1 
+leaf_directory/leaf_file2 
+directory/subdirectory/directory_symlink 
+directory/subdirectory/repeat_name 
+
+$ gufi_find -writable
+empty_file 
+1KB 
+1MB 
+unusual, name?# 
+.hidden 
+repeat_name 
+file_symlink 
+old_file 
+directory/writable 
+directory/executable 
+leaf_directory/leaf_file1 
+leaf_directory/leaf_file2 
+directory/subdirectory/directory_symlink 
+directory/subdirectory/repeat_name 
+
+$ gufi_find -executable
+file_symlink 
+directory/executable 
+directory/subdirectory/directory_symlink 
+
+$ gufi_find -mindepth 2
+directory/subdirectory/directory_symlink 
+directory/subdirectory/repeat_name 
+
+$ gufi_find -maxdepth 0
+empty_file 
+1KB 
+1MB 
+unusual, name?# 
+.hidden 
+repeat_name 
+file_symlink 
+old_file 
+
+$ gufi_find -size 1c
+unusual, name?# 
+.hidden 
+repeat_name 
+old_file 
+directory/readonly 
+directory/writable 
+directory/executable 
+leaf_directory/leaf_file1 
+leaf_directory/leaf_file2 
+directory/subdirectory/repeat_name 
+
+$ gufi_find -size=-1c
+empty_file 
+
+$ gufi_find -size +1c
+1KB 
+1MB 
+file_symlink 
+directory/subdirectory/directory_symlink 
+
+$ gufi_find -size +1024c
+1MB 
+
+$ gufi_find -size +1 -size=-3
+1KB 
+
+$ gufi_find -size 2048
+1MB 
+

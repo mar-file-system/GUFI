@@ -110,28 +110,29 @@ cd ${DIR}
 touch empty_file
 truncate -s 1024 1KB
 truncate -s 1048576 1MB
-touch "unusual, name?#"
-touch .hidden
-touch repeat_name
+truncate -s 1 "unusual, name?#"
+truncate -s 1 .hidden
+truncate -s 1 repeat_name
 ln -f -s $(realpath 1KB) file_symlink
+truncate -s 1 old_file
 touch -amt 197001010000.00 old_file
 mkdir directory
 
 cd directory
-touch readonly
+truncate -s 1 readonly
 chmod 444 readonly
-touch writable
+truncate -s 1 writable
 chmod 666 writable
-touch executable
+truncate -s 1 executable
 chmod 777 executable
 mkdir subdirectory
 
 cd subdirectory
 ln -f -s $(realpath .) directory_symlink
-touch repeat_name
+truncate -s 1 repeat_name
 
 cd ../..
 mkdir leaf_directory
 cd leaf_directory
-touch leaf_file1
-touch leaf_file2
+truncate -s 1 leaf_file1
+truncate -s 1 leaf_file2

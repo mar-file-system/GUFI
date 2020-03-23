@@ -8,13 +8,13 @@ directory/subdirectory 2
 leaf_directory 1
 
 $ gufi_stats    filesize
-1049600
+1049604
 
 $ gufi_stats -r filesize
-. 1049600
-directory 0
-directory/subdirectory 0
-leaf_directory 0
+. 1049604
+directory 3
+directory/subdirectory 1
+leaf_directory 2
 
 $ gufi_stats    filecount
 7
@@ -35,10 +35,10 @@ directory/subdirectory 1
 leaf_directory 0
 
 $ gufi_stats    total-filesize
-1001 1049600
+1001 1049610
 
 $ gufi_stats -c total-filesize
-1049600
+1049610
 
 $ gufi_stats    total-filecount
 1001 13

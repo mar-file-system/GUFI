@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,27 +62,60 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+set -e
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    setup.sh
-    common.py
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+# gufi_find wrapper
+GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
+function cleanup {
+    rm -rf "${SRCDIR}" "${INDEXROOT}"
+}
 
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+trap cleanup EXIT
+
+cleanup
+
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+
+OUTPUT="gufi_find.out"
+
+function replace() {
+    echo "$@" | sed "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/$(id -un)/1001/g"
+}
+
+function run() {
+    replace "$ $@"
+    replace "$($@)"
+    echo
+}
+
+(
+run "${GUFI_FIND}"
+run "${GUFI_FIND} -empty"
+run "${GUFI_FIND} -type d"
+run "${GUFI_FIND} -type f"
+run "${GUFI_FIND} -type l"
+run "${GUFI_FIND} -readable"
+run "${GUFI_FIND} -writable"
+run "${GUFI_FIND} -executable"
+run "${GUFI_FIND} -mindepth 2"
+run "${GUFI_FIND} -maxdepth 0"
+run "${GUFI_FIND} -size 1c"
+run "${GUFI_FIND} -size=-1c"
+run "${GUFI_FIND} -size +1c"
+run "${GUFI_FIND} -size +1024c"
+run "${GUFI_FIND} -size +1 -size=-3" # 512 < size < 1536
+run "${GUFI_FIND} -size 2048"        # 512 * 2048 = 1MB
+) | tee "${OUTPUT}"
+
+diff -b ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
+rm "${OUTPUT}"

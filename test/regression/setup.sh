@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,27 +62,31 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+# source this file in regression test scripts
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    setup.sh
-    common.py
+if [[ "$#" -lt 3 ]]
+then
+    echo "Syntax: $0 root srcdir indexroot"
+    exit 1
+fi
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+ROOT="$1"
+SRCDIR="$2"
+INDEXROOT="$3"
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+export PATH=${ROOT}/scripts:${PATH}
+export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
 
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
+CONFIG="config.test"
 
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+# generate a fake config file
+echo "Threads=1" > ${CONFIG}
+echo "Exec=${ROOT}/src/gufi_query" >> ${CONFIG}
+echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
+chmod 666 ${CONFIG}
+
+# generate the tree
+${ROOT}/test/generatetree "${SRCDIR}"
+
+# generate the index
+${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"
