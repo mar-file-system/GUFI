@@ -973,7 +973,7 @@ def per_level(config, args, where, type):
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['level', 'SUM(count)'],
                                       [args.inmemory_name],
-                                      ['level <> 0', 'count <> 0'],
+                                      ['count <> 0'],
                                       group_by,
                                       order_by,
                                       args.num_results,
