@@ -98,15 +98,15 @@ index_dirs=$(find "${INDEXROOT}/" -type d -printf "%p\n" | sed "s/${INDEXROOT}/$
 src_entries=$(find "${SRCDIR}/" -not -type d -printf "%p\n" | sort)
 index_entries=$(${ROOT}/src/gufi_query -d " " -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
 
-src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort | awk '{ printf "        " $0 "\n" }')
-index_combined=$(        (echo "${index_dirs}" ; echo "${index_entries}") | sort | awk '{ printf "        " $0 "\n" }')
+src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
+index_combined=$((echo "${index_dirs}" ; echo "${index_entries}") | sort)
 
 echo "Index up to level ${level}:"
 echo "    Source Directory:"
-echo "${src_combined}"
+echo "${src_combined}" | awk '{ printf "        " $0 "\n" }'
 echo
 echo "    GUFI Index:"
-echo "${index_combined}"
+echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
 echo
 
 diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
@@ -128,15 +128,15 @@ do
         src_entries=$(find "${SRCDIR}/" -maxdepth $((${level} + 1)) -not -type d -printf "%p\n" | sort)
         index_entries=$(${ROOT}/src/gufi_query -d " " -z ${level} -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
 
-        src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort | awk '{ printf "        " $0 "\n" }')
-        index_combined=$(        (echo "${index_dirs}" ; echo "${index_entries}") | sort | awk '{ printf "        " $0 "\n" }')
+        src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
+        index_combined=$((echo "${index_dirs}" ; echo "${index_entries}") | sort)
 
         echo "Index up to level ${level}:"
         echo "    Source Directory:"
-        echo "${src_combined}"
+        echo "${src_combined}" | awk '{ printf "        " $0 "\n" }'
         echo
         echo "    GUFI Index:"
-        echo "${index_combined}"
+        echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
         echo
 
         diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"

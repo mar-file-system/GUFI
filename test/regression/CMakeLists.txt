@@ -71,6 +71,9 @@ foreach(FILE
     gufi_dir2trace.expected
     gufi_dir2trace.sh
 
+    gufi_trace2index.expected
+    gufi_trace2index.sh
+
     gufi_query.expected
     gufi_query.sh
 

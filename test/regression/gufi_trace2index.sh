@@ -70,64 +70,60 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
 GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
+GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
 
-# output paths
+# output directories
 SRCDIR="prefix"
 TRACE="${SRCDIR}.trace"
+INDEXROOT="${SRCDIR}.gufi"
 
 # trace delimiter
 DELIM="|"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}.*"
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${INDEXROOT}"
 }
 
-# trap cleanup EXIT
+trap cleanup EXIT
 
-OUTPUT="gufi_dir2trace.out"
+cleanup
+
+OUTPUT="gufi_trace2index.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
 }
 
 (
 cleanup
 
 # generate the tree
+replace "$ generatetree ${SRCDIR}"
 ${ROOT}/test/regression/generatetree "${SRCDIR}"
+echo
 
 # generate the trace
 replace "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
 ${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}"
-
-# count output files
-expected=2
-found="$(find ${TRACE}.* | wc -l)"
-echo "Expecting ${expected} trace files. Found ${found}."
-
-# count lines
 cat ${TRACE}.* > "${TRACE}"
-trace_lines="$(cat ${TRACE} | wc -l)"
-contents=$(find "${SRCDIR}/" -printf "%p\n")
-content_lines=$(echo "${contents}" | wc -l)
-echo "Expecting ${content_lines} lines. Got ${trace_lines}."
+echo
 
-# count separators
-columns=$(sed "s/[^${DELIM}]//g" "${TRACE}" | awk '{ print length }' | sort | uniq)
-echo "Expecting 23 columns per row. Got ${columns}."
+# generate the index
+replace "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" |& sed '1d;$d'
+echo
 
-# compare names
-src=$(find "${SRCDIR}/" -printf "%p\n" | sort)
-lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sort)
+# compare contents
+src_contents=$(find "${SRCDIR}/" -printf "%p\n" | sort)
+index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path() || '/' || name FROM summary" -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
 
 echo "Source Directory:"
-echo "${src}"   | awk '{ print "    " $1 }'
-echo "Trace File:"
-echo "${lines}" | awk '{ print "    " $1 }'
-
-diff <(echo "${src}") <(echo "${lines}") && echo "No difference"
-
+echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'
+echo
+echo "GUFI Index:"
+echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
+echo
 ) |& tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
+diff -b ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

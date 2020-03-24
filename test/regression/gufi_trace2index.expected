@@ -1,0 +1,51 @@
+$ generatetree prefix
+
+$ gufi_dir2trace -d "|" -n 2 -x -o "prefix.trace" "prefix"
+
+$ gufi_trace2index -d "|" "prefix.trace" "prefix.gufi"
+Files: 15
+Dirs:  4 (0 empty)
+Total: 19
+
+Source Directory:
+    prefix/
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_file
+    prefix/file_symlink
+    prefix/.hidden
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual, name?#
+
+GUFI Index:
+    prefix/
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_file
+    prefix/file_symlink
+    prefix/.hidden
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual, name?#
+
