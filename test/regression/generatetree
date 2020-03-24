@@ -115,7 +115,7 @@ truncate -s 1 .hidden
 truncate -s 1 repeat_name
 ln -f -s $(realpath 1KB) file_symlink
 truncate -s 1 old_file
-touch -amt 197001010000.00 old_file
+TZ=UTC touch -amt 197001010000 old_file
 mkdir directory
 
 cd directory
