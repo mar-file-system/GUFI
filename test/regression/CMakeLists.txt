@@ -68,6 +68,7 @@ foreach(FILE
     gufi_query.expected
     gufi_query.sh
 
+    generatetree
     setup.sh
     common.py
 
