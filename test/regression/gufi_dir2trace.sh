@@ -97,7 +97,7 @@ cleanup
 ${ROOT}/test/regression/generatetree "${SRCDIR}"
 
 # generate the trace
-replace "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
+replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
 ${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}"
 
 # count output files
