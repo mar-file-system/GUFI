@@ -76,14 +76,6 @@ GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
 SRCDIR="prefix"
 INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 
-function cleanup {
-    rm -rf "${SRCDIR}" "${INDEXROOT}"
-}
-
-trap cleanup EXIT
-
-cleanup
-
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 OUTPUT="gufi_stats.out"

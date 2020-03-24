@@ -73,11 +73,18 @@ fi
 ROOT="$1"
 SRCDIR="$2"
 INDEXROOT="$3"
+CONFIG="config.test"
+
+function cleanup {
+    rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
+}
+
+trap cleanup EXIT
+
+cleanup
 
 export PATH=${ROOT}/scripts:${PATH}
 export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
-
-CONFIG="config.test"
 
 # generate a fake config file
 echo "Threads=1" > ${CONFIG}
