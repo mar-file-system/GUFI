@@ -1,0 +1,45 @@
+gufi_dir2trace -d "|" -n 2 -x -o "prefix.trace" "prefix"
+Expecting 2 trace files. Found 2.
+Expecting 19 lines. Got 19.
+Expecting 23 columns per row. Got 23.
+Source Directory:
+    prefix/
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_file
+    prefix/file_symlink
+    prefix/.hidden
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual,
+Trace File:
+    prefix/
+    prefix/1KB
+    prefix/1MB
+    prefix/directory
+    prefix/directory/executable
+    prefix/directory/readonly
+    prefix/directory/subdirectory
+    prefix/directory/subdirectory/directory_symlink
+    prefix/directory/subdirectory/repeat_name
+    prefix/directory/writable
+    prefix/empty_file
+    prefix/file_symlink
+    prefix/.hidden
+    prefix/leaf_directory
+    prefix/leaf_directory/leaf_file1
+    prefix/leaf_directory/leaf_file2
+    prefix/old_file
+    prefix/repeat_name
+    prefix/unusual,
+No difference

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +62,72 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+set -e
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(FILE
-    gufi_dir2index.expected
-    gufi_dir2index.sh
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-    gufi_dir2trace.expected
-    gufi_dir2trace.sh
+GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
 
-    gufi_query.expected
-    gufi_query.sh
+# output paths
+SRCDIR="prefix"
+TRACE="${SRCDIR}.trace"
 
-    generatetree
-    setup.sh
-    common.py
+# trace delimiter
+DELIM="|"
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+function cleanup {
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}.*"
+}
 
-    gufi_ls.expected
-    gufi_ls.py
-    gufi_ls.sh
+# trap cleanup EXIT
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh
+OUTPUT="gufi_dir2trace.out"
 
-    gufi_stat.expected
-    gufi_stat.sh
-)
-  configure_file(${FILE} ${FILE} COPYONLY)
-endforeach()
+function replace() {
+echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+}
 
-add_test(NAME gufi_dir2index COMMAND gufi_dir2index.sh)
-set_tests_properties(gufi_dir2index PROPERTIES LABELS regression)
+(
+cleanup
 
-add_test(NAME gufi_dir2trace COMMAND gufi_dir2trace.sh)
-set_tests_properties(gufi_dir2trace PROPERTIES LABELS regression)
+# generate the tree
+${ROOT}/test/regression/generatetree "${SRCDIR}"
 
-add_test(NAME gufi_query COMMAND gufi_query.sh)
-set_tests_properties(gufi_query PROPERTIES LABELS regression)
+# generate the trace
+replace "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
+${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}"
 
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
+# count output files
+expected=2
+found="$(find ${TRACE}.* | wc -l)"
+echo "Expecting ${expected} trace files. Found ${found}."
 
-add_test(NAME gufi_ls COMMAND gufi_ls.sh)
-set_tests_properties(gufi_ls PROPERTIES LABELS regression)
+# count lines
+cat ${TRACE}.* > "${TRACE}"
+trace_lines="$(cat ${TRACE} | wc -l)"
+contents=$(find "${SRCDIR}/" -printf "%p\n")
+content_lines=$(echo "${contents}" | wc -l)
+echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+# count separators
+columns=$(sed "s/[^${DELIM}]//g" "${TRACE}" | awk '{ print length }' | sort | uniq)
+echo "Expecting 23 columns per row. Got ${columns}."
 
-add_test(NAME gufi_stat COMMAND gufi_stat.sh)
-set_tests_properties(gufi_stat PROPERTIES LABELS regression)
+# compare names
+src=$(find "${SRCDIR}/" -printf "%p\n" | sort)
+lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sort)
+
+echo "Source Directory:"
+echo "${src}"   | awk '{ print "    " $1 }'
+echo "Trace File:"
+echo "${lines}" | awk '{ print "    " $1 }'
+
+diff <(echo "${src}") <(echo "${lines}") && echo "No difference"
+
+) |& tee "${OUTPUT}"
+
+diff -b ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
+rm "${OUTPUT}"
