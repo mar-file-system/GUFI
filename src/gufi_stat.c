@@ -121,20 +121,113 @@ int print_callback(void * args, int count, char **data, char **columns) {
     const mode_t mode = atoi(data[6]);
 
     time_t atime = atoi(data[9]);
-    struct tm * atm = localtime(&atime);
+    struct tm atm;
+    localtime_r(&atime, &atm);
     char atime_str[MAXPATH];
 
     time_t mtime = atoi(data[10]);
-    struct tm * mtm = localtime(&mtime);
+    struct tm mtm;
+    localtime_r(&mtime, &mtm);
     char mtime_str[MAXPATH];
 
     time_t ctime = atoi(data[11]);
-    struct tm * ctm = localtime(&ctime);
+    struct tm ctm;
+    localtime_r(&ctime, &ctm);
     char ctime_str[MAXPATH];
 
     while (*f) {
         if (*f != '%') {
-            fwrite(f, sizeof(char), 1, out);
+            /* handle escape sequences */
+            if (*f == '\\') {
+                char escape = '\0';
+                switch (*++f) {
+                    case 'a':
+                        escape = '\x07';
+                        break;
+                    case 'b':
+                        escape = '\x08';
+                        break;
+                    case 'e':
+                        escape = '\x1b';
+                        break;
+                    case 'f':
+                        escape = '\x0c';
+                        break;
+                    case 'n':
+                        escape = '\x0a';
+                        break;
+                    case 'r':
+                        escape = '\x0d';
+                        break;
+                    case 't':
+                        escape = '\x09';
+                        break;
+                    case 'v':
+                        escape = '\x0b';
+                        break;
+                    case '\\':
+                        escape = '\x5c';
+                        break;
+                    case '\'':
+                        escape = '\x27';
+                        break;
+                    case '"':
+                        escape = '\x22';
+                        break;
+                    case '?':
+                        escape = '\x3f';
+                        break;
+                    case 'x':
+                        f++;
+                        if (('0' <= *f) && (*f <= '9')) {
+                            escape = *f - '0';
+                        }
+                        else if (('a' <= *f) && (*f <= 'f')) {
+                            escape = *f - 'a' + 10;
+                        }
+                        else if (('A' <= *f) && (*f <= 'F')) {
+                            escape = *f - 'A' + 10;
+                        }
+                        else {
+                            fprintf(stderr, "gufi_stat: warning: unrecognized escape '\\escape'\n");
+                            f++;
+                            continue;
+                        }
+
+                        f++;
+                        if (('0' <= *f) && (*f <= '9')) {
+                            escape = (escape << 4) | (*f - '0');
+                        }
+                        else if (('a' <= *f) && (*f <= 'f')) {
+                            escape = (escape << 4) | ((*f - 'a') + 10);
+                        }
+                        else if (('A' <= *f) && (*f <= 'F')) {
+                            escape = (escape << 4) | ((*f - 'A') + 10);
+                        }
+                        break;
+                    case '0': case '1':
+                    case '2': case '3':
+                    case '4': case '5':
+                    case '6': case '7':
+                    case '8': case '9':
+                        escape = *f++;
+                        for(int i = 0; i < 2; i++) {
+                            if (!(('0' <= *f) && (*f <= '9'))) {
+                                break;
+                            }
+                            escape = (escape << 3) | *f++;
+                        }
+                        break;
+                    default:
+                        fprintf(stderr, "gufi_stat: warning: unrecognized escape '\\%c'\n", *f++);
+                        continue;
+                        break;
+                }
+                fwrite(&escape, sizeof(char), 1, out);
+            }
+            else {
+                fwrite(f, sizeof(char), 1, out);
+            }
         }
         else {
             f++;
@@ -208,7 +301,6 @@ int print_callback(void * args, int count, char **data, char **columns) {
                             break;
                         case 'd':
                             fprintf(out, line, "directory");
-                            fwrite("directory", sizeof(char), 9, out);
                             break;
                         default:
                             break;
@@ -283,27 +375,27 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, "0");
                     break;
                 case 'x': /* time of last access, human-readable */
-                    strftime(atime_str, MAXPATH, "%F %T %z", atm);
+                    strftime(atime_str, MAXPATH, "%F %T %z", &atm);
                     fprintf(out, line, atime_str);
                     break;
                 case 'X': /* time of last access, seconds since Epoch */
-                    strftime(atime_str, MAXPATH, "%s", atm);
+                    strftime(atime_str, MAXPATH, "%s", &atm);
                     fprintf(out, line, atime_str);
                     break;
                 case 'y': /* time of last modification, human-readable */
-                    strftime(mtime_str, MAXPATH, "%F %T %z", mtm);
+                    strftime(mtime_str, MAXPATH, "%F %T %z", &mtm);
                     fprintf(out, line, mtime_str);
                     break;
                 case 'Y': /* time of last modification, seconds since Epoch */
-                    strftime(mtime_str, MAXPATH, "%s", mtm);
+                    strftime(mtime_str, MAXPATH, "%s", &mtm);
                     fprintf(out, line, mtime_str);
                     break;
                 case 'z': /* time of last change, human-readable */
-                    strftime(ctime_str, MAXPATH, "%F %T %z", ctm);
+                    strftime(ctime_str, MAXPATH, "%F %T %z", &ctm);
                     fprintf(out, line, ctime_str);
                     break;
                 case 'Z': /* time of last change, seconds since Epoch */
-                    strftime(ctime_str, MAXPATH, "%s", ctm);
+                    strftime(ctime_str, MAXPATH, "%s", &ctm);
                     fprintf(out, line, ctime_str);
                     break;
                 default:
