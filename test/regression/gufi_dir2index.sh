@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,53 +62,86 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+set -e
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(FILE
-    gufi_dir2index.expected
-    gufi_dir2index.sh
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-    gufi_query.expected
-    gufi_query.sh
+GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
 
-    generatetree
-    setup.sh
-    common.py
+# output directories
+SRCDIR="prefix"
+INDEXROOT="${SRCDIR}.gufi"
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+function cleanup {
+    rm -rf "${SRCDIR}" "${INDEXROOT}"
+}
 
-    gufi_ls.expected
-    gufi_ls.py
-    gufi_ls.sh
+trap cleanup EXIT
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh
+cleanup
 
-    gufi_stat.expected
-    gufi_stat.sh
-)
-  configure_file(${FILE} ${FILE} COPYONLY)
-endforeach()
+# generate the tree
+${ROOT}/test/regression/generatetree "${SRCDIR}"
 
-add_test(NAME gufi_dir2index COMMAND gufi_dir2index.sh)
-set_tests_properties(gufi_dir2index PROPERTIES LABELS regression)
+OUTPUT="gufi_dir2index.out"
 
-add_test(NAME gufi_query COMMAND gufi_query.sh)
-set_tests_properties(gufi_query PROPERTIES LABELS regression)
+# full index
+(
+# generate the index
+${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
 
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
+src_dirs=$(find "${SRCDIR}/" -type d -printf "%p\n" | sort)
+index_dirs=$(find "${INDEXROOT}/" -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+src_entries=$(find "${SRCDIR}/" -not -type d -printf "%p\n" | sort)
+index_entries=$(${ROOT}/src/gufi_query -d " " -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
 
-add_test(NAME gufi_ls COMMAND gufi_ls.sh)
-set_tests_properties(gufi_ls PROPERTIES LABELS regression)
+src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort | awk '{ printf "        " $0 "\n" }')
+index_combined=$(        (echo "${index_dirs}" ; echo "${index_entries}") | sort | awk '{ printf "        " $0 "\n" }')
 
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+echo "Index up to level ${level}:"
+echo "    Source Directory:"
+echo "${src_combined}"
+echo
+echo "    GUFI Index:"
+echo "${index_combined}"
+echo
 
-add_test(NAME gufi_stat COMMAND gufi_stat.sh)
-set_tests_properties(gufi_stat PROPERTIES LABELS regression)
+diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
+) |& tee "${OUTPUT}"
+
+# index up to different levels of the tree
+for level in 0 1 2
+do
+    (
+        # remove preexisting indicies
+        rm -rf "${INDEXROOT}"
+
+        # generate the index
+        ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
+
+        # get the directories
+        src_dirs=$(find "${SRCDIR}/" -maxdepth ${level} -type d -printf "%p\n" | sort)
+        index_dirs=$(find "${INDEXROOT}/" -maxdepth ${level} -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+        src_entries=$(find "${SRCDIR}/" -maxdepth $((${level} + 1)) -not -type d -printf "%p\n" | sort)
+        index_entries=$(${ROOT}/src/gufi_query -d " " -z ${level} -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+
+        src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort | awk '{ printf "        " $0 "\n" }')
+        index_combined=$(        (echo "${index_dirs}" ; echo "${index_entries}") | sort | awk '{ printf "        " $0 "\n" }')
+
+        echo "Index up to level ${level}:"
+        echo "    Source Directory:"
+        echo "${src_combined}"
+        echo
+        echo "    GUFI Index:"
+        echo "${index_combined}"
+        echo
+
+        diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
+
+    ) |& tee -a "${OUTPUT}"
+done
+diff -b ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
+rm "${OUTPUT}"
