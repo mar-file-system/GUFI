@@ -108,7 +108,7 @@ run "${GUFI_LS} -s"
 run "${GUFI_LS} -ar"
 run "${GUFI_LS} -arR"
 
-) | tee "${OUTPUT}"
+) |& tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_ls.expected "${OUTPUT}"
 rm "${OUTPUT}"

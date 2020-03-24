@@ -155,7 +155,7 @@ user "${GUFI_STATS} -c links-per-level"
 
 user "${GUFI_STATS}    dirs-per-level"
 user "${GUFI_STATS} -c dirs-per-level"
-) | tee "${OUTPUT}"
+) |& tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_stats.expected "${OUTPUT}"
 rm "${OUTPUT}"
