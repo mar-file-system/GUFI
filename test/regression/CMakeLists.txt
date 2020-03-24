@@ -94,25 +94,14 @@ foreach(FILE
     gufi_stat.sh
 )
   configure_file(${FILE} ${FILE} COPYONLY)
+  get_filename_component(EXT ${FILE} EXT)
+  if ("${EXT}" STREQUAL ".sh")
+    if ("${FILE}" STREQUAL "setup.sh")
+      continue()
+    endif()
+
+    get_filename_component(TEST_NAME ${FILE} NAME_WE)
+    add_test(NAME ${TEST_NAME} COMMAND ${FILE})
+    set_tests_properties(${TEST_NAME} PROPERTIES LABELS regression)
+  endif()
 endforeach()
-
-add_test(NAME gufi_dir2index COMMAND gufi_dir2index.sh)
-set_tests_properties(gufi_dir2index PROPERTIES LABELS regression)
-
-add_test(NAME gufi_dir2trace COMMAND gufi_dir2trace.sh)
-set_tests_properties(gufi_dir2trace PROPERTIES LABELS regression)
-
-add_test(NAME gufi_query COMMAND gufi_query.sh)
-set_tests_properties(gufi_query PROPERTIES LABELS regression)
-
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
-
-add_test(NAME gufi_ls COMMAND gufi_ls.sh)
-set_tests_properties(gufi_ls PROPERTIES LABELS regression)
-
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
-
-add_test(NAME gufi_stat COMMAND gufi_stat.sh)
-set_tests_properties(gufi_stat PROPERTIES LABELS regression)
