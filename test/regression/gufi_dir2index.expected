@@ -1,0 +1,150 @@
+Index up to level :
+    Source Directory:
+        prefix/
+        prefix/1KB
+        prefix/1MB
+        prefix/directory
+        prefix/directory/executable
+        prefix/directory/readonly
+        prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable
+        prefix/empty_file
+        prefix/file_symlink
+        prefix/.hidden
+        prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2
+        prefix/old_file
+        prefix/repeat_name
+        prefix/unusual, name?#
+
+    GUFI Index:
+        prefix/
+        prefix/1KB 
+        prefix/1MB 
+        prefix/directory
+        prefix/directory/executable 
+        prefix/directory/readonly 
+        prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink 
+        prefix/directory/subdirectory/repeat_name 
+        prefix/directory/writable 
+        prefix/empty_file 
+        prefix/file_symlink 
+        prefix/.hidden 
+        prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1 
+        prefix/leaf_directory/leaf_file2 
+        prefix/old_file 
+        prefix/repeat_name 
+        prefix/unusual, name?# 
+
+No difference
+Index up to level 0:
+    Source Directory:
+        prefix/
+        prefix/1KB
+        prefix/1MB
+        prefix/empty_file
+        prefix/file_symlink
+        prefix/.hidden
+        prefix/old_file
+        prefix/repeat_name
+        prefix/unusual, name?#
+
+    GUFI Index:
+        prefix/
+        prefix/1KB 
+        prefix/1MB 
+        prefix/empty_file 
+        prefix/file_symlink 
+        prefix/.hidden 
+        prefix/old_file 
+        prefix/repeat_name 
+        prefix/unusual, name?# 
+
+No difference
+Index up to level 1:
+    Source Directory:
+        prefix/
+        prefix/1KB
+        prefix/1MB
+        prefix/directory
+        prefix/directory/executable
+        prefix/directory/readonly
+        prefix/directory/writable
+        prefix/empty_file
+        prefix/file_symlink
+        prefix/.hidden
+        prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2
+        prefix/old_file
+        prefix/repeat_name
+        prefix/unusual, name?#
+
+    GUFI Index:
+        prefix/
+        prefix/1KB 
+        prefix/1MB 
+        prefix/directory
+        prefix/directory/executable 
+        prefix/directory/readonly 
+        prefix/directory/writable 
+        prefix/empty_file 
+        prefix/file_symlink 
+        prefix/.hidden 
+        prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1 
+        prefix/leaf_directory/leaf_file2 
+        prefix/old_file 
+        prefix/repeat_name 
+        prefix/unusual, name?# 
+
+No difference
+Index up to level 2:
+    Source Directory:
+        prefix/
+        prefix/1KB
+        prefix/1MB
+        prefix/directory
+        prefix/directory/executable
+        prefix/directory/readonly
+        prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink
+        prefix/directory/subdirectory/repeat_name
+        prefix/directory/writable
+        prefix/empty_file
+        prefix/file_symlink
+        prefix/.hidden
+        prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1
+        prefix/leaf_directory/leaf_file2
+        prefix/old_file
+        prefix/repeat_name
+        prefix/unusual, name?#
+
+    GUFI Index:
+        prefix/
+        prefix/1KB 
+        prefix/1MB 
+        prefix/directory
+        prefix/directory/executable 
+        prefix/directory/readonly 
+        prefix/directory/subdirectory
+        prefix/directory/subdirectory/directory_symlink 
+        prefix/directory/subdirectory/repeat_name 
+        prefix/directory/writable 
+        prefix/empty_file 
+        prefix/file_symlink 
+        prefix/.hidden 
+        prefix/leaf_directory
+        prefix/leaf_directory/leaf_file1 
+        prefix/leaf_directory/leaf_file2 
+        prefix/old_file 
+        prefix/repeat_name 
+        prefix/unusual, name?# 
+
+No difference
