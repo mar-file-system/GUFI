@@ -138,11 +138,15 @@ size_t OutputBuffers_flush_multiple(struct OutputBuffers * obufs, const size_t c
 }
 
 void OutputBuffers_destroy(struct OutputBuffers * obufs, const size_t count) {
-    for(size_t i = 0; i < count; i++) {
-        OutputBuffer_destroy(&obufs->buffers[i]);
-    }
-    free(obufs->buffers);
-    obufs->buffers = NULL;
+    if (obufs) {
+        if (obufs->buffers) {
+            for(size_t i = 0; i < count; i++) {
+                OutputBuffer_destroy(&obufs->buffers[i]);
+            }
+            free(obufs->buffers);
+            obufs->buffers = NULL;
+        }
 
-    pthread_mutex_destroy(&obufs->mutex);
+        pthread_mutex_destroy(&obufs->mutex);
+    }
 }
