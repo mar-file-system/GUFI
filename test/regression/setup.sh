@@ -86,7 +86,7 @@ echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
 chmod 666 ${CONFIG}
 
 # generate the tree
-${ROOT}/test/generatetree "${SRCDIR}"
+${ROOT}/test/regression/generatetree "${SRCDIR}"
 
 # generate the index
 ${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"

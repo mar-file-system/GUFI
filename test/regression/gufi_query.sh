@@ -85,7 +85,7 @@ trap cleanup EXIT
 cleanup
 
 # generate the tree
-${ROOT}/test/generatetree "${SRCDIR}"
+${ROOT}/test/regression/generatetree "${SRCDIR}"
 
 # generate the index
 ${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"

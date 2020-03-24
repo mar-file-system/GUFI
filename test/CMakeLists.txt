@@ -73,7 +73,6 @@ add_subdirectory(googletest)
 foreach(TEST
     bfwiflat2gufitest
     dfw2gufitest
-    generatetree
     gitest.py
     gufitest.py
     robinhoodin
