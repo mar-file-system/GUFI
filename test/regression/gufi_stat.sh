@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,47 +62,81 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+set -e
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(FILE
-    gufi_query.expected
-    gufi_query.sh
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-    generatetree
-    setup.sh
-    common.py
+# gufi_stat wrapper
+GUFI_STAT="${ROOT}/src/gufi_stat"
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+# output directories
+SRCDIR="prefix"
+INDEXROOT="${SRCDIR}.gufi"
+REALSRC="$(realpath ${SRCDIR})"
 
-    gufi_ls.expected
-    gufi_ls.py
-    gufi_ls.sh
+function cleanup {
+    rm -rf "${SRCDIR}" "${INDEXROOT}"
+}
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh
+# trap cleanup EXIT
 
-    gufi_stat.expected
-    gufi_stat.sh
+cleanup
+
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+
+OUTPUT="gufi_stat.out"
+
+function replace() {
+    echo "$@" | sed "s/${GUFI_STAT//\//\\/}/gufi_stat/g; s/${REALSRC//\//\\/}\\///g"
+}
+
+(
+# entries in the index with a fixed size
+fixed_size=(
+    "${INDEXROOT}/empty_file"
+    "${INDEXROOT}/1KB"
+    "${INDEXROOT}/1MB"
+    "${INDEXROOT}/unusual, name?#"
+    "${INDEXROOT}/.hidden"
+    "${INDEXROOT}/repeat_name"
+    "${INDEXROOT}/old_file"
+    "${INDEXROOT}/directory/readonly"
+    "${INDEXROOT}/directory/writable"
+    "${INDEXROOT}/directory/executable"
+    "${INDEXROOT}/directory/subdirectory/repeat_name"
+    "${INDEXROOT}/leaf_directory/leaf_file1"
+    "${INDEXROOT}/leaf_directory/leaf_file2"
 )
-  configure_file(${FILE} ${FILE} COPYONLY)
-endforeach()
 
-add_test(NAME gufi_query COMMAND gufi_query.sh)
-set_tests_properties(gufi_query PROPERTIES LABELS regression)
+for entry in "${fixed_size[@]}"
+do
+    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %s %w %W\n' "${entry}")
+    replace "${output}"
+done
 
-add_test(NAME gufi_find COMMAND gufi_find.sh)
-set_tests_properties(gufi_find PROPERTIES LABELS regression)
+# entries in the index that don't have fixed sizes
+variable_size=(
+    "${INDEXROOT}/"
+    "${INDEXROOT}/directory"
+    "${INDEXROOT}/directory/subdirectory"
+    "${INDEXROOT}/directory/subdirectory/directory_symlink"
+    "${INDEXROOT}/file_symlink"
+    "${INDEXROOT}/leaf_directory"
+)
 
-add_test(NAME gufi_ls COMMAND gufi_ls.sh)
-set_tests_properties(gufi_ls PROPERTIES LABELS regression)
+# print directories separately since directory size seems to change
+for entry in "${variable_size[@]}"
+do
+    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %w %W\n' "${entry}")
+    replace "${output}"
+done
 
-add_test(NAME gufi_stats COMMAND gufi_stats.sh)
-set_tests_properties(gufi_stats PROPERTIES LABELS regression)
+# the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
+${GUFI_STAT} -f $'%N %X %Y\n' "${INDEXROOT}/old_file"
+) |& tee "${OUTPUT}"
 
-add_test(NAME gufi_stat COMMAND gufi_stat.sh)
-set_tests_properties(gufi_stat PROPERTIES LABELS regression)
+diff -b ${ROOT}/test/regression/gufi_stat.expected "${OUTPUT}"
+rm "${OUTPUT}"
