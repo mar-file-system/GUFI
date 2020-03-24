@@ -69,7 +69,6 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-# gufi_stat wrapper
 GUFI_STAT="${ROOT}/src/gufi_stat"
 
 # output directories

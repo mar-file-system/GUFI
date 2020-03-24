@@ -69,7 +69,6 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-# gufi_query wrapper
 GUFI_QUERY="${ROOT}/src/gufi_query"
 
 # output directories
