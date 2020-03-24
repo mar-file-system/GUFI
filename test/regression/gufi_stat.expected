@@ -1,0 +1,20 @@
+'prefix.gufi/empty_file' 664 -rw-rw-r-- 81b4 regular file 0 - 0
+'prefix.gufi/1KB' 664 -rw-rw-r-- 81b4 regular file 1024 - 0
+'prefix.gufi/1MB' 664 -rw-rw-r-- 81b4 regular file 1048576 - 0
+'prefix.gufi/unusual, name?#' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/.hidden' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/repeat_name' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/old_file' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/directory/readonly' 444 -r--r--r-- 8124 regular file 1 - 0
+'prefix.gufi/directory/writable' 666 -rw-rw-rw- 81b6 regular file 1 - 0
+'prefix.gufi/directory/executable' 777 -rwxrwxrwx 81ff regular file 1 - 0
+'prefix.gufi/directory/subdirectory/repeat_name' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'prefix.gufi/' 775 drwxrwxr-x 41fd directory - 0
+'prefix.gufi/directory' 775 drwxrwxr-x 41fd directory - 0
+'prefix.gufi/directory/subdirectory' 775 drwxrwxr-x 41fd directory - 0
+'prefix.gufi/directory/subdirectory/directory_symlink' -> 'directory/subdirectory' 777 -rwxrwxrwx a1ff symbolic link - 0
+'prefix.gufi/file_symlink' -> '1KB' 777 -rwxrwxrwx a1ff symbolic link - 0
+'prefix.gufi/leaf_directory' 775 drwxrwxr-x 41fd directory - 0
+'prefix.gufi/old_file' 0 0
