@@ -76,19 +76,7 @@ GUFI_QUERY="${ROOT}/src/gufi_query"
 SRCDIR="prefix"
 INDEXROOT="${SRCDIR}.gufi"
 
-function cleanup {
-    rm -rf "${SRCDIR}" "${INDEXROOT}"
-}
-
-trap cleanup EXIT
-
-cleanup
-
-# generate the tree
-${ROOT}/test/regression/generatetree "${SRCDIR}"
-
-# generate the index
-${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 OUTPUT="gufi_query.out"
 

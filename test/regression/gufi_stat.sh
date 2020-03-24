@@ -77,14 +77,6 @@ SRCDIR="prefix"
 INDEXROOT="${SRCDIR}.gufi"
 REALSRC="$(realpath ${SRCDIR})"
 
-function cleanup {
-    rm -rf "${SRCDIR}" "${INDEXROOT}"
-}
-
-# trap cleanup EXIT
-
-cleanup
-
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 OUTPUT="gufi_stat.out"
