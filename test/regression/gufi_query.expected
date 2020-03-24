@@ -84,7 +84,7 @@ directory
 .hidden
 .
 
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -S "INSERT INTO out SELECT path() || '/' || name, size FROM summary" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" prefix.gufi
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" prefix.gufi
 empty_file
 .hidden
 directory/executable
@@ -96,24 +96,16 @@ leaf_directory/leaf_file2
 old_file
 repeat_name
 unusual, name?#
-leaf_directory
 file_symlink
-directory/subdirectory
 directory/subdirectory/directory_symlink
-directory
-.
 1KB
 1MB
 
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -S "INSERT INTO out SELECT path() || '/' || name, size FROM summary" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" prefix.gufi
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" prefix.gufi
 1MB
 1KB
-.
-directory
 directory/subdirectory/directory_symlink
-directory/subdirectory
 file_symlink
-leaf_directory
 unusual, name?#
 repeat_name
 old_file

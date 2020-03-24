@@ -121,14 +121,13 @@ output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSER
 replace "${output}"
 echo
 
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -S \"INSERT INTO out SELECT path() || '/' || name, size FROM summary\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM entries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size ASC, name ASC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -S "INSERT INTO out SELECT path() || '/' || name, size FROM summary" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM entries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size ASC, name ASC\" ${INDEXROOT}"
+output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" ${INDEXROOT})
 replace "${output}"
 echo
 
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -S \"INSERT INTO out SELECT path() || '/' || name, size FROM summary\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM entries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size DESC, name DESC\" ${INDEXROOT}"
-
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -S "INSERT INTO out SELECT path() || '/' || name, size FROM summary" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM entries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size DESC, name DESC\" ${INDEXROOT}"
+output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" ${INDEXROOT})
 replace "${output}"
 echo
 ) |& tee "${OUTPUT}"
