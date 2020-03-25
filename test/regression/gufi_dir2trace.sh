@@ -127,7 +127,7 @@ echo "${lines}" | awk '{ print "    " $1 }'
 
 diff <(echo "${src}") <(echo "${lines}") && echo "No difference"
 
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
 rm "${OUTPUT}"

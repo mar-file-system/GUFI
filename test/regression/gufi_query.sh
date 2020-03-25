@@ -117,7 +117,7 @@ replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size 
 output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" ${INDEXROOT})
 replace "${output}"
 echo
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_query.expected "${OUTPUT}"
 rm "${OUTPUT}"

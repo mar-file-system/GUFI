@@ -110,7 +110,7 @@ echo
 
 # generate the index
 replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" |& sed '1d;$d'
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2>&1 | sed '1d;$d'
 echo
 
 # compare contents
@@ -123,7 +123,7 @@ echo
 echo "GUFI Index:"
 echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
 echo
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

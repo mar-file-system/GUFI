@@ -111,7 +111,7 @@ echo
 
 # generate the index
 replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" |& sed '1d;$d'
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2>&1 | sed '1d;$d'
 echo
 
 # verify that all entries in the trace can be found in the GUFI tree
@@ -131,7 +131,7 @@ replace "$ verifytreeintrace ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
 ${ROOT}/contrib/verifytreeintrace "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
 echo
 
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/verifytreeintrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

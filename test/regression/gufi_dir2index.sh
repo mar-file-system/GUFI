@@ -110,7 +110,7 @@ echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
 echo
 
 diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
-) |& tee "${OUTPUT}"
+) 2>&1 | tee "${OUTPUT}"
 
 # index up to different levels of the tree
 for level in 0 1 2
@@ -141,7 +141,7 @@ do
 
         diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
 
-    ) |& tee -a "${OUTPUT}"
+    ) 2>&1 | tee -a "${OUTPUT}"
 done
 diff -b ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"
