@@ -69,6 +69,10 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // write a work struct to a file
 int worktofile(FILE * file, char * delim, struct work * work);
 
@@ -77,5 +81,9 @@ int filetowork(FILE * file, char * delim, struct work * work);
 
 // convert a formatted string to a work struct
 int linetowork(char * line, char * delim, struct work * work);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -129,7 +129,6 @@ int linetowork(char * line, char * delim, struct work * work) {
     char *p;
     char *q;
 
-    line[strlen(line)-1]= '\0';
     p=line;    q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->name,MAXPATH,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); SNPRINTF(work->type,2,"%s",p);
     p=q+1;     q=strstr(p,delim); memset(q, 0, 1); work->statuso.st_ino=atol(p);

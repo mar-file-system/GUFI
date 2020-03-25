@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +62,76 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+set -e
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-set(REGRESSION_TEST_FILES
-    gufi_dir2index.expected
-    gufi_dir2index.sh
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-    gufi_dir2trace.expected
-    gufi_dir2trace.sh
+GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
+GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
 
-    gufi_trace2index.expected
-    gufi_trace2index.sh
+# output directories
+SRCDIR="prefix"
+TRACE="${SRCDIR}.trace"
+INDEXROOT="${SRCDIR}.gufi"
+BADTRACE="${TRACE}.bad"
 
-    gufi_query.expected
-    gufi_query.sh
+# trace delimiter
+DELIM="|"
 
-    generatetree
-    setup.sh
-    common.py
+function cleanup {
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${INDEXROOT}" "${BADTRACE}"
+}
 
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
+trap cleanup EXIT
 
-    gufi_ls.expected
-    gufi_ls.py
-    gufi_ls.sh
+cleanup
 
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh
+OUTPUT="gufi_trace2index.out"
 
-    gufi_stat.expected
-    gufi_stat.sh
-)
+function replace() {
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+}
 
-if (CMAKE_CXX_COMPILER)
-  list(APPEND REGRESSION_TEST_FILES
-    verifytreeintrace.expected
-    verifytreeintrace.sh)
-endif()
+(
+cleanup
 
-foreach(FILE ${REGRESSION_TEST_FILES})
-  configure_file(${FILE} ${FILE} COPYONLY)
-  get_filename_component(EXT ${FILE} EXT)
-  if ("${EXT}" STREQUAL ".sh")
-    if ("${FILE}" STREQUAL "setup.sh")
-      continue()
-    endif()
+# generate the tree
+replace "$ generatetree ${SRCDIR}"
+${ROOT}/test/regression/generatetree "${SRCDIR}"
+echo
 
-    get_filename_component(TEST_NAME ${FILE} NAME_WE)
-    add_test(NAME ${TEST_NAME} COMMAND ${FILE})
-    set_tests_properties(${TEST_NAME} PROPERTIES LABELS regression)
-  endif()
-endforeach()
+# generate the trace
+replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
+${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}"
+cat ${TRACE}.* > "${TRACE}"
+echo
+
+# generate the index
+replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" |& sed '1d;$d'
+echo
+
+# verify that all entries in the trace can be found in the GUFI tree
+replace "$ verifytreeintrace ${TRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytreeintrace "${TRACE}" "${DELIM}" "${INDEXROOT}"
+echo
+
+# replace a file name
+sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
+replace "$ verifytreeintrace ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytreeintrace "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+echo
+
+# replace a directory name
+sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
+replace "$ verifytreeintrace ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytreeintrace "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+echo
+
+) |& tee "${OUTPUT}"
+
+diff -b ${ROOT}/test/regression/verifytreeintrace.expected "${OUTPUT}"
+rm "${OUTPUT}"
