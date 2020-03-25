@@ -74,23 +74,67 @@
 
 
 
+GUFI_PWD=""
+
 __gufi() {
     root="$(readlink -m $(grep "IndexRoot=" /etc/GUFI/config | sed "s/^.*=//"))"
-    curr=$(printf "%s" "${COMP_WORDS[@]:1}")
-    path="${root}/${curr}"
+    bfq="$(readlink -m $(grep "Exec=" /etc/GUFI/config | sed "s/^.*=//"))"
+    curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
+    path="$(readlink -m ${root}/${curr})"
 
     if [[ -d "${path}" ]]
     then
-        path="${path}/"
-    fi
+        GUFI_PWD="${path}"
 
-    for entry in $(compgen -d ${path})
-    do
-        if [[ -d "${entry}" ]]
+        # return all entries in the directory and directory names in subdirectories
+        matches=$(${bfq} \
+            -a \
+            -e 0 \
+            -z 1 \
+            -d $'\0' \
+            -I "CREATE TABLE out(name TEXT, type TEXT)" \
+            -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (1 == 1)" \
+            -E "INSERT INTO out SELECT name, type FROM entries WHERE (0 == 0)" \
+            -J "INSERT INTO aggregate.out SELECT * FROM out" \
+            -G "SELECT name FROM out ORDER BY name ASC" \
+            ${GUFI_PWD})
+
+        # return all matches
+        for match in ${matches}
+        do
+            COMPREPLY+=("${match}")
+        done
+    else
+        # break up path into directory and name
+        name="$(basename ${path})"
+        dir="$(dirname ${path})"
+        GUFI_PWD="${dir}"
+
+        # search the index for matches on the name
+        matches=$(${bfq} \
+            -a \
+            -e 0 \
+            -z 1 \
+            -d $'\0' \
+            -I "CREATE TABLE out(name TEXT, type TEXT)" \
+            -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (name REGEXP \"^${name}\") AND (1 == 1)" \
+            -E "INSERT INTO out SELECT name || ' ', type FROM entries WHERE (name REGEXP \"^${name}\") AND (0 == 0)" \
+            -J "INSERT INTO aggregate.out SELECT * FROM out" \
+            -G "SELECT name FROM out ORDER BY name ASC" \
+            ${GUFI_PWD})
+
+        if [[ $(echo "${matches}" | wc -l) -eq "1" ]]
         then
-            COMPREPLY+=("/$(basename ${entry})")
+            fullpath="${GUFI_PWD}/${matches}"
+            COMPREPLY=("${fullpath#${root}/}")
+        else
+            # return all matches
+            for match in ${matches}
+            do
+                COMPREPLY+=("${match}")
+            done
         fi
-    done
+    fi
 
     return 0
 }
