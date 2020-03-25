@@ -1,0 +1,19 @@
+TESTS = gufi_dir2index gufi_dir2trace gufi_find gufi_ls gufi_query gufi_stat gufi_stats gufi_trace2index
+
+ifneq ("$(CXX)", "false")
+TESTS := $(TESTS) verifytreeintrace
+endif
+
+TARGETS=$(addprefix run, $(TESTS))
+
+.PHONY: $(TESTS)
+
+all: $(TARGETS)
+
+run%: %.sh
+	./$^
+
+run: $(TARGETS)
+
+clean:
+	rm -rf $(addsuffix .out, $(TESTS))

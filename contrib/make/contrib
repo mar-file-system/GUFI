@@ -1,0 +1,21 @@
+TARGETS =
+
+ifneq ("$(CXX)", "false")
+TARGETS := $(TARGETS) verifytreeintrace
+endif
+
+all: $(TARGETS)
+
+../src/libGUFI.a:
+	make -C ..
+
+%.o: %.cpp ../src/libGUFI.a
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+ifneq ("$(CXX)", "false")
+verifytreeintrace: verifytreeintrace.cpp $(STATIC_DEPS) ../src/libGUFI.a
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
+endif
+
+clean:
+	rm -rf $(TARGETS)

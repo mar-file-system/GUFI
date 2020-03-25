@@ -88,15 +88,19 @@ set(ROOT
 set(TARBALL_NAME "${CMAKE_BINARY_DIR}/gufi.tar.gz")
 
 add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/root       ${CMAKE_SOURCE_DIR}/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/contrib        ${CMAKE_SOURCE_DIR}/contrib/Makefile
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src        ${CMAKE_SOURCE_DIR}/src/Makefile
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/scripts    ${CMAKE_SOURCE_DIR}/scripts/Makefile
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test       ${CMAKE_SOURCE_DIR}/test/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/regression ${CMAKE_SOURCE_DIR}/test/regression/Makefile
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
                        COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${ROOT} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/contrib/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/src/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/scripts/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/regression/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
                        DEPENDS ${CMAKE_SOURCE_DIR}/test/googletest)
 
