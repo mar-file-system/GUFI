@@ -76,9 +76,9 @@ if (CMAKE_CXX_COMPILER)
 
   add_executable(verifytrace verifytrace.cpp)
 
-  add_executable(verifytreeintrace verifytreeintrace.cpp)
-  target_link_libraries(verifytreeintrace ${COMMON_LIBRARIES})
-  add_dependencies(verifytreeintrace install_dependencies)
+  add_executable(verifytraceintree verifytraceintree.cpp)
+  target_link_libraries(verifytraceintree ${COMMON_LIBRARIES})
+  add_dependencies(verifytraceintree install_dependencies)
 endif()
 
 # potentially useful scripts

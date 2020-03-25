@@ -99,8 +99,8 @@ set(REGRESSION_TEST_FILES
 
 if (CMAKE_CXX_COMPILER)
   list(APPEND REGRESSION_TEST_FILES
-    verifytreeintrace.expected
-    verifytreeintrace.sh)
+    verifytraceintree.expected
+    verifytraceintree.sh)
 endif()
 
 foreach(FILE ${REGRESSION_TEST_FILES})

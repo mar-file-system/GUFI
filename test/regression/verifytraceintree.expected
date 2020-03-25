@@ -7,13 +7,13 @@ Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 
-$ verifytreeintrace prefix.trace "|" prefix.gufi
+$ verifytraceintree prefix.trace "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 prefix.trace Pass
 
-$ verifytreeintrace prefix.trace.bad "|" prefix.gufi
+$ verifytraceintree prefix.trace.bad "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
@@ -21,7 +21,7 @@ Did not find expected entry "an_empty_file" in prefix.gufi/db.db
 Expected 8 entries. Got 0.
 prefix.trace.bad Fail
 
-$ verifytreeintrace prefix.trace.bad "|" prefix.gufi
+$ verifytraceintree prefix.trace.bad "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19

@@ -171,7 +171,7 @@ static void * worker_function(void * args) {
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        fprintf(stderr, "%" PRIu64 " ", since_epoch(&now) - epoch);
+        fprintf(stderr, "qptpool_size %" PRIu64 " ", since_epoch(&now) - epoch);
 
         size_t sum = 0;
         for(size_t i = 0; i < wf_args->ctx->size; i++) {

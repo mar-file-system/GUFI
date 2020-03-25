@@ -89,7 +89,7 @@ trap cleanup EXIT
 
 cleanup
 
-OUTPUT="gufi_trace2index.out"
+OUTPUT="verifytraceomtree.out"
 
 function replace() {
     echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
@@ -100,38 +100,38 @@ cleanup
 
 # generate the tree
 replace "$ generatetree ${SRCDIR}"
-${ROOT}/test/regression/generatetree "${SRCDIR}"
+${ROOT}/test/regression/generatetree "${SRCDIR}" 2> /dev/null
 echo
 
 # generate the trace
 replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}"
+${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}" 2> /dev/null
 cat ${TRACE}.* > "${TRACE}"
 echo
 
 # generate the index
 replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2>&1 | sed '1d;$d'
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2> /dev/null | sed '1d'
 echo
 
 # verify that all entries in the trace can be found in the GUFI tree
-replace "$ verifytreeintrace ${TRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytreeintrace "${TRACE}" "${DELIM}" "${INDEXROOT}"
+replace "$ verifytraceintree ${TRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytraceintree "${TRACE}" "${DELIM}" "${INDEXROOT}"
 echo
 
 # replace a file name
 sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
-replace "$ verifytreeintrace ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytreeintrace "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
 echo
 
 # replace a directory name
 sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
-replace "$ verifytreeintrace ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytreeintrace "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
 echo
 
 ) 2>&1 | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/verifytreeintrace.expected "${OUTPUT}"
+diff -b ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"
