@@ -8,13 +8,12 @@ LIB_A = lib$(LIB).a
 
 # executables
 DFW       = dfw
-BFW       = bfti bfwreaddirplus2db gufi_dir2trace gufi_dir2index gufi_trace2index gufi_query
+BFW       = bfti bfwreaddirplus2db gufi_dir2trace gufi_dir2index gufi_stat gufi_trace2index gufi_query querydb querydbn
 BFW_MYSQL = bfmi.mysql
-C_TOOLS   = gufi_stat querydb querydbn
 ifneq ("$(CXX)", "false")
 CXX_TOOLS =
 endif
-TARGETS   = $(DFW) $(BFW) $(C_TOOLS) $(CXX_TOOLS)
+TARGETS   = $(DFW) $(BFW) $(CXX_TOOLS)
 
 all: $(TARGETS)
 
