@@ -1,7 +1,7 @@
 TARGETS =
 
 ifneq ("$(CXX)", "false")
-TARGETS := $(TARGETS) verifytreeintrace
+TARGETS := $(TARGETS) verifytraceintree
 endif
 
 all: $(TARGETS)
@@ -13,7 +13,7 @@ all: $(TARGETS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 ifneq ("$(CXX)", "false")
-verifytreeintrace: verifytreeintrace.cpp $(STATIC_DEPS) ../src/libGUFI.a
+verifytraceintree: verifytraceintree.cpp $(STATIC_DEPS) ../src/libGUFI.a
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 endif
 

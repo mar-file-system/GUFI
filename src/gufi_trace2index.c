@@ -598,10 +598,10 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
     pthread_mutex_lock(&print_mutex);
-    fprintf(stderr, "Scout finished in %.2Lf seconds\n", elapsed(&scouting));
-    fprintf(stderr, "Files: %zu\n", file_count);
-    fprintf(stderr, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
-    fprintf(stderr, "Total: %zu\n", file_count + dir_count);
+    fprintf(stdout, "Scout finished in %.2Lf seconds\n", elapsed(&scouting));
+    fprintf(stdout, "Files: %zu\n", file_count);
+    fprintf(stdout, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
+    fprintf(stdout, "Total: %zu\n", file_count + dir_count);
     pthread_mutex_unlock(&print_mutex);
 
     return 0;
