@@ -76,11 +76,25 @@
 
 GUFI_PWD=""
 
+CONFIG="/etc/GUFI/config"
+if [[ "$1" != "" ]]
+then
+    CONFIG="$1"
+fi
+
 __gufi() {
-    root="$(readlink -m $(grep "IndexRoot=" /etc/GUFI/config | sed "s/^.*=//"))"
-    bfq="$(readlink -m $(grep "Exec=" /etc/GUFI/config | sed "s/^.*=//"))"
+    # make sure the config file exists
+    if [[ ! -f "${CONFIG}" ]]
+    then
+        >&2 echo "Could not find config file \"${CONFIG}\""
+        exit 1
+    fi
+
+    root=$(readlink -m $(grep "IndexRoot=" "${CONFIG}"  | sed "s/^.*=//"))
+    bfq=$(readlink -m $(grep "Exec=" ${CONFIG} | sed "s/^.*=//"))
     curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
-    path="$(readlink -m ${root}/${curr})"
+    path=$(readlink -m "${root}/${curr}")
+    path=$(echo -n ${path})
 
     COMPREPLY=()
 
