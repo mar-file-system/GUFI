@@ -1,0 +1,33 @@
+gufi_find completion function:
+__gufi
+
+gufi_ls completion function:
+__gufi
+
+gufi_stats completion function:
+__gufi
+
+At Root:
+.hidden 1KB 1MB directory/ empty_file executable file_symlink leaf_directory/ leaf_file1 leaf_file2 old_file prefix/ readonly repeat_name unusual, name?# writable
+
+All entries starting with "1":
+1KB 1MB
+
+All entries starting with "e":
+empty_file executable
+
+All entries starting with "dir":
+directory/
+
+The "directory" directory:
+directory/ directory_symlink executable readonly repeat_name subdirectory/ writable
+
+The "directory" directory with a slash:
+directory/ directory_symlink executable readonly repeat_name subdirectory/ writable
+
+Directories under directory whose names start with "sub":
+directory/subdirectory/
+
+The "directory/subdirectory" directory:
+directory_symlink repeat_name subdirectory/
+
