@@ -31,19 +31,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# -----
-# NOTE:
-# -----
-#
-# GUFI uses the C-Thread-Pool library.  The original version, written by
-# Johan Hanssen Seferidis, is found at
-# https://github.com/Pithikos/C-Thread-Pool/blob/master/LICENSE, and is
-# released under the MIT License.  LANS, LLC added functionality to the
-# original work.  The original work, plus LANS, LLC added functionality is
-# found at https://github.com/jti-lanl/C-Thread-Pool, also under the MIT
-# License.  The MIT License can be found at
-# https://opensource.org/licenses/MIT.
-#
 #
 # From Los Alamos National Security, LLC:
 # LA-CC-15-039
@@ -74,78 +61,73 @@
 
 
 
-GUFI_PWD=""
+THIS="$(realpath ${BASH_SOURCE[0]})"
+TESTS="$(dirname ${THIS})"
+ROOT="$(dirname ${TESTS})"
 
-__gufi() {
-    root="$(readlink -m $(grep "IndexRoot=" /etc/GUFI/config | sed "s/^.*=//"))"
-    bfq="$(readlink -m $(grep "Exec=" /etc/GUFI/config | sed "s/^.*=//"))"
-    curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
-    path="$(readlink -m ${root}/${curr})"
+set -e
 
-    COMPREPLY=()
+source ${ROOT}/scripts/completions
 
-    if [[ -d "${path}" ]]
-    then
-        GUFI_PWD="${path}"
+# This file was adapted from the answer posted by bonsaiviking at
+# https://stackoverflow.com/a/9505024
 
-        # return all entries in the directory and directory names in subdirectories
-        matches=$(${bfq} \
-            -a \
-            -e 0 \
-            -z 1 \
-            -d $'\0' \
-            -I "CREATE TABLE out(name TEXT, type TEXT)" \
-            -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (1 == 1)" \
-            -E "INSERT INTO out SELECT name || ' ', type FROM entries WHERE (0 == 0)" \
-            -J "INSERT INTO aggregate.out SELECT * FROM out" \
-            -G "SELECT name FROM out ORDER BY name ASC" \
-            ${GUFI_PWD})
-
-        # return all matches
-        for match in ${matches}
-        do
-            COMPREPLY+=("${match}")
-        done
-    else
-        # break up path into directory and name
-        name="$(basename ${path})"
-        GUFI_PWD="$(dirname ${path})"
-
-        # search the index for matches on the name
-        matches=$(${bfq} \
-            -a \
-            -e 0 \
-            -z 1 \
-            -d $'\0' \
-            -I "CREATE TABLE out(name TEXT, type TEXT)" \
-            -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (name REGEXP \"^${name}\") AND (1 == 1)" \
-            -E "INSERT INTO out SELECT name || ' ', type FROM entries WHERE (name REGEXP \"^${name}\") AND (0 == 0)" \
-            -J "INSERT INTO aggregate.out SELECT * FROM out" \
-            -G "SELECT name FROM out ORDER BY name ASC" \
-            ${GUFI_PWD})
-
-        if [[ $(echo "${matches}" | wc -l) -eq "1" ]]
-        then
-            fullpath="${GUFI_PWD}/${matches}"
-            COMPREPLY=("${fullpath#${root}/}")
-        else
-            # return all matches
-            for match in ${matches}
-            do
-                COMPREPLY+=("${match}")
-            done
-        fi
-    fi
-
-    return 0
+function get_function_name() {
+    echo "$@ completion function:"
+    complete -p $@ | sed "s/.*-F \\([^ ]*\\) .*/\\1/"
+    echo
 }
 
-# register gufi_find, gufi_ls, and gufi_stats to be able to expand paths
-complete -F __gufi gufi_find
-complete -F __gufi gufi_ls
-complete -F __gufi gufi_stats
+function tabtab() {
+    # manually fill in COMP variables
+    # COMP_LINE="__gufi $@"
+    COMP_WORDS=("__gufi" "$@")
+    COMP_CWORD=$((${#COMP_WORDS[@]} - 1))
+    # COMP_POINT=$((${#COMP_LINE}))
 
-# don't append spaces after tab completion
-compopt -o nospace gufi_find
-compopt -o nospace gufi_ls
-compopt -o nospace gufi_stats
+    __gufi && echo "${COMPREPLY[*]}"
+}
+
+OUTPUT="completions.out"
+
+(
+get_function_name gufi_find
+get_function_name gufi_ls
+get_function_name gufi_stats
+
+echo "At Root:"
+tabtab " "
+echo
+
+echo "All entries starting with \"1\":"
+tabtab 1
+echo
+
+echo "All entries starting with \"e\":"
+tabtab e
+echo
+
+echo "All entries starting with \"dir\":"
+tabtab dir
+echo
+
+echo "The \"directory\" directory:"
+tabtab directory
+echo
+
+echo "The \"directory\" directory with a slash:"
+tabtab directory/
+echo
+
+echo "Directories under directory whose names start with \"sub\":"
+tabtab directory/sub
+echo
+
+echo "The \"directory/subdirectory\" directory:"
+tabtab directory/subdirectory
+echo
+
+) 2>&1 | tee "${OUTPUT}"
+
+diff ${ROOT}/test/completions.expected "${OUTPUT}"
+rm "${OUTPUT}"

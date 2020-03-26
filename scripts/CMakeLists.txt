@@ -119,6 +119,7 @@ configure_file(gufi_jail gufi_jail COPYONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_jail DESTINATION bin COMPONENT Server)
 
 # bash completions for the tools so paths can be tab completed
+configure_file(completions completions COPYONLY)
 if (EXISTS /etc/bash_completion.d)
   EXECUTE_PROCESS(COMMAND test -w /etc/bash_completion.d RESULT_VARIABLE WRITABLE)
   if (WRITABLE EQUAL 0)
