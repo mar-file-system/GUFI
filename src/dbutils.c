@@ -673,11 +673,6 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     int depth = 0;
     int rectype = 0;
 
-    /* remove trailing path separators (pwork->name is a directory, not a file) */
-    for(size_t i = strlen(pwork->name) - 1; i && (pwork->name[i] == '/'); i--) {
-        pwork->name[i] = '\0';
-    }
-
     /* get the basename */
     char nameout[MAXPATH];
     char shortname[MAXPATH];

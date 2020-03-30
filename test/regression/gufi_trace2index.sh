@@ -95,7 +95,6 @@ function replace() {
 }
 
 (
-cleanup
 
 # generate the tree
 replace "$ generatetree ${SRCDIR}"
@@ -110,12 +109,12 @@ echo
 
 # generate the index
 replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2>&1 | sed '1d;$d'
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2>&1 | sed '1,2d'
 echo
 
 # compare contents
-src_contents=$(find "${SRCDIR}/" -printf "%p\n" | sort)
-index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path() || '/' || name FROM summary" -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+src_contents=$(find "${SRCDIR}" -printf "%p\n" | sort)
+index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g" | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'
@@ -123,6 +122,7 @@ echo
 echo "GUFI Index:"
 echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
 echo
+
 ) 2>&1 | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"

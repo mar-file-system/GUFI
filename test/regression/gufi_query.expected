@@ -1,9 +1,11 @@
+# Get only directories
 $ gufi_query -d " " -S "SELECT name FROM summary" prefix.gufi
 directory
 leaf_directory
 prefix
 subdirectory
 
+# Get only non-directories
 $ gufi_query -d " " -E SELECT name FROM entries prefix.gufi
 .hidden
 1KB
@@ -21,6 +23,7 @@ repeat_name
 unusual, name?#
 writable
 
+# Get all directory and non-directory names only
 $ gufi_query -d " " -S "SELECT name FROM summary" -E "SELECT name FROM entries" prefix.gufi
 .hidden
 1KB
@@ -42,7 +45,8 @@ subdirectory
 unusual, name?#
 writable
 
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() || '/' || name FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" prefix.gufi
+# Get relative paths of all directories and non-directories ascending names
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" prefix.gufi
 .
 .hidden
 1KB
@@ -63,7 +67,8 @@ old_file
 repeat_name
 unusual, name?#
 
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() || '/' || name FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" prefix.gufi
+# Get relative paths of all directories and non-directories descending names
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" prefix.gufi
 unusual, name?#
 repeat_name
 old_file
@@ -84,6 +89,7 @@ directory
 .hidden
 .
 
+# Get relative paths of all directories and non-directories ascending sizes
 $ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" prefix.gufi
 empty_file
 .hidden
@@ -101,6 +107,7 @@ directory/subdirectory/directory_symlink
 1KB
 1MB
 
+# Get relative paths of all directories and non-directories descending sizes
 $ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" prefix.gufi
 1MB
 1KB

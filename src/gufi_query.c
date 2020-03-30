@@ -588,11 +588,11 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                 if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
-                    /* for directories we have to take off after the last slash */
-                    /* and set the path so users can put path() in their queries */
-                    SNFORMAT_S(gps[id].gpath, MAXPATH, 1, shortname, strlen(shortname));
+                    /* put in the path relative to the user's input */
+                    SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
                     /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
                     realpath(work->name,gps[id].gfpath);
+
 
                     #ifndef NO_SQL_EXEC
                     struct CallbackArgs ca;
@@ -965,10 +965,21 @@ int main(int argc, char *argv[])
 
     /* enqueue all input paths */
     for(int i = idx; i < argc; i++) {
+        /* remove trailing slashes */
+        size_t len = strlen(argv[i]);
+        while (len && (argv[i][len] == '/')) {
+            len--;
+        }
+
+        /* root is special case */
+        if (len == 0) {
+            len = 1;
+        }
+
         struct work * mywork = calloc(1, sizeof(struct work));
 
         /* copy argv[i] into the work item */
-        SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], strlen(argv[i]));
+        SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
 
         lstat(mywork->name,&mywork->statuso);
         if (!S_ISDIR(mywork->statuso.st_mode) ) {
