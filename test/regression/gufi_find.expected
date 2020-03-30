@@ -1,127 +1,127 @@
-$ gufi_find
-empty_file 
-1KB 
-1MB 
-unusual, name?# 
-.hidden 
-repeat_name 
-file_symlink 
-old_file 
-directory/readonly 
-directory/writable 
-directory/executable 
-leaf_directory/leaf_file1 
-leaf_directory/leaf_file2 
-directory/subdirectory/directory_symlink 
-directory/subdirectory/repeat_name 
+$gufi_find
+1KB
+1MB
+directory/executable
+directory/readonly
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+.hidden
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual,name?#
 
-$ gufi_find -empty
-empty_file 
+$gufi_find-empty
+empty_file
 
-$ gufi_find -type d
-. 
-directory 
-leaf_directory 
-directory/subdirectory 
+$gufi_find-typed
+.
+directory
+directory/subdirectory
+leaf_directory
 
-$ gufi_find -type f
-empty_file 
-1KB 
-1MB 
-unusual, name?# 
-.hidden 
-repeat_name 
-old_file 
-directory/readonly 
-directory/writable 
-directory/executable 
-leaf_directory/leaf_file1 
-leaf_directory/leaf_file2 
-directory/subdirectory/repeat_name 
+$gufi_find-typef
+1KB
+1MB
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+.hidden
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual,name?#
 
-$ gufi_find -type l
-file_symlink 
-directory/subdirectory/directory_symlink 
+$gufi_find-typel
+directory/subdirectory/directory_symlink
+file_symlink
 
-$ gufi_find -readable
-empty_file 
-1KB 
-1MB 
-unusual, name?# 
-.hidden 
-repeat_name 
-file_symlink 
-old_file 
-directory/readonly 
-directory/writable 
-directory/executable 
-leaf_directory/leaf_file1 
-leaf_directory/leaf_file2 
-directory/subdirectory/directory_symlink 
-directory/subdirectory/repeat_name 
+$gufi_find-readable
+1KB
+1MB
+directory/executable
+directory/readonly
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+.hidden
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual,name?#
 
-$ gufi_find -writable
-empty_file 
-1KB 
-1MB 
-unusual, name?# 
-.hidden 
-repeat_name 
-file_symlink 
-old_file 
-directory/writable 
-directory/executable 
-leaf_directory/leaf_file1 
-leaf_directory/leaf_file2 
-directory/subdirectory/directory_symlink 
-directory/subdirectory/repeat_name 
+$gufi_find-writable
+1KB
+1MB
+directory/executable
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+.hidden
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual,name?#
 
-$ gufi_find -executable
-file_symlink 
-directory/executable 
-directory/subdirectory/directory_symlink 
+$gufi_find-executable
+directory/executable
+directory/subdirectory/directory_symlink
+file_symlink
 
-$ gufi_find -mindepth 2
-directory/subdirectory/directory_symlink 
-directory/subdirectory/repeat_name 
+$gufi_find-mindepth2
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
 
-$ gufi_find -maxdepth 0
-empty_file 
-1KB 
-1MB 
-unusual, name?# 
-.hidden 
-repeat_name 
-file_symlink 
-old_file 
+$gufi_find-maxdepth0
+1KB
+1MB
+empty_file
+file_symlink
+.hidden
+old_file
+repeat_name
+unusual,name?#
 
-$ gufi_find -size 1c
-unusual, name?# 
-.hidden 
-repeat_name 
-old_file 
-directory/readonly 
-directory/writable 
-directory/executable 
-leaf_directory/leaf_file1 
-leaf_directory/leaf_file2 
-directory/subdirectory/repeat_name 
+$gufi_find-size1c
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+.hidden
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual,name?#
 
-$ gufi_find -size=-1c
-empty_file 
+$gufi_find-size=-1c
+empty_file
 
-$ gufi_find -size +1c
-1KB 
-1MB 
-file_symlink 
-directory/subdirectory/directory_symlink 
+$gufi_find-size+1c
+1KB
+1MB
+directory/subdirectory/directory_symlink
+file_symlink
 
-$ gufi_find -size +1024c
-1MB 
+$gufi_find-size+1024c
+1MB
 
-$ gufi_find -size +1 -size=-3
-1KB 
+$gufi_find-size+1-size=-3
+1KB
 
-$ gufi_find -size 2048
-1MB 
+$gufi_find-size2048
+1MB
 
