@@ -1,4 +1,5 @@
-$gufi_find
+$ gufi_find
+.hidden
 1KB
 1MB
 directory/executable
@@ -8,23 +9,23 @@ directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
-.hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual,name?#
+unusual, name?#
 
-$gufi_find-empty
+$ gufi_find -empty
 empty_file
 
-$gufi_find-typed
+$ gufi_find -type d
 .
 directory
 directory/subdirectory
 leaf_directory
 
-$gufi_find-typef
+$ gufi_find -type f
+.hidden
 1KB
 1MB
 directory/executable
@@ -32,18 +33,18 @@ directory/readonly
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
-.hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual,name?#
+unusual, name?#
 
-$gufi_find-typel
+$ gufi_find -type l
 directory/subdirectory/directory_symlink
 file_symlink
 
-$gufi_find-readable
+$ gufi_find -readable
+.hidden
 1KB
 1MB
 directory/executable
@@ -53,14 +54,14 @@ directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
-.hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual,name?#
+unusual, name?#
 
-$gufi_find-writable
+$ gufi_find -writable
+.hidden
 1KB
 1MB
 directory/executable
@@ -69,59 +70,58 @@ directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
-.hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual,name?#
+unusual, name?#
 
-$gufi_find-executable
+$ gufi_find -executable
 directory/executable
 directory/subdirectory/directory_symlink
 file_symlink
 
-$gufi_find-mindepth2
+$ gufi_find -mindepth 2
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 
-$gufi_find-maxdepth0
+$ gufi_find -maxdepth 0
+.hidden
 1KB
 1MB
 empty_file
 file_symlink
-.hidden
 old_file
 repeat_name
-unusual,name?#
+unusual, name?#
 
-$gufi_find-size1c
+$ gufi_find -size 1c
+.hidden
 directory/executable
 directory/readonly
 directory/subdirectory/repeat_name
 directory/writable
-.hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual,name?#
+unusual, name?#
 
-$gufi_find-size=-1c
+$ gufi_find -size=-1c
 empty_file
 
-$gufi_find-size+1c
+$ gufi_find -size +1c
 1KB
 1MB
 directory/subdirectory/directory_symlink
 file_symlink
 
-$gufi_find-size+1024c
+$ gufi_find -size +1024c
 1MB
 
-$gufi_find-size+1-size=-3
+$ gufi_find -size +1 -size=-3
 1KB
 
-$gufi_find-size2048
+$ gufi_find -size 2048
 1MB
 

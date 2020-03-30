@@ -83,6 +83,7 @@ trap cleanup EXIT
 
 cleanup
 
+export LC_ALL=C
 export PATH=${ROOT}/scripts:${PATH}
 export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
 

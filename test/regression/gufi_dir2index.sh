@@ -83,6 +83,8 @@ trap cleanup EXIT
 
 cleanup
 
+export LC_ALL=C
+
 # generate the tree
 ${ROOT}/test/regression/generatetree "${SRCDIR}"
 
@@ -94,9 +96,9 @@ OUTPUT="gufi_dir2index.out"
 ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
 
 src_dirs=$(find "${SRCDIR}/" -type d -printf "%p\n" | sort)
-index_dirs=$(find "${INDEXROOT}/" -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+index_dirs=$(find "${INDEXROOT}/" -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
 src_entries=$(find "${SRCDIR}/" -not -type d -printf "%p\n" | sort)
-index_entries=$(${ROOT}/src/gufi_query -d " " -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+index_entries=$(${ROOT}/src/gufi_query -d " " -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
 
 src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
 index_combined=$((echo "${index_dirs}" ; echo "${index_entries}") | sort)
@@ -109,7 +111,6 @@ echo "    GUFI Index:"
 echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
 echo
 
-diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
 ) 2>&1 | tee "${OUTPUT}"
 
 # index up to different levels of the tree
@@ -124,9 +125,9 @@ do
 
         # get the directories
         src_dirs=$(find "${SRCDIR}/" -maxdepth ${level} -type d -printf "%p\n" | sort)
-        index_dirs=$(find "${INDEXROOT}/" -maxdepth ${level} -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+        index_dirs=$(find "${INDEXROOT}/" -maxdepth ${level} -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
         src_entries=$(find "${SRCDIR}/" -maxdepth $((${level} + 1)) -not -type d -printf "%p\n" | sort)
-        index_entries=$(${ROOT}/src/gufi_query -d " " -z ${level} -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g" | sort)
+        index_entries=$(${ROOT}/src/gufi_query -d " " -z ${level} -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
 
         src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
         index_combined=$((echo "${index_dirs}" ; echo "${index_entries}") | sort)
@@ -139,9 +140,8 @@ do
         echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
         echo
 
-        diff -b <(echo "${src_combined}") <(echo "${index_combined}") && echo "No difference"
-
     ) 2>&1 | tee -a "${OUTPUT}"
 done
-diff -b ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
+
+diff ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

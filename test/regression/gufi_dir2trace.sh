@@ -82,12 +82,14 @@ function cleanup {
     rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}.*"
 }
 
-# trap cleanup EXIT
+trap cleanup EXIT
+
+export LC_ALL=C
 
 OUTPUT="gufi_dir2trace.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
 }
 
 (
@@ -125,9 +127,7 @@ echo "${src}"   | awk '{ print "    " $1 }'
 echo "Trace File:"
 echo "${lines}" | awk '{ print "    " $1 }'
 
-diff <(echo "${src}") <(echo "${lines}") && echo "No difference"
-
 ) 2>&1 | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
 rm "${OUTPUT}"
