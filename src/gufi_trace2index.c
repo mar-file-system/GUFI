@@ -219,7 +219,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /* create the directory */
     debug_start(dupdir_call);
     char topath[MAXPATH];
-    SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", (size_t) 1, dir.name, strlen(dir.name));
+    if (w->first_delim) {
+        SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", (size_t) 1, dir.name, w->first_delim);
+    }
+    else {
+        SNFORMAT_S(topath, MAXPATH, 1, in.nameto, strlen(in.nameto));
+    }
+
     if (dupdir(topath, &dir.statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));

@@ -8,7 +8,7 @@ Dirs:  4 (0 empty)
 Total: 19
 
 Source Directory:
-    prefix/
+    prefix
     prefix/1KB
     prefix/1MB
     prefix/directory
@@ -29,7 +29,7 @@ Source Directory:
     prefix/unusual, name?#
 
 GUFI Index:
-    prefix/
+    prefix
     prefix/1KB
     prefix/1MB
     prefix/directory
