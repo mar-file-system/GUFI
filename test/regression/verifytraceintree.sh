@@ -96,7 +96,7 @@ function replace() {
 }
 
 (
-cleanup
+umask 002
 
 # generate the tree
 replace "$ generatetree ${SRCDIR}"
