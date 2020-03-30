@@ -707,28 +707,28 @@ def leaf_depth(config, args, where):
 
     return queries
 
-def leaf_files(config, args, where):
+def leaf(config, args, where, type):
     '''
-    get number of files in the leaf directories immediately under the current directory
+    get number of <type>s in the leaf directories immediately under the current directory
 
     using --recursive/-r here will search for leaf directories under the provided directory as well
 
-    # gufi_stats leaf-files
+    # gufi_stats leaf-<type>s
     1001 1
     1003 3
 
-    # gufi_stats -r leaf-files
+    # gufi_stats -r leaf-<type>s
     1001 1
     1002/dir 2
     1003 3
 
-    # gufi_stats leaf-files 1002
+    # gufi_stats leaf-<type>s 1002
     1002/dir 2
 
-    # gufi_stats -r leaf-files 1002
+    # gufi_stats -r leaf-<type>s 1002
     1002/dir 2
 
-    $ gufi_stats -r leaf-files
+    $ gufi_stats -r leaf-<type>s
     1001 1
     '''
 
@@ -738,7 +738,7 @@ def leaf_files(config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path() || "/" || name', '(SELECT COUNT(*) FROM entries WHERE type=="f")'],
+                                         gufi_common.build_query(['path() || "/" || name', '(SELECT COUNT(*) FROM entries WHERE type=="{}")'.format(type)],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,
@@ -769,6 +769,12 @@ def leaf_files(config, args, where):
                     '-z', '1']
 
     return queries
+
+def leaf_files(config, args, where):
+    return leaf(config, args, where, 'f')
+
+def leaf_links(config, args, where):
+    return leaf(config, args, where, 'l')
 
 def total_leaf(config, args, where, type):
     '''
@@ -1011,6 +1017,7 @@ def run(argv, config_path):
         'leaf-dirs'          : leaf_dirs,
         'leaf-depth'         : leaf_depth,
         'leaf-files'         : leaf_files,
+        'leaf-links'         : leaf_links,
     }
 
     # uses --cumulative
