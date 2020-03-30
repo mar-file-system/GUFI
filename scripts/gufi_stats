@@ -770,27 +770,27 @@ def leaf_files(config, args, where):
 
     return queries
 
-def total_leaf_files(config, args, where):
+def total_leaf(config, args, where, type):
     '''
-    get total number of files in the leaf directories under this directory
+    get total number of <type>s in the leaf directories under this directory
 
     --cumulative collects all values and sums them instead of reporting by uid
 
-    # gufi_stats total-leaf-files
+    # gufi_stats total-leaf-<type>s
     1001 1
     1002 2
     1003 3
 
-    # gufi_stats -c total-leaf-files
+    # gufi_stats -c total-leaf-<type>s
     6
 
-    # gufi_stats total-leaf-files 1002
+    # gufi_stats total-leaf-<type>s 1002
     1002 2
 
-    # gufi_stats -c total-leaf-files 1002
+    # gufi_stats -c total-leaf-<type>s 1002
     2
 
-    $ gufi_stats -c total-leaf-files
+    $ gufi_stats -c total-leaf-<type>s
     1
     '''
 
@@ -800,7 +800,7 @@ def total_leaf_files(config, args, where):
         '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type=="f") AS count'],
+                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type=="{}") AS count'.format(type)],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  group_by,
@@ -827,6 +827,12 @@ def total_leaf_files(config, args, where):
     ]
 
     return queries
+
+def total_leaf_files(config, args, where):
+    return total_leaf(config, args, where, 'f');
+
+def total_leaf_links(config, args, where):
+    return total_leaf(config, args, where, 'l');
 
 def median_leaf_files(config, args, where):
     '''
@@ -1014,6 +1020,7 @@ def run(argv, config_path):
         'total-linkcount'    : total_linkcount,
         'total-dircount'     : total_dircount,
         'total-leaf-files'   : total_leaf_files,
+        'total-leaf-links'   : total_leaf_links,
         'files-per-level'    : files_per_level,
         'links-per-level'    : links_per_level,
         'dirs-per-level'     : dirs_per_level,
