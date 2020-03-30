@@ -88,10 +88,12 @@ trap cleanup EXIT
 
 cleanup
 
+export LC_ALL=C
+
 OUTPUT="gufi_trace2index.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
 }
 
 (
@@ -125,5 +127,5 @@ echo
 
 ) 2>&1 | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

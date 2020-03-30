@@ -4,6 +4,7 @@ Expecting 19 lines. Got 19.
 Expecting 23 columns per row. Got 23.
 Source Directory:
     prefix/
+    prefix/.hidden
     prefix/1KB
     prefix/1MB
     prefix/directory
@@ -15,7 +16,6 @@ Source Directory:
     prefix/directory/writable
     prefix/empty_file
     prefix/file_symlink
-    prefix/.hidden
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
     prefix/leaf_directory/leaf_file2
@@ -24,6 +24,7 @@ Source Directory:
     prefix/unusual,
 Trace File:
     prefix/
+    prefix/.hidden
     prefix/1KB
     prefix/1MB
     prefix/directory
@@ -35,11 +36,9 @@ Trace File:
     prefix/directory/writable
     prefix/empty_file
     prefix/file_symlink
-    prefix/.hidden
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
     prefix/unusual,
-No difference

@@ -81,7 +81,7 @@ source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 OUTPUT="gufi_find.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]//g"
+    echo "$@" | sed "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
 }
 
 function run() {
