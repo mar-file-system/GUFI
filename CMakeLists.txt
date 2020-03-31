@@ -300,12 +300,16 @@ set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
 # Generate RPMs
 find_program(RPMBUILD rpmbuild)
 if (RPMBUILD)
-  message(STATUS "Found rpmbuild: ${RPMBUILD_EXECUTABLE}")
+  message(STATUS "Found rpmbuild: ${RPMBUILD}")
 
   # get the architecture of this machine
   # assumes that we are not cross compiling
-  find_program(UNAME REQUIRED uname)
-  execute_process(COMMAND ${UNAME_EXECUTABLE} -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  find_program(UNAME uname)
+  if (NOT UNAME)
+    message(FATAL_ERROR "uname not found. Cannot build RPMs.")
+  endif()
+  message(STATUS "Found uname: ${UNAME}")
+  execute_process(COMMAND ${UNAME} -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   set(CPACK_GENERATOR "RPM")
   set(CPACK_RPM_COMPONENT_INSTALL On)
