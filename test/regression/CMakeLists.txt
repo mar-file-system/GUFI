@@ -80,6 +80,9 @@ set(REGRESSION_TEST_FILES
     querydb.expected
     querydb.sh
 
+    querydbn.expected
+    querydbn.sh
+
     generatetree
     setup.sh
     common.py
