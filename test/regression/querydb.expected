@@ -1,0 +1,67 @@
+# Query only the entries table in .
+$ querydb -NV . "SELECT name FROM entries ORDER BY name ASC"
+processing query name .
+name|
+.hidden|
+1KB|
+1MB|
+empty_file|
+file_symlink|
+old_file|
+repeat_name|
+unusual, name?#|
+query returned 8 records
+
+# Query only the summary table in .
+$ querydb -NV . "SELECT name FROM summary ORDER BY name ASC"
+processing query name .
+name|
+prefix|
+query returned 1 records
+
+# Query only the entries table in directory
+$ querydb -NV directory "SELECT name FROM entries ORDER BY name ASC"
+processing query name directory
+name|
+executable|
+readonly|
+writable|
+query returned 3 records
+
+# Query only the summary table in directory
+$ querydb -NV directory "SELECT name FROM summary ORDER BY name ASC"
+processing query name directory
+name|
+directory|
+query returned 1 records
+
+# Query only the entries table in directory/subdirectory
+$ querydb -NV directory/subdirectory "SELECT name FROM entries ORDER BY name ASC"
+processing query name directory/subdirectory
+name|
+directory_symlink|
+repeat_name|
+query returned 2 records
+
+# Query only the summary table in directory/subdirectory
+$ querydb -NV directory/subdirectory "SELECT name FROM summary ORDER BY name ASC"
+processing query name directory/subdirectory
+name|
+subdirectory|
+query returned 1 records
+
+# Query only the entries table in leaf_directory
+$ querydb -NV leaf_directory "SELECT name FROM entries ORDER BY name ASC"
+processing query name leaf_directory
+name|
+leaf_file1|
+leaf_file2|
+query returned 2 records
+
+# Query only the summary table in leaf_directory
+$ querydb -NV leaf_directory "SELECT name FROM summary ORDER BY name ASC"
+processing query name leaf_directory
+name|
+leaf_directory|
+query returned 1 records
+

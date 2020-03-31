@@ -77,6 +77,9 @@ set(REGRESSION_TEST_FILES
     gufi_query.expected
     gufi_query.sh
 
+    querydb.expected
+    querydb.sh
+
     generatetree
     setup.sh
     common.py
