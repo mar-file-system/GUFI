@@ -105,7 +105,7 @@ echo
 
 # generate the trace
 replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x -o "${TRACE}" "${SRCDIR}" 2> /dev/null
+${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}" 2> /dev/null
 cat ${TRACE}.* > "${TRACE}"
 echo
 
