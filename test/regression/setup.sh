@@ -75,13 +75,13 @@ SRCDIR="$2"
 INDEXROOT="$3"
 CONFIG="config.test"
 
-function cleanup {
+function setup_cleanup {
     rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
 }
 
-trap cleanup EXIT
+trap setup_cleanup EXIT
 
-cleanup
+setup_cleanup
 
 export LC_ALL=C
 export PATH=${ROOT}/scripts:${PATH}
