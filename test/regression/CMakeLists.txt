@@ -98,6 +98,9 @@ set(REGRESSION_TEST_FILES
     gufi_stats.expected
     gufi_stats.py
     gufi_stats.sh
+
+    completions.expected
+    completions.sh
 )
 
 if (NOT APPLE)
