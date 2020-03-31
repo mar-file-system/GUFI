@@ -1,5 +1,4 @@
-#!/bin/bash -e
-
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,50 +61,44 @@
 
 
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-QUERYDB=$DIR/../src/querydb
+set -e
 
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-usage() {
-    PROG=$1
-    echo "Usage: $PROG <GUFI_tree>"
-    exit -1
+QUERYDB="${ROOT}/src/querydb"
+
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+
+OUTPUT="querydb.out"
+
+function replace() {
+    echo "$@" | sed "s/${QUERYDB//\//\\/}/querydb/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
 }
 
+function run() {
+    replace "$ ${QUERYDB} -NV $1 \"$2\""
+    output=$(${QUERYDB} -NV "$1" "$2")
+    replace "${output}"
+    echo
+}
 
-GUFI=$1
+(
+for path in "${INDEXROOT}" "${INDEXROOT}/directory" "${INDEXROOT}/directory/subdirectory" "${INDEXROOT}/leaf_directory"
+do
+    for table in "entries" "summary"
+    do
+        replace "# Query only the ${table} table in ${path}"
+        run "${path}" "SELECT name FROM ${table} ORDER BY name ASC"
+    done
+done
+) 2>&1 | tee "${OUTPUT}"
 
-if (( $# != 1 )); then
-    usage $0
-elif [ ! -d $GUFI ]; then
-    usage $0
-elif [ ! -e $GUFI/db.db ]; then
-    echo "$GUFI/db.db does not exist.  Need the root of a GUFI tree."
-    exit -1
-fi
-
-
-# Usage: querydb [options] [-s] DB_path SQL
-# options:
-#   -h              help
-#   -H              show assigned input values (debugging)
-#   -N              print column-names (header) for DB results
-#   -V              print column-values (rows) for DB results
-#
-# DB_path           path to dir containinng db.db.*
-# SQL               arbitrary SQL on DB
-#
-
-
-echo
-echo "query  dir summary"
-$QUERYDB -NV $GUFI "select * from summary;"
-
-echo
-echo "query  tree summary"
-$QUERYDB -NV $GUFI "select * from treesummary;"
-
-echo
-echo "query entries"
-$QUERYDB -NV $GUFI "select * from entries;"
+diff -b ${ROOT}/test/regression/querydb.expected "${OUTPUT}"
+rm "${OUTPUT}"
