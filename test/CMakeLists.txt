@@ -91,7 +91,6 @@ foreach(TEST
     runlistschemadb
     runlisttablesdb
     runoldbigfiles
-    runquerydbn
     runuidgidsummary
     runuidgidummary
     runuserfilespacehog
@@ -122,8 +121,6 @@ add_test(NAME bfq                             COMMAND runbfq                    
 set_tests_properties(bfq PROPERTIES LABELS manual)
 add_test(NAME bfwreaddirplus2db               COMMAND runbfwreaddirplus2db           ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(bfwreaddirplus2db PROPERTIES LABELS manual)
-add_test(NAME querydbn                        COMMAND runquerydbn                    ${TESTDST} 2         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(querydbn PROPERTIES LABELS manual)
 add_test(NAME dfw                             COMMAND rundfw                         ${TESTDST}           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(dfw PROPERTIES LABELS manual)
 

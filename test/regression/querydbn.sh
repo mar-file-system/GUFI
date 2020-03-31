@@ -1,5 +1,4 @@
-#!/bin/bash -e
-
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,16 +61,52 @@
 
 
 
-# arg 1 gufi tree arg 2 num threads
+set -e
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-SCR=$DIR/../scripts
-BFQ=$DIR/../src/gufi_query
-QUERYDBN=$DIR/../src/querydbn
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-echo "query to create db insert recs from entry query into out db big files and run querydbn"
-rm -f outdb*
-# if you want to be fancy then use date functions to provide this in user readable date/time
-$BFQ -E "insert into sument select uidtouser(uid, 5), path(), name, size, mtime from entries where type='f'and size>4;" -n $2 -O outdb -I "create table sument (username text, pathname text, name text, size int64, mtime int64);" $1
-$QUERYDBN -NV outdb $2 "select username, pathname,name,size,mtime from vsument order by size;" sument
+BFQ="${ROOT}/src/gufi_query"
+QUERYDBN="${ROOT}/src/querydbn"
+OUTDB="outdb"
+TABLE="out"
+THREADS="2"
+
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+
+function cleanup() {
+    find -name "${OUTDB}" -o -name "${OUTDB}.*" -delete
+}
+
+trap cleanup EXIT
+
+cleanup
+
+OUTPUT="querydbn.out"
+
+function replace() {
+    echo "$@" | sed "s/${BFQ//\//\\/}/gufi_query/g; s/${QUERYDBN//\//\\/}/querydbn/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
+}
+
+(
+replace "# Use ${BFQ} to generate per-thread result database files"
+replace "${BFQ} -n ${THREADS} -O ${OUTDB} -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path() || '/' || name, size FROM entries WHERE type=='f'\" ${INDEXROOT}"
+output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT, size INT64)" -E "INSERT INTO ${TABLE} SELECT path() || '/' || name, size FROM entries WHERE type=='f'" "${INDEXROOT}")
+echo "${output}"
+
+replace "# Query all per-thread result databse files at once"
+replace  "${QUERYDBN} -NV outdb ${THREADS} \"SELECT name, size FROM v${TABLE} ORDER BY size\" ${TABLE}"
+output=$(${QUERYDBN} -NV outdb ${THREADS} "SELECT name, size FROM v${TABLE} ORDER BY size" "${TABLE}")
+replace "${output}"
+echo
+
+) 2>&1 | tee "${OUTPUT}"
+
+diff -b ${ROOT}/test/regression/querydbn.expected "${OUTPUT}"
+rm "${OUTPUT}"
