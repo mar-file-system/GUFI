@@ -61,16 +61,19 @@
 
 
 
-THIS="$(realpath ${BASH_SOURCE[0]})"
-TESTS="$(dirname ${THIS})"
-ROOT="$(dirname ${TESTS})"
-
 set -e
 
-source ${ROOT}/scripts/completions
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-# This file was adapted from the answer posted by bonsaiviking at
-# https://stackoverflow.com/a/9505024
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source ${ROOT}/scripts/completions "${CONFIG}"
 
 function get_function_name() {
     echo "$@ completion function:"
@@ -78,6 +81,8 @@ function get_function_name() {
     echo
 }
 
+# Adapted from the answer posted by bonsaiviking at
+# https://stackoverflow.com/a/9505024
 function tabtab() {
     # manually fill in COMP variables
     # COMP_LINE="__gufi $@"
@@ -129,5 +134,5 @@ echo
 
 ) 2>&1 | tee "${OUTPUT}"
 
-diff ${ROOT}/test/completions.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/completions.expected "${OUTPUT}"
 rm "${OUTPUT}"

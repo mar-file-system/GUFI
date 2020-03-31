@@ -72,8 +72,6 @@ add_subdirectory(googletest)
 # list these explicitly to prevent random garbage from getting in
 foreach(TEST
     bfwiflat2gufitest
-    completions.expected
-    completions.sh
     dfw2gufitest
     gitest.py
     gufitest.py
@@ -115,6 +113,3 @@ set_tests_properties(gary PROPERTIES LABELS manual)
 
 # add_test(NAME gufitest COMMAND gufitest.py all)
 # set_tests_properties(gufitest PROPERTIES LABELS manual)
-
-add_test(NAME bash_completions                COMMAND completions.sh
-                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
