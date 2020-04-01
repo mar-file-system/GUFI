@@ -842,9 +842,7 @@ def total_leaf_links(config, args, where):
 
 def median_leaf_files(config, args, where):
     '''
-    get median number of leaf directories under the provided directory
-
-    --recursive is ignored
+    get median number of leaf files under the provided directory
 
     # gufi_stats median-leaf-files
     2.0
@@ -855,8 +853,6 @@ def median_leaf_files(config, args, where):
     $ gufi_stats median-leaf-files
     1.0
     '''
-
-    group_by = None if args.recursive else ['uid']
 
     queries = [
         '-I', build_create(args.inmemory_name, ['uid INT64', 'count INT64']),
@@ -891,6 +887,62 @@ def median_leaf_files(config, args, where):
     ]
 
     return queries
+
+def average_leaf(config, args, where, type):
+    '''
+    get average number of leaf files under the provided directory
+    '''
+
+    group_by = ['uid'] if args.cumulative else None
+
+    count = gufi_common.build_query(['COUNT(*)'],
+                                    ['entries'],
+                                    ['type == "{}"'.format(type)],
+                                    group_by,
+                                    None,
+                                    None)
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
+
+        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL',
+                                                                  'uid',
+                                                                  '({}) AS count'.format(count)
+                                                              ],
+                                                                 ['summary'],
+                                                                 where + ['nlink == 2'],
+                                                                 None,
+                                                                 None,
+                                                                 args.num_results,
+                                                                 None)),
+
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL', 'uid', 'count'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None)),
+
+        # Adapter from answer by CL
+        # https://stackoverflow.com/a/15766121
+        '-G', gufi_common.build_query(['AVG(count)'],
+                                      [args.inmemory_name],
+                                      None,
+                                      group_by,
+                                      None,
+                                      args.num_results,
+                                      None)
+    ]
+
+    return queries
+
+def average_leaf_files(config, args, where):
+    return average_leaf(config, args, where, 'f')
+
+def average_leaf_links(config, args, where):
+    return average_leaf(config, args, where, 'l')
 
 def per_level(config, args, where, type):
     '''
@@ -1031,6 +1083,8 @@ def run(argv, config_path):
         'files-per-level'    : files_per_level,
         'links-per-level'    : links_per_level,
         'dirs-per-level'     : dirs_per_level,
+        'average-leaf-files' : average_leaf_files,
+        'average-leaf-links' : average_leaf_links,
     }
 
     # does not use either
