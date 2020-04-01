@@ -112,11 +112,9 @@ static int create_tables(const char *name, sqlite3 *db, void *args) {
 off_t create_template(int * fd) {
     static const char name[] = "tmp.db";
 
-    sqlite3 * db = opendb(name, RDWR, 0, 0,
-                          create_tables, NULL
-                          #ifdef DEBUG
-                          , NULL, NULL
-                          , NULL, NULL
+    sqlite3 * db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
+                          , create_tables, NULL
+                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                           , NULL, NULL
                           , NULL, NULL
                           #endif

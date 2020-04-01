@@ -80,7 +80,7 @@ extern int errno;
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 #include "OutputBuffers.h"
-extern struct OutputBuffers debug_output_buffers;
+struct OutputBuffers debug_output_buffers;
 #endif
 
 int templatefd = -1;    /* this is really a constant that is set at runtime */
@@ -116,9 +116,6 @@ void row_destroy(struct row * row) {
 
 #ifdef DEBUG
 
-#define debug_start(name) define_start(name)
-#define debug_end(name) timestamp_end(name)
-
 #ifdef CUMULATIVE_TIMES
 uint64_t total_handle_args      = 0;
 uint64_t total_memset_work      = 0;
@@ -142,12 +139,9 @@ uint64_t total_insertdbfin      = 0;
 uint64_t total_insertsumdb      = 0;
 uint64_t total_closedb          = 0;
 uint64_t total_row_destroy      = 0;
-uint64_t total_files            = 0;
+size_t total_files              = 0;
 #endif
 
-#else
-#define debug_start(name)
-#define debug_end(name)
 #endif
 
 /* process the work under one directory (no recursion) */
@@ -176,18 +170,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     uint64_t thread_insertsumdb      = 0;
     uint64_t thread_closedb          = 0;
     uint64_t thread_row_destroy      = 0;
-    uint64_t thread_files = 0;
-    #endif
-
-    struct start_end print_timestamps;
-
-    #ifdef PER_THREAD_STATS
-    char buf[4096];
-    const size_t size = 4096;
+    size_t   thread_files            = 0;
     #endif
     #endif
 
-    debug_start(handle_args);
+    timestamp_create_buffer(4096);
+    timestamp_start(handle_args);
 
     /* skip argument checking */
     /* if (!data) { */
@@ -204,20 +192,20 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     struct row * w = (struct row *) data;
     FILE * trace = ((FILE **) args)[id];
 
-    debug_end(handle_args);
+    timestamp_set_end(handle_args);
 
-    debug_start(memset_work);
+    timestamp_start(memset_work);
     struct work dir;
     /* memset(&dir, 0, sizeof(struct work)); */
-    debug_end(memset_work);
+    timestamp_set_end(memset_work);
 
     /* parse the directory data */
-    debug_start(dir_linetowork);
+    timestamp_start(dir_linetowork);
     linetowork(w->line, w->len, in.delim, &dir);
-    debug_end(dir_linetowork);
+    timestamp_set_end(dir_linetowork);
 
     /* create the directory */
-    debug_start(dupdir_call);
+    timestamp_start(dupdir);
     char topath[MAXPATH];
     if (w->first_delim) {
         SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", (size_t) 1, dir.name, w->first_delim);
@@ -232,9 +220,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         row_destroy(w);
         return 1;
     }
-    debug_end(dupdir_call);
+    timestamp_set_end(dupdir);
 
-    debug_start(copy_template_call);
+    timestamp_start(copy_template);
 
     /* create the database name */
     char dbname[MAXPATH];
@@ -253,64 +241,62 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         return 1;
     }
 
-    debug_end(copy_template_call);
+    timestamp_set_end(copy_template);
 
     /* process the work */
-    debug_start(opendb_call);
-    sqlite3 * db = opendb(dbname, RDWR, 1, 0,
-                          NULL, NULL
-                          #ifdef DEBUG
+    timestamp_start(opendb);
+    sqlite3 * db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
                           , NULL, NULL
-                          , NULL, NULL
+                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                           , NULL, NULL
                           , NULL, NULL
                           #endif
                           );
-    debug_end(opendb_call);
+    timestamp_set_end(opendb);
 
     if (db) {
-        debug_start(zero_summary);
+        timestamp_start(zero_summary);
         struct sum summary;
         zeroit(&summary);
-        debug_end(zero_summary);
+        timestamp_set_end(zero_summary);
 
-        debug_start(insertdbprep_call);
+        timestamp_start(insertdbprep);
         sqlite3_stmt * res = insertdbprep(db);
-        debug_end(insertdbprep_call);
+        timestamp_set_end(insertdbprep);
 
-        debug_start(startdb_call);
+        timestamp_start(startdb);
         startdb(db);
-        debug_end(startdb_call);
+        timestamp_set_end(startdb);
 
         /* move the trace file to the offet */
-        debug_start(fseek_call);
+        timestamp_start(fseek);
         fseek(trace, w->offset, SEEK_SET);
-        debug_end(fseek_call);
+        timestamp_set_end(fseek);
 
-        debug_start(read_entries);
+        timestamp_start(read_entries);
         size_t row_count = 0;
         for(size_t i = 0; i < w->entries; i++) {
-            debug_start(getline_call);
+            timestamp_start(getline);
             char * line = NULL;
             size_t len = 0;
             if (getline(&line, &len, trace) == -1) {
                 free(line);
                 break;
             }
-            debug_end(getline_call);
+            timestamp_set_end(getline);
 
-            debug_start(memset_row);
+            timestamp_start(memset_row);
             struct work row;
             memset(&row, 0, sizeof(struct work));
-            debug_end(memset_row);
+            timestamp_set_end(memset_row);
 
-            debug_start(entry_linetowork);
+            timestamp_start(entry_linetowork);
             linetowork(line, len, in.delim, &row);
-            debug_end(entry_linetowork)
+            timestamp_set_end(entry_linetowork)
 
-            debug_start(free_call);
+            timestamp_start(free);
             free(line);
-            debug_end(free_call);
+            timestamp_set_end(free);
 
             /* /\* don't need this now because this loop uses the count acquired by the scout function *\/ */
             /* /\* stop on directories, since files are listed first *\/ */
@@ -319,150 +305,136 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             /* } */
 
             /* update summary table */
-            debug_start(sumit_call);
+            timestamp_start(sumit);
             sumit(&summary,&row);
-            debug_end(sumit_call);
+            timestamp_set_end(sumit);
 
             /* don't record pinode */
             row.pinode = 0;
 
             /* add row to bulk insert */
-            debug_start(insertdbgo_call);
+            timestamp_start(insertdbgo);
             insertdbgo(&row,db,res);
-            debug_end(insertdbgo_call);
+            timestamp_set_end(insertdbgo);
 
             row_count++;
             if (row_count > 100000) {
-                debug_start(stopdb_call);
+                timestamp_start(stopdb);
                 stopdb(db);
-                debug_end(stopdb_call);
+                timestamp_set_end(stopdb);
 
-                debug_start(startdb_call);
+                timestamp_start(startdb);
                 startdb(db);
-                debug_end(startdb_call);
+                timestamp_set_end(startdb);
 
                 #ifdef DEBUG
                 timestamp_start(print_timestamps);
-                #ifdef PER_THREAD_STATS
-                print_timer(&debug_output_buffers, id, buf, size, "startdb",          &startdb_call);
-                print_timer(&debug_output_buffers, id, buf, size, "stopdb",           &stopdb_call);
-                #endif
-                debug_end(print_timestamps);
+                timestamp_print(ctx->buffers, id, "startdb",          startdb);
+                timestamp_print(ctx->buffers, id, "stopdb",           stopdb);
+                timestamp_end(ctx->buffers,   id, "print_timestamps", print_timestamps);
+
                 #ifdef CUMULATIVE_TIMES
-                thread_startdb      += elapsed(&startdb_call);
-                thread_stopdb       += elapsed(&stopdb_call);
-                #endif
-                #ifdef PER_THREAD_STATS
-                print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
+                thread_startdb += timestamp_elapsed(startdb);
+                thread_stopdb  += timestamp_elapsed(stopdb);
                 #endif
                 #endif
 
-                row_count=0;
+                row_count = 0;
             }
 
             #ifdef DEBUG
             timestamp_start(print_timestamps);
-            #ifdef PER_THREAD_STATS
-            print_timer(&debug_output_buffers, id, buf, size, "getline",          &getline_call);
-            print_timer(&debug_output_buffers, id, buf, size, "memset_row",       &memset_row);
-            print_timer(&debug_output_buffers, id, buf, size, "entry_linetowork", &entry_linetowork);
-            print_timer(&debug_output_buffers, id, buf, size, "free",             &free_call);
-            print_timer(&debug_output_buffers, id, buf, size, "sumit",            &sumit_call);
-            print_timer(&debug_output_buffers, id, buf, size, "insertdbgo",       &insertdbgo_call);
-            #endif
-            debug_end(print_timestamps);
+            timestamp_print(ctx->buffers, id, "getline",          getline);
+            timestamp_print(ctx->buffers, id, "memset_row",       memset_row);
+            timestamp_print(ctx->buffers, id, "entry_linetowork", entry_linetowork);
+            timestamp_print(ctx->buffers, id, "free",             free);
+            timestamp_print(ctx->buffers, id, "sumit",            sumit);
+            timestamp_print(ctx->buffers, id, "insertdbgo",       insertdbgo);
+            timestamp_end  (ctx->buffers, id, "print_timestamps", print_timestamps);
 
             #ifdef CUMULATIVE_TIMES
-            thread_getline          += elapsed(&getline_call);
-            thread_memset_row       += elapsed(&memset_row);
-            thread_entry_linetowork += elapsed(&entry_linetowork);
-            thread_free             += elapsed(&free_call);
-            thread_sumit            += elapsed(&sumit_call);
-            thread_insertdbgo       += elapsed(&insertdbgo_call);
+            thread_getline          += timestamp_elapsed(getline);
+            thread_memset_row       += timestamp_elapsed(memset_row);
+            thread_entry_linetowork += timestamp_elapsed(entry_linetowork);
+            thread_free             += timestamp_elapsed(free);
+            thread_sumit            += timestamp_elapsed(sumit);
+            thread_insertdbgo       += timestamp_elapsed(insertdbgo);
             #endif
 
-            #ifdef PER_THREAD_STATS
-            print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
-            #endif
             #endif
         }
 
-        debug_end(read_entries);
+        timestamp_set_end(read_entries);
 
-        debug_start(stopdb_call);
+        timestamp_start(stopdb);
         stopdb(db);
-        debug_end(stopdb_call);
+        timestamp_set_end(stopdb);
 
-        debug_start(insertdbfin_call);
+        timestamp_start(insertdbfin);
         insertdbfin(res);
-        debug_end(insertdbfin_call);
+        timestamp_set_end(insertdbfin);
 
-        debug_start(insertsumdb_call);
+        timestamp_start(insertsumdb);
         insertsumdb(db, &dir, &summary);
-        debug_end(insertsumdb_call);
+        timestamp_set_end(insertsumdb);
 
-        debug_start(closedb_call);
+        timestamp_start(closedb);
         closedb(db); /* don't set to nullptr */
-        debug_end(closedb_call);
+        timestamp_set_end(closedb);
 
         #ifdef DEBUG
         timestamp_start(print_timestamps);
-        #ifdef PER_THREAD_STATS
-        print_timer(&debug_output_buffers, id, buf, size, "zero_summary", &zero_summary);
-        print_timer(&debug_output_buffers, id, buf, size, "insertdbprep", &insertdbprep_call);
-        print_timer(&debug_output_buffers, id, buf, size, "startdb",      &startdb_call);
-        print_timer(&debug_output_buffers, id, buf, size, "fseek",        &fseek_call);
-        print_timer(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
-        print_timer(&debug_output_buffers, id, buf, size, "stopdb",       &stopdb_call);
-        print_timer(&debug_output_buffers, id, buf, size, "insertdbfin",  &insertdbfin_call);
-        print_timer(&debug_output_buffers, id, buf, size, "insertsumdb",  &insertsumdb_call);
-        print_timer(&debug_output_buffers, id, buf, size, "closedb",      &closedb_call);
-        #endif
-        debug_end(print_timestamps);
+        timestamp_print(ctx->buffers, id, "zero_summary", zero_summary);
+        timestamp_print(ctx->buffers, id, "insertdbprep", insertdbprep);
+        timestamp_print(ctx->buffers, id, "startdb",      startdb);
+        timestamp_print(ctx->buffers, id, "fseek",        fseek);
+        timestamp_print(ctx->buffers, id, "read_entries", read_entries);
+        timestamp_print(ctx->buffers, id, "read_entries", read_entries);
+        timestamp_print(ctx->buffers, id, "stopdb",       stopdb);
+        timestamp_print(ctx->buffers, id, "insertdbfin",  insertdbfin);
+        timestamp_print(ctx->buffers, id, "insertsumdb",  insertsumdb);
+        timestamp_print(ctx->buffers, id, "closedb",      closedb);
+        timestamp_set_end(print_timestamps);
 
         #ifdef CUMULATIVE_TIMES
-        thread_zero_summary += elapsed(&zero_summary);
-        thread_insertdbprep += elapsed(&insertdbprep_call);
-        thread_startdb      += elapsed(&startdb_call);
-        thread_fseek        += elapsed(&fseek_call);
-        thread_read_entries += elapsed(&read_entries);
-        thread_stopdb       += elapsed(&stopdb_call);
-        thread_insertdbfin  += elapsed(&insertdbfin_call);
-        thread_insertsumdb  += elapsed(&insertsumdb_call);
-        thread_closedb      += elapsed(&closedb_call);
-        thread_files        += w->entries;
+        thread_zero_summary += timestamp_elapsed(zero_summary);
+        thread_insertdbprep += timestamp_elapsed(insertdbprep);
+        thread_startdb      += timestamp_elapsed(startdb);
+        thread_fseek        += timestamp_elapsed(fseek);
+        thread_read_entries += timestamp_elapsed(read_entries);
+        thread_stopdb       += timestamp_elapsed(stopdb);
+        thread_insertdbfin  += timestamp_elapsed(insertdbfin);
+        thread_insertsumdb  += timestamp_elapsed(insertsumdb);
+        thread_closedb      += timestamp_elapsed(closedb);
+        thread_files        += row_count;
         #endif
 
-        #ifdef PER_THREAD_STATS
-        print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
-        #endif
+        timestamp_print(ctx->buffers, id, "print_timestamps", print_timestamps);
         #endif
     }
 
-    debug_start(row_destroy_call);
+    timestamp_start(row_destroy);
     row_destroy(w);
-    debug_end(row_destroy_call);
+    timestamp_set_end(row_destroy);
 
     #ifdef DEBUG
     timestamp_start(print_timestamps);
-    #ifdef PER_THREAD_STATS
-    print_timer(&debug_output_buffers, id, buf, size, "handle_args",      &handle_args);
-    print_timer(&debug_output_buffers, id, buf, size, "memset_work",      &memset_work);
-    print_timer(&debug_output_buffers, id, buf, size, "dir_linetowork",   &dir_linetowork);
-    print_timer(&debug_output_buffers, id, buf, size, "dupdir",           &dupdir_call);
-    print_timer(&debug_output_buffers, id, buf, size, "copy_template",    &copy_template_call);
-    print_timer(&debug_output_buffers, id, buf, size, "opendb",           &opendb_call);
-    print_timer(&debug_output_buffers, id, buf, size, "row_destroy",      &row_destroy_call);
-    #endif
-    debug_end(print_timestamps);
+    timestamp_print(ctx->buffers, id, "handle_args",      handle_args);
+    timestamp_print(ctx->buffers, id, "memset_work",      memset_work);
+    timestamp_print(ctx->buffers, id, "dir_linetowork",   dir_linetowork);
+    timestamp_print(ctx->buffers, id, "dupdir",           dupdir);
+    timestamp_print(ctx->buffers, id, "copy_template",    copy_template);
+    timestamp_print(ctx->buffers, id, "opendb",           opendb);
+    timestamp_print(ctx->buffers, id, "row_destroy",      row_destroy);
+    timestamp_set_end(print_timestamps);
     #ifdef CUMULATIVE_TIMES
-    thread_handle_args     += elapsed(&handle_args);
-    thread_memset_work     += elapsed(&memset_work);
-    thread_dir_linetowork  += elapsed(&dir_linetowork);
-    thread_dupdir          += elapsed(&dupdir_call);
-    thread_copy_template   += elapsed(&copy_template_call);
-    thread_opendb          += elapsed(&opendb_call);
-    thread_row_destroy     += elapsed(&row_destroy_call);
+    thread_handle_args     += timestamp_elapsed(handle_args);
+    thread_memset_work     += timestamp_elapsed(memset_work);
+    thread_dir_linetowork  += timestamp_elapsed(dir_linetowork);
+    thread_dupdir          += timestamp_elapsed(dupdir);
+    thread_copy_template   += timestamp_elapsed(copy_template);
+    thread_opendb          += timestamp_elapsed(opendb);
+    thread_row_destroy     += timestamp_elapsed(row_destroy);
 
     pthread_mutex_lock(&print_mutex);
     total_handle_args      += thread_handle_args;
@@ -490,9 +462,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     total_files            += thread_files;
     pthread_mutex_unlock(&print_mutex);
     #endif
-    #ifdef PER_THREAD_STATS
-    print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
-    #endif
+    timestamp_print(ctx->buffers, id, "print_timestamps", print_timestamps);
     #endif
 
     return !db;
@@ -661,9 +631,9 @@ FILE ** open_per_thread_traces(char * filename, const int count) {
 
 int main(int argc, char * argv[]) {
     /* have to call clock_gettime explicitly to get start time and epoch */
-    struct start_end main_call;
-    clock_gettime(CLOCK_MONOTONIC, &main_call.start);
-    epoch = since_epoch(&main_call.start);
+    struct start_end main_func;
+    clock_gettime(CLOCK_MONOTONIC, &main_func.start);
+    epoch = since_epoch(&main_func.start);
 
     int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "input_file output_dir", &in);
     if (in.helped)
@@ -698,7 +668,11 @@ int main(int argc, char * argv[]) {
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    struct QPTPool * pool = QPTPool_init(in.maxthreads
+                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                         , &debug_output_buffers
+                                         #endif
+        );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         close_per_thread_traces(traces, in.maxthreads);
@@ -734,7 +708,7 @@ int main(int argc, char * argv[]) {
     close(templatefd);
 
     /* have to call clock_gettime explicitly to get end time */
-    clock_gettime(CLOCK_MONOTONIC, &main_call.end);
+    clock_gettime(CLOCK_MONOTONIC, &main_func.end);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     fprintf(stderr, "Handle Args:               %.2Lfs\n", sec(total_handle_args));
@@ -764,7 +738,7 @@ int main(int argc, char * argv[]) {
     fprintf(stderr, "Files inserted:            %zu\n", total_files);
     #endif
 
-    fprintf(stderr, "main completed %.2Lf seconds\n", sec(elapsed(&main_call)));
+    fprintf(stderr, "main completed in %.2Lf seconds\n", sec(elapsed(&main_func)));
 
     return 0;
 }

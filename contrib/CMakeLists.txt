@@ -85,6 +85,7 @@ endif()
 configure_file(canned_queries.sh canned_queries.sh COPYONLY)
 configure_file(gentrace.py gentrace.py COPYONLY)
 configure_file(trace_anonymizer.py trace_anonymizer.py COPYONLY)
+configure_file(output-on-failure output-on-failure COPYONLY)
 
 # make benchmark
 #    clean up old benchmark directory and create a new one
@@ -139,3 +140,7 @@ endif()
 
 # add target to build with makefiles
 add_subdirectory(make)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_subdirectory(debug)
+endif()

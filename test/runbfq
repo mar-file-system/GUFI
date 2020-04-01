@@ -89,15 +89,15 @@ echo
 echo "query to screen"
 $BFQ \
     -n 1\
-    -E "SELECT path(),* FROM entries;" \
+    -E "SELECT path(''),* FROM entries;" \
     $GUFI
 
 echo
 echo "query to screen show date conversion (limited to 10 entries)"
 $BFQ \
     -n 1 \
-    -S "SELECT path(),name,type,size,datetime(mtime,'unixepoch') FROM vsummarydir limit 10;" \
-    -E "SELECT path(),name, type, size, datetime(mtime,'unixepoch') FROM entries limit 10;" \
+    -S "SELECT path(''),name,type,size,datetime(mtime,'unixepoch') FROM vsummarydir limit 10;" \
+    -E "SELECT path(''),name, type, size, datetime(mtime,'unixepoch') FROM entries limit 10;" \
     $GUFI
 
 echo

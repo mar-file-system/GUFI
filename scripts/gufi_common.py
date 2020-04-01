@@ -175,6 +175,19 @@ def get_group(grp):
         return get_gid(grp)
 # ###############################################
 
+# add this to summary queries to handle rollups
+ROLLUP_SUMMARY_WHERE = '''
+    CASE level()
+        WHEN 0 THEN
+            CASE rollupscore
+                WHEN 0 THEN FALSE
+                WHEN 1 THEN (isroot == 0 AND depth == 1)
+            END
+        WHEN 1 THEN
+            (isroot == 1 AND depth == 0)
+    END
+'''
+
 def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None, extra = None):
     '''
     Builds a query using arrays of data for each field.

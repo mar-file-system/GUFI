@@ -6,7 +6,7 @@ LDFLAGS      += -L$(GTEST_PREFIX)/lib -L$(GTEST_PREFIX)/lib64 -lgtest -lgtest_ma
 TESTS=bf OutputBuffers QueuePerThreadPool sll trace utils
 OBJ=$(addsuffix .o, $(TESTS))
 
-TARGET=test
+TARGET=unit_tests
 
 .PHONY: $(TARGET)
 
@@ -18,9 +18,9 @@ all: $(TARGET)
 $(TARGET): $(OBJ) $(realpath ../../../src)/libGUFI.a $(STATIC_DEPS)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
-run: $(TARGET) ../../output-on-failure
-	@echo "Running Test: googletest"
-	@../../output-on-failure ./$(TARGET)
+run: $(TARGET) ../../../contrib/output-on-failure
+	@echo "Running Test: unit_tests"
+	@../../../contrib/output-on-failure ./$(TARGET)
 
 clean:
 	rm -rf $(OBJ) $(TARGET)

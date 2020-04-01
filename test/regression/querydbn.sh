@@ -96,8 +96,8 @@ function replace() {
 
 (
 replace "# Use ${BFQ} to generate per-thread result database files"
-replace "${BFQ} -n ${THREADS} -O ${OUTDB} -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path() || '/' || name, size FROM entries WHERE type=='f'\" ${INDEXROOT}"
-output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT, size INT64)" -E "INSERT INTO ${TABLE} SELECT path() || '/' || name, size FROM entries WHERE type=='f'" "${INDEXROOT}")
+replace "${BFQ} -n ${THREADS} -O ${OUTDB} -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path(summary.name) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentires.type=='f') AND (summary.inode == pentries.pinode)\" ${INDEXROOT}"
+output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT, size INT64)" -E "INSERT INTO ${TABLE} SELECT path(summary.name) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentries.type=='f') AND (summary.inode == pentries.pinode)" "${INDEXROOT}")
 echo "${output}"
 
 replace "# Query all per-thread result databse files at once"
@@ -106,7 +106,7 @@ output=$(${QUERYDBN} -NV outdb "${TABLE}" "SELECT name, size FROM v${TABLE} ORDE
 replace "${output}"
 echo
 
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/querydbn.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/querydbn.expected "${OUTPUT}"
 rm "${OUTPUT}"

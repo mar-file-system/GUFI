@@ -62,68 +62,75 @@ OF SUCH DAMAGE.
 
 
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "bf.h"
+#include "BottomUp.h"
 #include "debug.h"
+#include "utils.h"
 
-pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+extern int errno;
 
-uint64_t epoch = 0;
+/* Remove all non-subdirectories in the   */
+/* current directory. Then remove itself. */
+/* Subdirectories are already gone, so    */
+/* they don't have to processed at the    */
+/* current level.                         */
+void rm_dir(void * args timestamp_sig) {
+    struct BottomUp * dir = (struct BottomUp *) args;
 
-uint64_t since_epoch(struct timespec * ts) {
-    struct timespec now;
+    char db_name[MAXPATH];
+    SNPRINTF(db_name, MAXPATH, "%s/" DBNAME, dir->name);
 
-    if (!ts) {
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        ts = &now;
-    }
-
-    uint64_t ns = ts->tv_sec;
-    ns *= 1000000000ULL;
-    ns += ts->tv_nsec;
-
-    return ns;
-}
-
-uint64_t elapsed(struct start_end * se) {
-    const uint64_t s = (se->start.tv_sec * 1000000000ULL) + se->start.tv_nsec;
-    const uint64_t e = (se->end.tv_sec   * 1000000000ULL) + se->end.tv_nsec;
-    return e - s;
-}
-
-long double sec(uint64_t nsec) {
-    return ((long double) nsec) / 1e9L;
-}
-
-int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se) {
-    if (!obufs || !obufs->buffers) {
-        return -1;
-    }
-
-    const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
-    const size_t capacity = obufs->buffers[id].capacity;
-
-    /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-    if (len <= capacity) {
-        /* if there's not enough space in the buffer to fit the new row, flush it first */
-        if ((obufs->buffers[id].filled + len) > capacity) {
-            pthread_mutex_lock(obufs->mutex);
-            OutputBuffer_flush(&obufs->buffers[id], stderr);
-            pthread_mutex_unlock(obufs->mutex);
+    sll_loop(&dir->subnondirs, node) {
+        struct BottomUp * entry = (struct BottomUp *) sll_node_data(node);
+        if (unlink(entry->name) != 0) {
+            fprintf(stderr, "Warning: Failed to delete \"%s\": %s\n", entry->name, strerror(errno));
         }
-
-        char * buf = obufs->buffers[id].buf;
-        size_t filled = obufs->buffers[id].filled;
-
-        memcpy(&buf[filled], str, len);
-        filled += len;
-
-        obufs->buffers[id].filled = filled;
-        obufs->buffers[id].count++;
-    }
-    else {
-        /* if the row does not fit the buffer, output immediately */
-        /* instead of buffering since order shouldn't matter      */
-        fwrite(str, sizeof(char), len, stderr);
     }
 
-    return 0;
+    if (rmdir(dir->name) != 0) {
+        fprintf(stderr, "Warning: Failed to remove \"%s\": %s\n", dir->name, strerror(errno));
+    }
+}
+
+void sub_help() {
+   printf("directory        directory to delete\n");
+   printf("\n");
+}
+
+int main(int argc, char * argv[]) {
+    int idx = parse_cmd_line(argc, argv, "hHn:", 1, "directory ...", &in);
+    if (in.helped)
+        sub_help();
+    if (idx < 0)
+        return -1;
+
+    #ifdef DEBUG
+    #ifdef PER_THREAD_STATS
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    epoch = since_epoch(&now);
+    #endif
+
+    timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
+    #endif
+
+    const int rc = parallel_bottomup(argv + idx, argc - idx,
+                                     in.maxthreads,
+                                     sizeof(struct BottomUp), rm_dir,
+                                     1,
+                                     NULL
+                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                     , timestamp_buffers
+                                     #endif
+        );
+
+    timestamp_destroy(timestamp_buffers);
+
+    return rc;
 }

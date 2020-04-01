@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <libgen.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,6 +71,7 @@ OF SUCH DAMAGE.
 #include <grp.h>
 #include "pcre.h"
 
+#include "config.h"
 #include "dbutils.h"
 
 extern int errno;
@@ -84,10 +86,10 @@ char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode,@suspe
 char *esql = // "DROP TABLE IF EXISTS entries;"
             "CREATE TABLE entries(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
 
-char *esqli = "INSERT INTO entries VALUES (NULL,@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime, @ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
+char *esqli = "INSERT INTO entries VALUES (NULL,@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime,@ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
 
 char *ssql = "DROP TABLE IF EXISTS summary;"
-             "CREATE TABLE summary(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64);";
+             "CREATE TABLE summary(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
 
 char *tsql = "DROP TABLE IF EXISTS treesummary;"
              "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
@@ -113,16 +115,16 @@ char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
 
 
 
-sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const OpenMode mode)
+sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags)
 {
   char attach[MAXSQL];
-  if (mode == RDONLY) {
+  if (flags & SQLITE_OPEN_READONLY) {
       if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro' AS %Q", name, dbn)) {
           fprintf(stderr, "Cannot create ATTACH command\n");
           return NULL;
       }
   }
-  else if (mode == RDWR) {
+  else if (flags & SQLITE_OPEN_READWRITE) {
       if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn)) {
           fprintf(stderr, "Cannot create ATTACH command\n");
           return NULL;
@@ -130,7 +132,7 @@ sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const OpenMod
   }
 
   if (sqlite3_exec(db, attach, NULL, NULL, NULL) != SQLITE_OK) {
-      fprintf(stderr, "Cannot attach database \"%s\" as \"%s\": %s\n", name, dbn, sqlite3_errmsg(db));
+      fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, sqlite3_errmsg(db));
       return NULL;
   }
 
@@ -164,7 +166,7 @@ int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, 
     return rc;
 }
 
-static int set_pragmas(sqlite3 * db) {
+int set_db_pragmas(sqlite3 * db) {
     int rc = 0;
 
     // try to turn sychronization off
@@ -206,119 +208,70 @@ static int set_pragmas(sqlite3 * db) {
     return rc;
 }
 
-sqlite3 * opendb(const char * name, const OpenMode mode, const int setpragmas, const int load_extensions,
-                 int (*modifydb)(const char * name, sqlite3 * db, void * args), void * modifydb_args
-                 #ifdef DEBUG
-                 , struct timespec * sqlite3_open_start
-                 , struct timespec * sqlite3_open_end
-                 , struct timespec * set_pragmas_start
-                 , struct timespec * set_pragmas_end
-                 , struct timespec * load_extension_start
-                 , struct timespec * load_extension_end
-                 , struct timespec * modifydb_start
-                 , struct timespec * modifydb_end
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+#define check_set_start(name)            \
+    if (name) {                          \
+        timestamp_set_start_raw(*name);  \
+    }
+
+#define check_set_end(name)              \
+    if (name) {                          \
+        timestamp_set_end_raw(*name);    \
+    }
+#else
+#define check_set_start(name)
+#define check_set_end(name)
+#endif
+
+sqlite3 * opendb(const char * name, int flags, const int setpragmas, const int load_extensions,
+                 int (*modifydb_func)(const char * name, sqlite3 * db, void * args), void * modifydb_args
+                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                 , struct start_end * sqlite3_open,   struct start_end * set_pragmas
+                 , struct start_end * load_extension, struct start_end * modify_db
                  #endif
     ) {
     sqlite3 * db = NULL;
 
-    #ifdef DEBUG
-    if (sqlite3_open_start) {
-        clock_gettime(CLOCK_MONOTONIC, sqlite3_open_start);
-    }
-    #endif
-
-    int flags = SQLITE_OPEN_URI;
-    if (mode == RDONLY) {
-        flags |= SQLITE_OPEN_READONLY;
-    }
-    else {
-        flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
-    }
-
-    if (sqlite3_open_v2(name, &db, flags, GUFI_SQLITE_VFS) != SQLITE_OK) {
-        #ifdef DEBUG
-        if (sqlite3_open_end) {
-            clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
+    check_set_start(sqlite3_open);
+    if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
+        check_set_end(sqlite3_open);
+        if (!(flags & SQLITE_OPEN_CREATE)) {
+            fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
         }
-        #endif
-        /* fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db)); */
         sqlite3_close(db); /* close db even if it didn't open to avoid memory leaks */
         return NULL;
     }
+    check_set_end(sqlite3_open);
 
-    #ifdef DEBUG
-    if (sqlite3_open_end) {
-        clock_gettime(CLOCK_MONOTONIC, sqlite3_open_end);
-    }
-    #endif
-
-    #ifdef DEBUG
-    if (set_pragmas_start) {
-        clock_gettime(CLOCK_MONOTONIC, set_pragmas_start);
-    }
-    #endif
-
+    check_set_start(set_pragmas);
     if (setpragmas) {
         /* ignore errors */
-        set_pragmas(db);
+        set_db_pragmas(db);
     }
+    check_set_end(set_pragmas);
 
-    #ifdef DEBUG
-    if (set_pragmas_end) {
-        clock_gettime(CLOCK_MONOTONIC, set_pragmas_end);
-    }
-    #endif
-
-    #ifdef DEBUG
-    if (load_extension_start) {
-        clock_gettime(CLOCK_MONOTONIC, load_extension_start);
-    }
-    #endif
-
+    check_set_start(load_extension);
     if (load_extensions) {
         if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || /* enable loading of extensions */
             (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { /* load the sqlite3-pcre extension */
-            #ifdef DEBUG
-            if (load_extension_end) {
-                clock_gettime(CLOCK_MONOTONIC, load_extension_end);
-            }
-            #endif
+            check_set_end(load_extension);
             fprintf(stderr, "Unable to load regex extension\n");
             sqlite3_close(db);
             return NULL;
         }
     }
+    check_set_end(load_extension);
 
-    #ifdef DEBUG
-    if (load_extension_end) {
-        clock_gettime(CLOCK_MONOTONIC, load_extension_end);
-    }
-    #endif
-
-    #ifdef DEBUG
-    if (modifydb_start) {
-        clock_gettime(CLOCK_MONOTONIC, modifydb_start);
-    }
-    #endif
-
-    if ((mode != RDONLY) && modifydb) {
-        if (modifydb(name, db, modifydb_args) != 0) {
-            #ifdef DEBUG
-            if (modifydb_end) {
-                clock_gettime(CLOCK_MONOTONIC, modifydb_end);
-            }
-            #endif
+    check_set_start(modify_db);
+    if (!(flags & SQLITE_OPEN_READONLY) && modifydb_func) {
+        if (modifydb_func(name, db, modifydb_args) != 0) {
+            check_set_end(modify_db);
             fprintf(stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
             sqlite3_close(db);
             return NULL;
         }
     }
-
-    #ifdef DEBUG
-    if (modifydb_end) {
-        clock_gettime(CLOCK_MONOTONIC, modifydb_end);
-    }
-    #endif
+    check_set_end(modify_db);
 
     return db;
 }
@@ -674,9 +627,6 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     char shortname[MAXPATH];
     shortpath(pwork->name, nameout, shortname);
 
-/*
-CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlink INT, uid INT, gid INT, size INT, blksize INT, blocks INT, atime INT, mtime INT, ctime INT, linkname TEXT, xattrs TEXT, totfiles INT, totlinks INT, minuid INT, maxuid INT, mingid INT, maxgid INT, minsize INT, maxsize INT, totltk INT, totmtk INT, totltm INT, totmtm INT, totmtg INT, totmtt INT, totsize INT, minctime INT, maxctime INT, minmtime INT, maxmtime INT, minatime INT, maxatime INT, minblocks INT, maxblocks INT, totxattr INT,depth INT, mincrtime INT, maxcrtime INT, minossint1 INT, maxossint1 INT, totossint1 INT, minossint2 INT, maxossint2, totossint2 INT, minossint3 INT, maxossint3, totossint3 INT,minossint4 INT, maxossint4 INT, totossint4 INT, rectype INT, pinode INT);
-*/
     char *zname     = sqlite3_mprintf("%q",shortname);
     char *ztype     = sqlite3_mprintf("%q",pwork->type);
     char *zlinkname = sqlite3_mprintf("%q",pwork->linkname);
@@ -684,17 +634,17 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
 
     SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
             "(NULL, \'%s\', \'%s\', "
-            "%"STAT_ino", %d, %"STAT_nlink", %d, %d, %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
+            "%"STAT_ino", %d, %"STAT_nlink", %" PRId64 ", %" PRId64 ", %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
             "\'%s\', \'%s\', "
-            "%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld);",
+            "%lld, %lld, %" PRId64  ", %" PRId64 ", %" PRId64 ", %" PRId64 ", %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, 1, 0);",
             zname,
             ztype,
 
             pwork->statuso.st_ino,      // STAT_ino
             pwork->statuso.st_mode,
             pwork->statuso.st_nlink,    // STAT_nlink
-            pwork->statuso.st_uid,
-            pwork->statuso.st_gid,
+            (int64_t) pwork->statuso.st_uid,
+            (int64_t) pwork->statuso.st_gid,
             pwork->statuso.st_size,     // STAT_size
             pwork->statuso.st_blksize,  // STAT_bsize
             pwork->statuso.st_blocks,   // STAT_blocks
@@ -707,10 +657,10 @@ CREATE TABLE summary(name TEXT PRIMARY KEY, type TEXT, inode INT, mode INT, nlin
 
             su->totfiles,
             su->totlinks,
-            su->minuid,
-            su->maxuid,
-            su->mingid,
-            su->maxgid,
+            (int64_t) su->minuid,
+            (int64_t) su->maxuid,
+            (int64_t) su->mingid,
+            (int64_t) su->maxgid,
             su->minsize,
             su->maxsize,
             su->totltk,
@@ -789,10 +739,60 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return 0;
 }
 
+/* static void path(sqlite3_context *context, int argc, sqlite3_value **argv) */
+/* { */
+/*     const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context); */
+/*     const ino_t pinode = (ino_t) sqlite3_value_int64(argv[0]); */
+/*     char * name = (char *) sqlite3_value_text(argv[1]); */
+
+/*     const char * prefix = gps[id].gpath; */
+/*     if (pinode == 0) { */
+/*         /\* summary *\/ */
+/*         /\* there are two copies of the top level directory *\/ */
+/*         /\* name, so remove the first path from the name *\/ */
+/*         while (*name && (*name != '/')) { */
+/*             name++; */
+/*         } */
+/*         name++; */
+/*     } */
+/*     else { */
+/*         /\* entries *\/ */
+/*         /\* just append the name *\/ */
+/*     } */
+
+/*     const size_t len = strlen(name); */
+/*     char buf[MAXPATH]; */
+/*     if (len) { */
+/*         SNFORMAT_S(buf, MAXPATH, 3, prefix, strlen(prefix), "/", 1, name, len); */
+/*     } */
+/*     else { */
+/*         SNFORMAT_S(buf, MAXPATH, 1, prefix, strlen(prefix)); */
+/*     } */
+/*     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT); */
+
+/*     return; */
+/* } */
+
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    /* get thread id */
     const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context);
-    sqlite3_result_text(context, gps[id].gpath, -1, SQLITE_TRANSIENT);
+
+    /* get path found in summary */
+    const char *summary = (char *) sqlite3_value_text(argv[0]);
+
+    /* find first slash */
+    const char *s = summary;
+    while (*s && (*s != '/')) {
+        s++;
+    }
+
+    /* join path segments, removing duplicate at join point */
+    char final_path[MAXPATH];
+    SNFORMAT_S(final_path, MAXPATH, 2, gps[id].gpath, strlen(gps[id].gpath), s, strlen(s));
+
+    sqlite3_result_text(context, final_path, -1, SQLITE_TRANSIENT);
+
     return;
 }
 
@@ -856,7 +856,7 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     char tmode[64];
     if (argc == 1) {
         fmode = sqlite3_value_int(argv[0]);
-        modetostr(tmode, fmode);
+        modetostr(tmode, sizeof(tmode), fmode);
         sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
         return;
     }
@@ -874,7 +874,7 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
     return;
 }
 
-static const char SIZE[] = {' ', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
+static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
 
 /* Returns the number of blocks required to store a given size */
 /* Unfilled blocks count as one full block (round up)          */
@@ -883,18 +883,29 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
     const char * unit  = (char *) sqlite3_value_text(argv[1]);
     const int    align = sqlite3_value_int(argv[2]);
 
-    size_t unit_size = 1;
-
     const size_t len = strlen(unit);
-    if (len) {
-        for(size_t i = 1; i < sizeof(SIZE); i++) {
-            if (len == 1)
-                unit_size *= 1024;
-            if ((len == 2) && (unit[1] == 'B'))
-                unit_size *= 1000;
-            if ((len == 3) && (unit[1] == 'i') && (unit[2] == 'B'))
-                unit_size *= 1024;
 
+    size_t unit_size = 1;
+    if (len) {
+        if ((len > 1) && (unit[len - 1] != 'B')) {
+            sqlite3_result_error(context, "Bad blocksize unit", 0);
+            return;
+        }
+
+        size_t multiplier = 1024;
+        if (len == 2) {
+            multiplier = 1000;
+        }
+
+        if (len == 3) {
+            if (unit[1] != 'i') {
+                sqlite3_result_error(context, "Bad blocksize unit", 0);
+                return;
+            }
+        }
+
+        for(size_t i = 0; i < sizeof(SIZE); i++) {
+            unit_size *= multiplier;
             if (unit[0] == SIZE[i]) {
                 break;
             }
@@ -921,7 +932,7 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
     double size = sqlite3_value_double(argv[0]);
     if (size) {
         size_t unit_index = 0;
-        while (size > 1024) {
+        while (size >= 1024) {
             size /= 1024;
             unit_index++;
         }
@@ -931,8 +942,8 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
             snprintf(buf, sizeof(buf), format, size);
         }
         else {
-            snprintf(format, sizeof(format), "%%%d.1f%%c", align - 1);
-            snprintf(buf, sizeof(buf), format, size, SIZE[unit_index]);
+            snprintf(format, sizeof(format), "%%%d.1f%%c", align);
+            snprintf(buf, sizeof(buf), format, size, SIZE[unit_index - 1]);
         }
     }
     else {
@@ -956,8 +967,21 @@ static void starting_point(sqlite3_context *context, int argc, sqlite3_value **a
     return;
 }
 
+static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    char *path = (char *) sqlite3_value_text(argv[0]);
+
+    if (!path) {
+        sqlite3_result_text(context, "", -1, SQLITE_TRANSIENT);
+        return;
+    }
+
+    sqlite3_result_text(context, basename(path), -1, SQLITE_TRANSIENT);
+
+    return;
+}
+
 int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char * starting_dir) {
-    return ((sqlite3_create_function(db, "path",                0, SQLITE_UTF8, (void *) (uintptr_t) id,  &path,                NULL, NULL) == SQLITE_OK) &&
+    return ((sqlite3_create_function(db, "path",                1, SQLITE_UTF8, (void *) (uintptr_t) id,  &path,                NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "fpath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &fpath,               NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "epath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &epath,               NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "uidtouser",           2, SQLITE_UTF8, NULL,                     &uidtouser,           NULL, NULL) == SQLITE_OK) &&
@@ -967,7 +991,8 @@ int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char * starting_dir) {
             (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8, NULL,                     &blocksize,           NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8, NULL,                     &human_readable_size, NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "level",               0, SQLITE_UTF8, (void *) (uintptr_t) lvl, &relative_level,      NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "starting_point",      0, SQLITE_UTF8, starting_dir,             &starting_point,      NULL, NULL) == SQLITE_OK))?0:1;
+            (sqlite3_create_function(db, "starting_point",      0, SQLITE_UTF8, starting_dir,             &starting_point,      NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "basename",            1, SQLITE_UTF8, NULL,                     &sqlite_basename,     NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
@@ -1034,4 +1059,21 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
     }
 
     return rec_count;
+}
+
+static int get_rollupscore_callback(void * args, int count, char **data, char **columns) {
+    int * rollupscore = (int *) args;
+    *rollupscore = atoi(data[0]);
+    return 0;
+}
+
+int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
+    char * err = NULL;
+    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
+                     get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
+        sqlite3_free(err);
+        return -1;
+    }
+
+    return 0;
 }

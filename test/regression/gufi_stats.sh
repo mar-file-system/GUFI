@@ -84,13 +84,6 @@ function replace() {
     echo "$@" | sed "s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/$(id -un)/1001/g"
 }
 
-# function root() {
-#     replace "# $@"
-#     output=$(sudo -E env "PATH=$PATH" env "PYTHONPATH=$PYTHONPATH" bash -c "$@")
-#     replace "${output}"
-#     echo
-# }
-
 function user() {
     replace "$ $@"
     replace "$($@)"
@@ -152,8 +145,7 @@ then
 
     user "${GUFI_STATS}    median-leaf-files"
 fi
-
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 EXPECTED="${ROOT}/test/regression/gufi_stats.expected"
 COPY="${EXPECTED}.copy"
@@ -165,5 +157,5 @@ else
     cp "${EXPECTED}" "${COPY}"
 fi
 
-diff "${COPY}" "${OUTPUT}"
+diff -w "${COPY}" "${OUTPUT}"
 rm "${OUTPUT}"

@@ -139,7 +139,7 @@ echo
 echo "The \"directory/subdirectory\" directory:"
 tabtab directory/subdirectory
 echo
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 diff ${ROOT}/test/regression/completions.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -1,14 +1,18 @@
 $ gufi_ls
-.hidden
 1KB
 1MB
 directory
 empty_file
+executable
 file_symlink
 leaf_directory
+leaf_file1
+leaf_file2
 old_file
+readonly
 repeat_name
 unusual, name?#
+writable
 
 $ gufi_ls -a
 .hidden
@@ -16,39 +20,46 @@ $ gufi_ls -a
 1MB
 directory
 empty_file
+executable
 file_symlink
 leaf_directory
+leaf_file1
+leaf_file2
 old_file
+readonly
 repeat_name
 unusual, name?#
+writable
 
 $ gufi_ls -h
-.hidden
 1KB
 1MB
 directory
 empty_file
+executable
 file_symlink
 leaf_directory
+leaf_file1
+leaf_file2
 old_file
+readonly
 repeat_name
 unusual, name?#
+writable
 
 $ gufi_ls -R
-.
-.hidden
 1KB
 1MB
-directory/
+directory
 directory/executable
 directory/readonly
-directory/subdirectory/
+directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
-leaf_directory/
+leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
@@ -56,23 +67,32 @@ repeat_name
 unusual, name?#
 
 $ gufi_ls -r
+writable
 unusual, name?#
 repeat_name
+readonly
 old_file
+leaf_file2
+leaf_file1
 leaf_directory
 file_symlink
+executable
 empty_file
 directory
 1MB
 1KB
-.hidden
 
 $ gufi_ls -ar
+writable
 unusual, name?#
 repeat_name
+readonly
 old_file
+leaf_file2
+leaf_file1
 leaf_directory
 file_symlink
+executable
 empty_file
 directory
 1MB
@@ -85,18 +105,17 @@ repeat_name
 old_file
 leaf_directory/leaf_file2
 leaf_directory/leaf_file1
-leaf_directory/
+leaf_directory
 file_symlink
 empty_file
 directory/writable
 directory/subdirectory/repeat_name
 directory/subdirectory/directory_symlink
-directory/subdirectory/
+directory/subdirectory
 directory/readonly
 directory/executable
-directory/
+directory
 1MB
 1KB
 .hidden
-.
 

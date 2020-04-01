@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,64 @@
 
 
 
-# https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
-cmake_minimum_required(VERSION 3.0.0)
 
-include(CheckLanguage)
+if [[ "$#" -lt 1 ]]
+then
+    echo "Syntax: $0 file"
+    exit 1
+fi
 
-if (CMAKE_CXX_COMPILER)
-  include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
-  set(TEST_SRC
-    OutputBuffers.cpp
-    QueuePerThreadPool.cpp
-    bf.cpp
-    dbutils.cpp
-    sll.cpp
-    trace.cpp
-    utils.cpp
-  )
-  add_executable(unit_tests ${TEST_SRC})
-  target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
+file="$1"
+tmp="${file}.tmp"
+thread_file="${file}.thread_ids"
 
-  add_test(NAME unit_tests COMMAND unit_tests)
-  set_tests_properties(unit_tests PROPERTIES LABELS unit)
-endif()
+export LC_ALL=C
+
+if [[ ! -f "${tmp}" ]]
+then
+    # get subset of timestamp lines
+    grep -E "^[0-9]+ \S* [0-9]+ [0-9]+$" "${file}" | awk '{ print $1 " " $2 }' | sort -u > "${tmp}"
+fi
+
+# get set of unique labels
+label_file="${file}.labels"
+if [[ ( ! -f "${label_file}" ) || ( "${file}" -nt "${label_file}" ) ]]
+then
+    awk '{ print $2 }' "${tmp}" | sort -u > "${label_file}"
+fi
+
+# get unique thread ids
+if [[ ( ! -f "${thread_file}" ) || ( "${file}" -nt "${thread_file}" ) ]]
+then
+    awk '{ print $1 }' "${tmp}" | sort -un > "${thread_file}" &
+fi
+
+# separate timestamps by label
+echo "Available labels to plot:"
+for label in $(cat "${label_file}")
+do
+    echo "    ${label}"
+
+    filename="${file}.${label}"
+    if [[ ( ! -f "${filename}" ) || ( "${file}" -nt "${filename}" ) ]]
+    then
+        grep -E "^[0-9]+ ${label} [0-9]+ [0-9]+$" "${file}" > "${filename}" &
+    fi
+done
+
+wait
+
+thread_ids="$(cat ${thread_file})"
+lowest=$(echo "${thread_ids}" | head -n 1)
+highest=$(echo "${thread_ids}" | tail -n 1)
+
+echo "Thread Range: ${lowest}-${highest}"
+
+function plot_args() {
+    label="$1"
+    linewidth="$2"
+    shift
+    shift
+    title="$@"
+    echo "'${file}.${label}' using (\$3/1e9):1:(\$4-\$3)/1e9:(0) with vectors nohead filled linewidth ${linewidth} title '${title}', \\"
+}

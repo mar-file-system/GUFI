@@ -122,48 +122,38 @@ def build_select(args):
     if args.size:
         select += ['blocks']
 
+    if args.recursive:
+        display_name = 'fullpath'
+    else:
+        display_name = 'name'
+
     if args.long_listing:
         select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
         if not args.no_group:
             select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
-        select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + ['case when (type == "l") then (name || " -> " || linkname) else name end']
+
+        # in GNU ls, order of arguments determines which one has precedence
+        # here, --human-readable has precedence
+        select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + ['(case when (type == "l") then ({0} || " -> " || linkname) else {0} end) as display_name'.format(display_name)]
 
     else:
         # at minimum, print the file name
-        select += ['name']
+        select += [display_name + ' as display_name']
 
     return select
 
-def build_recursive_select(args):
-    '''Build the SELECT portion of the query on the initial scan of entries'''
-    select = []
-
-    # ordering of concatenation matters
-
-    if args.inode:
-        select += ['uinode']
-
-    if args.size:
-        select += ['ublocks']
-
-    if args.long_listing:
-        select += ['modetotxt(umode)', 'printf("%' + str(args.nlink_width) + 'd", unlink)', 'uidtouser(uuid, ' + str(args.user_width) + ')']
-        if not args.no_group:
-            select += ['gidtogroup(ugid, ' + str(args.group_width) + ')']
-        select += select_size(args, 'usize') + select_time(args.time_style, 'umtime') + ['case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
-
-    else:
-        # at minimum, print the file name
-        select += ['ufullpath || "/" || uname']
-
-    return select
-
-def build_where(args, name = None):
+def build_where(args, table, name = None):
     '''Build the WHERE portion of the query'''
     where = []
 
+    if not table:
+        table = ''
+
+    if table != '':
+        table += '.'
+
     if name:
-        where = ['name REGEXP "^{}$"'.format(name)]
+        where = ['{}name REGEXP "^{}$"'.format(table, name)]
     else:
         # -a: if show all, override -A
         if args.all:
@@ -171,15 +161,15 @@ def build_where(args, name = None):
         else:
             # -A: ignore . and ..
             if args.almost_all:
-                where += ['name <> "." AND name <> ".."']
+                where += ['{}name <> "." AND {}name <> ".."'.format(table)]
 
             # everything that's not hidden
             else:
-                where += ['name REGEXP "^(?![\.]).*$"']
+                where += ['{}name REGEXP "^(?![\.]).*$"'.format(table)]
 
         # -B: ignore files that end with ~
         if args.ignore_backups == True:
-            where += ['name REGEXP "^.*(?<![\~])$"']
+            where += ['{}name REGEXP "^.*(?<![\~])$"'.format(table)]
 
     return where
 
@@ -194,25 +184,7 @@ def build_order_by(args):
         order_by += ['mtime ' + ('ASC' if args.reverse else 'DESC')]
 
     if len(order_by) == 0:
-        order_by += ['name COLLATE NOCASE ' + ('DESC' if args.reverse else 'ASC')]
-
-    if args.no_sort:
-        order_by = []
-
-    return order_by
-
-def build_order_by_recursive(args):
-    '''Build the ORDER BY portion of the query.'''
-    order_by = []
-
-    if args.sort_largest:
-        order_by += ['usize ' + ('ASC' if args.reverse else 'DESC')]
-
-    if args.mtime:
-        order_by += ['umtime ' + ('ASC' if args.reverse else 'DESC')]
-
-    if len(order_by) == 0:
-        order_by += ['ufullpath || "/" || uname COLLATE NOCASE ' + ('DESC' if args.reverse else 'ASC')]
+        order_by += ['display_name COLLATE NOCASE ' + ('DESC' if args.reverse else 'ASC')]
 
     if args.no_sort:
         order_by = []
@@ -279,129 +251,78 @@ def run(argv, config_path):
         # prepend the provided paths with the GUFI index root
         fullpath = os.path.normpath(os.path.sep.join([config.indexroot(), path]))
 
-        # create the base command
-        query_cmd = [config.executable()]
+        match_name = None
 
-        # directory and non-directory paths are processed differently
-        if os.path.isdir(fullpath):
-            column_names = ['fullpath', 'name', 'type', 'inode', 'nlink', 'size',
-                            'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-                            'atime', 'ctime', 'linkname', 'xattrs', 'pinode']
-
-            I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT(64), nlink INT(64), size INT(64), mode INT(64), uid INT(64), gid INT(64), blksize INT(64), blocks INT(64), mtime INT(64), atime INT(64), ctime INT(64), linkname TEXT, xattrs TEXT, pinode INT(64));'.format(args.inmemory_name)
-
-            J = 'INSERT INTO aggregate.{0} {1}'.format(args.inmemory_name,
-                                                       gufi_common.build_query(['*'],
-                                                                               [args.inmemory_name],
-                                                                               None,
-                                                                               None,
-                                                                               None,
-                                                                               None))
-            if args.recursive:
-                S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                                 gufi_common.build_query(['fpath()', '"" as name', 'type', 'inode', 'nlink', 'size',
-                                                                          'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-                                                                          'atime', 'ctime', 'linkname', 'xattrs', 'pinode'],
-                                                                         ['summary'],
-                                                                         None,
-                                                                         None,
-                                                                         None,
-                                                                         None))
-
-                E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                                 gufi_common.build_query(['fpath()', 'name', 'type', 'inode', 'nlink', 'size',
-                                                                          'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-                                                                          'atime', 'ctime', 'linkname', 'xattrs', 'pinode'],
-                                                                         ['pentries'],
-                                                                         None,
-                                                                         None,
-                                                                         None,
-                                                                         None))
-
-                # recursive select on pinode
-                G = '''WITH RECURSIVE under ({1}) AS
-                (
-                         SELECT {2} FROM {0} WHERE inode=(SELECT inode FROM {0} WHERE fullpath=\"{3}\")
-                             UNION ALL
-                         SELECT {2} FROM {0} underm
-                                     JOIN under ON
-                                 underm.pinode=under.uinode
-                )
-                {4};'''.format(args.inmemory_name,
-                               'u' + ', u'.join(column_names),
-                               ', '.join(column_names),
-                               fullpath,
-                               gufi_common.build_query(build_recursive_select(args),
-                                                       ['under'],
-                                                       None,
-                                                       None,
-                                                       build_order_by_recursive(args),
-                                                       None))
-
-                query_cmd += ['-e', '0',
-                              '-I', I,
-                              '-S', S,
-                              '-E', E,
-                              '-J', J,
-                              '-G', G,
-                              '-a']
-
-            else:
-                S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                                 gufi_common.build_query(['fpath()', 'name', 'type', 'inode', 'nlink', 'size',
-                                                                          'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-                                                                          'atime', 'ctime', 'linkname', 'xattrs', 'pinode'],
-                                                                         ['summary'],
-                                                                         ['level() == 1'],
-                                                                         None,
-                                                                         None,
-                                                                         None))
-
-                E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                                 gufi_common.build_query(['fpath()', 'name', 'type', 'inode', 'nlink', 'size',
-                                                                          'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-                                                                          'atime', 'ctime', 'linkname', 'xattrs', 'pinode'],
-                                                                         ['pentries'],
-                                                                         ['level() == 0'],
-                                                                         None,
-                                                                         None,
-                                                                         None))
-
-                G = gufi_common.build_query(build_select(args),
-                                            [args.inmemory_name],
-                                            None,
-                                            None,
-                                            build_order_by(args),
-                                            None)
-
-
-                query_cmd += ['-e', '0',
-                              '-I', I,
-                              '-S', S,
-                              '-E', E,
-                              '-J', J,
-                              '-G', G,
-                              '-y', '0',
-                              '-z', '1',
-                              '-a']
-
-            query_cmd += ['-n', str(config.threads())]
-
-        else:
-            # if the path is not a directory, remove the last part of the path
+        if not os.path.isdir(fullpath):
+            # split the path up for matching
             fullpath, match_name = os.path.split(fullpath)
 
-            E = gufi_common.build_query(build_select(args),
-                                        ['entries'],
-                                        build_where(args, match_name) + ['level() == 0'],
-                                        None,
-                                        None,
-                                        None)
+        # create the base command
+        query_cmd = [config.executable(),
+                     '-n', str(config.threads())]
 
-            query_cmd += ['-e', '1',
-                          '-E', E,
-                          '-y', '0',
-                          '-z', '0']
+        if not args.recursive:
+                query_cmd += ['-y', '0',
+                              '-z', '1']
+
+        query_cmd += []
+
+        # columns without fullpath or name
+        columns = ['type', 'inode', 'nlink', 'size',
+                   'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
+                   'atime', 'ctime', 'linkname', 'xattrs', 'pinode']
+
+        I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattrs TEXT, pinode INT64);'.format(args.inmemory_name)
+
+        S_where = build_where(args, '',  match_name)
+        E_where = build_where(args, 'pentries', match_name) + ['summary.inode == pentries.pinode']
+
+        if not args.recursive:
+            S_where += [gufi_common.ROLLUP_SUMMARY_WHERE]
+            # only get the pentries that were originally in this directory
+            E_where += ['summary.isroot == 1']
+        else:
+            S_where += ['level() > 0']
+
+        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['path(name)', 'basename(name)'] + columns,
+                                                                 ['summary'],
+                                                                 S_where,
+                                                                 None,
+                                                                 None,
+                                                                 None))
+
+        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['path(summary.name) || "/" || pentries.name'] + ['pentries.' + column for column in ['name'] + columns],
+                                                                 ['summary', 'pentries'],
+                                                                 E_where,
+                                                                 None,
+                                                                 None,
+                                                                 None))
+
+        J = 'INSERT INTO aggregate.{0} {1}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['*'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None))
+
+        G = gufi_common.build_query(build_select(args),
+                                    [args.inmemory_name],
+                                    None,
+                                    None,
+                                    build_order_by(args),
+                                    None)
+
+        query_cmd += ['-e', '0',
+                      '-I', I,
+                      '-S', S,
+                      '-E', E,
+                      '-J', J,
+                      '-G', G,
+                      '-a',
+        ]
 
         query_cmd += ['-B', str(config.outputbuffer())]
 

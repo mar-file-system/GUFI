@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #include "trace.h"
 #include "utils.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,31 +77,31 @@ int worktofile(FILE * file, char * delim, struct work * work) {
 
     int count = 0;
 
-    count += fprintf(file, "%s%c",               work->name,               delim[0]);
-    count += fprintf(file, "%c%c",               work->type[0],            delim[0]);
-    count += fprintf(file, "%" STAT_ino "%c",    work->statuso.st_ino,     delim[0]);
-    count += fprintf(file, "%d%c",               work->statuso.st_mode,    delim[0]);
-    count += fprintf(file, "%" STAT_nlink"%c",   work->statuso.st_nlink,   delim[0]);
-    count += fprintf(file, "%d%c",               work->statuso.st_uid,     delim[0]);
-    count += fprintf(file, "%d%c",               work->statuso.st_gid,     delim[0]);
-    count += fprintf(file, "%" STAT_size "%c",   work->statuso.st_size,    delim[0]);
-    count += fprintf(file, "%" STAT_bsize "%c",  work->statuso.st_blksize, delim[0]);
-    count += fprintf(file, "%" STAT_blocks "%c", work->statuso.st_blocks,  delim[0]);
-    count += fprintf(file, "%ld%c",              work->statuso.st_atime,   delim[0]);
-    count += fprintf(file, "%ld%c",              work->statuso.st_mtime,   delim[0]);
-    count += fprintf(file, "%ld%c",              work->statuso.st_ctime,   delim[0]);
-    count += fprintf(file, "%s%c",               work->linkname,           delim[0]);
+    count += fprintf(file, "%s%c",                    work->name,               delim[0]);
+    count += fprintf(file, "%c%c",                    work->type[0],            delim[0]);
+    count += fprintf(file, "%" STAT_ino "%c",         work->statuso.st_ino,     delim[0]);
+    count += fprintf(file, "%d%c",                    work->statuso.st_mode,    delim[0]);
+    count += fprintf(file, "%" STAT_nlink "%c",       work->statuso.st_nlink,   delim[0]);
+    count += fprintf(file, "%" PRId64 "%c", (int64_t) work->statuso.st_uid,     delim[0]);
+    count += fprintf(file, "%" PRId64 "%c", (int64_t) work->statuso.st_gid,     delim[0]);
+    count += fprintf(file, "%" STAT_size "%c",        work->statuso.st_size,    delim[0]);
+    count += fprintf(file, "%" STAT_bsize "%c",       work->statuso.st_blksize, delim[0]);
+    count += fprintf(file, "%" STAT_blocks "%c",      work->statuso.st_blocks,  delim[0]);
+    count += fprintf(file, "%ld%c",                   work->statuso.st_atime,   delim[0]);
+    count += fprintf(file, "%ld%c",                   work->statuso.st_mtime,   delim[0]);
+    count += fprintf(file, "%ld%c",                   work->statuso.st_ctime,   delim[0]);
+    count += fprintf(file, "%s%c",                    work->linkname,           delim[0]);
     fwrite(work->xattrs, sizeof(char), work->xattrs_len, file);
     count += work->xattrs_len;
-    count += fprintf(file, "%c",                                           delim[0]);
-    count += fprintf(file, "%d%c",               work->crtime,             delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint1,            delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint2,            delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint3,            delim[0]);
-    count += fprintf(file, "%d%c",               work->ossint4,            delim[0]);
-    count += fprintf(file, "%s%c",               work->osstext1,           delim[0]);
-    count += fprintf(file, "%s%c",               work->osstext2,           delim[0]);
-    count += fprintf(file, "%lld%c",             work->pinode,             delim[0]);
+    count += fprintf(file, "%c",                                                delim[0]);
+    count += fprintf(file, "%d%c",                    work->crtime,             delim[0]);
+    count += fprintf(file, "%d%c",                    work->ossint1,            delim[0]);
+    count += fprintf(file, "%d%c",                    work->ossint2,            delim[0]);
+    count += fprintf(file, "%d%c",                    work->ossint3,            delim[0]);
+    count += fprintf(file, "%d%c",                    work->ossint4,            delim[0]);
+    count += fprintf(file, "%s%c",                    work->osstext1,           delim[0]);
+    count += fprintf(file, "%s%c",                    work->osstext2,           delim[0]);
+    count += fprintf(file, "%lld%c",                  work->pinode,             delim[0]);
     count += fprintf(file, "\n");
 
     return count;
@@ -150,17 +151,19 @@ int linetowork(char * line, const size_t len, char * delim, struct work * work) 
 
     char *p;
     char *q;
+    int64_t uid = -1;
+    int64_t gid = -1;
 
     p=line; q = split(p, delim, end); SNPRINTF(work->name,MAXPATH,"%s",p);
     p = q;  q = split(p, delim, end); SNPRINTF(work->type,2,"%s",p);
-    p = q;  q = split(p, delim, end); work->statuso.st_ino=atol(p);
+    p = q;  q = split(p, delim, end); sscanf(p, "%" STAT_ino, &work->statuso.st_ino);
     p = q;  q = split(p, delim, end); work->statuso.st_mode=atol(p);
-    p = q;  q = split(p, delim, end); work->statuso.st_nlink=atol(p);
-    p = q;  q = split(p, delim, end); work->statuso.st_uid=atol(p);
-    p = q;  q = split(p, delim, end); work->statuso.st_gid=atol(p);
-    p = q;  q = split(p, delim, end); work->statuso.st_size=atol(p);
-    p = q;  q = split(p, delim, end); work->statuso.st_blksize=atol(p);
-    p = q;  q = split(p, delim, end); work->statuso.st_blocks=atol(p);
+    p = q;  q = split(p, delim, end); sscanf(p, "%" STAT_nlink, &work->statuso.st_nlink);
+    p = q;  q = split(p, delim, end); sscanf(p, "%" PRId64, &uid); work->statuso.st_uid = uid;
+    p = q;  q = split(p, delim, end); sscanf(p, "%" PRId64, &gid); work->statuso.st_gid = gid;
+    p = q;  q = split(p, delim, end); sscanf(p, "%" STAT_size, &work->statuso.st_size);
+    p = q;  q = split(p, delim, end); sscanf(p, "%" STAT_bsize, &work->statuso.st_blksize);
+    p = q;  q = split(p, delim, end); sscanf(p, "%" STAT_blocks, &work->statuso.st_blocks);
     p = q;  q = split(p, delim, end); work->statuso.st_atime=atol(p);
     p = q;  q = split(p, delim, end); work->statuso.st_mtime=atol(p);
     p = q;  q = split(p, delim, end); work->statuso.st_ctime=atol(p);

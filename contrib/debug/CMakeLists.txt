@@ -60,25 +60,15 @@
 
 
 
-# https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
 cmake_minimum_required(VERSION 3.0.0)
 
-include(CheckLanguage)
+if(PER_THREAD_STATS)
+  foreach(plot
+      prepare_timestamps.sh
 
-if (CMAKE_CXX_COMPILER)
-  include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
-  set(TEST_SRC
-    OutputBuffers.cpp
-    QueuePerThreadPool.cpp
-    bf.cpp
-    dbutils.cpp
-    sll.cpp
-    trace.cpp
-    utils.cpp
-  )
-  add_executable(unit_tests ${TEST_SRC})
-  target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
-
-  add_test(NAME unit_tests COMMAND unit_tests)
-  set_tests_properties(unit_tests PROPERTIES LABELS unit)
+      gufi_query.sh
+      rollup.sh
+      )
+    configure_file("${plot}" "${plot}" COPYONLY)
+  endforeach()
 endif()

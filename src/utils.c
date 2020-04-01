@@ -605,13 +605,13 @@ int SNPRINTF(char * str, size_t size, const char *format, ...) {
     const int n = vsnprintf(str, size, format, args);
     va_end(args);
     if (n < 0) {
-        fprintf(stderr, "%s:%d Error printing\n",
-                __FILE__, __LINE__);
+        fprintf(stderr, "%s:%d Error printing %s\n",
+                __FILE__, __LINE__, format);
     }
     if ((size_t) n >= size) {
         fprintf(stderr, "%s:%d Warning: Message "
-                "was truncated to %d characters\n",
-                __FILE__, __LINE__, n);
+                "was truncated to %d characters: %s\n",
+                __FILE__, __LINE__, n, str);
     }
     return n;
 }
@@ -621,13 +621,16 @@ int SNPRINTF(char * str, size_t size, const char *format, ...) {
    unnecessary calls to strlen). Make sure to typecast the lengths
    to size_t or weird bugs may occur */
 size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
-    va_list args;
     size_t max_len = dst_len - 1;
 
+    va_list args;
     va_start(args, count);
     for(size_t i = 0; i < count; i++) {
-        char * src = va_arg(args, char *);
-        size_t len = va_arg(args, size_t);
+        const char * src = va_arg(args, char *);
+        /* size_t does not work, but solution found at */
+        /* https://stackoverflow.com/a/12864069/341683 */
+        /* does not seem to fix it either */
+        const size_t len = va_arg(args, unsigned int);
         const size_t copy_len = (len < max_len)?len:max_len;
         memcpy(dst, src, copy_len);
         dst += copy_len;
@@ -880,21 +883,52 @@ size_t descend(struct QPTPool *ctx, const size_t id,
 }
 
 /* convert a mode to a human readable string */
-char * modetostr(char * str, const mode_t mode)
+char * modetostr(char * str, const size_t size, const mode_t mode)
 {
+    if (size < 11) {
+        return NULL;
+    }
+
     if (str) {
-        snprintf(str, 64, "----------");
-        if (mode &  S_IFDIR) str[0] = 'd';
-        if (mode &  S_IRUSR) str[1] = 'r';
-        if (mode &  S_IWUSR) str[2] = 'w';
-        if (mode &  S_IXUSR) str[3] = 'x';
-        if (mode &  S_IRGRP) str[4] = 'r';
-        if (mode &  S_IWGRP) str[5] = 'w';
-        if (mode &  S_IXGRP) str[6] = 'x';
-        if (mode &  S_IROTH) str[7] = 'r';
-        if (mode &  S_IWOTH) str[8] = 'w';
-        if (mode &  S_IXOTH) str[9] = 'x';
+        SNPRINTF(str, size, "----------");
+        if (S_ISDIR(mode))  str[0] = 'd';
+        if (S_ISLNK(mode))  str[0] = 'l';
+        if (mode & S_IRUSR) str[1] = 'r';
+        if (mode & S_IWUSR) str[2] = 'w';
+        if (mode & S_IXUSR) str[3] = 'x';
+        if (mode & S_IRGRP) str[4] = 'r';
+        if (mode & S_IWGRP) str[5] = 'w';
+        if (mode & S_IXGRP) str[6] = 'x';
+        if (mode & S_IROTH) str[7] = 'r';
+        if (mode & S_IWOTH) str[8] = 'w';
+        if (mode & S_IXOTH) str[9] = 'x';
     }
 
     return str;
+}
+
+
+static int loop_matches(const char c, const char * match, const size_t match_count) {
+    for(size_t i = 0; i < match_count; i++) {
+        if (match[i] == c) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int remove_trailing(char * str, size_t * size,
+                    const char * match, const size_t match_count) {
+    if (!str || !size) {
+        return -1;
+    }
+
+    while (*size && loop_matches(str[(*size) - 1], match, match_count)) {
+        (*size)--;
+    }
+
+    str[*size] = '\x00';
+
+    return 0;
 }
