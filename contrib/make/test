@@ -15,9 +15,9 @@ TEST_PRODUCTS = testout.* outdb* outq.* core.* bfwreaddirplusdb* $(TESTDIR) $(TE
 
 all: runtests $(SUBDIRECTORIES)
 
-runtests: $(addprefix run,$(FILES)) output-on-failure
+runtests: $(addprefix run, $(FILES)) ../contrib/output-on-failure
 	@echo "Running Test: $@"
-	@./output-on-failure ./$@ $(TESTTAR) $(TESTDIR) $(TESTDST)
+	@../contrib/output-on-failure ./$@ $(TESTTAR) $(TESTDIR) $(TESTDST)
 
 $(SUBDIRECTORIES):
 	$(MAKE) -C $@ run

@@ -109,7 +109,7 @@ done
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
 ${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file"
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_stat.expected "${OUTPUT}"
 rm "${OUTPUT}"

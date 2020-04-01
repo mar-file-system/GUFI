@@ -98,7 +98,7 @@ do
         run "${path}" "SELECT name FROM ${table} ORDER BY name ASC"
     done
 done
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/querydb.expected "${OUTPUT}"
 rm "${OUTPUT}"

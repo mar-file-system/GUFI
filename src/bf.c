@@ -144,6 +144,8 @@ void print_help(const char* prog_name,
       case 'w': printf("  -w                     open the database files in read-write mode instead of read only mode\n"); break;
       case 'f': printf("  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT\n"); break;
       case 'j': printf("  -j                     print the information in terse form\n"); break;
+      case 'X': printf("  -X                     Dry run\n"); break;
+      case 'L': printf("  -L                     Highest number of files/links in a directory allowed to be rolled up\n"); break;
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -195,10 +197,12 @@ void show_input(struct input* in, int retval) {
    printf("in.show_results       = %d\n",    in->show_results);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
-   printf("in.open_mode          = %d\n",    in->open_mode);
+   printf("in.open_flags         = %d\n",    in->open_flags);
    printf("in.format_set         = %d\n",    in->format_set);
    printf("in.format             = '%s'\n",  in->format);
    printf("in.terse              = %d\n",    in->terse);
+   printf("in.dry_run            = %d\n",    in->dry_run);
+   printf("in.max_in_dir         = %zu\n",   in->max_in_dir);
    printf("\n");
    printf("retval                = %d\n",    retval);
    printf("\n");
@@ -221,7 +225,7 @@ int parse_cmd_line(int         argc,
                    int         n_positional,
                    const char* positional_args_help_str,
                    struct input *in) {
-   in->maxthreads         = 1;         // don't default to zero threads
+   in->maxthreads         = 1;                      // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), "|");
    in->name_len           = 0;
    in->sqlinit_len        = 0;
@@ -229,30 +233,33 @@ int parse_cmd_line(int         argc,
    in->sqlsum_len         = 0;
    in->sqlent_len         = 0;
    in->sqlfin_len         = 0;
-   in->dontdescend        = 0;         // default to descend
-   in->buildinindir       = 0;         // default to not building db in input dir
+   in->dontdescend        = 0;                      // default to descend
+   in->buildinindir       = 0;                      // default to not building db in input dir
    in->suspectd           = 0;
    in->suspectfl          = 0;
    in->suspectfile        = 0;
    in->suspectmethod      = 0;
-   in->stride             = 0;         // default striping of inodes
-   in->infile             = 0;         // default infile being used
-   in->outfile            = 0;         // no default outfile name
+   in->stride             = 0;                      // default striping of inodes
+   in->infile             = 0;                      // default infile being used
+   in->outfile            = 0;                      // no default outfile name
    memset(in->outfilen,     0, MAXPATH);
-   in->outdb              = 0;         // no default outdb name
+   in->outdb              = 0;                      // no default outdb name
    memset(in->outdbn,       0, MAXPATH);
-   in->min_level          = 0;         // default to the top
-   in->max_level          = -1;        // default to all the way down
+   in->min_level          = 0;                      // default to the top
+   in->max_level          = -1;                     // default to all the way down
    memset(in->sqlent,           0, MAXSQL);
    memset(in->create_aggregate, 0, MAXSQL);
    memset(in->intermediate,     0, MAXSQL);
    memset(in->aggregate,        0, MAXSQL);
-   in->show_results       = PRINT;     // print without aggregating by default
-   in->keep_matime        = 0;         // default to not keeping mtime and atime
-   in->open_mode          = RDONLY;    // default to read-only opens
+   in->show_results       = PRINT;                  // print without aggregating by default
+   in->keep_matime        = 0;                      // default to not keeping mtime and atime
+   in->output_buffer_size = 4096;
+   in->open_flags         = SQLITE_OPEN_READONLY;   // default to read-only opens
    in->format_set         = 0;
    memset(in->format,       0, MAXPATH);
    in->terse              = 0;
+   in->dry_run            = 0;
+   in->max_in_dir         = (size_t) -1;
 
    int show   = 0;
    int retval = 0;
@@ -451,7 +458,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'w':
-         in->open_mode = RDWR;
+         in->open_flags = SQLITE_OPEN_READWRITE;
          break;
 
       case 'f':
@@ -461,6 +468,14 @@ int parse_cmd_line(int         argc,
 
       case 'j':
           in->terse = 1;
+          break;
+
+      case 'X':
+          in->dry_run = 1;
+          break;
+
+      case 'L':
+          INSTALL_UINT(in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L");
           break;
 
       case '?':

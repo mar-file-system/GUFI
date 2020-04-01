@@ -1,0 +1,153 @@
+$ gufi_dir2index prefix prefix.gufi
+
+
+$ rollup prefix.gufi
+Roots:
+    prefix.gufi
+
+Thread Pool Size:            1
+Files/Links Limit:          -1
+
+Not Processed:               0
+Cannot Roll Up:              4
+    Subdirectories:
+        min:                 4
+        max:                 4
+        median:           4.00
+        sum:                16
+        average:          4.00
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 1
+        median:           1.00
+        sum:                 3
+        average:          0.75
+    Too Many Before:         0
+    Too Many After:          0
+Can Roll Up:                65
+    Subdirectories:
+        min:                 0
+        max:                 4
+        median:           0.00
+        sum:                52
+        average:          0.80
+    Files/Links:
+        min:                 0
+        max:                 3
+        median:           1.00
+        sum:                96
+        average:          1.48
+    Level:
+        min:                 1
+        max:                 3
+        median:           3.00
+        sum:               177
+        average:          2.72
+    Successful:             65
+    Failed:                  0
+Files/Links:    96
+Directories:    69 (21 empty)
+Total:          165
+Remaining Dirs: 17 (24.64%)
+
+# rolled up directories should have pentries tables
+$ gufi_query -d " " -S "SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC"
+view prefix.gufi
+view prefix.gufi/o+rx
+table prefix.gufi/ugo
+view prefix.gufi/ug
+view prefix.gufi/u
+table prefix.gufi/o+rx/o+rx
+table prefix.gufi/o+rx/ugo
+table prefix.gufi/o+rx/ug
+table prefix.gufi/o+rx/u
+table prefix.gufi/ug/o+rx
+table prefix.gufi/ug/ugo
+table prefix.gufi/ug/ug
+table prefix.gufi/ug/u
+table prefix.gufi/u/o+rx
+table prefix.gufi/u/ugo
+table prefix.gufi/u/ug
+table prefix.gufi/u/u
+
+$ unrollup prefix.gufi
+
+
+# COUNT(entries), COUNT(restored PENTRIES), view, directory
+$ gufi_query -d " " -S "SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) AS fullpath FROM summary ORDER BY fullpath ASC" prefix.gufi
+0 0 view prefix.gufi
+0 0 view prefix.gufi/o+rx
+0 0 view prefix.gufi/ugo
+0 0 view prefix.gufi/ug
+0 0 view prefix.gufi/u
+0 0 view prefix.gufi/o+rx/o+rx
+0 0 view prefix.gufi/o+rx/ugo
+0 0 view prefix.gufi/o+rx/ug
+0 0 view prefix.gufi/o+rx/u
+0 0 view prefix.gufi/ugo/o+rx
+0 0 view prefix.gufi/ugo/ugo
+0 0 view prefix.gufi/ugo/ug
+0 0 view prefix.gufi/ugo/u
+0 0 view prefix.gufi/ug/o+rx
+0 0 view prefix.gufi/ug/ugo
+0 0 view prefix.gufi/ug/ug
+0 0 view prefix.gufi/ug/u
+0 0 view prefix.gufi/u/o+rx
+0 0 view prefix.gufi/u/ugo
+0 0 view prefix.gufi/u/ug
+0 0 view prefix.gufi/u/u
+1 1 view prefix.gufi/o+rx/o+rx/dir1
+2 2 view prefix.gufi/o+rx/o+rx/dir2
+3 3 view prefix.gufi/o+rx/o+rx/dir3
+1 1 view prefix.gufi/o+rx/ugo/dir1
+2 2 view prefix.gufi/o+rx/ugo/dir2
+3 3 view prefix.gufi/o+rx/ugo/dir3
+1 1 view prefix.gufi/o+rx/ug/dir1
+2 2 view prefix.gufi/o+rx/ug/dir2
+3 3 view prefix.gufi/o+rx/ug/dir3
+1 1 view prefix.gufi/o+rx/u/dir1
+2 2 view prefix.gufi/o+rx/u/dir2
+3 3 view prefix.gufi/o+rx/u/dir3
+1 1 view prefix.gufi/ugo/o+rx/dir1
+2 2 view prefix.gufi/ugo/o+rx/dir2
+3 3 view prefix.gufi/ugo/o+rx/dir3
+1 1 view prefix.gufi/ugo/ugo/dir1
+2 2 view prefix.gufi/ugo/ugo/dir2
+3 3 view prefix.gufi/ugo/ugo/dir3
+1 1 view prefix.gufi/ugo/ug/dir1
+2 2 view prefix.gufi/ugo/ug/dir2
+3 3 view prefix.gufi/ugo/ug/dir3
+1 1 view prefix.gufi/ugo/u/dir1
+2 2 view prefix.gufi/ugo/u/dir2
+3 3 view prefix.gufi/ugo/u/dir3
+1 1 view prefix.gufi/ug/o+rx/dir1
+2 2 view prefix.gufi/ug/o+rx/dir2
+3 3 view prefix.gufi/ug/o+rx/dir3
+1 1 view prefix.gufi/ug/ugo/dir1
+2 2 view prefix.gufi/ug/ugo/dir2
+3 3 view prefix.gufi/ug/ugo/dir3
+1 1 view prefix.gufi/ug/ug/dir1
+2 2 view prefix.gufi/ug/ug/dir2
+3 3 view prefix.gufi/ug/ug/dir3
+1 1 view prefix.gufi/ug/u/dir1
+2 2 view prefix.gufi/ug/u/dir2
+3 3 view prefix.gufi/ug/u/dir3
+1 1 view prefix.gufi/u/o+rx/dir1
+2 2 view prefix.gufi/u/o+rx/dir2
+3 3 view prefix.gufi/u/o+rx/dir3
+1 1 view prefix.gufi/u/ugo/dir1
+2 2 view prefix.gufi/u/ugo/dir2
+3 3 view prefix.gufi/u/ugo/dir3
+1 1 view prefix.gufi/u/ug/dir1
+2 2 view prefix.gufi/u/ug/dir2
+3 3 view prefix.gufi/u/ug/dir3
+1 1 view prefix.gufi/u/u/dir1
+2 2 view prefix.gufi/u/u/dir2
+3 3 view prefix.gufi/u/u/dir3
+

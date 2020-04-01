@@ -104,7 +104,7 @@ OUTPUT="gufi_dir2index.out"
     src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
 
     index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
+    index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
     index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
 
     echo "Index Everything:"
@@ -114,7 +114,7 @@ OUTPUT="gufi_dir2index.out"
     echo "    GUFI Index:"
     echo "${index}" | awk '{ printf "        " $0 "\n" }'
     echo
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 # index up to different levels of the tree
 for level in 0 1 2
@@ -131,7 +131,7 @@ do
         src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
 
         index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
+        index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
         index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
 
         echo "Index up to level ${level}:"
@@ -141,7 +141,7 @@ do
         echo "    GUFI Index:"
         echo "${index}" | awk '{ printf "        " $0 "\n" }'
         echo
-    ) 2>&1 | tee -a "${OUTPUT}"
+    ) | tee -a "${OUTPUT}"
 done
 
 diff ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"

@@ -74,7 +74,6 @@ GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
 # output directories
 SRCDIR="prefix"
 TRACE="trace"
-COPY="${TRACE}.copy"
 BADTRACE="badtrace"
 
 # trace delimiter
@@ -82,7 +81,7 @@ DELIM="|"
 BADDELIM="?"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${COPY}" "${BADTRACE}"
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${BADTRACE}"
 }
 
 trap cleanup EXIT
@@ -104,14 +103,19 @@ ${ROOT}/test/regression/generatetree "${SRCDIR}" 2> /dev/null
 echo
 
 replace "# generate the trace"
-replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
+replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 \"${SRCDIR}\" \"${TRACE}\""
 ${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 "${SRCDIR}" "${TRACE}" 2> /dev/null
 cat ${TRACE}.* > "${TRACE}"
 echo
 
 # replace the numeric fields in the trace with 0s
-sed 's/[[:digit:]]\+/0/g' "${TRACE}" > "${COPY}"
-mv "${COPY}" "${TRACE}"
+sed -i 's/[[:digit:]]\+/0/g' "${TRACE}"
+
+# replace some rows with fixed data
+sed -i "s/^${DELIM}d${DELIM}.*\$/${DELIM}d${DELIM}1${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}/g" "${TRACE}"
+sed -i "s/^leaf_directory${DELIM}d${DELIM}.*\$/leaf_directory${DELIM}d${DELIM}4${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
+sed -i "s/^directory${DELIM}d${DELIM}.*\$/directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
+sed -i "s/^directory\\/subdirectory${DELIM}d${DELIM}.*\$/directory\\/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}/g" "${TRACE}"
 
 replace "# valid trace"
 replace "$ verifytrace \"${DELIM}\" ${TRACE}"
@@ -164,7 +168,7 @@ output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
 replace "${output}"
 echo
 
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 diff ${ROOT}/test/regression/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

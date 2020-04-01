@@ -127,7 +127,7 @@ echo "${src}"   | awk '{ print "    " $1 }'
 echo "Trace File:"
 echo "${lines}" | awk '{ print "    " $1 }'
 
-) 2>&1 | tee "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 diff ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
 rm "${OUTPUT}"

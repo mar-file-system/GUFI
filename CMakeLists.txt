@@ -119,6 +119,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   if (GPROF)
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg")
   endif()
+
+  # Timestamps showing what each thread is doing
+  if (PER_THREAD_STATS)
+    add_definitions(-DPER_THREAD_STATS=1)
+  endif()
 endif()
 
 # Only enable C++ if support is found

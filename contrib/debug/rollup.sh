@@ -1,3 +1,4 @@
+#/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,31 @@
 
 
 
-# https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
-cmake_minimum_required(VERSION 3.0.0)
+DEBUG="$(dirname ${BASH_SOURCE[0]})"
 
-include(CheckLanguage)
+. ${DEBUG}/prepare_timestamps.sh $@
 
-if (CMAKE_CXX_COMPILER)
-  include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
-  set(TEST_SRC
-    OutputBuffers.cpp
-    QueuePerThreadPool.cpp
-    bf.cpp
-    dbutils.cpp
-    sll.cpp
-    trace.cpp
-    utils.cpp
-  )
-  add_executable(unit_tests ${TEST_SRC})
-  target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
+gnuplot <<EOF
 
-  add_test(NAME unit_tests COMMAND unit_tests)
-  set_tests_properties(unit_tests PROPERTIES LABELS unit)
-endif()
+set terminal pngcairo color solid size 12800,4800 font ",32"
+set output '${file}.png'
+set title "rollup Events"
+set xlabel "Seconds Since Arbitrary Epoch"
+set ylabel "Thread #"
+set key outside right
+set xrange [10:10.05]
+set yrange [${lowest}:${highest}]
+set ytics 5
+set clip two
+
+plot $(plot_args "wait_for_threads"  32 "wait for threads")
+     $(plot_args "descend_to_bottom" 24 "descend")
+     $(plot_args "lstat"             16 "lstat")
+     $(plot_args "ascend_to_top"     24 "ascend")
+     $(plot_args "run_user_function" 16 "run user function")
+     $(plot_args "opendb"             8 "opendb")
+     $(plot_args "can_rollup"         8 "can rollup")
+     $(plot_args "do_rollup"          8 "do rollup")
+     $(plot_args "rollup_subdir"      4 "rollup subdir")
+
+EOF

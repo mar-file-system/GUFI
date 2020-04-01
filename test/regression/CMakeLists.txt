@@ -62,72 +62,72 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-set(REGRESSION_TEST_FILES
-    gufi_dir2index.expected
-    gufi_dir2index.sh
-
-    gufi_dir2trace.expected
-    gufi_dir2trace.sh
-
-    gufi_trace2index.expected
-    gufi_trace2index.sh
-
-    gufi_query.expected
-    gufi_query.sh
-
-    querydb.expected
-    querydb.sh
-
-    querydbn.expected
-    querydbn.sh
-
-    generatetree
-    setup.sh
-    common.py
-
-    gufi_find.expected
-    gufi_find.py
-    gufi_find.sh
-
-    gufi_ls.expected
-    gufi_ls.py
-    gufi_ls.sh
-
-    gufi_stats.expected
-    gufi_stats.py
-    gufi_stats.sh
-
-    completions.expected
-    completions.sh
+# regression test specific files
+set(CORE
+  generatetree
+  setup.sh
+  common.py
 )
 
-if (NOT APPLE)
-  list(APPEND REGRESSION_TEST_FILES
-    gufi_stat.expected
-    gufi_stat.sh)
-endif()
+# .sh and .expected
+set(SH_AND_EXPECTED
+  completions
+  gufi_dir2index
+  gufi_dir2trace
+  gufi_trace2index
+  gufi_query
+  querydb
+  querydbn
+)
+
+# .sh, .py, and .expected
+set(SH_PY_AND_EXPECTED
+  gufi_find
+  gufi_ls
+  gufi_stats
+)
 
 if (CMAKE_CXX_COMPILER)
-  list(APPEND REGRESSION_TEST_FILES
-    verifytrace.expected
-    verifytrace.sh
-
-    verifytraceintree.expected
-    verifytraceintree.sh)
+  list(APPEND SH_AND_EXPECTED
+    verifytrace
+    verifytraceintree
+  )
 endif()
 
-foreach(FILE ${REGRESSION_TEST_FILES})
-  configure_file(${FILE} ${FILE} COPYONLY)
-  get_filename_component(EXT ${FILE} EXT)
-  if ("${EXT}" STREQUAL ".sh")
-    if ("${FILE}" STREQUAL "setup.sh")
-      continue()
-    endif()
+if (NOT APPLE)
+  list(APPEND SH_AND_EXPECTED
+    gufi_stat)
+endif()
 
-    get_filename_component(TEST_NAME ${FILE} NAME_WE)
-    add_test(NAME ${TEST_NAME} COMMAND ${FILE})
-    set_tests_properties(${TEST_NAME} PROPERTIES LABELS regression)
-  endif()
+# .sh and .expected
+# tests are not added since sudo is required
+set(SUDO
+  rollup
+  unrollup
+)
+
+foreach(NAME ${CORE})
+  configure_file(${NAME} ${NAME} COPYONLY)
+endforeach()
+
+foreach(NAME ${SH_AND_EXPECTED})
+  configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
+  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
+
+  add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
+  set_tests_properties("${NAME}" PROPERTIES LABELS regression)
+endforeach()
+
+foreach(NAME ${SH_PY_AND_EXPECTED})
+  configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
+  configure_file("${NAME}.py"       "${NAME}.py"       COPYONLY)
+  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
+
+  add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
+  set_tests_properties("${NAME}" PROPERTIES LABELS regression)
+endforeach()
+
+foreach(NAME ${SUDO})
+  configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
+  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 endforeach()

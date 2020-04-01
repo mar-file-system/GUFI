@@ -78,6 +78,12 @@ if (BENCHMARK)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # ##########################################
+  # Debug prints
+  # Should not be used with BENCHMARK
+  # ##########################################
+
+  # Cumulative times shown at end of run
   option(CUMULATIVE_TIMES "Sum the durations of events across all threads and print them at the end" Off)
   if (CUMULATIVE_TIMES)
     add_definitions(-DCUMULATIVE_TIMES=1)
@@ -88,6 +94,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DPER_THREAD_STATS=1)
   endif()
 
+  # print subdirectory counts
   option(SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
   if (SUBDIRECTORY_COUNTS)
     add_definitions(-DSUBDIRECTORY_COUNTS=1)
@@ -96,6 +103,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   option(QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
   if (QPTPOOL_QUEUE_SIZE)
     add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
+  endif()
+
+  if (PRINT_ROLLUP_SCORE)
+    add_definitions(-DPRINT_ROLLUP_SCORE=1)
   endif()
 endif()
 
@@ -123,6 +134,7 @@ endif()
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES
   bf.c
+  BottomUp.c
   dbutils.c
   debug.c
   outfiles.c
@@ -186,8 +198,11 @@ set(C_SOURCES
   gufi_trace2index.c
   gufi_query.c
   gufi_stat.c
+  parallel_rmr.c
   querydb.c
   querydbn.c
+  rollup.c
+  unrollup.c
 )
 
 # build the C executables

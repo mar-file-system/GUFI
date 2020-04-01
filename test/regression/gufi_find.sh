@@ -74,7 +74,7 @@ GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
 
 # output directories
 SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+INDEXROOT="${SRCDIR}.gufi"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
@@ -84,30 +84,40 @@ function replace() {
     echo "$@" | sed "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
 }
 
-function run() {
+function run_unsorted() {
+    replace "$ $@"
+    replace "$($@)"
+    echo
+}
+
+function run_sorted() {
     replace "$ $@"
     replace "$($@)" | sort
     echo
 }
 
 (
-run "${GUFI_FIND}"
-run "${GUFI_FIND} -empty"
-run "${GUFI_FIND} -type d"
-run "${GUFI_FIND} -type f"
-run "${GUFI_FIND} -type l"
-run "${GUFI_FIND} -readable"
-run "${GUFI_FIND} -writable"
-run "${GUFI_FIND} -executable"
-run "${GUFI_FIND} -mindepth 2"
-run "${GUFI_FIND} -maxdepth 0"
-run "${GUFI_FIND} -type f -size 1c"
-run "${GUFI_FIND} -type f -size=-1c"
-run "${GUFI_FIND} -type f -size +1c"
-run "${GUFI_FIND} -type f -size +1024c"
-run "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
-run "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
-) 2>&1 | tee "${OUTPUT}"
+run_sorted   "${GUFI_FIND}"
+run_sorted   "${GUFI_FIND} -empty"
+run_sorted   "${GUFI_FIND} -type d"
+run_sorted   "${GUFI_FIND} -type f"
+run_sorted   "${GUFI_FIND} -type l"
+run_sorted   "${GUFI_FIND} -readable"
+run_sorted   "${GUFI_FIND} -writable"
+run_sorted   "${GUFI_FIND} -executable"
+run_sorted   "${GUFI_FIND} -mindepth 2"
+run_sorted   "${GUFI_FIND} -maxdepth 0"
+# don't include directories or links because their
+# sizes are not consistent across filesystems
+run_sorted   "${GUFI_FIND} -type f -size 1c"
+run_sorted   "${GUFI_FIND} -type f -size=-1c"
+run_sorted   "${GUFI_FIND} -type f -size +1c"
+run_sorted   "${GUFI_FIND} -type f -size +1024c"
+run_sorted   "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
+run_sorted   "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
+run_unsorted "${GUFI_FIND} -type f --smallest"
+run_unsorted "${GUFI_FIND} -type f --largest"
+) | tee "${OUTPUT}"
 
 diff ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -1,3 +1,4 @@
+#/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,25 +61,40 @@
 
 
 
-# https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
-cmake_minimum_required(VERSION 3.0.0)
+DEBUG="$(dirname ${BASH_SOURCE[0]})"
 
-include(CheckLanguage)
+. ${DEBUG}/prepare_timestamps.sh $@
 
-if (CMAKE_CXX_COMPILER)
-  include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
-  set(TEST_SRC
-    OutputBuffers.cpp
-    QueuePerThreadPool.cpp
-    bf.cpp
-    dbutils.cpp
-    sll.cpp
-    trace.cpp
-    utils.cpp
-  )
-  add_executable(unit_tests ${TEST_SRC})
-  target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
+function plot() {
+    output_name="$1"
+    shift
+    extra_args="$@"
 
-  add_test(NAME unit_tests COMMAND unit_tests)
-  set_tests_properties(unit_tests PROPERTIES LABELS unit)
-endif()
+    gnuplot <<EOF
+set terminal pngcairo color solid size 12800,4800 font ",32"
+set output '${output_name}.png'
+set title "gufi_query Events"
+set xlabel "Seconds Since Arbitrary Epoch"
+set ylabel "Thread #"
+set key outside right
+set yrange [${lowest}:${highest}]
+set ytics 5
+${extra_args}
+plot $(plot_args "wf"                32  "wf")
+     $(plot_args "wf_process_work"   24  "wf_process_work")
+     $(plot_args "opendir"            8  "opendir")
+     $(plot_args "opendb"             8  "opendb")
+     $(plot_args "descend"            8  "descend")
+     $(plot_args "sqlsum"             8  "sqlsum")
+     $(plot_args "sqlent"             8  "sqlent")
+     $(plot_args "closedb"            8  "closedb")
+     $(plot_args "closedir"           8  "closedir")
+     $(plot_args "output_timestamps"  8  "output_timestamps")
+     $(plot_args "wf_next_work"      24  "wf_next_work")
+EOF
+}
+
+plot "${file}" &
+plot "${file}-zoomed-in" "set xrange [1.1:1.15]" &
+
+wait

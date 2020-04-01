@@ -102,15 +102,6 @@ def depth(config, args, where):
     get the depths of the provided directories relative to the root directory
 
     using --recursive/-r here will search for all directories under the provided directory as well
-
-    $ gufi_stats    depth
-    0
-
-    $ gufi_stats -r depth
-    . 0
-    directory 1
-    directory/subdirectory 2
-    leaf_directory 1
     '''
 
     root_slash_count = config.indexroot().count('/')
@@ -120,7 +111,7 @@ def depth(config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
 
         '-S', 'INSERT INTO {} {} '.format(args.inmemory_name,
-                                          gufi_common.build_query(['path()', '0'],
+                                          gufi_common.build_query(['path(name)', '0'],
                                                                   ['summary'],
                                                                   where,
                                                                   None,
@@ -159,15 +150,6 @@ def filesize(config, args, where):
     get the size the files in the immediate directory
 
     using --recursive here will get the size taken up by all of files in all subdirectories, without adding them
-
-    $ gufi_stats    filesize
-    1049600
-
-    $ gufi_stats -r filesize
-    . 1049600
-    directory 0
-    directory/subdirectory 0
-    leaf_directory 0
     '''
 
     root_len = len(config.indexroot())
@@ -176,8 +158,8 @@ def filesize(config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
 
         '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                          gufi_common.build_query(['path()', 'CAST(TOTAL(size) as INT64)'],
-                                                                  ['entries'],
+                                          gufi_common.build_query(['path((SELECT name FROM summary WHERE summary.inode == pentries.pinode))', 'CAST(TOTAL(size) as INT64)'],
+                                                                  ['pentries'],
                                                                   where + ['type == "f"'],
                                                                   None,
                                                                   None,
@@ -214,24 +196,6 @@ def entries_count(config, args, where, type):
     get the number of <type>s in the immediate directory
 
     using --recursive here will get the number of <type> in all subdirectories, without adding them
-
-    $ gufi_stats    filecount
-    7
-
-    $ gufi_stats -r filecount
-    . 7
-    directory 3
-    directory/subdirectory 1
-    leaf_directory 2
-
-    $ gufi_stats    linkcount
-    1
-
-    $ gufi_stats -r linkcount
-    . 1
-    directory 0
-    directory/subdirectory 1
-    leaf_directory 0
     '''
 
     root_len = len(config.indexroot())
@@ -240,9 +204,9 @@ def entries_count(config, args, where, type):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
 
         '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path()', 'COUNT(*)'],
-                                                                 ['entries'],
-                                                                 where + ['type == "{}"'.format(type)],
+                                         gufi_common.build_query(['path((SELECT summary.name FROM summary))', 'COUNT(pentries.inode)'],
+                                                                 ['pentries'],
+                                                                 where + ['pentries.type == "{}"'.format(type)],
                                                                  None,
                                                                  None,
                                                                  args.num_results,
@@ -284,12 +248,6 @@ def total_filesize(config, args, where):
     get the total size taken up by the entire directory
 
     --cumulative collects all values and sums them instead of reporting by uid
-
-    $ gufi_stats    total-filesize
-    1001 1049600
-
-    $ gufi_stats -c total-filesize
-    1049600
     '''
 
     root_len = len(config.indexroot())
@@ -381,36 +339,28 @@ def total_entries_count(config, args, where, type):
     get the total number of <type>s under the directory
 
     --cumulative collects all values and sums them instead of reporting by uid
-
-    $ gufi_stats    total-filecount
-    1001 13
-
-    $ gufi_stats -c total-filecount
-    13
-
-    $ gufi_stats    total-linkcount
-    1001 2
-
-    $ gufi_stats -c total-linkcount
-    2
     '''
 
     group_by = None if args.cumulative else ['uid']
 
+    E_group_by = ['pinode']
+    if group_by is not None:
+        E_group_by += group_by
+
     queries = [
-        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
+        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'pinode INT64', 'count INT64']),
 
         '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'uid', 'COUNT(*) AS count'],
-                                                                 ['entries'],
+                                         gufi_common.build_query(['NULL', 'uid', 'pinode', 'COUNT(inode) AS count'],
+                                                                 ['pentries'],
                                                                  where + ['type == "{}"'.format(type)],
-                                                                 group_by,
+                                                                 E_group_by,
                                                                  ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
                                                                  args.num_results,
                                                                  None)),
 
         '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
-                                                   gufi_common.build_query(['NULL', 'uid', 'count'],
+                                                   gufi_common.build_query(['NULL', 'uid', 'pinode', 'count'],
                                                                            [args.inmemory_name],
                                                                            None,
                                                                            None,
@@ -446,15 +396,6 @@ def dircount(config, args, where):
     # user. Without root, the other databases  #
     # can't be accessed.                       #
     ############################################
-
-    $ gufi_stats    dircount
-    2
-
-    $ gufi_stats -r dircount
-    . 2
-    directory 1
-    directory/subdirectory 0
-    leaf_directory 0
     '''
 
     root_len = len(config.indexroot())
@@ -463,7 +404,7 @@ def dircount(config, args, where):
         '-I', build_create(args.inmemory_name, ['path TEXT', 'inode INT64', 'pinode INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['fpath()', 'inode', 'pinode'],
+                                         gufi_common.build_query(['path(name)', 'inode', 'pinode'],
                                                                  ['summary'],
                                                                  where,
                                                                  None,
@@ -494,30 +435,25 @@ def total_dircount(config, args, where):
     get the total number of directories under the directory
 
     --cumulative collects all values and sums them instead of reporting by uid
-
-    $ gufi_stats    total-dircount
-    1001 3
-
-    $ gufi_stats -c total-dircount
-    3
     '''
 
     group_by = None if args.cumulative else ['uid']
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
+        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'name TEXT', 'uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'uid', '1 as count'],
+                                         gufi_common.build_query(['NULL', 'name', 'uid', '1 as count'],
                                                                  ['summary'],
-                                                                 where + ['level() > 0'],
+                                                                 where +
+                                                                 [] if args.cumulative else [gufi_common.ROLLUP_SUMMARY_WHERE],
                                                                  group_by,
                                                                  ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
                                                                  args.num_results,
                                                                  None)),
 
         '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
-                                                   gufi_common.build_query(['NULL', 'uid', 'count'],
+                                                   gufi_common.build_query(['NULL', 'name',  'uid', 'count'],
                                                                            [args.inmemory_name],
                                                                            None,
                                                                            None,
@@ -525,7 +461,7 @@ def total_dircount(config, args, where):
                                                                            args.num_results,
                                                                            None)),
 
-        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(count) AS count'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(count) ' + ('' if args.cumulative else '+ 1') + ' AS count'],
                                       [args.inmemory_name],
                                       None,
                                       group_by,
@@ -541,13 +477,6 @@ def leaf_dirs(config, args, where):
     get the leaf directories immediately under the current directory
 
     using --recursive/-r here will search for leaf directories under the provided directory as well
-
-    $ gufi_stats    leaf-dirs
-    leaf_directory
-
-    $ gufi_stats -r leaf-dirs
-    directory/subdirectory
-    leaf_directory
     '''
 
     root_len = len(config.indexroot())
@@ -556,7 +485,7 @@ def leaf_dirs(config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path()'],
+                                         gufi_common.build_query(['path(name)'],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,
@@ -593,13 +522,6 @@ def leaf_depth(config, args, where):
     get the leaf directories immediately under the current directory
 
     using --recursive/-r here will search for leaf directories under the provided directory as well
-
-    $ gufi_stats    leaf-depth
-    leaf_directory 1
-
-    $ gufi_stats -r leaf-depth
-    directory/subdirectory 2
-    leaf_directory 1
     '''
 
     root_slash_count = config.indexroot().count('/')
@@ -609,7 +531,7 @@ def leaf_depth(config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path()', '0'],
+                                         gufi_common.build_query(['path(name)', '0'],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,
@@ -647,13 +569,6 @@ def leaf(config, args, where, type):
     get number of <type>s in the leaf directories immediately under the current directory
 
     using --recursive/-r here will search for leaf directories under the provided directory as well
-
-    $ gufi_stats    leaf-files
-    leaf_directory 2
-
-    $ gufi_stats -r leaf-files
-    directory/subdirectory 1
-    leaf_directory 2
     '''
 
     root_len = len(config.indexroot())
@@ -662,7 +577,7 @@ def leaf(config, args, where, type):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path()', '(SELECT COUNT(*) FROM entries WHERE type=="{}")'.format(type)],
+                                         gufi_common.build_query(['path(name)', '(SELECT COUNT(*) FROM entries WHERE type=="{}")'.format(type)],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,
@@ -705,12 +620,6 @@ def total_leaf(config, args, where, type):
     get total number of <type>s in the leaf directories under this directory
 
     --cumulative collects all values and sums them instead of reporting by uid
-
-    $ gufi_stats    total-leaf-files
-    1001 3
-
-    $ gufi_stats -c total-leaf-files
-    3
     '''
 
     group_by = None if args.cumulative else ['uid']
@@ -756,9 +665,6 @@ def total_leaf_links(config, args, where):
 def median_leaf_files(config, args, where):
     '''
     get median number of leaf files under the provided directory
-
-    $ gufi_stats median-leaf-files
-    1.5
     '''
 
     queries = [
@@ -856,34 +762,6 @@ def per_level(config, args, where, type):
     get counts of how many <type>s are in each level of the tree, by uid
 
     --cumulative combines the results into one set of distributions
-
-    $ gufi_stats    files-per-level
-    1001 0 7
-    1001 1 5
-    1001 2 1
-
-    $ gufi_stats -c files-per-level
-    0 7
-    1 5
-    2 1
-
-    $ gufi_stats    links-per-level
-    1001 0 1
-    1001 2 1
-
-    $ gufi_stats -c links-per-level
-    0 1
-    2 1
-
-    $ gufi_stats    dirs-per-level
-    1001 0 1
-    1001 1 2
-    1001 2 1
-
-    $ gufi_stats -c dirs-per-level
-    0 1
-    1 2
-    2 1
     '''
 
     root = os.path.normpath(config.indexroot())
@@ -954,7 +832,7 @@ def duplicate_names(config, args, where):
 
         '-S',
         'INSERT INTO {} {}'.format(args.inmemory_name,
-                                   gufi_common.build_query(['NULL', 'path()'] +
+                                   gufi_common.build_query(['NULL', 'path(name)'] +
                                                            columns,
                                                            ['summary'],
                                                            where,
@@ -965,7 +843,7 @@ def duplicate_names(config, args, where):
 
         '-E',
         'INSERT INTO {} {}'.format(args.inmemory_name,
-                                   gufi_common.build_query(['NULL', 'path()'] +
+                                   gufi_common.build_query(['NULL', 'path(name)'] +
                                                            columns,
                                                            ['entries'],
                                                            where,

@@ -65,7 +65,7 @@ $ gufi_stats    total-dircount
 1001 3 
 
 $ gufi_stats -c total-dircount
-3 
+4 
 
 $ gufi_stats    files-per-level
 1001 0 7 

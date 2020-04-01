@@ -141,3 +141,33 @@ $ gufi_find -type f -size +1 -size=-3
 $ gufi_find -type f -size 2048
 1MB
 
+$ gufi_find -type f --smallest
+empty_file
+.hidden
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual, name?#
+1KB
+1MB
+
+$ gufi_find -type f --largest
+1MB
+1KB
+.hidden
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual, name?#
+empty_file
+

@@ -62,68 +62,75 @@ OF SUCH DAMAGE.
 
 
 
+/*
+   This header provides an API for parallelized
+   bottom-up traversal of a directory tree.
+   Operations are performed on directories
+   during the upward portion of the traversal.
+*/
+
+#ifndef GUFI_BOTTOM_UP
+#define GUFI_BOTTOM_UP
+
+#include <pthread.h>
+
 #include "debug.h"
+#include "SinglyLinkedList.h"
 
-pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* extra AscendFunc_t argments */
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+    #define timestamp_sig  , struct OutputBuffers * timestamp_buffers
+    #define timestamp_args , timestamp_buffers
+#else
+    #define timestamp_sig
+    #define timestamp_args
+#endif
 
-uint64_t epoch = 0;
+/*
+  Structure containing the necessary information
+  to traverse a tree upwards.
 
-uint64_t since_epoch(struct timespec * ts) {
-    struct timespec now;
+  This struct should be wrapped by a user struct.
 
-    if (!ts) {
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        ts = &now;
-    }
+  This struct will likely be directly used by
+  the user, so the imeplementation is not opaque.
+*/
+struct BottomUp {
+    char name[MAXPATH];
+    struct {
+        pthread_mutex_t mutex;
+        size_t remaining;
+    } refs;
+    size_t subdir_count;
+    size_t subnondir_count;
+    struct sll subdirs;
+    struct sll subnondirs;
+    struct BottomUp * parent;
 
-    uint64_t ns = ts->tv_sec;
-    ns *= 1000000000ULL;
-    ns += ts->tv_nsec;
+    /* extra arguments available at all times */
+    void * extra_args;
 
-    return ns;
-}
+    size_t level;
+    struct {
+        size_t down;
+        size_t up;
+    } tid;
+};
 
-uint64_t elapsed(struct start_end * se) {
-    const uint64_t s = (se->start.tv_sec * 1000000000ULL) + se->start.tv_nsec;
-    const uint64_t e = (se->end.tv_sec   * 1000000000ULL) + se->end.tv_nsec;
-    return e - s;
-}
+/* Signature of function for processing */
+/* a directory as the tree is ascending */
+typedef void (*AscendFunc_t)(void * user_struct
+                             timestamp_sig);
 
-long double sec(uint64_t nsec) {
-    return ((long double) nsec) / 1e9L;
-}
+/* Function user should call to walk a tree bottom up in parallel */
+int parallel_bottomup(char ** root_names, size_t root_count,
+                      const size_t thread_count,
+                      const size_t user_struct_size, AscendFunc_t func,
+                      const int track_non_dirs,
+                      void * extra_args
+                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                      , struct OutputBuffers * debug_buffers
+                      #endif
+);
 
-int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se) {
-    if (!obufs || !obufs->buffers) {
-        return -1;
-    }
-
-    const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
-    const size_t capacity = obufs->buffers[id].capacity;
-
-    /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-    if (len <= capacity) {
-        /* if there's not enough space in the buffer to fit the new row, flush it first */
-        if ((obufs->buffers[id].filled + len) > capacity) {
-            pthread_mutex_lock(obufs->mutex);
-            OutputBuffer_flush(&obufs->buffers[id], stderr);
-            pthread_mutex_unlock(obufs->mutex);
-        }
-
-        char * buf = obufs->buffers[id].buf;
-        size_t filled = obufs->buffers[id].filled;
-
-        memcpy(&buf[filled], str, len);
-        filled += len;
-
-        obufs->buffers[id].filled = filled;
-        obufs->buffers[id].count++;
-    }
-    else {
-        /* if the row does not fit the buffer, output immediately */
-        /* instead of buffering since order shouldn't matter      */
-        fwrite(str, sizeof(char), len, stderr);
-    }
-
-    return 0;
-}
+#endif

@@ -268,7 +268,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                 case 'A': /* access rights in human readable form */
                     {
                         char mode_str[11];
-                        modetostr(mode_str, mode);
+                        modetostr(mode_str, 11, mode);
                         fprintf(out, line, mode_str);
                     }
                     break;
@@ -447,11 +447,9 @@ int process_path(const char *path, FILE *out, const char *format) {
     ca.format = format;
 
     int rc = 1;
-    if ((db = opendb(dbname, RDONLY, 0, 1,
-                     NULL, NULL
-                     #ifdef DEBUG
+    if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 1
                      , NULL, NULL
-                     , NULL, NULL
+                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
                      , NULL, NULL
                      , NULL, NULL
                      #endif

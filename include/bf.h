@@ -137,11 +137,6 @@ typedef enum ShowResults {
     PRINT
 } ShowResults_t;
 
-typedef enum OpenMode {
-    RDONLY,
-    RDWR
-} OpenMode;
-
 struct input {
    char name[MAXPATH];
    size_t name_len;
@@ -192,7 +187,7 @@ struct input {
    ShowResults_t show_results;
    int keep_matime;
    size_t output_buffer_size;
-   OpenMode open_mode;
+   int open_flags;
 
    /* used by gufi_query (cumulative times) and gufi_stat (regular output) */
    int terse;
@@ -200,6 +195,10 @@ struct input {
    /* only used by gufi_stat */
    int format_set;
    char format[MAXPATH];
+
+   /* only used by rollup */
+   int dry_run;
+   size_t max_in_dir;
 };
 extern struct input in;
 

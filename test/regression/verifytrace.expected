@@ -2,7 +2,7 @@
 $ generatetree prefix
 
 # generate the trace
-$ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
+$ gufi_dir2trace -d "|" -n 2 "prefix" "trace"
 
 # valid trace
 $ verifytrace "|" trace
@@ -10,7 +10,7 @@ trace: Pass
 
 # wrong delimiter used
 $ verifytrace "?" trace
-trace: Error: Stanza missing first delimiter: |d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+trace: Error: Stanza missing first delimiter: |d|1|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
 # trace starts with a file
@@ -28,7 +28,7 @@ badtrace: Error: Bad child: /non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0
 Fail
 
 # bad directory pinode
-badtrace: Error: Bad parent pinode: |d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
+badtrace: Error: Bad parent pinode: |d|1|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
 Fail
 
 # bad child pinode
