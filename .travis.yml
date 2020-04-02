@@ -19,19 +19,19 @@ matrix:
             apt:
               sources:
                 - ubuntu-toolchain-r-test
-                - llvm-toolchain-xenial-7
+                - llvm-toolchain-xenial-8
               packages:
                 - attr
                 - cmake
-                - clang-7
+                - clang-8
                 - libattr1-dev
                 - libfuse-dev
                 - libpcre3-dev
                 - pkg-config
               update: true
           env:
-            - C_COMPILER=clang-7
-            - CXX_COMPILER=clang++-7
+            - C_COMPILER=clang-8
+            - CXX_COMPILER=clang++-8
             - BUILD=cmake
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
           script: contrib/travis/xenial.sh
@@ -165,18 +165,21 @@ matrix:
             apt:
               sources:
                 - ubuntu-toolchain-r-test
-                - llvm-toolchain-xenial-7
+                - llvm-toolchain-xenial-8
               packages:
                 - attr
                 - bsd-mailx
                 - cmake
-                - clang-7
+                - clang-8
                 - libattr1-dev
                 - libfuse-dev
                 - libpcre3-dev
               update: true
           script:
             - true
+          env:
+            - C_COMPILER=clang-8
+            - CXX_COMPILER=clang++-8
           deploy:
             provider: script
             skip-cleanup: true
