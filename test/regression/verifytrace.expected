@@ -1,0 +1,25 @@
+# generate the tree
+$ generatetree prefix
+
+# generate the trace
+$ gufi_dir0trace -d "|" -n 0 -x "prefix" "prefix.trace"
+
+# valid trace
+$ verifytrace "|" prefix.trace
+prefix.trace: Pass
+
+# wrong delimiter used
+$ verifytrace "?" prefix.trace
+prefix.trace: Stanza missing first delimiter: |d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+
+# trace starts with a file
+$ verifytrace "|" prefix.trace.bad
+prefix.trace.bad: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+
+# too few columns
+$ verifytrace "|" prefix.trace.bad
+prefix.trace.bad: Expected a directory: f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+
+# directory followed by file not in directory
+prefix.trace.bad: Bad child: /non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+

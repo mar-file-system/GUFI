@@ -70,29 +70,30 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
 GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
-GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
 
 # output directories
 SRCDIR="prefix"
 TRACE="${SRCDIR}.trace"
-INDEXROOT="${SRCDIR}.gufi"
 BADTRACE="${TRACE}.bad"
 
 # trace delimiter
 DELIM="|"
+BADDELIM="?"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${INDEXROOT}" "${BADTRACE}"
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${BADTRACE}"
 }
 
 trap cleanup EXIT
 
 cleanup
 
-OUTPUT="verifytraceintree.out"
+export LC_ALL=C
+
+OUTPUT="verifytrace.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:digit:]]\+/0/g"
 }
 
 (
@@ -104,34 +105,46 @@ ${ROOT}/test/regression/generatetree "${SRCDIR}" 2> /dev/null
 echo
 
 replace "# generate the trace"
-replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
+replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
 ${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}" 2> /dev/null
 cat ${TRACE}.* > "${TRACE}"
 echo
 
-replace "# generate the index"
-replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2> /dev/null | sed '1d'
+replace "# valid trace"
+replace "$ verifytrace \"${DELIM}\" ${TRACE}"
+replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${TRACE}")
 echo
 
-replace "# verify that all entries in the trace can be found in the GUFI tree"
-replace "$ verifytraceintree ${TRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytraceintree "${TRACE}" "${DELIM}" "${INDEXROOT}"
+replace "# wrong delimiter used"
+replace "$ verifytrace \"${BADDELIM}\" ${TRACE}"
+replace $(${ROOT}/contrib/verifytrace "${BADDELIM}" "${TRACE}" 2>&1)
 echo
 
-replace "# replace a file name"
-sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
-replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+# get a file line, without the name
+file_line=$(grep "${DELIM}f${DELIM}" "${TRACE}" | sort | tail -n 1)
+without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
+
+replace "# trace starts with a file"
+echo "file${DELIM}${without_name}" > "${BADTRACE}"
+replace "$ verifytrace \"${DELIM}\" ${BADTRACE}"
+replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
 echo
 
-replace "# replace a directory name"
-sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
-replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+replace "# too few columns"
+echo "${without_name}" > "${BADTRACE}"
+replace "$ verifytrace \"${DELIM}\" ${BADTRACE}"
+replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+echo
+
+replace "# directory followed by file not in directory"
+dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
+dir_name=$(echo "${dir_line}" | awk -F "${DELIM}" '{print $1}')
+bad_name=$(echo "${dir_name}/non-existant_dir/file${DELIM}${without_name}")
+(echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
+replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
 echo
 
 ) 2>&1 | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

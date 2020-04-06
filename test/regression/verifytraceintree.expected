@@ -1,18 +1,23 @@
+# generate the tree
 $ generatetree prefix
 
+# generate the trace
 $ gufi_dir2trace -d "|" -n 2 -x -o "prefix.trace" "prefix"
 
+# generate the index
 $ gufi_trace2index -d "|" "prefix.trace" "prefix.gufi"
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 
+# verify that all entries in the trace can be found in the GUFI tree
 $ verifytraceintree prefix.trace "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 prefix.trace Pass
 
+# replace a file name
 $ verifytraceintree prefix.trace.bad "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
@@ -21,6 +26,7 @@ Did not find expected entry "an_empty_file" in prefix.gufi/db.db
 Expected 8 entries. Got 0.
 prefix.trace.bad Fail
 
+# replace a directory name
 $ verifytraceintree prefix.trace.bad "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)

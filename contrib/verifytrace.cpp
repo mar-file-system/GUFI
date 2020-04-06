@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -74,9 +75,14 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
         return false;
     }
 
+    // empt lines are not errors
+    if (!line.size()) {
+        return true;
+    }
+
     const std::string::size_type first_delim = line.find(delim);
     if (first_delim == std::string::npos) {
-        std::cerr << "Missing delimiter: " << line << std::endl;
+        std::cerr << "Stanza missing first delimiter: " << line << std::endl;
         return false;
     }
 
@@ -97,9 +103,17 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
             break;
         }
 
+        // need at least 23 columns
+        const int columns = std::count(line.begin(), line.end(), delim);
+        if (columns < 23) {
+            std::cerr << "Not enough columns" << std::endl;
+            return false;
+        }
+
+        // find the first delimiter to get the type
         const std::string::size_type first_delim = line.find(delim);
         if (first_delim == std::string::npos) {
-            std::cerr << "Missing delimiter: " << line << std::endl;
+            std::cerr << "Entry missing delimiter: " << line << std::endl;
             return false;
         }
 
@@ -111,7 +125,13 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
         }
 
         // check if the current path is a direct child of the parent path
-        const std::string::size_type last_slash = line.find_last_of('/', first_delim);
+        std::string::size_type last_slash = line.find_last_of('/', first_delim);
+
+        // entries in root directory don't have any slashes
+        if (last_slash == std::string::npos) {
+            last_slash = 0;
+        }
+
         if (last_slash != parent.size()) {
             std::cerr << "Bad child: " << line << std::endl;
             return false;
@@ -123,27 +143,34 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
 
 bool verify_trace(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
     if (!stream) {
+        std::cerr << "Bad stream" << std::endl;
         return false;
     }
 
     while (verify_stanza(stream, delim, dir));
+
+    // if the loop broke early, then the
+    // stream was not completely read, so
+    // a good stream is an error
     return !stream;
 }
 
 int main(int argc, char * argv[]) {
-    if (argc < 1) {
-        std::cerr << "Syntax: " << argv[0] << " [trace ...]" << std::endl;
+    if (argc < 2) {
+        std::cerr << "Syntax: " << argv[0] << " delim [trace ...]" << std::endl;
         return 0;
     }
 
-    for(int i = 1; i < argc; i++) {
+    const char delim = argv[1][0];
+
+    for(int i = 2; i < argc; i++) {
         std::ifstream trace(argv[i]);
         if (!trace) {
             std::cerr << "Could not open " << argv[i] << std::endl;
             continue;
         }
 
-        std::cout << argv[i] << " " << (verify_trace(trace)?"Pass":"Fail")  << std::endl;
+        std::cout << argv[i] << ": " << (verify_trace(trace, delim)?"Pass":"Fail")  << std::endl;
     }
 
     return 0;
