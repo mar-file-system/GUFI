@@ -105,6 +105,9 @@ set(REGRESSION_TEST_FILES
 
 if (CMAKE_CXX_COMPILER)
   list(APPEND REGRESSION_TEST_FILES
+    verifytrace.expected
+    verifytrace.sh
+
     verifytraceintree.expected
     verifytraceintree.sh)
 endif()

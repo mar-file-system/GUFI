@@ -151,16 +151,21 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         /* get entry path */
         struct work e;
         memset(&e, 0, sizeof(struct work));
-        SNPRINTF(e.name, MAXPATH, "%s/%s", work_name, entry->d_name);
+
+        char fullpath[MAXPATH];
+        const size_t fullpath_len = SNPRINTF(fullpath, MAXPATH, "%s/%s", work_name, entry->d_name);
+
+        /* the name that is stored in trace does not have the prefix */
+        memcpy(e.name, fullpath + in.name_len, fullpath_len - in.name_len);
 
         /* get the entry's metadata */
-        if (lstat(e.name, &e.statuso) < 0) {
+        if (lstat(fullpath, &e.statuso) < 0) {
             continue;
         }
 
         e.xattrs=0;
         if (in.doxattrs > 0) {
-            e.xattrs = pullxattrs(e.name, e.xattr);
+            e.xattrs = pullxattrs(fullpath, e.xattr);
         }
 
         /* push subdirectories onto the queue */
@@ -172,6 +177,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             /* this is more efficient than malloc+free for every single entry */
             struct work * copy = (struct work *) calloc(1, sizeof(struct work));
             memcpy(copy, &e, sizeof(struct work));
+            memcpy(copy->name, fullpath, fullpath_len);
 
             QPTPool_enqueue(ctx, id, processdir, copy);
             continue;
@@ -182,7 +188,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         /* non directories */
         if (S_ISLNK(e.statuso.st_mode)) {
             e.type[0] = 'l';
-            readlink(e.name, e.linkname, MAXPATH);
+            readlink(fullpath, e.linkname, MAXPATH);
         }
         else if (S_ISREG(e.statuso.st_mode)) {
             e.type[0] = 'f';
@@ -197,14 +203,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         total_files++;
         pthread_mutex_unlock(&global_mutex);
         #endif
-
-        if (work_name_len <= in.name_len) {
-            SNPRINTF(e.name, MAXPATH, "%s", entry->d_name);
-        }
-        else {
-            /* offset by in.name_len to remove prefix */
-            SNPRINTF(e.name, MAXPATH, "%s/%s", work_name + in.name_len, entry->d_name);
-        }
 
         worktofile(gts.outfd[id], in.delim, &e);
     }

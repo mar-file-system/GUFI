@@ -84,6 +84,8 @@ function cleanup {
 
 trap cleanup EXIT
 
+cleanup
+
 export LC_ALL=C
 
 OUTPUT="gufi_dir2trace.out"
@@ -93,8 +95,6 @@ function replace() {
 }
 
 (
-cleanup
-
 # generate the tree
 ${ROOT}/test/regression/generatetree "${SRCDIR}"
 
@@ -120,7 +120,7 @@ echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
 src=$(find "${SRCDIR}/" -printf "%p\n" | sort)
-lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sort)
+lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sed "s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"
 echo "${src}"   | awk '{ print "    " $1 }'
