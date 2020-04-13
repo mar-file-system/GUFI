@@ -50,7 +50,7 @@ matrix:
             - CXX_COMPILER=clang++-7
             - BUILD=cmake
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
-            - DOCKER_IMAGE=saltstack/opensuse-12.3-minimal
+            - DOCKER_IMAGE=tomxiong/basevm-opensuse-12-3
           script:
             - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/suse12.3.sh
 
