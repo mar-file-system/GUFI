@@ -87,16 +87,32 @@ def build_select(args):
     # ordering of concatenation matters
 
     if args.inode:
+        if args.json:
+            select += ["'inode'"]
         select += ['inode']
 
     if args.size:
+        if args.json:
+            select += ["'blocks'"]
         select += ['blocks']
 
     if args.long_listing:
-        select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
+        if args.json:
+            select += ["'mode'"]
+        select += ['modetotxt(mode)']
+        if args.json:
+            select += ["'nlink'"]
+        select += ['printf("%' + str(args.nlink_width) + 'd", nlink)']
+        if args.json:
+            select += ["'uid'"]
+        select += ['uidtouser(uid, ' + str(args.user_width) + ')']
         if not args.no_group:
+            if args.json:
+                select += ["'gid'"]
             select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
 
+        if args.json:
+            select += ["'size'"]
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
         if args.human_readable:
@@ -105,9 +121,16 @@ def build_select(args):
             select += ['blocksize(size, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
             select += ['printf("%' + str(args.size_width) + 'd", size)']
-        select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name || " -> " || linkname) else name end']
 
+        if args.json:
+            select += ["'mtime'"]
+        select += ['strftime("%b  %e %H:%M", mtime)']
+        if args.json:
+            select += ["'name'"]
+        select += ['case when (type == "l") then (name || " -> " || linkname) else name end']
     else:
+        if args.json:
+            select += ["'name'"]
         # at minimum, print the file name
         select += ['name']
 
@@ -120,16 +143,32 @@ def build_recursive_select(args):
     # ordering of concatenation matters
 
     if args.inode:
+        if args.json:
+            select += ["'inode'"]
         select += ['uinode']
 
     if args.size:
+        if args.json:
+            select += ["'blocks'"]
         select += ['ublocks']
 
     if args.long_listing:
-        select += ['modetotxt(umode)', 'printf("%' + str(args.nlink_width) + 'd", unlink)', 'uidtouser(uuid, ' + str(args.user_width) + ')']
+        if args.json:
+            select += ["'mode'"]
+        select += ['modetotxt(umode)',]
+        if args.json:
+            select += ["'nlink'"]
+        select += ['printf("%' + str(args.nlink_width) + 'd", unlink)']
+        if args.json:
+            select += ["'uid'"]
+        select += ['uidtouser(uuid, ' + str(args.user_width) + ')']
         if not args.no_group:
+            if args.json:
+                select += ["'gid'"]
             select += ['gidtogroup(ugid, ' + str(args.group_width) + ')']
 
+        if args.json:
+            select += ["'size'"]
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
         if args.human_readable:
@@ -138,9 +177,16 @@ def build_recursive_select(args):
             select += ['blocksize(usize, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
             select += ['printf("%' + str(args.size_width) + 'd", usize)']
-        select += ['strftime("%b  %e %H:%M", umtime)', 'case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
+        if args.json:
+            select += ["'mtime'"]
+        select += ['strftime("%b  %e %H:%M", umtime)']
+        if args.json:
+            select += ["'name'"]
+        select += ['case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
 
     else:
+        if args.json:
+            select += ["'name'"]
         # at minimum, print the file name
         select += ['ufullpath || "/" || uname']
 
@@ -245,6 +291,7 @@ if __name__=='__main__':
     parser.add_argument('--size-width',     metavar='chars', dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
     parser.add_argument('--user-width',     metavar='chars', dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
     parser.add_argument('--group-width',    metavar='chars', dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
+    parser.add_argument('--json',                            dest='json',           action='store_true',                              help='Output json')
 
     args = parser.parse_args();
 
@@ -295,7 +342,8 @@ if __name__=='__main__':
                                         None,
                                         None,
                                         build_order_by(args),
-                                        args.num_results)
+                                        args.num_results,
+                                        json = args.json)
 
             query_cmd += ['-y', '1',
                           '-z', '1']
@@ -350,7 +398,8 @@ if __name__=='__main__':
                                                        ['u' + w for w in where],
                                                        None,
                                                        build_order_by_recursive(args),
-                                                       args.num_results))
+                                                       args.num_results),
+                                                       json = args.json)
             else:
                 # select on pinode
                 G = gufi_common.build_query(build_select(args),
@@ -363,7 +412,8 @@ if __name__=='__main__':
                                                                                              None))],
                                             None,
                                             build_order_by(args),
-                                            args.num_results)
+                                            args.num_results,
+                                            json = args.json)
 
                 query_cmd += ['-z', '1']
 

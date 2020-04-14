@@ -175,7 +175,7 @@ def get_group(grp):
         return get_gid(grp)
 # ###############################################
 
-def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None, extra = None):
+def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None, extra = None, json = False):
     '''
     Builds a query using arrays of data for each field.
     'select' and 'from_tables' must exist. All other arguments are optional.
@@ -202,7 +202,11 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
     if not select or not len(select) or not tables or not len(tables):
         return ""
 
-    query = 'SELECT {} FROM {}'.format(', '.join(select), ', '.join(tables))
+    columns = ', '.join(select)
+    if (json):
+        columns = 'json_object({})'.format(columns)
+
+    query = 'SELECT {} FROM {}'.format(columns, ', '.join(tables))
 
     if where and len(where):
         query += ' WHERE ({})'.format(') AND ('.join(where))
