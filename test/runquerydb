@@ -1,3 +1,5 @@
+#!/bin/bash -e
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,56 +62,50 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+SCRIPT="$BASH_SOURCE" # Must be at the top
+DIR=`dirname $SCRIPT`
+QUERYDB=$DIR/../src/querydb
 
-# add regression tests
-add_subdirectory(regression)
 
-# make sure unit tests work first
-add_subdirectory(googletest)
+usage() {
+    PROG=$1
+    echo "Usage: $PROG <GUFI_tree>"
+    exit -1
+}
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+GUFI=$1
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+if (( $# != 1 )); then
+    usage $0
+elif [ ! -d $GUFI ]; then
+    usage $0
+elif [ ! -e $GUFI/db.db ]; then
+    echo "$GUFI/db.db does not exist.  Need the root of a GUFI tree."
+    exit -1
+fi
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+
+# Usage: querydb [options] [-s] DB_path SQL
+# options:
+#   -h              help
+#   -H              show assigned input values (debugging)
+#   -N              print column-names (header) for DB results
+#   -V              print column-values (rows) for DB results
+#
+# DB_path           path to dir containinng db.db.*
+# SQL               arbitrary SQL on DB
+#
+
+
+echo
+echo "query  dir summary"
+$QUERYDB -NV $GUFI "select * from summary;"
+
+echo
+echo "query  tree summary"
+$QUERYDB -NV $GUFI "select * from treesummary;"
+
+echo
+echo "query entries"
+$QUERYDB -NV $GUFI "select * from entries;"
