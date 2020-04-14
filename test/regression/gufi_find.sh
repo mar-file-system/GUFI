@@ -109,5 +109,5 @@ run "${GUFI_FIND} -size +1 -size=-3" # 512 < size < 1536
 run "${GUFI_FIND} -size 2048"        # 512 * 2048 = 1MB
 ) 2>&1 | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"

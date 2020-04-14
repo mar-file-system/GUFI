@@ -1,14 +1,18 @@
 $ gufi_find
+.
 .hidden
 1KB
 1MB
+directory
 directory/executable
 directory/readonly
+directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
+leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
@@ -44,16 +48,20 @@ directory/subdirectory/directory_symlink
 file_symlink
 
 $ gufi_find -readable
+.
 .hidden
 1KB
 1MB
+directory
 directory/executable
 directory/readonly
+directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
+leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
@@ -61,15 +69,19 @@ repeat_name
 unusual, name?#
 
 $ gufi_find -writable
+.
 .hidden
 1KB
 1MB
+directory
 directory/executable
+directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
 file_symlink
+leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
@@ -77,15 +89,21 @@ repeat_name
 unusual, name?#
 
 $ gufi_find -executable
+.
+directory
 directory/executable
+directory/subdirectory
 directory/subdirectory/directory_symlink
 file_symlink
+leaf_directory
 
 $ gufi_find -mindepth 2
+directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 
 $ gufi_find -maxdepth 0
+.
 .hidden
 1KB
 1MB
@@ -111,10 +129,14 @@ $ gufi_find -size=-1c
 empty_file
 
 $ gufi_find -size +1c
+.
 1KB
 1MB
+directory
+directory/subdirectory
 directory/subdirectory/directory_symlink
 file_symlink
+leaf_directory
 
 $ gufi_find -size +1024c
 1MB
