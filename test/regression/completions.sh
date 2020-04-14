@@ -100,19 +100,27 @@ get_function_name gufi_find
 get_function_name gufi_ls
 get_function_name gufi_stats
 
-echo "At Root:"
+echo "Root entries:"
 tabtab " "
 echo
 
-echo "All entries starting with \"1\":"
+echo "Root entries starting with \".\":"
+tabtab "\\."
+echo
+
+echo "Root entries starting with \"1\":"
 tabtab 1
 echo
 
-echo "All entries starting with \"e\":"
+echo "Root entries starting with \"e\":"
 tabtab e
 echo
 
-echo "All entries starting with \"dir\":"
+echo "Root entries starting with \"w\":"
+tabtab w
+echo
+
+echo "Root entries starting with \"dir\":"
 tabtab dir
 echo
 
