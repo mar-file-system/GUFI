@@ -73,15 +73,16 @@ GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
 
 # output directories
 SRCDIR="prefix"
-TRACE="${SRCDIR}.trace"
-BADTRACE="${TRACE}.bad"
+TRACE="trace"
+COPY="${TRACE}.copy"
+BADTRACE="badtrace"
 
 # trace delimiter
 DELIM="|"
 BADDELIM="?"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${BADTRACE}"
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${COPY}" "${BADTRACE}"
 }
 
 trap cleanup EXIT
@@ -93,12 +94,10 @@ export LC_ALL=C
 OUTPUT="verifytrace.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:digit:]]\+/0/g"
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
 }
 
 (
-umask 002
-
 replace "# generate the tree"
 replace "$ generatetree ${SRCDIR}"
 ${ROOT}/test/regression/generatetree "${SRCDIR}" 2> /dev/null
@@ -110,6 +109,10 @@ ${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 "${SRCDIR}" "${TRACE}" 2> /dev/null
 cat ${TRACE}.* > "${TRACE}"
 echo
 
+# replace the numeric fields in the trace with 0s
+sed 's/[[:digit:]]\+/0/g' "${TRACE}" > "${COPY}"
+mv "${COPY}" "${TRACE}"
+
 replace "# valid trace"
 replace "$ verifytrace \"${DELIM}\" ${TRACE}"
 replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${TRACE}")
@@ -117,7 +120,8 @@ echo
 
 replace "# wrong delimiter used"
 replace "$ verifytrace \"${BADDELIM}\" ${TRACE}"
-replace $(${ROOT}/contrib/verifytrace "${BADDELIM}" "${TRACE}" 2>&1)
+output=$(${ROOT}/contrib/verifytrace "${BADDELIM}" "${TRACE}" 2>&1)
+replace "${output}"
 echo
 
 # get a file line, without the name
@@ -127,13 +131,15 @@ without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
 replace "# trace starts with a file"
 echo "file${DELIM}${without_name}" > "${BADTRACE}"
 replace "$ verifytrace \"${DELIM}\" ${BADTRACE}"
-replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+replace "${output}"
 echo
 
 replace "# too few columns"
 echo "${without_name}" > "${BADTRACE}"
 replace "$ verifytrace \"${DELIM}\" ${BADTRACE}"
-replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+replace "${output}"
 echo
 
 replace "# directory followed by file not in directory"
@@ -141,7 +147,21 @@ dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
 dir_name=$(echo "${dir_line}" | awk -F "${DELIM}" '{print $1}')
 bad_name=$(echo "${dir_name}/non-existant_dir/file${DELIM}${without_name}")
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
-replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+replace "${output}"
+echo
+
+replace "# bad directory pinode"
+head -n 1 "${TRACE}" | awk -F "${DELIM}" '{$23="bad_pinode"; print}' OFS="${DELIM}" > "${BADTRACE}"
+output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+replace "${output}"
+echo
+
+replace "# bad child pinode"
+head -n 1 "${TRACE}" > "${BADTRACE}"
+echo "${file_line}"| awk -F "${DELIM}" '{$23="1234"; print}' OFS="${DELIM}" >> "${BADTRACE}"
+output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
+replace "${output}"
 echo
 
 ) 2>&1 | tee "${OUTPUT}"

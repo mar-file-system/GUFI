@@ -2,35 +2,35 @@
 $ generatetree prefix
 
 # generate the trace
-$ gufi_dir2trace -d "|" -n 2 -x -o "prefix.trace" "prefix"
+$ gufi_dir2trace -d "|" -n 2 -x -o "trace" "prefix"
 
 # generate the index
-$ gufi_trace2index -d "|" "prefix.trace" "prefix.gufi"
+$ gufi_trace2index -d "|" "trace" "prefix.gufi"
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 
 # verify that all entries in the trace can be found in the GUFI tree
-$ verifytraceintree prefix.trace "|" prefix.gufi
+$ verifytraceintree trace "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
-prefix.trace Pass
+trace Pass
 
 # replace a file name
-$ verifytraceintree prefix.trace.bad "|" prefix.gufi
+$ verifytraceintree badtrace "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 Did not find expected entry "an_empty_file" in prefix.gufi/db.db
-Expected 8 entries. Got 0.
-prefix.trace.bad Fail
+Did not get 8 entries.
+badtrace Fail
 
 # replace a directory name
-$ verifytraceintree prefix.trace.bad "|" prefix.gufi
+$ verifytraceintree badtrace "|" prefix.gufi
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19
 Parent doesn't exist: prefix.gufi/directory/subdir
-prefix.trace.bad Fail
+badtrace Fail
 

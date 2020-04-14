@@ -96,7 +96,6 @@ run "${GUFI_LS} -a"
 run "${GUFI_LS} -h"
 run "${GUFI_LS} -R"
 run "${GUFI_LS} -r"
-run "${GUFI_LS} -s"
 run "${GUFI_LS} -ar"
 run "${GUFI_LS} -arR"
 

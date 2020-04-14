@@ -1,6 +1,6 @@
 Index up to level :
     Source Directory:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
@@ -21,7 +21,7 @@ Index up to level :
         prefix/unusual, name?#
 
     GUFI Index:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
@@ -43,36 +43,41 @@ Index up to level :
 
 Index up to level 0:
     Source Directory:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
+        prefix/directory
         prefix/empty_file
         prefix/file_symlink
+        prefix/leaf_directory
         prefix/old_file
         prefix/repeat_name
         prefix/unusual, name?#
 
     GUFI Index:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
+        prefix/directory
         prefix/empty_file
         prefix/file_symlink
+        prefix/leaf_directory
         prefix/old_file
         prefix/repeat_name
         prefix/unusual, name?#
 
 Index up to level 1:
     Source Directory:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
         prefix/directory
         prefix/directory/executable
         prefix/directory/readonly
+        prefix/directory/subdirectory
         prefix/directory/writable
         prefix/empty_file
         prefix/file_symlink
@@ -84,13 +89,14 @@ Index up to level 1:
         prefix/unusual, name?#
 
     GUFI Index:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
         prefix/directory
         prefix/directory/executable
         prefix/directory/readonly
+        prefix/directory/subdirectory
         prefix/directory/writable
         prefix/empty_file
         prefix/file_symlink
@@ -103,7 +109,7 @@ Index up to level 1:
 
 Index up to level 2:
     Source Directory:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB
@@ -124,7 +130,7 @@ Index up to level 2:
         prefix/unusual, name?#
 
     GUFI Index:
-        prefix/
+        prefix
         prefix/.hidden
         prefix/1KB
         prefix/1MB

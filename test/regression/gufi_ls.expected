@@ -67,18 +67,6 @@ directory
 1KB
 .hidden
 
-$ gufi_ls -s
-0 .hidden
-0 1KB
-0 1MB
-0 directory
-0 empty_file
-0 file_symlink
-0 leaf_directory
-0 old_file
-0 repeat_name
-0 unusual, name?#
-
 $ gufi_ls -ar
 unusual, name?#
 repeat_name

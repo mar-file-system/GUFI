@@ -95,9 +95,9 @@ OUTPUT="gufi_dir2index.out"
 # generate the index
 ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
 
-src_dirs=$(find "${SRCDIR}/" -type d -printf "%p\n" | sort)
-index_dirs=$(find "${INDEXROOT}/" -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
-src_entries=$(find "${SRCDIR}/" -not -type d -printf "%p\n" | sort)
+src_dirs=$(find "${SRCDIR}" -type d | sort)
+index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
+src_entries=$(find "${SRCDIR}" -not -type d | sort)
 index_entries=$(${ROOT}/src/gufi_query -d " " -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
 
 src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
@@ -124,9 +124,9 @@ do
         ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
 
         # get the directories
-        src_dirs=$(find "${SRCDIR}/" -maxdepth ${level} -type d -printf "%p\n" | sort)
-        index_dirs=$(find "${INDEXROOT}/" -maxdepth ${level} -type d -printf "%p\n" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
-        src_entries=$(find "${SRCDIR}/" -maxdepth $((${level} + 1)) -not -type d -printf "%p\n" | sort)
+        src_dirs=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -type d | sort)
+        index_dirs=$(find "${INDEXROOT}" -maxdepth ${level} -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
+        src_entries=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -not -type d | sort)
         index_entries=$(${ROOT}/src/gufi_query -d " " -z ${level} -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
 
         src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)

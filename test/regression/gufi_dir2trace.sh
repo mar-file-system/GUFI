@@ -79,7 +79,7 @@ TRACE="${SRCDIR}.trace"
 DELIM="|"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}.*"
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".*
 }
 
 trap cleanup EXIT
@@ -104,14 +104,14 @@ ${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}"
 
 # count output files
 expected=2
-found="$(find ${TRACE}.* | wc -l)"
+found=$(find ${TRACE}.* | wc -l | awk '{print $1}')
 echo "Expecting ${expected} trace files. Found ${found}."
 
 # count lines
 cat ${TRACE}.* > "${TRACE}"
-trace_lines="$(cat ${TRACE} | wc -l)"
-contents=$(find "${SRCDIR}/" -printf "%p\n")
-content_lines=$(echo "${contents}" | wc -l)
+trace_lines=$(cat "${TRACE}" | wc -l | awk '{print $1}')
+contents=$(find "${SRCDIR}")
+content_lines=$(echo "${contents}" | wc -l | awk '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
@@ -119,7 +119,7 @@ columns=$(sed "s/[^${DELIM}]//g" "${TRACE}" | awk '{ print length }' | sort | un
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
-src=$(find "${SRCDIR}/" -printf "%p\n" | sort)
+src=$(find "${SRCDIR}/" | sed 's/\/\//\//g' | sort)
 lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sed "s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"

@@ -87,41 +87,41 @@ function replace() {
 (
 # entries in the index with a fixed size
 fixed_size=(
-    "${INDEXROOT}/empty_file"
-    "${INDEXROOT}/1KB"
-    "${INDEXROOT}/1MB"
-    "${INDEXROOT}/unusual, name?#"
-    "${INDEXROOT}/.hidden"
-    "${INDEXROOT}/repeat_name"
-    "${INDEXROOT}/old_file"
-    "${INDEXROOT}/directory/readonly"
-    "${INDEXROOT}/directory/writable"
-    "${INDEXROOT}/directory/executable"
-    "${INDEXROOT}/directory/subdirectory/repeat_name"
-    "${INDEXROOT}/leaf_directory/leaf_file1"
-    "${INDEXROOT}/leaf_directory/leaf_file2"
+    "empty_file"
+    "1KB"
+    "1MB"
+    "unusual, name?#"
+    ".hidden"
+    "repeat_name"
+    "old_file"
+    "directory/readonly"
+    "directory/writable"
+    "directory/executable"
+    "directory/subdirectory/repeat_name"
+    "leaf_directory/leaf_file1"
+    "leaf_directory/leaf_file2"
 )
 
 for entry in "${fixed_size[@]}"
 do
-    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %s %w %W\n' "${entry}")
+    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}")
     replace "${output}"
 done
 
 # entries in the index that don't have fixed sizes
 variable_size=(
-    "${INDEXROOT}/"
-    "${INDEXROOT}/directory"
-    "${INDEXROOT}/directory/subdirectory"
-    "${INDEXROOT}/directory/subdirectory/directory_symlink"
-    "${INDEXROOT}/file_symlink"
-    "${INDEXROOT}/leaf_directory"
+    ""
+    "directory"
+    "directory/subdirectory"
+    "directory/subdirectory/directory_symlink"
+    "file_symlink"
+    "leaf_directory"
 )
 
 # print directories separately since directory size seems to change
 for entry in "${variable_size[@]}"
 do
-    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %w %W\n' "${entry}")
+    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}")
     replace "${output}"
 done
 

@@ -2,24 +2,36 @@
 $ generatetree prefix
 
 # generate the trace
-$ gufi_dir0trace -d "|" -n 0 -x "prefix" "prefix.trace"
+$ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 
 # valid trace
-$ verifytrace "|" prefix.trace
-prefix.trace: Pass
+$ verifytrace "|" trace
+trace: Pass
 
 # wrong delimiter used
-$ verifytrace "?" prefix.trace
-prefix.trace: Stanza missing first delimiter: |d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+$ verifytrace "?" trace
+trace: Error: Stanza missing first delimiter: |d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+Fail
 
 # trace starts with a file
-$ verifytrace "|" prefix.trace.bad
-prefix.trace.bad: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+$ verifytrace "|" badtrace
+badtrace: Error: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+Fail
 
 # too few columns
-$ verifytrace "|" prefix.trace.bad
-prefix.trace.bad: Expected a directory: f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+$ verifytrace "|" badtrace
+badtrace: Error: Not enough columns: f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+Fail
 
 # directory followed by file not in directory
-prefix.trace.bad: Bad child: /non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0| Fail
+badtrace: Error: Bad child: /non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+Fail
+
+# bad directory pinode
+badtrace: Error: Bad parent pinode: |d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
+Fail
+
+# bad child pinode
+badtrace: Error: Bad child pinode: unusual, name?#|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
+Fail
 

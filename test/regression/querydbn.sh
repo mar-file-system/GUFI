@@ -81,7 +81,7 @@ INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 function cleanup() {
-    find -name "${OUTDB}" -o -name "${OUTDB}.*" -delete
+    rm -f ${OUTDB} ${OUTDB}.*
 }
 
 trap cleanup EXIT
