@@ -954,7 +954,7 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
     return;
 }
 
-static void level(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
     size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
     sqlite3_result_int64(context, level);
     return;
@@ -970,7 +970,7 @@ int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl) {
             (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8, NULL,                     &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8, NULL,                     &blocksize,           NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8, NULL,                     &human_readable_size, NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8, (void *) (uintptr_t) lvl, &level,               NULL, NULL) == SQLITE_OK))?0:1;
+            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8, (void *) (uintptr_t) lvl, &relative_level,      NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
