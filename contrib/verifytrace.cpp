@@ -75,25 +75,55 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
         return false;
     }
 
-    // empt lines are not errors
+    // empty lines are not errors
     if (!line.size()) {
         return true;
     }
 
+    // there should be at least one delimiter
     const std::string::size_type first_delim = line.find(delim);
     if (first_delim == std::string::npos) {
-        std::cerr << "Stanza missing first delimiter: " << line << std::endl;
+        std::cerr << "Error: Stanza missing first delimiter: " << line << std::endl;
+        return false;
+    }
+
+    // need at least 23 columns
+    const int columns = std::count(line.begin(), line.end(), delim);
+    if (columns < 23) {
+        std::cerr << "Error: Not enough columns: " << line << std::endl;
         return false;
     }
 
     // expect to start at a directory
     if (line[first_delim + 1] != dir) {
-        std::cerr << "Expected a directory: " << line << std::endl;
+        std::cerr << "Error: Expected a directory: " << line << std::endl;
         return false;
     }
 
-    // get the path of the parent, removing the trailing slash
-    const std::string parent = line.substr(0, first_delim - (line[first_delim - 1] == '/'));
+    std::string::size_type len = first_delim;
+    // remove trailing slashes
+    while (len && (line[len] == '/')) {
+        len--;
+    }
+
+    const std::string parent = line.substr(0, len);
+
+    const std::string::size_type last_delim = line.find_last_of(delim);
+    if (last_delim != (line.size() - 1)) {
+        std::cerr << "Warning: Trailing characters present" << std::endl;
+    }
+
+    const std::string::size_type pinode_delim = line.find_last_of(delim, last_delim - 1);
+    if (pinode_delim <= (first_delim + 2)) {
+        std::cerr << "Error: Could not find parent pinode: " << line << std::endl;
+        return false;
+    }
+
+    const std::string pinode = line.substr(pinode_delim + 1, last_delim - pinode_delim - 1);
+    if (!std::all_of(pinode.begin(), pinode.end(), ::isdigit)) { // don't use std::isdigit since it takes an int, but *it is a char
+        std::cerr << "Error: Bad parent pinode: " << line << std::endl;
+        return false;
+    }
 
     // followed by a series of non-directories
     while (true) {
@@ -103,17 +133,21 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
             break;
         }
 
-        // need at least 23 columns
-        const int columns = std::count(line.begin(), line.end(), delim);
-        if (columns < 23) {
-            std::cerr << "Not enough columns" << std::endl;
+        if (!line.size()) {
+            continue;
+        }
+
+        // there should be at least one delimiter
+        const std::string::size_type first_delim = line.find(delim);
+        if (first_delim == std::string::npos) {
+            std::cerr << "Error: Entry missing delimiter: " << line << std::endl;
             return false;
         }
 
-        // find the first delimiter to get the type
-        const std::string::size_type first_delim = line.find(delim);
-        if (first_delim == std::string::npos) {
-            std::cerr << "Entry missing delimiter: " << line << std::endl;
+        // need at least 23 columns
+        const int columns = std::count(line.begin(), line.end(), delim);
+        if (columns < 23) {
+            std::cerr << "Error: Not enough columns: " << line << std::endl;
             return false;
         }
 
@@ -132,8 +166,27 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
             last_slash = 0;
         }
 
-        if (last_slash != parent.size()) {
-            std::cerr << "Bad child: " << line << std::endl;
+        if ((last_slash != parent.size()) ||
+            (line.substr(0, last_slash) != parent)) {
+            std::cerr << "Error: Bad child: " << line << std::endl;
+            return false;
+        }
+
+        const std::string::size_type last_delim = line.find_last_of(delim);
+        if (last_delim != (line.size() - 1)) {
+            std::cerr << "Warning: Trailing characters present" << std::endl;
+        }
+
+        const std::string::size_type pinode_delim = line.find_last_of(delim, last_delim - 1);
+        if (pinode_delim <= (first_delim + 2)) {
+            std::cerr << "Error: Could not find child pinode: " << line << std::endl;
+            return false;
+        }
+
+        // make sure the child pinode is 0
+        const std::string pinode = line.substr(pinode_delim + 1, last_delim - pinode_delim - 1);
+        if (pinode != "0") {
+            std::cerr << "Error: Bad child pinode: " << line << std::endl;
             return false;
         }
     }

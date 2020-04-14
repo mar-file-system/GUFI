@@ -414,14 +414,16 @@ int print_callback(void * args, int count, char **data, char **columns) {
 
 int process_path(const char *path, FILE *out, const char *format) {
     char dbname[MAXPATH + MAXPATH];
-    sqlite3 * db = NULL;
-    char query[MAXSQL + MAXSQL + MAXSQL];
+    sqlite3 *db = NULL;
+    char query[MAXSQL];
 
     /* assume the provided path is a directory */
-    DIR * dir = opendir(path);
-    if (!dir) {
-        /* search for it in the entries table */
-
+    DIR *dir = opendir(path);
+    if (dir) {
+        SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, path);
+        SNPRINTF(query, sizeof(query), query_prefix, "summary", "");
+    }
+    else {
         /* remove file name from the path */
         char dir[MAXPATH];
         char name[MAXPATH];
@@ -429,13 +431,11 @@ int process_path(const char *path, FILE *out, const char *format) {
 
         SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, dir);
 
-        char where[MAXSQL + MAXSQL + MAXSQL / 2];
+        /* search for basename(path) in the entries table */
+        char where[MAXSQL];
         SNPRINTF(where, sizeof(where), "WHERE name == '%s'", name);
+
         SNPRINTF(query, sizeof(query), query_prefix, "entries", where);
-    }
-    else {
-        SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, path);
-        SNPRINTF(query, sizeof(query), query_prefix, "summary", "");
     }
 
     closedir(dir);
@@ -461,7 +461,7 @@ int process_path(const char *path, FILE *out, const char *format) {
         /* query the database */
         char *err = NULL;
         if (sqlite3_exec(db, query, print_callback, &ca, &err) != SQLITE_OK) {
-            fprintf(stderr, "gufi_stat: cannot stat '%s': %s\n", path, err);
+            fprintf(stderr, "gufi_stat: failed to query database in '%s': %s\n", path, err);
             rc = 1;
         }
 

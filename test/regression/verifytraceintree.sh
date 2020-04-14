@@ -74,9 +74,9 @@ GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
 
 # output directories
 SRCDIR="prefix"
-TRACE="${SRCDIR}.trace"
+TRACE="trace"
 INDEXROOT="${SRCDIR}.gufi"
-BADTRACE="${TRACE}.bad"
+BADTRACE="badtrace"
 
 # trace delimiter
 DELIM="|"

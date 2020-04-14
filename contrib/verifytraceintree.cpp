@@ -277,7 +277,7 @@ int check_stanza(struct QPTPool * ctx, const size_t id, void * data, void * args
     // previously counted entries should be the
     // same as the number encountered here
     if (sa->entries != entries) {
-        std::cerr << "Expected " << sa->entries << " entries. Got " << entries << "." << std::endl;
+        std::cerr << "Did not get " << sa->entries << " entries." << std::endl;
         rc = 1;
     }
 

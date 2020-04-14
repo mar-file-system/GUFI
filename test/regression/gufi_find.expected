@@ -113,7 +113,7 @@ old_file
 repeat_name
 unusual, name?#
 
-$ gufi_find -size 1c
+$ gufi_find -type f -size 1c
 .hidden
 directory/executable
 directory/readonly
@@ -125,25 +125,19 @@ old_file
 repeat_name
 unusual, name?#
 
-$ gufi_find -size=-1c
+$ gufi_find -type f -size=-1c
 empty_file
 
-$ gufi_find -size +1c
-.
+$ gufi_find -type f -size +1c
 1KB
 1MB
-directory
-directory/subdirectory
-directory/subdirectory/directory_symlink
-file_symlink
-leaf_directory
 
-$ gufi_find -size +1024c
+$ gufi_find -type f -size +1024c
 1MB
 
-$ gufi_find -size +1 -size=-3
+$ gufi_find -type f -size +1 -size=-3
 1KB
 
-$ gufi_find -size 2048
+$ gufi_find -type f -size 2048
 1MB
 

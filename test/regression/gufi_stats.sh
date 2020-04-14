@@ -125,20 +125,6 @@ user "${GUFI_STATS} -r dircount"
 user "${GUFI_STATS}    total-dircount"
 user "${GUFI_STATS} -c total-dircount"
 
-user "${GUFI_STATS}    leaf-dirs"
-user "${GUFI_STATS} -r leaf-dirs"
-
-user "${GUFI_STATS}    leaf-depth"
-user "${GUFI_STATS} -r leaf-depth"
-
-user "${GUFI_STATS}    leaf-files"
-user "${GUFI_STATS} -r leaf-files"
-
-user "${GUFI_STATS}    total-leaf-files"
-user "${GUFI_STATS} -c total-leaf-files"
-
-user "${GUFI_STATS}    median-leaf-files"
-
 user "${GUFI_STATS}    files-per-level"
 user "${GUFI_STATS} -c files-per-level"
 
@@ -147,7 +133,35 @@ user "${GUFI_STATS} -c links-per-level"
 
 user "${GUFI_STATS}    dirs-per-level"
 user "${GUFI_STATS} -c dirs-per-level"
+
+if [[ "$(uname)" != "Darwin" ]]
+then
+    user "${GUFI_STATS}    leaf-dirs"
+    user "${GUFI_STATS} -r leaf-dirs"
+
+    user "${GUFI_STATS}    leaf-depth"
+    user "${GUFI_STATS} -r leaf-depth"
+
+    user "${GUFI_STATS}    leaf-files"
+    user "${GUFI_STATS} -r leaf-files"
+
+    user "${GUFI_STATS}    total-leaf-files"
+    user "${GUFI_STATS} -c total-leaf-files"
+
+    user "${GUFI_STATS}    median-leaf-files"
+fi
+
 ) 2>&1 | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/gufi_stats.expected "${OUTPUT}"
+EXPECTED="${ROOT}/test/regression/gufi_stats.expected"
+COPY="${EXPECTED}.copy"
+
+if [[ "$(uname)" == "Darwin" ]]
+then
+    sed '/leaf-/,$d' "${EXPECTED}" > "${COPY}"
+else
+    cp "${EXPECTED}" "${COPY}"
+fi
+
+diff "${COPY}" "${OUTPUT}"
 rm "${OUTPUT}"

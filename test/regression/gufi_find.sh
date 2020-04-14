@@ -101,12 +101,12 @@ run "${GUFI_FIND} -writable"
 run "${GUFI_FIND} -executable"
 run "${GUFI_FIND} -mindepth 2"
 run "${GUFI_FIND} -maxdepth 0"
-run "${GUFI_FIND} -size 1c"
-run "${GUFI_FIND} -size=-1c"
-run "${GUFI_FIND} -size +1c"
-run "${GUFI_FIND} -size +1024c"
-run "${GUFI_FIND} -size +1 -size=-3" # 512 < size < 1536
-run "${GUFI_FIND} -size 2048"        # 512 * 2048 = 1MB
+run "${GUFI_FIND} -type f -size 1c"
+run "${GUFI_FIND} -type f -size=-1c"
+run "${GUFI_FIND} -type f -size +1c"
+run "${GUFI_FIND} -type f -size +1024c"
+run "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
+run "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
 ) 2>&1 | tee "${OUTPUT}"
 
 diff ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"

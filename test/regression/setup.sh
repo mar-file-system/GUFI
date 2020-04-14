@@ -79,10 +79,11 @@ function setup_cleanup {
     rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
 }
 
-trap setup_cleanup EXIT
+# trap setup_cleanup EXIT
 
 setup_cleanup
 
+umask 002
 export LC_ALL=C
 export PATH=${ROOT}/scripts:${PATH}
 export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
