@@ -2,19 +2,19 @@
 gufi_query -n 2 -O outdb -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries WHERE type=='f'" .
 
 # Query all per-thread result databse files at once
-querydbn -NV outdb 2 "SELECT name, size FROM vout ORDER BY size" out
+querydbn -NV outdb 2 "SELECT name, size FROM vout ORDER BY size ASC, name ASC" out
 name|size|
 empty_file|0|
-directory/readonly|1|
-directory/writable|1|
-directory/executable|1|
-directory/subdirectory/repeat_name|1|
-unusual, name?#|1|
 .hidden|1|
-repeat_name|1|
-old_file|1|
+directory/executable|1|
+directory/readonly|1|
+directory/subdirectory/repeat_name|1|
+directory/writable|1|
 leaf_directory/leaf_file1|1|
 leaf_directory/leaf_file2|1|
+old_file|1|
+repeat_name|1|
+unusual, name?#|1|
 1KB|1024|
 1MB|1048576|
 query returned 13 records
