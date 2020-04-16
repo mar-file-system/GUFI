@@ -942,6 +942,67 @@ def links_per_level(config, args, where):
 def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
+def duplicate_names(config, args, where):
+    # without id, path, and name
+    columns = ['NULL', 'path()', 'name', 'type', 'inode', 'mode', 'nlink', 'uid', 'gid', 'size', 'blksize', 'blocks', 'atime', 'mtime', 'ctime', 'linkname', 'xattrs']
+
+    root = os.path.normpath(config['IndexRoot'])
+    root_len = len(root)
+
+    queries = [
+        '-I',
+        build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT', 'type TEXT', 'inode INT64', 'mode INT64', 'nlink INT64', 'uid INT64', 'gid INT64', 'size INT64', 'blksize INT64', 'blocks INT64', 'atime INT64', 'mtime INT64', 'ctime INT64', 'linkname TEXT', 'xattrs TEXT']),
+
+        '-S',
+        'INSERT INTO {} {}'.format(args.inmemory_name,
+                                   gufi_common.build_query(columns,
+                                                           ['summary'],
+                                                           where,
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None)),
+
+        '-E',
+        'INSERT INTO {} {}'.format(args.inmemory_name,
+                                   gufi_common.build_query(columns,
+                                                           ['entries'],
+                                                           where,
+                                                           None,
+                                                           None,
+                                                           None,
+                                                           None)),
+
+        '-J',
+        'INSERT INTO aggregate.out ' + gufi_common.build_query(columns,
+                                                               [args.inmemory_name],
+                                                               None,
+                                                               None,
+                                                               None,
+                                                               None,
+                                                               None),
+
+        '-G',
+        gufi_common.build_query(['lhs.name', 'rhs.path'],
+                                ['{} as lhs'.format(args.inmemory_name),
+                                 '{} as rhs'.format(args.inmemory_name)],
+                                ['lhs.type == rhs.type',
+                                 'lhs.uid == rhs.uid',
+                                 'lhs.gid == rhs.gid',
+                                'lhs.name == rhs.name',
+                                 'lhs.inode <> rhs.inode'],
+                                None,
+                                ['lhs.name ' + ORDER[args.order]] if args.order else None,
+                                args.num_results,
+                                None),
+    ]
+
+    queries += ['-a']
+
+    return queries
+
+
+
 # argv[0] should be the command name
 def run(argv, config_path):
     # mapping of desired statistics to functions
@@ -976,6 +1037,7 @@ def run(argv, config_path):
     # does not use either
     OTHERS = {
         'median-leaf-files'  : median_leaf_files,
+        'duplicate-names'    : duplicate_names,
     }
 
     STATS = {}
