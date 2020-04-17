@@ -943,7 +943,7 @@ def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
 def duplicate_names(config, args, where):
-    columns = ['NULL', 'path()', 'name', 'type', 'inode', 'mode', 'nlink', 'uid', 'gid', 'size', 'blksize', 'blocks', 'atime', 'mtime', 'ctime', 'linkname', 'xattrs']
+    columns = ['name', 'type', 'inode', 'mode', 'nlink', 'uid', 'gid', 'size', 'blksize', 'blocks', 'atime', 'mtime', 'ctime', 'linkname', 'xattrs']
 
     root = config['IndexRoot']
     root_len = len(root)
@@ -954,7 +954,8 @@ def duplicate_names(config, args, where):
 
         '-S',
         'INSERT INTO {} {}'.format(args.inmemory_name,
-                                   gufi_common.build_query(columns,
+                                   gufi_common.build_query(['NULL', 'path()'] +
+                                                           columns,
                                                            ['summary'],
                                                            where,
                                                            None,
@@ -964,7 +965,8 @@ def duplicate_names(config, args, where):
 
         '-E',
         'INSERT INTO {} {}'.format(args.inmemory_name,
-                                   gufi_common.build_query(columns,
+                                   gufi_common.build_query(['NULL', 'path()'] +
+                                                           columns,
                                                            ['entries'],
                                                            where,
                                                            None,
@@ -973,7 +975,8 @@ def duplicate_names(config, args, where):
                                                            None)),
 
         '-J',
-        'INSERT INTO aggregate.out ' + gufi_common.build_query(columns,
+        'INSERT INTO aggregate.out ' + gufi_common.build_query(['NULL', 'path'] +
+                                                               columns,
                                                                [args.inmemory_name],
                                                                None,
                                                                None,
@@ -982,27 +985,13 @@ def duplicate_names(config, args, where):
                                                                None),
 
         '-G',
-        gufi_common.build_query(['lhs.name',
-                                 'substr(rhs.path, {})'.format(root_len + 1)],
-                                ['{} as lhs INNER JOIN {} as rhs ON {}'.format(
-                                    args.inmemory_name,
-                                    args.inmemory_name,
-                                    '((' + ') and ('.join(['lhs.type  == rhs.type',
-                                                           'lhs.name  == rhs.name',
-                                                           'lhs.inode <> rhs.inode']) + '))')
-                                ],
-                                None,
-                                None,
-                                ['lhs.name ' + ORDER[args.order]] if args.order else None,
-                                args.num_results,
-                                None),
+        'SELECT lhs.name, lhs.path FROM {} as lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {} GROUP BY name, type, size HAVING COUNT(*) > 1) as rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(args.inmemory_name, args.inmemory_name) + ('LIMIT {}'.format if args.num_results else '')
+
     ]
 
     queries += ['-a']
 
     return queries
-
-
 
 # argv[0] should be the command name
 def run(argv, config_path):
