@@ -202,7 +202,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
         // push subdirectories onto the queue
         if (S_ISDIR(e.statuso.st_mode)) {
-            if (work->level <= in.max_level) {
+            if (work->level < in.max_level) {
                 e.type[0] = 'd';
                 e.pinode = work->statuso.st_ino;
                 e.level = work->level + 1;
