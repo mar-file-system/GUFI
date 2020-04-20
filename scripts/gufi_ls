@@ -207,9 +207,10 @@ def build_order_by_recursive(args):
 
     return order_by
 
-if __name__=='__main__':
+# argv[0] should be the command name
+def run(argv, config_path):
     # find and parse the configuration file first
-    config = gufi_config.server_config(gufi_config.DEFAULT_CONFIG_PATH)
+    config = gufi_config.server_config(config_path)
 
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI version of ls', add_help=False)
@@ -243,14 +244,14 @@ if __name__=='__main__':
     parser.add_argument('--user-width',     metavar='chars', dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
     parser.add_argument('--group-width',    metavar='chars', dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
 
-    args = parser.parse_args();
+    args = parser.parse_args(argv[1:]);
 
     # return code
     rc = 0
 
     # at least 1 argument
     if len(args.paths[0]) == 0:
-        args.paths= [['']]
+        args.paths = [['']]
 
     for path in args.paths[0]:
         # prepend the provided paths with the GUFI index root
@@ -393,4 +394,7 @@ if __name__=='__main__':
         if query.returncode != 0:
             rc = 2
 
-    sys.exit(rc)
+    return rc
+
+if __name__=='__main__':
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_CONFIG_PATH))
