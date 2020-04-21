@@ -94,6 +94,7 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_D
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test       ${CMAKE_SOURCE_DIR}/test/Makefile
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/regression ${CMAKE_SOURCE_DIR}/test/regression/Makefile
                        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/googletest ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/output-on-failure ${CMAKE_SOURCE_DIR}/test/output-on-failure
                        COMMAND ${CMAKE_COMMAND} -E tar "czf" ${TARBALL_NAME} ${ROOT} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/contrib/Makefile
@@ -102,6 +103,7 @@ add_custom_target(gary COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_D
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/regression/Makefile
                        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/googletest/Makefile
+                       COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/test/output-on-failure
                        DEPENDS ${CMAKE_SOURCE_DIR}/test/googletest)
 
 # Test the tarball

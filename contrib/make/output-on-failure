@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+output=$($@ 2>&1)
+rc="$?"
+
+if [[ "${rc}" != "0" ]]
+then
+    >&2 echo "${output}"
+fi
+
+exit ${rc}

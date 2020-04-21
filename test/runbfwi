@@ -97,15 +97,15 @@ usage() {
     exit -1
 }
 
-SOURCE=$1
-GUFI_BASE=$2
-
 if (( $# < 1 || $# > 2 )); then
+    echo "[$@]"
     usage $0
 elif [ ! -d $SOURCE ]; then
     usage $0
 fi
 
+SOURCE=$1
+GUFI_BASE=$2
 
 # ...........................................................................
 # WARNING!
