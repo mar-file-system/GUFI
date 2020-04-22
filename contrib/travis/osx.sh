@@ -75,14 +75,14 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 brew uninstall poppler gdal postgis protobuf protobuf-c
 
 # install required packages
-brew install bash cmake gnu-sed mysql pcre
+brew install bash cmake coreutils gnu-sed mysql pcre
 
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew cask install osxfuse
 
 # add the executables found in the homebrew bin directory
-export PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$(brew --prefix $FORMULAE)/bin:$PATH"
+export PATH="$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$(brew --prefix)/opt/coreutils/libexec/gnubin:$(brew --prefix $FORMULAE)/bin:$PATH"
 
 # use the sqlite3 installed by brew
 export PKG_CONFIG_PATH="$(brew --prefix sqlite3)/lib/pkgconfig:$PKG_CONFIG_PATH"
