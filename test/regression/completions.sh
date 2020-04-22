@@ -101,11 +101,11 @@ get_function_name gufi_ls
 get_function_name gufi_stats
 
 echo "Root entries:"
-tabtab " "
+tabtab ""
 echo
 
 echo "Root entries starting with \".\":"
-tabtab "\\."
+tabtab "."
 echo
 
 echo "Root entries starting with \"1\":"
@@ -139,7 +139,6 @@ echo
 echo "The \"directory/subdirectory\" directory:"
 tabtab directory/subdirectory
 echo
-
 ) 2>&1 | tee "${OUTPUT}"
 
 diff ${ROOT}/test/regression/completions.expected "${OUTPUT}"
