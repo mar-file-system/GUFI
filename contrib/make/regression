@@ -1,4 +1,4 @@
-TESTS = gufi_dir2index gufi_dir2trace gufi_find gufi_ls gufi_query gufi_stats gufi_trace2index
+TESTS = completions gufi_dir2index gufi_dir2trace gufi_find gufi_ls gufi_query gufi_stats gufi_trace2index
 
 ifneq ("$(CXX)", "false")
 TESTS := $(TESTS) verifytraceintree
