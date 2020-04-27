@@ -75,7 +75,7 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 brew uninstall poppler gdal postgis protobuf protobuf-c
 
 # install required packages
-brew install bash cmake coreutils gnu-sed mysql pcre
+brew install cmake mysql pcre python3
 
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask

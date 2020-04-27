@@ -79,7 +79,7 @@ zypper --non-interactive --no-gpg-checks update
 zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
 
 # install extra packages
-zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python2-devel python2-setuptools python2-pip python-xml
+zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python3 python3-setuptools python3-xattr
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"
