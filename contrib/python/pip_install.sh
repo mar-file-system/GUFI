@@ -11,4 +11,4 @@ then
     USER="--user"
 fi
 
-pip2 install ${USER} cryptography bcrypt pynacl
+pip3 install ${USER} cryptography bcrypt pynacl
