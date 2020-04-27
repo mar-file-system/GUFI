@@ -74,7 +74,7 @@ TEST(SinglyLinkedList, init_destroy) {
     EXPECT_EQ(sll.head, nullptr);
     EXPECT_EQ(sll.tail, nullptr);
 
-    sll_destroy(&sll, 0);
+    sll_destroy(&sll, nullptr);
 }
 
 TEST(SinglyLinkedList, push) {
@@ -103,7 +103,7 @@ TEST(SinglyLinkedList, push) {
     // the head and tail nodes should be different now
     EXPECT_NE(sll.head, sll.tail);
 
-    sll_destroy(&sll, 0);
+    sll_destroy(&sll, nullptr);
 }
 
 TEST(SinglyLinkedList, move) {
@@ -133,8 +133,8 @@ TEST(SinglyLinkedList, move) {
     EXPECT_EQ(sll_src.head, nullptr);
     EXPECT_EQ(sll_src.tail, nullptr);
 
-    sll_destroy(&sll_dst, 0);
-    sll_destroy(&sll_src, 0);
+    sll_destroy(&sll_dst, nullptr);
+    sll_destroy(&sll_src, nullptr);
 }
 
 TEST(SinglyLinkedList, head_node) {
@@ -151,7 +151,7 @@ TEST(SinglyLinkedList, head_node) {
     EXPECT_EQ(sll.head, sll_head_node(&sll));
     EXPECT_NE(sll.tail, sll_head_node(&sll));
 
-    sll_destroy(&sll, 0);
+    sll_destroy(&sll, nullptr);
 }
 
 TEST(SinglyLinkedList, next_node) {
@@ -175,7 +175,7 @@ TEST(SinglyLinkedList, next_node) {
     struct node * third = sll.tail;
     EXPECT_EQ(third, sll_next_node(second));
 
-    sll_destroy(&sll, 0);
+    sll_destroy(&sll, nullptr);
 }
 
 TEST(SinglyLinkedList, node_data) {
@@ -188,7 +188,7 @@ TEST(SinglyLinkedList, node_data) {
     EXPECT_EQ(&value, data);
     EXPECT_EQ(value, * (int *) data);
 
-    sll_destroy(&sll, 0);
+    sll_destroy(&sll, nullptr);
 }
 
 TEST(SinglyLinkedList, loop) {
@@ -210,6 +210,18 @@ TEST(SinglyLinkedList, loop) {
         i++;
     }
 
-    sll_destroy(&sll, 0);
+    sll_destroy(&sll, nullptr);
     delete [] values;
+}
+
+TEST(SinglyLinkedList, destroy_func) {
+    struct sll sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    void * ptr = malloc(10);
+    ASSERT_NE(ptr, nullptr);
+    ASSERT_EQ(&sll, sll_push(&sll, ptr));
+
+    // use valgrind to check for leaks
+    sll_destroy(&sll, free);
 }

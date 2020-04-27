@@ -230,7 +230,7 @@ static void * worker_function(void * args) {
         QPTPool_timestamp_end(wf_process_queue);
 
         QPTPool_timestamp_start(wf_cleanup);
-        sll_destroy(&work, 1);
+        sll_destroy(&work, free);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
@@ -379,7 +379,7 @@ void QPTPool_destroy(struct QPTPool * ctx) {
             ctx->data[i].thread = 0;
             pthread_cond_destroy(&ctx->data[i].cv);
             pthread_mutex_destroy(&ctx->data[i].mutex);
-            sll_destroy(&ctx->data[i].queue, 0);
+            sll_destroy(&ctx->data[i].queue, NULL);
         }
 
         free(ctx->data);
