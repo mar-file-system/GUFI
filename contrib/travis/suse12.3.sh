@@ -71,13 +71,15 @@ zypper --non-interactive remove kernel-debug* libapparmor* libgmodule* libX11* l
 
 # add the tumbleweed oss repo
 zypper ar -f -c http://download.opensuse.org/tumbleweed/repo/oss tumbleweed-oss
+rm -rf /etc/ssl/certs
+mkdir /run/systemd
 zypper --non-interactive --no-gpg-checks update
 
 # install libraries
 zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
 
 # install extra packages
-zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python2-setuptools python2-xattr
+zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python2-devel python2-setuptools python2-pip python-xml
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"
@@ -104,6 +106,9 @@ fi
 # install the compilers
 # gcc must be installed even if compiling with clang
 zypper --non-interactive install gcc ${C_PACKAGE} ${CXX_PACKAGE}
+
+# install xattr
+yes | pip2 install --user xattr
 
 export C_COMPILER=${SUSE_C_COMPILER}
 export CXX_COMPILER=${SUSE_CXX_COMPILER}
