@@ -72,7 +72,7 @@ yum -y install epel-release
 yum -y install fuse-devel libattr pcre-devel
 
 # install extra packages
-yum -y install autoconf cmake3 diffutils fuse make patch pkgconfig python2-pip
+yum -y install autoconf cmake3 diffutils fuse make patch pkgconfig python3-pip
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     VERSION="${C_COMPILER##*-}"
@@ -102,8 +102,8 @@ fi
 yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
 
 # install xattr
-yum -y install python2-devel
-yes | pip2 install --user xattr
+yum -y install python3-devel
+yes | pip3 install --user xattr
 
 export C_COMPILER=${CENTOS_C_COMPILER}
 export CXX_COMPILER=${CENTOS_CXX_COMPILER}

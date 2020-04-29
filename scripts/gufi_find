@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,7 +62,6 @@
 
 
 import argparse
-import exceptions
 import os
 import subprocess
 import sys
@@ -91,7 +90,7 @@ def validate_args(args):
     if args.type:
         if 'd' in args.type:
             if args.size or args.atime or args.mtime or args.ctime:
-                raise exceptions.RuntimeError('size, atime, mtime, and ctime cannot be used with -type d')
+                raise RuntimeError('size, atime, mtime, and ctime cannot be used with -type d')
 
 def parse_size(size):
     prefix = None
@@ -242,7 +241,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
 
     if args.mtime is not None:
         if len(args.mtime) > 2:
-            raise exceptions.Exception('Up to 2 -mtime flags can be provided. Got {}.'.format(len(args.mtime)))
+            raise Exception('Up to 2 -mtime flags can be provided. Got {}.'.format(len(args.mtime)))
 
         for mtime in args.mtime:
             comp = '=='
@@ -320,7 +319,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
 
                 where += ['size {} {}'.format(comp, size)]
         else:
-            raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}: {}.'.format(len(args.size), args.size))
+            raise Exception('Up to 2 -size flags can be provided. Got {}: {}.'.format(len(args.size), args.size))
 
     if args.true == True:
         where += ['1']
@@ -368,9 +367,9 @@ def build_order_by(args):
 def help(parser):
     # generate list of expressions
     expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
-    expr = [expr[i:i+5] for i in xrange(0, len(expr), 5)]
+    expr = [expr[i:i+5] for i in range(0, len(expr), 5)]
 
-    print ('Usage: gufi_find [-P] [path...] [expression]\n' +
+    print(('Usage: gufi_find [-P] [path...] [expression]\n' +
            '\n' +
            'default path is the current directory;\n' +
            'expression may consist of:\n' +
@@ -378,7 +377,7 @@ def help(parser):
            '\n'.join(['    ' + ' '.join(row) for row in expr]) + '\n' +
            '\n' +
            'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
-           'page at https://github.com/mar-file-system/GUFI/issues\n')
+           'page at https://github.com/mar-file-system/GUFI/issues\n'))
 
     exit(0)
 
@@ -484,7 +483,7 @@ if __name__=='__main__':
         i += 1
 
     if at_expressions and (sys.argv[i][0] != '-'):
-        raise exceptions.RuntimeError('gufi_find: paths must preceed expression: {}'.format(sys.argv[i - 1]))
+        raise RuntimeError('gufi_find: paths must preceed expression: {}'.format(sys.argv[i - 1]))
 
     # parse paths
     paths = []
@@ -504,7 +503,7 @@ if __name__=='__main__':
         help(expression_parser)
 
     if len(unknown):
-        raise exceptions.RuntimeError('gufi_find: unknown predicate `{}\''.format(unknown[0]))
+        raise RuntimeError('gufi_find: unknown predicate `{}\''.format(unknown[0]))
 
     validate_args(args)
 

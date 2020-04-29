@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,7 +62,6 @@
 
 
 import argparse
-import exceptions
 import imp
 import os
 
@@ -112,19 +111,19 @@ def read_config(filename):
 def server_config(filename = DEFAULT_CONFIG_PATH):
     config = read_config(filename)
     if 'Threads' not in config:
-        raise exceptions.Exception('Missing Threads')
+        raise Exception('Missing Threads')
     if 'Exec' not in config:
-        raise exceptions.Exception('Missing Exec')
+        raise Exception('Missing Exec')
     if 'IndexRoot' not in config:
-        raise exceptions.Exception('Missing IndexRoot')
+        raise Exception('Missing IndexRoot')
     return config
 
 def client_config(filename = DEFAULT_CONFIG_PATH):
     config = read_config(filename)
     if 'Server' not in config:
-        raise exceptions.Exception('Missing Server')
+        raise Exception('Missing Server')
     if 'Port' not in config:
-        raise exceptions.Exception('Missing Port')
+        raise Exception('Missing Port')
     if 'Paramiko' not in config:
-        raise exceptions.Exception('Missing Paramiko')
+        raise Exception('Missing Paramiko')
     return config

@@ -72,7 +72,7 @@ yum -y install epel-release centos-release-scl
 yum -y install fuse-devel libattr1 pcre-devel
 
 # install extra packages
-yum -y install autoconf cmake3 fuse make patch pkgconfig python-pip
+yum -y install autoconf cmake3 fuse make patch pkgconfig python3-pip
 
 # create symlinks
 ln -sf /usr/bin/cmake3 /usr/bin/cmake
@@ -112,9 +112,9 @@ fi
 yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
 
 # install xattr
-yum -y install python2-devel python-cffi
+yum -y install python3-devel python3-cffi
 ln -sf ${CENTOS_C_COMPILER} /usr/bin/gcc
-yes | pip install --user xattr
+yes | pip3 install --user xattr
 
 export C_COMPILER=${CENTOS_C_COMPILER}
 export CXX_COMPILER=${CENTOS_CXX_COMPILER}

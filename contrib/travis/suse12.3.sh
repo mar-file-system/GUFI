@@ -71,13 +71,15 @@ zypper --non-interactive remove kernel-debug* libapparmor* libgmodule* libX11* l
 
 # add the tumbleweed oss repo
 zypper ar -f -c http://download.opensuse.org/tumbleweed/repo/oss tumbleweed-oss
+rm -rf /etc/ssl/certs
+mkdir /run/systemd
 zypper --non-interactive --no-gpg-checks update
 
 # install libraries
 zypper --non-interactive install fuse-devel libattr-devel libmysqlclient-devel libuuid-devel pcre-devel
 
 # install extra packages
-zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python2-setuptools python2-xattr
+zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python3 python3-setuptools python3-xattr
 
 if [[ "${C_COMPILER}" = gcc-* ]]; then
     C_PACKAGE="gcc${C_COMPILER##*-}"
