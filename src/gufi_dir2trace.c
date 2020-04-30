@@ -187,6 +187,10 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         else if (S_ISREG(e.statuso.st_mode)) {
             e.type[0] = 'f';
         }
+        else {
+            /* other types are not stored */
+            continue;
+        }
 
         #if BENCHMARK
         pthread_mutex_lock(&global_mutex);
