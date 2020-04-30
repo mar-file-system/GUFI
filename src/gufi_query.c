@@ -1064,6 +1064,7 @@ int main(int argc, char *argv[])
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     debug_end(cleanup_globals);
     const long double cleanup_globals_time = elapsed(&cleanup_globals);
+    total_time += cleanup_globals_time;
     #endif
 
     #ifdef DEBUG
@@ -1110,7 +1111,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "     close directories:                      %.2Lfs\n", total_closedir_time);
     fprintf(stderr, "     restore timestamps:                     %.2Lfs\n", total_utime_time);
     fprintf(stderr, "     free work:                              %.2Lfs\n", total_free_work_time);
-    fprintf(stderr, "output timestamps:                           %.2Lfs\n", total_output_timestamps_time);
+    fprintf(stderr, "     output timestamps:                      %.2Lfs\n", total_output_timestamps_time);
     fprintf(stderr, "aggregate into final databases:              %.2Lfs\n", aggregate_time);
     fprintf(stderr, "print aggregated results:                    %.2Lfs\n", output_time);
     fprintf(stderr, "clean up globals:                            %.2Lfs\n", cleanup_globals_time);
@@ -1118,6 +1119,14 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Rows returned:                               %zu\n",    rows);
     fprintf(stderr, "Queries performed:                           %zu\n",    thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len));
     fprintf(stderr, "Real time:                                   %.2Lfs\n", total_time);
+    fprintf(stderr, "Total Thread Time (not including main):      %.2Lfs\n",
+            total_opendir_time + total_open_time +
+            total_addqueryfuncs_time + total_descend_time +
+            total_attach_time + total_sqlsum_time +
+            total_sqlent_time + total_detach_time +
+            total_close_time + total_closedir_time +
+            total_utime_time + total_free_work_time +
+            total_output_timestamps_time);
     #endif
 
     #if BENCHMARK
