@@ -1088,9 +1088,9 @@ int main(int argc, char *argv[])
 
     /* clear out buffered data */
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
-    const size_t rows = 0;
-    for(size_t i = 0; i < args.outbuf_buffers->count; i++) {
-        rows += args.outputbuffers->buffers[i].count;
+    size_t rows = 0;
+    for(size_t i = 0; i < args.output_buffers.count; i++) {
+        rows += args.output_buffers.buffers[i].count;
     }
     #endif
     OutputBuffers_flush_to_multiple(&args.output_buffers, gts.outfd);
