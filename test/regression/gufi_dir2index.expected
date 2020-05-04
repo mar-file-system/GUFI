@@ -1,4 +1,4 @@
-Index up to level :
+Index Everything:
     Source Directory:
         prefix
         prefix/.hidden
@@ -47,10 +47,8 @@ Index up to level 0:
         prefix/.hidden
         prefix/1KB
         prefix/1MB
-        prefix/directory
         prefix/empty_file
         prefix/file_symlink
-        prefix/leaf_directory
         prefix/old_file
         prefix/repeat_name
         prefix/unusual, name?#
@@ -60,10 +58,8 @@ Index up to level 0:
         prefix/.hidden
         prefix/1KB
         prefix/1MB
-        prefix/directory
         prefix/empty_file
         prefix/file_symlink
-        prefix/leaf_directory
         prefix/old_file
         prefix/repeat_name
         prefix/unusual, name?#
@@ -77,7 +73,6 @@ Index up to level 1:
         prefix/directory
         prefix/directory/executable
         prefix/directory/readonly
-        prefix/directory/subdirectory
         prefix/directory/writable
         prefix/empty_file
         prefix/file_symlink
@@ -96,7 +91,6 @@ Index up to level 1:
         prefix/directory
         prefix/directory/executable
         prefix/directory/readonly
-        prefix/directory/subdirectory
         prefix/directory/writable
         prefix/empty_file
         prefix/file_symlink
