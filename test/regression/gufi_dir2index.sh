@@ -70,6 +70,7 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
 GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
+GUFI_QUERY="${ROOT}/src/gufi_query"
 
 # output directories
 SRCDIR="prefix"
@@ -90,27 +91,29 @@ ${ROOT}/test/regression/generatetree "${SRCDIR}"
 
 OUTPUT="gufi_dir2index.out"
 
-# full index
+# index everything
 (
-# generate the index
-${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
+    # remove preexisting indicies
+    rm -rf "${INDEXROOT}"
 
-src_dirs=$(find "${SRCDIR}" -type d | sort)
-index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
-src_entries=$(find "${SRCDIR}" -not -type d | sort)
-index_entries=$(${ROOT}/src/gufi_query -d " " -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
+    # generate the index
+    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
 
-src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
-index_combined=$((echo "${index_dirs}" ; echo "${index_entries}") | sort)
+    src_dirs=$(find "${SRCDIR}" -type d)
+    src_nondirs=$(find "${SRCDIR}" -not -type d)
+    src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
 
-echo "Index up to level ${level}:"
-echo "    Source Directory:"
-echo "${src_combined}" | awk '{ printf "        " $0 "\n" }'
-echo
-echo "    GUFI Index:"
-echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
-echo
+    index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
+    index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
+    index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
 
+    echo "Index Everything:"
+    echo "    Source Directory:"
+    echo "${src}" | awk '{ printf "        " $0 "\n" }'
+    echo
+    echo "    GUFI Index:"
+    echo "${index}" | awk '{ printf "        " $0 "\n" }'
+    echo
 ) 2>&1 | tee "${OUTPUT}"
 
 # index up to different levels of the tree
@@ -123,23 +126,21 @@ do
         # generate the index
         ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
 
-        # get the directories
-        src_dirs=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -type d | sort)
-        index_dirs=$(find "${INDEXROOT}" -maxdepth ${level} -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
-        src_entries=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -not -type d | sort)
-        index_entries=$(${ROOT}/src/gufi_query -d " " -z ${level} -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" | sort)
+        src_dirs=$(find "${SRCDIR}" -maxdepth ${level} -type d)
+        src_nondirs=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -not -type d)
+        src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
 
-        src_combined=$((echo "${src_dirs}" ; echo "${src_entries}") | sort)
-        index_combined=$((echo "${index_dirs}" ; echo "${index_entries}") | sort)
+        index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
+        index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
+        index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
 
         echo "Index up to level ${level}:"
         echo "    Source Directory:"
-        echo "${src_combined}" | awk '{ printf "        " $0 "\n" }'
+        echo "${src}" | awk '{ printf "        " $0 "\n" }'
         echo
         echo "    GUFI Index:"
-        echo "${index_combined}" | awk '{ printf "        " $0 "\n" }'
+        echo "${index}" | awk '{ printf "        " $0 "\n" }'
         echo
-
     ) 2>&1 | tee -a "${OUTPUT}"
 done
 
