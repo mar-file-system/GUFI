@@ -293,37 +293,86 @@ def total_filesize(config, args, where):
     '''
 
     root_len = len(config['IndexRoot'])
-    group_by = None if args.cumulative else ['uid']
 
-    queries = [
-        '-I', build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'uid INT64', 'size INT64']),
+    queries = []
+    if args.cumulative:
+        queries = [
+            '-I',
+            build_create(args.inmemory_name,
+                         ['id INTEGER PRIMARY KEY',
+                          'size INT64']),
 
-        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
-                                                                 ['entries'],
-                                                                 where + ['type == "f"'],
-                                                                 group_by,
-                                                                 ['uid {}'.format(ORDER[args.order]), 'size {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+            '-E',
+            'INSERT INTO {} {}'.format(args.inmemory_name,
+                                       gufi_common.build_query(['NULL', 'totsize'],
+                                                               ['summary'],
+                                                               where,
+                                                               None,
+                                                               None,
+                                                               None,
+                                                               None)),
 
-        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
-                                                   gufi_common.build_query(['NULL', 'uid', 'size'],
-                                                                           [args.inmemory_name],
-                                                                           None,
-                                                                           None,
-                                                                           ['uid {}'.format(ORDER[args.order]), 'size {}'.format(ORDER[args.order])],
-                                                                           args.num_results,
-                                                                           None)),
+            '-J',
+            'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                 gufi_common.build_query(['NULL', 'size'],
+                                                                         [args.inmemory_name],
+                                                                         None,
+                                                                         None,
+                                                                         None,
+                                                                         None,
+                                                                         None)),
 
-        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(size)'],
-                                      [args.inmemory_name],
-                                      None,
-                                      group_by,
-                                      ['uid {}'.format(ORDER[args.order]), 'size {}'.format(ORDER[args.order])],
-                                      args.num_results,
-                                      None),
-    ]
+            '-G',
+            gufi_common.build_query(['SUM(size)'],
+                                    [args.inmemory_name],
+                                    None,
+                                    None,
+                                    None,
+                                    None,
+                                    None),
+        ]
+
+    else:
+        group_by = ['uid']
+        order_by = ['uid {}' .format(ORDER[args.order]),
+                    'size {}'.format(ORDER[args.order])]
+
+        queries = [
+            '-I',
+            build_create(args.inmemory_name,
+                         ['id INTEGER PRIMARY KEY',
+                          'uid INT64',
+                          'size INT64']),
+
+            '-E',
+            'INSERT INTO {} {}'.format(args.inmemory_name,
+                                       gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
+                                                               ['pentries'],
+                                                               where + ['type == "f"'],
+                                                               group_by,
+                                                               order_by,
+                                                               args.num_results,
+                                                               None)),
+
+            '-J',
+            'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                 gufi_common.build_query(['NULL', 'uid', 'size'],
+                                                                         [args.inmemory_name],
+                                                                         None,
+                                                                         None,
+                                                                         order_by,
+                                                                         args.num_results,
+                                                                         None)),
+
+            '-G',
+            gufi_common.build_query(['uidtouser(uid, 0)', 'SUM(size)'],
+                                    [args.inmemory_name],
+                                    None,
+                                    group_by,
+                                    order_by,
+                                    args.num_results,
+                                    None),
+        ]
 
     return queries
 
