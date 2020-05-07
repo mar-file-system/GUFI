@@ -265,6 +265,7 @@ typedef enum {
 } CleanUpTasks;
 
 struct work {
+   char*         root;
    size_t        level;
    char          name[MAXPATH];
    char          type[2];

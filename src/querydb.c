@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
                  );
 
      //add query funcs to get uidtouser() gidtogroup() and path()
-     addqueryfuncs(db, 0, -1);
+     addqueryfuncs(db, 0, -1, NULL);
 
      // set the global path so path() is the path passed in
      memset(endname,0,sizeof(endname));

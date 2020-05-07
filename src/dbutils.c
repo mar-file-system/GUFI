@@ -955,7 +955,12 @@ static void relative_level(sqlite3_context *context, int argc, sqlite3_value **a
     return;
 }
 
-int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl) {
+static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    sqlite3_result_text(context, sqlite3_user_data(context), -1, SQLITE_TRANSIENT);
+    return;
+}
+
+int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char * starting_dir) {
     return ((sqlite3_create_function(db, "path",                0, SQLITE_UTF8, (void *) (uintptr_t) id,  &path,                NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "fpath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &fpath,               NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "epath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &epath,               NULL, NULL) == SQLITE_OK) &&
@@ -965,7 +970,8 @@ int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl) {
             (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8, NULL,                     &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8, NULL,                     &blocksize,           NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8, NULL,                     &human_readable_size, NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8, (void *) (uintptr_t) lvl, &relative_level,      NULL, NULL) == SQLITE_OK))?0:1;
+            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8, (void *) (uintptr_t) lvl, &relative_level,      NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "starting_point",      0, SQLITE_UTF8, starting_dir,             &starting_point,      NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {

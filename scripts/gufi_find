@@ -108,72 +108,8 @@ def parse_size(size):
     size = int(size) * filesize[unit]
     return prefix, size
 
-def build_init(args):
-    '''Build the CREATE TABLE query'''
-    init = ['name TEXT']
-
-    if args.amin or args.atime:
-        init += ['atime INT64']
-
-    if args.cmin or args.ctime:
-        init += ['ctime INT64']
-
-    if args.mmin or args.mtime or args.newer:
-        init += ['mtime INT64']
-
-    if args.empty or args.size or args.smallest or args.largest:
-        init += ['size INT64']
-
-    if args.executable or args.readable or args.writable:
-        init += ['mode INT64']
-
-    if args.uid or args.user:
-        init += ['uid INT64']
-
-    if args.gid or args.group:
-        init += ['gid INT64']
-
-    if args.links:
-        init += ['nlinks INT64']
-
-    if args.type:
-        init += ['type TEXT']
-
-    return init
-
-def build_select(args):
-    '''Build the SELECT clause'''
-
-    select = ['name']
-
-    if args.amin or args.atime:
-        select += ['atime']
-
-    if args.cmin or args.ctime:
-        select += ['ctime']
-
-    if args.mmin or args.mtime or args.newer:
-        select += ['mtime']
-
-    if args.empty or args.size or args.smallest or args.largest:
-        select += ['size']
-
-    if args.executable or args.readable or args.writable:
-        select += ['mode']
-
-    if args.uid or args.user:
-        select += ['uid']
-
-    if args.gid or args.group:
-        select += ['gid']
-
-    if args.links:
-        select += ['nlinks']
-
-    if args.type:
-        select += ['type']
-
-    return select
+def need_aggregation(args):
+    return args.num_results or args.smallest or args.largest
 
 def build_where(args, root_uid = 0, root_gid = 0):
     '''Build the WHERE clause'''
@@ -361,6 +297,162 @@ def build_order_by(args):
 
     return order_by
 
+def parse_escape(fmt, i):
+    ret = fmt[i]
+
+    if   ret == 'a':
+        ret = '\a'
+    elif ret == 'b':
+        ret = '\b'
+    elif ret == 'c':
+        ret = ''
+        i = len(fmt)
+    elif ret == 'f':
+        ret = '\f'
+    elif ret == 'n':
+        ret = '\n'
+    elif ret == 'r':
+        ret = '\r'
+    elif ret == 't':
+        ret = '\t'
+    elif ret == 'v':
+        ret = '\v'
+    elif ret == '0':
+        ret = '\0'
+    elif ret == '\\':
+        ret = '\\'
+    elif ret.isdigit():
+        chars = 1 + fmt[i + 1].isdigit() + fmt[i + 2].isdigit()
+        ret = chr(int(fmt[i:chars + 1], 8))
+        i += chars - 1
+    else:
+        pass
+
+    return '"' + ret + '"', i + 1
+
+def parse_directives(fmt, fmt_len, i, path):
+    # unterminated directive prints ""; behavior is undefined in GNU find
+    if i >= fmt_len:
+        return '""', i
+
+    # check for width formatting
+    width = 0
+    if fmt[i].isdigit() or (fmt[i] == '-') or (fmt[i] == '+') or (fmt[i] == '.'):
+        j = i
+        decimal_point = 0
+        while fmt[j].isdigit() or (fmt[j] == '.'):
+            if fmt[j] == '.':
+                decimal_point += 1
+            j += 1
+
+        if decimal_point > 0:
+            # let float deal with multiple decimal points
+            width = float(fmt[i:j])
+        else:
+            width = int(fmt[i:j])
+
+        i = j
+
+    ret = fmt[i]
+
+    if   ret == '%':
+        ret = '%'
+    elif ret == 'a':
+        ret = 'printf("%{}d", atime)'
+    # elif ret == 'A':
+    elif ret == 'b':
+        ret = 'printf("%{}f", (blocks * blksize) / 512)'
+    elif ret == 'c':
+        ret = 'printf("%{}d", ctime)'
+    # elif ret == 'C':
+    elif ret == 'd':
+        ret = 'printf("%{}u", level())'
+    elif ret == 'D':
+        ret = 'printf("%{}s", "-")'
+    elif ret == 'f':
+        ret = 'printf("%{}s", name)'
+    # elif ret == 'F':
+    elif ret == 'g':
+        ret = 'gidtogroup(gid, {})'
+    elif ret == 'G':
+        ret = 'printf("%{}d", gid)'
+    elif ret == 'h':
+        ret = 'printf("%{}s", ' + path + ')'
+    elif ret == 'H':
+        ret = 'printf("%{}s", starting_point())'
+    elif ret == 'i':
+        ret = 'printf("%{}d", inode)'
+    elif ret == 'k':
+        ret = 'printf("%{}f", (blocks * blksize) / 1024)'
+    elif ret == 'l':
+        ret = 'printf("%{}s", linkname)'
+    elif ret == 'm':
+        ret = 'printf("%{}o", mode & 0777)'
+    elif ret == 'M':
+        ret = 'printf("%{}s", modetotxt(mode))'
+    elif ret == 'n':
+        ret = 'printf("%{}d", nlink)'
+    elif ret == 'p':
+        ret = path + ' || "/" || name'
+    elif ret == 'P':
+        ret = 'printf("%{}s", substr(' + path + ' || "/" || name, length(starting_point()) + 2))'
+    elif ret == 's':
+        ret = 'printf("%{}u", size)'
+    elif ret == 'S':
+        ret = 'printf("%{}f", (blocksize * blocks) / size)'
+    elif ret == 't':
+        ret = 'printf("%{}d", mtime)'
+    # elif ret == 'T':
+    elif ret == 'u':
+        ret = 'uidtouser(uid, {})'
+    elif ret == 'U':
+        ret = 'printf("%{}d", uid)'
+    elif ret == 'y':
+        ret = 'printf("%{}s", type)'
+    # elif ret == 'Y':
+    # elif ret == 'Z':
+    else:
+        ret = ''
+        while (i < fmt_len) and (fmt[i] != '%') and (fmt[i] != '\\'):
+            ret += fmt[i]
+            i += 1
+        ret = '"' + ret + '"'
+        i -= 1
+
+    return ret.format(width), i + 1
+
+def build_output(args):
+    '''Build the output columns SELECT clause'''
+
+    output = ''
+
+    path = 'path'
+    if not need_aggregation(args):
+        path += '()'
+
+    if args.printf is not None:
+        i = 0
+        fmt = args.printf
+        fmt_len = len(args.printf)
+
+        output = '""'
+
+        while i < fmt_len:
+            output += ' || '
+            if fmt[i] == '\\':
+                column, i = parse_escape(fmt, i + 1)
+                output += column
+            elif fmt[i] == '%':
+                column, i = parse_directives(fmt, fmt_len, i + 1, path)
+                output += column
+            else:
+                output += '"' + fmt[i] + '"'
+                i += 1;
+    else:
+        output = path + ' || (CASE type WHEN "d" THEN "" ELSE "/" || name END)'
+
+    return [output]
+
 def help(parser):
     # generate list of expressions
     expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
@@ -385,9 +477,12 @@ def build_expression_parser():
     # override help to not use -h
     parser.add_argument('-help', '--help',                                                         action='store_true',                                help='Print a summary of the command-line usage of find and exit.')
 
+    # GNU find global options
+    parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',              type=gufi_common.get_non_negative,                  help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
+    parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',              type=gufi_common.get_non_negative,                  help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
     parser.add_argument('--version', '-v',                                                         action='version',                                   version=os.path.basename(PATH) + ' @GUFI_VERSION@')
 
-    # GNU find options
+    # GNU find test expressions
     parser.add_argument('-amin',               metavar='n',          dest='amin',                  type=gufi_common.get_non_negative,                  help='File was last accessed n minutes ago.')
     # parser.add_argument('-anewer',             metavar='file',       dest='anewer',                type=gufi_common.get_non_negative,                  help='File was last accessed more recently than file was modified.')
     parser.add_argument('-atime',              metavar='n',          dest='atime',                 type=gufi_common.get_non_negative,                  help='File was last accessed n*24 hours ago.')
@@ -430,18 +525,19 @@ def build_expression_parser():
     # parser.add_argument('-xtype',              metavar='c',          dest='xtype',                 type=gufi_common.get_char,                          help='The same as -type unless the file is a symbolic link.')
     # parser.add_argument('-context',            metavar='pattern',    dest='context',               type=str,                                           help='(SELinux only) Security context of the file matches glob pattern.')
 
-    parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',              type=gufi_common.get_non_negative,                  help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
-    parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',              type=gufi_common.get_non_negative,                  help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
+    # GNU find actions
     parser.add_argument('-fprint',             metavar='file',       dest='fprint',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
+    parser.add_argument('-printf',             metavar='format',     dest='printf',                type=str,                                           help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
     parser.add_argument('--delim',             metavar='c',          dest='delim',                 type=gufi_common.get_char, default=' ',             help='delimiter separating output columns')
     parser.add_argument('--size%',             metavar='n',          dest='size_percent_range',    type=float, nargs=2,                                help='Modifier to the -size flag. Expects 2 values that define the min and max percentage from the size.')
-    parser.add_argument('--num_results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
+    parser.add_argument('--num-results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
+
     return parser
 
 # argv[0] should be the command name
@@ -506,10 +602,10 @@ def run(argv, config_path):
     validate_args(args)
 
     # generate the query clauses
-    select   = build_select(args)
     where    = build_where(args)
     group_by = build_group_by(args)
     order_by = build_order_by(args)
+    output   = build_output(args)
 
     # create the query command
     query_cmd = [config['Exec'],
@@ -519,30 +615,47 @@ def run(argv, config_path):
     E = None
 
     # aggregation is required
-    if args.num_results or args.smallest or args.largest:
-        I = 'CREATE TABLE {0} ({1})'.format(args.inmemory_name, ', '.join(['path TEXT'] + build_init(args)))
+    if need_aggregation(args):
+        columns = ['name', 'type', 'inode', 'mode', 'nlink', 'uid',
+                   'gid', 'size', 'blksize', 'blocks', 'atime',
+                   'mtime', 'ctime', 'linkname', 'xattrs']
 
-        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(['path()'] + select,
-                                                                                     ['summary'],
-                                                                                     where,
-                                                                                     group_by,
-                                                                                     order_by,
-                                                                                     args.num_results))
+        I = 'CREATE TABLE {0} ({1})'.format(args.inmemory_name,
+                                            ', '.join(['id INTEGER PRIMARY KEY',
+                                                       'path TEXT',
+                                                       'name TEXT',     'type TEXT',
+                                                       'inode INT64',   'mode INT64',
+                                                       'nlink INT64',   'uid INT64',
+                                                       'gid INT64',     'size INT64',
+                                                       'blksize INT64', 'blocks INT64',
+                                                       'atime INT64',   'mtime INT64',
+                                                       'ctime INT64',   'linkname TEXT',
+                                                       'xattrs TEXT']))
 
-        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name, gufi_common.build_query(['path()'] + select,
-                                                                                     ['entries'],
-                                                                                     where,
-                                                                                     group_by,
-                                                                                     order_by,
-                                                                                     args.num_results))
+        S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL', 'path()'] + columns,
+                                                                 ['summary'],
+                                                                 where,
+                                                                 group_by,
+                                                                 order_by,
+                                                                 args.num_results))
 
-        J = "INSERT INTO aggregate.{0} {1}".format(args.inmemory_name, gufi_common.build_query(['path'] + select,
-                                                                                               [args.inmemory_name],
-                                                                                               where,
-                                                                                               group_by,
-                                                                                               order_by,
-                                                                                               args.num_results))
-        G = gufi_common.build_query(['(path || "/" || name)'],
+        E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                         gufi_common.build_query(['NULL', 'path()'] + columns,
+                                                                 ['pentries'],
+                                                                 where,
+                                                                 group_by,
+                                                                 order_by,
+                                                                 args.num_results))
+
+        J = "INSERT INTO aggregate.{0} {1}".format(args.inmemory_name,
+                                                   gufi_common.build_query(['NULL', 'path'] + columns,
+                                                                           [args.inmemory_name],
+                                                                           where,
+                                                                           group_by,
+                                                                           order_by,
+                                                                           args.num_results))
+        G = gufi_common.build_query(output,
                                     [args.inmemory_name],
                                     where,
                                     group_by,
@@ -554,15 +667,15 @@ def run(argv, config_path):
                       '-J', J,
                       '-G', G]
     else:
-        S = gufi_common.build_query(['path()'],
+        S = gufi_common.build_query(output,
                                     ['summary'],
                                     where,
                                     group_by,
                                     order_by,
                                     args.num_results)
 
-        E = gufi_common.build_query(['(path() || "/" || name)'],
-                                    ['entries'],
+        E = gufi_common.build_query(output,
+                                    ['pentries'],
                                     where,
                                     group_by,
                                     order_by,

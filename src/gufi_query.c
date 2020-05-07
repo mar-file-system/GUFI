@@ -291,6 +291,7 @@ static size_t descend2(struct QPTPool *ctx,
                 /* if (accessible) { */
                     buffered_start(set);
                     qwork.level = next_level;
+                    qwork.root = passmywork->root;
                     /* qwork.type[0] = 'd'; */
 
                     /* this is how the parent gets passed on */
@@ -526,7 +527,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     debug_start(addqueryfuncs_call);
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
-        addqueryfuncs(db, id, work->level);
+        addqueryfuncs(db, id, work->level, work->root);
     }
     debug_end(addqueryfuncs_call);
     #endif
@@ -601,21 +602,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                     ca.count = 0;
 
                     /* this probably needs a timer */
-                    #ifdef DEBUG
                     debug_start(sqlsum);
                     char *err = NULL;
-                    if (
-                    #endif
-                        sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca,
-                    #ifdef DEBUG
-                        &err) != SQLITE_OK) {
+                    if (sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
                         fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                         sqlite3_free(err);
                     }
                     debug_end(sqlsum);
-                    #else
-                    NULL);
-                    #endif
                     #endif
 
                     recs = ca.count;
@@ -639,21 +632,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         ca.output_buffers = &ta->output_buffers;
                         ca.id = id;
 
-                        #ifdef DEBUG
                         debug_start(sqlent);
                         char *err = NULL;
-                        if (
-                        #endif
-                        sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca,
-                        #ifdef DEBUG
-                        &err) != SQLITE_OK) {
+                        if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
                             fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
                             sqlite3_free(err);
                         }
                         debug_end(sqlent);
-                        #else
-                        NULL);
-                        #endif
                         #endif
                     }
                 }
@@ -811,7 +796,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
             return NULL;
         }
 
-        addqueryfuncs(gts.outdbd[i], i, -1);
+        addqueryfuncs(gts.outdbd[i], i, -1, NULL);
 
         // create table
         if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
@@ -837,7 +822,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
         return NULL;
     }
 
-    addqueryfuncs(aggregate, in.maxthreads, -1);
+    addqueryfuncs(aggregate, in.maxthreads, -1, NULL);
 
     // create table
     if (sqlite3_exec(aggregate, in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
@@ -980,6 +965,7 @@ int main(int argc, char *argv[])
 
         /* copy argv[i] into the work item */
         SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
+        mywork->root = argv[i];
 
         lstat(mywork->name,&mywork->statuso);
         if (!S_ISDIR(mywork->statuso.st_mode) ) {
