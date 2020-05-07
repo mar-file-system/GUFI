@@ -107,8 +107,8 @@ add_custom_target(make_tarball_dir COMMAND ${CMAKE_COMMAND} -E remove_directory 
                                    COMMAND ${CMAKE_COMMAND} -E make_directory ${TARBALL_TEST_DIR})
 
 add_custom_target(build_gary COMMAND ${CMAKE_COMMAND} -E tar "xzf" ${TARBALL_NAME}
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make DEBUG=1
-                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} make test
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} ${MAKE_FUSE} make DEBUG=1
+                             COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DEP_INSTALL_PREFIX=${DEP_INSTALL_PREFIX} ${MAKE_FUSE} make test
                              WORKING_DIRECTORY ${TARBALL_TEST_DIR}
                              DEPENDS gary make_tarball_dir)
 

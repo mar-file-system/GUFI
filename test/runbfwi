@@ -110,25 +110,16 @@ fi
 # ...........................................................................
 # WARNING!
 #
-#   bfwi builds the GUFI tree as a replication of the entire source-tree
-#   underneath the <to_dir> directory that is provided with '-t' on the
+#   bfwi builds the GUFI tree directly in the <to_dir>
+#   directory that is provided with '-t' on the
 #   command line.  For example:
 #
 #       source   = /a/b/c
-#       to_dir   = .
+#       to_dir   = /q/r/s
 #
-#       actual GUFI-tree = ./a/b/c
-#
-#   We must be very careful during cleanup to avoid e.g. "rm -rf
-#   to_dir" (i.e. the dir that is optionally provided on the
-#   command-line).
-#
-# THEREFORE:
-#
-#   Use "$CLEAN_GUFI", to be safe
+#       actual GUFI-tree = /q/r/s
 #
 # ...........................................................................
-
 
 # defaults
 DEST=

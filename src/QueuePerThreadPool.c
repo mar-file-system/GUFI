@@ -203,9 +203,7 @@ static void * worker_function(void * args) {
         while (w) {
             QPTPool_timestamp_start(wf_process_work);
             struct queue_item * qi = sll_node_data(w);
-
             tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, wf_args->args);
-
             QPTPool_timestamp_end(wf_process_work);
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)

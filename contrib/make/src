@@ -16,6 +16,10 @@ CXX_TOOLS =
 endif
 TARGETS   = $(DFW) $(BFW) $(C_TOOLS) $(CXX_TOOLS)
 
+ifneq ($(FUSE),)
+	TARGETS := $(TARGETS) bffuse bfresultfuse
+endif
+
 all: $(TARGETS)
 
 %.o: %.c $(LIB_H)
