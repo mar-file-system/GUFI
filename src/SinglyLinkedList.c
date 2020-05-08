@@ -67,8 +67,12 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
+static struct sll * sll_clear(struct sll * sll) {
+    return sll?memset(sll, 0, sizeof(struct sll)):NULL;
+}
+
 struct sll * sll_init(struct sll * sll) {
-    return memset(sll, 0, sizeof(struct sll));
+    return sll_clear(sll);
 };
 
 struct sll * sll_push(struct sll * sll, void * data) {
@@ -101,7 +105,31 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
 
     /* dst is overwritten, not destroyed */
     *dst = *src;
-    memset(src, 0, sizeof(struct sll));
+    sll_clear(src);
+    return dst;
+}
+
+struct sll * sll_move_append(struct sll * dst, struct sll * src) {
+    if (!dst || !src) {
+        return NULL;
+    }
+
+    /* src is appended to dst and then cleared */
+    if (!dst->head) {
+        dst->head = src->head;
+    }
+
+    if (dst->tail) {
+        dst->tail->next = src->head;
+    }
+
+    if (src->tail) {
+        dst->tail = src->tail;
+    }
+
+    dst->size += src->size;
+
+    sll_clear(src);
     return dst;
 }
 
@@ -132,5 +160,5 @@ void sll_destroy(struct sll * sll, void (*destroy)(void *)) {
         node = next;
     }
 
-    memset(sll, 0, sizeof(struct sll));
+    sll_clear(sll);
 }

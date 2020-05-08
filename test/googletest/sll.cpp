@@ -137,6 +137,158 @@ TEST(SinglyLinkedList, move) {
     sll_destroy(&sll_src, nullptr);
 }
 
+TEST(SinglyLinkedList, move_append) {
+    // dst is empty
+    {
+        // move one item
+        {
+            struct sll dst;
+            EXPECT_EQ(&dst, sll_init(&dst));
+
+            struct sll src;
+            EXPECT_EQ(&src, sll_init(&src));
+            EXPECT_EQ(&src, sll_push(&src, nullptr));
+
+            struct node * src_head = src.head;
+            struct node * src_tail = src.tail;
+            EXPECT_EQ(src_head, src_tail);
+
+            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
+            EXPECT_EQ(dst.head, src_head);
+            EXPECT_EQ(dst.tail, src_tail);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+
+            sll_destroy(&src, 0);
+            sll_destroy(&dst, 0);
+        }
+
+        // move two items
+        {
+            struct sll dst;
+            EXPECT_EQ(&dst, sll_init(&dst));
+
+            struct sll src;
+            EXPECT_EQ(&src, sll_init(&src));
+            EXPECT_EQ(&src, sll_push(&src, nullptr));
+            EXPECT_EQ(&src, sll_push(&src, nullptr));
+
+            struct node * src_head = src.head;
+            struct node * src_tail = src.tail;
+            EXPECT_NE(src_head, src_tail);
+
+            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
+            EXPECT_EQ(dst.head, src_head);
+            EXPECT_EQ(dst.tail, src_tail);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+
+            sll_destroy(&src, 0);
+            sll_destroy(&dst, 0);
+        }
+    }
+
+    // src is empty
+    {
+        struct sll dst;
+        EXPECT_EQ(&dst, sll_init(&dst));
+        EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+        EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+
+        struct node * dst_head = dst.head;
+        struct node * dst_tail = dst.tail;
+        EXPECT_NE(dst_head, dst_tail);
+
+        struct sll src;
+        EXPECT_EQ(&src, sll_init(&src));
+
+        // nothing in src
+        EXPECT_EQ(src.head, nullptr);
+        EXPECT_EQ(src.tail, nullptr);
+
+        EXPECT_EQ(&dst, sll_move_append(&dst, &src));
+
+        // dst not changed
+        EXPECT_EQ(dst.head, dst_head);
+        EXPECT_EQ(dst.tail, dst_tail);
+
+        // still nothing in src
+        EXPECT_EQ(src.head, nullptr);
+        EXPECT_EQ(src.tail, nullptr);
+
+        sll_destroy(&src, 0);
+        sll_destroy(&dst, 0);
+    }
+
+    // neither empty
+    {
+        // move one item
+        {
+            struct sll dst;
+            EXPECT_EQ(&dst, sll_init(&dst));
+            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+
+            struct node * dst_head = dst.head;
+            struct node * dst_tail = dst.tail;
+            EXPECT_NE(dst_head, dst_tail);
+
+            struct sll src;
+            EXPECT_EQ(&src, sll_init(&src));
+            EXPECT_EQ(&src, sll_push(&src, nullptr));
+
+            struct node * src_head = src.head;
+            struct node * src_tail = src.tail;
+            EXPECT_EQ(src_head, src_tail);
+
+            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
+
+            EXPECT_EQ(dst.head, dst_head); // same head
+            EXPECT_EQ(dst.tail, src_tail); // different tail
+
+            // src empty
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+
+            sll_destroy(&src, 0);
+            sll_destroy(&dst, 0);
+        }
+
+        // move two items
+        {
+            struct sll dst;
+            EXPECT_EQ(&dst, sll_init(&dst));
+            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+
+            struct node * dst_head = dst.head;
+            struct node * dst_tail = dst.tail;
+            EXPECT_NE(dst_head, dst_tail);
+
+            struct sll src;
+            EXPECT_EQ(&src, sll_init(&src));
+            EXPECT_EQ(&src, sll_push(&src, nullptr));
+            EXPECT_EQ(&src, sll_push(&src, nullptr));
+
+            struct node * src_head = src.head;
+            struct node * src_tail = src.tail;
+            EXPECT_NE(src_head, src_tail);
+
+            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
+
+            EXPECT_EQ(dst.head, dst_head); // same head
+            EXPECT_EQ(dst.tail, src_tail); // different tail
+
+            // src empty
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+
+            sll_destroy(&src, 0);
+            sll_destroy(&dst, 0);
+        }
+    }
+}
+
 TEST(SinglyLinkedList, head_node) {
     struct sll sll;
     EXPECT_EQ(&sll, sll_init(&sll));
