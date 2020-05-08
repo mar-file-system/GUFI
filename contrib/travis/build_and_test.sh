@@ -85,7 +85,7 @@ fi
 make
 
 if [[ "${BUILD}" = "cmake" ]]; then
-    ctest --verbose
+    ctest --output-on-failure
 elif [[ "${BUILD}" = "make" ]]; then
     make test
 fi
