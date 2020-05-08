@@ -344,8 +344,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                 #ifdef DEBUG
                 timestamp_start(print_timestamps);
                 #ifdef PER_THREAD_STATS
-                print_debug(&debug_output_buffers, id, buf, size, "startdb",          &startdb_call);
-                print_debug(&debug_output_buffers, id, buf, size, "stopdb",           &stopdb_call);
+                print_timer(&debug_output_buffers, id, buf, size, "startdb",          &startdb_call);
+                print_timer(&debug_output_buffers, id, buf, size, "stopdb",           &stopdb_call);
                 #endif
                 debug_end(print_timestamps);
                 #ifdef CUMULATIVE_TIMES
@@ -353,7 +353,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                 thread_stopdb       += elapsed(&stopdb_call);
                 #endif
                 #ifdef PER_THREAD_STATS
-                print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
+                print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
                 #endif
                 #endif
 
@@ -363,12 +363,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             #ifdef DEBUG
             timestamp_start(print_timestamps);
             #ifdef PER_THREAD_STATS
-            print_debug(&debug_output_buffers, id, buf, size, "getline",          &getline_call);
-            print_debug(&debug_output_buffers, id, buf, size, "memset_row",       &memset_row);
-            print_debug(&debug_output_buffers, id, buf, size, "entry_linetowork", &entry_linetowork);
-            print_debug(&debug_output_buffers, id, buf, size, "free",             &free_call);
-            print_debug(&debug_output_buffers, id, buf, size, "sumit",            &sumit_call);
-            print_debug(&debug_output_buffers, id, buf, size, "insertdbgo",       &insertdbgo_call);
+            print_timer(&debug_output_buffers, id, buf, size, "getline",          &getline_call);
+            print_timer(&debug_output_buffers, id, buf, size, "memset_row",       &memset_row);
+            print_timer(&debug_output_buffers, id, buf, size, "entry_linetowork", &entry_linetowork);
+            print_timer(&debug_output_buffers, id, buf, size, "free",             &free_call);
+            print_timer(&debug_output_buffers, id, buf, size, "sumit",            &sumit_call);
+            print_timer(&debug_output_buffers, id, buf, size, "insertdbgo",       &insertdbgo_call);
             #endif
             debug_end(print_timestamps);
 
@@ -382,7 +382,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             #endif
 
             #ifdef PER_THREAD_STATS
-            print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
+            print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
             #endif
             #endif
         }
@@ -408,16 +408,16 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         #ifdef DEBUG
         timestamp_start(print_timestamps);
         #ifdef PER_THREAD_STATS
-        print_debug(&debug_output_buffers, id, buf, size, "zero_summary", &zero_summary);
-        print_debug(&debug_output_buffers, id, buf, size, "insertdbprep", &insertdbprep_call);
-        print_debug(&debug_output_buffers, id, buf, size, "startdb",      &startdb_call);
-        print_debug(&debug_output_buffers, id, buf, size, "fseek",        &fseek_call);
-        print_debug(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
-        print_debug(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
-        print_debug(&debug_output_buffers, id, buf, size, "stopdb",       &stopdb_call);
-        print_debug(&debug_output_buffers, id, buf, size, "insertdbfin",  &insertdbfin_call);
-        print_debug(&debug_output_buffers, id, buf, size, "insertsumdb",  &insertsumdb_call);
-        print_debug(&debug_output_buffers, id, buf, size, "closedb",      &closedb_call);
+        print_timer(&debug_output_buffers, id, buf, size, "zero_summary", &zero_summary);
+        print_timer(&debug_output_buffers, id, buf, size, "insertdbprep", &insertdbprep_call);
+        print_timer(&debug_output_buffers, id, buf, size, "startdb",      &startdb_call);
+        print_timer(&debug_output_buffers, id, buf, size, "fseek",        &fseek_call);
+        print_timer(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
+        print_timer(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
+        print_timer(&debug_output_buffers, id, buf, size, "stopdb",       &stopdb_call);
+        print_timer(&debug_output_buffers, id, buf, size, "insertdbfin",  &insertdbfin_call);
+        print_timer(&debug_output_buffers, id, buf, size, "insertsumdb",  &insertsumdb_call);
+        print_timer(&debug_output_buffers, id, buf, size, "closedb",      &closedb_call);
         #endif
         debug_end(print_timestamps);
 
@@ -435,7 +435,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         #endif
 
         #ifdef PER_THREAD_STATS
-        print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
+        print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
         #endif
         #endif
     }
@@ -447,13 +447,13 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     #ifdef DEBUG
     timestamp_start(print_timestamps);
     #ifdef PER_THREAD_STATS
-    print_debug(&debug_output_buffers, id, buf, size, "handle_args",      &handle_args);
-    print_debug(&debug_output_buffers, id, buf, size, "memset_work",      &memset_work);
-    print_debug(&debug_output_buffers, id, buf, size, "dir_linetowork",   &dir_linetowork);
-    print_debug(&debug_output_buffers, id, buf, size, "dupdir",           &dupdir_call);
-    print_debug(&debug_output_buffers, id, buf, size, "copy_template",    &copy_template_call);
-    print_debug(&debug_output_buffers, id, buf, size, "opendb",           &opendb_call);
-    print_debug(&debug_output_buffers, id, buf, size, "row_destroy",      &row_destroy_call);
+    print_timer(&debug_output_buffers, id, buf, size, "handle_args",      &handle_args);
+    print_timer(&debug_output_buffers, id, buf, size, "memset_work",      &memset_work);
+    print_timer(&debug_output_buffers, id, buf, size, "dir_linetowork",   &dir_linetowork);
+    print_timer(&debug_output_buffers, id, buf, size, "dupdir",           &dupdir_call);
+    print_timer(&debug_output_buffers, id, buf, size, "copy_template",    &copy_template_call);
+    print_timer(&debug_output_buffers, id, buf, size, "opendb",           &opendb_call);
+    print_timer(&debug_output_buffers, id, buf, size, "row_destroy",      &row_destroy_call);
     #endif
     debug_end(print_timestamps);
     #ifdef CUMULATIVE_TIMES
@@ -492,7 +492,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     pthread_mutex_unlock(&print_mutex);
     #endif
     #ifdef PER_THREAD_STATS
-    print_debug(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
+    print_timer(&debug_output_buffers, id, buf, size, "print_timestamps", &print_timestamps);
     #endif
     #endif
 
