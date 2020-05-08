@@ -81,7 +81,7 @@ long double elapsed(struct start_end * se) {
     return e - s;
 }
 
-int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se) {
+int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se) {
     const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
     const size_t capacity = obufs->buffers[id].capacity;
 
@@ -102,7 +102,8 @@ int print_debug(struct OutputBuffers * obufs, const size_t id, char * str, const
         obufs->buffers[id].count++;
     }
     else {
-        /* if the row does not fit the buffer, output immediately instead of buffering */
+        /* if the row does not fit the buffer, output immediately */
+        /* instead of buffering since order shouldn't matter      */
         fwrite(str, sizeof(char), len, stderr);
     }
 

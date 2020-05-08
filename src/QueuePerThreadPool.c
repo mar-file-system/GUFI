@@ -121,7 +121,7 @@ static void * worker_function(void * args) {
         QPTPool_timestamp_end(wf);
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
         }
         #endif
         return NULL;
@@ -196,7 +196,7 @@ static void * worker_function(void * args) {
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_get_queue_head", &wf_get_queue_head);
         }
         #endif
 
@@ -210,7 +210,7 @@ static void * worker_function(void * args) {
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             if (debug_output_buffers.buffers) {
-                print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work);
+                print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_process_work", &wf_process_work);
             }
             #endif
 
@@ -220,7 +220,7 @@ static void * worker_function(void * args) {
 
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
             if (debug_output_buffers.buffers) {
-                print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work);
+                print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_next_work", &wf_next_work);
             }
             #endif
 
@@ -240,13 +240,13 @@ static void * worker_function(void * args) {
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
         if (debug_output_buffers.buffers) {
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_sll_init",       &wf_sll_init);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_tw_mutex_lock",  &wf_tw_mutex_lock);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_ctx_mutex_lock", &wf_ctx_mutex_lock);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_wait",           &wf_wait);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_move",           &wf_move_queue);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_process_queue",  &wf_process_queue);
-            print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_cleanup",        &wf_cleanup);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_sll_init",       &wf_sll_init);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_tw_mutex_lock",  &wf_tw_mutex_lock);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_ctx_mutex_lock", &wf_ctx_mutex_lock);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_wait",           &wf_wait);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_move",           &wf_move_queue);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_process_queue",  &wf_process_queue);
+            print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_cleanup",        &wf_cleanup);
         }
         #endif
     }
@@ -259,7 +259,7 @@ static void * worker_function(void * args) {
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     if (debug_output_buffers.buffers) {
-        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf_broadcast", &wf_broadcast);
+        print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf_broadcast", &wf_broadcast);
     }
     #endif
 
@@ -269,7 +269,7 @@ static void * worker_function(void * args) {
     QPTPool_timestamp_end(wf);
 
     if (debug_output_buffers.buffers) {
-        print_debug(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
+        print_timer(&debug_output_buffers, wf_args->id, buf, size, "wf", &wf);
     }
     #endif
 
