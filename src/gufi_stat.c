@@ -425,11 +425,11 @@ int process_path(const char *path, FILE *out, const char *format) {
     }
     else {
         /* remove file name from the path */
-        char dir[MAXPATH];
+        char parent[MAXPATH];
         char name[MAXPATH];
-        shortpath(path, dir, name);
+        shortpath(path, parent, name);
 
-        SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, dir);
+        SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, parent);
 
         /* search for basename(path) in the entries table */
         char where[MAXSQL];

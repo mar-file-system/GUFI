@@ -74,14 +74,13 @@ GUFI_STAT="${ROOT}/src/gufi_stat"
 # output directories
 SRCDIR="prefix"
 INDEXROOT="${SRCDIR}.gufi"
-REALSRC="$(realpath ${SRCDIR})"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 OUTPUT="gufi_stat.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_STAT//\//\\/}/gufi_stat/g; s/${REALSRC//\//\\/}\\///g"
+    echo "$@" | sed "s/${GUFI_STAT//\//\\/}/gufi_stat/g"
 }
 
 (
@@ -104,12 +103,12 @@ fixed_size=(
 
 for entry in "${fixed_size[@]}"
 do
-    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}")
+    output=$(${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}")
     replace "${output}"
 done
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-${GUFI_STAT} -f $'%N %X %Y\n' "${INDEXROOT}/old_file"
+${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file"
 ) 2>&1 | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/gufi_stat.expected "${OUTPUT}"
