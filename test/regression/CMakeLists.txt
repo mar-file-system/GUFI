@@ -98,10 +98,13 @@ set(REGRESSION_TEST_FILES
     gufi_stats.expected
     gufi_stats.py
     gufi_stats.sh
-
-    gufi_stat.expected
-    gufi_stat.sh
 )
+
+if (NOT APPLE)
+  list(APPEND REGRESSION_TEST_FILES
+    gufi_stat.expected
+    gufi_stat.sh)
+endif()
 
 if (CMAKE_CXX_COMPILER)
   list(APPEND REGRESSION_TEST_FILES
