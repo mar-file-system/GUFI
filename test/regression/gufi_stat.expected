@@ -11,10 +11,4 @@
 'prefix.gufi/directory/subdirectory/repeat_name' 664 -rw-rw-r-- 81b4 regular file 1 - 0
 'prefix.gufi/leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 1 - 0
 'prefix.gufi/leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'prefix.gufi/' 775 drwxrwxr-x 41fd directory - 0
-'prefix.gufi/directory' 775 drwxrwxr-x 41fd directory - 0
-'prefix.gufi/directory/subdirectory' 775 drwxrwxr-x 41fd directory - 0
-'prefix.gufi/directory/subdirectory/directory_symlink' -> 'directory/subdirectory' 777 -rwxrwxrwx a1ff symbolic link - 0
-'prefix.gufi/file_symlink' -> '1KB' 777 -rwxrwxrwx a1ff symbolic link - 0
-'prefix.gufi/leaf_directory' 775 drwxrwxr-x 41fd directory - 0
 'prefix.gufi/old_file' 0 0

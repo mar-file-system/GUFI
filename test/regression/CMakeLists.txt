@@ -99,8 +99,8 @@ set(REGRESSION_TEST_FILES
     gufi_stats.py
     gufi_stats.sh
 
-    # gufi_stat.expected
-    # gufi_stat.sh
+    gufi_stat.expected
+    gufi_stat.sh
 )
 
 if (CMAKE_CXX_COMPILER)
