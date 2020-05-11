@@ -108,23 +108,6 @@ do
     replace "${output}"
 done
 
-# entries in the index that don't have fixed sizes
-variable_size=(
-    ""
-    "directory"
-    "directory/subdirectory"
-    "directory/subdirectory/directory_symlink"
-    "file_symlink"
-    "leaf_directory"
-)
-
-# print directories separately since directory size seems to change
-for entry in "${variable_size[@]}"
-do
-    output=$(${GUFI_STAT} -f $'%N %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}")
-    replace "${output}"
-done
-
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
 ${GUFI_STAT} -f $'%N %X %Y\n' "${INDEXROOT}/old_file"
 ) 2>&1 | tee "${OUTPUT}"
