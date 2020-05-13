@@ -393,7 +393,7 @@ def parse_directives(fmt, fmt_len, i, path):
     elif ret == 'n':
         ret = 'printf("%{}d", nlink)'
     elif ret == 'p':
-        ret = path + ' || "/" || name'
+        ret = path + ' || (case type WHEN "d" THEN "" ELSE  "/" || name END)'
     elif ret == 'P':
         ret = 'printf("%{}s", substr(' + path + ' || "/" || name, length(starting_point()) + 2))'
     elif ret == 's':
