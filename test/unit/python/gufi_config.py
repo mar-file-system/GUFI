@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,16 +61,77 @@
 
 
 
-# https://github.com/hpc/hxhim/blob/master/test/CMakeLists.txt
-cmake_minimum_required(VERSION 3.0.0)
+import imp
+import io
+import unittest
+import sys
 
-include(CheckLanguage)
+# import the gufi_config in scripts
+sys.path.append('@CMAKE_BINARY_DIR@/scripts')
+gufi_config = imp.load_source('gufi_config', '@CMAKE_BINARY_DIR@/scripts/gufi_config.py')
 
-if (CMAKE_CXX_COMPILER)
-  include_directories( ${DEP_INSTALL_PREFIX}/googletest/include)
-  add_executable(googletests bf.cpp OutputBuffers.cpp QueuePerThreadPool.cpp sll.cpp trace.cpp utils.cpp)
-  target_link_libraries(googletests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
+def build_config(pairs):
+    return io.BytesIO(''.join(['{}={}\n'.format(key, value) for key, value in pairs.items()]))
 
-  add_test(NAME googletests COMMAND googletests)
-set_tests_properties(googletests PROPERTIES LABELS unit)
-endif()
+def build_missing(pairs, remove):
+    config = ''
+    for key, value in pairs.items():
+        if remove != key:
+            config += '{}={}\n'.format(key, value)
+    return io.BytesIO(config)
+
+class gufi_config_server(unittest.TestCase):
+    def setUp(self):
+        self.pairs = {gufi_config.Server.THREADS      : '5',
+                      gufi_config.Server.EXECUTABLE   : '@CMAKE_BINARY_DIR@/src/gufi_query',
+                      gufi_config.Server.INDEXROOT    : '@CMAKE_BINARY_DIR@',
+                      gufi_config.Server.OUTPUTBUFFER : '1024'}
+
+    def test_ok(self):
+        try:
+            gufi_config.Server(build_config(self.pairs))
+        except Exception as e:
+            self.fail("Reading good server configuration raised: {}".format(e))
+
+    def test_missing_threads(self):
+        with self.assertRaises(Exception):
+            gufi_config.Server(build_missing(self.pairs, gufi_config.Server.THREADS))
+
+    def test_missing_executable(self):
+        with self.assertRaises(Exception):
+            gufi_config.Server(build_missing(self.pairs, gufi_config.Server.EXECUTABLE))
+
+    def test_missing_indexroot(self):
+        with self.assertRaises(Exception):
+            gufi_config.Server(build_missing(self.pairs, gufi_config.Server.INDEXROOT))
+
+    def test_missing_outputbuffer(self):
+        with self.assertRaises(Exception):
+            gufi_config.Server(build_missing(self.pairs, gufi_config.Server.OUTPUTBUFFER))
+
+class gufi_config_client(unittest.TestCase):
+    def setUp(self):
+        self.pairs = {gufi_config.Client.SERVER   : 'hostname',
+                      gufi_config.Client.PORT     : '22',
+                      gufi_config.Client.PARAMIKO : 'paramiko'}
+
+    def test_ok(self):
+        try:
+            gufi_config.Client(build_config(self.pairs))
+        except Exception as e:
+            self.fail("Reading good client configuration raised: {}".format(e))
+
+    def test_missing_server(self):
+        with self.assertRaises(Exception):
+            gufi_config.Client(build_missing(self.pairs, gufi_config.Client.SERVER))
+
+    def test_missing_port(self):
+        with self.assertRaises(Exception):
+            gufi_config.Client(build_missing(self.pairs, gufi_config.Client.PORT))
+
+    def test_missing_paramiko(self):
+        with self.assertRaises(Exception):
+            gufi_config.Client(build_missing(self.pairs, gufi_config.Client.PARAMIKO))
+
+if __name__=='__main__':
+    unittest.main()

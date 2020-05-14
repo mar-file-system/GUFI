@@ -66,7 +66,7 @@ cmake_minimum_required(VERSION 3.0.0)
 add_subdirectory(regression)
 
 # make sure unit tests work first
-add_subdirectory(googletest)
+add_subdirectory(unit)
 
 # copy test scripts into the test directory within the build directory
 # list these explicitly to prevent random garbage from getting in
