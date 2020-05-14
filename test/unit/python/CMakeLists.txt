@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,116 +60,8 @@
 
 
 
-import argparse
-import imp
-import os
+cmake_minimum_required(VERSION 3.0.0)
 
-import gufi_common
-
-# default configuration file location
-DEFAULT_PATH='/etc/GUFI/config'
-
-def _parse_file(f):
-    out = {}
-    for line in f:
-        line.strip()
-        if line[-1] == '\n':
-            line = line[:-1]
-
-        if len(line) == 0:
-            continue
-
-        if line[0] == '#':
-            continue
-
-        name, value = line.split('=', 1)
-        if name == 'Port':
-            value = gufi_common.get_port(value)
-        elif name == 'Threads':
-            value = gufi_common.get_positive(value)
-        elif name in ['Paramiko', 'IndexRoot']:
-            value = os.path.normpath(value)
-        elif name == 'OutputBuffer':
-            value = gufi_common.get_non_negative(value)
-        out[name] = value
-
-    return out
-
-def _read_file(settings, f):
-    config = _parse_file(f)
-    for key in settings:
-        if key not in config:
-            raise Exception('Missing ' + key)
-    return config
-
-def _read_filename(settings, filename = DEFAULT_PATH):
-    with open(filename, 'r') as f:
-        return _read_file(settings, f)
-
-def _check_iterable(obj):
-    try:
-        iter(obj)
-    except TypeError:
-        return False
-    return True
-
-class Server:
-    THREADS      = 'Threads'      # number of threads to use
-    EXECUTABLE   = 'Executable'   # absolute path of gufi_query
-    INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
-    OUTPUTBUFFER = 'OutputBuffer' # size of per-thread buffers used to buffer prints
-
-    SETTINGS = [
-        THREADS,
-        EXECUTABLE,
-        INDEXROOT,
-        OUTPUTBUFFER
-    ]
-
-    def __init__(self, file_reference):
-        if isinstance(file_reference,  str):
-            self.config = _read_filename(Server.SETTINGS, file_reference)
-        elif _check_iterable(file_reference):
-            self.config = _read_file(Server.SETTINGS, file_reference)
-        else:
-            raise exception.TypeError('Cannot convert {} to a Server config'.format(type(file_reference)))
-
-    def threads(self):
-        return self.config[Server.THREADS]
-
-    def executable(self):
-        return self.config[Server.EXECUTABLE]
-
-    def indexroot(self):
-        return self.config[Server.INDEXROOT]
-
-    def outputbuffer(self):
-        return self.config[Server.OUTPUTBUFFER]
-
-class Client:
-    SERVER       = 'Server'       # hostname
-    PORT         = 'Port'         # ssh port
-    PARAMIKO     = 'Paramiko'     # location of paramiko installation
-
-    SETTINGS = [
-        SERVER,
-        PORT,
-        PARAMIKO,
-    ]
-
-    def __init__(self, file_reference):
-        if isinstance(file_reference,  str):
-            self.config = _read_filename(Client.SETTINGS, file_reference)
-        elif _check_iterable(file_reference):
-            self.config = _read_file(Client.SETTINGS, file_reference)
-        else:
-            raise exception.TypeError('Cannot convert {} to a Client config'.format(type(file_reference)))
-
-    def server(self):
-        return self.config[Client.SERVER]
-
-    def port(self):
-        return self.config[Client.PORT]
-
-    def paramiko(self):
-        return self.config[Client.PARAMIKO]
+configure_file(gufi_config.py gufi_config.py @ONLY)
+add_test(NAME gufi_config COMMAND gufi_config.py -v)
+set_tests_properties(gufi_config PROPERTIES LABELS unit)
