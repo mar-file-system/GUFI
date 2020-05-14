@@ -67,8 +67,11 @@ Threads=@CORES@
 
 # absolute path to gufi_query
 # single path string
-Exec=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
+Executable=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
 
 # directory where all GUFI indicies are placed under
 # single path string
 IndexRoot=@CMAKE_BINARY_DIR@
+
+# size of per-thread print buffers
+OutputBuffer=4096

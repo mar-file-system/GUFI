@@ -78,7 +78,7 @@ __gufi() {
     fi
 
     root=$(readlink -m $(grep "IndexRoot=" "${CONFIG}"  | sed "s/^.*=//"))
-    bfq=$(readlink -m $(grep "Exec=" ${CONFIG} | sed "s/^.*=//"))
+    bfq=$(readlink -m $(grep "Executable=" ${CONFIG} | sed "s/^.*=//"))
     curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
     path="${root}/${curr}"
     name=${path##*/} # basename without expanding

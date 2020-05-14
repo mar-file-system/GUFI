@@ -90,8 +90,9 @@ export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
 
 # generate a fake config file
 echo "Threads=1" > ${CONFIG}
-echo "Exec=${ROOT}/src/gufi_query" >> ${CONFIG}
+echo "Executable=${ROOT}/src/gufi_query" >> ${CONFIG}
 echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
+echo "OutputBuffer=4096" >> ${CONFIG}
 chmod 666 ${CONFIG}
 
 # generate the tree

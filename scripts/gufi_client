@@ -80,8 +80,8 @@ def talk_to_server(config, args):
         ssh.load_system_host_keys('/etc/ssh/ssh_known_hosts')
 
         # connect to the server
-        ssh.connect(hostname=config['Server'],
-                    port=config['Port'],
+        ssh.connect(hostname=config.server(),
+                    port=config.port()],
                     username=getpass.getuser(),
                     hostkey=paramiko.opensshkey.load_pubkey_from_file('/etc/ssh/ssh_host_rsa_key.pub'))
 
@@ -100,10 +100,10 @@ def talk_to_server(config, args):
         ssh.close()
 
 if __name__  == '__main__':
-    config = gufi_config.client_config(gufi_config.DEFAULT_CONFIG_PATH)
+    config = gufi_config.Client(gufi_config.DEFAULT_PATH)
 
     # import paramiko from provided path
-    sys.path.append(config['Paramiko'])
+    sys.path.append(config.paramiko())
     import paramiko
 
     talk_to_server(config, sys.argv[1:])
