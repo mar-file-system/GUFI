@@ -88,7 +88,7 @@ def talk_to_server(config, args):
         # run the command
         # assumes that gufi_@TOOL@ can be found in PATH on the other side
         # args needs to be sanitized
-        cmd = 'gufi_@TOOL@ ' + ' '.join(['"' + arg + '"' for arg in args])
+        cmd = 'gufi_@TOOL@ ' + ' '.join(args)
 
         try:
             _, stdout, stderr = ssh.exec_command(cmd)
