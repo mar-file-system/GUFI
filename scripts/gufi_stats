@@ -113,8 +113,8 @@ def depth(config, args, where):
     leaf_directory 1
     '''
 
-    root_slash_count = config['IndexRoot'].count('/')
-    root_len = len(config['IndexRoot'])
+    root_slash_count = config.indexroot().count('/')
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
@@ -170,7 +170,7 @@ def filesize(config, args, where):
     leaf_directory 0
     '''
 
-    root_len = len(config['IndexRoot'])
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
@@ -234,7 +234,7 @@ def entries_count(config, args, where, type):
     leaf_directory 0
     '''
 
-    root_len = len(config['IndexRoot'])
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
@@ -292,7 +292,7 @@ def total_filesize(config, args, where):
     1049600
     '''
 
-    root_len = len(config['IndexRoot'])
+    root_len = len(config.indexroot())
 
     queries = []
     if args.cumulative:
@@ -457,7 +457,7 @@ def dircount(config, args, where):
     leaf_directory 0
     '''
 
-    root_len = len(config['IndexRoot'])
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['path TEXT', 'inode INT64', 'pinode INT64']),
@@ -550,7 +550,7 @@ def leaf_dirs(config, args, where):
     leaf_directory
     '''
 
-    root_len = len(config['IndexRoot'])
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT']),
@@ -602,8 +602,8 @@ def leaf_depth(config, args, where):
     leaf_directory 1
     '''
 
-    root_slash_count = config['IndexRoot'].count('/')
-    root_len = len(config['IndexRoot'])
+    root_slash_count = config.indexroot().count('/')
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
@@ -656,7 +656,7 @@ def leaf(config, args, where, type):
     leaf_directory 2
     '''
 
-    root_len = len(config['IndexRoot'])
+    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'count INT64']),
@@ -886,7 +886,7 @@ def per_level(config, args, where, type):
     2 1
     '''
 
-    root = os.path.normpath(config['IndexRoot'])
+    root = os.path.normpath(config.indexroot())
     root_len = len(root)
     path = os.path.normpath(args.path)
     path_len = len(path)
@@ -984,7 +984,7 @@ def run(argv, config_path):
     STATS.update(OTHERS)
 
     # find and parse the configuration file first
-    config = gufi_config.server_config(config_path)
+    config = gufi_config.Server(config_path)
 
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
@@ -998,7 +998,6 @@ def run(argv, config_path):
     parser.add_argument('--delim',           metavar='c',     dest='delim',         type=gufi_common.get_char,          default=' ',       help='delimiter separating output columns')
     parser.add_argument('--num-results',     metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                     help='first n results')
     parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',           type=gufi_common.get_uid,                              help='restrict to user')
-    parser.add_argument('--output-buffer',   metavar='bytes', dest='output_buffer', type=gufi_common.get_positive,      default=4096,      help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name',  metavar='name',  dest='inmemory_name', type=str,                           default='out',     help='Name of in-memory database when -R is used')
     parser.add_argument('stat',                                                     choices=STATS.keys(), help='statistic to get')
     parser.add_argument('path',                                                     type=str, nargs='?',                default='')
@@ -1014,13 +1013,13 @@ def run(argv, config_path):
         sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{}" statistic\n'.format(args.stat))
 
     # prepend the provided paths with the GUFI root path
-    args.path = os.path.normpath(os.path.sep.join([config['IndexRoot'], args.path]))
+    args.path = os.path.normpath(os.path.sep.join([config.indexroot(), args.path]))
 
     # create the query command
-    query_cmd = [config['Exec'],
+    query_cmd = [config.executable(),
                  '-e', '0',
-                 '-n', str(config['Threads']),
-                 '-B', str(args.output_buffer),
+                 '-n', str(config.threads()),
+                 '-B', str(config.outputbuffer()),
                  '-d', args.delim] + STATS[args.stat](config, args, build_where(args))
 
     query = subprocess.Popen(query_cmd + [args.path])
@@ -1029,4 +1028,4 @@ def run(argv, config_path):
     return query.returncode
 
 if __name__=='__main__':
-    sys.exit(run(sys.argv, gufi_config.DEFAULT_CONFIG_PATH))
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

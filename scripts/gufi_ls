@@ -222,7 +222,7 @@ def build_order_by_recursive(args):
 # argv[0] should be the command name
 def run(argv, config_path):
     # find and parse the configuration file first
-    config = gufi_config.server_config(config_path)
+    config = gufi_config.Server(config_path)
 
     class FullTimeAction(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -259,8 +259,7 @@ def run(argv, config_path):
     parser.add_argument('paths',                                                         type=str, action='append' , nargs='*')
 
     # GUFI specific arguments
-    parser.add_argument('--delim',          metavar='c',          dest='delim',          type=gufi_common.get_char, default=' ',           help='delimiter separating output columns')
-    parser.add_argument('--output-buffer',  metavar='bytes',      dest='output_buffer',  type=gufi_common.get_non_negative, default=4096,  help='Size of each thread\'s output buffer')
+    parser.add_argument('--delim',          metavar='c',          dest='delim',          type=gufi_common.get_char,         default=' ',   help='delimiter separating output columns')
     parser.add_argument('--in-memory-name', metavar='name',       dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
     parser.add_argument('--nlink-width',    metavar='chars',      dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
     parser.add_argument('--size-width',     metavar='chars',      dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
@@ -278,10 +277,10 @@ def run(argv, config_path):
 
     for path in args.paths[0]:
         # prepend the provided paths with the GUFI index root
-        fullpath = os.path.normpath(os.path.sep.join([config['IndexRoot'], path]))
+        fullpath = os.path.normpath(os.path.sep.join([config.indexroot(), path]))
 
         # create the base command
-        query_cmd = [config['Exec']]
+        query_cmd = [config.executable()]
 
         # directory and non-directory paths are processed differently
         if os.path.isdir(fullpath):
@@ -340,7 +339,6 @@ def run(argv, config_path):
                                                        None))
 
                 query_cmd += ['-e', '0',
-                              '-n', str(config['Threads']),
                               '-I', I,
                               '-S', S,
                               '-E', E,
@@ -378,7 +376,6 @@ def run(argv, config_path):
 
 
                 query_cmd += ['-e', '0',
-                              '-n', str(config['Threads']),
                               '-I', I,
                               '-S', S,
                               '-E', E,
@@ -387,6 +384,8 @@ def run(argv, config_path):
                               '-y', '0',
                               '-z', '1',
                               '-a']
+
+            query_cmd += ['-n', str(config.threads())]
 
         else:
             # if the path is not a directory, remove the last part of the path
@@ -400,16 +399,14 @@ def run(argv, config_path):
                                         None)
 
             query_cmd += ['-e', '1',
-                          '-n', str(config['Threads']),
                           '-E', E,
                           '-y', '0',
                           '-z', '0']
 
+        query_cmd += ['-B', str(config.outputbuffer())]
+
         if args.delim:
             query_cmd += ['-d', args.delim]
-
-        if args.output_buffer:
-            query_cmd += ['-B', str(args.output_buffer)]
 
         query = subprocess.Popen(query_cmd + [fullpath])
         query.communicate() # block until query finishes
@@ -420,4 +417,4 @@ def run(argv, config_path):
     return rc
 
 if __name__=='__main__':
-    sys.exit(run(sys.argv, gufi_config.DEFAULT_CONFIG_PATH))
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

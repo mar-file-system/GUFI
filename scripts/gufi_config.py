@@ -69,22 +69,9 @@ import os
 import gufi_common
 
 # default configuration file location
-DEFAULT_CONFIG_PATH='/etc/GUFI/config'
+DEFAULT_PATH='/etc/GUFI/config'
 
-# recognized settings
-CLIENT_SETTINGS = [
-    'Server',   # hostname
-    'Port',     # ssh port
-    'Paramiko'  # location of paramiko installation
-]
-
-SERVER_SETTINGS = [
-    'Threads',  # number of threads to use
-    'Exec',     # absolute path of gufi_query
-    'IndexRoot' # absolute path of root directory for GUFI to traverse
-]
-
-def read_config(filename):
+def _parse(filename):
     with open(filename, 'r') as f:
         out = {}
         for line in f:
@@ -105,26 +92,67 @@ def read_config(filename):
                 value = gufi_common.get_positive(value)
             elif name in ['Paramiko', 'IndexRoot']:
                 value = os.path.normpath(value)
+            elif name == 'OutputBuffer':
+                value = gufi_common.get_non_negative(value)
             out[name] = value
+
         return out
 
-# command line arguments override configuration file values (logic is inverted)
-def server_config(filename = DEFAULT_CONFIG_PATH):
-    config = read_config(filename)
-    if 'Threads' not in config:
-        raise exceptions.Exception('Missing Threads')
-    if 'Exec' not in config:
-        raise exceptions.Exception('Missing Exec')
-    if 'IndexRoot' not in config:
-        raise exceptions.Exception('Missing IndexRoot')
+def _read(settings, filename = DEFAULT_PATH):
+    config = _parse(filename)
+    for key in settings:
+        if key not in config:
+            raise exceptions.Exception(filename + ' missing ' + key)
     return config
 
-def client_config(filename = DEFAULT_CONFIG_PATH):
-    config = read_config(filename)
-    if 'Server' not in config:
-        raise exceptions.Exception('Missing Server')
-    if 'Port' not in config:
-        raise exceptions.Exception('Missing Port')
-    if 'Paramiko' not in config:
-        raise exceptions.Exception('Missing Paramiko')
-    return config
+class Server:
+    THREADS      = 'Threads'      # number of threads to use
+    EXECUTABLE   = 'Executable'   # absolute path of gufi_query
+    INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
+    OUTPUTBUFFER = 'OutputBuffer' # size of per-thread buffers used to buffer prints
+
+    SETTINGS = [
+        THREADS,
+        EXECUTABLE,
+        INDEXROOT,
+        OUTPUTBUFFER
+    ]
+
+    def __init__(self, filename = DEFAULT_PATH):
+        self.config = _read(Server.SETTINGS, filename)
+
+    def threads(self):
+        return self.config[Server.THREADS]
+
+    def executable(self):
+        return self.config[Server.EXECUTABLE]
+
+    def indexroot(self):
+        return self.config[Server.INDEXROOT]
+
+    def outputbuffer(self):
+        return self.config[Server.OUTPUTBUFFER]
+
+class Client:
+    SERVER       = 'Server'       # hostname
+    PORT         = 'Port'         # ssh port
+    PARAMIKO     = 'Paramiko'     # location of paramiko installation
+
+
+    SETTINGS = [
+        SERVER,
+        PORT,
+        PARAMIKO,
+    ]
+
+    def __init__(self, filename = DEFAULT_PATH):
+        self.config = _read(Client.SETTINGS, filename)
+
+    def server(self):
+        return self.config[Client.SERVER]
+
+    def port(self):
+        return self.config[Client.PORT]
+
+    def paramiko(self):
+        return self.config[Client.PARAMIKO]

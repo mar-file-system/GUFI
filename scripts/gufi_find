@@ -535,7 +535,6 @@ def build_expression_parser():
     parser.add_argument('--num-results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
-    parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
 
     return parser
@@ -543,7 +542,7 @@ def build_expression_parser():
 # argv[0] should be the command name
 def run(argv, config_path):
     # find and parse the configuration file first
-    config = gufi_config.server_config(config_path)
+    config = gufi_config.Server(config_path)
 
     expression_parser = build_expression_parser()
 
@@ -588,7 +587,7 @@ def run(argv, config_path):
         paths = ['']
 
     # prepend the provided paths with the GUFI root path
-    paths = [os.path.normpath(os.path.sep.join([config['IndexRoot'], path])) for path in paths]
+    paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path])) for path in paths]
 
     # parse expressions without the 'real' and path arguments
     args, unknown = expression_parser.parse_known_args(argv[i:])
@@ -608,8 +607,10 @@ def run(argv, config_path):
     output   = build_output(args)
 
     # create the query command
-    query_cmd = [config['Exec'],
-                 '-n', str(config['Threads'])]
+    query_cmd = [config.executable(),
+                 '-n', str(config.threads()),
+                 '-B', str(config.outputbuffer())
+             ]
 
     S = None
     E = None
@@ -697,13 +698,10 @@ def run(argv, config_path):
     if args.fprint:
         query_cmd += ['-o', args.fprint]
 
-    if args.output_buffer:
-        query_cmd += ['-B', str(args.output_buffer)]
-
     query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
     query.communicate()                         # block until query finishes
 
     return query.returncode
 
 if __name__=='__main__':
-    sys.exit(run(sys.argv, gufi_config.DEFAULT_CONFIG_PATH))
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))
