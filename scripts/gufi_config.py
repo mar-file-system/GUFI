@@ -70,7 +70,7 @@ import gufi_common
 # default configuration file location
 DEFAULT_PATH='/etc/GUFI/config'
 
-def _parse_file(f):
+def _read_file(settings, f):
     out = {}
     for line in f:
         line.strip()
@@ -83,25 +83,17 @@ def _parse_file(f):
         if line[0] == '#':
             continue
 
-        name, value = line.split('=', 1)
-        if name == 'Port':
-            value = gufi_common.get_port(value)
-        elif name == 'Threads':
-            value = gufi_common.get_positive(value)
-        elif name in ['Paramiko', 'IndexRoot']:
-            value = os.path.normpath(value)
-        elif name == 'OutputBuffer':
-            value = gufi_common.get_non_negative(value)
-        out[name] = value
+        key, value = line.split('=', 1)
+        if settings[key]:
+            out[key] = settings[key](value)
+        else:
+            out[key] = value
+
+    for key in settings:
+        if key not in out:
+            raise Exception('Missing ' + key)
 
     return out
-
-def _read_file(settings, f):
-    config = _parse_file(f)
-    for key in settings:
-        if key not in config:
-            raise Exception('Missing ' + key)
-    return config
 
 def _read_filename(settings, filename = DEFAULT_PATH):
     with open(filename, 'r') as f:
@@ -120,12 +112,12 @@ class Server:
     INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
     OUTPUTBUFFER = 'OutputBuffer' # size of per-thread buffers used to buffer prints
 
-    SETTINGS = [
-        THREADS,
-        EXECUTABLE,
-        INDEXROOT,
-        OUTPUTBUFFER
-    ]
+    SETTINGS = {
+        THREADS      : gufi_common.get_positive,
+        EXECUTABLE   : None,
+        INDEXROOT    : os.path.normpath,
+        OUTPUTBUFFER : gufi_common.get_non_negative
+    }
 
     def __init__(self, file_reference):
         if isinstance(file_reference,  str):
@@ -152,11 +144,11 @@ class Client:
     PORT         = 'Port'         # ssh port
     PARAMIKO     = 'Paramiko'     # location of paramiko installation
 
-    SETTINGS = [
-        SERVER,
-        PORT,
-        PARAMIKO,
-    ]
+    SETTINGS = {
+        SERVER   : None,
+        PORT     : gufi_common.get_port,
+        PARAMIKO : os.path.normpath,
+    }
 
     def __init__(self, file_reference):
         if isinstance(file_reference,  str):
