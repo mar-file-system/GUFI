@@ -134,7 +134,7 @@ find_package(PkgConfig REQUIRED)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/contrib/cmake ${CMAKE_MODULE_PATH})
 
 # Detect and handle xattr.h platform specifics
-find_package(xattr REQUIRED XATTR)
+find_package(XATTR REQUIRED)
 message(STATUS "xattr headers located in ${XATTR_INCLUDEDIR}")
 set(CPACK_RPM_PACKAGE_REQUIRES "libattr")
 if (XATTR_ATTR_XATTR_HEADER)
