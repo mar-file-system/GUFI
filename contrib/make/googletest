@@ -3,7 +3,7 @@ GTEST_PREFIX ?= $(DEP_INSTALL_PREFIX)/googletest
 CXXFLAGS     += -I$(GTEST_PREFIX)/include
 LDFLAGS      += -L$(GTEST_PREFIX)/lib -L$(GTEST_PREFIX)/lib64 -lgtest -lgtest_main
 
-TESTS=bf utils
+TESTS=bf QueuePerThreadPool sll trace utils
 OBJ=$(addsuffix .o, $(TESTS))
 
 TARGET=test
@@ -15,12 +15,12 @@ all: $(TARGET)
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(TARGET): $(OBJ) $(realpath ../../src)/libGUFI.a $(STATIC_DEPS)
+$(TARGET): $(OBJ) $(realpath ../../../src)/libGUFI.a $(STATIC_DEPS)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
-run: $(TARGET) ../output-on-failure
+run: $(TARGET) ../../output-on-failure
 	@echo "Running Test: googletest"
-	@../output-on-failure ./$(TARGET)
+	@../../output-on-failure ./$(TARGET)
 
 clean:
 	rm -rf $(OBJ) $(TARGET)

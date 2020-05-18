@@ -63,12 +63,18 @@
 
 import imp
 import io
-import unittest
+import os
 import sys
+import unittest
+
+root = os.path.abspath(__file__)
+for _ in xrange(4):
+    root = os.path.dirname(root)
+scripts = os.path.join(root, 'scripts')
 
 # import the gufi_config in scripts
-sys.path.append('@CMAKE_BINARY_DIR@/scripts')
-gufi_config = imp.load_source('gufi_config', '@CMAKE_BINARY_DIR@/scripts/gufi_config.py')
+sys.path.append(scripts)
+gufi_config = imp.load_source('gufi_config', os.path.join(scripts, 'gufi_config.py'))
 
 def build_config(pairs):
     return io.BytesIO(''.join(['{}={}\n'.format(key, value) for key, value in pairs.items()]))
@@ -83,8 +89,8 @@ def build_missing(pairs, remove):
 class gufi_config_server(unittest.TestCase):
     def setUp(self):
         self.pairs = {gufi_config.Server.THREADS      : '5',
-                      gufi_config.Server.EXECUTABLE   : '@CMAKE_BINARY_DIR@/src/gufi_query',
-                      gufi_config.Server.INDEXROOT    : '@CMAKE_BINARY_DIR@',
+                      gufi_config.Server.EXECUTABLE   : os.path.join(root, 'src', 'gufi_query'),
+                      gufi_config.Server.INDEXROOT    : root,
                       gufi_config.Server.OUTPUTBUFFER : '1024'}
 
     def test_ok(self):

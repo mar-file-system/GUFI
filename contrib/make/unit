@@ -1,0 +1,13 @@
+export
+
+SUBDIRECTORIES = python
+ifneq ("$(CXX)", "false")
+SUBDIRECTORIES += googletest
+endif
+
+.PHONY: $(SUBDIRECTORIES)
+
+run: $(SUBDIRECTORIES)
+
+$(SUBDIRECTORIES):
+	$(MAKE) -C $@ run

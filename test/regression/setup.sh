@@ -73,7 +73,7 @@ fi
 ROOT="$1"
 SRCDIR="$2"
 INDEXROOT="$3"
-CONFIG="config.test"
+CONFIG="$(realpath config.test)"
 
 function setup_cleanup {
     rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
