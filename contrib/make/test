@@ -4,10 +4,7 @@ TESTTAR  = testdir.tar
 TESTDIR  = testdir
 TESTDST  = $(TESTDIR).gufi
 
-SUBDIRECTORIES = regression
-ifneq ("$(CXX)", "false")
-SUBDIRECTORIES := $(SUBDIRECTORIES) googletest
-endif
+SUBDIRECTORIES = regression unit
 
 FILES    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles
 
