@@ -71,6 +71,29 @@ endif()
 
 project(GUFI VERSION 0.5.1 LANGUAGES C)
 
+set(VERSION_STRING "GUFI ${GUFI_VERSION}")
+if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
+  # print version+git commit hash if git is found
+  find_package(Git)
+  if (GIT_FOUND)
+    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_HEAD
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${GIT_EXECUTABLE} status --porcelain --untracked-files=no
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_HEAD_MODIFIED
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(LENGTH "${GIT_HEAD_MODIFIED}" GIT_HEAD_MODIFIED_LEN)
+    set(GIT_HEAD_DIRTY "")
+    if (NOT GIT_HEAD_MODIFIED_LEN EQUAL "0")
+      set(GIT_HEAD_DIRTY "-dirty")
+    endif()
+    set(VERSION_STRING "${VERSION_STRING}-${GIT_HEAD}${GIT_HEAD_DIRTY}")
+  endif()
+endif()
+message(STATUS "${VERSION_STRING}")
+
 # Require C99
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
