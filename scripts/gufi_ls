@@ -80,6 +80,36 @@ SIZES = ['K',  'KB', 'KiB',
          'Z',  'ZB', 'ZiB',
          'Y',  'YB', 'YiB']
 
+def select_size(args, name):
+    # in GNU ls, order of arguments determines which one has precedence
+    # here, --human-readable has precedence
+    if args.human_readable:
+        column = 'human_readable_size({}, ' + str(args.size_width) + ')'
+    elif args.blocksize:
+        column = 'blocksize({}, "' + args.blocksize + '", ' + str(args.size_width) + ')'
+    else:
+        column = 'printf("%' + str(args.size_width) + 'd", {})'
+
+    return [column.format(name)]
+
+TIME_STYLES = {
+    'full-iso' : '%F %T %z',
+    'long-iso' : '%F %T',
+    'iso'      : '%m-%d %R',
+    'locale'   : '%b  %e %H:%M',
+}
+
+def select_time(style, name):
+    if not style:
+        style = 'locale'
+
+    try:
+        column = 'strftime("' + TIME_STYLES[style] + '", {})'
+    except:
+        raise ValueError('gufi_ls: invalid argument \'{}\' for \'time style\''.format(style))
+
+    return [column.format(name)]
+
 def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''
     select = []
@@ -105,7 +135,8 @@ def build_select(args):
             select += ['blocksize(size, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
             select += ['printf("%' + str(args.size_width) + 'd", size)']
-        select += ['strftime("%b  %e %H:%M", mtime)', 'case when (type == "l") then (name || " -> " || linkname) else name end']
+
+        select += select_time(args.time_style, 'mtime') + ['case when (type == "l") then (name || " -> " || linkname) else name end']
 
     else:
         # at minimum, print the file name
@@ -138,7 +169,8 @@ def build_recursive_select(args):
             select += ['blocksize(usize, "' + args.blocksize + '", ' + str(args.size_width) + ')']
         else:
             select += ['printf("%' + str(args.size_width) + 'd", usize)']
-        select += ['strftime("%b  %e %H:%M", umtime)', 'case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
+
+        select += select_time(args.time_style, 'umtime') + ['case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
 
     else:
         # at minimum, print the file name
@@ -212,37 +244,48 @@ def run(argv, config_path):
     # find and parse the configuration file first
     config = gufi_config.server_config(config_path)
 
+    class FullTimeAction(argparse.Action):
+        def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            super(FullTimeAction, self).__init__(option_strings, dest, 0, **kwargs)
+        def __call__(self, parser, namespace, values, option_string=None):
+            # --full-time
+            #        like -l --time-style=full-iso
+            setattr(namespace, 'long_listing', True)
+            setattr(namespace, 'time_style', 'full-iso')
+
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI version of ls', add_help=False)
     # override help to not use -h
-    parser.add_argument('--help',                                                   action='help',                                    help='show this help message and exit')
-    parser.add_argument('--version', '-v',                                          action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('-a', '--all',                       dest='all',            action='store_true',                              help='do not ignore entries starting with .')
-    parser.add_argument('-A', '--almost-all',                dest='almost_all',     action='store_true',                              help='do not list implied . and ..')
-    parser.add_argument('--block-size',                      dest='blocksize',      choices=SIZES,                                    help='with -l, scale sizes by SIZE when printing them')
-    parser.add_argument('-B', '--ignore-backups',            dest='ignore_backups', action='store_true',                              help='do not list implied entries ending with ~')
-    parser.add_argument('-G', '--no-group',                  dest='no_group',       action='store_true',                              help='in a long listing, don\'t print group names')
-    parser.add_argument('-h', '--human-readable',            dest='human_readable', action='store_true',                              help='with -l and -s, print sizes like 1K 234M 2G etc.')
-    parser.add_argument('-i', '--inode',                     dest='inode',          action='store_true',                              help='print the index number of each file')
-    parser.add_argument('-l',                                dest='long_listing',   action='store_true',                              help='use a long listing format')
-    parser.add_argument('-r', '--reverse',                   dest='reverse',        action='store_true',                              help='reverse order while sorting')
-    parser.add_argument('-R', '--recursive',                 dest='recursive',      action='store_true',                              help='list subdirectories recursively')
-    parser.add_argument('-s', '--size',                      dest='size',           action='store_true',                              help='print the allocated size of each file, in blocks')
-    parser.add_argument('-S',                                dest='sort_largest',   action='store_true',                              help='sort by file size, largest first')
-    parser.add_argument('-t',                                dest='mtime',          action='store_true',                              help='sort by modification time, newest first')
-    parser.add_argument('-U',                                dest='no_sort',        action='store_true',                              help='do not sort; list entries in directory order')
+    parser.add_argument('--help',                                                        action='help',                                    help='show this help message and exit')
+    parser.add_argument('--version', '-v',                                               action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('-a', '--all',                            dest='all',            action='store_true',                              help='do not ignore entries starting with .')
+    parser.add_argument('-A', '--almost-all',                     dest='almost_all',     action='store_true',                              help='do not list implied . and ..')
+    parser.add_argument('--block-size',                           dest='blocksize',      choices=SIZES,                                    help='with -l, scale sizes by SIZE when printing them')
+    parser.add_argument('-B', '--ignore-backups',                 dest='ignore_backups', action='store_true',                              help='do not list implied entries ending with ~')
+    parser.add_argument('--full-time',                            dest='full_time',      action=FullTimeAction,                            help='like -l --time-style=full-iso')
+    parser.add_argument('-G', '--no-group',                       dest='no_group',       action='store_true',                              help='in a long listing, don\'t print group names')
+    parser.add_argument('-h', '--human-readable',                 dest='human_readable', action='store_true',                              help='with -l and -s, print sizes like 1K 234M 2G etc.')
+    parser.add_argument('-i', '--inode',                          dest='inode',          action='store_true',                              help='print the index number of each file')
+    parser.add_argument('-l',                                     dest='long_listing',   action='store_true',                              help='use a long listing format')
+    parser.add_argument('-r', '--reverse',                        dest='reverse',        action='store_true',                              help='reverse order while sorting')
+    parser.add_argument('-R', '--recursive',                      dest='recursive',      action='store_true',                              help='list subdirectories recursively')
+    parser.add_argument('-s', '--size',                           dest='size',           action='store_true',                              help='print the allocated size of each file, in blocks')
+    parser.add_argument('-S',                                     dest='sort_largest',   action='store_true',                              help='sort by file size, largest first')
+    parser.add_argument('--time-style',     metavar='TIME_STYLE', dest='time_style',                                                       help='time/date format with -l')
+    parser.add_argument('-t',                                     dest='mtime',          action='store_true',                              help='sort by modification time, newest first')
+    parser.add_argument('-U',                                     dest='no_sort',        action='store_true',                              help='do not sort; list entries in directory order')
 
     # for now, only 1 path is allowed
-    parser.add_argument('paths',                                                    type=str, action='append' , nargs='*')
+    parser.add_argument('paths',                                                         type=str, action='append' , nargs='*')
 
     # GUFI specific arguments
-    parser.add_argument('--delim',          metavar='c',     dest='delim',          type=gufi_common.get_char, default=' ',           help='delimiter separating output columns')
-    parser.add_argument('--output-buffer',  metavar='bytes', dest='output_buffer',  type=gufi_common.get_non_negative, default=4096,  help='Size of each thread\'s output buffer')
-    parser.add_argument('--in-memory-name', metavar='name',  dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
-    parser.add_argument('--nlink-width',    metavar='chars', dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
-    parser.add_argument('--size-width',     metavar='chars', dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
-    parser.add_argument('--user-width',     metavar='chars', dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
-    parser.add_argument('--group-width',    metavar='chars', dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
+    parser.add_argument('--delim',          metavar='c',          dest='delim',          type=gufi_common.get_char, default=' ',           help='delimiter separating output columns')
+    parser.add_argument('--output-buffer',  metavar='bytes',      dest='output_buffer',  type=gufi_common.get_non_negative, default=4096,  help='Size of each thread\'s output buffer')
+    parser.add_argument('--in-memory-name', metavar='name',       dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
+    parser.add_argument('--nlink-width',    metavar='chars',      dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
+    parser.add_argument('--size-width',     metavar='chars',      dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
+    parser.add_argument('--user-width',     metavar='chars',      dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
+    parser.add_argument('--group-width',    metavar='chars',      dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
 
     args = parser.parse_args(argv[1:]);
 
