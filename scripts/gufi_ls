@@ -126,17 +126,7 @@ def build_select(args):
         select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
         if not args.no_group:
             select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
-
-        # in GNU ls, order of arguments determines which one has precedence
-        # here, --human-readable has precedence
-        if args.human_readable:
-            select += ['human_readable_size(size, ' + str(args.size_width) + ')']
-        elif args.blocksize:
-            select += ['blocksize(size, "' + args.blocksize + '", ' + str(args.size_width) + ')']
-        else:
-            select += ['printf("%' + str(args.size_width) + 'd", size)']
-
-        select += select_time(args.time_style, 'mtime') + ['case when (type == "l") then (name || " -> " || linkname) else name end']
+        select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + ['case when (type == "l") then (name || " -> " || linkname) else name end']
 
     else:
         # at minimum, print the file name
@@ -160,17 +150,7 @@ def build_recursive_select(args):
         select += ['modetotxt(umode)', 'printf("%' + str(args.nlink_width) + 'd", unlink)', 'uidtouser(uuid, ' + str(args.user_width) + ')']
         if not args.no_group:
             select += ['gidtogroup(ugid, ' + str(args.group_width) + ')']
-
-        # in GNU ls, order of arguments determines which one has precedence
-        # here, --human-readable has precedence
-        if args.human_readable:
-            select += ['human_readable_size(usize, ' + str(args.size_width) + ')']
-        elif args.blocksize:
-            select += ['blocksize(usize, "' + args.blocksize + '", ' + str(args.size_width) + ')']
-        else:
-            select += ['printf("%' + str(args.size_width) + 'd", usize)']
-
-        select += select_time(args.time_style, 'umtime') + ['case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
+        select += select_size(args, 'usize') + select_time(args.time_style, 'umtime') + ['case when (utype == "l") then (ufullpath || "/" || uname || " -> " || ulinkname) else ufullpath || "/" || uname end']
 
     else:
         # at minimum, print the file name
