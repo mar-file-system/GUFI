@@ -183,6 +183,8 @@ long double total_set_time = 0;
 long double total_clone_time = 0;
 long double total_pushdir_time = 0;
 long double total_attach_time = 0;
+long double total_sqltsumcheck_time = 0;
+long double total_sqltsum_time = 0;
 long double total_sqlsum_time = 0;
 long double total_sqlent_time = 0;
 long double total_detach_time = 0;
@@ -349,9 +351,10 @@ static size_t descend2(struct QPTPool *ctx,
 
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
-    struct OutputBuffers * output_buffers;
-    int id;
-    size_t count;
+    struct OutputBuffers * output_buffers; /* buffers for printing into before writing to stdout */
+    int id;                                /* thread id */
+    size_t rows;                           /* number of rows returned by the query */
+    /* size_t printed;                        /\* number of records printed by the callback *\/ */
 };
 
 static int print_callback(void *args, int count, char **data, char **columns) {
@@ -363,54 +366,59 @@ static int print_callback(void *args, int count, char **data, char **columns) {
     struct CallbackArgs * ca = (struct CallbackArgs *) args;
     const int id = ca->id;
     /* if (gts.outfd[id]) { */
-        size_t * lens = malloc(count * sizeof(size_t));
-        size_t row_len = count + 1; /* one delimiter per column + newline */
-        for(int i = 0; i < count; i++) {
-            lens[i] = strlen(data[i]);
-            row_len += lens[i];
-        }
-
-        const size_t capacity = ca->output_buffers->buffers[id].capacity;
-
-        /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-        if (row_len < capacity) {
-            /* if there's not enough space in the buffer to fit the new row, flush it first */
-            if ((ca->output_buffers->buffers[id].filled + row_len) >= capacity) {
-                OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+        if (ca->output_buffers) {
+            size_t * lens = malloc(count * sizeof(size_t));
+            size_t row_len = count + 1; /* one delimiter per column + newline */
+            for(int i = 0; i < count; i++) {
+                lens[i] = strlen(data[i]);
+                row_len += lens[i];
             }
 
-            char * buf = ca->output_buffers->buffers[id].buf;
-            size_t filled = ca->output_buffers->buffers[id].filled;
-            for(int i = 0; i < count; i++) {
-                memcpy(&buf[filled], data[i], lens[i]);
-                filled += lens[i];
+            const size_t capacity = ca->output_buffers->buffers[id].capacity;
 
-                buf[filled] = in.delim[0];
+            /* if the row can fit within an empty buffer, try to add the new row to the buffer */
+            if (row_len < capacity) {
+                /* if there's not enough space in the buffer to fit the new row, flush it first */
+                if ((ca->output_buffers->buffers[id].filled + row_len) >= capacity) {
+                    OutputBuffer_flush(&ca->output_buffers->mutex, &ca->output_buffers->buffers[id], gts.outfd[id]);
+                }
+
+                char * buf = ca->output_buffers->buffers[id].buf;
+                size_t filled = ca->output_buffers->buffers[id].filled;
+                for(int i = 0; i < count; i++) {
+                    memcpy(&buf[filled], data[i], lens[i]);
+                    filled += lens[i];
+
+                    buf[filled] = in.delim[0];
+                    filled++;
+                }
+
+                buf[filled] = '\n';
                 filled++;
+
+                ca->output_buffers->buffers[id].filled = filled;
+                ca->output_buffers->buffers[id].count++;
+            }
+            else {
+                /* if the row does not fit the buffer, output immediately instead of buffering */
+                pthread_mutex_lock(&ca->output_buffers->mutex);
+                for(int i = 0; i < count; i++) {
+                    fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
+                    fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
+                }
+                fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+                ca->output_buffers->buffers[id].count++;
+                pthread_mutex_unlock(&ca->output_buffers->mutex);
             }
 
-            buf[filled] = '\n';
-            filled++;
+            free(lens);
 
-            ca->output_buffers->buffers[id].filled = filled;
-            ca->output_buffers->buffers[id].count++;
+            /* ca->printed++; */
         }
-        else {
-            /* if the row does not fit the buffer, output immediately instead of buffering */
-            pthread_mutex_lock(&ca->output_buffers->mutex);
-            for(int i = 0; i < count; i++) {
-                fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
-                fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
-            }
-            fwrite("\n", sizeof(char), 1, gts.outfd[id]);
-            ca->output_buffers->buffers[id].count++;
-            pthread_mutex_unlock(&ca->output_buffers->mutex);
-        }
-
-        free(lens);
-
-        ca->count++;
     /* } */
+
+    ca->rows++;
+
     return 0;
 }
 
@@ -432,7 +440,6 @@ struct ThreadArgs {
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     sqlite3 *db = NULL;
     int recs;
-    int trecs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
     DIR * dir = NULL;
@@ -477,6 +484,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     init_start_end(descend_call, ta->start_time);
     struct sll * descend_timers = descend_timers_init();
     init_start_end(attach_call, ta->start_time);
+    init_start_end(sqltsumcheck, ta->start_time);
+    init_start_end(sqltsum, ta->start_time);
     init_start_end(sqlsum, ta->start_time);
     init_start_end(sqlent, ta->start_time);
     init_start_end(detach_call, ta->start_time);
@@ -537,15 +546,47 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
     /* if this is OR, as well as no-sql-to-run, skip this query */
     if (in.sqltsum_len > 1) {
+        if (in.andor == 0) {      /* AND */
+            /* make sure the treesummary table exists */
+            #ifndef NO_SQL_EXEC
+            struct CallbackArgs ca;
+            memset(&ca, 0, sizeof(ca)); /* output_buffers set to NULL to prevent printing */
 
-       if (in.andor == 0) {      /* AND */
-           trecs=rawquerydb(work->name, 0, db, (char *) "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
-         if (trecs<1) {
-           recs=-1;
-         } else {
-           recs=rawquerydb(work->name, 0, db, in.sqltsum, 0, 0, 0, id);
-         }
-      }
+            debug_start(sqltsumcheck);
+            char *err = NULL;
+            if (sqlite3_exec(db, "select name from sqlite_master where type=\'table\' and name='treesummary';", ta->print_callback_func, &ca, &err) != SQLITE_OK) {
+                fprintf(stderr, "Error: %s: %s: while checking for the existence of treesummary\n", err, dbname);
+                sqlite3_free(err);
+            }
+            debug_end(sqltsumcheck);
+
+            recs = ca.rows;
+            #endif
+
+            if (recs < 1) {
+                recs = -1;
+            }
+            else {
+                /* run in.sqltsum */
+                #ifndef NO_SQL_EXEC
+                /* reuse ca */
+                ca.output_buffers = &ta->output_buffers;
+                ca.id = id;
+                ca.rows = 0;
+                /* ca.printed = 0; */
+
+                debug_start(sqltsum);
+                char *err = NULL;
+                if (sqlite3_exec(db, in.sqltsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
+                    fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqltsum);
+                    sqlite3_free(err);
+                }
+                debug_end(sqltsum);
+
+                recs = ca.rows;
+                #endif
+            }
+        }
       /* this is an OR or we got a record back. go on to summary/entries */
       /* queries, if not done with this dir and all dirs below it */
       /* this means that no tree table exists so assume we have to go on */
@@ -598,19 +639,19 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                     struct CallbackArgs ca;
                     ca.output_buffers = &ta->output_buffers;
                     ca.id = id;
-                    ca.count = 0;
+                    ca.rows = 0;
+                    /* ca.printed = 0; */
 
-                    /* this probably needs a timer */
                     debug_start(sqlsum);
                     char *err = NULL;
                     if (sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
-                        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
+                        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlsum);
                         sqlite3_free(err);
                     }
                     debug_end(sqlsum);
-                    #endif
 
-                    recs = ca.count;
+                    recs = ca.rows;
+                    #endif
                 } else {
                     recs = 1;
                 }
@@ -630,6 +671,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         struct CallbackArgs ca;
                         ca.output_buffers = &ta->output_buffers;
                         ca.id = id;
+                        /* ca.rows = 0; */
+                        /* ca.printed = 0; */
 
                         debug_start(sqlent);
                         char *err = NULL;
@@ -713,6 +756,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             print_timers(&debug_output_buffers, id, buf, size, "clone",           &descend_timers[dt_make_clone]);
             print_timers(&debug_output_buffers, id, buf, size, "pushdir",         &descend_timers[dt_pushdir]);
             print_timer (&debug_output_buffers, id, buf, size, "attach",          &attach_call);
+            print_timer (&debug_output_buffers, id, buf, size, "sqltsumcheck",    &sqltsumcheck);
+            print_timer (&debug_output_buffers, id, buf, size, "sqltsum",         &sqltsum);
             print_timer (&debug_output_buffers, id, buf, size, "sqlsum",          &sqlsum);
             print_timer (&debug_output_buffers, id, buf, size, "sqlent",          &sqlent);
             print_timer (&debug_output_buffers, id, buf, size, "detach",          &detach_call);
@@ -754,6 +799,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     total_pushdir_time           += buffer_sum(&descend_timers[dt_pushdir]);
     total_closedir_time          += elapsed(&closedir_call);
     total_attach_time            += elapsed(&attach_call);
+    total_sqltsumcheck_time      += elapsed(&sqltsumcheck);
+    total_sqltsum_time           += elapsed(&sqltsum);
     total_sqlsum_time            += elapsed(&sqlsum);
     total_sqlent_time            += elapsed(&sqlent);
     total_detach_time            += elapsed(&detach_call);
@@ -1025,6 +1072,8 @@ int main(int argc, char *argv[])
         struct CallbackArgs ca;
         ca.output_buffers = &args.output_buffers;
         ca.id = in.maxthreads;
+        /* ca.rows = 0; */
+        /* ca.printed = 0; */
 
         char * err;
         if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
@@ -1099,6 +1148,8 @@ int main(int argc, char *argv[])
     fprintf(stderr, "             clone:                          %.2Lfs\n", total_clone_time);
     fprintf(stderr, "             pushdir:                        %.2Lfs\n", total_pushdir_time);
     fprintf(stderr, "     attach intermediate databases:          %.2Lfs\n", total_attach_time);
+    fprintf(stderr, "     check if treesummary table exists       %.2Lfs\n", total_sqltsumcheck_time);
+    fprintf(stderr, "     sqltsum                                 %.2Lfs\n", total_sqltsum_time);
     fprintf(stderr, "     sqlsum                                  %.2Lfs\n", total_sqlsum_time);
     fprintf(stderr, "     sqlent                                  %.2Lfs\n", total_sqlent_time);
     fprintf(stderr, "     detach intermediate databases:          %.2Lfs\n", total_detach_time);
