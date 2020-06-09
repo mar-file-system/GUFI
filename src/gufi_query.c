@@ -437,6 +437,30 @@ struct ThreadArgs {
     memcpy(&name.end, zero, sizeof(*zero));
 #endif
 
+/* wrapper wround sqlite3_exec to pass arguments and check for errors */
+#ifdef NO_SQL_EXEC
+#define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)
+#else
+#define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)    \
+do {                                                                    \
+    struct CallbackArgs ca;                                             \
+    ca.output_buffers = obufs;                                          \
+    ca.id = id;                                                         \
+    ca.rows = 0;                                                        \
+    /* ca.printed = 0; */                                               \
+                                                                        \
+    debug_start(ts_name);                                               \
+    char *err = NULL;                                                   \
+    if (sqlite3_exec(db, query, callback, &ca, &err) != SQLITE_OK) {    \
+        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query); \
+        sqlite3_free(err);                                              \
+    }                                                                   \
+    debug_end(ts_name);                                                 \
+                                                                        \
+    rc = ca.rows;                                                       \
+} while (0)
+#endif
+
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     sqlite3 *db = NULL;
     int recs;
@@ -548,43 +572,18 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     if (in.sqltsum_len > 1) {
         if (in.andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
-            #ifndef NO_SQL_EXEC
-            struct CallbackArgs ca;
-            memset(&ca, 0, sizeof(ca)); /* output_buffers set to NULL to prevent printing */
-
-            debug_start(sqltsumcheck);
-            char *err = NULL;
-            if (sqlite3_exec(db, "select name from sqlite_master where type=\'table\' and name='treesummary';", ta->print_callback_func, &ca, &err) != SQLITE_OK) {
-                fprintf(stderr, "Error: %s: %s: while checking for the existence of treesummary\n", err, dbname);
-                sqlite3_free(err);
-            }
-            debug_end(sqltsumcheck);
-
-            recs = ca.rows;
-            #endif
+            querydb(dbname, db, "select name from sqlite_master where type=\'table\' and name='treesummary';",
+                    ta->print_callback_func, NULL,
+                    id, sqltsumcheck, recs);
 
             if (recs < 1) {
                 recs = -1;
             }
             else {
                 /* run in.sqltsum */
-                #ifndef NO_SQL_EXEC
-                /* reuse ca */
-                ca.output_buffers = &ta->output_buffers;
-                ca.id = id;
-                ca.rows = 0;
-                /* ca.printed = 0; */
-
-                debug_start(sqltsum);
-                char *err = NULL;
-                if (sqlite3_exec(db, in.sqltsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
-                    fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqltsum);
-                    sqlite3_free(err);
-                }
-                debug_end(sqltsum);
-
-                recs = ca.rows;
-                #endif
+                querydb(dbname, db, in.sqltsum,
+                        ta->print_callback_func, &ta->output_buffers,
+                        id, sqltsum, recs);
             }
         }
       /* this is an OR or we got a record back. go on to summary/entries */
@@ -634,24 +633,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                     /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
                     realpath(work->name,gps[id].gfpath);
 
-
-                    #ifndef NO_SQL_EXEC
-                    struct CallbackArgs ca;
-                    ca.output_buffers = &ta->output_buffers;
-                    ca.id = id;
-                    ca.rows = 0;
-                    /* ca.printed = 0; */
-
-                    debug_start(sqlsum);
-                    char *err = NULL;
-                    if (sqlite3_exec(db, in.sqlsum, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
-                        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlsum);
-                        sqlite3_free(err);
-                    }
-                    debug_end(sqlsum);
-
-                    recs = ca.rows;
-                    #endif
+                    querydb(dbname, db, in.sqlsum,
+                            ta->print_callback_func, &ta->output_buffers,
+                            id, sqlsum, recs);
                 } else {
                     recs = 1;
                 }
@@ -667,21 +651,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
                         realpath(work->name,gps[id].gfpath);
 
-                        #ifndef NO_SQL_EXEC
-                        struct CallbackArgs ca;
-                        ca.output_buffers = &ta->output_buffers;
-                        ca.id = id;
-                        /* ca.rows = 0; */
-                        /* ca.printed = 0; */
-
-                        debug_start(sqlent);
-                        char *err = NULL;
-                        if (sqlite3_exec(db, in.sqlent, ta->print_callback_func, &ca, &err) != SQLITE_OK) {
-                            fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, in.sqlent);
-                            sqlite3_free(err);
-                        }
-                        debug_end(sqlent);
-                        #endif
+                        querydb(dbname, db, in.sqlent,
+                                ta->print_callback_func, &ta->output_buffers,
+                                id, sqlent, recs); /* recs is not used */
                     }
                 }
             }
