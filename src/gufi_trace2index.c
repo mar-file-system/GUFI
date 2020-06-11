@@ -99,7 +99,7 @@ struct row * row_init(const size_t first_delim, char * line, const size_t len, c
     struct row * row = malloc(sizeof(struct row));
     if (row) {
         row->first_delim = first_delim;
-        row->line = line;
+        row->line = line; /* takes ownership of line */
         row->len = len;
         row->offset = offset;
         row->entries = 0;
@@ -538,6 +538,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     if (getline(&line, &len, trace) == -1) {
         free(line);
         fclose(trace);
+        fprintf(stderr, "Could not get the first line of the trace\n");
         return 1;
     }
 
@@ -546,6 +547,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     if (first_delim == (size_t) -1) {
         free(line);
         fclose(trace);
+        fprintf(stderr, "Could not find the specified delimiter\n");
         return 1;
     }
 
@@ -553,6 +555,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     if (line[first_delim + 1] != 'd') {
         free(line);
         fclose(trace);
+        fprintf(stderr, "First line of trace is not a directory\n");
         return 1;
     }
 
@@ -564,12 +567,20 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     size_t dir_count = 1; /* always start with a directory */
     size_t empty = 0;
 
+    /* don't free line - the pointer is now owned by work */
+
+    /* have getline allocate a new buffer */
     line = NULL;
     len = 0;
     while (getline(&line, &len, trace) != -1) {
         first_delim = parsefirst(line, len, in.delim[0]);
+
+        /* bad line */
         if (first_delim == (size_t) -1) {
-            work->entries++;
+            free(line);
+            line = NULL;
+            len = 0;
+            fprintf(stderr, "Scout encountered bad line ending at offset %ld\n", ftell(trace));
             continue;
         }
 
@@ -583,17 +594,24 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
             QPTPool_enqueue(ctx, target_thread, processdir, work);
             target_thread = (target_thread + 1) % ctx->size;
 
+            /* put the current line into a new work item */
             work = row_init(first_delim, line, len, ftell(trace));
         }
         /* ignore non-directories */
         else {
             work->entries++;
             file_count++;
+
+            /* this line is not needed */
+            free(line);
         }
 
+        /* have getline allocate a new buffer */
         line = NULL;
         len = 0;
     }
+
+    /* end of file, so getline failed - still have to free line */
     free(line);
 
     /* insert the last work item */
