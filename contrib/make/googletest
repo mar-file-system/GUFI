@@ -3,7 +3,7 @@ GTEST_PREFIX ?= $(DEP_INSTALL_PREFIX)/googletest
 CXXFLAGS     += -I$(GTEST_PREFIX)/include
 LDFLAGS      += -L$(GTEST_PREFIX)/lib -L$(GTEST_PREFIX)/lib64 -lgtest -lgtest_main
 
-TESTS=bf QueuePerThreadPool sll trace utils
+TESTS=bf OutputBuffers QueuePerThreadPool sll trace utils
 OBJ=$(addsuffix .o, $(TESTS))
 
 TARGET=test
