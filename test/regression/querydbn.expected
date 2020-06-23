@@ -2,7 +2,7 @@
 gufi_query -n 2 -O outdb -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM entries WHERE type=='f'" .
 
 # Query all per-thread result databse files at once
-querydbn -NV outdb 2 "SELECT name, size FROM vout ORDER BY size ASC, name ASC" out
+querydbn -NV outdb "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
 name|size|
 empty_file|0|
 .hidden|1|

@@ -62,168 +62,174 @@ OF SUCH DAMAGE.
 
 
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <utime.h>
-#include <sys/xattr.h>
-#include <sqlite3.h>
-#include <ctype.h>
-#include <errno.h>
-#include <pthread.h>
-
-#include <pwd.h>
-#include <grp.h>
+#include <string.h>
 
 #include "bf.h"
-#include "utils.h"
 #include "dbutils.h"
 
-extern int errno;
-
 void sub_help() {
-   printf("  -s              dir-summary (currently-unused internal functionality)\n");
-   // printf("  -N <DB_count>   query DBs written by multiple threads (\n");}
+   printf("attach_name              name to use when attaching database files\n");
+   printf("table_name               name of view table = 'v<table_name>'\n");
+   printf("SQL                      arbitrary SQL on each DB (unified into single view)\n");
    printf("\n");
-   printf("DB_path           path to dir containing %s.*\n",DBNAME);
-   printf("DB_count          number of DBs (should match thread-count used in 'gufi_query')\n");
-   printf("SQL               arbitrary SQL on each DB (unified into single view)\n");
-   printf("table_name        name of view table = 'v<table_name>'\n");
-   printf("\n");
+}
+
+int print_callback(void *args, int count, char **data, char **columns) {
+    size_t * rows = (size_t *) args;
+
+    if (!*rows) {
+        if (in.printheader) {
+            for(int i = 0; i < count; i++) {
+                fprintf(stdout, "%s%c", columns[i], in.delim[0]);
+            }
+            fprintf(stdout, "\n");
+        }
+    }
+
+    if (in.printrows) {
+        for(int i = 0; i < count; i++) {
+            fprintf(stdout, "%s%c", data[i], in.delim[0]);
+        }
+        fprintf(stdout, "\n");
+    }
+
+    (*rows)++;
+
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
-   char name[MAXPATH];
-   char rsqlstmt[MAXSQL];
-   int rc;
-   sqlite3 *db;
-   int recs;
-   int dirsummary = 0;
-   int numdbs = 0;
-   int i;
-   char dbnam[MAXPATH];
-   char dbn[MAXPATH];
-   char sqlu[MAXSQL];
-   char sqlat[MAXSQL];
-   char tabnam[MAXPATH];
-   char up[MAXSQL];
-   char *err_msg = 0;
+    char *dbname = NULL;
+    char *tablename = NULL;
+    char *rsqlstmt = NULL;
+    sqlite3 *db = NULL;
+    int rc = 0;
 
-   // sprintf(name,"%s",argv[1]);
-   // sprintf(rsqlstmt,"%s",argv[2]);
-   // printpath=atoi(argv[3]);
-   // printheader=atoi(argv[4]);
-   // dirsummary=atoi(argv[5]);
-   // numdbs=atoi(argv[6]);
-   // sprintf(tabnam,"%s",argv[7]);
+    const char* pos_args = "attach_name table_name SQL DB_name [DB_name ...]";
+    int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args, &in);
+    if (in.helped)
+        sub_help();
+    if (idx < 0)
+        return -1;
+    else {
+        // parse positional args following the options
+        dbname = argv[idx++];
+        tablename = argv[idx++];
+        rsqlstmt = argv[idx++];
+    }
 
-   const char* pos_args = "[-s] DB_path DB_count SQL table_name";
-   int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args, &in);
-   if (in.helped)
-      sub_help();
-   if (idx < 0)
-      return -1;
-   else {
-      // parse our custom option '-s'
-      if ((argc - idx) > 4) {
-         if (strcmp(argv[idx], "-s")) {
-            print_help(argv[0], "hHNVp", pos_args);
-            sub_help();
-            return -1;
-         }
-         dirsummary = 1;
-         ++idx;
-      }
-
-      // parse positional args following the options
-      int retval = 0;
-      INSTALL_STR(name,     argv[idx++], MAXPATH,       "<DB_path>");
-      INSTALL_INT(numdbs,   argv[idx++], 1, MAXPTHREAD, "<DB_count>");
-      INSTALL_STR(rsqlstmt, argv[idx++], MAXSQL,        "<SQL>");
-      INSTALL_STR(tabnam,   argv[idx++], MAXPATH,       "<tabname>");
-      if (retval)
-         return retval;
-   }
-
-
-   //printf("processing query name %s  numb dbs %d\n",name, numdbs);
-   if (!(db = opendb(name, RDWR, 1, 1,
-               NULL, NULL
-               #ifdef DEBUG
-               , NULL, NULL
-               , NULL, NULL
-               , NULL, NULL
-               , NULL, NULL
-               #endif
-             ))) {
-       fprintf(stderr, "Error: Unable to create database file \"%s\".\n", name);
-       return -1;
-   }
+    if (!(db = opendb(":memory:", RDWR, 1, 1,
+                      NULL, NULL
+                      #ifdef DEBUG
+                      , NULL, NULL
+                      , NULL, NULL
+                      , NULL, NULL
+                      , NULL, NULL
+                      #endif
+              ))) {
+        fprintf(stderr, "Error: Unable to open in-memory database.\n");
+        return -1;
+    }
 
    // add query funcs to get path() uidtouser() gidtogroup()
    addqueryfuncs(db, 0, -1, NULL);
 
-   // just zero out the global path so path() for this query is useless
+   const int start = idx;
+   const int numdbs = argc - idx;
+
+   /* check if number of databases provided can be attached*/
+   const int attach_limit = sqlite3_limit(db, SQLITE_LIMIT_ATTACHED, -1);
+   if (attach_limit < numdbs) {
+       fprintf(stderr, "Error: Cannot attach %d database files (max %d)\n", numdbs, attach_limit);
+       rc = 1;
+       goto done;
+   }
+
+   /* just zero out the global path so path() for this query is useless */
    memset(gps[0].gpath, 0, sizeof(gps[0].gpath));
 
-   SNPRINTF(sqlu,MAXSQL,"create temp view v%s as ",tabnam);
-   i=0;
-   while (i < numdbs) {
-      SNPRINTF(dbnam,MAXPATH,"%s.%d",name,i);
-      SNPRINTF(dbn,MAXPATH,"%s%d",name,i);
-      if (i != (numdbs-1))
-         SNPRINTF(up,MAXSQL,"select * from %s.%s union all ",dbn,tabnam);
-      else
-         SNPRINTF(up,MAXSQL,"select * from %s.%s;",dbn,tabnam);
-      strcat(sqlu,up);
-      SNPRINTF(sqlat,MAXSQL,"ATTACH \'%s\' as %s",dbnam,dbn);
-      //printf("ATTACH \'%s\' as %s\n",dbnam,dbn);
-      rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
-      if (rc != SQLITE_OK) {
-         fprintf(stderr, "Cannot attach database: %s %s\n", dbnam, sqlite3_errmsg(db));
-         sqlite3_close(db);
-         exit(9);
-      }
+   /* length of a single "SELECT * FROM %s.%s UNION ALL" */
+   const size_t single_db_len = strlen(" SELECT * FROM ") +
+                                strlen(dbname) +            /* %s */
+                                3 +                         /* %d (max 125, so 3 chars) */
+                                1 +                         /* .  */
+                                strlen(tablename) +         /* %s */
+                                strlen(" UNION ALL");
 
-      i++;
-   }
-   //create view concat as select * from d1.summary union all d2.summary
-   //…… union all d10.summary;
+   /* overestimate size to allocate for CREATE TEMP VIEW string */
+   const size_t create_len = strlen("CREATE TEMP VIEW v") +
+                             strlen(tablename) +            /* %s */
+                             strlen(" AS") +
+                             (numdbs * single_db_len) +
+                             1;                             /* NULL terminator */
 
-   //printf("sqlu: %s\n",sqlu);
-   rawquerydb(dbnam, dirsummary, db, sqlu,
-              in.printing, in.printheader, in.printrows,0);
+   char * create_view = malloc(create_len);                 /* buffer for CREATE TEMP VIEW string */
+   char * dbn = malloc(strlen(dbname) + 3 + 1);             /* buffer for database attach name    */
 
-   //printf("after union running %s\n",rsqlstmt);
-   recs=rawquerydb(dbnam, dirsummary, db, rsqlstmt,
-                   in.printing, in.printheader, in.printrows, 0);
-   if (recs >= 0)
-      printf("query returned %d records\n",recs);
-   else
-      printf("query returned error\n");
+   char *curr = create_view;
+   curr += SNPRINTF(curr, create_len, "CREATE TEMP VIEW v%s AS", tablename);
 
-   i=0;
-   while (i < numdbs) {
-      SNPRINTF(dbnam,MAXPATH,"%s.%d",name,i);
-      SNPRINTF(dbn,MAXPATH,"%s%d",name,i);
+   /* build actual CREATE TEMP VIEW string */
+   idx = start;
+   for(int i = 0; idx < argc; idx++) {
+       SNPRINTF(dbn, MAXSQL, "%s%d", dbname, i);
+       curr += SNPRINTF(curr, MAXSQL, " SELECT * FROM %s.%s UNION ALL", dbn, tablename);
 
-      //detachdb(dbnam,db,dbn);
-      SNPRINTF(sqlat,MAXSQL,"DETACH %s",dbn);
-      rc=sqlite3_exec(db, sqlat,0, 0, &err_msg);
-      if (rc != SQLITE_OK) {
-         fprintf(stderr, "Cannot detach database: %s/%s %s\n", name, DBNAME,sqlite3_errmsg(db));
-         sqlite3_close(db);
-         exit(9);
-      }
-      i++;
+       // attach individual database files
+       if (!attachdb(argv[idx], db, dbn, RDONLY)) {
+           rc = 1;
+           goto detach;
+       }
+
+       i++;
    }
 
+   curr -= strlen(" UNION ALL");   /* remove last " UNION ALL" */
+   *curr = '\0';
 
-   return 0;
+   char * err = NULL;
+
+   /* create the view */
+   if (sqlite3_exec(db, create_view, NULL, NULL, &err) != SQLITE_OK) {
+       fprintf(stderr, "Error: Cannot create view with databases: %s\n", err);
+       sqlite3_free(err);
+       rc = 1;
+       goto detach;
+   }
+
+   /* run the user query */
+   size_t records = 0;
+   if (sqlite3_exec(db, rsqlstmt, print_callback, &records, &err) != SQLITE_OK) {
+       fprintf(stderr, "Error: User query failed: %s\n", err);
+       sqlite3_free(err);
+       rc = 1;
+       goto detach;
+   }
+
+   printf("query returned %zu records\n", records);
+
+  detach:
+   /* /\* detach each database file *\/ */
+   /* /\* not strictly necessary *\/ */
+   /* idx = start; */
+   /* for(int i = 0; idx < argc; idx++) { */
+   /*     char dbn[MAXSQL]; */
+   /*     SNPRINTF(dbn, MAXSQL, "%s%d", dbname, i); */
+   /*     detachdb(argv[i], db, dbn); */
+
+   /*     i++; */
+   /* } */
+
+   free(dbn);
+   free(create_view);
+
+  done:
+
+   closedb(db);
+
+   return rc;
 }
