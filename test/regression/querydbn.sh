@@ -101,8 +101,8 @@ output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT,
 echo "${output}"
 
 replace "# Query all per-thread result databse files at once"
-replace  "${QUERYDBN} -NV outdb ${THREADS} \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${TABLE}"
-output=$(${QUERYDBN} -NV outdb ${THREADS} "SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC" "${TABLE}")
+replace  "${QUERYDBN} -NV outdb \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+output=$(${QUERYDBN} -NV outdb "${TABLE}" "SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC" outdb.*)
 replace "${output}"
 echo
 
