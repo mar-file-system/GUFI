@@ -530,7 +530,6 @@ def build_expression_parser():
     parser.add_argument('-printf',             metavar='format',     dest='printf',                type=str,                                           help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
-    parser.add_argument('--delim',             metavar='c',          dest='delim',                 type=gufi_common.get_char, default=' ',             help='delimiter separating output columns')
     parser.add_argument('--size%',             metavar='n',          dest='size_percent_range',    type=float, nargs=2,                                help='Modifier to the -size flag. Expects 2 values that define the min and max percentage from the size.')
     parser.add_argument('--num-results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
@@ -684,10 +683,8 @@ def run(argv, config_path):
 
     query_cmd += ['-S', S,
                   '-E', E,
-                  '-a']
-
-    if args.delim:
-        query_cmd += ['-d', args.delim]
+                  '-a',
+                  '-d', ' ']
 
     if args.maxdepth is not None:
         query_cmd += ['-z', str(args.maxdepth)]
