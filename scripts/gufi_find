@@ -220,7 +220,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         if len(args.size) == 1:
             prefix, size = parse_size(args.size[0])
 
-            # (size - x%, size + x%)
+            # (size + x%, size + x%]
             # the prefix is ignored
             if args.size_percent_range is not None:
                 percent_range = sorted(args.size_percent_range)
