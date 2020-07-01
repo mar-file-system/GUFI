@@ -86,12 +86,12 @@ def build_missing(pairs, remove):
             config += '{}={}\n'.format(key, value)
     return io.BytesIO(config)
 
-class gufi_config_server(unittest.TestCase):
+class server(object):
     def setUp(self):
-        self.pairs = {gufi_config.Server.THREADS      : '5',
-                      gufi_config.Server.EXECUTABLE   : os.path.join(root, 'src', 'gufi_query'),
-                      gufi_config.Server.INDEXROOT    : root,
-                      gufi_config.Server.OUTPUTBUFFER : '1024'}
+        self.pairs[gufi_config.Server.THREADS]      = '5'
+        self.pairs[gufi_config.Server.EXECUTABLE]   = os.path.join(root, 'src', 'gufi_query')
+        self.pairs[gufi_config.Server.INDEXROOT]    = root,
+        self.pairs[gufi_config.Server.OUTPUTBUFFER] = '1024'
 
     def test_ok(self):
         try:
@@ -115,11 +115,15 @@ class gufi_config_server(unittest.TestCase):
         with self.assertRaises(Exception):
             gufi_config.Server(build_missing(self.pairs, gufi_config.Server.OUTPUTBUFFER))
 
-class gufi_config_client(unittest.TestCase):
+    def test_count(self):
+        config = gufi_config.Server(build_missing(self.pairs, None))
+        self.assertEqual(len(config.config), len(config.SETTINGS))
+
+class client(object):
     def setUp(self):
-        self.pairs = {gufi_config.Client.SERVER   : 'hostname',
-                      gufi_config.Client.PORT     : '22',
-                      gufi_config.Client.PARAMIKO : 'paramiko'}
+        self.pairs[gufi_config.Client.SERVER]   = 'hostname'
+        self.pairs[gufi_config.Client.PORT]     = '22'
+        self.pairs[gufi_config.Client.PARAMIKO] = 'paramiko'
 
     def test_ok(self):
         try:
@@ -138,6 +142,41 @@ class gufi_config_client(unittest.TestCase):
     def test_missing_paramiko(self):
         with self.assertRaises(Exception):
             gufi_config.Client(build_missing(self.pairs, gufi_config.Client.PARAMIKO))
+
+    def test_count(self):
+        config = gufi_config.Client(build_missing(self.pairs, None))
+        self.assertEqual(len(config.config), len(config.SETTINGS))
+
+class gufi_config_server(server, unittest.TestCase):
+    def setUp(self):
+        self.pairs = {}
+        server.setUp(self)
+
+class gufi_config_server_combined(server, unittest.TestCase):
+    def setUp(self):
+        self.pairs = {}
+        server.setUp(self)
+
+        # add client configuration
+        self.pairs[gufi_config.Client.SERVER]   = 'hostname'
+        self.pairs[gufi_config.Client.PORT]     = '22'
+        self.pairs[gufi_config.Client.PARAMIKO] = 'paramiko'
+
+class gufi_config_client(client, unittest.TestCase):
+    def setUp(self):
+        self.pairs = {}
+        client.setUp(self)
+
+class gufi_config_client_combined(client, unittest.TestCase):
+    def setUp(self):
+        self.pairs = {}
+        client.setUp(self)
+
+        # add server configuration
+        self.pairs[gufi_config.Server.THREADS]      = '5'
+        self.pairs[gufi_config.Server.EXECUTABLE]   = os.path.join(root, 'src', 'gufi_query')
+        self.pairs[gufi_config.Server.INDEXROOT]    = root,
+        self.pairs[gufi_config.Server.OUTPUTBUFFER] = '1024'
 
 if __name__=='__main__':
     unittest.main()

@@ -84,10 +84,14 @@ def _read_file(settings, f):
             continue
 
         key, value = line.split('=', 1)
-        if settings[key]:
-            out[key] = settings[key](value)
-        else:
-            out[key] = value
+
+        # only store known keys
+        if key in settings:
+            # some values need to be parsed
+            if settings[key]:
+                out[key] = settings[key](value)
+            else:
+                out[key] = value
 
     for key in settings:
         if key not in out:
