@@ -161,7 +161,6 @@ void print_timers(struct OutputBuffers * obufs, const size_t id, char * buf, con
 long double total_opendir_time = 0;
 long double total_open_time = 0;
 long double total_sqlite3_open_time = 0;
-long double total_create_tables_time = 0;
 long double total_set_pragmas_time = 0;
 long double total_load_extension_time = 0;
 long double total_addqueryfuncs_time = 0;
@@ -511,7 +510,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     init_start_end(opendir_call, ta->start_time);
     init_start_end(open_call, ta->start_time);
     init_start_end(sqlite3_open_call, ta->start_time);
-    init_start_end(create_tables_call, ta->start_time);
     init_start_end(set_pragmas, ta->start_time);
     init_start_end(load_extension, ta->start_time);
     init_start_end(addqueryfuncs_call, ta->start_time);
@@ -556,9 +554,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                   NULL, NULL
                   #ifdef DEBUG
                   , &sqlite3_open_call.start,  &sqlite3_open_call.end
-                  , &create_tables_call.start, &create_tables_call.end
                   , &set_pragmas.start,        &set_pragmas.end
                   , &load_extension.start,     &load_extension.end
+                  , NULL, NULL
                   #endif
                   );
     }
@@ -715,7 +713,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         print_timer(     &debug_output_buffers, id, buf, size, "opendb",          &open_call);
         if (db) {
             print_timer (&debug_output_buffers, id, buf, size, "sqlite3_open_v2", &sqlite3_open_call);
-            print_timer (&debug_output_buffers, id, buf, size, "create_tables",   &create_tables_call);
             print_timer (&debug_output_buffers, id, buf, size, "set_pragmas",     &set_pragmas);
             print_timer (&debug_output_buffers, id, buf, size, "load_extensions", &load_extension);
             print_timer (&debug_output_buffers, id, buf, size, "addqueryfuncs",   &addqueryfuncs_call);
@@ -758,7 +755,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     total_opendir_time           += elapsed(&opendir_call);
     total_open_time              += elapsed(&open_call);
     total_sqlite3_open_time      += elapsed(&sqlite3_open_call);
-    total_create_tables_time     += elapsed(&create_tables_call);
     total_set_pragmas_time       += elapsed(&set_pragmas);
     total_load_extension_time    += elapsed(&load_extension);
     total_addqueryfuncs_time     += elapsed(&addqueryfuncs_call);
@@ -1120,7 +1116,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "     open directories:                       %.2Lfs\n", total_opendir_time);
     fprintf(stderr, "     open databases:                         %.2Lfs\n", total_open_time);
     fprintf(stderr, "         sqlite3_open_v2:                    %.2Lfs\n", total_sqlite3_open_time);
-    fprintf(stderr, "         create tables:                      %.2Lfs\n", total_create_tables_time);
     fprintf(stderr, "         set pragmas:                        %.2Lfs\n", total_set_pragmas_time);
     fprintf(stderr, "         load extensions:                    %.2Lfs\n", total_load_extension_time);
     fprintf(stderr, "     addqueryfuncs:                          %.2Lfs\n", total_addqueryfuncs_time);
