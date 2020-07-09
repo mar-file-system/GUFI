@@ -501,8 +501,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /*     ta->print_callback_func(&ca, 1, &ptr, NULL); */
     /* } */
 
-    char dbname[MAXSQL];
-    SNFORMAT_S(dbname, MAXSQL, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, MAXPATH, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     struct ThreadArgs * ta = (struct ThreadArgs *) args;
 
