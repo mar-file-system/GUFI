@@ -81,7 +81,7 @@ source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 OUTPUT="gufi_stats.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/$(id -un)/1001/g"
+    echo "$@" | sed "s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/$(id -un)/1001/g"
 }
 
 # function root() {
@@ -133,6 +133,8 @@ user "${GUFI_STATS} -c links-per-level"
 
 user "${GUFI_STATS}    dirs-per-level"
 user "${GUFI_STATS} -c dirs-per-level"
+
+user "${GUFI_STATS}    duplicate-names"
 
 if [[ "$(uname)" != "Darwin" ]]
 then
