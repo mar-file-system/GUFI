@@ -95,6 +95,10 @@ $ gufi_stats -c dirs-per-level
 1 2 
 2 1 
 
+$ gufi_stats    duplicate-names
+repeat_name . 
+repeat_name directory/subdirectory 
+
 $ gufi_stats    leaf-dirs
 leaf_directory 
 

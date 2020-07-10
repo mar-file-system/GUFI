@@ -945,7 +945,7 @@ def dirs_per_level(config, args, where):
 def duplicate_names(config, args, where):
     columns = ['name', 'type', 'inode', 'mode', 'nlink', 'uid', 'gid', 'size', 'blksize', 'blocks', 'atime', 'mtime', 'ctime', 'linkname', 'xattrs']
 
-    root = config['IndexRoot']
+    root = os.path.normpath(config.indexroot())
     root_len = len(root)
 
     queries = [
