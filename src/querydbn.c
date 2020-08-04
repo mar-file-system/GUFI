@@ -78,7 +78,7 @@ void sub_help() {
 }
 
 int print_callback(void *args, int count, char **data, char **columns) {
-    size_t * rows = (size_t *) args;
+    size_t *rows = (size_t *) args;
 
     if (!*rows) {
         if (in.printheader) {
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
    const int start = idx;
    const int numdbs = argc - idx;
 
-   /* check if number of databases provided can be attached*/
+   /* check if number of databases provided can be attached */
    const int attach_limit = sqlite3_limit(db, SQLITE_LIMIT_ATTACHED, -1);
    if (attach_limit < numdbs) {
        fprintf(stderr, "Error: Cannot attach %d database files (max %d)\n", numdbs, attach_limit);
@@ -203,14 +203,14 @@ int main(int argc, char *argv[])
 
    /* run the user query */
    size_t records = 0;
-   if (sqlite3_exec(db, rsqlstmt, print_callback, &records, &err) != SQLITE_OK) {
+   if (sqlite3_exec(db, rsqlstmt, print_callback, &records, &err) == SQLITE_OK) {
+       printf("query returned %zu records\n", records);
+   }
+   else {
        fprintf(stderr, "Error: User query failed: %s\n", err);
        sqlite3_free(err);
        rc = 1;
-       goto detach;
    }
-
-   printf("query returned %zu records\n", records);
 
   detach:
    /* /\* detach each database file *\/ */
