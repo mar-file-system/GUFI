@@ -1,7 +1,7 @@
 CC                   ?= cc
 CXX                  ?= c++
-CFLAGS               ?= -std=gnu99
-CXXFLAGS             ?= -std=c++11
+CFLAGS               ?= -std=gnu99 -DOPENDB=1 -DADDQUERYFUNCS=1 -DSQL_EXEC=1
+CXXFLAGS             ?= -std=c++11 -DOPENDB=1 -DADDQUERYFUNCS=1 -DSQL_EXEC=1
 LDFLAGS              ?= -ldl -lm
 LIB                   = GUFI
 

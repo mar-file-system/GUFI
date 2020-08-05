@@ -94,19 +94,24 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 endif()
 
-# remove opendb (implies NO_ADDQUERYFUNCS and NO_SQL_EXEC)
-if (NO_OPENDB)
-  add_definitions(-DNO_OPENDB=1)
+# opendb can be turned off
+# addqueryfuncs fails silently if not turned off
+# sqlite3_exec fails with error message if not turned off
+option(OPENDB "Whether or not to enable opening databases" ON)
+if (OPENDB)
+  add_definitions(-DOPENDB=1)
 endif()
 
-# remove addqueryfuncs
-if (NO_ADDQUERYFUNCS)
-  add_definitions(-DNO_ADDQUERYFUNCS=1)
+# addqueryfuncs can be turned off
+option(ADDQUERYFUNCS "Add custom functions to opened databases" ON)
+if (ADDQUERYFUNCS)
+  add_definitions(-DADDQUERYFUNCS=1)
 endif()
 
-# remove sqlite3_exec
-if (NO_SQL_EXEC)
-  add_definitions(-DNO_SQL_EXEC=1)
+# sqlite3_exec can be turned off
+option(SQL_EXEC "Call sqlite3_exec" ON)
+if (SQL_EXEC)
+  add_definitions(-DSQL_EXEC=1)
 endif()
 # ##########################################
 
