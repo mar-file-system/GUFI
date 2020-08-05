@@ -115,6 +115,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SRC")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  option(GPROF "Compile with -pg" Off)
   if (GPROF)
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg")
   endif()

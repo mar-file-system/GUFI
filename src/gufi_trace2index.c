@@ -696,7 +696,7 @@ int main(int argc, char * argv[]) {
     }
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL);
+    OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
 
     struct QPTPool * pool = QPTPool_init(in.maxthreads);
@@ -724,8 +724,8 @@ int main(int argc, char * argv[]) {
     QPTPool_destroy(pool);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    OutputBuffers_flush_single(&debug_output_buffers, in.maxthreads, stderr);
-    OutputBuffers_destroy(&debug_output_buffers, in.maxthreads);
+    OutputBuffers_flush_to_single(&debug_output_buffers, stderr);
+    OutputBuffers_destroy(&debug_output_buffers);
     #endif
 
     /* set top level permissions */
