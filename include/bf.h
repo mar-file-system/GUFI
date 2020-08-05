@@ -194,10 +194,12 @@ struct input {
    size_t output_buffer_size;
    OpenMode open_mode;
 
+   /* used by gufi_query (cumulative times) and gufi_stat (regular output) */
+   int terse;
+
    /* only used by gufi_stat */
    int format_set;
    char format[MAXPATH];
-   int terse;
 };
 extern struct input in;
 
