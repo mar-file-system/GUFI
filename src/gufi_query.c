@@ -455,9 +455,7 @@ struct ThreadArgs {
 #endif
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
-#ifdef NO_SQL_EXEC
-#define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)
-#else
+#ifdef SQL_EXEC
 #define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)    \
 do {                                                                    \
     struct CallbackArgs ca;                                             \
@@ -476,6 +474,8 @@ do {                                                                    \
                                                                         \
     rc = ca.rows;                                                       \
 } while (0)
+#else
+#define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)
 #endif
 
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
@@ -547,7 +547,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         goto out_free;
     }
 
-    #ifndef NO_OPENDB
+    #if OPENDB
     debug_start(open_call);
     if (gts.outdbd[id]) {
       /* if we have an out db then only have to attach the gufi db */
@@ -571,7 +571,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     debug_end(open_call);
     #endif
 
-    #ifndef NO_ADDQUERYFUNCS
+    #ifdef ADDQUERYFUNCS
     debug_start(addqueryfuncs_call);
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     if (db) {
@@ -676,7 +676,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         }
     }
 
-    #ifndef NO_OPENDB
+    #ifdef OPENDB
     debug_start(close_call);
     /* if we have an out db we just detach gufi db */
     if (gts.outdbd[id]) {
