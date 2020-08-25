@@ -62,57 +62,33 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# make sure unit tests work first
-add_subdirectory(unit)
+if (CUMULATIVE_TIMES AND NOT BENCHMARK)
+  # copy test scripts into the test directory within the build directory
+  # list these explicitly to prevent random garbage from getting in
+  set(PERFORMANCE_REGRESSION_TEST_FILES
+    correctness.expected
+    correctness.sh
 
-# add regression tests
-add_subdirectory(regression)
+    run.sh
+    )
 
-# add performance regression tests
-add_subdirectory(performance)
+  foreach(FILE ${PERFORMANCE_REGRESSION_TEST_FILES})
+    configure_file(${FILE} ${FILE} COPYONLY)
+  endforeach()
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+  add_test(NAME performance_scripts COMMAND correctness.sh)
+  set_tests_properties(performance_scripts PROPERTIES LABELS performance)
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+  # performance test variables
+  set(PERF_DB "${CMAKE_CURRENT_SOURCE_DIR}/history.db" CACHE FILEPATH "Database file containing performance history")
+  set(PERF_CONFIG  CACHE STRING "The configuration hash")
+  set(PERF_RUNS 30 CACHE STRING "Number of runs to insert into the performance history database")
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+  # run only
+  add_custom_target(perf "${CMAKE_CURRENT_BINARY_DIR}/run.sh" "${CMAKE_BINARY_DIR}/src/gufi_query" "${PERF_DB}" "${PERF_CONFIG}" "${PERF_RUNS}" "average"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+  # run and add
+  add_custom_target(perf_add "${CMAKE_CURRENT_BINARY_DIR}/run.sh" "${CMAKE_BINARY_DIR}/src/gufi_query" "${PERF_DB}" "${PERF_CONFIG}" "${PERF_RUNS}" "average" "1"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif()

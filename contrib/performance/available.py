@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,59 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import argparse
 
-# make sure unit tests work first
-add_subdirectory(unit)
+import gufi_query
 
-# add regression tests
-add_subdirectory(regression)
+class ExecInfo:
+    def __init__(self,
+                 configuration, # list of executable specific command line arguments
+                 table_name,    # name of raw numbers table
+                 columns,       # the list of columns in the raw numbers table
+                 gen            # function to find the configuration and build the command to run
+                                # returns the command and the full configuration hash
+             ):
+        self.configuration = configuration
+        self.table_name    = table_name
+        self.columns       = columns
+        self.column_names  = [col.name for col in columns]
+        self.gen           = gen
 
-# add performance regression tests
-add_subdirectory(performance)
+# list of executables that can be processed
+EXECUTABLES = {'gufi_query' : ExecInfo(gufi_query.CONFIGURATION,
+                                       gufi_query.TABLE_NAME,
+                                       gufi_query.COLUMNS,
+                                       gufi_query.get_numbers),
+              }
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+DEFAULT = EXECUTABLES.keys()[0]
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+# Convert the input argument into an ExecInfo
+# fails if not found in the EXECUTABLES dictionary
+# (to replicate choices failure in argparse)
+def executable_type(key):
+    return EXECUTABLES[key]
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+def add_choices(parser, need_exec):
+    parser.add_argument('executable',
+                        type=executable_type, default=DEFAULT,
+                        help='Known Executables')
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+    if need_exec:
+        parser.add_argument('--executable-path', default=DEFAULT,
+                            help='Location of the executable')
+
+def add_flags(parser, parse_flags):
+    subparsers = parser.add_subparsers()
+    for name, info in EXECUTABLES.items():
+        exec_parser = subparsers.add_parser(name)
+        exec_parser.set_defaults(executable = EXECUTABLES[name])
+
+        if parse_flags:
+            exec_parser.add_argument('--{}_path'.format(name), default=name,
+                                     help='location of the {} executable'.format(name))
+
+            for config in info.configuration:
+                config.argparse(exec_parser)
+
+    return parser

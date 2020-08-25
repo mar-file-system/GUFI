@@ -1,0 +1,316 @@
+Initialize database file test_perf.db
+
+Tables:
+    commits
+    configurations
+    raw_numbers
+
+Views:
+    average
+    max
+    min
+
+Create a configuration
+    Hash: f617d2c24f25742941df37b02c24cf755060c906936aef05247d157c661a868e0deafe955be4d6e837bee8e4fa9ff4035bb1cf41c32a1ced18e16dc6cbd7a6d7
+Number of configurations available: 1
+
+Insert raw numbers
+Sets of raw numbers: 10
+
+Rows in average: 2
+Rows in max:     2
+Rows in min:     2
+
+commit1 average: 3.0
+commit1 max:     5.0
+commit1 min:     1.0
+
+commit2 average: 4.0
+commit2 max:     6.0
+commit2 min:     2.0
+
+Compare average
+RealTime 3.0 4.0 increased
+RealTime 3.0 4.0 same
+RealTime 3.0 4.0 decreased
+
+Compare max
+RealTime 5.0 6.0 increased
+RealTime 5.0 6.0 same
+RealTime 5.0 6.0 decreased
+
+Compare min
+RealTime 1.0 2.0 increased
+RealTime 1.0 2.0 same
+RealTime 1.0 2.0 decreased
+
+Dump average
+1 commit1 setup_globals 0.0
+1 commit1 setup_aggregate 0.0
+1 commit1 work 0.0
+1 commit1 opendir 0.0
+1 commit1 opendb 0.0
+1 commit1 sqlite3_open 0.0
+1 commit1 set_pragmas 0.0
+1 commit1 load_extension 0.0
+1 commit1 addqueryfuncs 0.0
+1 commit1 descend 0.0
+1 commit1 check_args 0.0
+1 commit1 level 0.0
+1 commit1 level_branch 0.0
+1 commit1 while_branch 0.0
+1 commit1 readdir 0.0
+1 commit1 readdir_branch 0.0
+1 commit1 strncmp 0.0
+1 commit1 strncmp_branch 0.0
+1 commit1 snprintf 0.0
+1 commit1 lstat 0.0
+1 commit1 isdir 0.0
+1 commit1 isdir_branch 0.0
+1 commit1 access 0.0
+1 commit1 set_struct 0.0
+1 commit1 clone 0.0
+1 commit1 pushdir 0.0
+1 commit1 attach 0.0
+1 commit1 sqltsumcheck 0.0
+1 commit1 sqltsum 0.0
+1 commit1 sqlsum 0.0
+1 commit1 sqlent 0.0
+1 commit1 detach 0.0
+1 commit1 closedb 0.0
+1 commit1 closedir 0.0
+1 commit1 utime 0.0
+1 commit1 free_work 0.0
+1 commit1 output_timestamps 0.0
+1 commit1 aggregate 0.0
+1 commit1 output 0.0
+1 commit1 cleanup_globals 0.0
+1 commit1 rows 0.0
+1 commit1 query_count 0.0
+1 commit1 RealTime 3.0
+1 commit1 ThreadTime 0.0
+2 commit2 setup_globals 0.0
+2 commit2 setup_aggregate 0.0
+2 commit2 work 0.0
+2 commit2 opendir 0.0
+2 commit2 opendb 0.0
+2 commit2 sqlite3_open 0.0
+2 commit2 set_pragmas 0.0
+2 commit2 load_extension 0.0
+2 commit2 addqueryfuncs 0.0
+2 commit2 descend 0.0
+2 commit2 check_args 0.0
+2 commit2 level 0.0
+2 commit2 level_branch 0.0
+2 commit2 while_branch 0.0
+2 commit2 readdir 0.0
+2 commit2 readdir_branch 0.0
+2 commit2 strncmp 0.0
+2 commit2 strncmp_branch 0.0
+2 commit2 snprintf 0.0
+2 commit2 lstat 0.0
+2 commit2 isdir 0.0
+2 commit2 isdir_branch 0.0
+2 commit2 access 0.0
+2 commit2 set_struct 0.0
+2 commit2 clone 0.0
+2 commit2 pushdir 0.0
+2 commit2 attach 0.0
+2 commit2 sqltsumcheck 0.0
+2 commit2 sqltsum 0.0
+2 commit2 sqlsum 0.0
+2 commit2 sqlent 0.0
+2 commit2 detach 0.0
+2 commit2 closedb 0.0
+2 commit2 closedir 0.0
+2 commit2 utime 0.0
+2 commit2 free_work 0.0
+2 commit2 output_timestamps 0.0
+2 commit2 aggregate 0.0
+2 commit2 output 0.0
+2 commit2 cleanup_globals 0.0
+2 commit2 rows 0.0
+2 commit2 query_count 0.0
+2 commit2 RealTime 4.0
+2 commit2 ThreadTime 0.0
+
+Dump max
+1 commit1 setup_globals 0.0
+1 commit1 setup_aggregate 0.0
+1 commit1 work 0.0
+1 commit1 opendir 0.0
+1 commit1 opendb 0.0
+1 commit1 sqlite3_open 0.0
+1 commit1 set_pragmas 0.0
+1 commit1 load_extension 0.0
+1 commit1 addqueryfuncs 0.0
+1 commit1 descend 0.0
+1 commit1 check_args 0.0
+1 commit1 level 0.0
+1 commit1 level_branch 0.0
+1 commit1 while_branch 0.0
+1 commit1 readdir 0.0
+1 commit1 readdir_branch 0.0
+1 commit1 strncmp 0.0
+1 commit1 strncmp_branch 0.0
+1 commit1 snprintf 0.0
+1 commit1 lstat 0.0
+1 commit1 isdir 0.0
+1 commit1 isdir_branch 0.0
+1 commit1 access 0.0
+1 commit1 set_struct 0.0
+1 commit1 clone 0.0
+1 commit1 pushdir 0.0
+1 commit1 attach 0.0
+1 commit1 sqltsumcheck 0.0
+1 commit1 sqltsum 0.0
+1 commit1 sqlsum 0.0
+1 commit1 sqlent 0.0
+1 commit1 detach 0.0
+1 commit1 closedb 0.0
+1 commit1 closedir 0.0
+1 commit1 utime 0.0
+1 commit1 free_work 0.0
+1 commit1 output_timestamps 0.0
+1 commit1 aggregate 0.0
+1 commit1 output 0.0
+1 commit1 cleanup_globals 0.0
+1 commit1 rows 0
+1 commit1 query_count 0
+1 commit1 RealTime 5.0
+1 commit1 ThreadTime 0.0
+2 commit2 setup_globals 0.0
+2 commit2 setup_aggregate 0.0
+2 commit2 work 0.0
+2 commit2 opendir 0.0
+2 commit2 opendb 0.0
+2 commit2 sqlite3_open 0.0
+2 commit2 set_pragmas 0.0
+2 commit2 load_extension 0.0
+2 commit2 addqueryfuncs 0.0
+2 commit2 descend 0.0
+2 commit2 check_args 0.0
+2 commit2 level 0.0
+2 commit2 level_branch 0.0
+2 commit2 while_branch 0.0
+2 commit2 readdir 0.0
+2 commit2 readdir_branch 0.0
+2 commit2 strncmp 0.0
+2 commit2 strncmp_branch 0.0
+2 commit2 snprintf 0.0
+2 commit2 lstat 0.0
+2 commit2 isdir 0.0
+2 commit2 isdir_branch 0.0
+2 commit2 access 0.0
+2 commit2 set_struct 0.0
+2 commit2 clone 0.0
+2 commit2 pushdir 0.0
+2 commit2 attach 0.0
+2 commit2 sqltsumcheck 0.0
+2 commit2 sqltsum 0.0
+2 commit2 sqlsum 0.0
+2 commit2 sqlent 0.0
+2 commit2 detach 0.0
+2 commit2 closedb 0.0
+2 commit2 closedir 0.0
+2 commit2 utime 0.0
+2 commit2 free_work 0.0
+2 commit2 output_timestamps 0.0
+2 commit2 aggregate 0.0
+2 commit2 output 0.0
+2 commit2 cleanup_globals 0.0
+2 commit2 rows 0
+2 commit2 query_count 0
+2 commit2 RealTime 6.0
+2 commit2 ThreadTime 0.0
+
+Dump min
+1 commit1 setup_globals 0.0
+1 commit1 setup_aggregate 0.0
+1 commit1 work 0.0
+1 commit1 opendir 0.0
+1 commit1 opendb 0.0
+1 commit1 sqlite3_open 0.0
+1 commit1 set_pragmas 0.0
+1 commit1 load_extension 0.0
+1 commit1 addqueryfuncs 0.0
+1 commit1 descend 0.0
+1 commit1 check_args 0.0
+1 commit1 level 0.0
+1 commit1 level_branch 0.0
+1 commit1 while_branch 0.0
+1 commit1 readdir 0.0
+1 commit1 readdir_branch 0.0
+1 commit1 strncmp 0.0
+1 commit1 strncmp_branch 0.0
+1 commit1 snprintf 0.0
+1 commit1 lstat 0.0
+1 commit1 isdir 0.0
+1 commit1 isdir_branch 0.0
+1 commit1 access 0.0
+1 commit1 set_struct 0.0
+1 commit1 clone 0.0
+1 commit1 pushdir 0.0
+1 commit1 attach 0.0
+1 commit1 sqltsumcheck 0.0
+1 commit1 sqltsum 0.0
+1 commit1 sqlsum 0.0
+1 commit1 sqlent 0.0
+1 commit1 detach 0.0
+1 commit1 closedb 0.0
+1 commit1 closedir 0.0
+1 commit1 utime 0.0
+1 commit1 free_work 0.0
+1 commit1 output_timestamps 0.0
+1 commit1 aggregate 0.0
+1 commit1 output 0.0
+1 commit1 cleanup_globals 0.0
+1 commit1 rows 0
+1 commit1 query_count 0
+1 commit1 RealTime 1.0
+1 commit1 ThreadTime 0.0
+2 commit2 setup_globals 0.0
+2 commit2 setup_aggregate 0.0
+2 commit2 work 0.0
+2 commit2 opendir 0.0
+2 commit2 opendb 0.0
+2 commit2 sqlite3_open 0.0
+2 commit2 set_pragmas 0.0
+2 commit2 load_extension 0.0
+2 commit2 addqueryfuncs 0.0
+2 commit2 descend 0.0
+2 commit2 check_args 0.0
+2 commit2 level 0.0
+2 commit2 level_branch 0.0
+2 commit2 while_branch 0.0
+2 commit2 readdir 0.0
+2 commit2 readdir_branch 0.0
+2 commit2 strncmp 0.0
+2 commit2 strncmp_branch 0.0
+2 commit2 snprintf 0.0
+2 commit2 lstat 0.0
+2 commit2 isdir 0.0
+2 commit2 isdir_branch 0.0
+2 commit2 access 0.0
+2 commit2 set_struct 0.0
+2 commit2 clone 0.0
+2 commit2 pushdir 0.0
+2 commit2 attach 0.0
+2 commit2 sqltsumcheck 0.0
+2 commit2 sqltsum 0.0
+2 commit2 sqlsum 0.0
+2 commit2 sqlent 0.0
+2 commit2 detach 0.0
+2 commit2 closedb 0.0
+2 commit2 closedir 0.0
+2 commit2 utime 0.0
+2 commit2 free_work 0.0
+2 commit2 output_timestamps 0.0
+2 commit2 aggregate 0.0
+2 commit2 output 0.0
+2 commit2 cleanup_globals 0.0
+2 commit2 rows 0
+2 commit2 query_count 0
+2 commit2 RealTime 2.0
+2 commit2 ThreadTime 0.0
+

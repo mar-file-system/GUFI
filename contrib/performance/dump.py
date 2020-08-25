@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,40 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import argparse
+import sqlite3
 
-# make sure unit tests work first
-add_subdirectory(unit)
+import available
+import configuration
+import raw_numbers
+import stats
 
-# add regression tests
-add_subdirectory(regression)
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='Dump stats from a database')
 
-# add performance regression tests
-add_subdirectory(performance)
+    parser.add_argument('database', type=str,                                    help='database file name')
+    available.add_choices(parser, False)
+    parser.add_argument('config',   type=str,                                    help='configuration hash')
+    parser.add_argument('stat',     choices=[view.name for view in stats.VIEWS], help='stat')
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+    args = parser.parse_args()
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+    db = sqlite3.connect(args.database)
+    cursor = db.cursor()
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+    # get the full config hash
+    config_hash = configuration.get(cursor, args.config)[-1]
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+    # get all stat rows associated with that config hash
+    cursor.execute('''SELECT commits.id, {0}.* FROM {0} JOIN commits on {0}.git == commits.hash WHERE configuration LIKE '{1}' ORDER BY commits.id;'''.format(args.stat, config_hash))
+
+    offset = len(raw_numbers.COLUMNS) + 1 # + 1 due to commits.id
+
+    for result in cursor.fetchall():
+        order  = result[0]  # commit order relative to other commits
+        commit = result[2]  # commit hash
+
+        for i in xrange(len(args.executable.column_names)):
+            print order, commit, args.executable.column_names[i], result[offset + i]
+
+    db.close()

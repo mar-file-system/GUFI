@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,90 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+# This script is does the benchmarking of gufi_query
+# with 'make perf' and 'make perf_add'.
+#
+# - 'make perf' runs the benchmark and prints the
+#   statistics but does not add the statistics into
+#   the database.
+#
+# - 'make perf_add' will add the statistcs into the
+#   database in addition to what 'make perf' does.
+#
+# This script is not part of the tests run by 'make test'.
+#
+# The database file must already exist and contain
+# at least one configuration and one set of raw numbers
+# to compare against.
+#
 
-# make sure unit tests work first
-add_subdirectory(unit)
+ROOT="$(dirname $(realpath ${BASH_SOURCE[0]}))"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-# add regression tests
-add_subdirectory(regression)
+set -e
 
-# add performance regression tests
-add_subdirectory(performance)
+if [[ "$#" -lt 5 ]]
+then
+    echo "Syntax: $0 gufi_query db-name config runs stat [add]"
+    echo "$@"
+    exit 1
+fi
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+gufi_query="$1"
+db="$2"
+config="$3"
+runs="$4"
+stat="$5"
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+if [[ "$#" -gt 5 ]]
+then
+    add="--add"
+fi
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
-
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+${ROOT}/contrib/performance/run.py --executable-path "${gufi_query}" --runs "${runs}" ${add} "${db}" "${config}" gufi_query \
+    stat average           \
+    setup_globals=-1,1     \
+    setup_aggregate=-1,1   \
+    work =-1,1             \
+    opendir=-1,1           \
+    opendb=-1,1            \
+    sqlite3_open=-1,1      \
+    set_pragmas=-1,1       \
+    load_extension=-1,1    \
+    addqueryfuncs=-1,1     \
+    descend=-1,1           \
+    check_args=-1,1        \
+    level=-1,1             \
+    level_branch=-1,1      \
+    while_branch=-1,1      \
+    readdir=-1,1           \
+    readdir_branch=-1,1    \
+    strncmp=-1,1           \
+    strncmp_branch=-1,1    \
+    snprintf=-1,1          \
+    lstat=-1,1             \
+    isdir=-1,1             \
+    isdir_branch=-1,1      \
+    access=-1,1            \
+    set_struct=-1,1        \
+    clone=-1,1             \
+    pushdir=-1,1           \
+    attach=-1,1            \
+    sqltsumcheck=-1,1      \
+    sqltsum=-1,1           \
+    sqlsum=-1,1            \
+    sqlent=-1,1            \
+    detach=-1,1            \
+    closedb=-1,1           \
+    closedir=-1,1          \
+    utime=-1,1             \
+    free_work=-1,1         \
+    output_timestamps=-1,1 \
+    aggregate=-1,1         \
+    output=-1,1            \
+    cleanup_globals=-1,1   \
+    rows =-1,1             \
+    query_count=-1,1       \
+    RealTime=-1,1          \
+    ThreadTime=-1,1        \

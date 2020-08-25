@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,33 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import available
 
-# make sure unit tests work first
-add_subdirectory(unit)
+# statistics views
+class StatView:
+    def __init__(self, view_name, sqlite_function):
+        self.name = view_name
+        self.sqlite_function = sqlite_function
 
-# add regression tests
-add_subdirectory(regression)
+VIEWS = [
+    StatView('average',  'AVG'),
+    StatView('min',      'MIN'),
+    StatView('max',      'MAX'),
+    # StatView('median',   'MEDIAN')
+    # StatView('stddev',   'STDDEV')
+]
 
-# add performance regression tests
-add_subdirectory(performance)
+def create_view(raw_numbers_name, col_names, stat):
+    return '''CREATE VIEW IF NOT EXISTS {} AS SELECT {} FROM {} GROUP BY git;'''.format(
+        stat.name,
+        ', '.join(
+            ['configuration', 'git', 'branch', 'COUNT(*) as count'] +
+            ['{}({}) AS {}'.format(stat.sqlite_function, name, name) for name in col_names]),
+        raw_numbers_name
+    )
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
-
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
-
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
-
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+def setup(cursor, executable):
+    for view in VIEWS:
+        cursor.execute(create_view(executable.table_name,
+                                   executable.column_names,
+                                   view))

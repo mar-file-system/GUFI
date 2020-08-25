@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,91 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+SCRIPT_SOURCE="$(dirname $(realpath ${BASH_SOURCE[0]}))"
 
-# make sure unit tests work first
-add_subdirectory(unit)
+if [[ "$#" -lt 3 ]]
+then
+    echo "Syntax: $0 db config dump [most recent n]"
+    exit 1
+fi
 
-# add regression tests
-add_subdirectory(regression)
+db="$1"
+config="$2"
+file="$3"
 
-# add performance regression tests
-add_subdirectory(performance)
+config_hash=$(sqlite3 "${db}" "SELECT hash FROM configurations WHERE hash LIKE '${config}%'")
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+if [[ -z "${config_hash}" ]]
+then
+    echo "Could not find configuration hash ${config}"
+    exit 2
+fi
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+if [[ "$(echo ${config_hash} | wc -l)" -gt "1" ]]
+then
+    echo "Use a longer hash. Multiple configurations matched ${config}:\n${config_hash}"
+    exit 3
+fi
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+# no need to filter stats by configuration hash because that was done by dump.py
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+# change x-axis starting index
+# do this here to get sqlite3 calls out of the way
+xrange=""
+if [[ "$#" -gt 3 ]]
+then
+    most_recent="$4"
+    count=$(awk '{ print $1 }' "${file}" | sort | uniq | wc -l)
+
+    if [[ "${most_recent}" -lt "${count}" ]]
+    then
+        xrange="set xrange [$(( ${count}-${most_recent} )):]"
+    fi
+fi
+
+# split dump by event name
+names=$(awk '{ print $3 }' "${file}" | sort | uniq)
+
+for name in ${names}
+do
+    grep -E "^[0-9]+ .* ${name} [0-9]+" "${file}" > "${file}.${name}" &
+done
+wait
+
+gnuplot <<EOF &
+
+set terminal svg size 1920,1024 noenhanced fixed mouse standalone solid linewidth 2
+set output "${file}.svg"
+set title "gufi_query with configuration ${config_hash:0:7}"
+set xlabel "Commit Hash"
+set ylabel "Time"
+set key outside right
+set xtics rotate by -45
+${xrange}
+
+hash(col) = substr(strcol(col), 0, 7)
+
+info(hash_col, duration) = sprintf("%s\n%s",   \
+                               hash(hash_col), \
+                               strcol(duration))
+
+plot '${file}.opendir'  using 1:4:xticlabels(hash(2)) with lines title 'opendir',   \
+     '${file}.opendb'   using 1:4:xticlabels(hash(2)) with lines title 'opendb',    \
+     '${file}.descend'  using 1:4:xticlabels(hash(2)) with lines title 'descend',   \
+     '${file}.sqlsum'   using 1:4:xticlabels(hash(2)) with lines title 'sqlsum',    \
+     '${file}.sqlent'   using 1:4:xticlabels(hash(2)) with lines title 'sqlent',    \
+     '${file}.closedb'  using 1:4:xticlabels(hash(2)) with lines title 'closedb',   \
+     '${file}.closedir' using 1:4:xticlabels(hash(2)) with lines title 'closedir',  \
+     '${file}.RealTime' using 1:4:xticlabels(hash(2)) with lines title 'Real Time', \
+     '${file}.opendir'  using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.opendb'   using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.descend'  using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.sqlsum'   using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.sqlent'   using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.closedb'  using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.closedir' using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+     '${file}.RealTime' using 1:4:(info(2, 4)) with labels hypertext notitle,       \
+
+EOF
+
+wait

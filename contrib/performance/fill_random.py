@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,68 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import argparse
+import hashlib
+import random
+import sqlite3
 
-# make sure unit tests work first
-add_subdirectory(unit)
+import available
+import configuration
+import run
 
-# add regression tests
-add_subdirectory(regression)
+BRANCH_NAME = 'random_data'
 
-# add performance regression tests
-add_subdirectory(performance)
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='Fill a raw numbers table will random data')
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+    parser.add_argument('--commits',     type=int, default=10,                help='How many sets of data to generate')
+    parser.add_argument('--runs',        type=int, default=30,                help='How many runs are used to generate a set of statistics')
+    parser.add_argument('--int-range',   type=int, default=[0, 100], nargs=2, help='random integer range')
+    parser.add_argument('--float-range', type=int, default=[0, 100], nargs=2, help='random float range')
+    parser.add_argument('database',      type=str,                            help='database file name')
+    parser.add_argument('config',        type=str,                            help='configuration hash')
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+    available.add_choices(parser, False)
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+    args = parser.parse_args()
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+    db = sqlite3.connect(args.database)
+    cursor = db.cursor()
+
+    # will raise if got bad config hash
+    config_hash = configuration.get(cursor, args.config)[-1]
+
+    # seed commit
+    fake_commit = hashlib.sha1(str(hash(random.uniform(0, 100))))
+
+    # fill in database
+    for _ in xrange(args.commits):
+        commit = fake_commit.hexdigest()
+
+        for r in xrange(args.runs):
+            # generate random numbers
+            # probably want to generate outside of loop
+            # and generate changes between runs and commits
+            times = []
+            for col in args.executable.columns:
+                value = random.gauss(50, 10)
+                if col.type == 'INTEGER':
+                    value = int(value)
+                times += [str(value)]
+
+            # insert into raw_numbers
+            run.insert_raw(cursor,
+                           commit,
+                           '''INSERT INTO {} VALUES ('{}', '{}', '{}', {}, {});'''.format(
+                               args.executable.table_name,
+                               config_hash,
+                               commit,
+                               BRANCH_NAME,
+                               r,
+                               ', '.join(times)))
+
+        # rehash previous commit to get next commit
+        fake_commit = hashlib.sha1(fake_commit.digest())
+
+    db.commit()
+    db.close()

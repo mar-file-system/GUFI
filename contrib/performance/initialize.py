@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,42 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import argparse
+import os
+import sqlite3
 
-# make sure unit tests work first
-add_subdirectory(unit)
+import available
+import configuration
+import raw_numbers
+import stats
 
-# add regression tests
-add_subdirectory(regression)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Performance Regression Database Setup')
 
-# add performance regression tests
-add_subdirectory(performance)
+    parser.add_argument('--drop', action='store_true',
+                        help='Drop existing tables if possible')
+    parser.add_argument('database', type=str,
+                        help='database file name')
+    available.add_choices(parser, False)
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+    args = parser.parse_args()
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+    db = sqlite3.connect(args.database)
+    cursor = db.cursor()
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+    if args.drop:
+        if os.path.isfile(args.database):
+            for name in [configuration.TABLE_NAME, args.executable.table_name]:
+                cursor.execute('''DROP TABLE IF EXISTS {};'''.format(name))
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+            for view in stats.Views:
+                cursor.execute('''DROP VIEW IF EXISTS {};'''.format(view.view_name))
+
+    configuration.setup(cursor, args.executable.configuration)
+    raw_numbers.setup(cursor, args.executable.table_name, args.executable.columns)
+    stats.setup(cursor, args.executable)
+
+    db.commit()
+    db.close()
+
+    print 'Performance Regression Database {} initialized'.format(args.database)

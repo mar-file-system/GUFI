@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,69 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+SCRIPT_SOURCE="$(dirname $(realpath ${BASH_SOURCE[0]}))"
 
-# make sure unit tests work first
-add_subdirectory(unit)
+if [[ "$#" -lt 2 ]]
+then
+    echo "Syntax: $0 db-name stat [graph most recent n]"
+    exit 1
+fi
 
-# add regression tests
-add_subdirectory(regression)
+db="$1"
+stat="$2"
 
-# add performance regression tests
-add_subdirectory(performance)
+if [[ "$#" -gt 2 ]]
+then
+    most_recent="$3"
+fi
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+set -e
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+# delete existing database file
+rm -f "${db}"
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+EXEC="gufi_query"
+INDEX="example_index"
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+# create the database file
+${SCRIPT_SOURCE}/initialize.py "${db}" "${EXEC}"
+
+# add a configuration and get the hash
+config=$(${SCRIPT_SOURCE}/configuration.py --add "${db}" --name "example config" "${EXEC}" -S "SELECT * FROM summary" -E "SELECT * FROM entries" "${INDEX}")
+short="${config:0:7}"
+echo "Configuration Hash (short): ${short}"
+
+# fill the database with random numbers
+${SCRIPT_SOURCE}/fill_random.py --commits 30 --runs 30 "${db}" "${config}" "${EXEC}"
+# normally would run run.py:
+# ${SCRIPT_SOURCE}/run.py --runs 30 --add "${db}" "${short}" gufi_query
+
+# see change between two commits
+commits=$(sqlite3 "${db}" "SELECT hash FROM commits ORDER BY id DESC LIMIT 2;")
+old=$(echo "${commits}" | head -n 1)
+new=$(echo "${commits}" | tail -n 1)
+echo "Comparing commits ${old:0:7} and ${new:0:7}:"
+${SCRIPT_SOURCE}/compare.py "${db}" "${EXEC}" "${old}" "${new}" "${stat}" \
+                            opendir=-1,1     \
+                            opendb=-1.5,2.5  \
+                            descend=-1,1     \
+                            sqlsum=-0.5,0.5  \
+                            sqlent=-1.5,1.5  \
+                            closedb=-2,2     \
+                            closedir=-2,1    \
+                            RealTime=1,2     \
+                            ThreadTime=-1,1
+
+file="${short}-${stat}"
+
+# dump the selected stat to a file
+${SCRIPT_SOURCE}/dump.py "${db}" "${EXEC}" "${config}" "${stat}" > "${file}"
+
+# plot the stat
+${SCRIPT_SOURCE}/plot.sh "${db}" "${config}" "${file}" ${most_recent}
+
+# clean up generated files, leaving only the dump and the plot
+for name in $(awk '{ print $3 }' "${file}" | sort | uniq)
+do
+    rm -f "${file}.${name}"
+done

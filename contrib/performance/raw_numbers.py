@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,80 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import sqlite3
 
-# make sure unit tests work first
-add_subdirectory(unit)
+import Column
 
-# add regression tests
-add_subdirectory(regression)
+# These columns are used to uniquely identify statistics
+# stored in a performance history database. They are
+# prepended onto the user provided list of columns.
+COLUMNS = [
+    Column.Column('configuration', 'TEXT',
+                  lambda parser, name: parser.add_argument('--config',
+                                                           dest=name,
+                                                           type=str, help='Configuration Hash'),
+                  required=True),
 
-# add performance regression tests
-add_subdirectory(performance)
+    Column.Column('git', 'TEXT',
+                  lambda parser, name: parser.add_argument('--git',
+                                                           dest=name,
+                                                           type=str, help='git commit hash'),
+                  required=True),
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+    Column.Column('branch', 'TEXT',
+                  lambda parser, name: parser.add_argument('--branch',
+                                                           dest=name,
+                                                           type=str, help='git branch name'),
+                  required=True),
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+    Column.Column('run', 'INTEGER',
+                  lambda parser, name: parser.add_argument('--run',
+                                                           dest=name,
+                                                           type=int, help='run number'),
+                  required=True),
+]
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
+# Use this SQL statement to generate the SQL statemetn
+# to create initialize the raw_numbers table.
+# This statement will fail if table already exists.
+#
+# Each executable's create_table function should call this
+# function to generate the raw_numbers table for that
+# executable.
+#
+# The output to this function will be passed to the  setup
+# function.
+def create_table(table_name, columns):
+    return '''CREATE TABLE {} ({}, UNIQUE({}), {}, {});'''.format(
+        table_name,
+        ', '.join([col.sql_column() for col in COLUMNS] +
+                  [col.sql_column() for col in columns]),
+        ', '.join([col.name for col in COLUMNS]),
+        'FOREIGN KEY(configuration) REFERENCES configurations(hash) ON UPDATE CASCADE ON DELETE CASCADE',
+        'FOREIGN KEY(git)           REFERENCES commits(hash)        ON UPDATE CASCADE ON DELETE CASCADE'
+    )
 
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+# Use this function to create the tables for storing raw numbers.
+#
+# The create_table_sql_func should return a SQL statement that creates
+# a table and optionally creates foreign keys that references
+#
+#     - the hash column of the 'configurations', which
+#       should already exist
+#
+#     - the hash column of the 'commits' table, which
+#       will be created right before create_table_sql_func
+#       is called
+#
+# In order for the update/deletes to cascade, run
+#
+#     PRAGMA foreign_keys = ON;
+#
+# before performing an action because foreign keys
+# are currently turned off by default.
+def setup(cursor, table_name, columns):
+    SQL = ['''CREATE TABLE commits(id INTEGER PRIMARY KEY, hash TEXT, UNIQUE(hash));''',
+           create_table(table_name, columns)]
+
+    for sql in SQL:
+        cursor.execute(sql)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,59 +61,32 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import argparse
 
-# make sure unit tests work first
-add_subdirectory(unit)
+class Column:
+    TYPES = {
+        'INTEGER',
+        'REAL',
+        'TEXT' ,
+    }
 
-# add regression tests
-add_subdirectory(regression)
+    def __init__(self,
+                 name,           # SQLite column name
+                 type,           # SQLite column type
+                 add_arg,        # function that adds this Column as an argument to argparse
+                 required=False):
+        if type not in Column.TYPES:
+            raise ValueError('''type argument '{}' is not valid.'''.format(type))
 
-# add performance regression tests
-add_subdirectory(performance)
+        self.name     = name
+        self.type     = type
+        self.add_arg  = add_arg
+        self.required = required
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+    # add this column to argparse
+    def argparse(self, parser):
+        self.add_arg(parser, self.name)
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
-
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
-
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+    # get this column as an SQL create table column
+    def sql_column(self):
+        return '''{} {} {}'''.format(self.name, self.type, 'NOT NULL' if self.required else '')

@@ -114,11 +114,51 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SRC")
 # Define the DEBUG macro when building in debug mode
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -Wall")
 
+# ##########################################
+# flags that can be used to modify code
+# behavior at compile time for some binaries.
+#
+# All of these should be left at their
+# default values when running the ctest.
+#
+# All binaries should be able to run
+# even if all of the values are changed.
+#
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   option(GPROF "Compile with -pg" Off)
   if (GPROF)
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg")
   endif()
+
+  # Cumulative times shown at end of run
+  option(CUMULATIVE_TIMES "Sum the durations of events across all threads and print them at the end" Off)
+  if (CUMULATIVE_TIMES)
+    add_definitions(-DCUMULATIVE_TIMES=1)
+  endif()
+
+  # Timestamps showing what each thread is doing
+  option(PER_THREAD_STATS "Print individual events of each thread" Off)
+  if (PER_THREAD_STATS)
+    add_definitions(-DPER_THREAD_STATS=1)
+  endif()
+
+  # print subdirectory counts
+  option(SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
+  if (SUBDIRECTORY_COUNTS)
+    add_definitions(-DSUBDIRECTORY_COUNTS=1)
+  endif()
+
+  # QueuePerThread queue size
+  option(QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
+  if (QPTPOOL_QUEUE_SIZE)
+    add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
+  endif()
+endif()
+
+# benchmark is not a debug print
+option(BENCHMARK "Enable the 'benchmark' make target" Off)
+if (BENCHMARK)
+  add_definitions(-DBENCHMARK=1)
 endif()
 
 # Only enable C++ if support is found

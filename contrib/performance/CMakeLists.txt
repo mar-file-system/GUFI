@@ -62,57 +62,40 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# make sure unit tests work first
-add_subdirectory(unit)
+if (CUMULATIVE_TIMES AND NOT BENCHMARK)
+  message(STATUS "Performance Regression Tests enabled")
 
-# add regression tests
-add_subdirectory(regression)
+  # make sure sqlite3 can be imported
+  # (does not have to be the same sqlite3 installed by the dependency installer)
+  execute_process(COMMAND python -c "import sqlite3"
+    RESULT_VARIABLE PYTHON_IMPORT_SQLITE3_ERROR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (PYTHON_IMPORT_SQLITE3_ERROR)
+    message(FATAL_ERROR "python could not import sqlite3")
+  endif()
 
-# add performance regression tests
-add_subdirectory(performance)
+  find_package(Gnuplot 5.2 REQUIRED)
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-foreach(TEST
-    bfwiflat2gufitest
-    dfw2gufitest
-    gitest.py
-    gufitest.py
-    robinhoodin
-    runbffuse
-    runbfmi
-    runbfq
-    runbfqforfuse
-    runbfti
-    runbfwi
-    runbfwreaddirplus2db
-    runbfwreaddirplus2db.orig
-    rundfw
-    rungenuidgidsummaryavoidentriesscan
-    rungroupfilespacehog
-    rungroupfilespacehogusesummary
-    runlistschemadb
-    runlisttablesdb
-    runoldbigfiles
-    runquerydb
-    runquerydbn
-    runuidgidsummary
-    runuidgidummary
-    runuserfilespacehog
-    runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
-  # copy the script into the build directory for easy access
-  configure_file(${TEST} ${TEST} COPYONLY)
-endforeach()
+  set(PERF_SCRIPTS
+    Column.py
+    available.py
+    compare.py
+    configuration.py
+    dump.py
+    fill_random.py
+    gufi_query.py
+    initialize.py
+    plot.sh
+    raw_numbers.py
+    run.py
+    stats.py
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+    example_run.sh
+    )
 
-add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(gary PROPERTIES LABELS manual)
-
-# add_test(NAME gufitest COMMAND gufitest.py all)
-# set_tests_properties(gufitest PROPERTIES LABELS manual)
+  foreach(FILE ${PERF_SCRIPTS})
+    configure_file(${FILE} ${FILE} @ONLY)
+  endforeach()
+else()
+  message(STATUS "Performance Regression Tests disabled")
+endif()
