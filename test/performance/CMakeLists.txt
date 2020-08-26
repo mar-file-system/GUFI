@@ -84,11 +84,32 @@ if (CUMULATIVE_TIMES AND NOT BENCHMARK)
   set(PERF_CONFIG  CACHE STRING "The configuration hash")
   set(PERF_RUNS 30 CACHE STRING "Number of runs to insert into the performance history database")
 
+  # ########################
+  # gufi_query
+  add_custom_target(perf_gufi_query "${CMAKE_CURRENT_BINARY_DIR}/run.sh" "${CMAKE_BINARY_DIR}/src/gufi_query" "${PERF_DB}" "${PERF_CONFIG}" "${PERF_RUNS}" "average"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+
+  add_custom_target(perf_add_gufi_query "${CMAKE_CURRENT_BINARY_DIR}/run.sh" "${CMAKE_BINARY_DIR}/src/gufi_query" "${PERF_DB}" "${PERF_CONFIG}" "${PERF_RUNS}" "average" "1"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+  # ########################
+
+  add_custom_target(perf_deps
+    DEPENDS run.sh
+  )
+
   # run only
-  add_custom_target(perf "${CMAKE_CURRENT_BINARY_DIR}/run.sh" "${CMAKE_BINARY_DIR}/src/gufi_query" "${PERF_DB}" "${PERF_CONFIG}" "${PERF_RUNS}" "average"
-    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+  add_custom_target(perf
+    DEPENDS perf_deps
+            perf_gufi_query
+  )
 
   # run and add
-  add_custom_target(perf_add "${CMAKE_CURRENT_BINARY_DIR}/run.sh" "${CMAKE_BINARY_DIR}/src/gufi_query" "${PERF_DB}" "${PERF_CONFIG}" "${PERF_RUNS}" "average" "1"
-    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+  add_custom_target(perf_add
+    DEPENDS perf_deps
+            perf_add_gufi_query
+  )
+
+
 endif()
