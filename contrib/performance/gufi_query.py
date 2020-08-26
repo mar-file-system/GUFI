@@ -307,6 +307,10 @@ CONFIGURATION = [
                   lambda parser, name: parser.add_argument('--buffer_size',
                                                            dest=name,
                                                            type=int)),
+    Column.Column('Terse', 'INTEGER',
+                  lambda parser, name: parser.add_argument('--terse', '-j',
+                                                           dest=name,
+                                                           action='store_true')),
     Column.Column('GUFIIndex', 'TEXT',
                   lambda parser, name: parser.add_argument('GUFIIndex',
                                                            type=str),
@@ -315,20 +319,20 @@ CONFIGURATION = [
 
 # find the configuration matching config_hash
 # build the gufi_query command
-# return the command and the full configuration hash
-def get_numbers(cursor, config_hash, gufi_query, terse):
-    config = configuration.get(cursor, config_hash)
+# return the command, the full configuration hash, and whether the timestamps were terse
+def get_numbers(cursor, config_hash, gufi_query):
+    config = configuration.get(cursor, CONFIGURATION, config_hash)
 
     # parse configuration settings
-    name, cpu, memory, storage, extra, threads, delimiter, aggregate_or_print, init, tsummary, summary, entries, intermediate, aggregate, cleanup, andor, utime, minlevel, maxlevel, buffersize, index, full_hash = config
+    name, cpu, memory, storage, extra, threads, delimiter, aggregate_or_print, init, tsummary, summary, entries, intermediate, aggregate, cleanup, andor, utime, minlevel, maxlevel, buffersize, terse, index, full_hash = config
 
     # put together a gufi_query command with the configuration values
     query_cmd = [gufi_query]
 
-    if terse:
-        query_cmd += ['-j']
-
     NONE = 'None'
+
+    if terse != NONE:
+        query_cmd += ['-j']
 
     if threads != NONE:
         query_cmd += ['-n', threads]
@@ -375,4 +379,29 @@ def get_numbers(cursor, config_hash, gufi_query, terse):
     if buffersize != NONE:
         query_cmd += ['-B', str(buffersize)]
 
-    return query_cmd + [index], full_hash
+    return query_cmd + [index], full_hash, (terse != NONE)
+
+
+# split row into an array
+def parse_terse(times):
+    return times.strip().split()
+
+# reformat human readable text into terse format
+def parse_not_terse(output):
+    lines = output.rsplit('\n', 46)[-46:46]
+
+    terse = []
+    for line in lines:
+        if len(line):
+            value = line.split()[-1]
+            if value[-1] == 's':
+                terse += [value[:-1]]
+            else:
+                terse += [value]
+
+    return terse
+
+def parse_output(lines, terse):
+    if terse:
+        return parse_terse(lines)
+    return parse_not_terse(args, lines)

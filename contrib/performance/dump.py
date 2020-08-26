@@ -83,7 +83,7 @@ if __name__=='__main__':
     cursor = db.cursor()
 
     # get the full config hash
-    config_hash = configuration.get(cursor, args.config)[-1]
+    config_hash = configuration.get(cursor, args.executable.configuration, args.config)[-1]
 
     # get all stat rows associated with that config hash
     cursor.execute('''SELECT commits.id, {0}.* FROM {0} JOIN commits on {0}.git == commits.hash WHERE configuration LIKE '{1}' ORDER BY commits.id;'''.format(args.stat, config_hash))

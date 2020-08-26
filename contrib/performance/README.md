@@ -86,20 +86,23 @@ each commit. The raw numbers that are plotted are currently hardcoded.
 # How to add a new executable
 
 Adding new executables should be fairly simple. Only a few variables
-and functions needs to be created:
+and functions needs to be created in an executable specific python
+file:
 
 - A list of `Column.Columns` listing possible executables arguments.
+
+- A value specifying the name of the table that contains the raw
+  values
 
 - A list of `Column.Columns` listing the timings the are collected
   from the executables.
 
-- A function that, given a hash, reads in a configurations and
-generates a valid command for the executable should be defined. This
-function should also return the full configuration hash as its second
-return value.
+- A function that generates the necessary information for running the
+  executable and collecting the timing information.
 
-Note that in the above descriptions, variable names are not
-fixed. This is because they should be passed into the
-`available.ExecInfo` constructor, which will alias them. This ExecInfo
-should be added to the global `available.EXECUTABLES` array. The
-fastest way to do this would be to modify `available.py`.
+- A function that parses the raw output from the executable.
+
+These variables and functions should be used to create a new
+`available.ExecInfo` in available.py, which will allow for the other
+scripts to process the new executable. For more details, see
+available.ExecInfo.

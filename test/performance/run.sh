@@ -102,11 +102,11 @@ then
     add="--add"
 fi
 
-${ROOT}/contrib/performance/run.py --executable-path "${gufi_query}" --runs "${runs}" ${add} "${db}" "${config}" gufi_query \
-    stat average           \
+${ROOT}/contrib/performance/run.py --executable-path "${gufi_query}" --runs "${runs}" ${add} "${db}" "${config}" --stat average         \
+    gufi_query             \
     setup_globals=-1,1     \
     setup_aggregate=-1,1   \
-    work =-1,1             \
+    work=-1,1              \
     opendir=-1,1           \
     opendb=-1,1            \
     sqlite3_open=-1,1      \
@@ -144,7 +144,7 @@ ${ROOT}/contrib/performance/run.py --executable-path "${gufi_query}" --runs "${r
     aggregate=-1,1         \
     output=-1,1            \
     cleanup_globals=-1,1   \
-    rows =-1,1             \
+    rows=-1,1              \
     query_count=-1,1       \
     RealTime=-1,1          \
     ThreadTime=-1,1        \

@@ -64,17 +64,41 @@
 import argparse
 
 class Column:
+    '''Class used to map simple data to a SQL column'''
+
     TYPES = {
         'INTEGER',
         'REAL',
         'TEXT' ,
     }
 
-    def __init__(self,
-                 name,           # SQLite column name
-                 type,           # SQLite column type
-                 add_arg,        # function that adds this Column as an argument to argparse
-                 required=False):
+    def __init__(self, name, type, add_arg, required=False):
+        '''
+        Parameters:
+            name     : str
+                Name of this column in SQLite
+
+            type     : one of Column.TYPES
+                Type of this column in SQLite
+
+            add_arg  : function
+                Function that adds an argument to an
+                argparse.ArgumentParser.
+
+                Parameters:
+                    parser : argparse.ArgumentParser
+                        The parser to add this column to
+
+                    name   : str
+                        The name to use in the parser.  Column.name is
+                        passed in. Can be ignored.
+
+            required : bool
+                Whether this column should be filled in by an optional
+                or positional argument. If true, adds 'NOT NULL' when
+                creating the SQLite column.
+        '''
+
         if type not in Column.TYPES:
             raise ValueError('''type argument '{}' is not valid.'''.format(type))
 

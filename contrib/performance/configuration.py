@@ -156,9 +156,9 @@ def find(table_name, cols, hash_to_match):
 
 # find all configuration hashes that match the given hash string
 # zero and multiple matches will error
-def get(cursor, config_hash):
+def get(cursor, columns, config_hash):
     cursor.execute(find(TABLE_NAME,
-                        COLUMNS,
+                        COLUMNS + columns,
                         config_hash))
 
     config = cursor.fetchall()

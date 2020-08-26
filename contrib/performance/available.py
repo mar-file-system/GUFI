@@ -66,24 +66,86 @@ import argparse
 import gufi_query
 
 class ExecInfo:
-    def __init__(self,
-                 configuration, # list of executable specific command line arguments
-                 table_name,    # name of raw numbers table
-                 columns,       # the list of columns in the raw numbers table
-                 gen            # function to find the configuration and build the command to run
-                                # returns the command and the full configuration hash
-             ):
+    '''
+    Holds executable specific command line argument types and
+    performance data types and how to handle new information.
+    '''
+    def __init__(self, configuration, table_name, columns, gen, parse_output):
+        '''
+        Parameters:
+
+            configuration : list of Column.Column
+                List of command line arguments
+
+            table_name    : str
+                Name of table containing raw numbers
+
+            column_name   : list of Column.Column
+                List of columns stored in table_name.
+                Should match the timings that are
+                collected from the executable.
+
+            gen           : function
+                Generates values for running the executable, parsing the
+                output, and inserting the values into the raw numbers
+                table
+
+                Parameters:
+                    cursor      : sqlite3.db.cursor
+                        Handle to the database
+
+                    config_hash : str
+                        The hash of the configuration to run the
+                        executable with. Does not have to be a
+                        full hash string but, must match with
+                        exactly 1 configuration hash.
+
+                    executable: str
+                        Path of the executable to run
+
+                Returns:
+                    - A list constructed from the configuration that
+                      can be executed with subprocess.Popen
+
+                    - The full configuration hash that matched
+                      config_hash
+
+                    - Any extra information that is needed to parse
+                      the output
+
+            parse_output  : function
+                Parses the output returned by the executable
+
+                Parameters:
+                    lines : str
+                        Ahe lines of output in one big string
+
+                    extra : any
+                        Any extra arguments that are needed to parse
+                        the lines
+
+                Return:
+                    List of values extracted from the output in the
+                    same order the columns are listed in.  The only
+                    requirement for each individual value is that it
+                    is representable as valid SQL by str.format.
+        '''
+
         self.configuration = configuration
         self.table_name    = table_name
         self.columns       = columns
         self.column_names  = [col.name for col in columns]
         self.gen           = gen
+        self.parse_output  = parse_output
 
 # list of executables that can be processed
 EXECUTABLES = {'gufi_query' : ExecInfo(gufi_query.CONFIGURATION,
                                        gufi_query.TABLE_NAME,
                                        gufi_query.COLUMNS,
-                                       gufi_query.get_numbers),
+                                       gufi_query.get_numbers,
+                                       gufi_query.parse_output),
+
+               # add more executables here
               }
 
 DEFAULT = EXECUTABLES.keys()[0]

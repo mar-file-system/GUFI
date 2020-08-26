@@ -77,8 +77,9 @@ VIEWS = [
     # StatView('stddev',   'STDDEV')
 ]
 
-def create_view(raw_numbers_name, col_names, stat):
-    return '''CREATE VIEW IF NOT EXISTS {} AS SELECT {} FROM {} GROUP BY git;'''.format(
+def create_view(raw_numbers_name, col_names, stat, temporary = False):
+    return '''CREATE {} VIEW IF NOT EXISTS {} AS SELECT {} FROM '{}' GROUP BY git;'''.format(
+        'TEMPORARY' if temporary else '',
         stat.name,
         ', '.join(
             ['configuration', 'git', 'branch', 'COUNT(*) as count'] +

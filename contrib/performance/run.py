@@ -95,27 +95,8 @@ def git_branch():
     branch, _ = git_head.communicate()
     return branch.strip()
 
-# split row into an array
-def parse_terse(times):
-    return times.strip().split()
-
-# reformat human readable text into terse format
-def parse_not_terse(output):
-    lines = output.rsplit('\n', 46)[-46:46]
-
-    terse = []
-    for line in lines:
-        if len(line):
-            value = line.split()[-1]
-            if value[-1] == 's':
-                terse += [value[:-1]]
-            else:
-                terse += [value]
-
-    return terse
-
 def temp_name(name, stat):
-    return 'temp.{}_{}'.format(name, stat)
+    return '''temp.'{}_{}\''''.format(name, stat)
 
 def insert_raw(cursor, commit, sql):
     # assume no previously existing rows with the same hash
@@ -135,9 +116,6 @@ if __name__=='__main__':
     parser.add_argument('--add',
                         action='store_true',
                         help='Store results to database')
-    parser.add_argument('--not-terse',
-                        action='store_true',
-                        help='Parse non-terse cumulative output')
     parser.add_argument('--override-commit', metavar='hash',
                         type=str, default=None,
                         help='Use provided commit hash instead of hash obtained from git (implies --ignore-dirty)')
@@ -177,34 +155,31 @@ if __name__=='__main__':
     branch_name = git_branch()
 
     # create a temporary table for the timestamps
-    cursor.execute('''CREATE TEMPORARY TABLE {} ({});'''.format(
+    cursor.execute('''CREATE TEMPORARY TABLE '{}' ({});'''.format(
         run_table_name,
         ', '.join([col.sql_column() for col in raw_numbers.COLUMNS] +
                   [col.sql_column() for col in args.executable.columns])
     ))
 
     # use the configuration to set up the runs
-    query_cmd, config_hash = args.executable.gen(cursor, args.config, args.executable_path, not args.not_terse)
+    query_cmd, config_hash, extra = args.executable.gen(cursor, args.config, args.executable_path)
 
     # run the query multiple times
     for run in xrange(args.runs):
         # run query, drop output, keep timings
         query = subprocess.Popen(query_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _, times = query.communicate()
+        _, lines = query.communicate()
 
-        if args.not_terse:
-            times = parse_not_terse(times)
-        else:
-            times = parse_terse(times)
+        timings = args.executable.parse_output(lines, extra)
 
         # insert the new value into the temporary table
-        cursor.execute('''INSERT INTO {} VALUES ('{}', '{}', '{}', {}, {});'''.format(
+        cursor.execute('''INSERT INTO '{}' VALUES ('{}', '{}', '{}', {}, {});'''.format(
             run_table_name,
             config_hash,
             run_table_name,
             branch_name,
             run,
-            ', '.join(times)
+            ', '.join(timings)
         ))
 
     print 'Stats for {} runs of {} ({} branch) with configuration {}'.format(
@@ -224,7 +199,8 @@ if __name__=='__main__':
 
         cursor.execute(stats.create_view(run_table_name,
                                          args.executable.column_names,
-                                         view))
+                                         view,
+                                         True))
 
         cursor.execute('''SELECT {} FROM {};'''.format(
             ', '.join(args.executable.column_names),
@@ -260,7 +236,7 @@ if __name__=='__main__':
     if args.add:
         insert_raw(cursor,
                    run_table_name,
-                   '''INSERT INTO {} SELECT * FROM {};'''.format(args.executable.table_name, run_table_name)
+                   '''INSERT INTO '{}' SELECT * FROM '{}';'''.format(args.executable.table_name, run_table_name)
         )
 
         perfdb.commit()

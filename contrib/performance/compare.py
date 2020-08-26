@@ -85,7 +85,7 @@ def selected_type(column):
     return [name, [float(lower), float(higher)]]
 
 def add_args(parser, optional = False):
-    parser.add_argument('column', nargs='*' if optional else '+', type=selected_type,
+    parser.add_argument('column', nargs=('*' if optional else '+'), type=selected_type,
                         action='append', default=[],
                         help='Columns to compare (format: <column name>=<float>,<float>)')
     return parser

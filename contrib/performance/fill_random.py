@@ -90,7 +90,7 @@ if __name__=='__main__':
     cursor = db.cursor()
 
     # will raise if got bad config hash
-    config_hash = configuration.get(cursor, args.config)[-1]
+    config_hash = configuration.get(cursor, args.executable.configuration, args.config)[-1]
 
     # seed commit
     fake_commit = hashlib.sha1(str(hash(random.uniform(0, 100))))
