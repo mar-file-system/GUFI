@@ -79,6 +79,24 @@ class StdDev:
 
         return (sum([(x - avg) ** 2 for x in self.nums]) / (N - 1)) ** .5
 
+class Median:
+    def __init__(self):
+        self.nums = []
+
+    def step(self, value):
+        self.nums += [value]
+
+    def finalize(self):
+        N = len(self.nums)
+        if N == 0:
+            raise sqlite3.OperationalError('Cannot calculate the median of zero values')
+
+        self.nums = sorted(self.nums)
+
+        if N % 2 == 0:
+            return sum(self.nums[N / 2:N / 2 + 2]) / 2.0
+        return self.nums[N / 2]
+
 # statistics views
 class StatView:
     def __init__(self,
@@ -97,7 +115,7 @@ BUILTIN_STATS = [
 
 CUSTOM_STATS = [
     StatView('stddev',   'STDDEV', 1, StdDev),
-    # StatView('median',   'MEDIAN', 1, Median),
+    StatView('median',   'MEDIAN', 1, Median),
 ]
 
 VIEWS = BUILTIN_STATS + CUSTOM_STATS
