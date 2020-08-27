@@ -94,6 +94,7 @@ if __name__ == '__main__':
 
     configuration.setup(cursor, args.executable.configuration)
     raw_numbers.setup(cursor, args.executable.table_name, args.executable.columns)
+    stats.add_funcs(db)
     stats.setup(cursor, args.executable)
 
     db.commit()

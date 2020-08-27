@@ -80,6 +80,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     db = sqlite3.connect(args.database)
+    stats.add_funcs(db)
     cursor = db.cursor()
 
     # get the full config hash

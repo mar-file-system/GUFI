@@ -149,6 +149,7 @@ if __name__=='__main__':
         raise RuntimeError('''Need a statistic type to print''')
 
     perfdb = sqlite3.connect(args.database)
+    stats.add_funcs(perfdb)
     cursor = perfdb.cursor()
 
     run_table_name = git_hash(args.override_commit, args.ignore_dirty)
