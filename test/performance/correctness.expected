@@ -8,7 +8,9 @@ Tables:
 Views:
     average
     max
+    median
     min
+    stddev
 
 Create a configuration
     Hash: f617d2c24f25742941df37b02c24cf755060c906936aef05247d157c661a868e0deafe955be4d6e837bee8e4fa9ff4035bb1cf41c32a1ced18e16dc6cbd7a6d7
