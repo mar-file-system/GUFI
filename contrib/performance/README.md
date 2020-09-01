@@ -71,8 +71,15 @@ The name, old value, new value, and change (`same`, `increased`,
 
 ## Available Statistics
 
-Currently, the statistics available are: `average`, `max`, and
-`min`. More will be added in the future.
+Currently, the statistics available are:
+
+- average
+- max
+- min
+- median
+- stddev
+
+More will be added in the future.
 
 # Plotting
 
