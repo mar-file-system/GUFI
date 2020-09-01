@@ -335,7 +335,7 @@ def get_numbers(cursor, config_hash, gufi_query):
         query_cmd += ['-j']
 
     if threads != NONE:
-        query_cmd += ['-n', threads]
+        query_cmd += ['-n', str(threads)]
 
     if delimiter != NONE:
         query_cmd += ['-d', delimiter]
