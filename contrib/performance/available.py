@@ -64,6 +64,7 @@
 import argparse
 
 import gufi_query
+import gufi_trace2index
 
 class ExecInfo:
     '''
@@ -139,12 +140,17 @@ class ExecInfo:
         self.parse_output  = parse_output
 
 # list of executables that can be processed
-EXECUTABLES = {'gufi_query' : ExecInfo(gufi_query.CONFIGURATION,
-                                       gufi_query.TABLE_NAME,
-                                       gufi_query.COLUMNS,
-                                       gufi_query.get_numbers,
-                                       gufi_query.parse_output),
+EXECUTABLES = {'gufi_query'       : ExecInfo(gufi_query.CONFIGURATION,
+                                             gufi_query.TABLE_NAME,
+                                             gufi_query.COLUMNS,
+                                             gufi_query.get_numbers,
+                                             gufi_query.parse_output),
 
+               'gufi_trace2index' : ExecInfo(gufi_trace2index.CONFIGURATION,
+                                             gufi_trace2index.TABLE_NAME,
+                                             gufi_trace2index.COLUMNS,
+                                             gufi_trace2index.get_numbers,
+                                             gufi_trace2index.parse_output)
                # add more executables here
               }
 
@@ -164,18 +170,3 @@ def add_choices(parser, need_exec):
     if need_exec:
         parser.add_argument('--executable-path', default=DEFAULT,
                             help='Location of the executable')
-
-def add_flags(parser, parse_flags):
-    subparsers = parser.add_subparsers()
-    for name, info in EXECUTABLES.items():
-        exec_parser = subparsers.add_parser(name)
-        exec_parser.set_defaults(executable = EXECUTABLES[name])
-
-        if parse_flags:
-            exec_parser.add_argument('--{}_path'.format(name), default=name,
-                                     help='location of the {} executable'.format(name))
-
-            for config in info.configuration:
-                config.argparse(exec_parser)
-
-    return parser

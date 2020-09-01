@@ -75,23 +75,23 @@ TABLE_NAME = 'configurations'
 # set of columns that define a configuration
 COLUMNS = [
     # machine information
-    Column.Column('name',    'TEXT',
+    Column.Column('name',       'TEXT',
                   lambda parser, name: parser.add_argument('--name',
                                                            dest=name,
                                                            type=str, help='Machine name')),
-    Column.Column('CPU'    , 'TEXT',
+    Column.Column('CPU'    ,    'TEXT',
                   lambda parser, name: parser.add_argument('--cpu',
                                                            dest=name,
                                                            type=str, help='CPU information')),
-    Column.Column('memory',  'TEXT',
+    Column.Column('memory',     'TEXT',
                   lambda parser, name: parser.add_argument('--memory',
                                                            dest=name,
                                                            type=str, help='Memory information')),
-    Column.Column('storage', 'TEXT',
+    Column.Column('storage',    'TEXT',
                   lambda parser, name: parser.add_argument('--storage',
                                                            dest=name,
                                                            type=str, help='Storage information')),
-    Column.Column('extra',   'TEXT',
+    Column.Column('extra',      'TEXT',
                   lambda parser, name: parser.add_argument('--extra',
                                                            dest=name,
                                                            type=str, help='Extra information')),
@@ -180,9 +180,16 @@ if __name__ == '__main__':
 
     parser.add_argument('--hash', choices=HASHES.keys(), default='sha512', help='Hash to use')
     parser.add_argument('--add',  metavar='db', type=str,                  help='Add this configuration entry to db')
-    available.add_flags(parser, True)
+    available.add_choices(parser, False)
 
-    args = parser.parse_args()
+    args, exec_specific = parser.parse_known_args()
+
+    # parse executable specific arguments
+    exec_parser = argparse.ArgumentParser(description='Executable specific argument parser')
+    for config in args.executable.configuration:
+        config.argparse(exec_parser)
+
+    exec_args = exec_parser.parse_args(exec_specific)
 
     config_hash = gen_hash(COLUMNS, args, HASHES[args.hash])
 
@@ -196,7 +203,8 @@ if __name__ == '__main__':
 
         cursor.execute('''INSERT OR IGNORE INTO {} VALUES ({}, '{}');'''.format(
             TABLE_NAME,
-            ', '.join([python2sqlite(args, col) for col in COLUMNS + args.executable.configuration]),
+            ', '.join([python2sqlite(args,      col) for col in COLUMNS] +
+                      [python2sqlite(exec_args, col) for col in args.executable.configuration]),
             config_hash
         ))
 

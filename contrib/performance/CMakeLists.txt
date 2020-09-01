@@ -77,21 +77,32 @@ if (CUMULATIVE_TIMES AND NOT BENCHMARK)
   find_package(Gnuplot 5.2 REQUIRED)
 
   set(PERF_SCRIPTS
+    # core files
     Column.py
-    available.py
     compare.py
     configuration.py
-    dump.py
-    fill_random.py
-    gufi_query.py
     initialize.py
-    median.py
-    plot.sh
     raw_numbers.py
-    run.py
+
+    # statistics
+    median.py
     stats.py
     stddev.py
 
+    # executables
+    available.py
+    gufi_query.py
+    gufi_trace2index.py
+
+    # running
+    run.py
+
+    # plotting
+    dump.py
+    plot.sh
+
+    # example
+    fill_random.py
     example_run.sh
     )
 
