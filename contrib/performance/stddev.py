@@ -61,50 +61,20 @@
 
 
 
-import available
+import sqlite3
 
-import median
-import stddev
+class StdDev:
+    def __init__(self):
+        self.nums = []
 
-# statistics views
-class StatView:
-    def __init__(self,
-                 view_name, sqlite_function,
-                 args = None, cls = None): # only used by custom stats
-        self.name = view_name
-        self.sqlite_function = sqlite_function
-        self.args = args
-        self.cls = cls
+    def step(self, value):
+        self.nums += [value]
 
-BUILTIN_STATS = [
-    StatView('average',  'AVG'),
-    StatView('min',      'MIN'),
-    StatView('max',      'MAX'),
-]
+    def finalize(self):
+        N = len(self.nums)
+        if N == 0:
+            raise sqlite3.OperationalError('Cannot calculate standard deviaton of zero values')
 
-CUSTOM_STATS = [
-    StatView('stddev',   'STDDEV', 1, stddev.StdDev),
-    StatView('median',   'MEDIAN', 1, median.Median),
-]
+        avg = sum(self.nums) / N
 
-VIEWS = BUILTIN_STATS + CUSTOM_STATS
-
-def create_view(raw_numbers_name, col_names, stat, temporary = False):
-    return '''CREATE {} VIEW IF NOT EXISTS {} AS SELECT {} FROM '{}' GROUP BY git;'''.format(
-        'TEMPORARY' if temporary else '',
-        stat.name,
-        ', '.join(
-            ['configuration', 'git', 'branch', 'COUNT(*) as count'] +
-            ['{}({}) AS {}'.format(stat.sqlite_function, name, name) for name in col_names]),
-        raw_numbers_name
-    )
-
-def add_funcs(db):
-    for func in CUSTOM_STATS:
-        db.create_aggregate(func.sqlite_function, func.args, func.cls)
-
-def setup(cursor, executable):
-    for view in VIEWS:
-        cursor.execute(create_view(executable.table_name,
-                                   executable.column_names,
-                                   view))
+        return (sum([(x - avg) ** 2 for x in self.nums]) / (N - 1)) ** .5

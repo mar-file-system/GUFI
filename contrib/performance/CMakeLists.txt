@@ -85,10 +85,12 @@ if (CUMULATIVE_TIMES AND NOT BENCHMARK)
     fill_random.py
     gufi_query.py
     initialize.py
+    median.py
     plot.sh
     raw_numbers.py
     run.py
     stats.py
+    stddev.py
 
     example_run.sh
     )
