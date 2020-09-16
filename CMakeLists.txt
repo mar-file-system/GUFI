@@ -359,7 +359,6 @@ if (RPMBUILD)
   set(CPACK_RPM_PACKAGE_ARCHITECTURE "${ARCH}")
   set(CPACK_RPM_Server_FILE_NAME "gufi-server-${GUFI_VERSION}.${ARCH}.rpm")
   set(CPACK_RPM_Server_PACKAGE_SUMMARY "GUFI Server RPM")
-  set(CPACK_RPM_Server_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/scripts/generate_server_config")
 
   if (CLIENT)
     set(CPACK_RPM_Client_FILE_NAME "gufi-client-${GUFI_VERSION}.${ARCH}.rpm")
@@ -367,7 +366,6 @@ if (RPMBUILD)
     set(CPACK_RPM_Client_PACKAGE_REQUIRES "python >= 2.7, python < 3, openssh, python2-pip")
     set(CPACK_RPM_Client_PACKAGE_SUMMARY "GUFI Client RPM")
     set(CPACK_RPM_Client_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/contrib/python/pip_install.sh")
-    set(CPACK_RPM_Client_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/scripts/generate_client_config")
   endif()
 
   # Generate source RPM
