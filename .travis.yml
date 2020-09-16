@@ -36,23 +36,23 @@ matrix:
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
           script: contrib/travis/xenial.sh
 
-        # OpenSUSE 12.3 + Tumbleweed Repo
-        - stage: test
-          os: linux
-          sudo: true
-          dist: xenial
-          addons:
-              apt:
-                  update: false
-          services: docker
-          env:
-            - C_COMPILER=clang-7
-            - CXX_COMPILER=clang++-7
-            - BUILD=cmake
-            - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
-            - DOCKER_IMAGE=tomxiong/basevm-opensuse-12-3
-          script:
-            - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/suse12.3.sh
+        # # OpenSUSE 12.3 + Tumbleweed Repo
+        # - stage: test
+        #   os: linux
+        #   sudo: true
+        #   dist: xenial
+        #   addons:
+        #       apt:
+        #           update: false
+        #   services: docker
+        #   env:
+        #     - C_COMPILER=clang-7
+        #     - CXX_COMPILER=clang++-7
+        #     - BUILD=cmake
+        #     - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
+        #     - DOCKER_IMAGE=tomxiong/basevm-opensuse-12-3
+        #   script:
+        #     - docker run --rm --privileged --cap-add=SYS_ADMIN --device /dev/fuse -v $(realpath .):/GUFI -w /GUFI -e C_COMPILER -e CXX_COMPILER -e BUILD -e CMAKE_FLAGS "${DOCKER_IMAGE}" bash -c contrib/travis/suse12.3.sh
 
         # CentOS 7
         - stage: test
