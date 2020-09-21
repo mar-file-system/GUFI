@@ -63,6 +63,7 @@
 
 import argparse
 import exceptions
+import math
 import os
 import subprocess
 import sys
@@ -93,20 +94,43 @@ def validate_args(args):
             if args.size or args.atime or args.mtime or args.ctime:
                 raise exceptions.RuntimeError('size, atime, mtime, and ctime cannot be used with -type d')
 
-def parse_size(size):
-    prefix = None
-    if size[0] == '+' or size[0] == '-':
-        prefix = size[0]
-        size = size[1:]
+# Used to parse all numeric arguments
+# From man 1 find:
+#
+# Numeric arguments can be specified as
+#
+# +n     for greater than n,
+#
+# -n     for less than n,
+#
+# n      for exactly n.
+#
+def numeric_arg(n):
+    try:
+        float(n)
+    except:
+        raise argparse.ArgumentTypeError("%s is not a valid numeric argument" % n)
 
+    op = None
+    if n[0] == '+':
+        op = '>'
+        n = n[1:]
+    elif n[0] == '-':
+        op = '<'
+        n = n[1:]
+    else:
+        op = '=='
+
+    return op, n
+
+def parse_size(size):
     unit = 'b'
     if size[-1] in filesize:
         unit = size[-1]
         size = size[:-1]
 
-    # compute the actual size
-    size = int(size) * filesize[unit]
-    return prefix, size
+    comp, actual_size = numeric_arg(size)
+    return comp, int(math.ceil(float(actual_size))) * filesize[unit]
 
 def need_aggregation(args):
     return args.num_results or args.smallest or args.largest
@@ -122,20 +146,20 @@ def build_where(args, root_uid = 0, root_gid = 0):
     #     # where  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
 
     if args.amin is not None:
-        where += ['({} - atime) / 60 == {}'.format(now, args.amin)]
+        where += ['({} - atime) / 60 {} {}'.format(now, amin[0], amin[1]) for amin in args.amin]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        where += ['({} - atime) / {} == {} '.format(now, SECONDS_PER_DAY, args.atime)]
+        where += ['({} - atime) / {} {} {}'.format(now, SECONDS_PER_DAY, atime[0], atime[1]) for atime in args.atime]
 
     if args.cmin is not None:
-        where += ['({} - ctime) / 60 == {}'.format(now, args.cmin)]
+        where += ['({} - ctime) / 60 {} {}'.format(now, cmin[0], cmin[1]) for cmin in args.cmin]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        where += ['({} - ctime) / {} == {} '.format(now, SECONDS_PER_DAY, args.ctime)]
+        where += ['({} - ctime) / {} {} {}'.format(now, SECONDS_PER_DAY, ctime[0], ctime[1]) for ctime in args.ctime]
 
     if args.empty == True:
         where += ['size == 0', '(type == \'f\') OR (type == \'d\')']
@@ -147,7 +171,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         where += ['0']
 
     if args.gid is not None:
-        where += ['gid == {}'.format(args.gid)]
+        where += ['gid {} {}'.format(gid[0], gid[1]) for gid in args.gid]
 
     if args.group is not None:
         where += ['gid == {}'.format(args.group)]
@@ -158,7 +182,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         where += ['name REGEXP \'(?i){}\'"'.format(args.iname)]
 
     if args.inum is not None:
-        where += ['inode == {}'.format(args.inum)]
+        where += ['inode {} {}'.format(inum[0], inum[1]) for inum in args.inum]
 
     # Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.
     # if args.ipath is not None:
@@ -168,29 +192,16 @@ def build_where(args, root_uid = 0, root_gid = 0):
     # if args.iwholename is not None:
 
     if args.links is not None:
-        where += ['nlink == {}'.format(args.links)]
+        where += ['nlink {} {}'.format(links[0], links[1]) for links in args.links]
 
     if args.lname is not None:
         where += ['type == \'f\'', 'linkname REGEXP \'(?i){}\'"'.format(args.lname)]
 
     if args.mmin is not None:
-        where += ['({} - mtime) / 60 == {}'.format(now, args.mmin)]
+        where += ['({} - mtime) / 60 {} {}'.format(now, mmin[0], mmin[1]) for mmin in args.mmin]
 
     if args.mtime is not None:
-        if len(args.mtime) > 2:
-            raise exceptions.Exception('Up to 2 -mtime flags can be provided. Got {}.'.format(len(args.mtime)))
-
-        for mtime in args.mtime:
-            comp = '=='
-
-            if mtime[0] == '-':
-                comp = '<'
-                mtime = mtime[1:]
-            elif mtime[0] == '+':
-                comp = '>'
-                mtime = mtime[1:]
-
-            where += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, comp, mtime)]
+        where += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, mtime[0], mtime[1]) for mtime in args.mtime]
 
     if args.name is not None:
         where += [' OR '.join(['(name REGEXP \'{}\')'.format(name) for name in args.name])]
@@ -217,42 +228,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         where += ['inode == {}'.format(args.samefile.st_ino)]
 
     if args.size is not None:
-        if len(args.size) == 1:
-            prefix, size = parse_size(args.size[0])
-
-            # [size + x%, size + x%]
-            # the prefix is ignored
-            if args.size_percent_range is not None:
-                percent_range = sorted(args.size_percent_range)
-                lower = size + size * percent_range[0] / 100.0
-                higher = size + size * percent_range[1] / 100.0
-                where += ['{} <= size'.format(lower), 'size <= {}'.format(higher)]
-            # size <=/=/>= x
-            else:
-                comp = '=='
-                if prefix == '+':
-                    comp = '>'
-                elif prefix == '-':
-                    comp = '<'
-
-                where += ['size {} {}'.format(comp, size)]
-        # if there are multiple sizes, do not process args.size_percent_range
-        elif len(args.size) == 2:
-            if args.size_percent_range is not None:
-                sys.stderr.write("Ignoring --size%\n")
-
-            for size_str in args.size:
-                prefix, size = parse_size(size_str)
-
-                comp = '=='
-                if prefix == '+':
-                    comp = '>'
-                elif prefix == '-':
-                    comp = '<'
-
-                where += ['size {} {}'.format(comp, size)]
-        else:
-            raise exceptions.Exception('Up to 2 -size flags can be provided. Got {}: {}.'.format(len(args.size), args.size))
+        where += ['size {} {}'.format(size[0], size[1]) for size in args.size]
 
     if args.true == True:
         where += ['1']
@@ -261,7 +237,7 @@ def build_where(args, root_uid = 0, root_gid = 0):
         where += ['(type == "{}")'.format(args.type)]
 
     if args.uid is not None:
-        where += [' OR '.join(['(uid == {})'.format(uid) for uid in args.uid])]
+        where += ['(uid {} {})'.format(uid[0], uid[1]) for uid in args.uid]
 
     # if args.used is not None:
 
@@ -483,28 +459,28 @@ def build_expression_parser():
     parser.add_argument('--version', '-v',                                                         action='version',                                   version=os.path.basename(PATH) + ' @GUFI_VERSION@')
 
     # GNU find test expressions
-    parser.add_argument('-amin',               metavar='n',          dest='amin',                  type=gufi_common.get_non_negative,                  help='File was last accessed n minutes ago.')
+    parser.add_argument('-amin',               metavar='n',          dest='amin',                  type=numeric_arg, action='append',                  help='File was last accessed n minutes ago.')
     # parser.add_argument('-anewer',             metavar='file',       dest='anewer',                type=gufi_common.get_non_negative,                  help='File was last accessed more recently than file was modified.')
-    parser.add_argument('-atime',              metavar='n',          dest='atime',                 type=gufi_common.get_non_negative,                  help='File was last accessed n*24 hours ago.')
-    parser.add_argument('-cmin',               metavar='n',          dest='cmin',                  type=gufi_common.get_non_negative,                  help='File\'s status was last changed n minutes ago.')
+    parser.add_argument('-atime',              metavar='n',          dest='atime',                 type=numeric_arg, action='append',                  help='File was last accessed n*24 hours ago.')
+    parser.add_argument('-cmin',               metavar='n',          dest='cmin',                  type=numeric_arg, action='append',                  help='File\'s status was last changed n minutes ago.')
     # parser.add_argument('-cnewer',             metavar='file',       dest='cnewer',                type=gufi_common.get_non_negative,                  help='File\'s status was last changed more recently than file was modified.')
-    parser.add_argument('-ctime',              metavar='n',          dest='ctime',                 type=gufi_common.get_non_negative,                  help='File\'s status was last changed n*24 hours ago.')
+    parser.add_argument('-ctime',              metavar='n',          dest='ctime',                 type=numeric_arg, action='append',                  help='File\'s status was last changed n*24 hours ago.')
     parser.add_argument('-empty',                                    dest='empty',                 action='store_true',                                help='File is empty and is either a regular file or a directory.')
     parser.add_argument('-executable',                               dest='executable',            action='store_true',                                help='Matches files which are executable and directories which are searchable (in a file name resolution sense).')
     parser.add_argument('-false',                                    dest='false',                 action='store_true',                                help='File is false and is either a regular file or a directory.')
     # parser.add_argument('-fstype',             metavar='n',          dest='fstype',                type=str,                                           help='File is on a filesystem of type type.')
-    parser.add_argument('-gid',                metavar='n',          dest='gid',                   type=gufi_common.get_gid,                           help='File\'s numeric group ID is n.')
+    parser.add_argument('-gid',                metavar='n',          dest='gid',                   type=numeric_arg, action='append',                  help='File\'s numeric group ID is n.')
     parser.add_argument('-group',              metavar='gname',      dest='group',                 type=gufi_common.get_group,                         help='File belongs to group gname (numeric group ID allowed).')
     # parser.add_argument('-ilname',             metavar='pattern',    dest='ilname',                type=str,                                           help='Like -lname, but the match is case insensitive.')
     parser.add_argument('-iname',              metavar='pattern',    dest='iname',                 type=str,                                           help='Like -name, but the match is case insensitive.')
-    parser.add_argument('-inum',               metavar='n',          dest='inum',                  type=gufi_common.get_non_negative,                  help='File has inode number n. It is normally easier to use the -samefile test instead.')
+    parser.add_argument('-inum',               metavar='n',          dest='inum',                  type=numeric_arg, action='append',                  help='File has inode number n. It is normally easier to use the -samefile test instead.')
     # parser.add_argument('-ipath',              metavar='pattern',    dest='ipath',                 type=str,                                           help='Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.')
     # parser.add_argument('-iregex',             metavar='pattern',    dest='iregex',                type=str,                                           help='Like -regex, but the match is case insensitive.')
     # parser.add_argument('-iwholename',         metavar='pattern',    dest='iwholename',            type=str,                                           help='Like -wholename, but the match is case insensitive.')
-    parser.add_argument('-links',              metavar='n',          dest='links',                 type=gufi_common.get_non_negative,                  help='File has n links.')
+    parser.add_argument('-links',              metavar='n',          dest='links',                 type=numeric_arg, action='append',                  help='File has n links.')
     parser.add_argument('-lname',              metavar='pattern',    dest='lname' ,                type=str,                                           help='File is a symbolic link whose contents match shell pattern pattern.')
-    parser.add_argument('-mmin',               metavar='n',          dest='mmin',                  type=gufi_common.get_non_negative,                  help='File\'s data was last modified n minutes ago.')
-    parser.add_argument('-mtime',              metavar='n',          dest='mtime',                 type=gufi_common.get_non_negative,                  help='File\'s data was last modified n*24 hours ago.')
+    parser.add_argument('-mmin',               metavar='n',          dest='mmin',                  type=numeric_arg, action='append',                  help='File\'s data was last modified n minutes ago.')
+    parser.add_argument('-mtime',              metavar='n',          dest='mtime',                 type=numeric_arg, action='append',                  help='File\'s data was last modified n*24 hours ago.')
     parser.add_argument('-name',               metavar='pattern',    dest='name',                  type=str, action='append',                          help='Base of file name (the path with the leading directories removed) matches shell pattern pattern.')
     parser.add_argument('-newer',              metavar='file',       dest='newer',                 type=os.stat,                                       help='File was modified more recently than file.')
     # parser.add_argument('-newerXY',            metavar='reference',  dest='newerXY',               type=str,                                           help='Compares the timestamp of the current file with reference.')
@@ -514,11 +490,11 @@ def build_expression_parser():
     parser.add_argument('-readable',                                 dest='readable',              action='store_true',                                help='Matches files which are readable.')
     # parser.add_argument('-regex',              metavar='pattern',    dest='regex',                 type=str,                                           help='File name matches regular expression pattern.')
     parser.add_argument('-samefile',           metavar='name',       dest='samefile',              type=os.stat,                                       help='File refers to the same inode as name.')
-    parser.add_argument('-size',               metavar='n',          dest='size', action='append', type=gufi_common.get_size,                          help='')
+    parser.add_argument('-size',               metavar='n',          dest='size',                  type=parse_size, action='append',                   help='')
     parser.add_argument('-true',                                     dest='true',                  action='store_true',                                help='Always true')
     parser.add_argument('-type',               metavar='c',          dest='type',                  type=gufi_common.get_char,                          help='File is of type c')
-    parser.add_argument('-uid',                metavar='n',          dest='uid',                   type=gufi_common.get_uid,  action='append',         help='File\'s numeric user ID is n.')
-    # parser.add_argument('-used',               metavar='n',          dest='used',                  type=gufi_common.get_non_negative,                  help='File was last accessed n days after its status was last changed.')
+    parser.add_argument('-uid',                metavar='n',          dest='uid',                   type=numeric_arg,  action='append',                 help='File\'s numeric user ID is n.')
+    # parser.add_argument('-used',               metavar='n',          dest='used',                  type=numeric_arg, action='append',                  help='File was last accessed n days after its status was last changed.')
     parser.add_argument('-user',               metavar='uname',      dest='user',                  type=gufi_common.get_user,                          help='File is owned by user uname (numeric user ID allowed).')
     # parser.add_argument('-wholename',          metavar='pattern',    dest='wholename',             type=str, action='append', default=[],              help='See -path. This alternative is less portable than -path.')
     parser.add_argument('-writable',                                 dest='writable',              action='store_true',                                help='Matches files which are writable.')
@@ -530,7 +506,6 @@ def build_expression_parser():
     parser.add_argument('-printf',             metavar='format',     dest='printf',                type=str,                                           help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
-    parser.add_argument('--size%',             metavar='n',          dest='size_percent_range',    type=float, nargs=2,                                help='Modifier to the -size flag. Expects 2 values that define the min and max percentage from the size.')
     parser.add_argument('--num-results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
