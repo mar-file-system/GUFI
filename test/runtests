@@ -93,7 +93,7 @@ tar -xf ${TAR} -C ${TREE}
 ${TESTS}/runbfwi                ${TREE} ${INDEX}
 ${TESTS}/runbfti                        ${INDEX}
 ${TESTS}/runbfq                         ${INDEX}
-${TESTS}/runquerydbn                    ${INDEX} 2
+${TESTS}/runquerydbs                    ${INDEX} 2
 ${TESTS}/runbfwreaddirplus2db           ${INDEX}
 ${TESTS}/rundfw                         ${INDEX}
 

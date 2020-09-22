@@ -8,7 +8,7 @@ LIB_A = lib$(LIB).a
 
 # executables
 DFW       = dfw
-BFW       = bfti bfwreaddirplus2db gufi_dir2trace gufi_dir2index gufi_stat gufi_trace2index gufi_query querydbn
+BFW       = bfti bfwreaddirplus2db gufi_dir2trace gufi_dir2index gufi_stat gufi_trace2index gufi_query querydbs
 BFW_MYSQL = bfmi.mysql
 ifneq ("$(CXX)", "false")
 CXX_TOOLS =

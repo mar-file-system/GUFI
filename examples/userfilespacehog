@@ -63,11 +63,11 @@
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
 BFQ=$DIR/../src/gufi_query
-QUERYDBN=$DIR/../src/querydbn
+QUERYDBS=$DIR/../src/querydbs
 
 EPATH=..
 echo "query to create db insert recs from entry query into out db user file space hog"
 rm -f outdb*
 $BFQ -E "insert into sument select uidtouser(uid, 0), count(*), sum(size) from entries where type='f' group by uid;" -n $2 -O outdb -I "create table sument (username text, totfiles int64, totsize int64);" $1
-#$EPATH/querydbn outdb "select username, totfiles, totsize from vsument group by username;" 0 1 1 $2 sument
-$QUERYDBN -NV outdb sument "select username, sum(totfiles), sum(totsize) from vsument group by username;" outdb.*
+#$EPATH/querydbs outdb "select username, totfiles, totsize from vsument group by username;" 0 1 1 $2 sument
+$QUERYDBS -NV outdb sument "select username, sum(totfiles), sum(totsize) from vsument group by username;" outdb.*
