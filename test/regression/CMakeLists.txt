@@ -76,7 +76,7 @@ set(SH_AND_EXPECTED
   gufi_dir2trace
   gufi_trace2index
   gufi_query
-  querydbn
+  querydbs
 )
 
 # .sh, .py, and .expected
