@@ -6,7 +6,7 @@ TESTDST  = $(TESTDIR).gufi
 
 SUBDIRECTORIES = regression unit
 
-FILES    = bfwi bfti bfq bfwreaddirplus2db querydb querydbn dfw listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles
+FILES    = bfwi bfti bfq bfwreaddirplus2db querydbn dfw listschemadb listtablesdb groupfilespacehogusesummary userfilespacehogusesummary groupfilespacehog userfilespacehog oldbigfiles
 
 # these are trashable files and dirs produced by the test/run* tests
 TEST_PRODUCTS = testout.* outdb* outq.* core.* bfwreaddirplusdb* $(TESTDIR) $(TESTDST) testbwrpdb

@@ -91,7 +91,6 @@ foreach(TEST
     runlistschemadb
     runlisttablesdb
     runoldbigfiles
-    runquerydb
     runquerydbn
     runuidgidsummary
     runuidgidummary
