@@ -199,7 +199,6 @@ set(C_SOURCES
   gufi_query.c
   gufi_stat.c
   parallel_rmr.c
-  querydb.c
   querydbn.c
   rollup.c
   unrollup.c
