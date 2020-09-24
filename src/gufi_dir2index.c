@@ -468,9 +468,6 @@ int main(int argc, char * argv[]) {
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
-    // set top level permissions
-    chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
     #if BENCHMARK
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
     const long double processtime = elapsed(&benchmark);
