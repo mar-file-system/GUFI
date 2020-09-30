@@ -66,10 +66,19 @@ cmake_minimum_required(VERSION 3.0.0)
 include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
-  include_directories( ${DEP_INSTALL_PREFIX}/googletest/include)
-  add_executable(googletests bf.cpp OutputBuffers.cpp QueuePerThreadPool.cpp sll.cpp trace.cpp utils.cpp)
-  target_link_libraries(googletests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
+  include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
+  set(TEST_SRC
+    OutputBuffers.cpp
+    QueuePerThreadPool.cpp
+    bf.cpp
+    dbutils.cpp
+    sll.cpp
+    trace.cpp
+    utils.cpp
+  )
+  add_executable(unit_tests ${TEST_SRC})
+  target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 
-  add_test(NAME googletests COMMAND googletests)
-  set_tests_properties(googletests PROPERTIES LABELS unit)
+  add_test(NAME unit_tests COMMAND unit_tests)
+  set_tests_properties(unit_tests PROPERTIES LABELS unit)
 endif()

@@ -122,11 +122,9 @@ int main(int argc, char *argv[])
         rsqlstmt = argv[idx++];
     }
 
-    if (!(db = opendb(":memory:", RDWR, 1, 1,
+    if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1,
                       NULL, NULL
-                      #ifdef DEBUG
-                      , NULL, NULL
-                      , NULL, NULL
+                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                       , NULL, NULL
                       , NULL, NULL
                       #endif
@@ -180,7 +178,7 @@ int main(int argc, char *argv[])
        curr += SNPRINTF(curr, MAXSQL, " SELECT * FROM %s.%s UNION ALL", dbn, tablename);
 
        // attach individual database files
-       if (!attachdb(argv[idx], db, dbn, RDONLY)) {
+       if (!attachdb(argv[idx], db, dbn, SQLITE_OPEN_READONLY)) {
            rc = 1;
            goto detach;
        }

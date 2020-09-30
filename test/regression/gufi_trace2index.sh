@@ -116,7 +116,7 @@ echo
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || name FROM entries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
+index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path(name) FROM summary" -E "SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'

@@ -114,7 +114,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     DIR * dir = opendir(work->name);
     if (!dir) {
-        closedir(dir);
         free(data);
         return 1;
     }
@@ -302,8 +301,18 @@ int main(int argc, char * argv[]) {
         if (retval)
             return retval;
 
-        /* add 1 more for the separator that is placed between this string and the entry */
-        in.name_len = strlen(in.name) + 1;
+        in.name_len = strlen(in.name);
+        remove_trailing(in.name, &in.name_len, "/", 1);
+
+        /* root is special case */
+        if (in.name_len == 0) {
+            in.name[0] = '/';
+            in.name_len = 1;
+        }
+        else {
+            /* add 1 more for the separator that is placed between this string and the entry */
+            in.name_len++;
+        }
         in.outfile = 1;
     }
 
@@ -322,7 +331,11 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    struct QPTPool * pool = QPTPool_init(in.maxthreads
+                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                         , NULL
+                                         #endif
+        );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         return -1;

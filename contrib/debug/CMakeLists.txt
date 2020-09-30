@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,87 +60,15 @@
 
 
 
-set -e
+cmake_minimum_required(VERSION 3.0.0)
 
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
+if(PER_THREAD_STATS)
+  foreach(plot
+      prepare_timestamps.sh
 
-GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
-GUFI_QUERY="${ROOT}/src/gufi_query"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-function cleanup {
-    rm -rf "${SRCDIR}" "${INDEXROOT}"
-}
-
-trap cleanup EXIT
-
-cleanup
-
-export LC_ALL=C
-
-# generate the tree
-${ROOT}/test/regression/generatetree "${SRCDIR}"
-
-OUTPUT="gufi_dir2index.out"
-
-# index everything
-(
-    # remove preexisting indicies
-    rm -rf "${INDEXROOT}"
-
-    # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
-
-    src_dirs=$(find "${SRCDIR}" -type d)
-    src_nondirs=$(find "${SRCDIR}" -not -type d)
-    src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
-
-    index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
-
-    echo "Index Everything:"
-    echo "    Source Directory:"
-    echo "${src}" | awk '{ printf "        " $0 "\n" }'
-    echo
-    echo "    GUFI Index:"
-    echo "${index}" | awk '{ printf "        " $0 "\n" }'
-    echo
-) 2>&1 | tee "${OUTPUT}"
-
-# index up to different levels of the tree
-for level in 0 1 2
-do
-    (
-        # remove preexisting indicies
-        rm -rf "${INDEXROOT}"
-
-        # generate the index
-        ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
-
-        src_dirs=$(find "${SRCDIR}" -maxdepth ${level} -type d)
-        src_nondirs=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -not -type d)
-        src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
-
-        index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
-
-        echo "Index up to level ${level}:"
-        echo "    Source Directory:"
-        echo "${src}" | awk '{ printf "        " $0 "\n" }'
-        echo
-        echo "    GUFI Index:"
-        echo "${index}" | awk '{ printf "        " $0 "\n" }'
-        echo
-    ) 2>&1 | tee -a "${OUTPUT}"
-done
-
-diff ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
-rm "${OUTPUT}"
+      gufi_query.sh
+      rollup.sh
+      )
+    configure_file("${plot}" "${plot}" COPYONLY)
+  endforeach()
+endif()

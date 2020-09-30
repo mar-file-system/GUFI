@@ -1014,7 +1014,11 @@ int main(int argc, char *argv[]) {
     }
 
     // start up thread pool
-    struct QPTPool * pool = QPTPool_init(settings.threads);
+    struct QPTPool * pool = QPTPool_init(settings.threads
+                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                         , NULL
+                                         #endif
+        );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         return -1;

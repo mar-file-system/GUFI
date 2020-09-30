@@ -1,0 +1,146 @@
+$ gufi_dir2index prefix prefix.gufi
+
+
+$ rollup prefix.gufi
+Ran 140 threads
+Roots:
+    prefix.gufi
+Not Processed:               0
+
+Not Rolled Up:               4
+    Subdirectories:
+        min:                 3
+        max:                 4
+        median:           4.00
+        sum:                15
+        average:          3.75
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 1
+        median:           1.00
+        sum:                 3
+        average:          0.75
+
+Rolled Up:                  48
+    Subdirectories:
+        min:                 0
+        max:                 3
+        median:           0.00
+        sum:                36
+        average:          0.75
+    Files/Links:
+        min:                 0
+        max:                 3
+        median:           1.50
+        sum:                72
+        average:          1.50
+    Level:
+        min:                 2
+        max:                 3
+        median:           3.00
+        sum:               132
+        average:          2.75
+
+    Successful:
+        1:                   3
+        2:                   3
+        3:                   3
+        4:                   3
+        5:                  36
+        Total:              48
+    Failed:
+        1:                   0
+        2:                   0
+        3:                   0
+        4:                   0
+        5:                   0
+        Total:               0
+Files/Links:    72
+Directories:    52 (16 empty)
+Total:          124
+Remaining Dirs: 16 (30.77%)
+Took 0.05 seconds
+
+# rolled up directories should have pentries tables
+$ gufi_query -d " " -S "SELECT type FROM qlite_master where name == 'pentries'"
+view prefix.gufi
+view prefix.gufi/1001
+view prefix.gufi/1002
+view prefix.gufi/1003
+table prefix.gufi/1001/o+rx
+table prefix.gufi/1001/ugo
+table prefix.gufi/1001/ug
+table prefix.gufi/1001/u
+table prefix.gufi/1002/o+rx
+table prefix.gufi/1002/ugo
+table prefix.gufi/1002/ug
+table prefix.gufi/1002/u
+table prefix.gufi/1003/o+rx
+table prefix.gufi/1003/ugo
+table prefix.gufi/1003/ug
+table prefix.gufi/1003/u
+
+$ unrollup prefix.gufi
+
+
+# COUNT(entries), COUNT(restored PENTRIES), view, directory
+$ gufi_query -d " " -S "SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) FROM summary" prefix.gufi
+0 0 view prefix.gufi
+0 0 view prefix.gufi/1001
+0 0 view prefix.gufi/1002
+0 0 view prefix.gufi/1003
+0 0 view prefix.gufi/1001/o+rx
+0 0 view prefix.gufi/1001/ugo
+0 0 view prefix.gufi/1001/ug
+0 0 view prefix.gufi/1001/u
+0 0 view prefix.gufi/1002/o+rx
+0 0 view prefix.gufi/1002/ugo
+0 0 view prefix.gufi/1002/ug
+0 0 view prefix.gufi/1002/u
+0 0 view prefix.gufi/1003/o+rx
+0 0 view prefix.gufi/1003/ugo
+0 0 view prefix.gufi/1003/ug
+0 0 view prefix.gufi/1003/u
+1 1 view prefix.gufi/1001/o+rx/dir1
+2 2 view prefix.gufi/1001/o+rx/dir2
+3 3 view prefix.gufi/1001/o+rx/dir3
+1 1 view prefix.gufi/1001/ugo/dir1
+2 2 view prefix.gufi/1001/ugo/dir2
+3 3 view prefix.gufi/1001/ugo/dir3
+1 1 view prefix.gufi/1001/ug/dir1
+2 2 view prefix.gufi/1001/ug/dir2
+3 3 view prefix.gufi/1001/ug/dir3
+1 1 view prefix.gufi/1001/u/dir1
+2 2 view prefix.gufi/1001/u/dir2
+3 3 view prefix.gufi/1001/u/dir3
+1 1 view prefix.gufi/1002/o+rx/dir1
+2 2 view prefix.gufi/1002/o+rx/dir2
+3 3 view prefix.gufi/1002/o+rx/dir3
+1 1 view prefix.gufi/1002/ugo/dir1
+2 2 view prefix.gufi/1002/ugo/dir2
+3 3 view prefix.gufi/1002/ugo/dir3
+1 1 view prefix.gufi/1002/ug/dir1
+2 2 view prefix.gufi/1002/ug/dir2
+3 3 view prefix.gufi/1002/ug/dir3
+1 1 view prefix.gufi/1002/u/dir1
+2 2 view prefix.gufi/1002/u/dir2
+3 3 view prefix.gufi/1002/u/dir3
+1 1 view prefix.gufi/1003/o+rx/dir1
+2 2 view prefix.gufi/1003/o+rx/dir2
+3 3 view prefix.gufi/1003/o+rx/dir3
+1 1 view prefix.gufi/1003/ugo/dir1
+2 2 view prefix.gufi/1003/ugo/dir2
+3 3 view prefix.gufi/1003/ugo/dir3
+1 1 view prefix.gufi/1003/ug/dir1
+2 2 view prefix.gufi/1003/ug/dir2
+3 3 view prefix.gufi/1003/ug/dir3
+1 1 view prefix.gufi/1003/u/dir1
+2 2 view prefix.gufi/1003/u/dir2
+3 3 view prefix.gufi/1003/u/dir3
+

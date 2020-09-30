@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,87 +61,64 @@
 
 
 
-set -e
 
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
+if [[ "$#" -lt 1 ]]
+then
+    echo "Syntax: $0 file"
+    exit 1
+fi
 
-GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
-GUFI_QUERY="${ROOT}/src/gufi_query"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-function cleanup {
-    rm -rf "${SRCDIR}" "${INDEXROOT}"
-}
-
-trap cleanup EXIT
-
-cleanup
+file="$1"
+tmp="${file}.tmp"
+thread_file="${file}.thread_ids"
 
 export LC_ALL=C
 
-# generate the tree
-${ROOT}/test/regression/generatetree "${SRCDIR}"
+if [[ ! -f "${tmp}" ]]
+then
+    # get subset of timestamp lines
+    grep -E "^[0-9]+ \S* [0-9]+ [0-9]+$" "${file}" | awk '{ print $1 " " $2 }' | sort -u > "${tmp}"
+fi
 
-OUTPUT="gufi_dir2index.out"
+# get set of unique labels
+label_file="${file}.labels"
+if [[ ( ! -f "${label_file}" ) || ( "${file}" -nt "${label_file}" ) ]]
+then
+    awk '{ print $2 }' "${tmp}" | sort -u > "${label_file}"
+fi
 
-# index everything
-(
-    # remove preexisting indicies
-    rm -rf "${INDEXROOT}"
+# get unique thread ids
+if [[ ( ! -f "${thread_file}" ) || ( "${file}" -nt "${thread_file}" ) ]]
+then
+    awk '{ print $1 }' "${tmp}" | sort -un > "${thread_file}" &
+fi
 
-    # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
-
-    src_dirs=$(find "${SRCDIR}" -type d)
-    src_nondirs=$(find "${SRCDIR}" -not -type d)
-    src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
-
-    index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
-
-    echo "Index Everything:"
-    echo "    Source Directory:"
-    echo "${src}" | awk '{ printf "        " $0 "\n" }'
-    echo
-    echo "    GUFI Index:"
-    echo "${index}" | awk '{ printf "        " $0 "\n" }'
-    echo
-) 2>&1 | tee "${OUTPUT}"
-
-# index up to different levels of the tree
-for level in 0 1 2
+# separate timestamps by label
+echo "Available labels to plot:"
+for label in $(cat "${label_file}")
 do
-    (
-        # remove preexisting indicies
-        rm -rf "${INDEXROOT}"
+    echo "    ${label}"
 
-        # generate the index
-        ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
-
-        src_dirs=$(find "${SRCDIR}" -maxdepth ${level} -type d)
-        src_nondirs=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -not -type d)
-        src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
-
-        index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
-
-        echo "Index up to level ${level}:"
-        echo "    Source Directory:"
-        echo "${src}" | awk '{ printf "        " $0 "\n" }'
-        echo
-        echo "    GUFI Index:"
-        echo "${index}" | awk '{ printf "        " $0 "\n" }'
-        echo
-    ) 2>&1 | tee -a "${OUTPUT}"
+    filename="${file}.${label}"
+    if [[ ( ! -f "${filename}" ) || ( "${file}" -nt "${filename}" ) ]]
+    then
+        grep -E "^[0-9]+ ${label} [0-9]+ [0-9]+$" "${file}" > "${filename}" &
+    fi
 done
 
-diff ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
-rm "${OUTPUT}"
+wait
+
+thread_ids="$(cat ${thread_file})"
+lowest=$(echo "${thread_ids}" | head -n 1)
+highest=$(echo "${thread_ids}" | tail -n 1)
+
+echo "Thread Range: ${lowest}-${highest}"
+
+function plot_args() {
+    label="$1"
+    linewidth="$2"
+    shift
+    shift
+    title="$@"
+    echo "'${file}.${label}' using (\$3/1e9):1:(\$4-\$3)/1e9:(0) with vectors nohead filled linewidth ${linewidth} title '${title}', \\"
+}

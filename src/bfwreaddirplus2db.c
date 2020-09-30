@@ -196,11 +196,9 @@ int reprocessdir(void * passv, DIR *dir)
           truncate(dbpath,0);
         }
     }
-    if (!(db = opendb(dbpath, RDWR, 1, 1,
-                      create_tables, NULL
-                      #ifdef DEBUG
-                      , NULL, NULL
-                      , NULL, NULL
+    if (!(db = opendb(dbpath, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
+                      , create_tables, NULL
+                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                       , NULL, NULL
                       , NULL, NULL
                       #endif
@@ -611,11 +609,9 @@ int processinit(struct QPTPool * ctx) {
        i=0;
        while (i < in.maxthreads) {
            SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outdbn,i);
-           gts.outdbd[i]=opendb(outdbn, RDWR, 1, 1,
-                                create_readdirplus_tables, NULL
-                                #ifdef DEBUG
-                                , NULL, NULL
-                                , NULL, NULL
+           gts.outdbd[i]=opendb(outdbn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
+                                , create_readdirplus_tables, NULL
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                 , NULL, NULL
                                 , NULL, NULL
                                 #endif
@@ -769,7 +765,11 @@ int main(int argc, char *argv[])
 
      if (in.buildinindir == 1) gltodirmode=1;
 
-     struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    struct QPTPool * pool = QPTPool_init(in.maxthreads
+                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                         , NULL
+                                         #endif
+        );
      if (!pool) {
          fprintf(stderr, "Failed to initialize thread pool\n");
          return -1;

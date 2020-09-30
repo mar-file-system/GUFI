@@ -66,10 +66,12 @@ OF SUCH DAMAGE.
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <libgen.h>
+#include <map>
 #include <string>
 
-bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
+typedef std::map <std::string, std::pair<std::string, std::string> > Tree;
+
+bool verify_stanza(std::istream & stream, Tree & tree, const char delim = '\x1e', const char dir = 'd') {
     std::string line;
     if (!std::getline(stream, line)) {
         return false;
@@ -108,6 +110,12 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
 
     const std::string parent = line.substr(0, len);
 
+    // find the inode (1 column after type)
+    const std::string::size_type second_delim = first_delim + 2;
+    const std::string::size_type third_delim = line.find(delim, second_delim + 1);
+    const std::string inode = line.substr(second_delim + 1, third_delim - second_delim - 1);
+
+    // find the pinode
     const std::string::size_type last_delim = line.find_last_of(delim);
     if (last_delim != (line.size() - 1)) {
         std::cerr << "Warning: Trailing characters present" << std::endl;
@@ -125,6 +133,13 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
         return false;
     }
 
+    if (tree.find(parent) != tree.end()) {
+        std::cerr << "Error: Path reappears in trace: " << parent << std::endl;
+        return false;
+    }
+
+    tree[parent] = std::make_pair(inode, pinode);
+
     // followed by a series of non-directories
     while (true) {
         const std::istream::streampos pos = stream.tellg();
@@ -133,6 +148,7 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
             break;
         }
 
+        // empty lines are not errors
         if (!line.size()) {
             continue;
         }
@@ -194,18 +210,75 @@ bool verify_stanza(std::istream & stream, const char delim = '\x1e', const char 
     return true;
 }
 
+static std::string basename(const std::string & path) {
+    std::string::size_type len = path.size();
+
+    // remove trailing slashes
+    while (len && (path[len - 1] == '/')) {
+        len--;
+    }
+
+    // find parent
+    while (len && (path[len - 1] != '/')) {
+        len--;
+    }
+
+    // remove trailing slashes
+    while (len && (path[len - 1] == '/')) {
+        len--;
+    }
+
+    return path.substr(0, len);
+}
+
+std::size_t complete_tree(const Tree & tree) {
+    std::size_t bad = 0;
+    for(std::pair <const std::string,
+                   std::pair<std::string,
+                             std::string> > const & dir : tree) {
+        const std::string parent_path = basename(dir.first);
+
+        // root
+        if (parent_path == dir.first) {
+            continue;
+        }
+
+        Tree::const_iterator parent = tree.find(parent_path);
+        if (parent == tree.end()) {
+            std::cerr << "Parent path of " << dir.first << " missing." << std::endl;
+            bad++;
+            continue;
+        }
+
+        if (parent->second.first != dir.second.second) {
+            std::cerr << "Parent inode does not match directory's pinode: \"" <<  dir.first << "\"" << std::endl;
+            bad++;
+            continue;
+        }
+    }
+
+    return bad;
+}
+
 bool verify_trace(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
     if (!stream) {
         std::cerr << "Bad stream" << std::endl;
         return false;
     }
 
-    while (verify_stanza(stream, delim, dir));
+    Tree tree;
+
+    while (verify_stanza(stream, tree, delim, dir));
+
+    const std::size_t bad = complete_tree(tree);
+    if (bad) {
+        std::cerr << bad << " directories either missing or mismatched" << std::endl;
+    }
 
     // if the loop broke early, then the
     // stream was not completely read, so
     // a good stream is an error
-    return !stream;
+    return (!stream) && (bad == 0);
 }
 
 int main(int argc, char * argv[]) {

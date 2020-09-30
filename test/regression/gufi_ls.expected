@@ -1,5 +1,4 @@
 $ gufi_ls
-.hidden
 1KB
 1MB
 directory
@@ -23,7 +22,6 @@ repeat_name
 unusual, name?#
 
 $ gufi_ls -h
-.hidden
 1KB
 1MB
 directory
@@ -35,8 +33,6 @@ repeat_name
 unusual, name?#
 
 $ gufi_ls -R
-.
-.hidden
 1KB
 1MB
 directory/
@@ -65,7 +61,6 @@ empty_file
 directory
 1MB
 1KB
-.hidden
 
 $ gufi_ls -ar
 unusual, name?#
@@ -98,5 +93,4 @@ directory/
 1MB
 1KB
 .hidden
-.
 

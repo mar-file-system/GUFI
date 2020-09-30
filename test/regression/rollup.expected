@@ -1,0 +1,299 @@
+Ran 140 threads
+Roots:
+    prefix.gufi
+Not Processed:               0
+
+Not Rolled Up:               4
+    Subdirectories:
+        min:                 3
+        max:                 4
+        median:           4.00
+        sum:                15
+        average:          3.75
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 1
+        median:           1.00
+        sum:                 3
+        average:          0.75
+
+Rolled Up:                  48
+    Subdirectories:
+        min:                 0
+        max:                 3
+        median:           0.00
+        sum:                36
+        average:          0.75
+    Files/Links:
+        min:                 0
+        max:                 3
+        median:           1.50
+        sum:                72
+        average:          1.50
+    Level:
+        min:                 2
+        max:                 3
+        median:           3.00
+        sum:               132
+        average:          2.75
+
+    Successful:
+        1:                   3
+        2:                   3
+        3:                   3
+        4:                   3
+        5:                  36
+        Total:              48
+    Failed:
+        1:                   0
+        2:                   0
+        3:                   0
+        4:                   0
+        5:                   0
+        Total:               0
+Files/Links:    72
+Directories:    52 (16 empty)
+Total:          124
+Remaining Dirs: 16 (30.77%)
+$ gufi_query -d " " -S "SELECT path(name) from summary" "prefix.gufi" | wc -l
+52
+
+$ gufi_query -d " " -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "prefix.gufi" | wc -l
+72
+
+$ gufi_query -d " " -S "SELECT path(name) from summary" -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "prefix.gufi" | wc -l
+124
+
+$ gufi_find -type d | wc -l
+52
+
+$ gufi_find -type f | wc -l
+72
+
+$ gufi_find | wc -l
+124
+
+$ gufi_ls
+1001
+1002
+1003
+
+$ gufi_ls 1001
+o+rx
+u
+ug
+ugo
+
+# nothing (for now) because 1001/o+rx was rolled up, and level() could not get to 1
+$ gufi_ls 1001/o+rx
+
+
+$ gufi_ls 1001/o+rx/dir1
+file1
+
+$ gufi_ls 1001/o+rx/dir2
+file1
+file2
+
+$ gufi_ls 1001/o+rx/dir3
+file1
+file2
+file3
+
+$ gufi_ls 1002
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls 1002/ugo/dir1
+file1
+
+$ gufi_ls 1002/ugo/dir2
+file1
+file2
+
+$ gufi_ls 1002/ugo/dir3
+file1
+file2
+file3
+
+$ gufi_ls 1003
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls 1003/ug/dir1
+file1
+
+$ gufi_ls 1003/ug/dir2
+file1
+file2
+
+$ gufi_ls 1003/ug/dir3
+file1
+file2
+file3
+
+# 1 less because gufi_ls does not list the input dir
+$ gufi_ls -R | wc -l
+123
+
+$ gufi_stats    depth
+0
+
+$ gufi_stats -r depth
+. 0
+1001 1
+1001/o+rx 2
+1001/o+rx/dir1 3
+1001/o+rx/dir2 3
+1001/o+rx/dir3 3
+1001/u 2
+1001/u/dir1 3
+1001/u/dir2 3
+1001/u/dir3 3
+1001/ug 2
+1001/ug/dir1 3
+1001/ug/dir2 3
+1001/ug/dir3 3
+1001/ugo 2
+1001/ugo/dir1 3
+1001/ugo/dir2 3
+1001/ugo/dir3 3
+1002 1
+1002/o+rx 2
+1002/o+rx/dir1 3
+1002/o+rx/dir2 3
+1002/o+rx/dir3 3
+1002/u 2
+1002/u/dir1 3
+1002/u/dir2 3
+1002/u/dir3 3
+1002/ug 2
+1002/ug/dir1 3
+1002/ug/dir2 3
+1002/ug/dir3 3
+1002/ugo 2
+1002/ugo/dir1 3
+1002/ugo/dir2 3
+1002/ugo/dir3 3
+1003 1
+1003/o+rx 2
+1003/o+rx/dir1 3
+1003/o+rx/dir2 3
+1003/o+rx/dir3 3
+1003/u 2
+1003/u/dir1 3
+1003/u/dir2 3
+1003/u/dir3 3
+1003/ug 2
+1003/ug/dir1 3
+1003/ug/dir2 3
+1003/ug/dir3 3
+1003/ugo 2
+1003/ugo/dir1 3
+1003/ugo/dir2 3
+1003/ugo/dir3 3
+
+$ gufi_stats    filecount
+0
+
+$ gufi_stats -r filecount
+. 0
+1001 0
+1001/o+rx 6
+1001/u 6
+1001/ug 6
+1001/ugo 6
+1002 0
+1002/o+rx 6
+1002/u 6
+1002/ug 6
+1002/ugo 6
+1003 0
+1003/o+rx 6
+1003/u 6
+1003/ug 6
+1003/ugo 6
+
+$ gufi_stats    total-filecount
+1001 24
+1002 24
+1003 24
+
+$ gufi_stats -c total-filecount
+72
+
+$ gufi_stats    dircount
+3
+
+$ gufi_stats -r dircount
+. 3
+1001 4
+1001/o+rx 3
+1001/o+rx/dir1 0
+1001/o+rx/dir2 0
+1001/o+rx/dir3 0
+1001/u 3
+1001/u/dir1 0
+1001/u/dir2 0
+1001/u/dir3 0
+1001/ug 3
+1001/ug/dir1 0
+1001/ug/dir2 0
+1001/ug/dir3 0
+1001/ugo 3
+1001/ugo/dir1 0
+1001/ugo/dir2 0
+1001/ugo/dir3 0
+1002 4
+1002/o+rx 3
+1002/o+rx/dir1 0
+1002/o+rx/dir2 0
+1002/o+rx/dir3 0
+1002/u 3
+1002/u/dir1 0
+1002/u/dir2 0
+1002/u/dir3 0
+1002/ug 3
+1002/ug/dir1 0
+1002/ug/dir2 0
+1002/ug/dir3 0
+1002/ugo 3
+1002/ugo/dir1 0
+1002/ugo/dir2 0
+1002/ugo/dir3 0
+1003 4
+1003/o+rx 3
+1003/o+rx/dir1 0
+1003/o+rx/dir2 0
+1003/o+rx/dir3 0
+1003/u 3
+1003/u/dir1 0
+1003/u/dir2 0
+1003/u/dir3 0
+1003/ug 3
+1003/ug/dir1 0
+1003/ug/dir2 0
+1003/ug/dir3 0
+1003/ugo 3
+1003/ugo/dir1 0
+1003/ugo/dir2 0
+1003/ugo/dir3 0
+
+$ gufi_stats    total-dircount
+1001 5
+1002 5
+1003 5
+
+$ gufi_stats -c total-dircount
+51
+

@@ -67,6 +67,10 @@ OF SUCH DAMAGE.
 
 #include <pthread.h>
 
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+#include "OutputBuffers.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -80,6 +84,11 @@ struct QPTPool {
     pthread_mutex_t mutex;
     int running;
     size_t incomplete;
+
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    struct OutputBuffers * buffers;
+    #endif
+
 };
 
 /* User defined function to pass into QPTPool_start
@@ -95,7 +104,11 @@ typedef int (*QPTPoolFunc_t)(struct QPTPool * ctx, const size_t id, void * data,
 /* main functions for operating a QPTPool */
 
 /* initialize a QPTPool context without starting the threads */
-struct QPTPool * QPTPool_init(const size_t threads);
+struct QPTPool * QPTPool_init(const size_t threads
+                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                              , struct OutputBuffers * buffers
+                              #endif
+    );
 
 /* start the threads */
 size_t QPTPool_start(struct QPTPool * ctx, void * args);

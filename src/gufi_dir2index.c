@@ -113,7 +113,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     DIR * dir = opendir(work->name);
     if (!dir) {
-        closedir(dir);
         fprintf(stderr, "Could not open directory \"%s\"\n", work->name);
         return 1;
     }
@@ -148,11 +147,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         return 1;
     }
 
-    sqlite3 * db = opendb(dbname, RDWR, 1, 0,
-                          NULL, NULL
-                          #ifdef DEBUG
+    sqlite3 * db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
                           , NULL, NULL
-                          , NULL, NULL
+                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                           , NULL, NULL
                           , NULL, NULL
                           #endif
@@ -429,8 +426,18 @@ int main(int argc, char * argv[]) {
         if (retval)
             return retval;
 
-        /* add 1 more for the separator that is placed between this string and the entry */
-        in.name_len = strlen(in.name) + 1;
+        in.name_len = strlen(in.name);
+        remove_trailing(in.name, &in.name_len, "/", 1);
+
+        /* root is special case */
+        if (in.name_len == 0) {
+            in.name[0] = '/';
+            in.name_len = 1;
+        }
+        else {
+            /* add 1 more for the separator that is placed between this string and the entry */
+            in.name_len++;
+        }
     }
 
     // get first work item by validating inputs
@@ -453,7 +460,11 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads);
+    struct QPTPool * pool = QPTPool_init(in.maxthreads
+                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                         , NULL
+                                         #endif
+        );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         return -1;

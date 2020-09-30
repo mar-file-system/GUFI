@@ -1,9 +1,13 @@
-TESTS = gufi_config.py
+TESTS = gufi_config
 
-all: $(TESTS)
+TARGETS=$(addprefix run, $(TESTS))
 
-run%.py: %.py ../../output-on-failure
+.PHONY: $(TESTS)
+
+all: run
+
+run%: %.py ../../../contrib/output-on-failure
 	@echo "Running Test: $<"
-	@../../output-on-failure ./$<
+	@../../../contrib/output-on-failure ./$<
 
-run: $(addprefix run, $(TESTS))
+run: $(TARGETS)
