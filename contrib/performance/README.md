@@ -12,7 +12,9 @@ CMake variables must be set:
 - CUMULATIVE_TIMES=On
 - BENCHMARK=Off
 
-Additionally, Python 2.7 and gnuplot 5.2+ are required.
+Python 2.7 and gnuplot 5.2+ are required.
+SQLite3 needs to be compiled with DECLTYPE turned on (do not define
+SQLITE_OMIT_DECLTYPE).
 
 # Initialization
 
@@ -44,12 +46,14 @@ hash that can uniquely identify the hash have to be kept.
 # Running Trials and Collecting Raw Numbers
 
 `run.py` will extract the arguments from the configuration table and
-use them to run the executable. The raw numbers will be collected from
-stderr and placed into a temporary table. Statistics of the runs will
-be generated in temporary views and printed out, but not stored. Use
-the `--add` flag to move the raw numbers to the non-temporary table.
-The statistics will be automatically generated in the non-temporary
-views.
+use them to run the executable. The executables must be findable by
+the environment. The raw numbers will be collected from stderr and
+placed into a temporary table. Statistics of the runs will be
+generated in temporary views and printed out, but not stored. Use the
+`--add` flag to move the raw numbers to the non-temporary table.  The
+statistics will be automatically generated in the non-temporary views.
+The executable should be run at least 2 times so that stddev does not
+divide by 0.
 
 # Comparing Statistics
 
@@ -91,6 +95,52 @@ with `dump.py`. Each line contains:
 These lines should be dumped into a file that should be passed into
 `plot.sh`. The script will generate a svg file with the statistics of
 each commit. The raw numbers that are plotted are currently hardcoded.
+
+# Example Usage
+
+```
+GUFI_SRC=...
+DB="perf.db"
+INDEX="index"
+EXEC="gufi_query"
+STAT="average"
+
+# Create an index
+# Make "${EXEC}" findable by the shell (add its dirname to PATH)
+
+# The performance directory is not installed, so have to go to GUFI source
+cd "${GUFI_SRC}/contrib/performance"
+
+# Create the database of raw numbers
+# One database can only store numbers for one executable
+./initialize.py "${DB}" "${EXEC}"
+
+# Store information about the environment and command line arguments
+# and save the output hash to a variable
+# The arguments after ${EXEC} are executable dependent
+CONFIG_HASH=$(./configuration.py                     \
+              --name "machine name"                  \
+              --cpu "CPU"                            \
+              --memory "DRAM"                        \
+              --storage "Drive/Filesystem"           \
+              "${EXEC}"                              \
+              --threads 1                            \
+              --summary "SELECT * FROM summary"      \
+              --entries "SELECT * FROM entries"      \
+              --buffer_size 1024 --terse "${INDEX}"  \
+              --add "${DB}")
+
+# Run the executable and fill up the database with performance metrics
+# Run this as the GUFI repository is updated with new commits
+# If dropping caches, will need sudo
+./run.py --add "${DB}" "${CONFIG_HASH}" "${EXEC}"
+
+# Dump the average of each column that was generated from running on the same configuration hash
+./dump.py "${DB}" "${EXEC}" "${CONFIG_HASH}" "${STAT}" > "${EXEC}.${STAT}"
+
+# Plot the statistics across commits to "${EXEC}.${STAT}.svg"
+./plot.sh "${DB}" "${CONFIG_HASH}" "${EXEC}.${STAT}"
+```
 
 # How to add a new executable
 
