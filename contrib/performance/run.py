@@ -122,6 +122,10 @@ if __name__=='__main__':
     parser.add_argument('--ignore-dirty',
                         action='store_true',
                         help='Do not suffix git commit with \'_dirty\'')
+    parser.add_argument('--no-drop-caches',
+                        dest='drop_caches',
+                        action='store_false',
+                        help='do not drop caches before each run')
     parser.add_argument('database',
                         type=str,
                         help='database file name')
@@ -140,6 +144,9 @@ if __name__=='__main__':
     compare.add_args(parser, True)
 
     args = parser.parse_args()
+
+    if args.runs < 2:
+        raise RuntimeError('Need to run at least 2 times to calculate stddev. Got {}.'.format(args.runs))
 
     if not os.path.isfile(args.database):
         raise IOError('''Database file {} does not exist. Not creating an empty database file.'''.format(args.database))
@@ -167,6 +174,11 @@ if __name__=='__main__':
 
     # run the query multiple times
     for run in xrange(args.runs):
+        # drop cache
+        if args.drop_caches:
+            with open('/proc/sys/vm/drop_caches', 'w') as drop_caches:
+                drop_caches.write('3\n')
+
         # run query, drop output, keep timings
         query = subprocess.Popen(query_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _, lines = query.communicate()
