@@ -63,16 +63,18 @@
 
 set -e
 
-mkdir -p build
-cd build
-
 export CC="${C_COMPILER}"
 export CXX="${CXX_COMPILER}"
 export GTEST_COLOR=1
-export DEP_PATH="/tmp"
+export DEP_PREFIX="/tmp"
 export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
-cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PATH}" ..
+export SRC_DIR="$(pwd)"
+export BUILD_DIR="$(realpath ${SRC_DIR})/build"
+mkdir -p "${BUILD_DIR}"
+cd "${BUILD_DIR}"
+
+cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PREFIX}" "${SRC_DIR}"
 
 # use files from the generated tar
 if  [[ "${BUILD}" = "make" ]]; then

@@ -73,7 +73,7 @@ db="$1"
 config="$2"
 file="$3"
 
-config_hash=$(sqlite3 "${db}" "SELECT hash FROM configurations WHERE hash LIKE '${config}%'")
+config_hash=$(@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3 "${db}" "SELECT hash FROM configurations WHERE hash LIKE '${config}%'")
 
 if [[ -z "${config_hash}" ]]
 then
@@ -112,7 +112,7 @@ do
 done
 wait
 
-gnuplot <<EOF &
+@GNUPLOT_EXECUTABLE@ <<EOF &
 
 set terminal svg size 1920,1024 noenhanced fixed mouse standalone solid linewidth 2
 set output "${file}.svg"

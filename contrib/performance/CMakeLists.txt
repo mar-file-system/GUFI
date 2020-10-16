@@ -74,8 +74,6 @@ if (CUMULATIVE_TIMES AND NOT BENCHMARK)
     message(FATAL_ERROR "python could not import sqlite3")
   endif()
 
-  find_package(Gnuplot 5.2 REQUIRED)
-
   set(PERF_SCRIPTS
     # core files
     Column.py

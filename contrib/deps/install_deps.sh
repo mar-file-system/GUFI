@@ -19,6 +19,7 @@ fi
 
 BUILD_CXX="false"
 PARAMIKO="false"
+GNUPLOT="false"
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -34,6 +35,10 @@ case $key in
     ;;
     --paramiko)
     PARAMIKO="true"
+    shift # past argument
+    ;;
+    --gnuplot)
+    GNUPLOT="true"
     shift # past argument
     ;;
     *)    # unknown option
@@ -83,4 +88,9 @@ fi
 if [[ "${PARAMIKO}" == "true" ]]; then
     echo "Installing Paramiko"
     . ${SCRIPT_PATH}/paramiko.sh
+fi
+
+if [[ "${GNUPLOT}" == "true" ]]; then
+    echo "Installing gnuplot"
+    . ${SCRIPT_PATH}/gnuplot.sh
 fi

@@ -244,17 +244,29 @@ pkg_search_module(PCRE REQUIRED libpcre)
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}")
 
 # Download and build all non-system dependencies
-set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH "Location of dependency sources")
-set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE PATH "Location of dependency builds")
-set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE PATH "Location of dependency binaries")
-set(CLIENT              OFF                                CACHE BOOL "Whether or not to build and install client")
-set(DEP_OPTIONS "")
+set(DEP_DOWNLOAD_PREFIX "${CMAKE_SOURCE_DIR}/contrib/deps" CACHE PATH   "Location of dependency sources")
+set(DEP_BUILD_PREFIX    "${CMAKE_BINARY_DIR}/builds"       CACHE PATH   "Location of dependency builds")
+set(DEP_INSTALL_PREFIX  "${CMAKE_BINARY_DIR}/deps"         CACHE PATH   "Location of dependency binaries")
+set(CLIENT              OFF                                CACHE BOOL   "Whether or not to build and install client")
+set(DEP_OPTIONS         ""                                 CACHE STRING "Extra dependency installer options")
+
 if (CMAKE_CXX_COMPILER)
   set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
 endif()
+
 if (CLIENT)
   set(DEP_OPTIONS ${DEP_OPTIONS} --paramiko)
 endif()
+
+# GnuPlot 5.2+ required for performance regression testing
+if (CUMULATIVE_TIMES AND NOT BENCHMARK)
+  find_package(Gnuplot 5.2)
+  if (NOT GNUPLOT_FOUND)
+    set(DEP_OPTIONS ${DEP_OPTIONS} --gnuplot)
+    set(GNUPLOT_EXECUTABLE "${DEP_INSTALL_PREFIX}/gnuplot/bin/gnuplot")
+  endif()
+endif()
+
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
 # search for FUSE on Linux, or OSXFUSE on OSX

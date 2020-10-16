@@ -34,7 +34,36 @@ matrix:
             - CXX_COMPILER=clang++-8
             - BUILD=cmake
             - CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=Debug
-          script: contrib/travis/xenial.sh
+          script:
+            - contrib/travis/xenial.sh
+
+        # Ubuntu Xenial
+        - stage: test
+          os: linux
+          sudo: false
+          dist: xenial
+          addons:
+            apt:
+              sources:
+                - ubuntu-toolchain-r-test
+                - llvm-toolchain-xenial-8
+              packages:
+                - attr
+                - cmake
+                - clang-8
+                - libattr1-dev
+                - libfuse-dev
+                - libpcre3-dev
+                - pkg-config
+              update: true
+          env:
+            - C_COMPILER=clang-8
+            - CXX_COMPILER=clang++-8
+            - BUILD=cmake
+            - CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug -DCUMULATIVE_TIMES=On -DBENCHMARK=Off"
+          script:
+            - source contrib/travis/xenial.sh
+            - contrib/travis/performance.sh
 
         # # OpenSUSE 12.3 + Tumbleweed Repo
         # - stage: test
