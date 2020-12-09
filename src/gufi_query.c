@@ -370,14 +370,15 @@ static int print_callback(void *args, int count, char **data, char **columns) {
     /*     return 1; */
     /* } */
 
-    struct CallbackArgs * ca = (struct CallbackArgs *) args;
+    struct CallbackArgs *ca = (struct CallbackArgs *) args;
     const int id = ca->id;
-    struct OutputBuffers * obs = ca->output_buffers;
-    struct OutputBuffer * ob = &obs->buffers[id];
+    struct OutputBuffers *obs = ca->output_buffers;
 
     /* if (gts.outfd[id]) { */
-        if (ca->output_buffers) {
-            size_t * lens = malloc(count * sizeof(size_t));
+    /*     if (obs) { */
+            struct OutputBuffer *ob = &obs->buffers[id];
+
+            size_t *lens = malloc(count * sizeof(size_t));
             size_t row_len = count + 1; /* one delimiter per column + newline */
             for(int i = 0; i < count; i++) {
                 lens[i] = strlen(data[i]);
@@ -415,7 +416,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
             /* if the old data + this row cannot fit the buffer, works since old data has been flushed */
             /* if the old data + this row fit the buffer, old data was not flushed, but no issue */
             else {
-                char * buf = ob->buf;
+                char *buf = ob->buf;
                 size_t filled = ob->filled;
                 for(int i = 0; i < count; i++) {
                     memcpy(&buf[filled], data[i], lens[i]);
@@ -431,7 +432,9 @@ static int print_callback(void *args, int count, char **data, char **columns) {
                 ob->filled = filled;
                 ob->count++;
             }
-        }
+
+            free(lens);
+    /*     } */
     /* } */
 
     ca->rows++;
