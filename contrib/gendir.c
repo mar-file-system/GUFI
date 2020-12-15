@@ -161,13 +161,12 @@ int generate_level(struct QPTPool * ctx, const size_t id, void * data, void * ar
     char name[MAXPATH];
     for(size_t i = 0; i < settings->files; i++) {
         SNPRINTF(name, MAXPATH, "%s/f.%zu", dir->name, i);
-
-        // overwrite any existing data
-        const int fd = open(name, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        if (fd < 0) {
-            fprintf(stderr, "open failed for %s: %d %s\n", name, errno, strerror(errno));
+        if (mknod(name, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH, S_IFREG) != 0) {
+            const int err = errno;
+            if (err != EEXIST) {
+                fprintf(stderr, "Failed to create %s: %d %s\n", name, err, strerror(err));
+            }
         }
-        close(fd);
     }
 
     free(dir);
