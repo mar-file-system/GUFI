@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -68,6 +68,18 @@ import hashlib
 import os
 import sys
 
+# trace file format
+PATH_IDX = 0
+UID_IDX  = 5
+GID_IDX  = 6
+LINK_IDX = 13
+
+UID_MIN = 1000
+UID_MAX = 1 << 32
+
+GID_MIN = 1000
+GID_MAX = 1 << 32
+
 # wrapper for the built-in hash function to act as a hashlib hash class
 # update() and hexdigest() are not provided
 class BuiltInHash:
@@ -106,6 +118,46 @@ def anonymize(string,                                # the data to hash
     '''
     return sep.join(['' if part == '' else urlsafe_b64encode(hash((salt(part, args) if salt else "") + part).digest()) for part in string.split(sep)])
 
+# convert anonymized integer column back to an integer
+def anonymize_int(args, column):
+    return int(hexlify(urlsafe_b64decode(anonymize(column, hash=Hashes[args.hash]))), 16)
+
+# bound an anonymized integer within [lower, higher)
+# while preventing collisions
+def limit_int(args, column, used, lower, higher):
+    if lower >= higher:
+        raise ValueError('Lower bound ({}) of range is greater than or equal to the high bound ({})'.format(lower, higher))
+
+    # anonymize the column
+    anon = anonymize_int(args, column) % higher
+    if anon < lower:
+        anon = lower
+
+    found = False
+    for _ in xrange(lower, higher):
+        # this is a new mapping
+        if anon not in used:
+            used[anon] = column
+            found = True
+            break
+
+        # this value has been previously assigned to
+        # the same source column, so use the value
+        if used[anon] == column:
+            found = True
+            break;
+
+        # this value has been previously assigned to a
+        # different source column, so try another value
+        anon = (anon + 1) % higher
+        if anon < lower:
+            anon = lower
+
+    if not found:
+        raise RuntimeError('Failed to find a mapping for {} in range [{}, {})'.format(column, lower, higher))
+
+    return str(anon)
+
 # make sure -i and -o are only 1 character long
 def char(c):
     if len(c) != 1:
@@ -120,7 +172,8 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # mapping of anonymized ints to original ints
-    used_ints = {}
+    used_uids = {}
+    used_gids = {}
 
     # read lines from stdin
     for line in sys.stdin:
@@ -128,29 +181,18 @@ if __name__=='__main__':
             line = line[:-1]
         nl = True
         out = []
-        for idx,column in enumerate(line.split(args.in_delim)):
-            # path and linkname
-            if idx in [0, 13]:
+        for idx, column in enumerate(line.split(args.in_delim)):
+            if idx in [PATH_IDX, LINK_IDX]:
                 anon = anonymize(column, hash=Hashes[args.hash])
                 if len(anon) > 490:
                     nl = False
                     break
                 else:
                     out += [anon]
-            # ints
-            elif idx in [5, 6]:
-                anon = anonymize(column, hash=Hashes[args.hash])
-
-                # convert numeric columns back to numbers
-                converted = int(hexlify(urlsafe_b64decode(anon)), 16)
-
-                # make sure there are no collisions
-                while (converted in used_ints) and (used_ints[converted] != column):
-                    converted += 1;
-
-                used_ints[converted] = column
-
-                out += [str(converted)]
+            elif idx == UID_IDX:
+                out += [limit_int(args, column, used_uids, UID_MIN, UID_MAX)]
+            elif idx == GID_IDX:
+                out += [limit_int(args, column, used_gids, GID_MIN, GID_MAX)]
             else:
                 out += [column]
         if nl:
