@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,18 +61,62 @@
 
 
 
-#!/usr/bin/env python2
-
 import argparse
 import sys
 
 def generate_level_r(out, parent, dir_count, file_count, current_level, max_level, rs = chr(0x1e)):
     # generate all files first
     for f_name in xrange(file_count):
-        out.write(parent + 'f.' + str(f_name) + rs + 'f' + rs + '1' + rs + '33188' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '1' + rs + '\n')
+        out.write(parent + 'f.' + str(f_name) + # name
+                  rs + 'f' +                    # type
+                  rs + '1' +                    # inode
+                  rs + '33188' +                # mode
+                  rs + '1' +                    # nlink
+                  rs + '1' +                    # uid
+                  rs + '1' +                    # gid
+                  rs + '1' +                    # size
+                  rs + '1' +                    # blksize
+                  rs + '1' +                    # blocks
+                  rs + '1' +                    # atime
+                  rs + '1' +                    # mtime
+                  rs + '1' +                    # ctime
+                  rs +                          # linkname
+                  rs +                          # xattrs
+                  rs + '0' +                    # crtime
+                  rs + '0' +                    # ossint1
+                  rs + '0' +                    # ossint2
+                  rs + '0' +                    # ossint3
+                  rs + '0' +                    # ossint4
+                  rs +                          # osstext1
+                  rs +                          # osstext2
+                  rs + '0' +                    # pinode
+                  rs + '\n')
 
     for d_name in xrange(dir_count):
-        out.write(parent + 'd.' + str(d_name) + rs + 'd' + rs + '1' + rs + '16832' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '1' + rs +'\n')
+        out.write(parent + 'd.' + str(d_name) + # name
+                  rs + 'd' +                    # type
+                  rs + '1' +                    # inode
+                  rs + '16832' +                # mode
+                  rs + '1' +                    # nlink
+                  rs + '1' +                    # uid
+                  rs + '1' +                    # gid
+                  rs + '1' +                    # size
+                  rs + '1' +                    # blksize
+                  rs + '1' +                    # blocks
+                  rs + '1' +                    # atime
+                  rs + '1' +                    # mtime
+                  rs + '1' +                    # ctime
+                  rs +                          # linkname
+                  rs +                          # xattrs
+                  rs + '0' +                    # crtime
+                  rs + '0' +                    # ossint1
+                  rs + '0' +                    # ossint2
+                  rs + '0' +                    # ossint3
+                  rs + '0' +                    # ossint4
+                  rs +                          # osstext1
+                  rs +                          # osstext2
+                  rs + '0' +                    # pinode
+                  rs + '\n')
 
         if current_level < max_level:
             # generate each directory with its children
@@ -79,7 +124,30 @@ def generate_level_r(out, parent, dir_count, file_count, current_level, max_leve
 
 def generate_level(out, root, dir_count, file_count, max_level, rs = chr(0x1e)):
     # start at root
-    out.write(root + rs + 'd' + rs + '1' + rs + '16832' + rs + '1' + rs + '1' + rs + '1'  + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + '1' + rs + rs + rs + rs + '1' + rs + '1' + rs +'\n')
+    out.write(root +            # name
+              rs + 'd' +        # type
+              rs + '1' +        # inode
+              rs + '16832' +    # mode
+              rs + '1' +        # nlink
+              rs + '1' +        # uid
+              rs + '1' +        # gid
+              rs + '1' +        # size
+              rs + '1' +        # blksize
+              rs + '1' +        # blocks
+              rs + '1' +        # atime
+              rs + '1' +        # mtime
+              rs + '1' +        # ctime
+              rs +              # linkname
+              rs +              # xattrs
+              rs + '0' +        # crtime
+              rs + '0' +        # ossint1
+              rs + '0' +        # ossint2
+              rs + '0' +        # ossint3
+              rs + '0' +        # ossint4
+              rs +              # osstext1
+              rs +              # osstext2
+              rs + '0' +        # pinode
+              rs + '\n')
     generate_level_r(args.output, root, args.directories, args.files, 1, args.depth, args.separator)
 
 if __name__=='__main__':
