@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,8 +61,6 @@
 
 
 
-#!/usr/bin/env python
-
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from binascii import hexlify, unhexlify
 import argparse
@@ -107,12 +106,21 @@ def anonymize(string,                                # the data to hash
     '''
     return sep.join(['' if part == '' else urlsafe_b64encode(hash((salt(part, args) if salt else "") + part).digest()) for part in string.split(sep)])
 
+# make sure -i and -o are only 1 character long
+def char(c):
+    if len(c) != 1:
+        raise argparse.ArgumentTypeError("Expected 1 character. Got {}.".format(len(c)))
+    return c
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Column Anonymizer: Read from stdin. Output to stdout.')
-    parser.add_argument('hash',    nargs='?',                   default="BuiltInHash", choices=Hashes.keys(), help='Hash function name')
-    parser.add_argument('-i', '--in-delim',   dest='in_delim',  default="\x1e",                               help='Input Column Delimiter')
-    parser.add_argument('-o', '--out-delim',  dest='out_delim', default="\x1e",                               help='Output Column Delimiter (Do not use space)')
+    parser.add_argument('hash',              nargs='?',        default="BuiltInHash", choices=Hashes.keys(), help='Hash function name')
+    parser.add_argument('-i', '--in-delim',  dest='in_delim',  default="\x1e",        type=char,             help='Input Column Delimiter')
+    parser.add_argument('-o', '--out-delim', dest='out_delim', default="\x1e",        type=char,             help='Output Column Delimiter (Do not use space)')
     args = parser.parse_args()
+
+    # mapping of anonymized ints to original ints
+    used_ints = {}
 
     # read lines from stdin
     for line in sys.stdin:
@@ -121,20 +129,29 @@ if __name__=='__main__':
         nl = True
         out = []
         for idx,column in enumerate(line.split(args.in_delim)):
-            #path and linkname
-            if idx in [0,13]: # path
+            # path and linkname
+            if idx in [0, 13]:
                 anon = anonymize(column, hash=Hashes[args.hash])
                 if len(anon) > 490:
                     nl = False
                     break
                 else:
                     out += [anon]
-            #leave in case we anony ints
-            elif idx in []:
+            # ints
+            elif idx in [5, 6]:
                 anon = anonymize(column, hash=Hashes[args.hash])
+
                 # convert numeric columns back to numbers
-                out += [str(int(hexlify(urlsafe_b64decode(anon)), 16))]
+                converted = int(hexlify(urlsafe_b64decode(anon)), 16)
+
+                # make sure there are no collisions
+                while (converted in used_ints) and (used_ints[converted] != column):
+                    converted += 1;
+
+                used_ints[converted] = column
+
+                out += [str(converted)]
             else:
                 out += [column]
         if nl:
-            print args.out_delim.join(out)# + args.out_delim
+            print args.out_delim.join(out)
