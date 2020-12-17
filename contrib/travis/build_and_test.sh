@@ -67,7 +67,7 @@ export CC="${C_COMPILER}"
 export CXX="${CXX_COMPILER}"
 export GTEST_COLOR=1
 export DEP_PREFIX="/tmp"
-export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
+export PATH="${DEP_PREFIX}/sqlite3/bin:${PATH}"
 
 export SRC_DIR="$(pwd)"
 export BUILD_DIR="$(realpath ${SRC_DIR})/build"
