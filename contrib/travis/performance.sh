@@ -87,7 +87,7 @@ do
     # set up the database
     if [[ ! -f "${DB}" ]]
     then
-        ./initialize.py "${DB}" "${EXEC}"
+        ./initialize.py "${DB}" "${name}"
     fi
 
     CONFIG_HASH=$(./configuration.py --name "Travis ${TRAVIS_OS_NAME}"       \
@@ -147,7 +147,7 @@ do
          RealTime=-1,1                                                       \
          ThreadTime=-1,1
 
-    ./dump.py "${DB}" "${EXEC}" "${CONFIG_HASH}" "${STAT}" > "${EXEC}.${STAT}"
+    ./dump.py "${DB}" "${name}" "${CONFIG_HASH}" "${STAT}" > "${name}.${STAT}"
 
-    ./plot.sh "${DB}" "${CONFIG_HASH}" "${EXEC}.${STAT}"
+    ./plot.sh "${DB}" "${CONFIG_HASH}" "${name}.${STAT}"
 done
