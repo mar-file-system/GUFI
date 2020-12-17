@@ -99,7 +99,7 @@ do
                                      --buffer_size 1024 --terse "${INDEX}"  \
                                      --add "${DB}")
 
-    ./run.py --add "${DB}" "${CONFIG_HASH}" --stat average "${EXEC}"        \
+    sudo ./run.py --add "${DB}" "${CONFIG_HASH}" --stat average "${EXEC}"   \
         setup_globals=-1,1                                                  \
         setup_aggregate=-1,1                                                \
         work=-1,1                                                           \
