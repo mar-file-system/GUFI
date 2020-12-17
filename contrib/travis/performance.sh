@@ -76,7 +76,7 @@ CPUS="$(nproc --all)"
 INDEX="/tmp/index"
 gufi_dir2index -n "${CPUS}" "${ROOT}" "${INDEX}"
 
-cd "${ROOT}/contrib/performance"
+cd "${ROOT}/build/contrib/performance"
 
 # run benchmarks on each executable
 for EXEC in "${ROOT}/build/src/gufi_query"
