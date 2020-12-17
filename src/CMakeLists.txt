@@ -62,43 +62,6 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# ##########################################
-# flags that can be used to modify code
-# behavior at compile time for some binaries.
-#
-# All of these should be left at their
-# default values when running the ctest.
-#
-# All binaries should be able to run
-# even if all of the values are changed.
-#
-option(BENCHMARK "Enable the 'benchmark' make target" Off)
-if (BENCHMARK)
-  add_definitions(-DBENCHMARK=1)
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  option(CUMULATIVE_TIMES "Sum the durations of events across all threads and print them at the end" Off)
-  if (CUMULATIVE_TIMES)
-    add_definitions(-DCUMULATIVE_TIMES=1)
-  endif()
-
-  option(PER_THREAD_STATS "Print individual events of each thread" Off)
-  if (PER_THREAD_STATS)
-    add_definitions(-DPER_THREAD_STATS=1)
-  endif()
-
-  option(SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
-  if (SUBDIRECTORY_COUNTS)
-    add_definitions(-DSUBDIRECTORY_COUNTS=1)
-  endif()
-
-  option(QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
-  if (QPTPOOL_QUEUE_SIZE)
-    add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
-  endif()
-endif()
-
 # opendb can be turned off
 # addqueryfuncs fails silently if not turned off
 # sqlite3_exec fails with error message if not turned off
@@ -118,7 +81,6 @@ option(SQL_EXEC "Call sqlite3_exec" ON)
 if (SQL_EXEC)
   add_definitions(-DSQL_EXEC=1)
 endif()
-# ##########################################
 
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES

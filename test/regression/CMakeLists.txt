@@ -62,9 +62,14 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-# copy test scripts into the test directory within the build directory
-# list these explicitly to prevent random garbage from getting in
-set(REGRESSION_TEST_FILES
+if (CUMULATIVE_TIMES OR PER_THREAD_STATS OR SUBDIRECTORY_COUNTS OR QPTPOOL_QUEUE_SIZE)
+  message(WARNING "At least one of the debug print variables have been enabled, so regression tests have been disabled")
+else()
+  message(STATUS "Regression tests enabled")
+
+  # copy test scripts into the test directory within the build directory
+  # list these explicitly to prevent random garbage from getting in
+  set(REGRESSION_TEST_FILES
     gufi_dir2index.expected
     gufi_dir2index.sh
 
@@ -101,33 +106,34 @@ set(REGRESSION_TEST_FILES
 
     completions.expected
     completions.sh
-)
+    )
 
-if (NOT APPLE)
-  list(APPEND REGRESSION_TEST_FILES
-    gufi_stat.expected
-    gufi_stat.sh)
-endif()
-
-if (CMAKE_CXX_COMPILER)
-  list(APPEND REGRESSION_TEST_FILES
-    verifytrace.expected
-    verifytrace.sh
-
-    verifytraceintree.expected
-    verifytraceintree.sh)
-endif()
-
-foreach(FILE ${REGRESSION_TEST_FILES})
-  configure_file(${FILE} ${FILE} COPYONLY)
-  get_filename_component(EXT ${FILE} EXT)
-  if ("${EXT}" STREQUAL ".sh")
-    if ("${FILE}" STREQUAL "setup.sh")
-      continue()
-    endif()
-
-    get_filename_component(TEST_NAME ${FILE} NAME_WE)
-    add_test(NAME ${TEST_NAME} COMMAND ${FILE})
-    set_tests_properties(${TEST_NAME} PROPERTIES LABELS regression)
+  if (NOT APPLE)
+    list(APPEND REGRESSION_TEST_FILES
+      gufi_stat.expected
+      gufi_stat.sh)
   endif()
-endforeach()
+
+  if (CMAKE_CXX_COMPILER)
+    list(APPEND REGRESSION_TEST_FILES
+      verifytrace.expected
+      verifytrace.sh
+
+      verifytraceintree.expected
+      verifytraceintree.sh)
+  endif()
+
+  foreach(FILE ${REGRESSION_TEST_FILES})
+    configure_file(${FILE} ${FILE} COPYONLY)
+    get_filename_component(EXT ${FILE} EXT)
+    if ("${EXT}" STREQUAL ".sh")
+      if ("${FILE}" STREQUAL "setup.sh")
+        continue()
+      endif()
+
+      get_filename_component(TEST_NAME ${FILE} NAME_WE)
+      add_test(NAME ${TEST_NAME} COMMAND ${FILE})
+      set_tests_properties(${TEST_NAME} PROPERTIES LABELS regression)
+    endif()
+  endforeach()
+endif()

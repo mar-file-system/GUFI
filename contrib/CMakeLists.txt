@@ -139,3 +139,6 @@ endif()
 
 # add target to build with makefiles
 add_subdirectory(make)
+
+# add performance scripts
+add_subdirectory(performance)
