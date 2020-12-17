@@ -81,19 +81,19 @@ cd "${ROOT}/contrib/performance"
 # run benchmarks on each executable
 for EXEC in "${ROOT}/build/src/gufi_query"
 do
-    name="$(basename ${EXEC})"
-    DB="${name}.db"
+    NAME="$(basename ${EXEC})"
+    DB="${NAME}.db"
 
     # set up the database
     if [[ ! -f "${DB}" ]]
     then
-        ./initialize.py "${DB}" "${name}"
+        ./initialize.py "${DB}" "${NAME}"
     fi
 
     CONFIG_HASH=$(./configuration.py --name "Travis ${TRAVIS_OS_NAME}"       \
                                      --cpu "${TRAVIS_CPU_ARCH}"              \
                                      --memory "7.5 GB"                       \
-                                     "${name}"                               \
+                                     "${NAME}"                               \
                                      --threads "${CPUS}"                     \
                                      --summary "SELECT * FROM summary"       \
                                      --entries "SELECT * FROM entries"       \
@@ -101,7 +101,7 @@ do
                                      --add "${DB}")
 
     sudo ./run.py --add "${DB}" "${CONFIG_HASH}" --executable-path="${EXEC}" \
-         --stat average "${name}"                                            \
+         --stat average "${NAME}"                                            \
          setup_globals=-1,1                                                  \
          setup_aggregate=-1,1                                                \
          work=-1,1                                                           \
@@ -146,8 +146,10 @@ do
          query_count=-1,1                                                    \
          RealTime=-1,1                                                       \
          ThreadTime=-1,1
+    for STAT in average min max
+    do
+        ./dump.py "${DB}" "${NAME}" "${CONFIG_HASH}" "${STAT}" > "${NAME}.${STAT}"
 
-    ./dump.py "${DB}" "${name}" "${CONFIG_HASH}" "${STAT}" > "${name}.${STAT}"
-
-    ./plot.sh "${DB}" "${CONFIG_HASH}" "${name}.${STAT}"
+        ./plot.sh "${DB}" "${CONFIG_HASH}" "${NAME}.${STAT}"
+    done
 done
