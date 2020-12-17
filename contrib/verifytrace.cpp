@@ -223,7 +223,8 @@ int main(int argc, char * argv[]) {
             continue;
         }
 
-        std::cout << argv[i] << ": " << (verify_trace(trace, delim)?"Pass":"Fail")  << std::endl;
+        std::cout << argv[i] << ": " << std::flush;
+        std::cout << (verify_trace(trace, delim)?"Pass":"Fail") << std::endl;
     }
 
     return 0;
