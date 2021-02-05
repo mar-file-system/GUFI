@@ -65,7 +65,7 @@
 SCRIPT="$BASH_SOURCE" # Must be at the top
 DIR=`dirname $SCRIPT`
 BFWREADDIRPLUS2DB=$DIR/../bfwreaddirplus2db
-QUERYDBN=$DIR/../querydbn
+QUERYDBS=$DIR/../querydbs
 
 
 # NOTE: The destination GUFI-tree is optional
@@ -183,10 +183,10 @@ echo ""
 sqlite3 -line bfwreaddirplusdb.1 'select * from readdirplus;'
 echo ""
 
-# run querydbn to union all the db's together into one table
-echo " run querydbn to union all the db's together into one table"
+# run querydbs to union all the db's together into one table
+echo " run querydbs to union all the db's together into one table"
 echo ""
-$QUERYDBN -N -V -p bfwreaddirplusdb 2 "select * from vreaddirplus" readdirplus
+$QUERYDBS -N -V -p bfwreaddirplusdb 2 "select * from vreaddirplus" readdirplus
 
 # run to create output db
 echo

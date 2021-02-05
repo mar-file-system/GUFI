@@ -608,8 +608,8 @@ def cflatloadbfwi():
  if (exit_code!=0):
    exit(exit_code)
 ################################### test cflatloadbfwi end ############################################
-################################### test cbfqbftiquerydbn ############################################
-def cbfqbftiquerydbn():
+################################### test cbfqbftiquerydbs ############################################
+def cbfqbftiquerydbs():
  global dcnt
  global fcnt
  global fsz
@@ -637,10 +637,10 @@ def cbfqbftiquerydbn():
  ############################
  # do some bfq tests now
  print "testing bfq tot dirs %d tot files %d tot bytes %d tot files with xattrs %d tot links %d" % (dcnt,fcnt,fsz,xcnt,lcnt)
- of="%s/cbfqbftiquerydbnout" % (top)
- of1="%s/cbfqbftiquerydbnout1" % (top)
- oft="%s/cbfqbftiquerydbnout.0" % (top)
- oft1="%s/cbfqbftiquerydbnout1.0" % (top)
+ of="%s/cbfqbftiquerydbsout" % (top)
+ of1="%s/cbfqbftiquerydbsout1" % (top)
+ oft="%s/cbfqbftiquerydbsout.0" % (top)
+ oft1="%s/cbfqbftiquerydbsout1.0" % (top)
  ###### num file test #####
  print "+++++++++ test to see if gufi agrees totfiles=%d" % (fcnt)
  os.system('%s/%s/bfq -n1 -p -E "select name from entries where type=\'f\';" -o %s %s'  % (tdir,gdir,of,'gt/d0'))
@@ -682,23 +682,23 @@ def cbfqbftiquerydbn():
   else:
    print "xattr count match xcnt %d numl %d" % (xcnt,numl)
  ###### end num dir test #####
- ###### sum of file sizes test uses querydbn #####/os
- print "+++++++++ test to see if bfq creating output db per thread and use querydbn to aggregate total size=%d" % (fsz)
+ ###### sum of file sizes test uses querydbs #####/os
+ print "+++++++++ test to see if bfq creating output db per thread and use querydbs to aggregate total size=%d" % (fsz)
  os.system('%s/%s/bfq -n 2 -p -E "insert into sument select size from entries where type=\'f\'and size>0;" -I "create table sument (sz int64);" -O outdb %s'  % (tdir,gdir,'gt/d0'))
  #os.system('%s/%s/bfq -n 1 -p -E "insert into sument select size from entries where type=\'f\'and size>0;" -I "create table sument (sz int64);" -O outdb %s'  % (tdir,gdir,'gt/d0'))
- os.system('%s/%s/querydbn -V  outdb 2 "select sum(sz) from vsument" sument > querydbnout' % (tdir,gdir))
- #os.system('%s/%s/querydbn -V  outdb 1 "select sum(sz) from vsument" sument > querydbnout' % (tdir,gdir))
- os.system('cat querydbnout');
- proc=subprocess.Popen('head -1 querydbnout',stdout=subprocess.PIPE,shell=True)
+ os.system('%s/%s/querydbs -V  outdb 2 "select sum(sz) from vsument" sument > querydbsout' % (tdir,gdir))
+ #os.system('%s/%s/querydbs -V  outdb 1 "select sum(sz) from vsument" sument > querydbsout' % (tdir,gdir))
+ os.system('cat querydbsout');
+ proc=subprocess.Popen('head -1 querydbsout',stdout=subprocess.PIPE,shell=True)
  for line in proc.stdout:
   csz=line.split('|')[0]
   sz=string.atoi(csz)
  if (sz!=fsz):
-  print "error: file size total from querydbn %d real file size total %d" % (sz,fsz)
+  print "error: file size total from querydbs %d real file size total %d" % (sz,fsz)
   exit()
  else:
-  print "good news: file size total from querydbn %d real file size total %d" % (sz,fsz)
- ###### end sum of file sizes test uses querydbn #####
+  print "good news: file size total from querydbs %d real file size total %d" % (sz,fsz)
+ ###### end sum of file sizes test uses querydbs #####
  ######  tree directory use test #####
  ####?????????????????????? need to fix bfq so that it doesnt print an error if a dir doesnt have a tree summary
  #### select name from sqlite_master where type='table' and name='treesummary'; should do the trick
@@ -713,7 +713,7 @@ def cbfqbftiquerydbn():
  else:
    print "good news: using tree summary examined %d directories and not using tree summary examined %d directories" % (numl,numl1)
  ######  end tree directory use test #####
-################################## test cbfqbftiquerydbn end ############################################
+################################## test cbfqbftiquerydbs end ############################################
 ################################### test cincr3modf ############################################
 def cbfwiinsrc():
  testn="correctness bfwi in src tree"
@@ -881,16 +881,16 @@ def fbfwreaddirplus2db():
  os.system('%s/runbfwreaddirplus2db %s > %s' % (tdir,'d0',testfull))
  outlines=flines(testfull,normlines,1,1)
 ################################### func fquerydb end ############################################
-################################### func fquerydbn ############################################
-def fquerydbn():
- testf='fquerydbn'
+################################### func fquerydbs ############################################
+def fquerydbs():
+ testf='fquerydbs'
  normlines=5
  testfull='%s/%s' % (funcout,testf)
- testn="functional querydbn"
+ testn="functional querydbs"
  cleanstart(testn,1)
- os.system('%s/runquerydbn %s %s > %s' % (tdir,'gt/d0','2',testfull))
+ os.system('%s/runquerydbs %s %s > %s' % (tdir,'gt/d0','2',testfull))
  outlines=flines(testfull,normlines,1,1)
-################################### func fquerydbn end ############################################
+################################### func fquerydbs end ############################################
 ################################### func fgroupfilespacehog ############################################
 def fgroupfilespacehog():
  testf='fgroupfilespacehog'
@@ -1015,7 +1015,7 @@ def runallc():
  cflatloaddfw()
  cflatloadfinddfw()
  cflatloadbfwi()
- cbfqbftiquerydbn()
+ cbfqbftiquerydbs()
  cbfwiinsrc()
  cbfwrp2dbfullinsrc()
  cbfwrdp2dbincrinsrc()
@@ -1028,7 +1028,7 @@ def runallf():
  fdfw()
  fquerydb()
  fbfwreaddirplus2db()
- fquerydbn()
+ fquerydbs()
  fgroupfilespacehog()
  fgroupfilespacehogusesummary()
  fuserfilespacehog()
@@ -1053,7 +1053,7 @@ def usage():
  print "cflatloaddfw                      - correctness flat load using bfwi -u from dfw"
  print "cflatloadfinddfw                  - correctness flat load using bfwi -u from find dfw"
  print "cflatloadbfwi                     - correctness flat load using bfwi -u from bfwi"
- print "cbfqbftiquerydbn                  - correctness bfq and bfti and querydnb"
+ print "cbfqbftiquerydbs                  - correctness bfq and bfti and querydnb"
  print "cbfwiinsrc                        - correctness bfwi putting index in src tree"
  print "cbfwrp2dbfullinsrc                - correctness bfwreaddirplus2db full gufi tree build in src tree"
  print "cbfwrdp2dbincrinsrc               - correctness bfwreaddirplus2db incr gufi tree update in src tree"
@@ -1063,7 +1063,7 @@ def usage():
  print "fdfw                              - functional dfw"
  print "fquerydb                          - functional querydb"
  print "freaddirplus2db                   - functional readdirplus2db"
- print "fquerydbn                         - functional querydbn"
+ print "fquerydbs                         - functional querydbs"
  print "fgroupfilespacehog                - functional groupfilespacehog"
  print "fgroupfilespacehogusesummary      - functional groupfilespacehogusesummary"
  print "fuserfilespacehog                 - functional userfilespacehog"
@@ -1123,8 +1123,8 @@ if len(sys.argv) > 1:
   cflatloadbfwi()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
   exit(0)
- elif (sys.argv[1] == 'cbfqbftiquerydbn'):
-  cbfqbftiquerydbn()
+ elif (sys.argv[1] == 'cbfqbftiquerydbs'):
+  cbfqbftiquerydbs()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
   exit(0)
  elif (sys.argv[1] == 'cbfwiinsrc'):
@@ -1169,9 +1169,9 @@ if len(sys.argv) > 1:
   fbfwreaddirplus2db()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
   exit(0)
- elif (sys.argv[1] == 'fquerydbn'):
+ elif (sys.argv[1] == 'fquerydbs'):
   os.system('mkdir %s' % (funcout))
-  fquerydbn()
+  fquerydbs()
   print "+_+_+_+_+_+_+_+_+_ end test %s +_+_+_+_+_+_+_+_+" % (sys.argv[1])
   exit(0)
  elif (sys.argv[1] == 'fgroupfilespacehog'):
