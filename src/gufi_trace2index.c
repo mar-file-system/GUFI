@@ -120,29 +120,29 @@ void row_destroy(struct row * row) {
 #define debug_end(name) timestamp_end(name)
 
 #ifdef CUMULATIVE_TIMES
-size_t total_handle_args      = 0;
-size_t total_memset_work      = 0;
-size_t total_dir_linetowork   = 0;
-size_t total_dupdir           = 0;
-size_t total_copy_template    = 0;
-size_t total_opendb           = 0;
-size_t total_zero_summary     = 0;
-size_t total_insertdbprep     = 0;
-size_t total_startdb          = 0;
-size_t total_fseek            = 0;
-size_t total_read_entries     = 0;
-size_t total_getline          = 0;
-size_t total_memset_row       = 0;
-size_t total_entry_linetowork = 0;
-size_t total_free             = 0;
-size_t total_sumit            = 0;
-size_t total_insertdbgo       = 0;
-size_t total_stopdb           = 0;
-size_t total_insertdbfin      = 0;
-size_t total_insertsumdb      = 0;
-size_t total_closedb          = 0;
-size_t total_row_destroy      = 0;
-size_t total_files            = 0;
+uint64_t total_handle_args      = 0;
+uint64_t total_memset_work      = 0;
+uint64_t total_dir_linetowork   = 0;
+uint64_t total_dupdir           = 0;
+uint64_t total_copy_template    = 0;
+uint64_t total_opendb           = 0;
+uint64_t total_zero_summary     = 0;
+uint64_t total_insertdbprep     = 0;
+uint64_t total_startdb          = 0;
+uint64_t total_fseek            = 0;
+uint64_t total_read_entries     = 0;
+uint64_t total_getline          = 0;
+uint64_t total_memset_row       = 0;
+uint64_t total_entry_linetowork = 0;
+uint64_t total_free             = 0;
+uint64_t total_sumit            = 0;
+uint64_t total_insertdbgo       = 0;
+uint64_t total_stopdb           = 0;
+uint64_t total_insertdbfin      = 0;
+uint64_t total_insertsumdb      = 0;
+uint64_t total_closedb          = 0;
+uint64_t total_row_destroy      = 0;
+uint64_t total_files            = 0;
 #endif
 
 #else
@@ -154,29 +154,29 @@ size_t total_files            = 0;
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
-    size_t thread_handle_args      = 0;
-    size_t thread_memset_work      = 0;
-    size_t thread_dir_linetowork   = 0;
-    size_t thread_dupdir           = 0;
-    size_t thread_copy_template    = 0;
-    size_t thread_opendb           = 0;
-    size_t thread_zero_summary     = 0;
-    size_t thread_insertdbprep     = 0;
-    size_t thread_startdb          = 0;
-    size_t thread_fseek            = 0;
-    size_t thread_read_entries     = 0;
-    size_t thread_getline          = 0;
-    size_t thread_memset_row       = 0;
-    size_t thread_entry_linetowork = 0;
-    size_t thread_free             = 0;
-    size_t thread_sumit            = 0;
-    size_t thread_insertdbgo       = 0;
-    size_t thread_stopdb           = 0;
-    size_t thread_insertdbfin      = 0;
-    size_t thread_insertsumdb      = 0;
-    size_t thread_closedb          = 0;
-    size_t thread_row_destroy      = 0;
-    size_t thread_files = 0;
+    uint64_t thread_handle_args      = 0;
+    uint64_t thread_memset_work      = 0;
+    uint64_t thread_dir_linetowork   = 0;
+    uint64_t thread_dupdir           = 0;
+    uint64_t thread_copy_template    = 0;
+    uint64_t thread_opendb           = 0;
+    uint64_t thread_zero_summary     = 0;
+    uint64_t thread_insertdbprep     = 0;
+    uint64_t thread_startdb          = 0;
+    uint64_t thread_fseek            = 0;
+    uint64_t thread_read_entries     = 0;
+    uint64_t thread_getline          = 0;
+    uint64_t thread_memset_row       = 0;
+    uint64_t thread_entry_linetowork = 0;
+    uint64_t thread_free             = 0;
+    uint64_t thread_sumit            = 0;
+    uint64_t thread_insertdbgo       = 0;
+    uint64_t thread_stopdb           = 0;
+    uint64_t thread_insertdbfin      = 0;
+    uint64_t thread_insertsumdb      = 0;
+    uint64_t thread_closedb          = 0;
+    uint64_t thread_row_destroy      = 0;
+    uint64_t thread_files = 0;
     #endif
 
     struct start_end print_timestamps;
@@ -323,7 +323,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             sumit(&summary,&row);
             debug_end(sumit_call);
 
-            /* dont't record pinode */
+            /* don't record pinode */
             row.pinode = 0;
 
             /* add row to bulk insert */
@@ -413,7 +413,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         print_timer(&debug_output_buffers, id, buf, size, "startdb",      &startdb_call);
         print_timer(&debug_output_buffers, id, buf, size, "fseek",        &fseek_call);
         print_timer(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
-        print_timer(&debug_output_buffers, id, buf, size, "read_entries", &read_entries);
         print_timer(&debug_output_buffers, id, buf, size, "stopdb",       &stopdb_call);
         print_timer(&debug_output_buffers, id, buf, size, "insertdbfin",  &insertdbfin_call);
         print_timer(&debug_output_buffers, id, buf, size, "insertsumdb",  &insertsumdb_call);
@@ -431,7 +430,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         thread_insertdbfin  += elapsed(&insertdbfin_call);
         thread_insertsumdb  += elapsed(&insertsumdb_call);
         thread_closedb      += elapsed(&closedb_call);
-        thread_files        += row_count;
+        thread_files        += w->entries;
         #endif
 
         #ifdef PER_THREAD_STATS
@@ -622,7 +621,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
     pthread_mutex_lock(&print_mutex);
-    fprintf(stdout, "Scout finished in %.2Lf seconds\n", elapsed(&scouting));
+    fprintf(stdout, "Scout finished in %.2Lf seconds\n", sec(elapsed(&scouting)));
     fprintf(stdout, "Files: %zu\n", file_count);
     fprintf(stdout, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
     fprintf(stdout, "Total: %zu\n", file_count + dir_count);
@@ -738,34 +737,34 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &main_call.end);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    fprintf(stderr, "Handle Args:               %.2Lfs\n", ((long double) total_handle_args) / 1e9L);
-    fprintf(stderr, "memset(work):              %.2Lfs\n", ((long double) total_memset_work) / 1e9L);
-    fprintf(stderr, "Parse directory line:      %.2Lfs\n", ((long double) total_dir_linetowork) / 1e9L);
-    fprintf(stderr, "dupdir:                    %.2Lfs\n", ((long double) total_dupdir) / 1e9L);
-    fprintf(stderr, "copy_template:             %.2Lfs\n", ((long double) total_copy_template) / 1e9L);
-    fprintf(stderr, "opendb:                    %.2Lfs\n", ((long double) total_opendb) / 1e9L);
-    fprintf(stderr, "Zero summary struct:       %.2Lfs\n", ((long double) total_zero_summary) / 1e9L);
-    fprintf(stderr, "insertdbprep:              %.2Lfs\n", ((long double) total_insertdbprep) / 1e9L);
-    fprintf(stderr, "startdb:                   %.2Lfs\n", ((long double) total_startdb) / 1e9L);
-    fprintf(stderr, "fseek:                     %.2Lfs\n", ((long double) total_fseek) / 1e9L);
-    fprintf(stderr, "Read entries:              %.2Lfs\n", ((long double) total_read_entries) / 1e9L);
-    fprintf(stderr, "    getline:               %.2Lfs\n", ((long double) total_getline) / 1e9L);
-    fprintf(stderr, "    memset(entry struct):  %.2Lfs\n", ((long double) total_memset_row) / 1e9L);
-    fprintf(stderr, "    Parse entry line:      %.2Lfs\n", ((long double) total_entry_linetowork) / 1e9L);
-    fprintf(stderr, "    free(entry line):      %.2Lfs\n", ((long double) total_free) / 1e9L);
-    fprintf(stderr, "    sumit:                 %.2Lfs\n", ((long double) total_sumit) / 1e9L);
-    fprintf(stderr, "    insertdbgo:            %.2Lfs\n", ((long double) total_insertdbgo) / 1e9L);
-    fprintf(stderr, "stopdb:                    %.2Lfs\n", ((long double) total_stopdb) / 1e9L);
-    fprintf(stderr, "insertdbfin:               %.2Lfs\n", ((long double) total_insertdbfin) / 1e9L);
-    fprintf(stderr, "insertsumdb:               %.2Lfs\n", ((long double) total_insertsumdb) / 1e9L);
-    fprintf(stderr, "closedb:                   %.2Lfs\n", ((long double) total_closedb) / 1e9L);
-    fprintf(stderr, "cleanup:                   %.2Lfs\n", ((long double) total_row_destroy) / 1e9L);
+    fprintf(stderr, "Handle Args:               %.2Lfs\n", sec(total_handle_args));
+    fprintf(stderr, "memset(work):              %.2Lfs\n", sec(total_memset_work));
+    fprintf(stderr, "Parse directory line:      %.2Lfs\n", sec(total_dir_linetowork));
+    fprintf(stderr, "dupdir:                    %.2Lfs\n", sec(total_dupdir));
+    fprintf(stderr, "copy_template:             %.2Lfs\n", sec(total_copy_template));
+    fprintf(stderr, "opendb:                    %.2Lfs\n", sec(total_opendb));
+    fprintf(stderr, "Zero summary struct:       %.2Lfs\n", sec(total_zero_summary));
+    fprintf(stderr, "insertdbprep:              %.2Lfs\n", sec(total_insertdbprep));
+    fprintf(stderr, "startdb:                   %.2Lfs\n", sec(total_startdb));
+    fprintf(stderr, "fseek:                     %.2Lfs\n", sec(total_fseek));
+    fprintf(stderr, "Read entries:              %.2Lfs\n", sec(total_read_entries));
+    fprintf(stderr, "    getline:               %.2Lfs\n", sec(total_getline));
+    fprintf(stderr, "    memset(entry struct):  %.2Lfs\n", sec(total_memset_row));
+    fprintf(stderr, "    Parse entry line:      %.2Lfs\n", sec(total_entry_linetowork));
+    fprintf(stderr, "    free(entry line):      %.2Lfs\n", sec(total_free));
+    fprintf(stderr, "    sumit:                 %.2Lfs\n", sec(total_sumit));
+    fprintf(stderr, "    insertdbgo:            %.2Lfs\n", sec(total_insertdbgo));
+    fprintf(stderr, "stopdb:                    %.2Lfs\n", sec(total_stopdb));
+    fprintf(stderr, "insertdbfin:               %.2Lfs\n", sec(total_insertdbfin));
+    fprintf(stderr, "insertsumdb:               %.2Lfs\n", sec(total_insertsumdb));
+    fprintf(stderr, "closedb:                   %.2Lfs\n", sec(total_closedb));
+    fprintf(stderr, "cleanup:                   %.2Lfs\n", sec(total_row_destroy));
     fprintf(stderr, "\n");
     fprintf(stderr, "Directories created:       %zu\n", completed);
     fprintf(stderr, "Files inserted:            %zu\n", total_files);
     #endif
 
-    fprintf(stderr, "main completed %.2Lf seconds\n", elapsed(&main_call));
+    fprintf(stderr, "main completed %.2Lf seconds\n", sec(elapsed(&main_call)));
 
     return 0;
 }
