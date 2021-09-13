@@ -97,7 +97,7 @@ struct start_end * buffer_get(struct sll * timers) {
     return timer;
 }
 
-/* descend timer types*/
+/* descend timer types */
 enum {
     dt_within_descend = 0,
     dt_check_args,
@@ -158,43 +158,43 @@ void print_timers(struct OutputBuffers * obufs, const size_t id, char * buf, con
 #endif
 
 #ifdef CUMULATIVE_TIMES
-long double total_opendir_time = 0;
-long double total_open_time = 0;
-long double total_sqlite3_open_time = 0;
-long double total_set_pragmas_time = 0;
-long double total_load_extension_time = 0;
-long double total_addqueryfuncs_time = 0;
-long double total_descend_time = 0;
-long double total_check_args_time = 0;
-long double total_level_time = 0;
-long double total_level_branch_time = 0;
-long double total_while_branch_time = 0;
-long double total_readdir_time = 0;
-long double total_readdir_branch_time = 0;
-long double total_strncmp_time = 0;
-long double total_strncmp_branch_time = 0;
-long double total_snprintf_time = 0;
-long double total_lstat_time = 0;
-long double total_isdir_time = 0;
-long double total_isdir_branch_time = 0;
-long double total_access_time = 0;
-long double total_set_time = 0;
-long double total_clone_time = 0;
-long double total_pushdir_time = 0;
-long double total_attach_time = 0;
-long double total_sqltsumcheck_time = 0;
-long double total_sqltsum_time = 0;
-long double total_sqlsum_time = 0;
-long double total_sqlent_time = 0;
-long double total_detach_time = 0;
-long double total_close_time = 0;
-long double total_closedir_time = 0;
-long double total_utime_time = 0;
-long double total_free_work_time = 0;
-long double total_output_timestamps_time = 0;
+uint64_t total_opendir_time = 0;
+uint64_t total_open_time = 0;
+uint64_t total_sqlite3_open_time = 0;
+uint64_t total_set_pragmas_time = 0;
+uint64_t total_load_extension_time = 0;
+uint64_t total_addqueryfuncs_time = 0;
+uint64_t total_descend_time = 0;
+uint64_t total_check_args_time = 0;
+uint64_t total_level_time = 0;
+uint64_t total_level_branch_time = 0;
+uint64_t total_while_branch_time = 0;
+uint64_t total_readdir_time = 0;
+uint64_t total_readdir_branch_time = 0;
+uint64_t total_strncmp_time = 0;
+uint64_t total_strncmp_branch_time = 0;
+uint64_t total_snprintf_time = 0;
+uint64_t total_lstat_time = 0;
+uint64_t total_isdir_time = 0;
+uint64_t total_isdir_branch_time = 0;
+uint64_t total_access_time = 0;
+uint64_t total_set_time = 0;
+uint64_t total_clone_time = 0;
+uint64_t total_pushdir_time = 0;
+uint64_t total_attach_time = 0;
+uint64_t total_sqltsumcheck_time = 0;
+uint64_t total_sqltsum_time = 0;
+uint64_t total_sqlsum_time = 0;
+uint64_t total_sqlent_time = 0;
+uint64_t total_detach_time = 0;
+uint64_t total_close_time = 0;
+uint64_t total_closedir_time = 0;
+uint64_t total_utime_time = 0;
+uint64_t total_free_work_time = 0;
+uint64_t total_output_timestamps_time = 0;
 
-long double buffer_sum(struct sll * timers) {
-    long double sum = 0;
+uint64_t buffer_sum(struct sll * timers) {
+    uint64_t sum = 0;
     sll_loop(timers, node) {
         struct start_end * timer = (struct start_end *) sll_node_data(node);
         sum += elapsed(timer);
@@ -203,7 +203,7 @@ long double buffer_sum(struct sll * timers) {
     return sum;
 }
 
-#define print_cumulative(normal_fmt, terse_fmt, ...)        \
+#define print_stats(normal_fmt, terse_fmt, ...)        \
     if (in.terse) {                                         \
         fprintf(stderr, terse_fmt " ", ##__VA_ARGS__);      \
     }                                                       \
@@ -935,7 +935,7 @@ int main(int argc, char *argv[])
 
     #ifdef CUMULATIVE_TIMES
     debug_end(setup_globals);
-    const long double setup_globals_time = elapsed(&setup_globals);
+    const uint64_t setup_globals_time = elapsed(&setup_globals);
     #endif
     #endif
 
@@ -964,11 +964,11 @@ int main(int argc, char *argv[])
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     debug_end(setup_aggregate);
-    const long double setup_aggregate_time = elapsed(&setup_aggregate);
+    const uint64_t setup_aggregate_time = elapsed(&setup_aggregate);
     #endif
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-    long double total_time = 0;
+    uint64_t total_time = 0;
 
     debug_define_start(work);
     #endif
@@ -1033,13 +1033,13 @@ int main(int argc, char *argv[])
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     debug_end(work);
 
-    const long double work_time = elapsed(&work);
+    const uint64_t work_time = elapsed(&work);
     total_time += work_time;
     #endif
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-    long double aggregate_time = 0;
-    long double output_time = 0;
+    uint64_t aggregate_time = 0;
+    uint64_t output_time = 0;
     #endif
 
     int rc = 0;
@@ -1109,8 +1109,10 @@ int main(int argc, char *argv[])
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     debug_end(cleanup_globals);
-    const long double cleanup_globals_time = elapsed(&cleanup_globals);
+    const uint64_t cleanup_globals_time = elapsed(&cleanup_globals);
     total_time += cleanup_globals_time;
+
+    const long double total_time_sec = sec(total_time);
     #endif
 
     #ifdef DEBUG
@@ -1131,53 +1133,53 @@ int main(int argc, char *argv[])
 
     const size_t query_count = thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len);
 
-    print_cumulative("set up globals:                              %.2Lfs", "%Lf", setup_globals_time);
-    print_cumulative("set up intermediate databases:               %.2Lfs", "%Lf", setup_aggregate_time);
-    print_cumulative("thread pool:                                 %.2Lfs", "%Lf", work_time);
-    print_cumulative("     open directories:                       %.2Lfs", "%Lf", total_opendir_time);
-    print_cumulative("     open databases:                         %.2Lfs", "%Lf", total_open_time);
-    print_cumulative("         sqlite3_open_v2:                    %.2Lfs", "%Lf", total_sqlite3_open_time);
-    print_cumulative("         set pragmas:                        %.2Lfs", "%Lf", total_set_pragmas_time);
-    print_cumulative("         load extensions:                    %.2Lfs", "%Lf", total_load_extension_time);
-    print_cumulative("     addqueryfuncs:                          %.2Lfs", "%Lf", total_addqueryfuncs_time);
-    print_cumulative("     descend:                                %.2Lfs", "%Lf", total_descend_time);
-    print_cumulative("         check args:                         %.2Lfs", "%Lf", total_check_args_time);
-    print_cumulative("         check level:                        %.2Lfs", "%Lf", total_level_time);
-    print_cumulative("         check level <= max_level branch:    %.2Lfs", "%Lf", total_level_branch_time);
-    print_cumulative("         while true:                         %.2Lfs", "%Lf", total_while_branch_time);
-    print_cumulative("             readdir:                        %.2Lfs", "%Lf", total_readdir_time);
-    print_cumulative("             readdir != null branch:         %.2Lfs", "%Lf", total_readdir_branch_time);
-    print_cumulative("             strncmp:                        %.2Lfs", "%Lf", total_strncmp_time);
-    print_cumulative("             strncmp != . or ..:             %.2Lfs", "%Lf", total_strncmp_branch_time);
-    print_cumulative("             snprintf:                       %.2Lfs", "%Lf", total_snprintf_time);
-    print_cumulative("             lstat:                          %.2Lfs", "%Lf", total_lstat_time);
-    print_cumulative("             isdir:                          %.2Lfs", "%Lf", total_isdir_time);
-    print_cumulative("             isdir branch:                   %.2Lfs", "%Lf", total_isdir_branch_time);
-    print_cumulative("             access:                         %.2Lfs", "%Lf", total_access_time);
-    print_cumulative("             set:                            %.2Lfs", "%Lf", total_set_time);
-    print_cumulative("             clone:                          %.2Lfs", "%Lf", total_clone_time);
-    print_cumulative("             pushdir:                        %.2Lfs", "%Lf", total_pushdir_time);
-    print_cumulative("     attach intermediate databases:          %.2Lfs", "%Lf", total_attach_time);
-    print_cumulative("     check if treesummary table exists       %.2Lfs", "%Lf", total_sqltsumcheck_time);
-    print_cumulative("     sqltsum                                 %.2Lfs", "%Lf", total_sqltsum_time);
-    print_cumulative("     sqlsum                                  %.2Lfs", "%Lf", total_sqlsum_time);
-    print_cumulative("     sqlent                                  %.2Lfs", "%Lf", total_sqlent_time);
-    print_cumulative("     detach intermediate databases:          %.2Lfs", "%Lf", total_detach_time);
-    print_cumulative("     close databases:                        %.2Lfs", "%Lf", total_close_time);
-    print_cumulative("     close directories:                      %.2Lfs", "%Lf", total_closedir_time);
-    print_cumulative("     restore timestamps:                     %.2Lfs", "%Lf", total_utime_time);
-    print_cumulative("     free work:                              %.2Lfs", "%Lf", total_free_work_time);
-    print_cumulative("     output timestamps:                      %.2Lfs", "%Lf", total_output_timestamps_time);
-    print_cumulative("aggregate into final databases:              %.2Lfs", "%Lf", aggregate_time);
-    print_cumulative("print aggregated results:                    %.2Lfs", "%Lf", output_time);
-    print_cumulative("clean up globals:                            %.2Lfs", "%Lf", cleanup_globals_time);
+    print_stats("set up globals:                              %.2Lfs", "%Lf", sec(setup_globals_time));
+    print_stats("set up intermediate databases:               %.2Lfs", "%Lf", sec(setup_aggregate_time));
+    print_stats("thread pool:                                 %.2Lfs", "%Lf", sec(work_time));
+    print_stats("     open directories:                       %.2Lfs", "%Lf", sec(total_opendir_time));
+    print_stats("     open databases:                         %.2Lfs", "%Lf", sec(total_open_time));
+    print_stats("         sqlite3_open_v2:                    %.2Lfs", "%Lf", sec(total_sqlite3_open_time));
+    print_stats("         set pragmas:                        %.2Lfs", "%Lf", sec(total_set_pragmas_time));
+    print_stats("         load extensions:                    %.2Lfs", "%Lf", sec(total_load_extension_time));
+    print_stats("     addqueryfuncs:                          %.2Lfs", "%Lf", sec(total_addqueryfuncs_time));
+    print_stats("     descend:                                %.2Lfs", "%Lf", sec(total_descend_time));
+    print_stats("         check args:                         %.2Lfs", "%Lf", sec(total_check_args_time));
+    print_stats("         check level:                        %.2Lfs", "%Lf", sec(total_level_time));
+    print_stats("         check level <= max_level branch:    %.2Lfs", "%Lf", sec(total_level_branch_time));
+    print_stats("         while true:                         %.2Lfs", "%Lf", sec(total_while_branch_time));
+    print_stats("             readdir:                        %.2Lfs", "%Lf", sec(total_readdir_time));
+    print_stats("             readdir != null branch:         %.2Lfs", "%Lf", sec(total_readdir_branch_time));
+    print_stats("             strncmp:                        %.2Lfs", "%Lf", sec(total_strncmp_time));
+    print_stats("             strncmp != . or ..:             %.2Lfs", "%Lf", sec(total_strncmp_branch_time));
+    print_stats("             snprintf:                       %.2Lfs", "%Lf", sec(total_snprintf_time));
+    print_stats("             lstat:                          %.2Lfs", "%Lf", sec(total_lstat_time));
+    print_stats("             isdir:                          %.2Lfs", "%Lf", sec(total_isdir_time));
+    print_stats("             isdir branch:                   %.2Lfs", "%Lf", sec(total_isdir_branch_time));
+    print_stats("             access:                         %.2Lfs", "%Lf", sec(total_access_time));
+    print_stats("             set:                            %.2Lfs", "%Lf", sec(total_set_time));
+    print_stats("             clone:                          %.2Lfs", "%Lf", sec(total_clone_time));
+    print_stats("             pushdir:                        %.2Lfs", "%Lf", sec(total_pushdir_time));
+    print_stats("     attach intermediate databases:          %.2Lfs", "%Lf", sec(total_attach_time));
+    print_stats("     check if treesummary table exists       %.2Lfs", "%Lf", sec(total_sqltsumcheck_time));
+    print_stats("     sqltsum                                 %.2Lfs", "%Lf", sec(total_sqltsum_time));
+    print_stats("     sqlsum                                  %.2Lfs", "%Lf", sec(total_sqlsum_time));
+    print_stats("     sqlent                                  %.2Lfs", "%Lf", sec(total_sqlent_time));
+    print_stats("     detach intermediate databases:          %.2Lfs", "%Lf", sec(total_detach_time));
+    print_stats("     close databases:                        %.2Lfs", "%Lf", sec(total_close_time));
+    print_stats("     close directories:                      %.2Lfs", "%Lf", sec(total_closedir_time));
+    print_stats("     restore timestamps:                     %.2Lfs", "%Lf", sec(total_utime_time));
+    print_stats("     free work:                              %.2Lfs", "%Lf", sec(total_free_work_time));
+    print_stats("     output timestamps:                      %.2Lfs", "%Lf", sec(total_output_timestamps_time));
+    print_stats("aggregate into final databases:              %.2Lfs", "%Lf", sec(aggregate_time));
+    print_stats("print aggregated results:                    %.2Lfs", "%Lf", sec(output_time));
+    print_stats("clean up globals:                            %.2Lfs", "%Lf", sec(cleanup_globals_time));
     if (!in.terse) {
         fprintf(stderr, "\n");
     }
-    print_cumulative("Rows returned:                               %zu",    "%zu", rows);
-    print_cumulative("Queries performed:                           %zu",    "%zu", query_count);
-    print_cumulative("Real time:                                   %.2Lfs", "%Lf", total_time);
-    print_cumulative("Total Thread Time (not including main):      %.2Lfs", "%Lf", thread_time);
+    print_stats("Rows returned:                               %zu",    "%zu", rows);
+    print_stats("Queries performed:                           %zu",    "%zu", query_count);
+    print_stats("Real time:                                   %.2Lfs", "%Lf", total_time_sec);
+    print_stats("Total Thread Time (not including main):      %.2Lfs", "%Lf", sec(thread_time));
     if (in.terse) {
         fprintf(stderr, "\n");
     }
@@ -1186,9 +1188,9 @@ int main(int argc, char *argv[])
     #if BENCHMARK
     fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
     fprintf(stderr, "Total Files:           %zu\n",    rows);
-    fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time);
+    fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time_sec);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time_sec);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time_sec);
     #endif
 
     return rc;
