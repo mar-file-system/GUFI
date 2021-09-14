@@ -301,7 +301,7 @@ sqlite3 * opendb(const char * name, const OpenMode mode, const int setpragmas, c
     }
     #endif
 
-    if (modifydb) {
+    if ((mode != RDONLY) && modifydb) {
         if (modifydb(name, db, modifydb_args) != 0) {
             #ifdef DEBUG
             if (modifydb_end) {
