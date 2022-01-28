@@ -27,6 +27,8 @@ See other components of MarFS at:
 
 ## Quick Start
 ```bash
+git clone https://github.com/mar-file-system/GUFI.git
+cd GUFI
 mkdir build
 cd build
 cmake ..
