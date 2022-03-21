@@ -1,7 +1,7 @@
-diff --git a/sqlite3.c b/sqlite3.c
-index b43c73d..558ae1a 100644
---- a/sqlite3.c
-+++ b/sqlite3.c
+diff --git a/a/sqlite3.c b/b/sqlite3.c
+index 4729f45..c7d76ea 100644
+--- a/a/sqlite3.c
++++ b/b/sqlite3.c
 @@ -32356,7 +32356,7 @@ SQLITE_PRIVATE const char *sqlite3OpcodeName(int i){
  /*
  ** Maximum supported path-length.
@@ -11,3 +11,154 @@ index b43c73d..558ae1a 100644
  
  /*
  ** Maximum supported symbolic links
+@@ -32450,6 +32450,7 @@ struct unixFile {
+   */
+   char aPadding[32];
+ #endif
++  int GUFI_open;
+ };
+ 
+ /* This variable holds the process id (pid) from when the xRandomness()
+@@ -33848,13 +33849,20 @@ static int fileHasMoved(unixFile *pFile){
+ **
+ ** Issue sqlite3_log(SQLITE_WARNING,...) messages if anything is not right.
+ */
++/*
++** For GUFI usecase we satisfy all the required conditions (1,2,3) mentioned 
++** above. We ALWAYS pass actual database file to sqlite functions. This helps 
++** us to avoid a Fstat() function call.
++**/
+ static void verifyDbFile(unixFile *pFile){
+   struct stat buf;
+   int rc;
+ 
+   /* These verifications occurs for the main database only */
+   if( pFile->ctrlFlags & UNIXFILE_NOLOCK ) return;
+-
++  
++  rc = SQLITE_OK; //GUFI modification
++/*
+   rc = osFstat(pFile->h, &buf);
+   if( rc!=0 ){
+     sqlite3_log(SQLITE_WARNING, "cannot fstat db file %s", pFile->zPath);
+@@ -33872,6 +33880,7 @@ static void verifyDbFile(unixFile *pFile){
+     sqlite3_log(SQLITE_WARNING, "file renamed while open: %s", pFile->zPath);
+     return;
+   }
++*/
+ }
+ 
+ 
+@@ -35656,6 +35665,15 @@ static int nfsUnlock(sqlite3_file *id, int eFileLock){
+ ** To avoid stomping the errno value on a failed read the lastErrno value
+ ** is set before returning.
+ */
++/*
++** For our use case in GUFI we always read from begining of the database. 
++** A LSEEK() call is performed to move the userspace offset. We can avoid 
++** this call by always setting the newOffset value to be 0. Once the offset 
++** is obtained a READ() call is performed to check if the amount read is equall 
++** to cnt. We can avoid this call by setting READ value to cnt. 
++** to check if the amount read is equall to cnt. We can avoid this call by 
++** setting READ value to cnt. 
++**/
+ static int seekAndRead(unixFile *id, sqlite3_int64 offset, void *pBuf, int cnt){
+   int got;
+   int prior = 0;
+@@ -35673,13 +35691,22 @@ static int seekAndRead(unixFile *id, sqlite3_int64 offset, void *pBuf, int cnt){
+     got = osPread64(id->h, pBuf, cnt, offset);
+     SimulateIOError( got = -1 );
+ #else
+-    newOffset = lseek(id->h, offset, SEEK_SET);
++    if(id->GUFI_open == 0){
++      newOffset = 0 ;
++    } else {
++      newOffset = lseek(id->h, offset, SEEK_SET);
++    }
+     SimulateIOError( newOffset = -1 );
+     if( newOffset<0 ){
+       storeLastErrno((unixFile*)id, errno);
+       return -1;
+     }
+-    got = osRead(id->h, pBuf, cnt);
++    if(id->GUFI_open == 0){
++      got = cnt;
++    } else {
++      got = osRead(id->h, pBuf, cnt);
++    }
++    id->GUFI_open = 1;
+ #endif
+     if( got==cnt ) break;
+     if( got<0 ){
+@@ -38152,7 +38179,13 @@ static UnixUnusedFd *findReusableFd(const char *zPath, int flags){
+   **
+   ** Even if a subsequent open() call does succeed, the consequences of
+   ** not searching for a reusable file descriptor are not dire.  */
+-  if( inodeList!=0 && 0==osStat(zPath, &sStat) ){
++  /*
++  ** Following above comment we just avoid osStat call. We dont need this call
++  ** as In GUFI any DB that is opened by a thread is closed by the same thread. 
++  ** No thread accesses any other thread's DB.
++  */
++  //if( inodeList!=0 && 0==osStat(zPath, &sStat) ){ // GUFI open modification
++    if( inodeList!=0 ){ 
+     unixInodeInfo *pInode;
+ 
+     pInode = inodeList;
+@@ -38258,7 +38291,8 @@ static int findCreateFileMode(
+     memcpy(zDb, zPath, nDb);
+     zDb[nDb] = '\0';
+ 
+-    rc = getFileMode(zDb, pMode, pUid, pGid);
++    //rc = getFileMode(zDb, pMode, pUid, pGid); //GUFI modification
++    rc = SQLITE_OK; 
+   }else if( flags & SQLITE_OPEN_DELETEONCLOSE ){
+     *pMode = 0600;
+   }else if( flags & SQLITE_OPEN_URI ){
+@@ -38310,6 +38344,7 @@ static int unixOpen(
+   int noLock;                    /* True to omit locking primitives */
+   int rc = SQLITE_OK;            /* Function Return Code */
+   int ctrlFlags = 0;             /* UNIXFILE_* flags */
++  ((unixFile *)pFile)->GUFI_open = 0; /* GUFI open optimization*/
+ 
+   int isExclusive  = (flags & SQLITE_OPEN_EXCLUSIVE);
+   int isDelete     = (flags & SQLITE_OPEN_DELETEONCLOSE);
+@@ -38615,6 +38650,14 @@ static int unixAccess(
+   int flags,              /* What do we want to learn about the zPath file? */
+   int *pResOut            /* Write result boolean here */
+ ){
++  /* GUFI currently doesn't support WAL and Journaling. If the file string ends 
++  ** with "-wal" or "-journal", skip them. */
++  if(!strcmp(strrchr(zPath, '\0') - 4, "-wal") || 
++  	!strcmp(strrchr(zPath, '\0') - 8, "-journal")){
++     *pResOut = 0;
++     return SQLITE_OK;
++  }
++  
+   UNUSED_PARAMETER(NotUsed);
+   SimulateIOError( return SQLITE_IOERR_ACCESS; );
+   assert( pResOut!=0 );
+@@ -38668,12 +38711,23 @@ static int mkFullPathname(
+ ** (in this case, MAX_PATHNAME bytes). The full-path is written to
+ ** this buffer before returning.
+ */
++/*
++** For GUFI we can avoid this function execution  by always passing the actual 
++** full path file name instead of realtive path. This modification will also 
++** prevent a Lstat() call, which is done to identify if given file path is 
++** symbolic link. 
++*/
+ static int unixFullPathname(
+   sqlite3_vfs *pVfs,            /* Pointer to vfs object */
+   const char *zPath,            /* Possibly relative input path */
+   int nOut,                     /* Size of output buffer in bytes */
+   char *zOut                    /* Output buffer */
+ ){
++  int GUFIFullPath = 1;
++  if(GUFIFullPath){
++    strcpy(zOut,zPath);
++    return SQLITE_OK;
++  }
+ #if !defined(HAVE_READLINK) || !defined(HAVE_LSTAT)
+   return mkFullPathname(zPath, zOut, nOut);
+ #else

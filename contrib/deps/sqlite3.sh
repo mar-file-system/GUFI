@@ -16,7 +16,7 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
         fi
 
         tar -xf "${sqlite3_tarball}" -C "${BUILD_DIR}"
-        patch -p1 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3270200.patch"
+        patch -p2 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3270200.patch"
     fi
 
     cd "${sqlite3_build}"
