@@ -135,4 +135,12 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
 
 int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore);
 
+int xattrprep(const char *xattrpath, sqlite3 *db,
+              const char *vn, const size_t vn_len,
+              const char *tn, const size_t tn_len
+              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+              ,size_t *query_count
+              #endif
+              );
+
 #endif

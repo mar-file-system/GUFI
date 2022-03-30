@@ -1077,3 +1077,93 @@ int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
 
     return 0;
 }
+
+int xattrprep(const char *xattrpath,
+              sqlite3    *db,
+              const char *vn, const size_t vn_len,
+              const char *tn, const size_t tn_len
+              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+              ,size_t *query_count
+              #endif
+              )
+{
+    static const char XATTR_COLS[] = " SELECT exinode, exattrs FROM ";
+    static const size_t XATTR_COLS_LEN = sizeof(XATTR_COLS) - 1;
+
+    int           rec_count = 0;
+    sqlite3_stmt *res = NULL;
+    const char   *tail = NULL;
+    char          unioncmd[MAXSQL];
+    char         *unioncmdp = unioncmd;
+
+    int error = sqlite3_prepare_v2(db, in.xattr.query, MAXSQL, &res, &tail);
+    if (error != SQLITE_OK) {
+        printf("in xattrprep: SQL error on query: %s path %s xattrq %d err %s\n", in.xattr.query, xattrpath, error, sqlite3_errmsg(db));
+        return -1;
+    }
+
+    if (*tail) {
+        sqlite3_step(res);
+        //sqlite3_finalize(res);
+        sqlite3_reset(res);
+    }
+
+    unioncmdp += SNFORMAT_S(unioncmd, sizeof(unioncmd), 3,
+                            "CREATE TEMP VIEW IF NOT EXISTS ", (size_t) 31,
+                            vn, vn_len,
+                            " AS ", (size_t) 4);
+
+    while (sqlite3_step(res) == SQLITE_ROW) {
+        int ncols = sqlite3_column_count(res);
+        if (ncols != 3) {
+            fprintf(stderr, "in xattrprep: num cols not 3 cols %d\n", ncols);
+            continue;
+        }
+
+        const char *xattrfname  = (const char *) sqlite3_column_text(res,0);
+        /* const char *xattrfinode = (const char *) sqlite3_column_text(res,1); */
+        const char *xattrfdb    = (const char *) sqlite3_column_text(res,2);
+
+        char attcmd[MAXSQL];
+        SNFORMAT_S(attcmd, sizeof(attcmd), 6,
+                   "ATTACH \'", (size_t) 8,
+                   xattrpath, strlen(xattrpath),
+                   "/", (size_t) 1,
+                   xattrfname, strlen(xattrfname),
+                   "\' AS ", (size_t) 5,
+                   xattrfdb, strlen(xattrfdb));
+
+        /* if attach fails, you don't have access to the xattrs - just continue */
+        if (sqlite3_exec(db, attcmd, 0, 0, NULL) == SQLITE_OK) {
+            rec_count++;
+            unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 5,
+                                    XATTR_COLS, XATTR_COLS_LEN,
+                                    xattrfdb, strlen(xattrfdb),
+                                    ".", (size_t) 1,
+                                    tn, tn_len,
+                                    " UNION ", (size_t) 7);
+        }
+
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        (*query_count)++;
+        #endif
+    }
+    sqlite3_finalize(res);
+
+    SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 2,
+               XATTR_COLS, XATTR_COLS_LEN,
+               in.xattr.baseview, in.xattr.baseview_len);
+
+    const int rc = sqlite3_exec(db, unioncmd, 0, 0, NULL);
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    (*query_count)++;
+    #endif
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "create view failed: \"%s\": %s\n", unioncmd, sqlite3_errmsg(db));
+        return -1;
+    }
+
+    return rec_count;
+}

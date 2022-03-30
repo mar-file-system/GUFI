@@ -140,6 +140,14 @@ struct input {
    char name[MAXPATH];
    size_t name_len;
    char nameto[MAXPATH];
+   struct {
+        int    index;              /* read from source filesystem */
+
+        int    use;                /* read from index */
+        char   baseview[MAXPATH];  /* view to read xattrs from */
+        size_t baseview_len;
+        char   query[MAXSQL];      /* query generated using file spec */
+   } xattr;
    char sqltsum[MAXSQL];
    size_t sqltsum_len;
    char sqlsum[MAXSQL];
@@ -153,7 +161,6 @@ struct input {
    int  helped;               /* support parsing of per-app sub-options */
    int  dodelim;
    char delim[2];
-   int  doxattrs;
    int  buildindex;
    int  maxthreads;
    int  writetsum;

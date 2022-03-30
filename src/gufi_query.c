@@ -92,8 +92,8 @@ extern int errno;
 #define AGGREGATE_ATTACH_NAME  "aggregate"
 
 #ifdef DEBUG
-struct start_end * buffer_create(struct sll * timers) {
-    struct start_end * timer = malloc(sizeof(struct start_end));
+struct start_end *buffer_create(struct sll *timers) {
+    struct start_end *timer = malloc(sizeof(struct start_end));
     sll_push(timers, timer);
     return timer;
 }
@@ -121,8 +121,8 @@ enum {
     dt_max
 };
 
-struct sll * descend_timers_init() {
-    struct sll * dt = malloc(dt_max * sizeof(struct sll));
+struct sll *descend_timers_init() {
+    struct sll *dt = malloc(dt_max * sizeof(struct sll));
     for(int i = 0; i < dt_max; i++) {
         sll_init(&dt[i]);
     }
@@ -130,7 +130,7 @@ struct sll * descend_timers_init() {
     return dt;
 }
 
-void descend_timers_destroy(struct sll * dt) {
+void descend_timers_destroy(struct sll *dt) {
     for(int i = 0; i < dt_max; i++) {
         sll_destroy(&dt[i], free);
     }
@@ -140,8 +140,8 @@ void descend_timers_destroy(struct sll * dt) {
 #define buffered_name(name) (dt_##name)
 #define buffered_get(timers, name)  timers[buffered_name(name)]
 
-#define buffered_start(name)                                              \
-    struct start_end * name = buffer_create(&buffered_get(timers, name)); \
+#define buffered_start(name)                                             \
+    struct start_end *name = buffer_create(&buffered_get(timers, name)); \
     timestamp_set_start_raw((*(name)));
 
 #define buffered_end(name) timestamp_set_end_raw((*(name)));
@@ -150,7 +150,7 @@ void descend_timers_destroy(struct sll * dt) {
 
 #define print_descend_timers(obufs, id, name, timers, type)              \
     sll_loop(&buffered_get(timers, type), node) {                        \
-        struct start_end * timestamp = sll_node_data(node);              \
+        struct start_end *timestamp = sll_node_data(node);               \
         print_timer(obufs, id, ts_buf, sizeof(ts_buf), name, timestamp); \
     }
 #else
@@ -164,7 +164,9 @@ uint64_t total_sqlite3_open_time      = 0;
 uint64_t total_set_pragmas_time       = 0;
 uint64_t total_load_extension_time    = 0;
 uint64_t total_create_tables_time     = 0;
+uint64_t total_xattrprep_time         = 0;
 uint64_t total_addqueryfuncs_time     = 0;
+uint64_t total_get_rollupscore_time   = 0;
 uint64_t total_descend_time           = 0;
 uint64_t total_check_args_time        = 0;
 uint64_t total_level_time             = 0;
@@ -194,10 +196,10 @@ uint64_t total_utime_time             = 0;
 uint64_t total_free_work_time         = 0;
 uint64_t total_output_timestamps_time = 0;
 
-uint64_t buffer_sum(struct sll * timers) {
+uint64_t buffer_sum(struct sll *timers) {
     uint64_t sum = 0;
     sll_loop(timers, node) {
-        struct start_end * timer = (struct start_end *) sll_node_data(node);
+        struct start_end *timer = (struct start_end *) sll_node_data(node);
         sum += nsec(timer);
     }
 
@@ -215,7 +217,7 @@ uint64_t buffer_sum(struct sll * timers) {
 #endif
 #else
 struct sll *descend_timers_init() { return NULL; }
-void descend_timers_destroy(struct sll * dt) {}
+void descend_timers_destroy(struct sll *dt) {}
 #define buffered_start(name)
 #define buffered_end(name)
 #endif
@@ -229,7 +231,7 @@ static size_t descend2(struct QPTPool *ctx,
                        QPTPoolFunc_t func,
                        const size_t max_level
                        #ifdef DEBUG
-                       , struct sll * timers
+                       , struct sll *timers
                        #endif
     ) {
     buffered_start(within_descend);
@@ -357,10 +359,10 @@ static size_t descend2(struct QPTPool *ctx,
 
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
-    struct OutputBuffers * output_buffers; /* buffers for printing into before writing to stdout */
-    int id;                                /* thread id */
-    size_t rows;                           /* number of rows returned by the query */
-    /* size_t printed;                        /\* number of records printed by the callback *\/ */
+    struct OutputBuffers *output_buffers; /* buffers for printing into before writing to stdout */
+    int id;                               /* thread id */
+    size_t rows;                          /* number of rows returned by the query */
+    /* size_t printed;                    /\* number of records printed by the callback *\/ */
 };
 
 static int print_callback(void *args, int count, char **data, char **columns) {
@@ -378,8 +380,11 @@ static int print_callback(void *args, int count, char **data, char **columns) {
         size_t *lens = malloc(count * sizeof(size_t));
         size_t row_len = count + 1; /* one delimiter per column + newline */
         for(int i = 0; i < count; i++) {
-            lens[i] = strlen(data[i]);
-            row_len += lens[i];
+            lens[i] = 0;
+            if (data[i]) {
+                lens[i] = strlen(data[i]);
+                row_len += lens[i];
+            }
         }
 
         struct OutputBuffer *ob = &obs->buffers[id];
@@ -402,7 +407,9 @@ static int print_callback(void *args, int count, char **data, char **columns) {
                 pthread_mutex_lock(obs->mutex);
             }
             for(int i = 0; i < count; i++) {
-                fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
+                if (data[i]) {
+                    fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
+                }
                 fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
             }
             fwrite("\n", sizeof(char), 1, gts.outfd[id]);
@@ -418,8 +425,10 @@ static int print_callback(void *args, int count, char **data, char **columns) {
             char *buf = ob->buf;
             size_t filled = ob->filled;
             for(int i = 0; i < count; i++) {
-                memcpy(&buf[filled], data[i], lens[i]);
-                filled += lens[i];
+                if (data[i]) {
+                    memcpy(&buf[filled], data[i], lens[i]);
+                    filled += lens[i];
+                }
 
                 buf[filled] = in.delim[0];
                 filled++;
@@ -443,6 +452,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 struct ThreadArgs {
     struct OutputBuffers output_buffers;
     trie_t *skip;
+    size_t *queries; /* per thread query count, not including -T, -S, and -E */
     int (*print_callback_func)(void*,int,char**,char**);
     #ifdef DEBUG
     struct timespec *start_time;
@@ -473,7 +483,7 @@ do {                                                                    \
 #define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)
 #endif
 
-int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     sqlite3 *db = NULL;
     int recs;
     char shortname[MAXPATH];
@@ -509,25 +519,27 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     struct ThreadArgs *ta = (struct ThreadArgs *) args;
 
-    timestamp_create_zero(opendir_call,       ta->start_time);
-    timestamp_create_zero(open_call,          ta->start_time);
-    timestamp_create_zero(sqlite3_open_call,  ta->start_time);
-    timestamp_create_zero(create_tables_call, ta->start_time);
-    timestamp_create_zero(set_pragmas,        ta->start_time);
-    timestamp_create_zero(load_extension,     ta->start_time);
-    timestamp_create_zero(addqueryfuncs_call, ta->start_time);
-    timestamp_create_zero(descend_call,       ta->start_time);
+    timestamp_create_zero(opendir_call,         ta->start_time);
+    timestamp_create_zero(open_call,            ta->start_time);
+    timestamp_create_zero(sqlite3_open_call,    ta->start_time);
+    timestamp_create_zero(create_tables_call,   ta->start_time);
+    timestamp_create_zero(set_pragmas,          ta->start_time);
+    timestamp_create_zero(load_extension,       ta->start_time);
+    timestamp_create_zero(addqueryfuncs_call,   ta->start_time);
+    timestamp_create_zero(xattrprep_call,       ta->start_time);
+    timestamp_create_zero(get_rollupscore_call, ta->start_time);
+    timestamp_create_zero(descend_call,         ta->start_time);
     struct sll * descend_timers = descend_timers_init();
-    timestamp_create_zero(attach_call,        ta->start_time);
-    timestamp_create_zero(sqltsumcheck,       ta->start_time);
-    timestamp_create_zero(sqltsum,            ta->start_time);
-    timestamp_create_zero(sqlsum,             ta->start_time);
-    timestamp_create_zero(sqlent,             ta->start_time);
-    timestamp_create_zero(detach_call,        ta->start_time);
-    timestamp_create_zero(close_call,         ta->start_time);
-    timestamp_create_zero(closedir_call,      ta->start_time);
-    timestamp_create_zero(utime_call,         ta->start_time);
-    timestamp_create_zero(free_work,          ta->start_time);
+    timestamp_create_zero(attach_call,          ta->start_time);
+    timestamp_create_zero(sqltsumcheck,         ta->start_time);
+    timestamp_create_zero(sqltsum,              ta->start_time);
+    timestamp_create_zero(sqlsum,               ta->start_time);
+    timestamp_create_zero(sqlent,               ta->start_time);
+    timestamp_create_zero(detach_call,          ta->start_time);
+    timestamp_create_zero(close_call,           ta->start_time);
+    timestamp_create_zero(closedir_call,        ta->start_time);
+    timestamp_create_zero(utime_call,           ta->start_time);
+    timestamp_create_zero(free_work,            ta->start_time);
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
     timestamp_set_start(opendir_call);
@@ -573,6 +585,24 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     timestamp_set_end(addqueryfuncs_call);
     #endif
 
+    /* set up xattr view "myxatv" so that it can be used by -T, -S, and -E */
+    if (in.xattr.use != 0) {
+        static const char   view_name[]    = "myxatv";
+        static const size_t view_name_len  = sizeof(view_name) - 1;
+        static const char   table_name[]   = "entxattr";
+        static const size_t table_name_len = sizeof(table_name) - 1;
+
+        timestamp_set_start(xattrprep_call);
+        xattrprep(work->name, db,
+                  view_name, view_name_len,
+                  table_name, table_name_len
+                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                  ,&ta->queries[id]
+                  #endif
+                  );
+        timestamp_set_end(xattrprep_call);
+    }
+
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* if it fails then this will be set to 1 and will go on */
 
@@ -608,10 +638,15 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
          * ignore errors - if the db wasn't opened, or if
          * summary is missing the columns, keep descending
          */
+        timestamp_set_start(get_rollupscore_call);
         int rollupscore = 0;
         if (db) {
             get_rollupscore(work->name, db, &rollupscore);
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            ta->queries[id]++;
+            #endif
         }
+        timestamp_set_end(get_rollupscore_call);
 
         /* push subdirectories into the queue */
         if (rollupscore == 0) {
@@ -729,6 +764,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             #ifndef NO_ADDQUERYFUNCS
             timestamp_print     (ctx->buffers, id, "addqueryfuncs",      addqueryfuncs_call);
             #endif
+            timestamp_print     (ctx->buffers, id, "xattrprep",          xattrprep_call);
+            timestamp_print     (ctx->buffers, id, "get_rollupscore",    get_rollupscore_call);
             timestamp_print     (ctx->buffers, id, "descend",            descend_call);
             print_descend_timers(ctx->buffers, id, "within_descend",     descend_timers, within_descend);
             print_descend_timers(ctx->buffers, id, "check_args",         descend_timers, check_args);
@@ -774,6 +811,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     total_load_extension_time    += timestamp_elapsed(load_extension);
     total_create_tables_time     += timestamp_elapsed(create_tables_call);
     total_addqueryfuncs_time     += timestamp_elapsed(addqueryfuncs_call);
+    total_xattrprep_time         += timestamp_elapsed(xattrprep_call);
+    total_get_rollupscore_time   += timestamp_elapsed(get_rollupscore_call);
     total_descend_time           += timestamp_elapsed(descend_call);
     total_check_args_time        += buffer_sum(&descend_timers[dt_check_args]);
     total_level_time             += buffer_sum(&descend_timers[dt_level_cmp]);
@@ -895,7 +934,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:wk:", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:wM:k:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -970,6 +1009,9 @@ int main(int argc, char *argv[])
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_set_end(setup_aggregate);
     const uint64_t setup_aggregate_time = timestamp_elapsed(setup_aggregate);
+
+    /* query counters */
+    args.queries = calloc(in.maxthreads, sizeof(size_t));
     #endif
 
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
@@ -988,6 +1030,7 @@ int main(int argc, char *argv[])
 
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
@@ -997,6 +1040,7 @@ int main(int argc, char *argv[])
 
     if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
+        free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
@@ -1102,6 +1146,12 @@ int main(int argc, char *argv[])
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     timestamp_start(cleanup_globals);
+
+    /* aggregate per thread query counts */
+    size_t query_count = 0;
+    for(int i = 0; i < in.maxthreads; i++) {
+        query_count += args.queries[i];
+    }
     #endif
 
     /* clear out buffered data */
@@ -1115,6 +1165,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* clean up globals */
+    free(args.queries);
     OutputBuffers_destroy(&args.output_buffers);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(gts.outfd, output_count);
@@ -1141,7 +1192,7 @@ int main(int argc, char *argv[])
         total_utime_time + total_free_work_time +
         total_output_timestamps_time;
 
-    const size_t query_count = thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len);
+    query_count += thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len);
 
     print_stats("set up globals:                             %.2Lfs", "%Lf", sec(setup_globals_time));
     print_stats("set up intermediate databases:              %.2Lfs", "%Lf", sec(setup_aggregate_time));
@@ -1152,6 +1203,8 @@ int main(int argc, char *argv[])
     print_stats("        set pragmas:                        %.2Lfs", "%Lf", sec(total_set_pragmas_time));
     print_stats("        load extensions:                    %.2Lfs", "%Lf", sec(total_load_extension_time));
     print_stats("    addqueryfuncs:                          %.2Lfs", "%Lf", sec(total_addqueryfuncs_time));
+    print_stats("    xattrprep:                              %.2Lfs", "%Lf", sec(total_xattrprep_time));
+    print_stats("    get_rollupscore:                        %.2Lfs", "%Lf", sec(total_get_rollupscore_time));
     print_stats("    descend:                                %.2Lfs", "%Lf", sec(total_descend_time));
     print_stats("        check args:                         %.2Lfs", "%Lf", sec(total_check_args_time));
     print_stats("        check level:                        %.2Lfs", "%Lf", sec(total_level_time));
