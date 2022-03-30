@@ -176,7 +176,7 @@ int reprocessdir(void * passv, DIR *dir)
     bzero(passmywork->xattrs,sizeof(passmywork->xattrs));
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
     SNPRINTF(passmywork->type,2,"d");
-    if (in.doxattrs > 0) {
+    if (in.xattr.index > 0) {
       passmywork->xattrs_len = pullxattrs(passmywork->name,passmywork->xattrs, sizeof(passmywork->xattrs));
     }
 
@@ -234,7 +234,7 @@ int reprocessdir(void * passv, DIR *dir)
         SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
         lstat(qwork.name, &qwork.statuso);
         /* qwork.xattrs_len = 0; */
-        if (in.doxattrs > 0) {
+        if (in.xattr.index > 0) {
           qwork.xattrs_len = pullxattrs(qwork.name,qwork.xattrs, sizeof(qwork.xattrs));
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {

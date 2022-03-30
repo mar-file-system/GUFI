@@ -842,7 +842,7 @@ int main(int argc, char * argv[]) {
     free(stats);
 
     timestamp_set_end_raw(runtime);
-    fprintf(stderr, "Took %.2Lf seconds\n", sec(elapsed(&runtime)));
+    fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
 
     return rc;
 }

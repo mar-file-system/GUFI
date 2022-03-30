@@ -121,6 +121,7 @@ void print_help(const char* prog_name,
       case 'I': printf("  -I <SQL_init>          SQL init\n"); break;
       case 'T': printf("  -T <SQL_tsum>          SQL for tree-summary table\n"); break;
       case 'S': printf("  -S <SQL_sum>           SQL for summary table\n"); break;
+      case 'M': printf("  -M <xattrspec>         basexattrtable:xattrdbfilespec\n"); break;
       case 'E': printf("  -E <SQL_ent>           SQL for entries table\n"); break;
       case 'F': printf("  -F <SQL_fin>           SQL cleanup\n"); break;
       case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db\n"); break;
@@ -155,7 +156,6 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.doxattrs           = %d\n",    in->doxattrs);
    printf("in.printing           = %d\n",    in->printing);
    printf("in.printdir           = %d\n",    in->printdir);
    printf("in.printheader        = %d\n",    in->printheader);
@@ -173,6 +173,10 @@ void show_input(struct input* in, int retval) {
    printf("in.outdbn             = '%s'\n",  in->outdbn);
    printf("in.nameto             = '%s'\n",  in->nameto);
    printf("in.andor              = %d\n",    in->andor);
+   printf("in.xattr.index        = '%d'\n",  in->xattr.index);
+   printf("in.xattr.use          = '%d'\n",  in->xattr.use);
+   printf("in.xattr.baseview     = '%s'\n",  in->xattr.baseview);
+   printf("in.xattr.query        = '%s'\n",  in->xattr.query);
    printf("in.sqlinit            = '%s'\n",  in->sqlinit);
    printf("in.sqltsum            = '%s'\n",  in->sqltsum);
    printf("in.sqlsum             = '%s'\n",  in->sqlsum);
@@ -247,6 +251,9 @@ int parse_cmd_line(int         argc,
    memset(in->outdbn,       0, MAXPATH);
    in->min_level          = 0;                      // default to the top
    in->max_level          = -1;                     // default to all the way down
+   memset(&in->xattr,           0, sizeof(in->xattr));
+   memset(in->sqltsum,          0, MAXSQL);
+   memset(in->sqlsum,           0, MAXSQL);
    memset(in->sqlent,           0, MAXSQL);
    memset(in->create_aggregate, 0, MAXSQL);
    memset(in->intermediate,     0, MAXSQL);
@@ -280,7 +287,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'x':               // xattrs
-         in->doxattrs = 1;
+         in->xattr.index = 1;
          break;
 
       case 'p':               // print file name/path?
@@ -290,6 +297,33 @@ int parse_cmd_line(int         argc,
       case 'P':               // print dirs?
          in->printdir = 1;
          break;
+
+      case 'M':               // xattrspec
+          if (strlen(optarg) > 0) {
+              static const char delim[] = ",";
+
+              char *xattrspec = optarg;
+
+              /* xattr table stored in db.db */
+              char *token = strtok_r(xattrspec, delim, &xattrspec);
+              const size_t token_len = strlen(token);
+              in->xattr.baseview_len = SNFORMAT_S(in->xattr.baseview, sizeof(in->xattr.baseview), 1,
+                                                  token, token_len);
+
+              /* xattr filename pattern to open (stored in db.db) */
+              token = strtok_r(NULL, delim, &xattrspec);
+              char qterm[MAXPATH];
+              const size_t qterm_len = snprintf(qterm, sizeof(qterm), "%s", token);
+
+              static const char xattrq_template[] = "SELECT fname, finode, fdb FROM fsd WHERE fname LIKE \"";
+              SNFORMAT_S(in->xattr.query, sizeof(in->xattr.query), 3,
+                         xattrq_template, sizeof(xattrq_template) - 1,
+                         qterm, qterm_len,
+                         "\"", 1);
+
+              in->xattr.use = 1;
+          }
+          break;
 
       case 'N':               // print DB-result column-names?  (i.e. header)
          in->printheader = 1;

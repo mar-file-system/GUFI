@@ -265,7 +265,7 @@ int main(int argc, char * argv[]) {
 
     clock_gettime(CLOCK_MONOTONIC, &generation.end);
 
-    const long double gen_time = elapsed(&generation);
+    const long double gen_time = sec(nsec(&generation));
 
     printf("Time Spent Generating: %.2Lfs\n", gen_time);
     printf("Dirs/Sec:              %.2Lf\n",  total_dirs / gen_time);

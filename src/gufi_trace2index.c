@@ -591,7 +591,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
     pthread_mutex_lock(&print_mutex);
-    fprintf(stdout, "Scout finished in %.2Lf seconds\n", sec(elapsed(&scouting)));
+    fprintf(stdout, "Scout finished in %.2Lf seconds\n", sec(nsec(&scouting)));
     fprintf(stdout, "Files: %zu\n", file_count);
     fprintf(stdout, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
     fprintf(stdout, "Total: %zu\n", file_count + dir_count);
@@ -738,7 +738,7 @@ int main(int argc, char * argv[]) {
     fprintf(stderr, "Files inserted:            %zu\n", total_files);
     #endif
 
-    fprintf(stderr, "main completed in %.2Lf seconds\n", sec(elapsed(&main_func)));
+    fprintf(stderr, "main completed in %.2Lf seconds\n", sec(nsec(&main_func)));
 
     return 0;
 }

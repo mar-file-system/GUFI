@@ -192,7 +192,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         }
 
         /* e.xattrs_len = 0; */
-        if (in.doxattrs > 0) {
+        if (in.xattr.index > 0) {
             e.xattrs_len = pullxattrs(e.name, e.xattrs, sizeof(e.xattrs));
         }
 
@@ -396,7 +396,7 @@ struct work * validate_inputs() {
         return NULL;
     }
 
-    if (in.doxattrs > 0) {
+    if (in.xattr.index > 0) {
         root->xattrs_len = pullxattrs(in.name, root->xattrs, sizeof(root->xattrs));
     }
 
@@ -481,7 +481,7 @@ int main(int argc, char * argv[]) {
 
     #if BENCHMARK
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
-    const long double processtime = sec(elapsed(&benchmark));
+    const long double processtime = sec(nsec(&benchmark));
 
     fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
     fprintf(stderr, "Total Files:           %zu\n",    total_files);

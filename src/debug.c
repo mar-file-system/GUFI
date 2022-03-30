@@ -83,14 +83,14 @@ uint64_t since_epoch(struct timespec * ts) {
     return ns;
 }
 
-uint64_t elapsed(struct start_end * se) {
+uint64_t nsec(struct start_end * se) {
     const uint64_t s = (se->start.tv_sec * 1000000000ULL) + se->start.tv_nsec;
     const uint64_t e = (se->end.tv_sec   * 1000000000ULL) + se->end.tv_nsec;
     return e - s;
 }
 
-long double sec(uint64_t nsec) {
-    return ((long double) nsec) / 1e9L;
+long double sec(uint64_t ns) {
+    return ((long double) ns) / 1e9L;
 }
 
 int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se) {
