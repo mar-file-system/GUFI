@@ -68,8 +68,9 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "xattrs.h"
+
 #define MAXPATH 4096
-#define MAXXATTR 1024
 #define MAXSQL 2048
 #define MAXRECS 100000
 #define MAXPTHREAD 1000
@@ -140,14 +141,15 @@ struct input {
    char name[MAXPATH];
    size_t name_len;
    char nameto[MAXPATH];
+   size_t nameto_len;
    struct {
-        int    index;              /* read from source filesystem */
-
-        int    use;                /* read from index */
-        char   baseview[MAXPATH];  /* view to read xattrs from */
-        size_t baseview_len;
-        char   query[MAXSQL];      /* query generated using file spec */
-   } xattr;
+        int index;              /* read from source filesystem */
+        struct {
+            uid_t uid;
+            gid_t gid;
+        } nobody;
+        int gen_view;           /* read from index and generate view */
+   } xattrs;
    char sqltsum[MAXSQL];
    size_t sqltsum_len;
    char sqlsum[MAXSQL];
@@ -282,14 +284,13 @@ struct work {
    char*         root;
    size_t        level;
    char          name[MAXPATH];
+   size_t        name_len;
    char          type[2];
-   // char          nameto[MAXPATH];
    char          linkname[MAXPATH];
    struct stat   statuso;
    long long int pinode;
    long long int offset;
-   ssize_t       xattrs_len;
-   char          xattrs[MAXXATTR];
+   struct xattrs xattrs;
    void*         freeme;
    int           crtime;
    int           ossint1;
@@ -302,7 +303,6 @@ struct work {
    int           suspect;  // added for bfwreaddirplus2db for suspect
 };
 
-extern char xattrdelim[];
 extern char fielddelim[];
 
 

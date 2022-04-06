@@ -105,12 +105,12 @@ struct RollUpStats {
     size_t remaining;       /* children that remain after rolling up */
 
     #ifdef DEBUG
-    struct OutputBuffers * print_buffers;
+    struct OutputBuffers *print_buffers;
     #endif
 };
 
 /* compare function for qsort */
-int compare_size_t(const void * lhs, const void * rhs) {
+int compare_size_t(const void *lhs, const void *rhs) {
     return (*(size_t *) lhs - *(size_t *) rhs);
 }
 
@@ -121,13 +121,13 @@ do {                                                                     \
         break;                                                           \
     }                                                                    \
                                                                          \
-    size_t * array = malloc(count * sizeof(size_t));                     \
+    size_t *array = malloc(count * sizeof(size_t));                      \
     size_t min = (size_t) -1;                                            \
     size_t max = 0;                                                      \
     size_t sum = 0;                                                      \
     size_t i = 0;                                                        \
     sll_loop(all, node) {                                                \
-        struct DirStats * ds = (struct DirStats *) sll_node_data(node);  \
+        struct DirStats *ds = (struct DirStats *) sll_node_data(node);   \
         if (ds->var < min) {                                             \
             min = ds->var;                                               \
         }                                                                \
@@ -167,13 +167,13 @@ do {                                                                     \
         break;                                                           \
     }                                                                    \
                                                                          \
-    size_t * array = malloc(count * sizeof(size_t));                     \
+    size_t *array = malloc(count * sizeof(size_t));                      \
     size_t min = (size_t) -1;                                            \
     size_t max = 0;                                                      \
     size_t sum = 0;                                                      \
     size_t i = 0;                                                        \
     sll_loop(all, node) {                                                \
-        struct DirStats * ds = (struct DirStats *) sll_node_data(node);  \
+        struct DirStats *ds = (struct DirStats *) sll_node_data(node);   \
         if (ds->var == 0) {                                              \
             continue;                                                    \
         }                                                                \
@@ -212,7 +212,7 @@ do {                                                                     \
     free(array);                                                         \
 } while (0)
 
-void print_stanza(const char * name, struct sll * stats) {
+void print_stanza(const char *name, struct sll *stats) {
     fprintf(stdout, "%s %*zu\n", name, (int) (29 - strlen(name)), sll_get_size(stats));
     sll_dir_stats("Subdirectories", stats, subdir_count,    10);
     sll_dir_stats("Files/Links",    stats, subnondir_count, 10);
@@ -220,7 +220,7 @@ void print_stanza(const char * name, struct sll * stats) {
 }
 
 /* this function moves the sll stats up and deallocates them */
-void print_stats(char ** paths, const int path_count, struct RollUpStats * stats, const size_t threads) {
+void print_stats(char **paths, const int path_count, struct RollUpStats *stats, const size_t threads) {
     fprintf(stdout, "Roots:\n");
     for(int i = 0; i < path_count; i++) {
         fprintf(stdout, "    %s\n", paths[i]);
@@ -253,7 +253,7 @@ void print_stats(char ** paths, const int path_count, struct RollUpStats * stats
     size_t successful = 0;
     size_t failed = 0;
     sll_loop(&rolled_up, node) {
-        struct DirStats * ds = (struct DirStats *) sll_node_data(node);
+        struct DirStats *ds = (struct DirStats *) sll_node_data(node);
         if (ds->success) {
             successful++;
         }
@@ -271,7 +271,7 @@ void print_stats(char ** paths, const int path_count, struct RollUpStats * stats
     size_t not_rolled_up_nondirs = 0;
     size_t not_rolled_up_empty = 0;
     sll_loop(&not_rolled_up, node) {
-        struct DirStats * ds = (struct DirStats *) sll_node_data(node);
+        struct DirStats *ds = (struct DirStats *) sll_node_data(node);
         not_rolled_up_nondirs += ds->subnondir_count;
         not_rolled_up_empty += !ds->subnondir_count;
     }
@@ -279,7 +279,7 @@ void print_stats(char ** paths, const int path_count, struct RollUpStats * stats
     size_t rolled_up_nondirs = 0;
     size_t rolled_up_empty = 0;
     sll_loop(&rolled_up, node) {
-        struct DirStats * ds = (struct DirStats *) sll_node_data(node);
+        struct DirStats *ds = (struct DirStats *) sll_node_data(node);
         rolled_up_nondirs += ds->subnondir_count;
         rolled_up_empty += !ds->subnondir_count;
     }
@@ -333,8 +333,8 @@ struct Permissions {
     gid_t gid;
 };
 
-int get_permissions(void * args, int count, char ** data, char ** columns) {
-    struct Permissions * perms = (struct Permissions *) args;
+int get_permissions(void *args, int count, char **data, char **columns) {
+    struct Permissions *perms = (struct Permissions *) args;
     perms->mode = atoi(data[0]);
     perms->uid  = atoi(data[1]);
     perms->gid  = atoi(data[2]);
@@ -342,19 +342,19 @@ int get_permissions(void * args, int count, char ** data, char ** columns) {
 }
 
 struct ChildData {
-    struct Permissions * perms;
+    struct Permissions *perms;
     size_t count;
 };
 
-int get_permissions_and_count(void * args, int count, char ** data, char ** columns) {
-    struct ChildData * child = (struct ChildData *) args;
+int get_permissions_and_count(void *args, int count, char **data, char **columns) {
+    struct ChildData *child = (struct ChildData *) args;
     get_permissions(child->perms, count, data, columns);
     child->count = atoi(data[3]);
     return 0;
 }
 
-int add_entries_count(void * args, int count, char ** data, char ** columns) {
-    size_t * total = (size_t *) args;
+int add_entries_count(void *args, int count, char **data, char **columns) {
+    size_t *total = (size_t *) args;
     size_t rows = 0;
     if (sscanf(data[0], "%zu", &rows) != 1) {
         return 1;
@@ -364,8 +364,8 @@ int add_entries_count(void * args, int count, char ** data, char ** columns) {
 }
 
 /* get number of non-dirs in this directory from the pentries table */
-int get_nondirs(const char * name, sqlite3 * dst, size_t *subnondir_count) {
-    char * err = NULL;
+int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) {
+    char *err = NULL;
     const int exec_rc = sqlite3_exec(dst, "SELECT COUNT(*) FROM pentries",
                                      add_entries_count, subnondir_count, &err);
     if (exec_rc != SQLITE_OK) {
@@ -380,7 +380,7 @@ int get_nondirs(const char * name, sqlite3 * dst, size_t *subnondir_count) {
          0 - do not roll up
          1 - all permissions pass
 */
-int check_children(struct RollUp * rollup, struct Permissions * curr,
+int check_children(struct RollUp *rollup, struct Permissions *curr,
                    const size_t child_count, size_t *total_child_entries
                    timestamp_sig) {
     if (child_count == 0) {
@@ -389,24 +389,24 @@ int check_children(struct RollUp * rollup, struct Permissions * curr,
 
     timestamp_create_buffer(4096);
 
-    struct Permissions * child_perms =
-        malloc(sizeof(struct Permissions) * sll_get_size(&rollup->data.subdirs));
+    struct Permissions *child_perms =
+        malloc(sizeof(struct Permissions) *sll_get_size(&rollup->data.subdirs));
 
     /* get permissions of each child */
     size_t idx = 0;
     sll_loop(&rollup->data.subdirs, node) {
-        struct RollUp * child = (struct RollUp *) sll_node_data(node);
+        struct RollUp *child = (struct RollUp *) sll_node_data(node);
 
         char dbname[MAXPATH] = {0};
         SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, child->data.name);
 
         timestamp_start(open_child_db);
-        sqlite3 * db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
-                              , NULL, NULL
-                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                              , NULL, NULL
-                              , NULL, NULL
-                              #endif
+        sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
+                             , NULL, NULL
+                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                             , NULL, NULL
+                             , NULL, NULL
+                             #endif
             );
         timestamp_end(timestamp_buffers, rollup->data.tid.up, "open_child_db", open_child_db);
 
@@ -419,7 +419,7 @@ int check_children(struct RollUp * rollup, struct Permissions * curr,
         struct ChildData data;
         data.perms = &child_perms[idx];
         data.count = 0;
-        char * err = NULL;
+        char *err = NULL;
         const int rc = sqlite3_exec(db, PERM_SQL, get_permissions_and_count, &data, &err);
         timestamp_end(timestamp_buffers, rollup->data.tid.up, "get_child_data", get_child_data);
 
@@ -448,7 +448,7 @@ int check_children(struct RollUp * rollup, struct Permissions * curr,
         return -1;
     }
 
-    int legal = 0;
+    size_t legal = 0;
     for(size_t i = 0; i < child_count; i++) {
         /* so long as one condition is true, child[i] can be rolled up into the current directory */
         legal += (
@@ -486,15 +486,15 @@ int check_children(struct RollUp * rollup, struct Permissions * curr,
 @return   0 - cannot rollup
         > 0 - rollup score
 */
-int can_rollup(struct RollUp * rollup,
-               struct DirStats * ds,
-               sqlite3 * dst
+int can_rollup(struct RollUp *rollup,
+               struct DirStats *ds,
+               sqlite3 *dst
                timestamp_sig) {
     /* if (!rollup || !ds || !dst) { */
     /*     return -1; */
     /* } */
 
-    char * err = NULL;
+    char *err = NULL;
 
     timestamp_create_buffer(4096);
     timestamp_start(can_roll_up);
@@ -521,7 +521,7 @@ int can_rollup(struct RollUp * rollup,
     timestamp_start(check_subdirs_rolledup);
     size_t rolledup = 0;
     sll_loop(&rollup->data.subdirs, node) {
-        struct RollUp * child = (struct RollUp *) sll_node_data(node);
+        struct RollUp *child = (struct RollUp *) sll_node_data(node);
         rolledup += child->rolledup;
         total_subdirs++;
     }
@@ -594,9 +594,9 @@ static const char rollup_subdir[] =
          0 - success
          1 - at least one child failed to be moved
 */
-int do_rollup(struct RollUp * rollup,
-              struct DirStats * ds,
-              sqlite3 * dst
+int do_rollup(struct RollUp *rollup,
+              struct DirStats *ds,
+              sqlite3 *dst
               timestamp_sig) {
     /* assume that this directory can be rolled up */
     /* can_rollup should have been called earlier  */
@@ -615,7 +615,7 @@ int do_rollup(struct RollUp * rollup,
     #endif
 
     int rc = 0;
-    char * err = NULL;
+    char *err = NULL;
     int exec_rc = SQLITE_OK;
 
     /* set the rollup score in the SQL statement */
@@ -638,13 +638,13 @@ int do_rollup(struct RollUp * rollup,
     sll_loop(&rollup->data.subdirs, node) {
         timestamp_start(rollup_subdir);
 
-        struct BottomUp * child = (struct BottomUp *) sll_node_data(node);
+        struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
         char child_dbname[MAXPATH];
         SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, strlen(child->name), "/", 1, DBNAME, DBNAME_LEN);
 
         /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
-        rc = !attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY);
+        rc = !attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1);
 
         /* roll up the subdir into this dir */
         if (!rc) {
@@ -675,12 +675,12 @@ end_rollup:
     return rc;
 }
 
-void rollup(void * args timestamp_sig) {
+void rollup(void *args timestamp_sig) {
     timestamp_create_buffer(4096);
 
     timestamp_start(setup);
 
-    struct RollUp * dir = (struct RollUp *) args;
+    struct RollUp *dir = (struct RollUp *) args;
     dir->rolledup = 0;
 
     const size_t id = dir->data.tid.up;
@@ -689,10 +689,10 @@ void rollup(void * args timestamp_sig) {
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, dir->data.name);
 
-    struct RollUpStats * stats = (struct RollUpStats *) dir->data.extra_args;
+    struct RollUpStats *stats = (struct RollUpStats *) dir->data.extra_args;
 
     /* get statistics out of BottomUp */
-    struct DirStats * ds = malloc(sizeof(struct DirStats));
+    struct DirStats *ds = malloc(sizeof(struct DirStats));
     SNFORMAT_S(ds->path, MAXPATH, 1, dir->data.name, name_len);
     ds->level = dir->data.level;
     ds->subdir_count = dir->data.subdir_count;
@@ -706,7 +706,7 @@ void rollup(void * args timestamp_sig) {
 
     /* open the database file here to reduce number of open calls */
     timestamp_start(open_curr_db);
-    sqlite3 * dst = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0
+    sqlite3 *dst = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0
                            , NULL, NULL
                            #if defined(DEBUG) && defined(PER_THREAD_STATS)
                            , NULL, NULL
@@ -748,7 +748,7 @@ void rollup(void * args timestamp_sig) {
             /* count only children that were rolled up */
             /* in order to not double count */
             sll_loop(&dir->data.subdirs, node) {
-                struct RollUp * child = (struct RollUp *) sll_node_data(node);
+                struct RollUp *child = (struct RollUp *) sll_node_data(node);
                 if (child->rolledup) {
                     stats[id].remaining++;
                 }
@@ -770,7 +770,7 @@ void sub_help() {
    printf("\n");
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     epoch = since_epoch(NULL);
 
     timestamp_start_raw(runtime);
@@ -789,7 +789,7 @@ int main(int argc, char * argv[]) {
     #endif
     #endif
 
-    struct RollUpStats * stats = calloc(in.maxthreads, sizeof(struct RollUpStats));
+    struct RollUpStats *stats = calloc(in.maxthreads, sizeof(struct RollUpStats));
     for(int i = 0; i < in.maxthreads; i++) {
         sll_init(&stats[i].not_processed);
         sll_init(&stats[i].not_rolled_up);

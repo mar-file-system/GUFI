@@ -113,20 +113,20 @@ TEST(parse_cmd_line, flags) {
 
     struct input in;
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    EXPECT_EQ(in.doxattrs,    1);
-    EXPECT_EQ(in.printing,    1);
-    EXPECT_EQ(in.printdir,    1);
-    EXPECT_EQ(in.printheader, 1);
-    EXPECT_EQ(in.printrows,   1);
-    EXPECT_EQ(in.writetsum,   1);
-    EXPECT_EQ(in.buildindex,  1);
-    EXPECT_EQ(in.andor,       1);
-    EXPECT_EQ(in.insertfl,    1);
-    EXPECT_EQ(in.insertdir,   1);
-    EXPECT_EQ(in.dontdescend, 1);
-    EXPECT_EQ(in.suspectd,    1);
-    EXPECT_EQ(in.suspectfl,   1);
-    EXPECT_EQ(in.infile,      1);
+    EXPECT_EQ(in.xattrs.index, 1);
+    EXPECT_EQ(in.printing,     1);
+    EXPECT_EQ(in.printdir,     1);
+    EXPECT_EQ(in.printheader,  1);
+    EXPECT_EQ(in.printrows,    1);
+    EXPECT_EQ(in.writetsum,    1);
+    EXPECT_EQ(in.buildindex,   1);
+    EXPECT_EQ(in.andor,        1);
+    EXPECT_EQ(in.insertfl,     1);
+    EXPECT_EQ(in.insertdir,    1);
+    EXPECT_EQ(in.dontdescend,  1);
+    EXPECT_EQ(in.suspectd,     1);
+    EXPECT_EQ(in.suspectfl,    1);
+    EXPECT_EQ(in.infile,       1);
 }
 
 TEST(parse_cmd_line, options) {

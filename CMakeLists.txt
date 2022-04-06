@@ -207,6 +207,16 @@ else()
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCONFIG_GNU_XATTRS")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_GNU_XATTRS")
 endif()
+find_program(SETFATTR setfattr) # REQUIRED option was not added until 3.18
+if (NOT SETFATTR)
+  message(FATAL_ERROR "setfattr not found. Cannot build tests.")
+endif()
+message(STATUS "Found setfattr: ${SETFATTR}")
+find_program(GETFATTR getfattr) # REQUIRED option was not added until 3.18
+if (NOT GETFATTR)
+  message(FATAL_ERROR "getfattr not found. Cannot build tests.")
+endif()
+message(STATUS "Found getfattr: ${GETFATTR}")
 
 set(BIN "bin" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
 set(LIB "lib" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")

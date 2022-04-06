@@ -79,7 +79,7 @@ function setup_cleanup {
     rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
 }
 
-# trap setup_cleanup EXIT
+trap setup_cleanup EXIT
 
 setup_cleanup
 

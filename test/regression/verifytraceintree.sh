@@ -111,7 +111,7 @@ echo
 
 replace "# generate the index"
 replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" 2> /dev/null | sed '1d'
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" | tail -n 4 | head -n 3
 echo
 
 replace "# verify that all entries in the trace can be found in the GUFI tree"

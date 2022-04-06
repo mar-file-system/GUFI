@@ -62,25 +62,107 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_TRACE_H
-#define GUFI_TRACE_H
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
-#include <stdio.h>
+#include <gtest/gtest.h>
 
-#include "bf.h"
+#include "xattrs.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+static const struct xattr EXPECTED_XATTR[] = {
+    {
+        "user.key1", 9,
+        "value1", 6,
+    },
+    {
+        "user.key2", 9,
+        "value2", 6,
+    },
+};
 
-/* write a work struct to a file */
-int worktofile(FILE *file, const char *delim, const size_t prefix_len, struct work *work);
+static const struct xattrs EXPECTED_XATTRS = {
+    .pairs = (struct xattr *) EXPECTED_XATTR,
+    .name_len = 18,
+    .len = 30,
+    .count = 2,
+};
 
-/* convert a formatted string to a work struct */
-int linetowork(char *line, const size_t len, const char *delim, struct work *work);
+static void check_contents(struct xattrs &xattrs) {
+    for(size_t i = 0; i < xattrs.count; i++) {
+        struct xattr *expected_xattr = &EXPECTED_XATTRS.pairs[i];
+        struct xattr *xattr = &xattrs.pairs[i];
 
-#ifdef __cplusplus
+        EXPECT_EQ(xattr->name_len, expected_xattr->name_len);
+        EXPECT_EQ(xattr->value_len, expected_xattr->value_len);
+
+        EXPECT_EQ(memcmp(xattr->name,  expected_xattr->name,  expected_xattr->name_len),  0);
+        EXPECT_EQ(memcmp(xattr->value, expected_xattr->value, expected_xattr->value_len), 0);
+    }
 }
-#endif
 
-#endif
+TEST(xattrs, get) {
+    char name[] = "XXXXXX";
+    const int fd = mkstemp(name);
+    ASSERT_NE(fd, -1);
+    close(fd);
+
+    for(size_t i = 0; i < EXPECTED_XATTRS.count; i++) {
+        struct xattr *xattr = &EXPECTED_XATTRS.pairs[i];
+        ASSERT_EQ(SETXATTR(name, xattr->name, xattr->value, xattr->value_len), 0);
+    }
+
+    /* use fresh xattrs struct */
+    struct xattrs xattrs;
+    ASSERT_EQ(xattrs_setup(&xattrs), 0);
+    ASSERT_EQ(xattrs_get(name, &xattrs), (ssize_t) EXPECTED_XATTRS.count);
+    ASSERT_NE(xattrs.pairs, nullptr);
+    EXPECT_EQ(xattrs.name_len, EXPECTED_XATTRS.name_len);
+    EXPECT_EQ(xattrs.len, EXPECTED_XATTRS.len);
+    EXPECT_EQ(xattrs.count, EXPECTED_XATTRS.count);
+
+    check_contents(xattrs);
+
+    xattrs_cleanup(&xattrs);
+    remove(name);
+}
+
+TEST(xattrs, get_names) {
+    const char EXPECTED_STR[MAXXATTR] = "user.key1\x1Fuser.key2\x1F";
+    const size_t EXPECTED_STR_LEN = 20;
+
+    EXPECT_EQ(EXPECTED_XATTRS.name_len + EXPECTED_XATTRS.count, EXPECTED_STR_LEN);
+
+    char names[MAXXATTR];
+    EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, names, MAXXATTR, XATTRDELIM),
+              (ssize_t) EXPECTED_STR_LEN);
+    EXPECT_EQ(memcmp(names, EXPECTED_STR, EXPECTED_STR_LEN), 0);
+}
+
+TEST(xattrs, to_file) {
+    const char EXPECTED_STR[MAXXATTR] = "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F";
+    const size_t EXPECTED_STR_LEN = 34;
+
+    char line[MAXXATTR];
+    FILE *file = fmemopen(line, MAXXATTR, "wb");
+
+    EXPECT_EQ(xattrs_to_file(file, &EXPECTED_XATTRS, XATTRDELIM), (int) EXPECTED_STR_LEN);
+    fflush(file);
+
+    EXPECT_EQ(memcmp(line, EXPECTED_STR, EXPECTED_STR_LEN), 0);
+    fclose(file);
+}
+
+TEST(xattrs, from_line) {
+    char line[MAXXATTR];
+    const size_t line_len = snprintf(line, MAXXATTR, "user.key1\x1Fvalue1\x1Fuser.key2\x1Fvalue2\x1F");
+    EXPECT_EQ(line_len, EXPECTED_XATTRS.len + 2 * EXPECTED_XATTRS.count);
+
+    struct xattrs xattrs;
+    EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, "\x1F"),
+              (int) EXPECTED_XATTRS.count);
+
+    check_contents(xattrs);
+
+    xattrs_cleanup(&xattrs);
+}

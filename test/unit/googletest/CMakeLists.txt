@@ -76,6 +76,7 @@ if (CMAKE_CXX_COMPILER)
     trace.cpp
     trie.cpp
     utils.cpp
+    xattrs.cpp
   )
   add_executable(unit_tests ${TEST_SRC})
   target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})

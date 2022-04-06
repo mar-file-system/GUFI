@@ -72,6 +72,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "template_db.h"
+#include "xattrs.h"
 
 #ifdef __APPLE__
 
@@ -95,57 +96,106 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
 
 extern int errno;
 
-static int create_tables(const char *name, sqlite3 *db, void *args) {
-    if ((create_table_wrapper(name, db, "esql",        esql)       != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "ssql",        ssql)       != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqldir",    vssqldir)   != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqluser",   vssqluser)  != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vesql",       vesql)      != SQLITE_OK)) {
+int init_template_db(struct template_db *tdb) {
+    /* if (!tdb) { */
+    /*     return 1; */
+    /* } */
+
+    tdb->fd = -1;
+    tdb->size = -1;
+    return 0;
+}
+
+static int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
+    if ((create_table_wrapper(name, db, XATTRS_TABLE_NAME, XATTRS_SQL_CREATE)      != SQLITE_OK) ||
+        (create_table_wrapper(name, db, XATTR_FILES_NAME,  XATTR_FILES_SQL_CREATE) != SQLITE_OK)) {
         return -1;
     }
 
     return 0;
 }
 
-// create the initial database file to copy from
-off_t create_template(int *fd) {
-    static const char name[] = "tmp.db";
+static int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
+    if ((create_table_wrapper(name, db, "esql",            esql)                   != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "ssql",            ssql)                   != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",        vssqldir)               != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",       vssqluser)              != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",      vssqlgroup)             != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vesql",           vesql)                  != SQLITE_OK)) {
+        return -1;
+    }
+
+    return create_xattr_tables(name, db, args);
+}
+
+int close_template_db(struct template_db *tdb) {
+    /* if (!tdb) { */
+    /*     return 1; */
+    /* } */
+
+    close(tdb->fd);
+    return init_template_db(tdb);
+}
+
+/* create the database file to copy from */
+static int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
+                           const char *name) {
+    /* if (!tdb) { */
+    /*     return 1; */
+    /* } */
 
     sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
-                          , create_tables, NULL
-                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                          , NULL, NULL
-                          , NULL, NULL
-                          #endif
-                          );
+                         , create_tables, NULL
+                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , NULL, NULL
+                         , NULL, NULL
+                         #endif
+                         );
 
     sqlite3_close(db);
 
-    if ((*fd = open(name, O_RDONLY)) == -1) {
+    if ((tdb->fd = open(name, O_RDONLY)) == -1) {
         fprintf(stderr, "Could not open template file\n");
         return -1;
     }
 
-    // no need for the file to remain on the filesystem
+    /* no need for the file to remain on the filesystem */
     remove(name);
 
-    return lseek(*fd, 0, SEEK_END);
+    tdb->size = lseek(tdb->fd, 0, SEEK_END);
+    return !tdb->size;
 }
 
-// copy the template file instead of creating a new database and new tables for each work item
-// the ownership and permissions are set too
-int copy_template(const int src_fd, const char *dst, off_t size, uid_t uid, gid_t gid) {
-    // ignore errors here
-    const int src_db = dup(src_fd);
+/* create the initial xattrs database file to copy from */
+int create_xattrs_template(struct template_db *tdb) {
+    static const char name[] = "xattrs_tmp.db";
+    return create_template(tdb, create_xattr_tables, name);
+}
+
+/* create the initial main database file to copy from */
+int create_dbdb_template(struct template_db *tdb) {
+    static const char name[] = "tmp.db";
+    return create_template(tdb, create_dbdb_tables, name);
+}
+
+/* copy the template file instead of creating a new database and new tables for each work item */
+/* the ownership and permissions are set too */
+int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
+    /* if (!tdb) { */
+    /*     return 1; */
+    /* } */
+
+    /* ignore errors here */
+    const int src_db = dup(tdb->fd);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-    const ssize_t sf = gufi_copyfd(src_db, dst_db, size);
+    const ssize_t sf = gufi_copyfd(src_db, dst_db, tdb->size);
     fchown(dst_db, uid, gid);
     close(src_db);
     close(dst_db);
 
     if (sf == -1) {
-        fprintf(stderr, "Could not copy template file to %s: %s (%d)\n", dst, strerror(errno), errno);
+        fprintf(stderr, "Could not copy template file (%d) to %s (%d): %s (%d)\n",
+                src_db, dst, dst_db, strerror(errno), errno);
         return -1;
     }
 

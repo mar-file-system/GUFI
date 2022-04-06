@@ -62,21 +62,21 @@ OF SUCH DAMAGE.
 
 
 #define _GNU_SOURCE
-#include <stdint.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/xattr.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <utime.h>
 
 #include "bf.h"
 #include "utils.c"
+#include "xattrs.h"
 
 extern int errno;
 
@@ -88,8 +88,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     char lpath[MAXPATH];
     struct stat st;
     char type[2];
-    int xattrs;
-    char xattr[MAXXATTR];
+    struct xattrs xattrs;
     char sortf[MAXPATH];
     char beginpath[MAXPATH];
     char endpath[MAXPATH];
@@ -109,10 +108,9 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
       }
     }
     //if (statit) lstat(name,&st);
-    bzero(xattr, sizeof(xattr));
-    xattrs=0;
+    bzero(&xattrs, sizeof(xattrs));
     if (xattrit) {
-      xattrs=pullxattrs(name,xattr,sizeof(xattr));
+      xattrs_get(name, &xattrs);
     }
     if (statit+xattrit > 0) {
       bzero(lpath,sizeof(lpath));
@@ -132,9 +130,9 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
           shortpath(name,beginpath,endpath);
           SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in.delim,type);
         }
-        printload(name,&st,type,lpath,xattrs,xattr,pin,sortf,stdout);
+        printload(name,&st,type,lpath,&xattrs,pin,sortf,stdout);
       } else {
-        printit(name,&st,type,lpath,xattrs,xattr,1,pin);
+        printit(name,&st,type,lpath,&xattrs,1,pin);
       }
     } else {
       printf("d %s %lld %lld\n", name, pin , level);
@@ -164,10 +162,9 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
            st.st_mode=0100644;
          }
        }
-       xattrs=0;
-       bzero(xattr, sizeof(xattr));
+       bzero(&xattrs, sizeof(xattrs));
        if (xattrit) {
-         xattrs=pullxattrs(path,xattr,sizeof(xattr));
+         xattrs_get(path, &xattrs);
        }
         //if (entry->d_type == DT_DIR) {
         if (S_ISDIR(st.st_mode) ) {
@@ -198,9 +195,9 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
                   shortpath(path,beginpath,endpath);
                   SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in.delim,type);
                 }
-                printload(path,&st,type,lpath,xattrs,xattr,pin,sortf,stdout);
+                printload(path,&st,type,lpath,&xattrs,pin,sortf,stdout);
               } else {
-                printit(path,&st,type,lpath,xattrs,xattr,1,pin);
+                printit(path,&st,type,lpath,&xattrs,1,pin);
               }
             } else {
               printf("%s %s %"STAT_ino" %lld\n",type, path, entry->d_ino,pin);

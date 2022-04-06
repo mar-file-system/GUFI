@@ -134,7 +134,10 @@ int main(int argc, char *argv[])
     }
 
    // add query funcs to get path() uidtouser() gidtogroup()
-   addqueryfuncs(db, 0, -1, NULL);
+   struct work work;
+   memset(&work, 0, sizeof(work));
+   work.level = -1;
+   addqueryfuncs(db, 0, &work);
 
    const int start = idx;
    const int numdbs = argc - idx;
@@ -178,7 +181,7 @@ int main(int argc, char *argv[])
        curr += SNPRINTF(curr, MAXSQL, " SELECT * FROM %s.%s UNION ALL", dbn, tablename);
 
        // attach individual database files
-       if (!attachdb(argv[idx], db, dbn, SQLITE_OPEN_READONLY)) {
+       if (!attachdb(argv[idx], db, dbn, SQLITE_OPEN_READONLY, 1)) {
            rc = 1;
            goto detach;
        }

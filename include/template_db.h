@@ -67,7 +67,21 @@ OF SUCH DAMAGE.
 
 #include <sys/types.h>
 
-off_t create_template(int *fd);
-int copy_template(const int src_fd, const char *dst, off_t size, uid_t uid, gid_t gid);
+struct template_db {
+    int fd;
+    off_t size;
+};
+
+struct templates {
+    struct template_db db;
+    struct template_db xattr;
+};
+
+int init_template_db(struct template_db *tdb);
+int create_xattrs_template(struct template_db *tdb);
+int create_dbdb_template(struct template_db *tdb);
+int close_template_db(struct template_db *tdb);
+
+int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gid);
 
 #endif

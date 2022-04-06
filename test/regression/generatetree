@@ -77,9 +77,9 @@
 # |---- empty_file
 # |---- file_symlink -> 1KB
 # |---- .hidden
-# |---- leaf_directory/
-#       |---- leaf_file1
-#       |---- leaf_file2
+# |---- leaf_directory/  (user.name1=value1, user.name2=value2)
+#       |---- leaf_file1 (user.name1=value1, user.name2=value2)
+#       |---- leaf_file2 (user.name1=value1, user.name2=value2)
 # |---- old_file
 # |---- repeat_name
 # |---- unusual, name?#
@@ -95,44 +95,53 @@ fi
 
 DIR="$1"
 
-if [[ ! -d "${DIR}" ]]
-then
-    mkdir -p "${DIR}"
-fi
-
-if [[ "$(find ${DIR} -mindepth 1 -maxdepth 1)" -ne "" ]]
-then
-    echo "Warning: Directory ${DIR} is not empty"
-fi
+rm -rf "${DIR}"
+mkdir -p "${DIR}"
 
 # generate tree
-cd ${DIR}
-touch empty_file
+cd "${DIR}"
+
 truncate -s 1024 1KB
+
 truncate -s 1048576 1MB
-truncate -s 1 "unusual, name?#"
-truncate -s 1 .hidden
-truncate -s 1 repeat_name
+
+mkdir directory
+(
+    cd directory
+    truncate -s 1 readonly
+    chmod 444 readonly
+    truncate -s 1 writable
+    chmod 666 writable
+    truncate -s 1 executable
+    chmod 777 executable
+    mkdir subdirectory
+    (
+        cd subdirectory
+        ln -f -s $(realpath .) directory_symlink
+        truncate -s 1 repeat_name
+    )
+)
+
+touch empty_file
+
 ln -f -s $(realpath 1KB) file_symlink
+
+truncate -s 1 .hidden
+
+mkdir leaf_directory
+setfattr -n "user.name1" -v "value1" leaf_directory
+setfattr -n "user.name2" -v "value2" leaf_directory
+(
+    cd leaf_directory
+    truncate -s 1 leaf_file1
+    truncate -s 1 leaf_file2
+    setfattr -n "user.name1" -v "value1" leaf_file1
+    setfattr -n "user.name2" -v "value2" leaf_file2
+)
+
 truncate -s 1 old_file
 TZ=UTC touch -amt 197001010000 old_file
-mkdir directory
 
-cd directory
-truncate -s 1 readonly
-chmod 444 readonly
-truncate -s 1 writable
-chmod 666 writable
-truncate -s 1 executable
-chmod 777 executable
-mkdir subdirectory
-
-cd subdirectory
-ln -f -s $(realpath .) directory_symlink
 truncate -s 1 repeat_name
 
-cd ../..
-mkdir leaf_directory
-cd leaf_directory
-truncate -s 1 leaf_file1
-truncate -s 1 leaf_file2
+truncate -s 1 "unusual, name?#"

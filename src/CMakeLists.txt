@@ -145,7 +145,8 @@ set(GUFI_SOURCES
   template_db.c
   trace.c
   trie.c
-  utils.c)
+  utils.c
+  xattrs.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 
