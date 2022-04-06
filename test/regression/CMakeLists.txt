@@ -98,13 +98,6 @@ if (NOT APPLE)
     gufi_stat)
 endif()
 
-# .sh and .expected
-# tests are not added since sudo is required
-set(SUDO
-  rollup
-  unrollup
-)
-
 foreach(NAME ${CORE})
   configure_file(${NAME} ${NAME} @ONLY)
 endforeach()
@@ -126,7 +119,20 @@ foreach(NAME ${SH_PY_AND_EXPECTED})
   set_tests_properties("${NAME}" PROPERTIES LABELS regression)
 endforeach()
 
-foreach(NAME ${SUDO})
-  configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-endforeach()
+find_program(SUDO sudo)
+if (SUDO)
+  # .sh and .expected
+  set(NEED_SUDO
+    rollup
+    unrollup
+    xattrs
+    )
+
+  foreach(NAME ${NEED_SUDO})
+    configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
+    configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
+
+    add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh")
+    set_tests_properties("${NAME}" PROPERTIES LABELS sudo)
+  endforeach()
+endif()

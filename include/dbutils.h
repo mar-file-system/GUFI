@@ -68,8 +68,11 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <sqlite3.h>
 
+#include "SinglyLinkedList.h"
 #include "debug.h"
+#include "template_db.h"
 #include "utils.h"
+#include "xattrs.h"
 
 extern char *rsql;
 extern char *rsqli;
@@ -90,7 +93,7 @@ extern char *vtssqldir;
 extern char *vtssqluser;
 extern char *vtssqlgroup;
 
-sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags);
+sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err);
 
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn);
 
@@ -119,28 +122,59 @@ int closedb(sqlite3 *db);
 
 int insertdbfin(sqlite3_stmt *res);
 
-sqlite3_stmt *insertdbprep(sqlite3 *db);
-sqlite3_stmt *insertdbprepr(sqlite3 *db);
+sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli);
 
+/* insert entries and xattr names */
 int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
+/* insert directly into xattrs_avail in the associated db */
+int insertdbgo_xattrs_avail(struct work *entry, sqlite3_stmt *res);
+/* figure out where the xattr should go and insert it there */
+int insertdbgo_xattrs(struct stat *dir, struct work *entry,
+                      struct sll *xattr_db_list, struct template_db *xattr_template,
+                      const char *topath, const size_t topath_len,
+                      sqlite3_stmt *xattrs_res,
+                      sqlite3_stmt *xattr_files_res);
 int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
 
-int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su);
+int insertsumdb(sqlite3 *sdb, struct work *pwork, struct sum *su);
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
 
-int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char *starting_dir);
+int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
 int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore);
 
-int xattrprep(const char *xattrpath, sqlite3 *db,
-              const char *vn, const size_t vn_len,
-              const char *tn, const size_t tn_len
+/* xattr db list item */
+struct xattr_db {
+    char filename[MAXPATH];
+    size_t filename_len;
+
+    char attach[MAXPATH];
+    size_t attach_len;
+
+    /* db.db, per-user, or per-group db */
+    sqlite3 *db;
+    sqlite3_stmt *res;
+
+    /* db.db */
+    sqlite3_stmt *file_list;
+
+    struct stat st;
+};
+
+struct xattr_db *create_xattr_db(struct template_db *tdb,
+                                 const char *path, const size_t path_len,
+                                 uid_t uid, gid_t gid, mode_t mode,
+                                 sqlite3_stmt *file_list);
+void destroy_xattr_db(void *ptr);
+
+/* create view of all accessible xattrs when querying */
+int xattrprep(const char *path, const size_t path_len, sqlite3 *db
               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
               ,size_t *query_count
               #endif
-              );
+    );
 
 #endif

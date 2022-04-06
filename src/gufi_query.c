@@ -296,7 +296,7 @@ static size_t descend2(struct QPTPool *ctx,
 
             buffered_start(snprintf_call);
             struct work qwork;
-            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
+            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
             buffered_end(snprintf_call);
 
             /* buffered_end(lstat_call); */
@@ -502,7 +502,6 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     struct work *work = (struct work *) data;
-    const size_t work_name_len = strlen(work->name);
 
     /* /\* print directory *\/ */
     /* if (in.printdir) { */
@@ -515,7 +514,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
+    SNFORMAT_S(dbname, MAXPATH, 2, work->name, work->name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     struct ThreadArgs *ta = (struct ThreadArgs *) args;
 
@@ -557,7 +556,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     if (gts.outdbd[id]) {
       /* if we have an out db then only have to attach the gufi db */
       db = gts.outdbd[id];
-      if (!attachdb(dbname, db, "tree", in.open_flags)) {
+      if (!attachdb(dbname, db, "tree", in.open_flags, 1)) {
           goto close_dir;
       }
     }
@@ -578,24 +577,17 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #ifdef ADDQUERYFUNCS
     timestamp_set_start(addqueryfuncs_call);
     if (db) {
-        if (addqueryfuncs(db, id, work->level, work->root) != 0) {
+        if (addqueryfuncs(db, id, work) != 0) {
             fprintf(stderr, "Could not add functions to sqlite\n");
         }
     }
     timestamp_set_end(addqueryfuncs_call);
     #endif
 
-    /* set up xattr view "myxatv" so that it can be used by -T, -S, and -E */
-    if (in.xattr.use != 0) {
-        static const char   view_name[]    = "myxatv";
-        static const size_t view_name_len  = sizeof(view_name) - 1;
-        static const char   table_name[]   = "entxattr";
-        static const size_t table_name_len = sizeof(table_name) - 1;
-
+    /* set up XATTRS_VIEW_NAME so that it can be used by -T, -S, and -E */
+    if (in.xattrs.gen_view) {
         timestamp_set_start(xattrprep_call);
-        xattrprep(work->name, db,
-                  view_name, view_name_len,
-                  table_name, table_name_len
+        xattrprep(work->name, work->name_len, db
                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                   ,&ta->queries[id]
                   #endif
@@ -683,7 +675,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                 if (in.sqlsum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
-                    SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
+                    SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
                     /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
                     realpath(work->name,gps[id].gfpath);
 
@@ -702,7 +694,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                     if (in.sqlent_len > 1) {
                         /* set the path so users can put path() in their queries */
                         /* printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent)); */
-                        SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work_name_len);
+                        SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
                         realpath(work->name,gps[id].gfpath);
 
                         querydb(dbname, db, in.sqlent,
@@ -858,9 +850,11 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
  * the user must create the intermediate table with -I and insert into it
  * the per-thread databases reuse outdb array
  */
-static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
-                               char *aggregate_name, size_t count) {
-    for(int i = 0; i < in.maxthreads; i++) {
+static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
+    struct work work;
+    memset(&work, 0, sizeof(work));
+    work.level = -1;
+    for(size_t i = 0; i < count; i++) {
         char intermediate_name[MAXSQL];
         SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
         if (!(gts.outdbd[i] = opendb(intermediate_name, SQLITE_OPEN_READWRITE, 1, 1
@@ -875,7 +869,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
             return NULL;
         }
 
-        addqueryfuncs(gts.outdbd[i], i, -1, NULL);
+        addqueryfuncs(gts.outdbd[i], i, &work);
 
         /* create table */
         if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
@@ -895,17 +889,17 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
                              #endif
               ))) {
         fprintf(stderr, "Could not open %s\n", aggregate_name);
-        outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
+        outdbs_fin(gts.outdbd, count, NULL, 0);
         closedb(aggregate);
         return NULL;
     }
 
-    addqueryfuncs(aggregate, in.maxthreads, -1, NULL);
+    addqueryfuncs(aggregate, count, &work);
 
     /* create table */
     if (sqlite3_exec(aggregate, strlen(in.create_aggregate)?in.create_aggregate:in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
         fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
-        outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
+        outdbs_fin(gts.outdbd, count, NULL, 0);
         closedb(aggregate);
         return NULL;
     }
@@ -945,6 +939,7 @@ int main(int argc, char *argv[])
     #endif
 
     struct ThreadArgs args;
+    memset(&args, 0, sizeof(args));
     #ifdef DEBUG
     args.start_time = &now;
     #endif
@@ -997,7 +992,7 @@ int main(int argc, char *argv[])
     char aggregate_name[MAXSQL];
     sqlite3 *aggregate = NULL;
     if (in.show_results == AGGREGATE) {
-        if (!(aggregate = aggregate_init(AGGREGATE_NAME, aggregate_name, in.maxthreads))) {
+        if (!(aggregate = aggregate_init(aggregate_name, in.maxthreads))) {
             OutputBuffers_destroy(&args.output_buffers);
             outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
             outfiles_fin(gts.outfd, output_count);
@@ -1063,8 +1058,7 @@ int main(int argc, char *argv[])
         struct work *mywork = calloc(1, sizeof(struct work));
 
         /* copy argv[i] into the work item */
-        SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
-        mywork->root = argv[i];
+        mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
 
         lstat(mywork->name,&mywork->statuso);
         if (!S_ISDIR(mywork->statuso.st_mode) ) {
@@ -1072,6 +1066,8 @@ int main(int argc, char *argv[])
             free(mywork);
             continue;
         }
+
+        mywork->root = argv[i];
 
         /* push the path onto the queue */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
@@ -1105,7 +1101,7 @@ int main(int argc, char *argv[])
 
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
-            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, SQLITE_OPEN_READWRITE) ||
+            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1) ||
                 (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK))          {
                 fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }

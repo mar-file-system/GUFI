@@ -68,12 +68,10 @@ OF SUCH DAMAGE.
 #include <pthread.h>
 #include <sqlite3.h>
 #include <stdio.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/xattr.h>
 #include <unistd.h>
 #include <utime.h>
 
@@ -85,6 +83,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "trie.h"
 #include "utils.h"
+#include "xattrs.h"
 
 extern int errno;
 pthread_mutex_t outdb_mutex[MAXPTHREAD];
@@ -173,12 +172,11 @@ int reprocessdir(void * passv, DIR *dir)
     //printf(" in reprocessdir rebuilding gufi for %s\n",passmywork->name);
 
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
-    passmywork->xattrs_len = 0;
-    bzero(passmywork->xattrs,sizeof(passmywork->xattrs));
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
     SNPRINTF(passmywork->type,2,"d");
-    if (in.xattr.index > 0) {
-      passmywork->xattrs_len = pullxattrs(passmywork->name,passmywork->xattrs, sizeof(passmywork->xattrs));
+    xattrs_setup(&passmywork->xattrs);
+    if (in.xattrs.index) {
+      xattrs_get(passmywork->name, &passmywork->xattrs);
     }
 
 
@@ -206,7 +204,7 @@ int reprocessdir(void * passv, DIR *dir)
                       ))) {
        return -1;
     }
-    res=insertdbprep(db);
+    res=insertdbprep(db,esqli);
     startdb(db);
     records=malloc(MAXRECS);
     bzero(records,MAXRECS);
@@ -235,13 +233,15 @@ int reprocessdir(void * passv, DIR *dir)
         SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
         lstat(qwork.name, &qwork.statuso);
         /* qwork.xattrs_len = 0; */
-        if (in.xattr.index > 0) {
-          qwork.xattrs_len = pullxattrs(qwork.name,qwork.xattrs, sizeof(qwork.xattrs));
+        xattrs_setup(&qwork.xattrs);
+        if (in.xattrs.index) {
+          xattrs_get(qwork.name, &qwork.xattrs);
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {
             // this is how the parent gets passed on
             //qwork.pinode=passmywork->statuso.st_ino;
             // there is no work to do for a directory here - we are processing files and links of this dir into a gufi db
+            xattrs_cleanup(&qwork.xattrs);
             continue;
         } else if (S_ISLNK(qwork.statuso.st_mode) ) {
             // its a link so get the linkname
@@ -269,6 +269,8 @@ int reprocessdir(void * passv, DIR *dir)
               transcnt=0;
             }
         }
+
+        xattrs_cleanup(&qwork.xattrs);
     }
 
     stopdb(db);
@@ -276,6 +278,7 @@ int reprocessdir(void * passv, DIR *dir)
 
     // this i believe has to be after we close off the entries transaction
     insertsumdb(db,passmywork,&summary);
+    xattrs_cleanup(&passmywork->xattrs);
     closedb(db);
 
     chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
@@ -617,7 +620,7 @@ int processinit(struct QPTPool * ctx) {
                                 , NULL, NULL
                                 #endif
                                 );
-         global_res[i]=insertdbprepr(gts.outdbd[i]);
+         global_res[i]=insertdbprep(gts.outdbd[i], rsqli);
          if (in.stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
              fprintf(stderr,"\n mutex %d init failed\n",i);

@@ -96,7 +96,7 @@ TEST(addqueryfuncs, path) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     // pass in an empty string into path
     {
@@ -112,7 +112,6 @@ TEST(addqueryfuncs, path) {
 
     // call path with contents
     {
-        // original tree was indexed at root
         const char src[MAXPATH] = "root/level1/level2";
 
         // use value obtained from summary table
@@ -140,7 +139,7 @@ TEST(addqueryfuncs, fpath) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT fpath()", str_output, output, NULL), SQLITE_OK);
@@ -161,7 +160,7 @@ TEST(addqueryfuncs, epath) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT epath()", str_output, output, NULL), SQLITE_OK);
@@ -189,7 +188,7 @@ TEST(addqueryfuncs, uidtouser) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     // use value obtained from summary table
     char query[MAXSQL] = {};
@@ -221,7 +220,7 @@ TEST(addqueryfuncs, gidtogroup) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     // use value obtained from summary table
     char query[MAXSQL] = {};
@@ -243,7 +242,7 @@ TEST(addqueryfuncs, modetotxt) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     for(mode_t perm = 0; perm < 01000; perm++) {
         char query[MAXSQL] = {};
@@ -272,7 +271,7 @@ TEST(addqueryfuncs, strftime) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     const char fmt[] = "%a %A %b %B %c %C %d %D %e %F %g %G %h %H %I %j %m %M %n %p %r %R %S %t %T %u %U %V %w %W %x %X %y %Y %z %Z %%";
 
@@ -312,7 +311,7 @@ TEST(addqueryfuncs, blocksize) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     const char expecteds[] = {'1', '1', '2'};
 
@@ -366,7 +365,7 @@ TEST(addqueryfuncs, human_readable_size) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char query[MAXSQL] = {};
     char output[MAXPATH] = {};
@@ -401,14 +400,14 @@ TEST(addqueryfuncs, level) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    for(size_t level = 0; level < 10; level++) {
-        ASSERT_EQ(addqueryfuncs(db, 0, level, nullptr), 0);
+    for(work.level = 0; work.level < 10; work.level++) {
+        ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
         char output[MAXPATH] = {};
         ASSERT_EQ(sqlite3_exec(db, "SELECT level()", str_output, output, NULL), SQLITE_OK);
 
         char expected[MAXPATH] = {};
-        SNPRINTF(expected, MAXPATH, "%zu", level);
+        SNPRINTF(expected, MAXPATH, "%zu", work.level);
 
         EXPECT_STREQ(output, expected);
     }

@@ -83,8 +83,10 @@ extern int errno;
 struct OutputBuffers debug_output_buffers;
 #endif
 
-int templatefd = -1;    /* this is really a constant that is set at runtime */
-off_t templatesize = 0; /* this is really a constant that is set at runtime */
+struct PoolArgs {
+    FILE **traces;
+    struct templates *templates;
+};
 
 /* Data stored during first pass of input file */
 struct row {
@@ -189,8 +191,11 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     (void) ctx;
 
+    struct PoolArgs *pa = (struct PoolArgs *) args;
+    FILE *trace = ((FILE **) pa->traces)[id];
+    struct templates *templates = pa->templates;
+
     struct row *w = (struct row *) data;
-    FILE *trace = ((FILE **) args)[id];
 
     timestamp_set_end(handle_args);
 
@@ -207,12 +212,10 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* create the directory */
     timestamp_start(dupdir);
     char topath[MAXPATH];
-    if (w->first_delim) {
-        SNFORMAT_S(topath, MAXPATH, 3, in.nameto, strlen(in.nameto), "/", (size_t) 1, dir.name, w->first_delim);
-    }
-    else {
-        SNFORMAT_S(topath, MAXPATH, 1, in.nameto, strlen(in.nameto));
-    }
+    const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
+                                         in.nameto, in.nameto_len,
+                                         "/", (size_t) 1,
+                                         dir.name, w->first_delim);
 
     if (dupdir(topath, &dir.statuso)) {
         const int err = errno;
@@ -226,7 +229,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     /* create the database name */
     char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2, topath, strlen(topath), "/" DBNAME, (size_t) (DBNAME_LEN + 1));
+    SNFORMAT_S(dbname, MAXPATH, 2,
+               topath, topath_len,
+               "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
     /* /\* don't bother doing anything if there is nothing to insert *\/ */
     /* /\* (the database file will not exist for empty directories) *\/ */
@@ -236,7 +241,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     /* copy the template file */
-    if (copy_template(templatefd, dbname, templatesize, dir.statuso.st_uid, dir.statuso.st_gid)) {
+    if (copy_template(&templates->db, dbname, dir.statuso.st_uid, dir.statuso.st_gid)) {
         row_destroy(w);
         return 1;
     }
@@ -260,15 +265,21 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         zeroit(&summary);
         timestamp_set_end(zero_summary);
 
+        struct sll xattr_db_list;
+        sll_init(&xattr_db_list);
+
+        /* INSERT statement bindings into db.db */
         timestamp_start(insertdbprep);
-        sqlite3_stmt *res = insertdbprep(db);
+        sqlite3_stmt *res = insertdbprep(db, esqli);                                /* entries */
+        sqlite3_stmt *xattrs_res = insertdbprep(db, XATTRS_SQL_INSERT);             /* xattrs within db.db */
+        sqlite3_stmt *xattr_files_res = insertdbprep(db, XATTR_FILES_SQL_INSERT);   /* per-user and per-group db file names*/
         timestamp_set_end(insertdbprep);
 
         timestamp_start(startdb);
         startdb(db);
         timestamp_set_end(startdb);
 
-        /* move the trace file to the offet */
+        /* move the trace file to the offset */
         timestamp_start(fseek);
         fseek(trace, w->offset, SEEK_SET);
         timestamp_set_end(fseek);
@@ -306,7 +317,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
             /* update summary table */
             timestamp_start(sumit);
-            sumit(&summary,&row);
+            sumit(&summary, &row);
             timestamp_set_end(sumit);
 
             /* don't record pinode */
@@ -314,8 +325,14 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
             /* add row to bulk insert */
             timestamp_start(insertdbgo);
-            insertdbgo(&row,db,res);
+            insertdbgo(&row, db, res);
+            insertdbgo_xattrs(&dir.statuso, &row,
+                              &xattr_db_list, &templates->xattr,
+                              topath, topath_len,
+                              xattrs_res, xattr_files_res);
             timestamp_set_end(insertdbgo);
+
+            xattrs_cleanup(&row.xattrs);
 
             row_count++;
             if (row_count > 100000) {
@@ -370,12 +387,22 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         stopdb(db);
         timestamp_set_end(stopdb);
 
+        /* write out per-user and per-group xattrs */
+        sll_destroy(&xattr_db_list, destroy_xattr_db);
+
+        /* write out the current directory's xattrs */
+        insertdbgo_xattrs_avail(&dir, xattrs_res);
+
+        /* write out data going into db.db */
         timestamp_start(insertdbfin);
-        insertdbfin(res);
+        insertdbfin(xattr_files_res); /* per-user and per-group xattr db file names */
+        insertdbfin(xattrs_res);      /* xattrs */
+        insertdbfin(res);             /* entries */
         timestamp_set_end(insertdbfin);
 
         timestamp_start(insertsumdb);
         insertsumdb(db, &dir, &summary);
+        xattrs_cleanup(&dir.xattrs);
         timestamp_set_end(insertsumdb);
 
         timestamp_start(closedb);
@@ -648,10 +675,22 @@ int main(int argc, char *argv[]) {
 
         if (retval)
             return retval;
+
+        in.name_len = strlen(in.name);
+        in.nameto_len = strlen(in.nameto);
     }
 
-    if ((templatesize = create_template(&templatefd)) == (off_t) -1) {
+    struct templates templates;
+    init_template_db(&templates.db);
+    if (create_dbdb_template(&templates.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
+        return -1;
+    }
+
+    init_template_db(&templates.xattr);
+    if (create_xattrs_template(&templates.xattr) != 0) {
+        fprintf(stderr, "Could not create xattr template file\n");
+        close_template_db(&templates.db);
         return -1;
     }
 
@@ -672,18 +711,25 @@ int main(int argc, char *argv[]) {
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , &debug_output_buffers
                                          #endif
-        );
+                                         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         close_per_thread_traces(traces, in.maxthreads);
-        close(templatefd);
+        close_template_db(&templates.xattr);
+        close_template_db(&templates.db);
         return -1;
     }
 
-    if (!QPTPool_start(pool, traces)) {
+    struct PoolArgs args = {
+        .traces = traces,
+        .templates = &templates,
+    };
+
+    if (!QPTPool_start(pool, &args)) {
         fprintf(stderr, "Failed to start threads\n");
         close_per_thread_traces(traces, in.maxthreads);
-        close(templatefd);
+        close_template_db(&templates.xattr);
+        close_template_db(&templates.db);
         return -1;
     }
 
@@ -696,6 +742,9 @@ int main(int argc, char *argv[]) {
     #endif
     QPTPool_destroy(pool);
 
+    close_template_db(&templates.xattr);
+    close_template_db(&templates.db);
+
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_flush_to_single(&debug_output_buffers, stderr);
     OutputBuffers_destroy(&debug_output_buffers);
@@ -703,9 +752,6 @@ int main(int argc, char *argv[]) {
 
     /* set top level permissions */
     chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
-    close_per_thread_traces(traces, in.maxthreads);
-    close(templatefd);
 
     /* have to call clock_gettime explicitly to get end time */
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);
@@ -738,7 +784,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Files inserted:            %zu\n", total_files);
     #endif
 
-    fprintf(stderr, "main completed in %.2Lf seconds\n", sec(nsec(&main_func)));
+    fprintf(stdout, "main completed in %.2Lf seconds\n", sec(nsec(&main_func)));
 
     return 0;
 }

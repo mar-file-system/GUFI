@@ -66,13 +66,10 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
-#include "config.h"
 #include "utils.h"
 
 extern int errno;
@@ -84,9 +81,9 @@ pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
 // global variable to hold per thread state
 struct globalthreadstate gts = {};
 
-int printits(struct work *pwork,int ptid) {
+int printits(struct work *pwork, int ptid) {
   char  ffielddelim[2];
-  FILE * out;
+  FILE *out;
 
   out = stdout;
   if (in.outfile > 0)
@@ -131,7 +128,7 @@ int printits(struct work *pwork,int ptid) {
     fprintf(out,"%s%s",pwork->xattr,ffielddelim);
   }
 */
-  fwrite(pwork->xattrs, sizeof(char), pwork->xattrs_len, out);
+  /* fwrite(pwork->xattrs, sizeof(char), pwork->xattrs_len, out); */
   fprintf(out,"%s",ffielddelim);
 
   /* this one is for create tiem which posix doesnt have */
@@ -143,75 +140,6 @@ int printits(struct work *pwork,int ptid) {
   return 0;
 }
 
-ssize_t pullxattrs(const char *filename, char *xattrs, const size_t xattrs_buf_size) {
-    char key_list[MAXXATTR];
-    ssize_t key_list_len = LISTXATTR(filename, key_list, sizeof(key_list));
-
-    ssize_t xattr_len = 0;
-    if (key_list_len > 0) {
-        char *key = key_list;
-        char *curr = xattrs;
-        while ((xattr_len < xattrs_buf_size) && (key_list_len > 0)) {
-            size_t key_len = strlen(key); /* does not include the NULL terminator */
-
-            char value[MAXXATTR];
-            const ssize_t value_len = GETXATTR(filename, key, value, sizeof(value));  /* includes the NULL terminator */
-
-            /* can't fit buffer */
-            const size_t pair_len = key_len + 1 + value_len;
-            if (pair_len > (MAXXATTR - xattr_len)) {
-                fprintf(stderr, "Warning: Cannot fit xattrs from %s into buffer: %s:%s\n", filename, key, value);
-                break;
-            }
-
-            /* write the pair into the buffer */
-            memcpy(curr, key, key_len);
-            curr += key_len;
-            *curr = xattrdelim[0];
-            curr++;
-            memcpy(curr, value, value_len);
-            curr += value_len;
-            xattr_len += pair_len;
-
-            /* go to the next key */
-            key += key_len + 1;
-            key_list_len -= key_len + 1;
-        }
-
-        *curr = '\x00';
-    }
-
-    return xattr_len;
-}
-
-const char *get_xattr_value(const char *xattrs, const size_t xattrs_len, const char *key, const size_t key_len) {
-    const char *curr = xattrs;
-    const char *end = curr + xattrs_len;
-
-    while (curr < end) {
-        /* find the delimiter */
-        size_t i = 0;
-        while (((curr + i) < end) && (curr[i] != xattrdelim[0])) {
-            i++;
-        }
-
-        if ((curr + i) == end) {
-            return 0;
-        }
-
-        /* if the length matches, check if the key matches */
-        if (i == key_len) {
-            if (strncmp(curr, key, key_len) == 0) {
-                return curr + key_len + 1;
-            }
-        }
-
-        /* go to the next pair */
-        curr += strlen(curr) + 1;
-    }
-
-    return 0;
-}
 
 int zeroit(struct sum *summary)
 {
@@ -261,7 +189,7 @@ int zeroit(struct sum *summary)
   return 0;
 }
 
-int sumit (struct sum *summary,struct work *pwork) {
+int sumit(struct sum *summary, struct work *pwork) {
 
   if (summary->setit == 0) {
     summary->minuid=pwork->statuso.st_uid;
@@ -342,20 +270,12 @@ int sumit (struct sum *summary,struct work *pwork) {
   if (pwork->ossint4 > summary->maxossint4) summary->maxossint4=pwork->ossint4;
   summary->totossint4=summary->totossint4+pwork->ossint4;
 
-  size_t xattrdelim_counter = 0;
-  for(ssize_t i = 0; i < pwork->xattrs_len; i++) {
-      if (pwork->xattrs[i] == xattrdelim[0]) {
-          xattrdelim_counter++;
-          if ((xattrdelim_counter & 1) == 0) {
-              summary->totxattr++;
-          }
-      }
-  }
+  summary->totxattr += pwork->xattrs.count;
 
   return 0;
 }
 
-int tsumit (struct sum *sumin,struct sum *smout) {
+int tsumit(struct sum *sumin,struct sum *smout) {
 
   pthread_mutex_lock(&sum_mutex);
 
@@ -454,8 +374,8 @@ int tsumit (struct sum *sumin,struct sum *smout) {
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
 //
-int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
-  for (char* p=strchr(path+1, '/'); p; p=strchr(p+1, '/')) {
+int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
+  for (char *p=strchr(path+1, '/'); p; p=strchr(p+1, '/')) {
     //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
     //printf("mkpath mkdir file_path %s\n", file_path);
@@ -476,7 +396,7 @@ int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
   return mkdir(path,mode);
 }
 
-int dupdir(char * path, struct stat * stat)
+int dupdir(char *path, struct stat *stat)
 {
     //printf("mkdir %s\n",path);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
@@ -531,7 +451,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      return 0;
 }
 
-int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode) {
+int printit(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, int printing, long long pinode) {
   if (!printing) return 0;
   printf("%c ", type[0]);
 
@@ -551,25 +471,17 @@ int printit(const char *name, const struct stat *status, char *type, char *linkn
   printf("%ld ",            status->st_mtime);
   printf("%ld ",            status->st_ctime);
 
-  if (xattrs > 0) {
-    printf("xattr: %s",xattr);
-/*
-    while (cnt < xattrs) {
-      memset(buf, 0, sizeof(buf));
-      memset(bufv, 0, sizeof(bufv));
-      strcpy(buf,xattrp); xattrp=xattrp+strlen(buf)+1;
-      printf("%s",buf);
-      strcpy(bufv,xattrp); xattrp=xattrp+strlen(bufv)+1;
-      printf("%s ",bufv);
-      cnt++;
-   }
-*/
+  if (xattrs->count) {
+    printf("xattr:");
+    for(size_t i = 0; i < xattrs->count; i++) {
+      printf("%s\\0", xattrs->pairs[i].name);
+    }
   }
   printf("\n");
   return 0;
 }
 
-int printload(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,long long pinode,char *sortf,FILE *of) {
+int printload(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, long long pinode, char *sortf, FILE *of) {
   fprintf(of,"%s%s",             name,in.delim);
   fprintf(of,"%c%s",             type[0],in.delim);
   fprintf(of,"%"STAT_ino"%s",    status->st_ino,in.delim);
@@ -585,11 +497,10 @@ int printload(const char *name, const struct stat *status, char *type, char *lin
   fprintf(of,"%ld%s",            status->st_mtime,in.delim);
   fprintf(of,"%ld%s",            status->st_ctime,in.delim);
   fprintf(of,"%s%s",             linkname,in.delim);
-  if (xattrs > 0) {
-    fprintf(of,"%s%s",xattr,in.delim);
-  } else {
-    fprintf(of,"%s",in.delim);
+  for(size_t i = 0; i < xattrs->count; i++) {
+      fprintf(of, "%s\\0", xattrs->pairs[i].name);
   }
+  fprintf(of,"%s",in.delim);
   /* this one is for create time which posix doenst have */
   fprintf(of,"%s",in.delim);
   /* sort field at the end not required */
@@ -599,7 +510,7 @@ int printload(const char *name, const struct stat *status, char *type, char *lin
   return(0);
 }
 
-int SNPRINTF(char * str, size_t size, const char *format, ...) {
+int SNPRINTF(char *str, size_t size, const char *format, ...) {
     va_list args;
     va_start(args, format);
     const int n = vsnprintf(str, size, format, args);
@@ -620,13 +531,13 @@ int SNPRINTF(char * str, size_t size, const char *format, ...) {
    should be pairs of strings and their lengths (to try to prevent
    unnecessary calls to strlen). Make sure to typecast the lengths
    to size_t or weird bugs may occur */
-size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...) {
+size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
     size_t max_len = dst_len - 1;
 
     va_list args;
     va_start(args, count);
     for(size_t i = 0; i < count; i++) {
-        const char * src = va_arg(args, char *);
+        const char *src = va_arg(args, char *);
         /* size_t does not work, but solution found at */
         /* https://stackoverflow.com/a/12864069/341683 */
         /* does not seem to fix it either */
@@ -671,7 +582,7 @@ size_t descend(struct QPTPool *ctx, const size_t id,
         /* queue, if file or link print it, fill up qwork structure for */
         /* each */
         while (1) {
-            struct dirent * entry = readdir(dir);
+            struct dirent *entry = readdir(dir);
 
             if (!entry) {
                 break;
@@ -688,7 +599,7 @@ size_t descend(struct QPTPool *ctx, const size_t id,
             }
 
             struct work qwork;
-            SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
+            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
 
             /* #ifdef DEBUG */
             /* struct start_end * lstat_call = buffer_get(&timers->lstat); */
@@ -714,7 +625,7 @@ size_t descend(struct QPTPool *ctx, const size_t id,
 
                     /* make a clone here so that the data can be pushed into the queue */
                     /* this is more efficient than malloc+free for every single entry */
-                    struct work * clone = (struct work *) malloc(sizeof(struct work));
+                    struct work *clone = (struct work *) malloc(sizeof(struct work));
                     memcpy(clone, &qwork, sizeof(struct work));
 
                     /* push the subdirectory into the queue for processing */
@@ -734,7 +645,7 @@ size_t descend(struct QPTPool *ctx, const size_t id,
 }
 
 /* convert a mode to a human readable string */
-char * modetostr(char * str, const size_t size, const mode_t mode)
+char *modetostr(char *str, const size_t size, const mode_t mode)
 {
     if (size < 11) {
         return NULL;
@@ -759,7 +670,7 @@ char * modetostr(char * str, const size_t size, const mode_t mode)
 }
 
 
-static int loop_matches(const char c, const char * match, const size_t match_count) {
+static int loop_matches(const char c, const char *match, const size_t match_count) {
     for(size_t i = 0; i < match_count; i++) {
         if (match[i] == c) {
             return 1;
@@ -769,8 +680,8 @@ static int loop_matches(const char c, const char * match, const size_t match_cou
     return 0;
 }
 
-int remove_trailing(char * str, size_t * size,
-                    const char * match, const size_t match_count) {
+int remove_trailing(char *str, size_t *size,
+                    const char *match, const size_t match_count) {
     if (!str || !size) {
         return -1;
     }
@@ -826,4 +737,26 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
     }
 
     return 0;
+}
+
+/* strstr/strtok replacement */
+/* does not terminate on NULL character */
+/* does not skip to the next non-empty column */
+char *split(char *src, const char *delim, const char *end) {
+    if (!src || !delim || !end || (src > end)) {
+        return NULL;
+    }
+
+    while (src < end) {
+        for(const char *d = delim; *d; d++) {
+            if (*src == *d) {
+                *src = '\x00';
+                return src + 1;
+            }
+        }
+
+        src++;
+    }
+
+    return NULL;
 }

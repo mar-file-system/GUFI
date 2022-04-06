@@ -172,7 +172,6 @@ TEST(summary, sumit_file) {
     pwork.ossint2           = dist(gen);
     pwork.ossint3           = dist(gen);
     pwork.ossint4           = dist(gen);
-    pwork.xattrs_len        = 0;
 
     ASSERT_EQ(sumit(&summary, &pwork), 0);
 
@@ -234,7 +233,6 @@ TEST(summary, sumit_link) {
     pwork.ossint2           = dist(gen);
     pwork.ossint3           = dist(gen);
     pwork.ossint4           = dist(gen);
-    pwork.xattrs_len        = 0;
 
     ASSERT_EQ(sumit(&summary, &pwork), 0);
 
@@ -631,79 +629,71 @@ TEST(modetostr, directories) {
     }
 }
 
-TEST(xattrs, get_xattr_value) {
-    const char xattrs[] = "key.0\x1fvalue0\x00"
-                          "key.1\x1fvalue1\x00"
-                          "key.2\x1fvalue2\x00";
-    const size_t xattr_len = sizeof(xattrs) - 1;
-
-    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, "key.2", 5), "value2");
-    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, "key.1", 5), "value1");
-    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, "key.0", 5), "value0");
-}
-
-TEST(xattrs, pullxattrs) {
-    char name[] = "XXXXXX";
-    const int fd = mkstemp(name);
-    ASSERT_NE(fd, -1);
-    close(fd);
-
-    const char KEY[] = "user.key";
-    const char VALUE[] = "value";
-
-    ASSERT_EQ(SETXATTR(name, KEY, VALUE, strlen(VALUE)), 0);
-
-    char xattrs[MAXXATTR];
-    const size_t xattr_len = pullxattrs(name, xattrs, sizeof(xattrs));
-    ASSERT_NE(xattr_len, (size_t) 0);
-
-    EXPECT_STREQ(get_xattr_value(xattrs, xattr_len, KEY, strlen(KEY)), VALUE);
-
-    remove(name);
-}
-
 TEST(remove_trailing, paths) {
-    const char expected[] = "/a/b/c";
-    const std::size_t expected_len = strlen(expected);
+    char root[MAXPATH]    = "/";
+    char dir[MAXPATH]     = "/a/b/c/";
+    char nondir[MAXPATH]  = "/a/b/c";
+    char slashes[MAXPATH] = "////";
+    char nulls[MAXPATH]   = "";
 
-    char root[MAXPATH]    = {};
-    char good[MAXPATH]    = {};
-    char slashes[MAXPATH] = {};
-    char nulls[MAXPATH]   = {};
-    char both[MAXPATH]    = {};
-
-    const char match[] = "/\x00";
+    const char match[] = "/";
     const size_t match_len = strlen(match);
 
     size_t len = 0;
 
-    SNFORMAT_S(root, MAXPATH, 1, "/", 1);
     len = strlen(root);
     EXPECT_EQ(remove_trailing(root, &len, match, match_len), 0);
-    EXPECT_EQ(len, 0U);
+    EXPECT_EQ(len, (size_t) 0);
     EXPECT_STREQ(root, "");
 
-    SNFORMAT_S(good, MAXPATH, 1, expected, expected_len);
-    len = strlen(good);
-    EXPECT_EQ(remove_trailing(good, &len, match, match_len), 0);
-    EXPECT_EQ(len, expected_len);
-    EXPECT_STREQ(good, expected);
+    len = strlen(dir);
+    EXPECT_EQ(remove_trailing(dir, &len, match, match_len), 0);
+    EXPECT_EQ(len, (size_t) 6);
+    EXPECT_STREQ(dir, "/a/b/c");
 
-    SNFORMAT_S(slashes, MAXPATH, 1, expected, expected_len);
+    len = strlen(nondir);
+    EXPECT_EQ(remove_trailing(nondir, &len, match, match_len), 0);
+    EXPECT_EQ(len, (size_t) 6);
+    EXPECT_STREQ(nondir, "/a/b/c");
+
     len = strlen(slashes);
     EXPECT_EQ(remove_trailing(slashes, &len, match, match_len), 0);
-    EXPECT_EQ(len, expected_len);
-    EXPECT_STREQ(slashes, expected);
+    EXPECT_EQ(len, (size_t) 0);
 
-    SNFORMAT_S(nulls, MAXPATH, 1, expected, expected_len);
     len = strlen(nulls);
     EXPECT_EQ(remove_trailing(nulls, &len, match, match_len), 0);
-    EXPECT_EQ(len, expected_len);
-    EXPECT_STREQ(nulls, expected);
+    EXPECT_EQ(len, (size_t) 0);
+}
 
-    SNFORMAT_S(both, MAXPATH, 1, expected, expected_len);
-    len = strlen(both);
-    EXPECT_EQ(remove_trailing(both, &len, match, match_len), 0);
-    EXPECT_EQ(len, expected_len);
-    EXPECT_STREQ(both, expected);
+TEST(split, delims) {
+    const char delims[] = "\xfe\xff";
+    char line[MAXPATH];
+    const size_t line_len = SNFORMAT_S(line, MAXPATH, 6,
+                                       "a", 1,
+                                       delims, 1,
+                                       "b", 1,
+                                       &delims[1], 1,
+                                       delims, 1,
+                                       "c", 1);
+    EXPECT_EQ(line_len, (size_t) 6);
+    const char *end = line + line_len;
+
+    char *curr = nullptr;
+    char *next = line;
+
+    curr = next; next = split(curr, delims, end);
+    EXPECT_STREQ(curr, "a");
+
+    curr = next; next = split(curr, delims, end);
+    EXPECT_STREQ(curr, "b");
+
+    curr = next; next = split(curr, delims, end);
+    EXPECT_STREQ(curr, "");
+
+    curr = next; next = split(curr, delims, end);
+    EXPECT_STREQ(curr, "c");
+
+    curr = next; next = split(curr, delims, end);
+    EXPECT_EQ(curr, nullptr);
+    EXPECT_EQ(next, nullptr);
 }

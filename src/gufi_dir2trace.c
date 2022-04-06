@@ -68,18 +68,17 @@ OF SUCH DAMAGE.
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/xattr.h>
 #include <unistd.h>
 
 #include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "debug.h"
 #include "dbutils.h"
+#include "debug.h"
 #include "outfiles.h"
-#include "template_db.h"
 #include "trace.h"
 #include "trie.h"
 #include "utils.h"
+#include "xattrs.h"
 
 extern int errno;
 
@@ -120,22 +119,16 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         return 1;
     }
 
-    /* get source directory info */
-    struct stat dir_st;
-    if (lstat(work->name, &dir_st) < 0)  {
-        closedir(dir);
-        free(data);
-        return 1;
+    /* get source directory xattrs */
+    xattrs_setup(&work->xattrs);
+    if (in.xattrs.index) {
+        xattrs_get(work->name, &work->xattrs);
     }
 
-    /* get a copy of the full source path */
-    char work_name[MAXPATH];
-    size_t work_name_len = strlen(work->name);
-    SNFORMAT_S(work_name, MAXPATH, 1, work->name, work_name_len);
+    /* write start of stanza */
+    worktofile(gts.outfd[id], in.delim, in.name_len, work);
 
-    /* remove this directory's path prefix for writing to the trace file */
-    SNFORMAT_S(work->name, MAXPATH, 1, work_name + in.name_len, work_name_len - in.name_len);
-    worktofile(gts.outfd[id], in.delim, work);
+    xattrs_cleanup(&work->xattrs);
 
     struct dirent *entry = NULL;
     size_t rows = 0;
@@ -147,27 +140,18 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             continue;
         }
 
-        /* get entry path */
         struct work e;
         memset(&e, 0, sizeof(struct work));
 
-        char fullpath[MAXPATH];
-        const size_t fullpath_len = SNFORMAT_S(fullpath, MAXPATH, 3,
-                                               work_name, work_name_len,
-                                               "/",  (size_t) 1,
-                                               entry->d_name, len);
-
-        /* the name that is stored in trace does not have the prefix */
-        memcpy(e.name, fullpath + in.name_len, fullpath_len - in.name_len);
+        /* this is the actual path */
+        e.name_len = SNFORMAT_S(e.name, MAXPATH, 3,
+                                work->name, work->name_len,
+                                "/", (size_t) 1,
+                                entry->d_name, len);
 
         /* get the entry's metadata */
-        if (lstat(fullpath, &e.statuso) < 0) {
+        if (lstat(e.name, &e.statuso) < 0) {
             continue;
-        }
-
-        e.xattrs_len = 0;
-        if (in.xattr.index > 0) {
-            e.xattrs_len = pullxattrs(e.name, e.xattrs, sizeof(e.xattrs));
         }
 
         /* push subdirectories onto the queue */
@@ -179,8 +163,6 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             /* this is more efficient than malloc+free for every single entry */
             struct work *copy = (struct work *) calloc(1, sizeof(struct work));
             memcpy(copy, &e, sizeof(struct work));
-            memcpy(copy->name, fullpath, fullpath_len);
-
             QPTPool_enqueue(ctx, id, processdir, copy);
             continue;
         }
@@ -190,7 +172,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         /* non directories */
         if (S_ISLNK(e.statuso.st_mode)) {
             e.type[0] = 'l';
-            readlink(fullpath, e.linkname, MAXPATH);
+            readlink(e.name, e.linkname, MAXPATH);
         }
         else if (S_ISREG(e.statuso.st_mode)) {
             e.type[0] = 'f';
@@ -200,13 +182,19 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             continue;
         }
 
+        xattrs_setup(&e.xattrs);
+        if (in.xattrs.index) {
+            xattrs_get(e.name, &e.xattrs);
+        }
+
         #if BENCHMARK
         pthread_mutex_lock(&global_mutex);
         total_files++;
         pthread_mutex_unlock(&global_mutex);
         #endif
 
-        worktofile(gts.outfd[id], in.delim, &e);
+        worktofile(gts.outfd[id], in.delim, in.name_len, &e);
+        xattrs_cleanup(&e.xattrs);
     }
 
     closedir(dir);
@@ -222,7 +210,7 @@ struct work *validate_inputs() {
         return NULL;
     }
 
-    SNPRINTF(root->name, MAXPATH, "%s", in.name);
+    root->name_len = SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
     /* get input path metadata */
     if (lstat(root->name, &root->statuso) < 0) {
@@ -276,10 +264,6 @@ struct work *validate_inputs() {
         }
     }
 
-    if (in.xattr.index > 0) {
-        root->xattrs_len = pullxattrs(in.name, root->xattrs, sizeof(root->xattrs));
-    }
-
     return root;
 }
 
@@ -310,6 +294,8 @@ int main(int argc, char *argv[]) {
         }
 
         in.name_len = strlen(in.name);
+        in.nameto_len = strlen(in.nameto);
+
         remove_trailing(in.name, &in.name_len, "/", 1);
 
         /* root is special case */
@@ -321,6 +307,7 @@ int main(int argc, char *argv[]) {
             /* add 1 more for the separator that is placed between this string and the entry */
             in.name_len++;
         }
+
         in.outfile = 1;
     }
 

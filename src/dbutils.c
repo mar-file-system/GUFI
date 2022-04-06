@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 
 #include "config.h"
 #include "dbutils.h"
+#include "template_db.h"
 
 extern int errno;
 
@@ -112,27 +113,30 @@ char *vtssqluser  = "DROP VIEW IF EXISTS vtsummaryuser;"
 char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
                     "create view vtsummarygroup as select * from treesummary where rectype=2;";
 
-
-
-
-sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags)
+sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err)
 {
   char attach[MAXSQL];
   if (flags & SQLITE_OPEN_READONLY) {
       if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro' AS %Q", name, dbn)) {
-          fprintf(stderr, "Cannot create ATTACH command\n");
+          if (print_err) {
+              fprintf(stderr, "Cannot create ATTACH command\n");
+          }
           return NULL;
       }
   }
   else if (flags & SQLITE_OPEN_READWRITE) {
       if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn)) {
-          fprintf(stderr, "Cannot create ATTACH command\n");
+          if (print_err) {
+              fprintf(stderr, "Cannot create ATTACH command\n");
+          }
           return NULL;
       }
   }
 
   if (sqlite3_exec(db, attach, NULL, NULL, NULL) != SQLITE_OK) {
-      fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, sqlite3_errmsg(db));
+      if (print_err) {
+          fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, sqlite3_errmsg(db));
+      }
       return NULL;
   }
 
@@ -478,33 +482,17 @@ int insertdbfin(sqlite3_stmt *res)
     return 0;
 }
 
-sqlite3_stmt *insertdbprep(sqlite3 *db)
+sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
 {
-    const char *tail;
+    const char *tail = NULL;
     int error = SQLITE_OK;
     sqlite3_stmt *reso;
 
     // WARNING: passing length-arg that is longer than SQL text
-    error= sqlite3_prepare_v2(db, esqli, MAXSQL, &reso, &tail);
+    error = sqlite3_prepare_v2(db, sqli, MAXSQL, &reso, &tail);
     if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on insertdbprep: error %d %s err %s\n",
                   error,esqli,sqlite3_errmsg(db));
-          return NULL;
-    }
-    return reso;
-}
-
-sqlite3_stmt *insertdbprepr(sqlite3 *db)
-{
-    const char *tail;
-    int error = SQLITE_OK;
-    sqlite3_stmt *reso;
-
-    // WARNING: passing length-arg that is longer than SQL text
-    error= sqlite3_prepare_v2(db, rsqli, MAXSQL, &reso, &tail);
-    if (error != SQLITE_OK) {
-          fprintf(stderr, "SQL error on insertdbprepr: error %d %s err %s\n",
-                  error,rsqli,sqlite3_errmsg(db));
           return NULL;
     }
     return reso;
@@ -561,7 +549,15 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_bind_int64(res,12,pwork->statuso.st_mtime);
     sqlite3_bind_int64(res,13,pwork->statuso.st_ctime);
     sqlite3_bind_text(res,14,zlinkname,-1,SQLITE_STATIC);
-    sqlite3_bind_blob64(res, 15, pwork->xattrs, pwork->xattrs_len, SQLITE_STATIC);
+
+    /* only insert xattr names */
+    char xattr_names[MAXXATTR];
+    ssize_t xattr_names_len = xattr_get_names(&pwork->xattrs, xattr_names, sizeof(xattr_names), XATTRDELIM);
+    if (xattr_names_len < 0) {
+         xattr_names_len = 0;
+    }
+    sqlite3_bind_blob64(res, 15, xattr_names, xattr_names_len, SQLITE_STATIC);
+
     sqlite3_bind_int64(res,16,pwork->crtime);
     sqlite3_bind_int64(res,17,pwork->ossint1);
     sqlite3_bind_int64(res,18,pwork->ossint2);
@@ -582,6 +578,96 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     /* } */
     /* sqlite3_clear_bindings(res); */
     sqlite3_reset(res);
+
+    return 0;
+}
+
+int insertdbgo_xattrs_avail(struct work *pwork, sqlite3_stmt *res)
+{
+    int error = SQLITE_DONE;
+    for(size_t i = 0; (i < pwork->xattrs.count) && (error == SQLITE_DONE); i++) {
+        struct xattr *xattr = &pwork->xattrs.pairs[i];
+
+        sqlite3_bind_int64(res, 1, pwork->statuso.st_ino);
+        sqlite3_bind_blob(res,  2, xattr->name,  xattr->name_len,  SQLITE_STATIC);
+        sqlite3_bind_blob(res,  3, xattr->value, xattr->value_len, SQLITE_STATIC);
+
+        error = sqlite3_step(res);
+        sqlite3_reset(res);
+    }
+
+    return error;
+}
+
+int insertdbgo_xattrs(struct stat *dir, struct work *entry,
+                      struct sll *xattr_db_list,
+                      struct template_db *xattr_template,
+                      const char *topath, const size_t topath_len,
+                      sqlite3_stmt *xattrs_res,
+                      sqlite3_stmt *xattr_files_res) {
+    /* insert into the xattrs_avail table inside db.db */
+    const int rollin_score = xattr_can_rollin(dir, &entry->statuso);
+    if (rollin_score) {
+        insertdbgo_xattrs_avail(entry, xattrs_res);
+    }
+    /* can't roll in, so need external dbs */
+    else {
+        struct xattr_db *xattr_uid_db = NULL;
+        struct xattr_db *xattr_gid_db = NULL;
+
+        /* linear search since there shouldn't be too many users/groups that have xattrs */
+        sll_loop(xattr_db_list, node) {
+            struct xattr_db *xattr_db = (struct xattr_db *) sll_node_data(node);
+            if (xattr_db->st.st_uid == entry->statuso.st_uid) {
+                xattr_uid_db = xattr_db;
+
+                if (xattr_gid_db) {
+                    break;
+                }
+            }
+
+            if ((xattr_db->st.st_gid == entry->statuso.st_gid) &&
+                ((xattr_db->st.st_mode & 0040) == (entry->statuso.st_mode & 0040))) {
+                xattr_gid_db = xattr_db;
+
+                if (xattr_uid_db) {
+                    break;
+                }
+            }
+        }
+
+        /* user id/permission mismatch */
+        if (!xattr_uid_db) {
+            xattr_uid_db = create_xattr_db(xattr_template,
+                                           topath, topath_len,
+                                           entry->statuso.st_uid,
+                                           in.xattrs.nobody.gid,
+                                           entry->statuso.st_mode,
+                                           xattr_files_res);
+            if (!xattr_uid_db) {
+                return -1;
+            }
+            sll_push(xattr_db_list, xattr_uid_db);
+        }
+
+        /* group id/permission mismatch */
+        if (!xattr_gid_db) {
+            xattr_gid_db = create_xattr_db(xattr_template,
+                                           topath, topath_len,
+                                           in.xattrs.nobody.uid,
+                                           entry->statuso.st_gid,
+                                           entry->statuso.st_mode,
+                                           xattr_files_res);
+            if (!xattr_gid_db) {
+                return -1;
+            }
+            sll_push(xattr_db_list, xattr_gid_db);
+        }
+
+        /* insert into per-user and per-group xattr dbs */
+        insertdbgo_xattrs_avail(entry, xattr_uid_db->res);
+        insertdbgo_xattrs_avail(entry, xattr_gid_db->res);
+    }
 
     return 0;
 }
@@ -614,7 +700,7 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     return 0;
 }
 
-int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
+int insertsumdb(sqlite3 *sdb, struct work *pwork, struct sum *su)
 {
     char *err_msg = 0;
     char sqlstmt[MAXSQL];
@@ -630,7 +716,11 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork,struct sum *su)
     char *zname     = sqlite3_mprintf("%q",shortname);
     char *ztype     = sqlite3_mprintf("%q",pwork->type);
     char *zlinkname = sqlite3_mprintf("%q",pwork->linkname);
-    char *zxattr    = sqlite3_mprintf("%q",pwork->xattrs);
+
+    char xattr_names[MAXXATTR] = "\x00";
+    xattr_get_names(&pwork->xattrs, xattr_names, sizeof(xattr_names), XATTRDELIM);
+
+    char *zxattr    = sqlite3_mprintf("%q", xattr_names);
 
     SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
             "(NULL, \'%s\', \'%s\', "
@@ -980,19 +1070,32 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     return;
 }
 
-int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char *starting_dir) {
-    return ((sqlite3_create_function(db, "path",                1, SQLITE_UTF8, (void *) (uintptr_t) id,  &path,                NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "fpath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &fpath,               NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "epath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &epath,               NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "uidtouser",           2, SQLITE_UTF8, NULL,                     &uidtouser,           NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "gidtogroup",          2, SQLITE_UTF8, NULL,                     &gidtogroup,          NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "modetotxt",           1, SQLITE_UTF8, NULL,                     &modetotxt,           NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8, NULL,                     &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8, NULL,                     &blocksize,           NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8, NULL,                     &human_readable_size, NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8, (void *) (uintptr_t) lvl, &relative_level,      NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "starting_point",      0, SQLITE_UTF8, starting_dir,             &starting_point,      NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "basename",            1, SQLITE_UTF8, NULL,                     &sqlite_basename,     NULL, NULL) == SQLITE_OK))?0:1;
+int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
+    void *lvl = (void *) (uintptr_t) work->level;
+    return ((sqlite3_create_function(db, "path",                1, SQLITE_UTF8,
+                 (void *) (uintptr_t) id,&path,                 NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "fpath",               0, SQLITE_UTF8,
+                 (void *) (uintptr_t) id,&fpath,                NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "epath",               0, SQLITE_UTF8,
+                 (void *) (uintptr_t) id,&epath,                NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "uidtouser",           2, SQLITE_UTF8,
+                 NULL,                   &uidtouser,            NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "gidtogroup",          2, SQLITE_UTF8,
+                 NULL,                   &gidtogroup,           NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "modetotxt",           1, SQLITE_UTF8,
+                 NULL,                   &modetotxt,            NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8,
+                 NULL,                   &sqlite3_strftime,     NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8,
+                 NULL,                   &blocksize,            NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8,
+                 NULL,                   &human_readable_size,  NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8,
+                 lvl,                    &relative_level,       NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "starting_point",      0, SQLITE_UTF8,
+                 work->root,             &starting_point,       NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db, "basename",            1, SQLITE_UTF8,
+                 NULL,                   &sqlite_basename,      NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
@@ -1078,70 +1181,159 @@ int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
     return 0;
 }
 
-int xattrprep(const char *xattrpath,
-              sqlite3    *db,
-              const char *vn, const size_t vn_len,
-              const char *tn, const size_t tn_len
+struct xattr_db *create_xattr_db(struct template_db *tdb,
+                                 const char *path, const size_t path_len,
+                                 uid_t uid, gid_t gid, mode_t mode,
+                                 sqlite3_stmt *file_list) {
+    /* /\* make sure only one of uid or gid is set *\/ */
+    /* if (!((uid == in.xattrs.nobody.uid) ^ (gid == in.xattrs.nobody.gid)))) { */
+    /*     return NULL; */
+    /* } */
+
+    struct xattr_db *xdb = malloc(sizeof(struct xattr_db));
+    mode_t xattr_db_mode = 0;
+
+    /* set the relative path in xdb */
+    if (uid != in.xattrs.nobody.uid) {
+        xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+                                     XATTR_UID_FILENAME_FORMAT, uid);
+        xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
+                                     XATTR_UID_ATTACH_FORMAT, uid);
+        xattr_db_mode = 0600;
+    }
+    else if (gid != in.xattrs.nobody.gid) {
+        /* g+r */
+        if ((mode & 0040) == 0040) {
+            xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+                                         XATTR_GID_W_READ_FILENAME_FORMAT, gid);
+            xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
+                                         XATTR_GID_W_READ_ATTACH_FORMAT, gid);
+            xattr_db_mode = 0040;
+        }
+        /* g-r */
+        else {
+            xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
+                                         XATTR_GID_WO_READ_FILENAME_FORMAT, gid);
+            xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
+                                         XATTR_GID_WO_READ_ATTACH_FORMAT, gid);
+            xattr_db_mode = 0000;
+        }
+    }
+
+    /* store full path here */
+    char filename[MAXPATH];
+    SNFORMAT_S(filename, MAXPATH, 3,
+               path, path_len,
+               "/", (size_t) 1,
+               xdb->filename, xdb->filename_len);
+
+    xdb->db  = NULL;
+    xdb->res = NULL;
+    xdb->file_list = file_list;
+    xdb->st.st_uid = uid;
+    xdb->st.st_gid = gid;
+    xdb->st.st_mode = xattr_db_mode;
+
+    if (copy_template(tdb, filename, xdb->st.st_uid, xdb->st.st_gid) != 0) {
+        destroy_xattr_db(xdb);
+        return NULL;
+    }
+
+    if (chmod(filename, xdb->st.st_mode) != 0) {
+        const int err = errno;
+        fprintf(stderr, "Warning: Unable to set permissions for %s: %d\n", filename, err);
+    }
+
+    xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0
+                     , NULL, NULL
+                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                     , NULL, NULL
+                     , NULL, NULL
+                     #endif
+                     );
+
+    if (!xdb->db) {
+        destroy_xattr_db(xdb);
+        return NULL;
+    }
+
+    xdb->res = insertdbprep(xdb->db, XATTRS_SQL_INSERT);
+    return xdb;
+}
+
+void destroy_xattr_db(void *ptr) {
+    struct xattr_db *xdb = (struct xattr_db *) ptr;
+
+    /* write out per-user/per-group xattrs */
+    sqlite3_finalize(xdb->res);
+    closedb(xdb->db);
+
+    /* add this xattr db to the list of dbs to open when creating view */
+    sqlite3_bind_int64(xdb->file_list, 1, xdb->st.st_uid);
+    sqlite3_bind_int64(xdb->file_list, 2, xdb->st.st_gid);
+    sqlite3_bind_text( xdb->file_list, 3, xdb->filename, xdb->filename_len, SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 4, xdb->attach, xdb->attach_len, SQLITE_STATIC);
+
+    sqlite3_step(xdb->file_list);
+    sqlite3_reset(xdb->file_list);
+
+    free(xdb);
+}
+
+int xattrprep(const char *path, const size_t path_len, sqlite3 *db
               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
               ,size_t *query_count
               #endif
-              )
+    )
 {
-    static const char XATTR_COLS[] = " SELECT exinode, exattrs FROM ";
+    static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
     static const size_t XATTR_COLS_LEN = sizeof(XATTR_COLS) - 1;
+    static const size_t XATTRS_TABLE_NAME_LEN = sizeof(XATTRS_TABLE_NAME) - 1;
 
     int           rec_count = 0;
     sqlite3_stmt *res = NULL;
-    const char   *tail = NULL;
-    char          unioncmd[MAXSQL];
-    char         *unioncmdp = unioncmd;
+    char          unioncmd[MAXSQL] = "CREATE TEMP VIEW IF NOT EXISTS " XATTRS_VIEW_NAME " AS";
+    char         *unioncmdp = unioncmd + strlen(unioncmd);
 
-    int error = sqlite3_prepare_v2(db, in.xattr.query, MAXSQL, &res, &tail);
+    /* step through each xattr db file */
+    int error = sqlite3_prepare_v2(db, "SELECT filename, attachname FROM " XATTR_FILES_NAME, MAXSQL, &res, NULL);
     if (error != SQLITE_OK) {
-        printf("in xattrprep: SQL error on query: %s path %s xattrq %d err %s\n", in.xattr.query, xattrpath, error, sqlite3_errmsg(db));
+        printf("xattrprep Error: %s: Could not get filenames from table %s: %d err %s\n",
+               path, XATTR_FILES_NAME, error, sqlite3_errmsg(db));
         return -1;
     }
 
-    if (*tail) {
-        sqlite3_step(res);
-        //sqlite3_finalize(res);
-        sqlite3_reset(res);
-    }
-
-    unioncmdp += SNFORMAT_S(unioncmd, sizeof(unioncmd), 3,
-                            "CREATE TEMP VIEW IF NOT EXISTS ", (size_t) 31,
-                            vn, vn_len,
-                            " AS ", (size_t) 4);
-
     while (sqlite3_step(res) == SQLITE_ROW) {
-        int ncols = sqlite3_column_count(res);
-        if (ncols != 3) {
-            fprintf(stderr, "in xattrprep: num cols not 3 cols %d\n", ncols);
+        const int ncols = sqlite3_column_count(res);
+        if (ncols != 2) {
+            fprintf(stderr, "Error: Searching xattr file list returned bad column count: %d (expected 2)\n", ncols);
             continue;
         }
 
-        const char *xattrfname  = (const char *) sqlite3_column_text(res,0);
-        /* const char *xattrfinode = (const char *) sqlite3_column_text(res,1); */
-        const char *xattrfdb    = (const char *) sqlite3_column_text(res,2);
+        const char *filename   = (const char *) sqlite3_column_text(res, 0);
+        const char *attachname = (const char *) sqlite3_column_text(res, 1);
+        const size_t attachname_len = strlen(attachname);
 
+        /* ATTACH <path>/<per-user/group db> AS <attach name> */
         char attcmd[MAXSQL];
         SNFORMAT_S(attcmd, sizeof(attcmd), 6,
                    "ATTACH \'", (size_t) 8,
-                   xattrpath, strlen(xattrpath),
+                   path, path_len,
                    "/", (size_t) 1,
-                   xattrfname, strlen(xattrfname),
+                   filename, strlen(filename),
                    "\' AS ", (size_t) 5,
-                   xattrfdb, strlen(xattrfdb));
+                   attachname, attachname_len);
 
         /* if attach fails, you don't have access to the xattrs - just continue */
         if (sqlite3_exec(db, attcmd, 0, 0, NULL) == SQLITE_OK) {
             rec_count++;
+            /* SELECT inode, name, value FROM <attach name>.xattrs_avail UNION */
             unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 5,
                                     XATTR_COLS, XATTR_COLS_LEN,
-                                    xattrfdb, strlen(xattrfdb),
+                                    attachname, attachname_len,
                                     ".", (size_t) 1,
-                                    tn, tn_len,
-                                    " UNION ", (size_t) 7);
+                                    XATTRS_TABLE_NAME, XATTRS_TABLE_NAME_LEN,
+                                    " UNION", (size_t) 6);
         }
 
         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -1152,7 +1344,7 @@ int xattrprep(const char *xattrpath,
 
     SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 2,
                XATTR_COLS, XATTR_COLS_LEN,
-               in.xattr.baseview, in.xattr.baseview_len);
+               XATTRS_TABLE_NAME, XATTRS_TABLE_NAME_LEN);
 
     const int rc = sqlite3_exec(db, unioncmd, 0, 0, NULL);
 

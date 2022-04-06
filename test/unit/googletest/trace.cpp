@@ -75,11 +75,33 @@ extern "C" {
 #include "trace.h"
 }
 
-static char delim[] = "\x1e";
+static const char delim[] = "\x1e";
 
-static struct work * get_work() {
-    struct work * work = new struct work;
-    snprintf(work->name,     sizeof(work->name), "name");
+static const struct xattr XATTR[] = {
+    {
+        "xattr.key0", 10,
+        "xattr.val0", 10,
+    },
+    {
+        "xattr.key1", 10,
+        "xattr.val1", 10,
+    },
+};
+
+static struct xattrs XATTRS = {
+    (struct xattr *) XATTR,
+    0,
+    0,
+    2,
+};
+
+static const char XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
+                                 "xattr.key1\x1fxattr.val1\x1f";
+static const size_t XATTRS_STR_LEN = sizeof(XATTRS_STR) - 1;
+
+static struct work *get_work() {
+    struct work *work = new struct work;
+    work->name_len           = snprintf(work->name, sizeof(work->name), "name");
     snprintf(work->type,     sizeof(work->type), "t");
     snprintf(work->linkname, sizeof(work->linkname), "link");
     work->statuso.st_ino     = 0xfedc;
@@ -93,10 +115,10 @@ static struct work * get_work() {
     work->statuso.st_atime   = 0x1234;
     work->statuso.st_mtime   = 0x5678;
     work->statuso.st_ctime   = 0x9abc;
-    const char xattrs[] = "xattr.key0\x1fxattr.value0\0"
-                          "xattr.key1\x1fxattr.value1\0";
-    work->xattrs_len = strlen(xattrs);
-    memcpy(work->xattrs, xattrs, work->xattrs_len);
+    work->xattrs.pairs       = (struct xattr *) XATTR;
+    work->xattrs.name_len    = 0;
+    work->xattrs.len         = 0;
+    work->xattrs.count       = 2;
     work->crtime             = 0x9abc;
     work->ossint1            = 1;
     work->ossint2            = 2;
@@ -108,7 +130,7 @@ static struct work * get_work() {
     return work;
 }
 
-static int to_string(char * line, const size_t size, struct work * work) {
+static int to_string(char *line, const size_t size, struct work *work) {
     const int part1 = snprintf(line, size,
                                "%s%c"
                                "%c%c"
@@ -144,8 +166,8 @@ static int to_string(char * line, const size_t size, struct work * work) {
 
     line += part1;
 
-    memcpy(line, work->xattrs, work->xattrs_len);
-    line += work->xattrs_len;
+    memcpy(line, XATTRS_STR, XATTRS_STR_LEN);
+    line += XATTRS_STR_LEN;
 
     const int part2 = snprintf(line, size,
                                "%c"
@@ -174,19 +196,19 @@ static int to_string(char * line, const size_t size, struct work * work) {
     line += part2;
     *line = '\0';
 
-    return part1 + work->xattrs_len + part2;
+    return part1 + XATTRS_STR_LEN + part2;
 }
 
 TEST(trace, worktofile) {
-    struct work * work = get_work();
+    struct work *work = get_work();
     ASSERT_NE(work, nullptr);
 
     // write a known struct to a file
     char buf[4096];
-    FILE * file = fmemopen(buf, sizeof(buf), "w");
+    FILE *file = fmemopen(buf, sizeof(buf), "w");
     ASSERT_NE(file, nullptr);
 
-    const int written = worktofile(file, delim, work);
+    const int written = worktofile(file, delim, 0, work);
     fclose(file);
 
     ASSERT_GT(written, 0);
@@ -218,8 +240,6 @@ TEST(trace, worktofile) {
     EXPECT_EQ(dst.statuso.st_mtime,   src->statuso.st_mtime);      \
     EXPECT_EQ(dst.statuso.st_ctime,   src->statuso.st_ctime);      \
     EXPECT_STREQ(dst.linkname,        src->linkname);              \
-    EXPECT_EQ(dst.xattrs_len,         src->xattrs_len);            \
-    EXPECT_EQ(memcmp(dst.xattrs, src->xattrs, dst.xattrs_len), 0); \
     EXPECT_EQ(dst.crtime,             src->crtime);                \
     EXPECT_EQ(dst.ossint1,            src->ossint1);               \
     EXPECT_EQ(dst.ossint2,            src->ossint2);               \
@@ -230,7 +250,7 @@ TEST(trace, worktofile) {
     EXPECT_EQ(dst.pinode,             src->pinode);                \
 
 TEST(trace, linetowork) {
-    struct work * src = get_work();
+    struct work *src = get_work();
 
     // write the known struct to a string using an alternative write function
     char line[4096];
@@ -243,6 +263,13 @@ TEST(trace, linetowork) {
     EXPECT_EQ(linetowork(line, rc, delim, &work), 0);
 
     COMPARE(src, work);
+
+    EXPECT_STREQ(work.xattrs.pairs[0].name,  XATTRS.pairs[0].name);
+    EXPECT_STREQ(work.xattrs.pairs[0].value, XATTRS.pairs[0].value);
+    EXPECT_STREQ(work.xattrs.pairs[1].name,  XATTRS.pairs[1].name);
+    EXPECT_STREQ(work.xattrs.pairs[1].value, XATTRS.pairs[1].value);
+
+    xattrs_cleanup(&work.xattrs);
 
     delete src;
 }

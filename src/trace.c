@@ -62,22 +62,24 @@ OF SUCH DAMAGE.
 
 
 
-#include "trace.h"
-#include "utils.h"
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int worktofile(FILE *file, const char *delim, struct work *work) {
+#include "trace.h"
+#include "utils.h"
+#include "xattrs.h"
+
+int worktofile(FILE *file, const char *delim, const size_t prefix_len, struct work *work) {
     if (!file || !delim || !work) {
         return -1;
     }
 
     int count = 0;
 
-    count += fprintf(file, "%s%c",                    work->name,               delim[0]);
+    count += fwrite(work->name + prefix_len, 1, work->name_len - prefix_len, file);
+    count += fwrite(delim, 1, 1, file);
     count += fprintf(file, "%c%c",                    work->type[0],            delim[0]);
     count += fprintf(file, "%" STAT_ino "%c",         work->statuso.st_ino,     delim[0]);
     count += fprintf(file, "%d%c",                    work->statuso.st_mode,    delim[0]);
@@ -91,8 +93,7 @@ int worktofile(FILE *file, const char *delim, struct work *work) {
     count += fprintf(file, "%ld%c",                   work->statuso.st_mtime,   delim[0]);
     count += fprintf(file, "%ld%c",                   work->statuso.st_ctime,   delim[0]);
     count += fprintf(file, "%s%c",                    work->linkname,           delim[0]);
-    fwrite(work->xattrs, sizeof(char), work->xattrs_len, file);
-    count += work->xattrs_len;
+    count += xattrs_to_file(file, &work->xattrs, XATTRDELIM);
     count += fprintf(file, "%c",                                                delim[0]);
     count += fprintf(file, "%d%c",                    work->crtime,             delim[0]);
     count += fprintf(file, "%d%c",                    work->ossint1,            delim[0]);
@@ -105,24 +106,6 @@ int worktofile(FILE *file, const char *delim, struct work *work) {
     count += fprintf(file, "\n");
 
     return count;
-}
-
-/* strstr replacement */
-/* does not terminate on NULL character */
-/* automatically adds NULL character to matching delimiter */
-static char *split(char *src, const char *delim, const char *end) {
-    while (src < end) {
-        for(const char *d = delim; *d; d++) {
-            if (*src == *d) {
-                *src = '\x00';
-                return src + 1;
-            }
-        }
-
-        src++;
-    }
-
-    return NULL;
 }
 
 int linetowork(char *line, const size_t len, const char *delim, struct work *work) {
@@ -151,7 +134,7 @@ int linetowork(char *line, const size_t len, const char *delim, struct work *wor
     p = q;  q = split(p, delim, end); work->statuso.st_mtime=atol(p);
     p = q;  q = split(p, delim, end); work->statuso.st_ctime=atol(p);
     p = q;  q = split(p, delim, end); SNPRINTF(work->linkname,MAXPATH,"%s",p);
-    p = q;  q = split(p, delim, end); work->xattrs_len = SNPRINTF(work->xattrs,MAXPATH,"%s",p);
+    p = q;  q = split(p, delim, end); xattrs_from_line(p, q - 1, &work->xattrs, XATTRDELIM);
     p = q;  q = split(p, delim, end); work->crtime=atol(p);
     p = q;  q = split(p, delim, end); work->ossint1=atol(p);
     p = q;  q = split(p, delim, end); work->ossint2=atol(p);
