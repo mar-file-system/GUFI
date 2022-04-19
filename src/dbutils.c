@@ -1257,7 +1257,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
         return NULL;
     }
 
-    xdb->res = insertdbprep(xdb->db, XATTRS_SQL_INSERT);
+    xdb->res = insertdbprep(xdb->db, XATTRS_PWD_INSERT);
     return xdb;
 }
 
@@ -1296,7 +1296,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 {
     static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
     static const size_t XATTR_COLS_LEN = sizeof(XATTR_COLS) - 1;
-    static const size_t XATTRS_TABLE_NAME_LEN = sizeof(XATTRS_TABLE_NAME) - 1;
+    static const size_t XATTRS_AVAIL_NAME_LEN = sizeof(XATTRS_AVAIL_NAME) - 1;
 
     int           rec_count = 0;
     sqlite3_stmt *res = NULL;
@@ -1312,11 +1312,11 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
     }
 
     while (sqlite3_step(res) == SQLITE_ROW) {
-        const int ncols = sqlite3_column_count(res);
-        if (ncols != 2) {
-            fprintf(stderr, "Error: Searching xattr file list returned bad column count: %d (expected 2)\n", ncols);
-            continue;
-        }
+        /* const int ncols = sqlite3_column_count(res); */
+        /* if (ncols != 2) { */
+        /*     fprintf(stderr, "Error: Searching xattr file list returned bad column count: %d (expected 2)\n", ncols); */
+        /*     continue; */
+        /* } */
 
         const char *filename   = (const char *) sqlite3_column_text(res, 0);
         const char *attachname = (const char *) sqlite3_column_text(res, 1);
@@ -1340,7 +1340,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
                                     XATTR_COLS, XATTR_COLS_LEN,
                                     attachname, attachname_len,
                                     ".", (size_t) 1,
-                                    XATTRS_TABLE_NAME, XATTRS_TABLE_NAME_LEN,
+                                    XATTRS_AVAIL_NAME, XATTRS_AVAIL_NAME_LEN,
                                     " UNION", (size_t) 6);
         }
 
@@ -1352,7 +1352,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 
     SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 2,
                XATTR_COLS, XATTR_COLS_LEN,
-               XATTRS_TABLE_NAME, XATTRS_TABLE_NAME_LEN);
+               XATTRS_AVAIL_NAME, XATTRS_AVAIL_NAME_LEN);
 
     /* create xattrs view */
     int rc = sqlite3_exec(db, unioncmd, 0, 0, NULL);

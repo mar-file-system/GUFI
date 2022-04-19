@@ -172,7 +172,10 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
                          "CREATE VIEW pentries AS SELECT entries.*, summary.inode AS pinode FROM entries, summary WHERE rectype = 0;"
                          "DELETE FROM summary WHERE isroot <> 1;"
                          "UPDATE summary SET rollupscore = 0 WHERE isroot == 1;"
-                         "END TRANSACTION;",
+                         "DELETE FROM " XATTRS_ROLLUP_NAME ";"
+                         "DELETE FROM " XATTR_FILES_ROLLUP_NAME ";"
+                         "END TRANSACTION;"
+                         "VACUUM;",
                          NULL,
                          NULL,
                          &err) != SQLITE_OK) {

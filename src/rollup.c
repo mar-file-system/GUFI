@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "debug.h"
 #include "SinglyLinkedList.h"
+#include "template_db.h"
 #include "utils.h"
 
 extern int errno;
@@ -107,6 +108,11 @@ struct RollUpStats {
     #ifdef DEBUG
     struct OutputBuffers *print_buffers;
     #endif
+};
+
+struct ThreadArgs {
+    struct template_db xattr_template;
+    struct RollUpStats *stats;
 };
 
 /* compare function for qsort */
@@ -585,9 +591,99 @@ static const size_t rollup_score_offset = sizeof(ROLLUP_CURRENT_DIR) - sizeof("0
 
 /* copy child pentries into pentries */
 /* copy child summary into summary */
+/* copy child xattrs_avail to xattrs_avail - FIXME: need to be able to drop rows */
+/* copy child xattr_files to xattr_files   - FIXME: need to be able to drop rows */
 static const char rollup_subdir[] =
     "INSERT INTO pentries SELECT * FROM " SUBDIR_ATTACH_NAME ".pentries;"
-    "INSERT INTO summary  SELECT NULL, s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattrs, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM summary as s, " SUBDIR_ATTACH_NAME ".summary as sub WHERE s.isroot == 1;";
+    "INSERT INTO summary  SELECT NULL, s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattrs, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM summary as s, " SUBDIR_ATTACH_NAME ".summary as sub WHERE s.isroot == 1;"
+    "INSERT INTO " XATTRS_ROLLUP_NAME      " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL_NAME ";"
+    "INSERT INTO " XATTR_FILES_ROLLUP_NAME " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES_NAME  ";"
+    "SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES_NAME ";";
+
+struct CallbackArgs {
+    struct template_db *xattr;
+    char *parent;
+    size_t parent_len;
+    char *child;
+    size_t child_len;
+};
+
+/* use this callback to create xattr db files and insert filenames */
+/* db.db doesn't need to be modified since the SQL statement already did it */
+static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **columns) {
+    struct CallbackArgs *ca     = (struct CallbackArgs *) args;
+    const char  *uid_str        = data[0];
+    const char  *gid_str        = data[1];
+    const char  *filename       = data[2];
+    const size_t filename_len   = strlen(filename);
+    const char  *attachname     = data[3];
+    const size_t attachname_len = strlen(attachname);
+    uid_t uid;
+    gid_t gid;
+
+    sscanf(uid_str, "%d", &uid); /* skip checking for failure */
+    sscanf(gid_str, "%d", &gid); /* skip checking for failure */
+
+    /* parent xattr db filename */
+    char xattr_db_name[MAXPATH];
+    SNFORMAT_S(xattr_db_name, MAXPATH, 3,
+               ca->parent, ca->parent_len,
+               "/", (size_t) 1,
+               filename, filename_len);
+
+    /* check if the parent per-user/per-group xattr db file exists */
+    struct stat st;
+    if (stat(xattr_db_name, &st) != 0) {
+        const int err = errno;
+        if (err != ENOENT) {
+            fprintf(stderr, "Error: Cannot access xattr db file %s: %s (%d)\n",
+                    xattr_db_name, strerror(err), err);
+            return 1;
+        }
+
+        /* copy the template file */
+        if (copy_template(ca->xattr, xattr_db_name, uid, gid)) {
+            return 1;
+        }
+    }
+
+    /* open parent per-user/per-group xattr db file */
+    sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0,
+                               NULL, NULL
+                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                               , NULL, NULL
+                               , NULL, NULL
+                               #endif
+        );
+    if (!xattr_db) {
+        return 1;
+    }
+
+    char child_xattr_db_name[MAXPATH];
+    SNFORMAT_S(child_xattr_db_name, MAXPATH, 3,
+               ca->child, ca->child_len,
+               "/", (size_t) 1,
+               filename, filename_len);
+
+    if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1)) {
+        closedb(xattr_db);
+        return 1;
+    }
+
+    char insert[MAXSQL];
+    SNPRINTF(insert, MAXSQL, "INSERT INTO %s SELECT * FROM %s.%s;",
+             XATTRS_ROLLUP_NAME, attachname, XATTRS_AVAIL_NAME);
+    char *err = NULL;
+    int rc = sqlite3_exec(xattr_db, insert, NULL, NULL, &err);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: Failed to copy \"%s\" xattrs into xattrs_rollup of %s: %s\n",
+                               child_xattr_db_name, xattr_db_name, err);
+    }
+
+    sqlite3_free(err);
+    closedb(xattr_db);
+    return 0;
+}
 
 /*
 @return -1 - could not move entries into pentries
@@ -596,7 +692,8 @@ static const char rollup_subdir[] =
 */
 int do_rollup(struct RollUp *rollup,
               struct DirStats *ds,
-              sqlite3 *dst
+              sqlite3 *dst,
+              struct template_db *xattr_template
               timestamp_sig) {
     /* assume that this directory can be rolled up */
     /* can_rollup should have been called earlier  */
@@ -641,7 +738,8 @@ int do_rollup(struct RollUp *rollup,
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
         char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, strlen(child->name), "/", 1, DBNAME, DBNAME_LEN);
+        /* SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, strlen(child->name), "/", 1, DBNAME, DBNAME_LEN); */
+        SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, child->name_len, "/", 1, DBNAME, DBNAME_LEN);
 
         /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
         rc = !attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1);
@@ -649,7 +747,15 @@ int do_rollup(struct RollUp *rollup,
         /* roll up the subdir into this dir */
         if (!rc) {
             timestamp_start(rollup_subdir);
-            exec_rc = sqlite3_exec(dst, rollup_subdir, NULL, NULL, &err);
+            struct CallbackArgs ca = {
+                .xattr      = xattr_template,
+                .parent     = rollup->data.name,
+                .parent_len = rollup->data.name_len,
+                .child      = child->name,
+                .child_len  = child->name_len,
+            };
+
+            exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_xattr_dbs_callback, &ca, &err);
             timestamp_end(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
             if (exec_rc != SQLITE_OK) {
                 fprintf(stderr, "Error: Failed to copy \"%s\" subdir pentries into pentries table: %s\n", child->name, err);
@@ -684,16 +790,19 @@ void rollup(void *args timestamp_sig) {
     dir->rolledup = 0;
 
     const size_t id = dir->data.tid.up;
-    const size_t name_len = strlen(dir->data.name);
 
     char dbname[MAXPATH];
-    SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, dir->data.name);
+    SNFORMAT_S(dbname, MAXPATH, 3,
+               dir->data.name, dir->data.name_len,
+               "/", (size_t) 1,
+               DBNAME, DBNAME_LEN);
 
-    struct RollUpStats *stats = (struct RollUpStats *) dir->data.extra_args;
+    struct ThreadArgs *ta = dir->data.extra_args;
+    struct RollUpStats *stats = ta->stats;
 
     /* get statistics out of BottomUp */
     struct DirStats *ds = malloc(sizeof(struct DirStats));
-    SNFORMAT_S(ds->path, MAXPATH, 1, dir->data.name, name_len);
+    SNFORMAT_S(ds->path, MAXPATH, 1, dir->data.name, dir->data.name_len);
     ds->level = dir->data.level;
     ds->subdir_count = dir->data.subdir_count;
     ds->subnondir_count = 0;
@@ -727,7 +836,7 @@ void rollup(void *args timestamp_sig) {
                 ds->success = 1;
             }
             else {
-                ds->success = (do_rollup(dir, ds, dst timestamp_args) == 0);
+                ds->success = (do_rollup(dir, ds, dst, &ta->xattr_template timestamp_args) == 0);
             }
 
             dir->rolledup = ds->success;
@@ -781,6 +890,13 @@ int main(int argc, char *argv[]) {
     if (idx < 0)
         return -1;
 
+    struct ThreadArgs ta;
+    init_template_db(&ta.xattr_template);
+    if (create_xattrs_template(&ta.xattr_template) != 0) {
+        fprintf(stderr, "Could not create xattr template file\n");
+        return -1;
+    }
+
     #ifdef DEBUG
     pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -789,12 +905,12 @@ int main(int argc, char *argv[]) {
     #endif
     #endif
 
-    struct RollUpStats *stats = calloc(in.maxthreads, sizeof(struct RollUpStats));
+    ta.stats = calloc(in.maxthreads, sizeof(struct RollUpStats));
     for(int i = 0; i < in.maxthreads; i++) {
-        sll_init(&stats[i].not_processed);
-        sll_init(&stats[i].not_rolled_up);
-        sll_init(&stats[i].rolled_up);
-        stats[i].remaining = 0;
+        sll_init(&ta.stats[i].not_processed);
+        sll_init(&ta.stats[i].not_rolled_up);
+        sll_init(&ta.stats[i].rolled_up);
+        ta.stats[i].remaining = 0;
     }
 
     #ifdef DEBUG
@@ -802,7 +918,7 @@ int main(int argc, char *argv[]) {
     OutputBuffers_init(&print_buffers, in.maxthreads, 1024 * 1024, &print_mutex);
 
     for(int i = 0; i < in.maxthreads; i++) {
-        stats[i].print_buffers = &print_buffers;
+        ta.stats[i].print_buffers = &print_buffers;
     }
     #endif
 
@@ -814,7 +930,7 @@ int main(int argc, char *argv[]) {
                                      sizeof(struct RollUp),
                                      NULL, rollup,
                                      0,
-                                     stats
+                                     &ta
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , timestamp_buffers
                                      #endif
@@ -830,17 +946,18 @@ int main(int argc, char *argv[]) {
 
     #endif
 
-    print_stats(argv, argc, stats, in.maxthreads);
+    print_stats(argv, argc, ta.stats, in.maxthreads);
 
     for(int i = 0; i < in.maxthreads; i++) {
         #ifdef DEBUG
-        stats[i].print_buffers = NULL;
+        ta.stats[i].print_buffers = NULL;
         #endif
-        sll_destroy(&stats[i].rolled_up, 0);
-        sll_destroy(&stats[i].not_rolled_up, 0);
-        sll_destroy(&stats[i].not_processed, 0);
+        sll_destroy(&ta.stats[i].rolled_up, 0);
+        sll_destroy(&ta.stats[i].not_rolled_up, 0);
+        sll_destroy(&ta.stats[i].not_processed, 0);
     }
-    free(stats);
+    free(ta.stats);
+    close_template_db(&ta.xattr_template);
 
     timestamp_set_end_raw(runtime);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
