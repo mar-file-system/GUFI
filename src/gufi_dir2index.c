@@ -150,9 +150,12 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     /* create the database name */
     char dbname[MAXPATH];
-    SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, topath);
+    SNFORMAT_S(dbname, MAXPATH, 3,
+               topath, topath_len,
+               "/", (size_t) 1,
+               DBNAME, DBNAME_LEN);
 
-    // copy the template file
+    /* copy the template file */
     if (copy_template(&templates->db, dbname, dir_st.st_uid, dir_st.st_gid)) {
         closedir(dir);
         return 1;
@@ -172,7 +175,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     const size_t next_level = work->level + 1;
 
-    // prepare to insert into the database
+    /* prepare to insert into the database */
     struct sum summary;
     zeroit(&summary);
 
@@ -186,8 +189,8 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     sll_init(&xattr_db_list);
 
     if (in.xattrs.enabled) {
-        xattrs_res = insertdbprep(db, XATTRS_SQL_INSERT);
-        xattr_files_res = insertdbprep(db, XATTR_FILES_SQL_INSERT);
+        xattrs_res = insertdbprep(db, XATTRS_PWD_INSERT);
+        xattr_files_res = insertdbprep(db, XATTR_FILES_PWD_INSERT);
     }
 
     startdb(db);
@@ -264,10 +267,10 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
         /* get entry relative path (use extra buffer to prevent memcpy overlap) */
         char relpath[MAXPATH];
-        SNFORMAT_S(relpath, MAXPATH, 1, e.name + in.name_len, e.name_len - in.name_len);
+        const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1, e.name + in.name_len + 1, e.name_len - in.name_len - 1);
 
         /* overwrite full path with relative path */
-        /* e.name_len = */ SNFORMAT_S(e.name, MAXPATH, 1, relpath, e.name_len - in.name_len);
+        /* e.name_len = */ SNFORMAT_S(e.name, MAXPATH, 1, relpath, relpath_len);
 
         /* update summary table */
         sumit(&summary, &e);
@@ -337,7 +340,7 @@ struct work *validate_inputs() {
         return NULL;
     }
 
-    root->name_len = SNPRINTF(root->name, MAXPATH, "%s", in.name);
+    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, in.name, in.name_len);
 
     /* get input path metadata */
     if (lstat(root->name, &root->statuso) < 0) {
@@ -485,11 +488,6 @@ int main(int argc, char *argv[]) {
         /* root is special case */
         if (in.name_len == 0) {
             in.name[0] = '/';
-            in.name_len = 1;
-        }
-        else {
-            /* add 1 more for the separator that is placed between this string and the entry */
-            in.name_len++;
         }
     }
 

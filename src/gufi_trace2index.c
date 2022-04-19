@@ -271,8 +271,8 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         /* INSERT statement bindings into db.db */
         timestamp_start(insertdbprep);
         sqlite3_stmt *res = insertdbprep(db, esqli);                                /* entries */
-        sqlite3_stmt *xattrs_res = insertdbprep(db, XATTRS_SQL_INSERT);             /* xattrs within db.db */
-        sqlite3_stmt *xattr_files_res = insertdbprep(db, XATTR_FILES_SQL_INSERT);   /* per-user and per-group db file names*/
+        sqlite3_stmt *xattrs_res = insertdbprep(db, XATTRS_PWD_INSERT);             /* xattrs within db.db */
+        sqlite3_stmt *xattr_files_res = insertdbprep(db, XATTR_FILES_PWD_INSERT);   /* per-user and per-group db file names*/
         timestamp_set_end(insertdbprep);
 
         timestamp_start(startdb);
