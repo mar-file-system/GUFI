@@ -150,8 +150,8 @@ replace "$ ${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXROOT}\""
 ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
 echo
 
-replace "$ ${GUFI_QUERY} -d \" \" -M -S \"SELECT path(''), summary.type, xattrs.name, xattrs.value FROM summary LEFT JOIN xattrs ON summary.inode == xattrs.inode\" -E \"SELECT path('') || '/' || pentries.name, pentries.type, xattrs.name, xattrs.value FROM pentries LEFT JOIN xattrs ON pentries.inode == xattrs.inode\" \"${INDEXROOT}\" | sort"
-${GUFI_QUERY} -d " " -M -S "SELECT path(''), summary.type, xattrs.name, xattrs.value FROM summary LEFT JOIN xattrs ON summary.inode == xattrs.inode" -E "SELECT path('') || '/' || pentries.name, pentries.type, xattrs.name, xattrs.value FROM pentries LEFT JOIN xattrs ON pentries.inode == xattrs.inode" "${INDEXROOT}" | sort
+replace "$ ${GUFI_QUERY} -d \" \" -x -S \"SELECT path(''), type, xattr_name, xattr_value FROM xsummary\" -E \"SELECT path('') || '/' || name, type, xattr_name, xattr_value FROM xpentries\" \"${INDEXROOT}\" | sort"
+${GUFI_QUERY} -d " " -x -S "SELECT path(''), type, xattr_name, xattr_value FROM xsummary" -E "SELECT path('') || '/' || name, type, xattr_name, xattr_value FROM xpentries" "${INDEXROOT}" | sort
 echo
 
 rm -r "${INDEXROOT}"
@@ -164,8 +164,8 @@ replace "$ ${GUFI_TRACE2INDEX} \"${TRACE}\" \"${INDEXROOT}\""
 ${GUFI_TRACE2INDEX} "${TRACE}.0" "${INDEXROOT}" | tail -n 4 | head -n 3
 echo
 
-replace "$ ${GUFI_QUERY} -d \" \" -M -S \"SELECT path(''), summary.type, xattrs.name, xattrs.value FROM summary LEFT JOIN xattrs ON summary.inode == xattrs.inode\" -E \"SELECT path('') || '/' || pentries.name, pentries.type, xattrs.name, xattrs.value FROM pentries LEFT JOIN xattrs ON pentries.inode == xattrs.inode\" \"${INDEXROOT}\" | sort"
-${GUFI_QUERY} -d " " -M -S "SELECT path(''), summary.type, xattrs.name, xattrs.value FROM summary LEFT JOIN xattrs ON summary.inode == xattrs.inode" -E "SELECT path('') || '/' || pentries.name, pentries.type, xattrs.name, xattrs.value FROM pentries LEFT JOIN xattrs ON pentries.inode == xattrs.inode" "${INDEXROOT}" | sort
+replace "$ ${GUFI_QUERY} -d \" \" -x -S \"SELECT path(''), type, xattr_name, xattr_value FROM xsummary\" -E \"SELECT path('') || '/' || name, type, xattr_name, xattr_value FROM xpentries\" \"${INDEXROOT}\" | sort"
+${GUFI_QUERY} -d " " -x -S "SELECT path(''), type, xattr_name, xattr_value FROM xsummary" -E "SELECT path('') || '/' || name, type, xattr_name, xattr_value FROM xpentries" "${INDEXROOT}" | sort
 ) | tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/xattrs.expected "${OUTPUT}"

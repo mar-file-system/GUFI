@@ -143,12 +143,11 @@ struct input {
    char nameto[MAXPATH];
    size_t nameto_len;
    struct {
-        int index;              /* read from source filesystem */
+        int enabled;
         struct {
             uid_t uid;
             gid_t gid;
         } nobody;
-        int gen_view;           /* read from index and generate view */
    } xattrs;
    char sqltsum[MAXSQL];
    size_t sqltsum_len;

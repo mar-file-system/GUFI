@@ -585,7 +585,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #endif
 
     /* set up XATTRS_VIEW_NAME so that it can be used by -T, -S, and -E */
-    if (in.xattrs.gen_view) {
+    if (in.xattrs.enabled) {
         timestamp_set_start(xattrprep_call);
         xattrprep(work->name, work->name_len, db
                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -928,7 +928,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:wM:k:", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:wxk:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
