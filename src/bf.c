@@ -102,7 +102,7 @@ void print_help(const char* prog_name,
       case ':': continue;
       case 'h': printf("  -h                     help\n"); break;
       case 'H': printf("  -H                     show assigned input values (debugging)\n"); break;
-      case 'x': printf("  -x                     pull xattrs from source file-sys into GUFI\n"); break;
+      case 'x': printf("  -x                     enable xattr processing\n"); break;
       case 'p': printf("  -p                     print file-names\n"); break;
       case 'P': printf("  -P                     print directories as they are encountered\n"); break;
       case 'N': printf("  -N                     print column-names (header) for DB results\n"); break;
@@ -119,7 +119,6 @@ void print_help(const char* prog_name,
       case 'I': printf("  -I <SQL_init>          SQL init\n"); break;
       case 'T': printf("  -T <SQL_tsum>          SQL for tree-summary table\n"); break;
       case 'S': printf("  -S <SQL_sum>           SQL for summary table\n"); break;
-      case 'M': printf("  -M                     Build xattrs view for querying\n"); break;
       case 'E': printf("  -E <SQL_ent>           SQL for entries table\n"); break;
       case 'F': printf("  -F <SQL_fin>           SQL cleanup\n"); break;
       case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db\n"); break;
@@ -172,10 +171,9 @@ void show_input(struct input* in, int retval) {
    printf("in.outdbn             = '%s'\n",  in->outdbn);
    printf("in.nameto             = '%s'\n",  in->nameto);
    printf("in.andor              = %d\n",    in->andor);
-   printf("in.xattr.index        = %d\n",    in->xattrs.index);
+   printf("in.xattr.enabled      = %d\n",    in->xattrs.enabled);
    printf("in.xattr.nobody.uid   = %d\n",    (int) in->xattrs.nobody.uid);
    printf("in.xattr.nobody.gid   = %d\n",    (int) in->xattrs.nobody.gid);
-   printf("in.xattr.gen_view     = %d\n",    in->xattrs.gen_view);
    printf("in.sqlinit            = '%s'\n",  in->sqlinit);
    printf("in.sqltsum            = '%s'\n",  in->sqltsum);
    printf("in.sqlsum             = '%s'\n",  in->sqlsum);
@@ -295,7 +293,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'x':               // xattrs
-         in->xattrs.index = 1;
+         in->xattrs.enabled = 1;
          break;
 
       case 'p':               // print file name/path?
@@ -305,10 +303,6 @@ int parse_cmd_line(int         argc,
       case 'P':               // print dirs?
          in->printdir = 1;
          break;
-
-      case 'M':               // generate xattrs view
-          in->xattrs.gen_view = 1;
-          break;
 
       case 'N':               // print DB-result column-names?  (i.e. header)
          in->printheader = 1;

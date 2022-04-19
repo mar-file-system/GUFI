@@ -185,7 +185,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     struct sll xattr_db_list;
     sll_init(&xattr_db_list);
 
-    if (in.xattrs.index) {
+    if (in.xattrs.enabled) {
         xattrs_res = insertdbprep(db, XATTRS_SQL_INSERT);
         xattr_files_res = insertdbprep(db, XATTR_FILES_SQL_INSERT);
     }
@@ -254,7 +254,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         #endif
 
         xattrs_setup(&e.xattrs);
-        if (in.xattrs.index) {
+        if (in.xattrs.enabled) {
             xattrs_get(e.name, &e.xattrs);
             insertdbgo_xattrs(&work->statuso, &e,
                               &xattr_db_list, &templates->xattr,
@@ -284,7 +284,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     /* pull this directory's xattrs because they were not pulled by the parent */
     xattrs_setup(&work->xattrs);
-    if (in.xattrs.index) {
+    if (in.xattrs.enabled) {
         /* write out per-user and per-group xattrs */
         sll_destroy(&xattr_db_list, destroy_xattr_db);
 
