@@ -60,21 +60,21 @@ Remaining Dirs: 17 (24.64%)
 $ gufi_query -d " " -S "SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC" | sort -k2 -k1
 view prefix.gufi
 view prefix.gufi/o+rx
-table prefix.gufi/o+rx/o+rx
-table prefix.gufi/o+rx/u
-table prefix.gufi/o+rx/ug
-table prefix.gufi/o+rx/ugo
+view prefix.gufi/o+rx/o+rx
+view prefix.gufi/o+rx/u
+view prefix.gufi/o+rx/ug
+view prefix.gufi/o+rx/ugo
 view prefix.gufi/u
-table prefix.gufi/u/o+rx
-table prefix.gufi/u/u
-table prefix.gufi/u/ug
-table prefix.gufi/u/ugo
+view prefix.gufi/u/o+rx
+view prefix.gufi/u/u
+view prefix.gufi/u/ug
+view prefix.gufi/u/ugo
 view prefix.gufi/ug
-table prefix.gufi/ug/o+rx
-table prefix.gufi/ug/u
-table prefix.gufi/ug/ug
-table prefix.gufi/ug/ugo
-table prefix.gufi/ugo
+view prefix.gufi/ug/o+rx
+view prefix.gufi/ug/u
+view prefix.gufi/ug/ug
+view prefix.gufi/ug/ugo
+view prefix.gufi/ugo
 
 $ unrollup prefix.gufi
 

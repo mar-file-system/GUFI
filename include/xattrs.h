@@ -96,41 +96,41 @@ extern "C" {
 
 #endif
 
-#define MAXXATTR          1024
+#define MAXXATTR            1024
 extern const char XATTRDELIM[];
 
 /* each db.db, per-user db, and per-group db will have a table with this name */
 /* this table contains xattrs that are local to the current directory */
-#define XATTRS_PWD_NAME     "xattrs_pwd"
+#define XATTRS_PWD          "xattrs_pwd"
 extern const char XATTRS_PWD_CREATE[];
 extern const char XATTRS_PWD_INSERT[];
 
 /* each db.db, per-user db, and per-group db will have a table with this name */
 /* this table will be empty before rollups */
-#define XATTRS_ROLLUP_NAME  "xattrs_rollup"
+#define XATTRS_ROLLUP       "xattrs_rollup"
 extern const char XATTRS_ROLLUP_CREATE[];
 
 /* each db.db, per-user db, and per-group db will have a view with this name */
 /* this is the combination of xattrs_pwd and xattrs_rollup */
-#define XATTRS_AVAIL_NAME   "xattrs_avail"
+#define XATTRS_AVAIL        "xattrs_avail"
 extern const char XATTRS_AVAIL_CREATE[];
 
 /* the view of all xattrs available to the caller */
-#define XATTRS_VIEW_NAME    "xattrs"
+#define XATTRS              "xattrs"
 
 /* table containing list of per-user and per-group xattr dbs */
-#define XATTR_FILES_PWD_NAME     "xattr_files_pwd"
+#define XATTR_FILES_PWD     "xattr_files_pwd"
 extern const char XATTR_FILES_PWD_CREATE[];
 extern const char XATTR_FILES_PWD_INSERT[];
 
 /* table containing list of per-user and per-group xattr dbs */
 /* this table will be empty before rollups */
-#define XATTR_FILES_ROLLUP_NAME  "xattr_files_rollup"
+#define XATTR_FILES_ROLLUP  "xattr_files_rollup"
 extern const char XATTR_FILES_ROLLUP_CREATE[];
 extern const char XATTR_FILES_ROLLUP_INSERT[];
 
 /* view containing list of per-user and per-group xattr dbs */
-#define XATTR_FILES_NAME         "xattr_files"
+#define XATTR_FILES         "xattr_files"
 extern const char XATTR_FILES_CREATE[];
 
 /* format to pass into snprintf */

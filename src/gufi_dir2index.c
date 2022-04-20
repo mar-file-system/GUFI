@@ -180,7 +180,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     zeroit(&summary);
 
     /* prepared statements within db.db */
-    sqlite3_stmt *entries_res = insertdbprep(db, esqli);
+    sqlite3_stmt *entries_res = insertdbprep(db, ENTRIES_INSERT);
     sqlite3_stmt *xattrs_res = NULL;
     sqlite3_stmt *xattr_files_res = NULL;
 

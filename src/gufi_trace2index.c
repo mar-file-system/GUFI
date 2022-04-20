@@ -270,8 +270,8 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
         /* INSERT statement bindings into db.db */
         timestamp_start(insertdbprep);
-        sqlite3_stmt *res = insertdbprep(db, esqli);                                /* entries */
-        sqlite3_stmt *xattrs_res = insertdbprep(db, XATTRS_PWD_INSERT);             /* xattrs within db.db */
+        sqlite3_stmt *entries_res     = insertdbprep(db, ENTRIES_INSERT);           /* entries */
+        sqlite3_stmt *xattrs_res      = insertdbprep(db, XATTRS_PWD_INSERT);        /* xattrs within db.db */
         sqlite3_stmt *xattr_files_res = insertdbprep(db, XATTR_FILES_PWD_INSERT);   /* per-user and per-group db file names*/
         timestamp_set_end(insertdbprep);
 
@@ -325,7 +325,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
             /* add row to bulk insert */
             timestamp_start(insertdbgo);
-            insertdbgo(&row, db, res);
+            insertdbgo(&row, db, entries_res);
             insertdbgo_xattrs(&dir.statuso, &row,
                               &xattr_db_list, &templates->xattr,
                               topath, topath_len,
@@ -396,8 +396,8 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         /* write out data going into db.db */
         timestamp_start(insertdbfin);
         insertdbfin(xattr_files_res); /* per-user and per-group xattr db file names */
-        insertdbfin(xattrs_res);      /* xattrs */
-        insertdbfin(res);             /* entries */
+        insertdbfin(xattrs_res);
+        insertdbfin(entries_res);
         timestamp_set_end(insertdbfin);
 
         timestamp_start(insertsumdb);

@@ -327,10 +327,10 @@ struct RollUp {
 
 /* ************************************** */
 /* get permissions from directory entries */
-const char PERM_SQL[] = "SELECT " \
-    "(SELECT mode FROM summary WHERE isroot == 1), " \
-    "(SELECT uid  FROM summary WHERE isroot == 1), " \
-    "(SELECT gid  FROM summary WHERE isroot == 1), " \
+const char PERM_SQL[] = "SELECT "
+    "(SELECT mode FROM summary WHERE isroot == 1), "
+    "(SELECT uid  FROM summary WHERE isroot == 1), "
+    "(SELECT gid  FROM summary WHERE isroot == 1), "
     "(SELECT COUNT(*) FROM pentries)";
 
 struct Permissions {
@@ -577,28 +577,16 @@ end_can_rollup:
     return legal;
 }
 
-/* drop pentries view */
-/* create pentries table */
-/* copy entries + pinode into pentries */
-/* define here to be able to duplicate the SQL at compile time */
-#define ROLLUP_CURRENT_DIR \
-    "DROP VIEW IF EXISTS pentries;" \
-    "CREATE TABLE pentries AS SELECT entries.*, summary.inode AS pinode FROM summary, entries;" /* "CREATE TABLE AS" already inserts rows, so no need to explicitly insert rows */ \
-    "UPDATE summary SET rollupscore = 0;"
-
-/* location of the 0 in ROLLUP_CURRENT_DIR */
-static const size_t rollup_score_offset = sizeof(ROLLUP_CURRENT_DIR) - sizeof("0;");
-
-/* copy child pentries into pentries */
+/* copy child pentries into pentries_rollup */
 /* copy child summary into summary */
-/* copy child xattrs_avail to xattrs_avail - FIXME: need to be able to drop rows */
-/* copy child xattr_files to xattr_files   - FIXME: need to be able to drop rows */
+/* copy child xattrs_avail to xattrs_rollup */
+/* copy child xattr_files to xattr_files_rollup */
 static const char rollup_subdir[] =
-    "INSERT INTO pentries SELECT * FROM " SUBDIR_ATTACH_NAME ".pentries;"
-    "INSERT INTO summary  SELECT NULL, s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattrs, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM summary as s, " SUBDIR_ATTACH_NAME ".summary as sub WHERE s.isroot == 1;"
-    "INSERT INTO " XATTRS_ROLLUP_NAME      " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL_NAME ";"
-    "INSERT INTO " XATTR_FILES_ROLLUP_NAME " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES_NAME  ";"
-    "SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES_NAME ";";
+    "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
+    "INSERT INTO " SUMMARY " SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattrs, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
+    "INSERT INTO " XATTRS_ROLLUP      " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
+    "INSERT INTO " XATTR_FILES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES  ";"
+    "SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES ";";
 
 struct CallbackArgs {
     struct template_db *xattr;
@@ -617,7 +605,6 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     const char  *filename       = data[2];
     const size_t filename_len   = strlen(filename);
     const char  *attachname     = data[3];
-    const size_t attachname_len = strlen(attachname);
     uid_t uid;
     gid_t gid;
 
@@ -672,7 +659,7 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
 
     char insert[MAXSQL];
     SNPRINTF(insert, MAXSQL, "INSERT INTO %s SELECT * FROM %s.%s;",
-             XATTRS_ROLLUP_NAME, attachname, XATTRS_AVAIL_NAME);
+             XATTRS_ROLLUP, attachname, XATTRS_AVAIL);
     char *err = NULL;
     int rc = sqlite3_exec(xattr_db, insert, NULL, NULL, &err);
     if (rc != SQLITE_OK) {
@@ -716,8 +703,8 @@ int do_rollup(struct RollUp *rollup,
     int exec_rc = SQLITE_OK;
 
     /* set the rollup score in the SQL statement */
-    char rollup_current_dir[] = ROLLUP_CURRENT_DIR;
-    rollup_current_dir[rollup_score_offset] += ds->score;
+    char rollup_current_dir[] = "UPDATE " SUMMARY " SET rollupscore = 0;";
+    rollup_current_dir[sizeof(rollup_current_dir) - sizeof("0;")] += ds->score;
 
     timestamp_start(rollup_current_dir);
     exec_rc = sqlite3_exec(dst, rollup_current_dir, NULL, NULL, &err);
@@ -738,7 +725,6 @@ int do_rollup(struct RollUp *rollup,
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
         char child_dbname[MAXPATH];
-        /* SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, strlen(child->name), "/", 1, DBNAME, DBNAME_LEN); */
         SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, child->name_len, "/", 1, DBNAME, DBNAME_LEN);
 
         /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */

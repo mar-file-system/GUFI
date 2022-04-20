@@ -131,12 +131,13 @@ int searchmyll(long long int lull, int lutype) {
 }
 
 static int create_tables(const char * name, sqlite3 * db, void * args) {
-    if ((create_table_wrapper(name, db, "esql",        esql)       != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "ssql",        ssql)       != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqldir",    vssqldir)   != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqluser",   vssqluser)  != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vesql",       vesql)      != SQLITE_OK)) {
+    if ((create_table_wrapper(name, db, ENTRIES,         ENTRIES_CREATE)         != SQLITE_OK) ||
+        (create_table_wrapper(name, db, SUMMARY,         SUMMARY_CREATE)         != SQLITE_OK) ||
+        (create_table_wrapper(name, db, PENTRIES_ROLLUP, PENTRIES_ROLLUP_CREATE) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, PENTRIES,        PENTRIES_CREATE)        != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",      vssqldir)               != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",     vssqluser)              != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",    vssqlgroup)             != SQLITE_OK)) {
         return -1;
     }
 
@@ -144,7 +145,7 @@ static int create_tables(const char * name, sqlite3 * db, void * args) {
 }
 
 static int create_readdirplus_tables(const char * name, sqlite3 * db, void * args) {
-    if (create_table_wrapper(name, db, "rsql",         rsql)       != SQLITE_OK) {
+    if (create_table_wrapper(name, db, READDIRPLUS,    READDIRPLUS_CREATE)  != SQLITE_OK) {
         return -1;
     }
 
@@ -204,7 +205,7 @@ int reprocessdir(void * passv, DIR *dir)
                       ))) {
        return -1;
     }
-    res=insertdbprep(db,esqli);
+    res=insertdbprep(db, ENTRIES_INSERT);
     startdb(db);
     records=malloc(MAXRECS);
     bzero(records,MAXRECS);
@@ -620,7 +621,7 @@ int processinit(struct QPTPool * ctx) {
                                 , NULL, NULL
                                 #endif
                                 );
-         global_res[i]=insertdbprep(gts.outdbd[i], rsqli);
+         global_res[i]=insertdbprep(gts.outdbd[i], READDIRPLUS_INSERT);
          if (in.stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
              fprintf(stderr,"\n mutex %d init failed\n",i);

@@ -71,18 +71,18 @@ OF SUCH DAMAGE.
 
 const char XATTRDELIM[] = "\x1F";     // ASCII Unit Separator
 
-const char XATTRS_PWD_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_PWD_NAME ";"
-                                 "CREATE TABLE " XATTRS_PWD_NAME "(inode INT64, name TEXT, value TEXT);";
+const char XATTRS_PWD_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_PWD ";"
+                                 "CREATE TABLE " XATTRS_PWD "(inode INT64, name TEXT, value TEXT);";
 
-const char XATTRS_PWD_INSERT[] = "INSERT INTO " XATTRS_PWD_NAME " VALUES (@inode, @name, @value);";
+const char XATTRS_PWD_INSERT[] = "INSERT INTO " XATTRS_PWD " VALUES (@inode, @name, @value);";
 
-const char XATTRS_ROLLUP_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_ROLLUP_NAME ";"
-                                    "CREATE TABLE " XATTRS_ROLLUP_NAME "(inode INT64, name TEXT, value TEXT);";
+const char XATTRS_ROLLUP_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_ROLLUP ";"
+                                    "CREATE TABLE " XATTRS_ROLLUP "(inode INT64, name TEXT, value TEXT);";
 
-const char XATTRS_ROLLUP_INSERT[] = "INSERT INTO " XATTRS_ROLLUP_NAME " VALUES (@inode, @name, @value);";
+const char XATTRS_ROLLUP_INSERT[] = "INSERT INTO " XATTRS_ROLLUP " VALUES (@inode, @name, @value);";
 
-const char XATTRS_AVAIL_CREATE[] = "DROP VIEW IF EXISTS " XATTRS_AVAIL_NAME ";"
-                                   "CREATE VIEW " XATTRS_AVAIL_NAME " AS SELECT * FROM " XATTRS_PWD_NAME " UNION SELECT * FROM " XATTRS_ROLLUP_NAME ";";
+const char XATTRS_AVAIL_CREATE[] = "DROP VIEW IF EXISTS " XATTRS_AVAIL ";"
+                                   "CREATE VIEW " XATTRS_AVAIL " AS SELECT * FROM " XATTRS_PWD " UNION SELECT * FROM " XATTRS_ROLLUP ";";
 
 const char XATTR_UID_FILENAME_FORMAT[]         = "uid.%llu.db";
 const char XATTR_UID_ATTACH_FORMAT[]           = "uid%llu";
@@ -93,23 +93,23 @@ const char XATTR_GID_WO_READ_ATTACH_FORMAT[]   = "gid%llu";
 
 /* file name should be relative to the current directory, not an absolute path */
 const char XATTR_FILES_PWD_CREATE[] =
-    "DROP TABLE IF EXISTS " XATTR_FILES_PWD_NAME ";"
-    "CREATE TABLE " XATTR_FILES_PWD_NAME "(uid INT64, gid INT64, filename TEXT, attachname TEXT, PRIMARY KEY(filename, attachname));";
+    "DROP TABLE IF EXISTS " XATTR_FILES_PWD ";"
+    "CREATE TABLE " XATTR_FILES_PWD "(uid INT64, gid INT64, filename TEXT, attachname TEXT, PRIMARY KEY(filename, attachname));";
 
 const char XATTR_FILES_PWD_INSERT[] =
-    "INSERT INTO " XATTR_FILES_PWD_NAME " VALUES (@uid, @gid, @filename, @attachname);";
+    "INSERT INTO " XATTR_FILES_PWD " VALUES (@uid, @gid, @filename, @attachname);";
 
 /* file name should be relative to the current directory, not an absolute path */
 const char XATTR_FILES_ROLLUP_CREATE[] =
-    "DROP TABLE IF EXISTS " XATTR_FILES_ROLLUP_NAME ";"
-    "CREATE TABLE " XATTR_FILES_ROLLUP_NAME "(uid INT64, gid INT64, filename TEXT, attachname TEXT, PRIMARY KEY(filename, attachname));";
+    "DROP TABLE IF EXISTS " XATTR_FILES_ROLLUP ";"
+    "CREATE TABLE " XATTR_FILES_ROLLUP "(uid INT64, gid INT64, filename TEXT, attachname TEXT, PRIMARY KEY(filename, attachname));";
 
 const char XATTR_FILES_ROLLUP_INSERT[] =
-    "INSERT INTO " XATTR_FILES_ROLLUP_NAME " VALUES (@uid, @gid, @filename, @attachname);";
+    "INSERT INTO " XATTR_FILES_ROLLUP " VALUES (@uid, @gid, @filename, @attachname);";
 
 const char XATTR_FILES_CREATE[] =
-    "DROP VIEW IF EXISTS " XATTR_FILES_NAME ";"
-    "CREATE VIEW " XATTR_FILES_NAME " AS SELECT * FROM " XATTR_FILES_PWD_NAME " UNION SELECT * FROM " XATTR_FILES_ROLLUP_NAME ";";
+    "DROP VIEW IF EXISTS " XATTR_FILES ";"
+    "CREATE VIEW " XATTR_FILES " AS SELECT * FROM " XATTR_FILES_PWD " UNION SELECT * FROM " XATTR_FILES_ROLLUP ";";
 
 int xattr_can_rollin(struct stat *parent, struct stat *entry) {
     /* Rule 1: File is 0+R (doesn’t matter what the parent dir perms or ownership is) */

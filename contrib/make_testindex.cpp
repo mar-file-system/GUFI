@@ -362,12 +362,13 @@ long double elapsed(const struct timespec &start, const struct timespec &end) {
 }
 
 bool create_tables(sqlite3 *db) {
-    return ((sqlite3_exec(db, esql,       nullptr, nullptr, nullptr) == SQLITE_OK) &&
-            (sqlite3_exec(db, ssql,       nullptr, nullptr, nullptr) == SQLITE_OK) &&
-            (sqlite3_exec(db, vssqldir,   nullptr, nullptr, nullptr) == SQLITE_OK) &&
-            (sqlite3_exec(db, vssqluser,  nullptr, nullptr, nullptr) == SQLITE_OK) &&
-            (sqlite3_exec(db, vssqlgroup, nullptr, nullptr, nullptr) == SQLITE_OK) &&
-            (sqlite3_exec(db, vesql,      nullptr, nullptr, nullptr) == SQLITE_OK));
+    return ((sqlite3_exec(db, ENTRIES_CREATE,         nullptr, nullptr, nullptr) == SQLITE_OK) &&
+            (sqlite3_exec(db, SUMMARY_CREATE,         nullptr, nullptr, nullptr) == SQLITE_OK) &&
+            (sqlite3_exec(db, PENTRIES_ROLLUP_CREATE, nullptr, nullptr, nullptr) == SQLITE_OK) &&
+            (sqlite3_exec(db, PENTRIES_CREATE,        nullptr, nullptr, nullptr) == SQLITE_OK) &&
+            (sqlite3_exec(db, vssqldir,               nullptr, nullptr, nullptr) == SQLITE_OK) &&
+            (sqlite3_exec(db, vssqluser,              nullptr, nullptr, nullptr) == SQLITE_OK) &&
+            (sqlite3_exec(db, vssqlgroup,             nullptr, nullptr, nullptr) == SQLITE_OK));
 }
 
 sqlite3 *open_and_create_tables(const std::string &name){
@@ -458,8 +459,8 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
     // prepare to insert entries
     sqlite3_stmt *res = nullptr;
-    static const std::size_t esqli_len = strlen(esqli);
-    if (sqlite3_prepare_v2(on_disk, esqli, esqli_len, &res, nullptr) != SQLITE_OK) {
+    static const std::size_t esqli_len = strlen(ENTRIES_INSERT);
+    if (sqlite3_prepare_v2(on_disk, ENTRIES_INSERT, esqli_len, &res, nullptr) != SQLITE_OK) {
         std::cerr << "Could not prepare statement for " << fullname << " (" << sqlite3_errmsg(on_disk) << "). Skipping" << std::endl;
         sqlite3_close(on_disk);
         return;

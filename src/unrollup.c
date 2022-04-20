@@ -82,21 +82,74 @@ struct Unrollup {
     int rolledup; /* set by parent, can be modified by self */
 };
 
-int get_rolled_up(void * args, int count, char ** data, char ** columns) {
+int get_rolled_up(void *args, int count, char **data, char **columns) {
     if ((count == 1) && (data[0][1] == '\0')) {
-        int * rolledup = (int *) args;
+        int *rolledup = (int *) args;
         *rolledup = (data[0][0] == '1');
         return 0;
     }
     return 1;
 }
 
-int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
-    struct Unrollup * work = (struct Unrollup *) data;
-    char * err = NULL;
+int count_pwd(void *args, int count, char **data, char **columns) {
+    size_t *xattr_count = (size_t *) args;
+    sscanf(data[0], "%zu", xattr_count); /* skip check */
+    return 0;
+}
+
+/* Delete all entries in each file found in the XATTR_FILES_ROLLUP table */
+int process_xattrs(void *args, int count, char **data, char **columns) {
+    char *dir = (char *) args;
+    char *relpath = data[0];
+    char fullpath[MAXPATH];
+    SNPRINTF(fullpath, MAXPATH, "%s/%s", dir, relpath);
+
     int rc = 0;
 
-    DIR * dir = opendir(work->name);
+    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0
+                         , NULL, NULL
+                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , NULL, NULL
+                         , NULL, NULL
+                         #endif
+        );
+
+    if (db) {
+        char *err = NULL;
+        size_t xattr_count = 0;
+        if (sqlite3_exec(db,
+                         "DELETE FROM " XATTRS_ROLLUP ";"
+                         "SELECT COUNT(*) FROM " XATTRS_PWD ";",
+                         count_pwd, &count, &err) == SQLITE_OK) {
+             /* remove empty per-user/per-group xattr db files */
+             if (xattr_count == 0) {
+                 if (remove(fullpath) != 0) {
+                     const int err = errno;
+                     fprintf(stderr, "Warning: Failed to remove empty xattr ddb file %s: %s (%d)\n",
+                             fullpath, strerror(err), err);
+                     rc = 1;
+                 }
+             }
+        }
+        else {
+            fprintf(stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n",
+                    fullpath, err);
+            rc = 1;
+        }
+        sqlite3_free(err);
+    }
+
+    closedb(db);
+
+    return rc;
+}
+
+int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+    struct Unrollup *work = (struct Unrollup *) data;
+    char *err = NULL;
+    int rc = 0;
+
+    DIR *dir = opendir(work->name);
     if (!dir) {
         fprintf(stderr, "Error: Could not open directory \"%s\": %s", work->name, strerror(errno));
         rc = 1;
@@ -107,12 +160,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
-    sqlite3 * db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0
-                , NULL, NULL
-                #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                , NULL, NULL
-                , NULL, NULL
-                #endif
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0
+                         , NULL, NULL
+                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , NULL, NULL
+                         , NULL, NULL
+                         #endif
         );
 
     if (!db) {
@@ -122,38 +175,47 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /* get roll up status set by parent */
     rolledup = work->rolledup;
 
-    /* even if the parent was not rolled up, this directory might be */
-    /* directories known to be rolled up can skip this check */
-    if (db && !work->rolledup) {
+    /*
+     * if parent of this directory was rolled up, all children are rolled up, so skip this check
+     * if parent of this direcotry was not rolled up, this directory might be
+     */
+    if (db && !rolledup) {
         /* get whether or not the current directory was rolled up */
-        if (sqlite3_exec(db, "SELECT (rollupscore <> 0) FROM summary WHERE isroot == 1", get_rolled_up, &rolledup, &err) != SQLITE_OK) {
-            fprintf(stderr, "Error: Failed to get rollup score from \"%s\": %s\n", work->name, err);
+        if (sqlite3_exec(db, "SELECT (rollupscore <> 0) FROM summary WHERE isroot == 1",
+                         get_rolled_up, &rolledup, &err) != SQLITE_OK) {
+            fprintf(stderr, "Error: Failed to get rollup score from \"%s\": %s\n",
+                    work->name, err);
             rc = 1;
         }
         sqlite3_free(err);
         err = NULL;
     }
 
-    /* always descend */
-    /* if not rolled up, children might be */
-    /* if rolled up, all child also need processing */
-    /**/
-    /* descend first to keep working while cleaning up db */
-    struct dirent * entry = NULL;
+    /*
+     * always descend
+     *     if rolled up, all child also need processing
+     *     if not rolled up, children might be
+     *
+     * descend first to keep working while cleaning up db
+     */
+    struct dirent *entry = NULL;
     while ((entry = readdir(dir))) {
-        if ((strncmp(entry->d_name, ".",  2) == 0) ||
-            (strncmp(entry->d_name, "..", 3) == 0)) {
-            continue;
+        const size_t len = strlen(entry->d_name);
+        if (len < 3) {
+            if ((strncmp(entry->d_name, ".",  2) == 0) ||
+                (strncmp(entry->d_name, "..", 3) == 0)) {
+                continue;
+            }
         }
 
         char name[MAXPATH];
-        size_t len = SNPRINTF(name, MAXPATH, "%s/%s", work->name, entry->d_name);
+        size_t name_len = SNPRINTF(name, MAXPATH, "%s/%s", work->name, entry->d_name);
 
         struct stat st;
         if (lstat(name, &st) == 0) {
             if (S_ISDIR(st.st_mode)) {
-                struct Unrollup * subdir = malloc(sizeof(struct Unrollup));
-                memcpy(subdir->name, name, len + 1);
+                struct Unrollup *subdir = malloc(sizeof(struct Unrollup));
+                memcpy(subdir->name, name, name_len + 1);
 
                 /* set child rolledup status so that if this dir */
                 /* was rolled up, child can skip roll up check */
@@ -168,16 +230,16 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     if (db && rolledup) {
         if (sqlite3_exec(db,
                          "BEGIN TRANSACTION;"
-                         "DROP TABLE pentries;"
-                         "CREATE VIEW pentries AS SELECT entries.*, summary.inode AS pinode FROM entries, summary WHERE rectype = 0;"
-                         "DELETE FROM summary WHERE isroot <> 1;"
-                         "UPDATE summary SET rollupscore = 0 WHERE isroot == 1;"
-                         "DELETE FROM " XATTRS_ROLLUP_NAME ";"
-                         "DELETE FROM " XATTR_FILES_ROLLUP_NAME ";"
+                         "DELETE FROM " PENTRIES_ROLLUP ";"
+                         "DELETE FROM " SUMMARY " WHERE isroot <> 1;"
+                         "UPDATE " SUMMARY " SET rollupscore = 0 WHERE isroot == 1;"
+                         "DELETE FROM " XATTRS_ROLLUP ";"
+                         "SELECT filename FROM " XATTR_FILES_ROLLUP ";"
+                         "DELETE FROM " XATTR_FILES_ROLLUP ";"
                          "END TRANSACTION;"
                          "VACUUM;",
-                         NULL,
-                         NULL,
+                         process_xattrs,
+                         work->name,
                          &err) != SQLITE_OK) {
             fprintf(stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
             rc = 1;
@@ -200,7 +262,7 @@ void sub_help() {
    printf("\n");
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
@@ -213,10 +275,10 @@ int main(int argc, char * argv[]) {
     timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , timestamp_buffers
-                                         #endif
+    struct QPTPool *pool = QPTPool_init(in.maxthreads
+                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                        , timestamp_buffers
+                                        #endif
         );
 
     if (!pool) {
@@ -242,7 +304,7 @@ int main(int argc, char * argv[]) {
             len = 1;
         }
 
-        struct Unrollup * mywork = malloc(sizeof(struct Unrollup));
+        struct Unrollup *mywork = malloc(sizeof(struct Unrollup));
 
         /* copy argv[i] into the work item */
         SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
@@ -263,18 +325,12 @@ int main(int argc, char * argv[]) {
     }
 
     QPTPool_wait(pool);
-
-    /* #ifdef DEBUG */
-    /* const size_t thread_count = QPTPool_threads_completed(pool); */
-    /* #endif */
-
     QPTPool_destroy(pool);
 
     #ifdef DEBUG
     #ifdef PER_THREAD_STATS
     timestamp_destroy(timestamp_buffers);
     #endif
-
     #endif
 
     return 0;

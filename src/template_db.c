@@ -108,9 +108,9 @@ int init_template_db(struct template_db *tdb) {
 
 /* each db.db, per-user db, and per-group db will have these tables */
 static int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
-    if ((create_table_wrapper(name, db, XATTRS_PWD_NAME,         XATTRS_PWD_CREATE)         != SQLITE_OK) ||
-        (create_table_wrapper(name, db, XATTRS_ROLLUP_NAME,      XATTRS_ROLLUP_CREATE)      != SQLITE_OK) ||
-        (create_table_wrapper(name, db, XATTRS_AVAIL_NAME,       XATTRS_AVAIL_CREATE)       != SQLITE_OK)) {
+    if ((create_table_wrapper(name, db, XATTRS_PWD,         XATTRS_PWD_CREATE)         != SQLITE_OK) ||
+        (create_table_wrapper(name, db, XATTRS_ROLLUP,      XATTRS_ROLLUP_CREATE)      != SQLITE_OK) ||
+        (create_table_wrapper(name, db, XATTRS_AVAIL,       XATTRS_AVAIL_CREATE)       != SQLITE_OK)) {
         return -1;
     }
 
@@ -118,16 +118,16 @@ static int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
 }
 
 static int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
-    if ((create_table_wrapper(name, db, "esql",                  esql)                      != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "ssql",                  ssql)                      != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqldir",              vssqldir)                  != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqluser",             vssqluser)                 != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqlgroup",            vssqlgroup)                != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vesql",                 vesql)                     != SQLITE_OK) ||
-        /* these only exists in db.db */
-        (create_table_wrapper(name, db, XATTR_FILES_PWD_NAME,    XATTR_FILES_PWD_CREATE)    != SQLITE_OK) ||
-        (create_table_wrapper(name, db, XATTR_FILES_ROLLUP_NAME, XATTR_FILES_ROLLUP_CREATE) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, XATTR_FILES_NAME,        XATTR_FILES_CREATE)        != SQLITE_OK)) {
+    if ((create_table_wrapper(name, db, ENTRIES,            ENTRIES_CREATE)            != SQLITE_OK) ||
+        (create_table_wrapper(name, db, SUMMARY,            SUMMARY_CREATE)            != SQLITE_OK) ||
+        (create_table_wrapper(name, db, PENTRIES_ROLLUP,    PENTRIES_ROLLUP_CREATE)    != SQLITE_OK) ||
+        (create_table_wrapper(name, db, PENTRIES,           PENTRIES_CREATE)           != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",         vssqldir)                  != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",        vssqluser)                 != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",       vssqlgroup)                != SQLITE_OK) ||
+        (create_table_wrapper(name, db, XATTR_FILES_PWD,    XATTR_FILES_PWD_CREATE)    != SQLITE_OK) ||
+        (create_table_wrapper(name, db, XATTR_FILES_ROLLUP, XATTR_FILES_ROLLUP_CREATE) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, XATTR_FILES,        XATTR_FILES_CREATE)        != SQLITE_OK)) {
         return -1;
     }
 
