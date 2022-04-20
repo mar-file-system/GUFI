@@ -79,39 +79,55 @@ extern int errno;
 
 static const char GUFI_SQLITE_VFS[] = "unix-none";
 
-char *rsql = // "DROP TABLE IF EXISTS readdirplus;"
-            "CREATE TABLE readdirplus(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
+#define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
+#define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
 
-char *rsqli = "INSERT INTO readdirplus VALUES (@path,@type,@inode,@pinode,@suspect);";
+const char READDIRPLUS_CREATE[] =
+    DROP_TABLE(READDIRPLUS)
+    "CREATE TABLE " READDIRPLUS "(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
 
-char *esql = // "DROP TABLE IF EXISTS entries;"
-            "CREATE TABLE entries(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+const char READDIRPLUS_INSERT[] =
+    "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @suspect);";
 
-char *esqli = "INSERT INTO entries VALUES (NULL,@name,@type,@inode,@mode,@nlink,@uid,@gid,@size,@blksize,@blocks,@atime,@mtime,@ctime,@linkname,@xattrs,@crtime,@ossint1,@ossint2,@ossint3,@ossint4,@osstext1,@osstext2);";
+const char ENTRIES_CREATE[] =
+    DROP_TABLE(ENTRIES)
+    "CREATE TABLE " ENTRIES "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
 
-char *ssql = "DROP TABLE IF EXISTS summary;"
-             "CREATE TABLE summary(id INTEGER PRIMARY KEY, name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64,minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
+const char ENTRIES_INSERT[] =
+    "INSERT INTO " ENTRIES " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattrs, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2);";
 
-char *tsql = "DROP TABLE IF EXISTS treesummary;"
-             "CREATE TABLE treesummary(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64,depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64,rectype INT64, uid INT64, gid INT64);";
+const char SUMMARY_CREATE[] =
+    DROP_TABLE(SUMMARY)
+    "CREATE TABLE summary(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
 
-char *vesql = "DROP VIEW IF EXISTS pentries;"
-              "create view pentries as select entries.*, summary.inode as pinode from entries, summary where rectype=0;";
+const char PENTRIES_ROLLUP_CREATE[] =
+    DROP_TABLE(PENTRIES_ROLLUP)
+    "CREATE TABLE " PENTRIES_ROLLUP "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode INT64);";
 
+const char PENTRIES_ROLLUP_INSERT[] =
+    "INSERT INTO " PENTRIES_ROLLUP " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattrs, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2, pinode INT64);";
 
-char *vssqldir   = "DROP VIEW IF EXISTS vsummarydir;"
-                   "create view vsummarydir as select * from summary where rectype=0;";
-char *vssqluser  = "DROP VIEW IF EXISTS vsummaryuser;"
-                   "create view vsummaryuser as select * from summary where rectype=1;";
-char *vssqlgroup = "DROP VIEW IF EXISTS vsummarygroup;"
-                   "create view vsummarygroup as select * from summary where rectype=2;";
+const char PENTRIES_CREATE[] =
+    DROP_VIEW(PENTRIES)
+    "CREATE VIEW " PENTRIES " AS SELECT " ENTRIES ".*, " SUMMARY ".inode AS pinode FROM " ENTRIES ", " SUMMARY " WHERE rectype=0 UNION SELECT * FROM " PENTRIES_ROLLUP ";";
 
-char *vtssqldir   = "DROP VIEW IF EXISTS vtsummarydir;"
-                    "create view vtsummarydir as select * from treesummary where rectype=0;";
-char *vtssqluser  = "DROP VIEW IF EXISTS vtsummaryuser;"
-                    "create view vtsummaryuser as select * from treesummary where rectype=1;";
-char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
-                    "create view vtsummarygroup as select * from treesummary where rectype=2;";
+const char tsql[] =
+    DROP_TABLE(TREESUMMARY)
+    "CREATE TABLE " TREESUMMARY "(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);";
+
+/* summary and tsummary views */
+#define vssql(name, value)                                                                           \
+    const char vssql##name[] =                                                                       \
+        "DROP VIEW IF EXISTS vsummary" #name ";"                                                     \
+        "CREATE VIEW vsummary" #name " AS SELECT * FROM " SUMMARY " WHERE rectype=" #value ";";      \
+                                                                                                     \
+    const char vtssql##name[] =                                                                      \
+        "DROP VIEW IF EXISTS vtsummary" #name ";"                                                    \
+        "CREATE VIEW vtsummary" #name " AS SELECT * FROM " TREESUMMARY " WHERE rectype=" #value ";"  \
+
+vssql(dir,   0);
+vssql(user,  1);
+vssql(group, 2);
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err)
 {
@@ -492,7 +508,7 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
     error = sqlite3_prepare_v2(db, sqli, MAXSQL, &reso, &tail);
     if (error != SQLITE_OK) {
           fprintf(stderr, "SQL error on insertdbprep: error %d %s err %s\n",
-                  error,esqli,sqlite3_errmsg(db));
+                  error, sqli, sqlite3_errmsg(db));
           return NULL;
     }
     return reso;
@@ -723,7 +739,7 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork, struct sum *su)
     char *zxattr    = sqlite3_mprintf("%q", xattr_names);
 
     SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
-            "(NULL, \'%s\', \'%s\', "
+            "(\'%s\', \'%s\', "
             "%"STAT_ino", %d, %"STAT_nlink", %" PRId64 ", %" PRId64 ", %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
             "\'%s\', \'%s\', "
             "%lld, %lld, %" PRId64  ", %" PRId64 ", %" PRId64 ", %" PRId64 ", %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, 1, 0);",
@@ -1296,18 +1312,18 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 {
     static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
     static const size_t XATTR_COLS_LEN = sizeof(XATTR_COLS) - 1;
-    static const size_t XATTRS_AVAIL_NAME_LEN = sizeof(XATTRS_AVAIL_NAME) - 1;
+    static const size_t XATTRS_AVAIL_LEN = sizeof(XATTRS_AVAIL) - 1;
 
     int           rec_count = 0;
     sqlite3_stmt *res = NULL;
-    char          unioncmd[MAXSQL] = "CREATE TEMP VIEW IF NOT EXISTS " XATTRS_VIEW_NAME " AS";
+    char          unioncmd[MAXSQL] = "CREATE TEMP VIEW IF NOT EXISTS " XATTRS " AS";
     char         *unioncmdp = unioncmd + strlen(unioncmd);
 
     /* step through each xattr db file */
-    int error = sqlite3_prepare_v2(db, "SELECT filename, attachname FROM " XATTR_FILES_NAME, MAXSQL, &res, NULL);
+    int error = sqlite3_prepare_v2(db, "SELECT filename, attachname FROM " XATTR_FILES, MAXSQL, &res, NULL);
     if (error != SQLITE_OK) {
-        printf("xattrprep Error: %s: Could not get filenames from table %s: %d err %s\n",
-               path, XATTR_FILES_NAME, error, sqlite3_errmsg(db));
+        fprintf(stderr, "xattrprep Error: %s: Could not get filenames from table %s: %d err %s\n",
+               path, XATTR_FILES, error, sqlite3_errmsg(db));
         return -1;
     }
 
@@ -1340,7 +1356,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
                                     XATTR_COLS, XATTR_COLS_LEN,
                                     attachname, attachname_len,
                                     ".", (size_t) 1,
-                                    XATTRS_AVAIL_NAME, XATTRS_AVAIL_NAME_LEN,
+                                    XATTRS_AVAIL, XATTRS_AVAIL_LEN,
                                     " UNION", (size_t) 6);
         }
 
@@ -1352,7 +1368,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 
     SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 2,
                XATTR_COLS, XATTR_COLS_LEN,
-               XATTRS_AVAIL_NAME, XATTRS_AVAIL_NAME_LEN);
+               XATTRS_AVAIL, XATTRS_AVAIL_LEN);
 
     /* create xattrs view */
     int rc = sqlite3_exec(db, unioncmd, 0, 0, NULL);
@@ -1368,7 +1384,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 
     /* create LEFT JOIN views (all rows, with and without xattrs) */
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xentries AS SELECT entries.*, xattrs.name as xattr_name, xattrs.value as xattr_value FROM entries LEFT JOIN xattrs ON entries.inode == xattrs.inode", 0, 0, NULL);
+    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xentries AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode", 0, 0, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
@@ -1379,7 +1395,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
         return -1;
     }
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xpentries AS SELECT pentries.*, xattrs.name as xattr_name, xattrs.value as xattr_value FROM pentries LEFT JOIN xattrs ON pentries.inode == xattrs.inode", 0, 0, NULL);
+    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xpentries AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN xattrs ON " PENTRIES ".inode == " XATTRS ".inode", 0, 0, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
@@ -1390,7 +1406,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
         return -1;
     }
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xsummary AS SELECT summary.*, xattrs.name as xattr_name, xattrs.value as xattr_value FROM summary LEFT JOIN xattrs ON summary.inode == xattrs.inode", 0, 0, NULL);
+    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xsummary AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN xattrs ON " SUMMARY ".inode == " XATTRS ".inode", 0, 0, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;

@@ -74,24 +74,40 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-extern char *rsql;
-extern char *rsqli;
+#define READDIRPLUS       "readdirplus"
+extern const char READDIRPLUS_CREATE[];
+extern const char READDIRPLUS_INSERT[];
 
-extern char *esql;
-extern char *esqli;
+/* contains all file and link metadata for the current directory */
+/* prefer pentries over entries */
+#define ENTRIES           "entries"
+extern const char ENTRIES_CREATE[];
+extern const char ENTRIES_INSERT[];
 
-extern char *ssql;
-extern char *tsql;
+/* directory metadata + aggregate data */
+#define SUMMARY           "summary"
+extern const char SUMMARY_CREATE[];
 
-extern char *vesql;
+/* pentries pulled from children */
+#define PENTRIES_ROLLUP   "pentries_rollup"
+extern const char PENTRIES_ROLLUP_CREATE[];
+extern const char PENTRIES_ROLLUP_INSERT[];
 
-extern char *vssqldir;
-extern char *vssqluser;
-extern char *vssqlgroup;
+/* (entries + summary.inode) UNION pentries_rollup */
+#define PENTRIES          "pentries"
+extern const char PENTRIES_CREATE[];
 
-extern char *vtssqldir;
-extern char *vtssqluser;
-extern char *vtssqlgroup;
+/* aggregate data of tree starting at current directory */
+#define TREESUMMARY       "treesummary"
+extern const char tsql[];
+
+extern const char vssqldir[];
+extern const char vssqluser[];
+extern const char vssqlgroup[];
+
+extern const char vtssqldir[];
+extern const char vtssqluser[];
+extern const char vtssqlgroup[];
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err);
 

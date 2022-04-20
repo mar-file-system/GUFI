@@ -77,7 +77,7 @@ extern "C" {
 
 static const char delim[] = "\x1e";
 
-static const struct xattr XATTR[] = {
+static const struct xattr EXPECTED_XATTR[] = {
     {
         "xattr.key0", 10,
         "xattr.val0", 10,
@@ -88,16 +88,16 @@ static const struct xattr XATTR[] = {
     },
 };
 
-static struct xattrs XATTRS = {
-    (struct xattr *) XATTR,
+static struct xattrs EXPECTED_XATTRS = {
+    (struct xattr *) EXPECTED_XATTR,
     0,
     0,
     2,
 };
 
-static const char XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
+static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
                                  "xattr.key1\x1fxattr.val1\x1f";
-static const size_t XATTRS_STR_LEN = sizeof(XATTRS_STR) - 1;
+static const size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
 static struct work *get_work() {
     struct work *work = new struct work;
@@ -115,7 +115,7 @@ static struct work *get_work() {
     work->statuso.st_atime   = 0x1234;
     work->statuso.st_mtime   = 0x5678;
     work->statuso.st_ctime   = 0x9abc;
-    work->xattrs.pairs       = (struct xattr *) XATTR;
+    work->xattrs.pairs       = (struct xattr *) EXPECTED_XATTR;
     work->xattrs.name_len    = 0;
     work->xattrs.len         = 0;
     work->xattrs.count       = 2;
@@ -166,8 +166,8 @@ static int to_string(char *line, const size_t size, struct work *work) {
 
     line += part1;
 
-    memcpy(line, XATTRS_STR, XATTRS_STR_LEN);
-    line += XATTRS_STR_LEN;
+    memcpy(line, EXPECTED_XATTRS_STR, EXPECTED_XATTRS_STR_LEN);
+    line += EXPECTED_XATTRS_STR_LEN;
 
     const int part2 = snprintf(line, size,
                                "%c"
@@ -196,7 +196,7 @@ static int to_string(char *line, const size_t size, struct work *work) {
     line += part2;
     *line = '\0';
 
-    return part1 + XATTRS_STR_LEN + part2;
+    return part1 + EXPECTED_XATTRS_STR_LEN + part2;
 }
 
 TEST(trace, worktofile) {
@@ -264,10 +264,10 @@ TEST(trace, linetowork) {
 
     COMPARE(src, work);
 
-    EXPECT_STREQ(work.xattrs.pairs[0].name,  XATTRS.pairs[0].name);
-    EXPECT_STREQ(work.xattrs.pairs[0].value, XATTRS.pairs[0].value);
-    EXPECT_STREQ(work.xattrs.pairs[1].name,  XATTRS.pairs[1].name);
-    EXPECT_STREQ(work.xattrs.pairs[1].value, XATTRS.pairs[1].value);
+    EXPECT_STREQ(work.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
+    EXPECT_STREQ(work.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
+    EXPECT_STREQ(work.xattrs.pairs[1].name,  EXPECTED_XATTRS.pairs[1].name);
+    EXPECT_STREQ(work.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
 
     xattrs_cleanup(&work.xattrs);
 
