@@ -131,7 +131,7 @@ replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
 ${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
 echo
 
-) | tee "${OUTPUT}"
+) |& tee "${OUTPUT}"
 
 diff -b ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"
