@@ -106,7 +106,7 @@ set(SUDO
 )
 
 foreach(NAME ${CORE})
-  configure_file(${NAME} ${NAME} COPYONLY)
+  configure_file(${NAME} ${NAME} @ONLY)
 endforeach()
 
 foreach(NAME ${SH_AND_EXPECTED})
@@ -119,7 +119,7 @@ endforeach()
 
 foreach(NAME ${SH_PY_AND_EXPECTED})
   configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
-  configure_file("${NAME}.py"       "${NAME}.py"       COPYONLY)
+  configure_file("${NAME}.py"       "${NAME}.py"       @ONLY)
   configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
   add_test(NAME "${NAME}" COMMAND "${NAME}.sh")

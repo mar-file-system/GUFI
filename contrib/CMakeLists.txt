@@ -82,10 +82,10 @@ if (CMAKE_CXX_COMPILER)
 endif()
 
 # potentially useful scripts
-configure_file(canned_queries.sh canned_queries.sh COPYONLY)
-configure_file(gentrace.py gentrace.py COPYONLY)
-configure_file(trace_anonymizer.py trace_anonymizer.py COPYONLY)
-configure_file(output-on-failure output-on-failure COPYONLY)
+configure_file(canned_queries.sh canned_queries.sh @ONLY)
+configure_file(gentrace.py gentrace.py @ONLY)
+configure_file(trace_anonymizer.py trace_anonymizer.py @ONLY)
+configure_file(output-on-failure output-on-failure @ONLY)
 
 # make benchmark
 #    clean up old benchmark directory and create a new one

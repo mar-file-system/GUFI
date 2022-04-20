@@ -1,5 +1,4 @@
-#!/usr/bin/env python2
-
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -67,7 +66,7 @@ import sys
 
 # get root directory of GUFI
 root = os.path.abspath(__file__)
-for _ in xrange(3):
+for _ in range(3):
     root = os.path.dirname(root)
 
 # test config file name
