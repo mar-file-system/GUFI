@@ -115,7 +115,7 @@ char *vtssqlgroup = "DROP VIEW IF EXISTS vtsummarygroup;"
 
 
 
-sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags)
+sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags)
 {
   char attach[MAXSQL];
   if (flags & SQLITE_OPEN_READONLY) {
@@ -139,7 +139,7 @@ sqlite3 * attachdb(const char *name, sqlite3 *db, const char *dbn, const int fla
   return db;
 }
 
-sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
+sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn)
 {
   char detach[MAXSQL];
   if (!sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn)) {
@@ -155,7 +155,7 @@ sqlite3 * detachdb(const char *name, sqlite3 *db, const char *dbn)
   return db;
 }
 
-int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, const char * sql, int (*callback)(void*,int,char**,char**), void * args) {
+int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql, int (*callback)(void*,int,char**,char**), void *args) {
     char *err_msg = NULL;
     const int rc = sqlite3_exec(db, sql, callback, args, &err_msg);
     if (rc != SQLITE_OK) {
@@ -166,7 +166,7 @@ int create_table_wrapper(const char *name, sqlite3 * db, const char * sql_name, 
     return rc;
 }
 
-int set_db_pragmas(sqlite3 * db) {
+int set_db_pragmas(sqlite3 *db) {
     int rc = 0;
 
     // try to turn sychronization off
@@ -223,14 +223,14 @@ int set_db_pragmas(sqlite3 * db) {
 #define check_set_end(name)
 #endif
 
-sqlite3 * opendb(const char * name, int flags, const int setpragmas, const int load_extensions,
-                 int (*modifydb_func)(const char * name, sqlite3 * db, void * args), void * modifydb_args
+sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
+                 int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                 , struct start_end * sqlite3_open,   struct start_end * set_pragmas
-                 , struct start_end * load_extension, struct start_end * modify_db
+                 , struct start_end *sqlite3_open,   struct start_end *set_pragmas
+                 , struct start_end *load_extension, struct start_end *modify_db
                  #endif
     ) {
-    sqlite3 * db = NULL;
+    sqlite3 *db = NULL;
 
     check_set_start(sqlite3_open);
     if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
@@ -478,7 +478,7 @@ int insertdbfin(sqlite3_stmt *res)
     return 0;
 }
 
-sqlite3_stmt * insertdbprep(sqlite3 *db)
+sqlite3_stmt *insertdbprep(sqlite3 *db)
 {
     const char *tail;
     int error = SQLITE_OK;
@@ -494,7 +494,7 @@ sqlite3_stmt * insertdbprep(sqlite3 *db)
     return reso;
 }
 
-sqlite3_stmt * insertdbprepr(sqlite3 *db)
+sqlite3_stmt *insertdbprepr(sqlite3 *db)
 {
     const char *tail;
     int error = SQLITE_OK;
@@ -743,9 +743,9 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 /* { */
 /*     const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context); */
 /*     const ino_t pinode = (ino_t) sqlite3_value_int64(argv[0]); */
-/*     char * name = (char *) sqlite3_value_text(argv[1]); */
+/*     char *name = (char *) sqlite3_value_text(argv[1]); */
 
-/*     const char * prefix = gps[id].gpath; */
+/*     const char *prefix = gps[id].gpath; */
 /*     if (pinode == 0) { */
 /*         /\* summary *\/ */
 /*         /\* there are two copies of the top level directory *\/ */
@@ -840,7 +840,7 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     SNPRINTF(format, 256, FORMAT, width);
 
     const int fgid = atoi(text);
-    struct group * fmygroup = getgrgid(fgid);
+    struct group *fmygroup = getgrgid(fgid);
     const char *show = fmygroup?fmygroup->gr_name:text;
 
     char fgroup[256];
@@ -864,8 +864,8 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 }
 
 static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv) {
-    const char * fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
-    const time_t t = sqlite3_value_int64(argv[1]);           /* timestamp */
+    const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
+    const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
 
     char buf[MAXPATH];
     strftime(buf, sizeof(buf), fmt, localtime(&t));
@@ -880,7 +880,7 @@ static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
 /* Unfilled blocks count as one full block (round up)          */
 static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
     const size_t size  = sqlite3_value_int64(argv[0]);
-    const char * unit  = (char *) sqlite3_value_text(argv[1]);
+    const char *unit  = (char *) sqlite3_value_text(argv[1]);
     const int    align = sqlite3_value_int(argv[2]);
 
     const size_t len = strlen(unit);
@@ -980,7 +980,7 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     return;
 }
 
-int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char * starting_dir) {
+int addqueryfuncs(sqlite3 *db, size_t id, size_t lvl, char *starting_dir) {
     return ((sqlite3_create_function(db, "path",                1, SQLITE_UTF8, (void *) (uintptr_t) id,  &path,                NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "fpath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &fpath,               NULL, NULL) == SQLITE_OK) &&
             (sqlite3_create_function(db, "epath",               0, SQLITE_UTF8, (void *) (uintptr_t) id,  &epath,               NULL, NULL) == SQLITE_OK) &&
@@ -1061,14 +1061,14 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
     return rec_count;
 }
 
-static int get_rollupscore_callback(void * args, int count, char **data, char **columns) {
-    int * rollupscore = (int *) args;
+static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
+    int *rollupscore = (int *) args;
     *rollupscore = atoi(data[0]);
     return 0;
 }
 
 int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
-    char * err = NULL;
+    char *err = NULL;
     if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
                      get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
         sqlite3_free(err);

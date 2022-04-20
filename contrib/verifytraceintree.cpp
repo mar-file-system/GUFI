@@ -219,7 +219,7 @@ int check_stanza(struct QPTPool * ctx, const size_t id, void * data, void * args
     int rc = 0;
     while (true) {
         // store pos here so it can be jumped back to if this was a directory
-        const std::istream::streampos pos = trace.tellg();
+        const std::streampos pos = trace.tellg();
 
         std::string line;
         if (!std::getline(trace, line)) {

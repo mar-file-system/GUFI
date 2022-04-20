@@ -89,14 +89,14 @@ off_t templatesize = 0; /* this is really a constant that is set at runtime */
 /* Data stored during first pass of input file */
 struct row {
     size_t first_delim;
-    char * line;
+    char *line;
     size_t len;
     long offset;
     size_t entries;
 };
 
-struct row * row_init(const size_t first_delim, char * line, const size_t len, const long offset) {
-    struct row * row = malloc(sizeof(struct row));
+struct row *row_init(const size_t first_delim, char *line, const size_t len, const long offset) {
+    struct row *row = malloc(sizeof(struct row));
     if (row) {
         row->first_delim = first_delim;
         row->line = line; /* takes ownership of line */
@@ -107,7 +107,7 @@ struct row * row_init(const size_t first_delim, char * line, const size_t len, c
     return row;
 }
 
-void row_destroy(struct row * row) {
+void row_destroy(struct row *row) {
     if (row) {
         free(row->line);
         free(row);
@@ -145,7 +145,7 @@ size_t total_files              = 0;
 #endif
 
 /* process the work under one directory (no recursion) */
-int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     uint64_t thread_handle_args      = 0;
@@ -189,8 +189,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     (void) ctx;
 
-    struct row * w = (struct row *) data;
-    FILE * trace = ((FILE **) args)[id];
+    struct row *w = (struct row *) data;
+    FILE *trace = ((FILE **) args)[id];
 
     timestamp_set_end(handle_args);
 
@@ -245,7 +245,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
     /* process the work */
     timestamp_start(opendb);
-    sqlite3 * db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
                           , NULL, NULL
                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
                           , NULL, NULL
@@ -261,7 +261,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         timestamp_set_end(zero_summary);
 
         timestamp_start(insertdbprep);
-        sqlite3_stmt * res = insertdbprep(db);
+        sqlite3_stmt *res = insertdbprep(db);
         timestamp_set_end(insertdbprep);
 
         timestamp_start(startdb);
@@ -277,7 +277,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         size_t row_count = 0;
         for(size_t i = 0; i < w->entries; i++) {
             timestamp_start(getline);
-            char * line = NULL;
+            char *line = NULL;
             size_t len = 0;
             if (getline(&line, &len, trace) == -1) {
                 free(line);
@@ -468,7 +468,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     return !db;
 }
 
-size_t parsefirst(char * line, const size_t len, const char delim) {
+size_t parsefirst(char *line, const size_t len, const char delim) {
     size_t first_delim = 0;
     while ((first_delim < len) && (line[first_delim] != delim)) {
         first_delim++;
@@ -482,13 +482,13 @@ size_t parsefirst(char * line, const size_t len, const char delim) {
 }
 
 /* Read ahead to figure out where files under directories start */
-int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     struct start_end scouting;
     clock_gettime(CLOCK_MONOTONIC, &scouting.start);
 
     /* skip argument checking */
-    char * filename = (char *) data;
-    FILE * trace = fopen(filename, "rb");
+    char *filename = (char *) data;
+    FILE *trace = fopen(filename, "rb");
 
     (void) id;
     (void) args;
@@ -502,7 +502,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
     /* keep current directory while finding next directory */
     /* in order to find out whether or not the current */
     /* directory has files in it */
-    char * line = NULL;
+    char *line = NULL;
     size_t len = 0;
     if (getline(&line, &len, trace) == -1) {
         free(line);
@@ -528,7 +528,7 @@ int scout_function(struct QPTPool * ctx, const size_t id, void * data, void * ar
         return 1;
     }
 
-    struct row * work = row_init(first_delim, line, len, ftell(trace));
+    struct row *work = row_init(first_delim, line, len, ftell(trace));
 
     size_t target_thread = 0;
 
@@ -606,7 +606,7 @@ void sub_help() {
    printf("\n");
 }
 
-void close_per_thread_traces(FILE ** traces, const int count) {
+void close_per_thread_traces(FILE **traces, const int count) {
     if (traces) {
         for(int i = 0; i < count; i++) {
             fclose(traces[i]);
@@ -616,8 +616,8 @@ void close_per_thread_traces(FILE ** traces, const int count) {
     }
 }
 
-FILE ** open_per_thread_traces(char * filename, const int count) {
-    FILE ** traces = (FILE **) calloc(count, sizeof(FILE *));
+FILE **open_per_thread_traces(char *filename, const int count) {
+    FILE **traces = (FILE **) calloc(count, sizeof(FILE *));
     if (traces) {
         for(int i = 0; i < count; i++) {
             if (!(traces[i] = fopen(filename, "rb"))) {
@@ -629,7 +629,7 @@ FILE ** open_per_thread_traces(char * filename, const int count) {
     return traces;
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     /* have to call clock_gettime explicitly to get start time and epoch */
     struct start_end main_func;
     clock_gettime(CLOCK_MONOTONIC, &main_func.start);
@@ -658,7 +658,7 @@ int main(int argc, char * argv[]) {
     /* open trace files for threads to jump around in */
     /* all have to be passed in at once because there's no way to send one to each thread */
     /* the trace files have to be opened outside of the thread in order to not repeatedly open the files */
-    FILE ** traces = open_per_thread_traces(in.name, in.maxthreads);
+    FILE **traces = open_per_thread_traces(in.name, in.maxthreads);
     if (!traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
         return -1;
@@ -668,7 +668,7 @@ int main(int argc, char * argv[]) {
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads
+    struct QPTPool *pool = QPTPool_init(in.maxthreads
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , &debug_output_buffers
                                          #endif

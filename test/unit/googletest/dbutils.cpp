@@ -77,8 +77,8 @@ extern "C" {
 
 }
 
-int str_output(void * args, int, char ** data, char **) {
-    char * output = static_cast <char *> (args);
+int str_output(void *args, int, char **data, char **) {
+    char *output = static_cast <char *> (args);
     memcpy(output, data[0], strlen(data[0]));
     return 0;
 }
@@ -86,9 +86,14 @@ int str_output(void * args, int, char ** data, char **) {
 TEST(addqueryfuncs, path) {
     // index was placed into basename
     const char index[MAXPATH] = "/prefix0/prefix1/basename";
-    SNPRINTF(gps[0].gpath, MAXPATH, "%s", index);
+    const size_t index_len = SNPRINTF(gps[0].gpath, MAXPATH, "%s", index);
 
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+    work.root = (char *) index;
+    memcpy(work.name, index, index_len);
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs(db, 0, 0, nullptr), 0);
@@ -128,7 +133,10 @@ TEST(addqueryfuncs, fpath) {
     const char fpath[MAXPATH] = "fpath";
     SNFORMAT_S(gps[0].gfpath, MAXPATH, 1, fpath, strlen(fpath));
 
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -146,7 +154,10 @@ TEST(addqueryfuncs, epath) {
     const char epath[MAXPATH] = "epath";
     SNFORMAT_S(gps[0].gepath, MAXPATH, 1, epath, strlen(epath));
 
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -165,13 +176,16 @@ TEST(addqueryfuncs, uidtouser) {
     const uid_t uid = getuid();
 
     struct passwd pwd;
-    struct passwd * result = NULL;
+    struct passwd *result = NULL;
 
     char buf[MAXPATH] = {};
     ASSERT_EQ(getpwuid_r(uid, &pwd, buf, MAXPATH, &result), 0);
     ASSERT_EQ(result, &pwd);
 
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -194,13 +208,16 @@ TEST(addqueryfuncs, gidtogroup) {
     const gid_t gid = getgid();
 
     struct group grp;
-    struct group * result = NULL;
+    struct group *result = NULL;
 
     char buf[MAXPATH] = {};
     ASSERT_EQ(getgrgid_r(gid, &grp, buf, MAXPATH, &result), 0);
     ASSERT_EQ(result, &grp);
 
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -219,7 +236,10 @@ TEST(addqueryfuncs, gidtogroup) {
 }
 
 TEST(addqueryfuncs, modetotxt) {
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -245,7 +265,10 @@ TEST(addqueryfuncs, modetotxt) {
 }
 
 TEST(addqueryfuncs, strftime) {
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -282,7 +305,10 @@ static const char SIZE[] = {'K',    // 10
 };
 
 TEST(addqueryfuncs, blocksize) {
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -333,7 +359,10 @@ TEST(addqueryfuncs, blocksize) {
 }
 
 TEST(addqueryfuncs, human_readable_size) {
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
@@ -365,7 +394,10 @@ TEST(addqueryfuncs, human_readable_size) {
 }
 
 TEST(addqueryfuncs, level) {
-    sqlite3 * db = nullptr;
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 

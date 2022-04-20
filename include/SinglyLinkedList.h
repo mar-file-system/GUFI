@@ -68,34 +68,34 @@ OF SUCH DAMAGE.
 #include <stddef.h>
 
 struct node {
-    void * data;
-    struct node * next;
+    void *data;
+    struct node *next;
 };
 
 /* Singly linked list that is used like a queue */
 struct sll {
-    struct node * head;
-    struct node * tail;
+    struct node *head;
+    struct node *tail;
     size_t size;
 };
 
-struct sll * sll_init(struct sll * sll);
-struct sll * sll_push(struct sll * sll, void * data);
-struct sll * sll_move(struct sll * dst, struct sll * src);
-struct sll * sll_move_append(struct sll * dst, struct sll * src);
-size_t sll_get_size(struct sll * sll);
+struct sll *sll_init(struct sll *sll);
+struct sll *sll_push(struct sll *sll, void *data);
+struct sll *sll_move(struct sll *dst, struct sll *src);
+struct sll *sll_move_append(struct sll *dst, struct sll *src);
+size_t sll_get_size(struct sll *sll);
 
 /* functions for looping over a sll */
-struct node * sll_head_node(struct sll * sll);
-struct node * sll_next_node(struct node * node);
-void * sll_node_data(struct node * node);
+struct node *sll_head_node(struct sll *sll);
+struct node *sll_next_node(struct node *node);
+void *sll_node_data(struct node *node);
 
 /* convenience macro */
-#define sll_loop(sll, name)                      \
-    for(struct node * name = sll_head_node(sll); \
-        name;                                    \
-        name = sll_next_node(name))              \
+#define sll_loop(sll, name)                         \
+    for(struct node *(name) = sll_head_node((sll)); \
+        (name);                                     \
+        (name) = sll_next_node((name)))             \
 
-void sll_destroy(struct sll * sll, void (*destroy)(void *));
+void sll_destroy(struct sll *sll, void (*destroy)(void *));
 
 #endif

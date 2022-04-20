@@ -109,10 +109,10 @@ static int create_tables(const char *name, sqlite3 *db, void *args) {
 }
 
 // create the initial database file to copy from
-off_t create_template(int * fd) {
+off_t create_template(int *fd) {
     static const char name[] = "tmp.db";
 
-    sqlite3 * db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
+    sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
                           , create_tables, NULL
                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
                           , NULL, NULL
@@ -135,7 +135,7 @@ off_t create_template(int * fd) {
 
 // copy the template file instead of creating a new database and new tables for each work item
 // the ownership and permissions are set too
-int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid) {
+int copy_template(const int src_fd, const char *dst, off_t size, uid_t uid, gid_t gid) {
     // ignore errors here
     const int src_db = dup(src_fd);
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);

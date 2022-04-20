@@ -204,8 +204,8 @@ run ${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXROOT}
 run ${ROLLUP} ${INDEXROOT}
 
 echo "# rolled up directories should have pentries tables"
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC\""
-output=$(${GUFI_QUERY} -d " " -S "SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC\" | sort -k2 -k1"
+output=$(${GUFI_QUERY} -d " " -S "SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC" ${INDEXROOT} | sort -k2 -k1)
 replace "${output}"
 echo
 
@@ -213,8 +213,8 @@ echo
 run ${UNROLLUP} ${INDEXROOT}
 
 echo "# COUNT(entries), COUNT(restored PENTRIES), view, directory"
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) AS fullpath FROM summary ORDER BY fullpath ASC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -S "SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) AS fullpath FROM summary ORDER BY fullpath ASC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) AS fullpath FROM summary ORDER BY fullpath ASC\" ${INDEXROOT} | sort -k4 -k3"
+output=$(${GUFI_QUERY} -d " " -S "SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) AS fullpath FROM summary ORDER BY fullpath ASC" ${INDEXROOT} | sort -k4 -k3)
 replace "${output}"
 echo
 ) | tee "${OUTPUT}"

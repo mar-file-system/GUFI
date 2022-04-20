@@ -73,23 +73,23 @@ OF SUCH DAMAGE.
 
 /* struct to pass into pthread_create */
 struct worker_function_args {
-    struct QPTPool * ctx;
+    struct QPTPool *ctx;
     size_t id;
-    void * args;
+    void *args;
 };
 
 /* struct that is created when something is enqueued */
 struct queue_item {
     QPTPoolFunc_t func;
-    void * work;
+    void *work;
 };
 
-static void * worker_function(void * args) {
+static void *worker_function(void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(wf);
 
-    struct worker_function_args * wf_args = (struct worker_function_args *) args;
-    struct QPTPool * ctx = wf_args->ctx;
+    struct worker_function_args *wf_args = (struct worker_function_args *) args;
+    struct QPTPool *ctx = wf_args->ctx;
 
     if (!args) {
         timestamp_end(ctx->buffers, wf_args->id, "wf", wf);
@@ -102,7 +102,7 @@ static void * worker_function(void * args) {
         return NULL;
     }
 
-    struct QPTPoolData * tw = &wf_args->ctx->data[wf_args->id];
+    struct QPTPoolData *tw = &wf_args->ctx->data[wf_args->id];
 
     while (1) {
         timestamp_start(wf_sll_init);
@@ -166,12 +166,12 @@ static void * worker_function(void * args) {
         size_t work_count = 0;
 
         timestamp_start(wf_get_queue_head);
-        struct node * w = sll_head_node(&work);
+        struct node *w = sll_head_node(&work);
         timestamp_end(ctx->buffers, wf_args->id, "wf_get_queue_head", wf_get_queue_head);
 
         while (w) {
             timestamp_start(wf_process_work);
-            struct queue_item * qi = sll_node_data(w);
+            struct queue_item *qi = sll_node_data(w);
 
             tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, wf_args->args);
             timestamp_end(ctx->buffers, wf_args->id, "wf_process_work", wf_process_work);
@@ -218,16 +218,16 @@ static void * worker_function(void * args) {
     return NULL;
 }
 
-struct QPTPool * QPTPool_init(const size_t threads
-                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                              , struct OutputBuffers * buffers
-                              #endif
+struct QPTPool *QPTPool_init(const size_t threads
+                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                             , struct OutputBuffers *buffers
+                             #endif
     ) {
     if (!threads) {
         return NULL;
     }
 
-    struct QPTPool * ctx = calloc(1, sizeof(struct QPTPool));
+    struct QPTPool *ctx = calloc(1, sizeof(struct QPTPool));
     if (!ctx) {
         return NULL;
     }
@@ -259,14 +259,14 @@ struct QPTPool * QPTPool_init(const size_t threads
     return ctx;
 }
 
-size_t QPTPool_start(struct QPTPool * ctx, void * args) {
+size_t QPTPool_start(struct QPTPool *ctx, void *args) {
     if (!ctx) {
         return 0;
     }
 
     size_t started = 0;
     for(size_t i = 0; i < ctx->size; i++) {
-        struct worker_function_args * wf_args = calloc(1, sizeof(struct worker_function_args));
+        struct worker_function_args *wf_args = calloc(1, sizeof(struct worker_function_args));
         wf_args->ctx = ctx;
         wf_args->id = i;
         wf_args->args = args;
@@ -281,10 +281,10 @@ size_t QPTPool_start(struct QPTPool * ctx, void * args) {
 }
 
 /* id selects the next_queue variable to use, not where the work will be placed */
-void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, QPTPoolFunc_t func, void * new_work) {
+void QPTPool_enqueue(struct QPTPool *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
     /* skip argument checking */
     /* if (ctx) { */
-        struct queue_item * qi = malloc(sizeof(struct queue_item));
+        struct queue_item *qi = malloc(sizeof(struct queue_item));
         qi->func = func; /* if no function is provided, the thread will segfault when it processes this item*/
         qi->work = new_work;
 
@@ -302,7 +302,7 @@ void QPTPool_enqueue(struct QPTPool * ctx, const size_t id, QPTPoolFunc_t func, 
     /* } */
 }
 
-void QPTPool_wait(struct QPTPool * ctx) {
+void QPTPool_wait(struct QPTPool *ctx) {
     if (!ctx) {
         return;
     }
@@ -321,7 +321,7 @@ void QPTPool_wait(struct QPTPool * ctx) {
     }
 }
 
-void QPTPool_destroy(struct QPTPool * ctx) {
+void QPTPool_destroy(struct QPTPool *ctx) {
     if (ctx) {
         for(size_t i = 0; i < ctx->size; i++) {
             ctx->data[i].threads_successful = 0;
@@ -338,7 +338,7 @@ void QPTPool_destroy(struct QPTPool * ctx) {
 }
 
 /* utility functions */
-size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id) {
+size_t QPTPool_get_index(struct QPTPool *ctx, const pthread_t id) {
     /* skip argument checking */
     /* if (!ctx) { */
     /*     return (size_t) -1; */
@@ -351,7 +351,7 @@ size_t QPTPool_get_index(struct QPTPool * ctx, const pthread_t id) {
     return (size_t) -1;
 }
 
-size_t QPTPool_threads_started(struct QPTPool * ctx) {
+size_t QPTPool_threads_started(struct QPTPool *ctx) {
     /* skip argument checking */
     /* if (!ctx) { */
     /*     return (size_t) -1; */
@@ -363,7 +363,7 @@ size_t QPTPool_threads_started(struct QPTPool * ctx) {
     return sum;
 }
 
-size_t QPTPool_threads_completed(struct QPTPool * ctx) {
+size_t QPTPool_threads_completed(struct QPTPool *ctx) {
     /* skip argument checking */
     /* if (!ctx) { */
     /*     return (size_t) -1; */

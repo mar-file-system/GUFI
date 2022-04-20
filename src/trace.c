@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-int worktofile(FILE * file, char * delim, struct work * work) {
+int worktofile(FILE *file, char *delim, struct work *work) {
     if (!file || !delim || !work) {
         return -1;
     }
@@ -107,23 +107,6 @@ int worktofile(FILE * file, char * delim, struct work * work) {
     return count;
 }
 
-int filetowork(FILE * file, char * delim, struct work * work) {
-    if (!file || !delim || !work) {
-        return -1;
-    }
-
-    char * line = NULL;
-    size_t len = 0;
-    if (getline(&line, &len, file) == -1) {
-        return -1;
-    }
-
-    const int rc = linetowork(line, len, delim, work);
-    free(line);
-
-    return rc;
-}
-
 /* strstr replacement */
 /* does not terminate on NULL character */
 /* automatically adds NULL character to matching delimiter */
@@ -142,12 +125,12 @@ static char * split(char * src, char * delim, const char * end) {
     return NULL;
 }
 
-int linetowork(char * line, const size_t len, char * delim, struct work * work) {
+int linetowork(char *line, const size_t len, char *delim, struct work *work) {
     if (!line || !delim || !work) {
         return -1;
     }
 
-    const char * end = line + len;
+    const char *end = line + len;
 
     char *p;
     char *q;

@@ -67,20 +67,20 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-static struct sll * sll_clear(struct sll * sll) {
+static struct sll *sll_clear(struct sll *sll) {
     return sll?memset(sll, 0, sizeof(struct sll)):NULL;
 }
 
-struct sll * sll_init(struct sll * sll) {
+struct sll *sll_init(struct sll *sll) {
     return sll_clear(sll);
 };
 
-struct sll * sll_push(struct sll * sll, void * data) {
+struct sll *sll_push(struct sll *sll, void *data) {
     if (!sll) {
         return NULL;
     }
 
-    struct node * node = calloc(1, sizeof(struct node));
+    struct node *node = calloc(1, sizeof(struct node));
     node->data = data;
 
     if (!sll->head) {
@@ -98,7 +98,7 @@ struct sll * sll_push(struct sll * sll, void * data) {
     return sll;
 }
 
-struct sll * sll_move(struct sll * dst, struct sll * src) {
+struct sll *sll_move(struct sll *dst, struct sll *src) {
     if (!dst || !src) {
         return NULL;
     }
@@ -109,7 +109,7 @@ struct sll * sll_move(struct sll * dst, struct sll * src) {
     return dst;
 }
 
-struct sll * sll_move_append(struct sll * dst, struct sll * src) {
+struct sll *sll_move_append(struct sll *dst, struct sll *src) {
     if (!dst || !src) {
         return NULL;
     }
@@ -133,29 +133,29 @@ struct sll * sll_move_append(struct sll * dst, struct sll * src) {
     return dst;
 }
 
-size_t sll_get_size(struct sll * sll) {
+size_t sll_get_size(struct sll *sll) {
     return sll?sll->size:0;
 }
 
-struct node * sll_head_node(struct sll * sll) {
+struct node *sll_head_node(struct sll *sll) {
     return sll?sll->head:NULL;
 }
 
-struct node * sll_next_node(struct node * node) {
+struct node *sll_next_node(struct node *node) {
     return node?node->next:NULL;
 }
 
-void * sll_node_data(struct node * node) {
+void *sll_node_data(struct node *node) {
     return node?node->data:NULL;
 }
 
-void sll_destroy(struct sll * sll, void (*destroy)(void *)) {
-    struct node * node = sll_head_node(sll);
+void sll_destroy(struct sll *sll, void (*destroy)(void *)) {
+    struct node *node = sll_head_node(sll);
     while (node) {
         if (destroy) {
             destroy(sll_node_data(node));
         }
-        struct node * next = sll_next_node(node);
+        struct node *next = sll_next_node(node);
         free(node);
         node = next;
     }

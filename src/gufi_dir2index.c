@@ -80,7 +80,7 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
-// constants set at runtime (probably cannot be constexpr)
+/* constants set at runtime (probably cannot be constexpr) */
 int templatefd = -1;
 off_t templatesize = 0;
 
@@ -92,7 +92,7 @@ size_t total_dirs = 0;
 size_t total_files = 0;
 #endif
 
-int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
@@ -109,22 +109,22 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /*     return 1; */
     /* } */
 
-    struct work * work = (struct work *) data;
+    struct work *work = (struct work *) data;
 
-    DIR * dir = opendir(work->name);
+    DIR *dir = opendir(work->name);
     if (!dir) {
         fprintf(stderr, "Could not open directory \"%s\"\n", work->name);
         return 1;
     }
 
-    // get source directory info
+    /* get source directory info */
     struct stat dir_st;
     if (lstat(work->name, &dir_st) < 0)  {
         closedir(dir);
         return 1;
     }
 
-    // create the directory
+    /* create the directory */
     char topath[MAXPATH];
     SNPRINTF(topath, MAXPATH, "%s/%s", in.nameto, work->name + in.name_len); /* offset by in.name_len to remove prefix */
     int rc = mkdir(topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);           /* don't need recursion because parent is guaranteed to exist */
@@ -137,17 +137,17 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         }
     }
 
-    // create the database name
+    /* create the database name */
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, topath);
 
-    // copy the template file
+    /* copy the template file */
     if (copy_template(templatefd, dbname, templatesize, dir_st.st_uid, dir_st.st_gid)) {
         closedir(dir);
         return 1;
     }
 
-    sqlite3 * db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
                           , NULL, NULL
                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
                           , NULL, NULL
@@ -159,20 +159,20 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         return 1;
     }
 
-    // prepare to insert into the database
+    /* prepare to insert into the database */
     struct sum summary;
     zeroit(&summary);
 
-    sqlite3_stmt * res = insertdbprep(db);
+    sqlite3_stmt *res = insertdbprep(db);
 
     startdb(db);
 
-    struct dirent * entry = NULL;
+    struct dirent *entry = NULL;
     size_t rows = 0;
     while ((entry = readdir(dir))) {
         const size_t len = strlen(entry->d_name);
 
-        // skip . and ..
+        /* skip . and .. */
         if (entry->d_name[0] == '.') {
             if ((len == 1) ||
                 ((len == 2) && (entry->d_name[1] == '.'))) {
@@ -181,12 +181,12 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         }
 
 
-        // get entry path
+        /* get entry path */
         struct work e;
         memset(&e, 0, sizeof(struct work));
         SNFORMAT_S(e.name, MAXPATH, 3, work->name, strlen(work->name), "/", 1, entry->d_name, len);
 
-        // get the entry's metadata
+        /* get the entry's metadata */
         if (lstat(e.name, &e.statuso) < 0) {
             continue;
         }
@@ -196,7 +196,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             e.xattrs_len = pullxattrs(e.name, e.xattrs, sizeof(e.xattrs));
         }
 
-        // push subdirectories onto the queue
+        /* push subdirectories onto the queue */
         if (S_ISDIR(e.statuso.st_mode)) {
             if (work->level < in.max_level) {
                 e.type[0] = 'd';
@@ -205,7 +205,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
                 /* make a copy here so that the data can be pushed into the queue */
                 /* this is more efficient than malloc+free for every single entry */
-                struct work * copy = (struct work *) calloc(1, sizeof(struct work));
+                struct work *copy = (struct work *) calloc(1, sizeof(struct work));
                 memcpy(copy, &e, sizeof(struct work));
 
                 QPTPool_enqueue(ctx, id, processdir, copy);
@@ -215,7 +215,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
         rows++;
 
-        // non directories
+        /* non directories */
         if (S_ISLNK(e.statuso.st_mode)) {
             e.type[0] = 'l';
             readlink(e.name, e.linkname, MAXPATH);
@@ -234,17 +234,17 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
         pthread_mutex_unlock(&global_mutex);
         #endif
 
-        // get entry relative path
+        /* get entry relative path */
         char e_name[MAXPATH];
         SNPRINTF(e_name, MAXPATH, "%s", e.name + in.name_len);
 
-        // overwrite full path with relative path
+        /* overwrite full path with relative path */
         SNFORMAT_S(e.name, MAXPATH, 1, e_name, strlen(e.name) - in.name_len);
 
-        // update summary table
+        /* update summary table */
         sumit(&summary, &e);
 
-        // add entry into bulk insert
+        /* add entry into bulk insert */
         insertdbgo(&e, db, res);
     }
 
@@ -254,7 +254,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     closedb(db);
     db = NULL;
 
-    // ignore errors
+    /* ignore errors */
     chmod(topath, work->statuso.st_mode);
     chown(topath, work->statuso.st_uid, work->statuso.st_gid);
 
@@ -265,7 +265,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     return 0;
 }
 
-struct work * validate_inputs() {
+struct work *validate_inputs() {
     char expathin[MAXPATH];
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
@@ -279,7 +279,7 @@ struct work * validate_inputs() {
         fprintf(stderr,"You are putting the index dbs in input directory\n");
     }
 
-    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+    struct work *root = (struct work *) calloc(1, sizeof(struct work));
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
         return NULL;
@@ -287,14 +287,14 @@ struct work * validate_inputs() {
 
     SNPRINTF(root->name, MAXPATH, "%s", in.name);
 
-    // get input path metadata
+    /* get input path metadata */
     if (lstat(root->name, &root->statuso) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
         free(root);
         return NULL;
     }
 
-    // check that the input path is a directory
+    /* check that the input path is a directory */
     if (S_ISDIR(root->statuso.st_mode)) {
         root->type[0] = 'd';
     }
@@ -304,7 +304,7 @@ struct work * validate_inputs() {
         return NULL;
     }
 
-    // check if the source directory can be accessed
+    /* check if the source directory can be accessed */
     if (access(root->name, R_OK | X_OK) != 0) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 root->name, strerror(errno));
@@ -318,12 +318,12 @@ struct work * validate_inputs() {
         return NULL;
     }
 
-    // check if the destination path already exists (not an error)
+    /* check if the destination path already exists (not an error) */
     struct stat dst_st;
     if (lstat(in.nameto, &dst_st) == 0) {
         fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-        // if the destination path is not a directory (error)
+        /* if the destination path is not a directory (error) */
         if (!S_ISDIR(dst_st.st_mode)) {
             fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
             free(root);
@@ -331,7 +331,7 @@ struct work * validate_inputs() {
         }
     }
 
-    // check the output files, if a prefix was provided
+    /* check the output files, if a prefix was provided */
     if (in.outfile) {
         if (!strlen(in.outfilen)) {
             fprintf(stderr, "No output file name specified\n");
@@ -339,7 +339,7 @@ struct work * validate_inputs() {
             return NULL;
         }
 
-        // check if the destination path already exists (not an error)
+        /* check if the destination path already exists (not an error) */
         for(int i = 0; i < in.maxthreads; i++) {
             char outname[MAXPATH];
             SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
@@ -348,7 +348,7 @@ struct work * validate_inputs() {
             if (lstat(in.outfilen, &dst_st) == 0) {
                 fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-                // if the destination path is not a directory (error)
+                /* if the destination path is not a directory (error) */
                 if (S_ISDIR(dst_st.st_mode)) {
                     fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
                     free(root);
@@ -358,7 +358,7 @@ struct work * validate_inputs() {
         }
     }
 
-    // check the output dbs, if a prefix was provided
+    /* check the output dbs, if a prefix was provided */
     if (in.outdb) {
         if (!strlen(in.outdbn)) {
             fprintf(stderr, "No output db name specified\n");
@@ -366,7 +366,7 @@ struct work * validate_inputs() {
             return NULL;
         }
 
-        // check if the destination path already exists (not an error)
+        /* check if the destination path already exists (not an error) */
         for(int i = 0; i < in.maxthreads; i++) {
             char outname[MAXPATH];
             SNPRINTF(outname, MAXPATH, "%s.%d", in.outdbn, i);
@@ -375,7 +375,7 @@ struct work * validate_inputs() {
             if (lstat(in.outdbn, &dst_st) == 0) {
                 fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-                // if the destination path is not a directory (error)
+                /* if the destination path is not a directory (error) */
                 if (S_ISDIR(dst_st.st_mode)) {
                     fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outdbn);
                     free(root);
@@ -385,9 +385,9 @@ struct work * validate_inputs() {
         }
     }
 
-    // create the source root under the destination directory using
-    // the source directory's permissions and owners
-    // this allows for the threads to not have to recursively create directories
+    /* create the source root under the destination directory using */
+    /* the source directory's permissions and owners */
+    /* this allows for the threads to not have to recursively create directories */
     char dst_path[MAXPATH];
     SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name + in.name_len);
     if (dupdir(dst_path, &root->statuso)) {
@@ -411,14 +411,14 @@ void sub_help() {
    printf("\n");
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:xz:", 2, "input_dir output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
         return -1;
     else {
-        // parse positional args, following the options
+        /* parse positional args, following the options */
         int retval = 0;
         INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
         INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_dir");
@@ -440,8 +440,8 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    // get first work item by validating inputs
-    struct work * root = validate_inputs();
+    /* get first work item by validating inputs */
+    struct work *root = validate_inputs();
     if (!root) {
         return -1;
     }
@@ -460,10 +460,10 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , NULL
-                                         #endif
+    struct QPTPool *pool = QPTPool_init(in.maxthreads
+                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                        , NULL
+                                        #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");

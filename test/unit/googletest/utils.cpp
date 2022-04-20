@@ -662,7 +662,7 @@ TEST(mkpath, childfirst) {
     EXPECT_EQ(orig_child_stat.st_gid,            child_stat.st_gid);
 }
 
-static char * another_modetostr(char * str, const mode_t mode) {
+static char *another_modetostr(char *str, const mode_t mode) {
     static const char rwx[] = "rwx";
     snprintf(str, 11, "----------");
     switch(mode & S_IFMT) {

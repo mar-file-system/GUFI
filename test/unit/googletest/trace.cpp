@@ -229,31 +229,6 @@ TEST(trace, worktofile) {
     EXPECT_STREQ(dst.osstext2,        src->osstext2);              \
     EXPECT_EQ(dst.pinode,             src->pinode);                \
 
-TEST(trace, filetowork) {
-    struct work * src = get_work();
-    ASSERT_NE(src, nullptr);
-
-    // write a known struct using an alternative write function and convert the buffer to a file
-    char buf[4096];
-    const int rc = to_string(buf, sizeof(buf), src);
-    ASSERT_GT(rc, -1);
-    ASSERT_LT(rc, (int) sizeof(buf));
-
-    FILE * file = fmemopen(buf, sizeof(buf), "r");
-    ASSERT_NE(file, nullptr);
-
-    // extract the data from the file
-    struct work work;
-    const int read = filetowork(file, delim, &work);
-    fclose(file);
-
-    EXPECT_EQ(read, 0);
-
-    COMPARE(src, work);
-
-    delete src;
-}
-
 TEST(trace, linetowork) {
     struct work * src = get_work();
 

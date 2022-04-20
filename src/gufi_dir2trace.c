@@ -92,7 +92,7 @@ size_t total_files = 0;
 
 /* process the work under one directory (no recursion) */
 /* deletes work */
-int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
@@ -110,9 +110,9 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /*     return 1; */
     /* } */
 
-    struct work * work = (struct work *) data;
+    struct work *work = (struct work *) data;
 
-    DIR * dir = opendir(work->name);
+    DIR *dir = opendir(work->name);
     if (!dir) {
         free(data);
         return 1;
@@ -135,7 +135,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     SNFORMAT_S(work->name, MAXPATH, 1, work_name + in.name_len, work_name_len - in.name_len);
     worktofile(gts.outfd[id], in.delim, work);
 
-    struct dirent * entry = NULL;
+    struct dirent *entry = NULL;
     size_t rows = 0;
     while ((entry = readdir(dir))) {
         /* skip . and .. */
@@ -174,7 +174,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
 
             /* make a copy here so that the data can be pushed into the queue */
             /* this is more efficient than malloc+free for every single entry */
-            struct work * copy = (struct work *) calloc(1, sizeof(struct work));
+            struct work *copy = (struct work *) calloc(1, sizeof(struct work));
             memcpy(copy, &e, sizeof(struct work));
             memcpy(copy->name, fullpath, fullpath_len);
 
@@ -212,8 +212,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     return 0;
 }
 
-struct work * validate_inputs() {
-    struct work * root = (struct work *) calloc(1, sizeof(struct work));
+struct work *validate_inputs() {
+    struct work *root = (struct work *) calloc(1, sizeof(struct work));
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
         return NULL;
@@ -286,8 +286,8 @@ void sub_help() {
     printf("\n");
 }
 
-int main(int argc, char * argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:", 1, "input_dir output_prefix", &in);
+int main(int argc, char *argv[]) {
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:", 2, "input_dir output_prefix", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -317,7 +317,7 @@ int main(int argc, char * argv[]) {
     }
 
     /* get first work item by validating inputs */
-    struct work * root = validate_inputs();
+    struct work *root = validate_inputs();
     if (!root) {
         return -1;
     }
@@ -331,10 +331,10 @@ int main(int argc, char * argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , NULL
-                                         #endif
+    struct QPTPool *pool = QPTPool_init(in.maxthreads
+                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                        , NULL
+                                        #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");

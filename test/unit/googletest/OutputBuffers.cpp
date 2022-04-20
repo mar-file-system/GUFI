@@ -69,8 +69,8 @@ OF SUCH DAMAGE.
 
 
 extern "C" {
-    struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const size_t capacity);
-    void OutputBuffer_destroy(struct OutputBuffer * obuf);
+    struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t capacity);
+    void OutputBuffer_destroy(struct OutputBuffer *obuf);
 }
 
 const char STR[] = "string";
@@ -96,7 +96,7 @@ TEST(OutputBuffer, use) {
 
     // flush buffer to a file
     char buf[4096];
-    FILE * file = fmemopen(buf, sizeof(buf), "w");
+    FILE *file = fmemopen(buf, sizeof(buf), "w");
     ASSERT_NE(file, nullptr);
 
     EXPECT_EQ(OutputBuffer_flush(&obuf, file), LEN);
@@ -142,7 +142,7 @@ TEST(OutputBuffers, usse) {
         ASSERT_EQ(OutputBuffer_write(&obufs.buffers[1], STR, LEN, 0), LEN);
 
         char buf[4096];
-        FILE * file = fmemopen(buf, sizeof(buf), "w");
+        FILE *file = fmemopen(buf, sizeof(buf), "w");
         ASSERT_NE(file, nullptr);
 
         EXPECT_EQ(OutputBuffers_flush_to_single(&obufs, file), LEN + LEN);
@@ -159,12 +159,12 @@ TEST(OutputBuffers, usse) {
         ASSERT_EQ(OutputBuffer_write(&obufs.buffers[1], STR, LEN, 0), LEN);
 
         char buf1[4096];
-        FILE * file1 = fmemopen(buf1, sizeof(buf1), "w");
+        FILE *file1 = fmemopen(buf1, sizeof(buf1), "w");
         ASSERT_NE(file1, nullptr);
 
         // flush buffer to a file
         char buf2[4096];
-        FILE * file2 = fmemopen(buf2, sizeof(buf2), "w");
+        FILE *file2 = fmemopen(buf2, sizeof(buf2), "w");
         ASSERT_NE(file2, nullptr);
 
         FILE *files[] = {file1, file2};

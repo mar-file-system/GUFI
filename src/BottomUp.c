@@ -95,17 +95,17 @@ struct UserArgs {
     int track_non_dirs;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct OutputBuffers * timestamp_buffers;
+    struct OutputBuffers *timestamp_buffers;
     #else
-    void * timestamp_buffers;
+    void *timestamp_buffers;
     #endif
 };
 
-int ascend_to_top(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int ascend_to_top(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(ascend);
 
-    struct UserArgs * ua = (struct UserArgs *) args;
+    struct UserArgs *ua = (struct UserArgs *) args;
 
     /* reached root */
     if (!data) {
@@ -113,7 +113,7 @@ int ascend_to_top(struct QPTPool * ctx, const size_t id, void * data, void * arg
         return 0;
     }
 
-    struct BottomUp * bu = (struct BottomUp *) data;
+    struct BottomUp *bu = (struct BottomUp *) data;
 
     timestamp_start(lock_refs);
     pthread_mutex_lock(&bu->refs.mutex);
@@ -173,12 +173,13 @@ int ascend_to_top(struct QPTPool * ctx, const size_t id, void * data, void * arg
     return 0;
 }
 
-static struct BottomUp * track(const char * name, const size_t name_len,
-                               const size_t user_struct_size, struct sll * sll,
-                               const size_t level) {
-    struct BottomUp * copy = malloc(user_struct_size);
+static struct BottomUp *track(const char *name, const size_t name_len,
+                              const size_t user_struct_size, struct sll *sll,
+                              const size_t level) {
+    struct BottomUp *copy = malloc(user_struct_size);
 
     memcpy(copy->name, name, name_len + 1);
+    copy->name_len = name_len;
 
     copy->level = level;
 
@@ -188,18 +189,18 @@ static struct BottomUp * track(const char * name, const size_t name_len,
     return copy;
 }
 
-int descend_to_bottom(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(descend);
 
-    struct UserArgs * ua = (struct UserArgs *) args;
-    struct BottomUp * bu = (struct BottomUp *) data;
+    struct UserArgs *ua = (struct UserArgs *) args;
+    struct BottomUp *bu = (struct BottomUp *) data;
 
     /* keep track of which thread was used to walk downwards */
     bu->tid.down = id;
 
     timestamp_start(open_dir);
-    DIR * dir = opendir(bu->name);
+    DIR *dir = opendir(bu->name);
     timestamp_end(ua->timestamp_buffers, id, "opendir", open_dir);
 
     if (!dir) {
@@ -221,7 +222,7 @@ int descend_to_bottom(struct QPTPool * ctx, const size_t id, void * data, void *
     const size_t next_level = bu->level + 1;
     while (1) {
         timestamp_start(read_dir);
-        struct dirent * entry = readdir(dir);;
+        struct dirent *entry = readdir(dir);;
         timestamp_end(ua->timestamp_buffers, id, "readdir", read_dir);
 
         if (!entry) {
@@ -234,7 +235,7 @@ int descend_to_bottom(struct QPTPool * ctx, const size_t id, void * data, void *
         }
 
         struct BottomUp new_work;
-        const size_t name_len = SNPRINTF(new_work.name, MAXPATH, "%s/%s", bu->name, entry->d_name);
+        new_work.name_len = SNPRINTF(new_work.name, MAXPATH, "%s/%s", bu->name, entry->d_name);
 
         timestamp_start(lstat_entry);
         struct stat st;
@@ -242,13 +243,13 @@ int descend_to_bottom(struct QPTPool * ctx, const size_t id, void * data, void *
         timestamp_end(ua->timestamp_buffers, id, "lstat", lstat_entry);
 
         if (rc != 0) {
-            fprintf(stderr, "Error: Could not stat \"%s\": %s", new_work.name, strerror(errno));
+            fprintf(stderr, "Error: Could not stat \"%s\": %s\n", new_work.name, strerror(errno));
             continue;
         }
 
         timestamp_start(track_entry);
         if (S_ISDIR(st.st_mode)) {
-            track(new_work.name, name_len,
+            track(new_work.name, new_work.name_len,
                   ua->user_struct_size, &bu->subdirs,
                   next_level);
 
@@ -257,7 +258,7 @@ int descend_to_bottom(struct QPTPool * ctx, const size_t id, void * data, void *
         }
         else {
             if (ua->track_non_dirs) {
-                track(new_work.name, name_len,
+                track(new_work.name, new_work.name_len,
                       ua->user_struct_size, &bu->subnondirs,
                       next_level);
             }
@@ -302,13 +303,13 @@ int descend_to_bottom(struct QPTPool * ctx, const size_t id, void * data, void *
     return 0;
 }
 
-int parallel_bottomup(char ** root_names, size_t root_count,
+int parallel_bottomup(char **root_names, size_t root_count,
                       const size_t thread_count,
                       const size_t user_struct_size, AscendFunc_t func,
                       const int track_non_dirs,
-                      void * extra_args
+                      void *extra_args
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                      , struct OutputBuffers * timestamp_buffers
+                      , struct OutputBuffers *timestamp_buffers
                       #endif
     ) {
     struct UserArgs ua;
@@ -333,7 +334,7 @@ int parallel_bottomup(char ** root_names, size_t root_count,
     ua.timestamp_buffers = timestamp_buffers;
     #endif
 
-    struct QPTPool * pool = QPTPool_init(thread_count
+    struct QPTPool *pool = QPTPool_init(thread_count
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , timestamp_buffers
                                          #endif
@@ -352,10 +353,10 @@ int parallel_bottomup(char ** root_names, size_t root_count,
 
     /* enqueue all root directories */
     timestamp_start(enqueue_roots);
-    struct BottomUp * roots = malloc(root_count * user_struct_size);
+    struct BottomUp *roots = malloc(root_count * user_struct_size);
     for(size_t i = 0; i < root_count; i++) {
-        struct BottomUp * root = &roots[i];
-        SNPRINTF(root->name, MAXPATH, "%s", root_names[i]);
+        struct BottomUp *root = &roots[i];
+        root->name_len = SNPRINTF(root->name, MAXPATH, "%s", root_names[i]);
 
         struct stat st;
         if (lstat(root->name, &st) != 0) {

@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 
 #include <sys/types.h>
 
-off_t create_template(int * fd);
-int copy_template(const int src_fd, const char * dst, off_t size, uid_t uid, gid_t gid);
+off_t create_template(int *fd);
+int copy_template(const int src_fd, const char *dst, off_t size, uid_t uid, gid_t gid);
 
 #endif

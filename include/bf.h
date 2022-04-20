@@ -67,21 +67,20 @@ OF SUCH DAMAGE.
 
 #include <unistd.h>
 #include <sys/stat.h>
-#include <pthread.h>            // thpool.h expects us to do this
 
 #define MAXPATH 4096
 #define MAXXATTR 1024
 #define MAXSQL 2048
 #define MAXRECS 100000
 #define MAXPTHREAD 1000
-#define MAXSTRIDE 1000000000   // maximum records per stripe
+#define MAXSTRIDE 1000000000   /* maximum records per stripe */
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 
 struct globalpathstate {
   char gpath[MAXPATH];
   char gepath[MAXPATH];
-  char gfpath[MAXPATH]; // added to provide dumping of full path in query extension
+  char gfpath[MAXPATH]; /* added to provide dumping of full path in query extension */
 };
 
 extern struct globalpathstate gps[MAXPTHREAD];
@@ -151,7 +150,7 @@ struct input {
    int  printing;
    int  printheader;
    int  printrows;
-   int  helped;               // support parsing of per-app sub-options
+   int  helped;               /* support parsing of per-app sub-options */
    int  dodelim;
    char delim[2];
    int  doxattrs;
@@ -203,59 +202,62 @@ struct input {
 extern struct input in;
 
 
-void print_help(const char* prog_name,
-                const char* getopt_str,
-                const char* positional_args_help_str);
+void print_help(const char *prog_name,
+                const char *getopt_str,
+                const char *positional_args_help_str);
 
-// DEBUGGING
-void show_input(struct input* in, int retval);
+/* DEBUGGING */
+void show_input(struct input*in, int retval);
 
 int parse_cmd_line(int         argc,
-                   char*       argv[],
-                   const char* getopt_str,
+                   char       *argv[],
+                   const char *getopt_str,
                    int         n_positional,
-                   const char* positional_args_help_str,
+                   const char *positional_args_help_str,
                    struct input *in);
 
-// help for parsing a cmd-line string-argument into a fixed-size array.
-// NOTE: This assumes you have a variable <retval> in scope.
-#define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                         \
-   do {                                                                 \
-      const char* src = (SOURCE); /* might be "argv[idx++]" */          \
-      if (strlen(src) >= (MAX)) {                                       \
-         fprintf(stderr, "argument '%s' exceeds max allowed (%d)\n",    \
-                 (ARG_NAME), (MAX));                                    \
-         retval = -1;                                                   \
-      }                                                                 \
-      strncpy((VAR), (src), (MAX));                                     \
-      (VAR)[(MAX)-1] = 0;                                               \
+/* help for parsing a cmd-line string-argument into a fixed-size array. */
+/* NOTE: This assumes you have a variable <retval> in scope. */
+#define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                             \
+   do {                                                                     \
+      const char *src = (SOURCE); /* might be "argv[idx++]" */              \
+      const size_t src_len = strlen(src);                                   \
+      if (src_len >= (MAX)) {                                               \
+          fprintf(stderr, "argument '%s' exceeds max allowed (%zu): %zu\n", \
+                  (ARG_NAME), (size_t) (MAX), src_len);                     \
+         retval = -1;                                                       \
+      }                                                                     \
+      else {                                                                \
+          strncpy((VAR), src, src_len);                                     \
+          (VAR)[src_len] = '\x00';                                          \
+      }                                                                     \
    } while (0)
 
 
-#define INSTALL_INT(VAR, SOURCE, MIN, MAX, ARG_NAME)                    \
-   do {                                                                 \
-      if (sscanf((SOURCE), "%d", &(VAR)) != 1) {                        \
-        retval = -1;                                                    \
-        break;                                                          \
-      }                                                                 \
-      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
-         fprintf(stderr, "argument '%s' not in range [%d,%d]\n",        \
-                 (ARG_NAME), (MIN), (MAX));                             \
-         retval = -1;                                                   \
-      }                                                                 \
+#define INSTALL_INT(VAR, SOURCE, MIN, MAX, ARG_NAME)                        \
+   do {                                                                     \
+      if (sscanf((SOURCE), "%d", &(VAR)) != 1) {                            \
+        retval = -1;                                                        \
+        break;                                                              \
+      }                                                                     \
+      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                             \
+         fprintf(stderr, "argument '%s' not in range [%d,%d]\n",            \
+                 (ARG_NAME), (MIN), (MAX));                                 \
+         retval = -1;                                                       \
+      }                                                                     \
    } while (0)
 
-#define INSTALL_UINT(VAR, SOURCE, MIN, MAX, ARG_NAME)                   \
-   do {                                                                 \
-      if (sscanf((SOURCE), "%lu", &(VAR)) != 1) {                       \
-        retval = -1;                                                    \
-        break;                                                          \
-      }                                                                 \
-      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                         \
-         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",      \
-                 (ARG_NAME), (MIN), (MAX));                             \
-         retval = -1;                                                   \
-      }                                                                 \
+#define INSTALL_UINT(VAR, SOURCE, MIN, MAX, ARG_NAME)                       \
+   do {                                                                     \
+      if (sscanf((SOURCE), "%lu", &(VAR)) != 1) {                           \
+        retval = -1;                                                        \
+        break;                                                              \
+      }                                                                     \
+      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                             \
+         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",          \
+                 (ARG_NAME), (MIN), (MAX));                                 \
+         retval = -1;                                                       \
+      }                                                                     \
    } while (0)
 
 // TBD: this would replace gotos

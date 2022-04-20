@@ -142,7 +142,7 @@ bool verify_stanza(std::istream & stream, Tree & tree, const char delim = '\x1e'
 
     // followed by a series of non-directories
     while (true) {
-        const std::istream::streampos pos = stream.tellg();
+        const std::streampos pos = stream.tellg();
 
         if (!std::getline(stream, line)) {
             break;

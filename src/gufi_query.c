@@ -263,7 +263,7 @@ static size_t descend2(struct QPTPool *ctx,
         buffered_start(while_branch);
         while (1) {
             buffered_start(readdir_call);
-            struct dirent * entry = readdir(dir);
+            struct dirent *entry = readdir(dir);
             buffered_end(readdir_call);
 
             buffered_start(readdir_branch);
@@ -323,7 +323,7 @@ static size_t descend2(struct QPTPool *ctx,
                     /* make a clone here so that the data can be pushed into the queue */
                     /* this is more efficient than malloc+free for every single entry */
                     buffered_start(make_clone);
-                    struct work * clone = (struct work *) malloc(sizeof(struct work));
+                    struct work *clone = (struct work *) malloc(sizeof(struct work));
                     memcpy(clone, &qwork, sizeof(struct work));
                     buffered_end(make_clone);
 
@@ -373,14 +373,14 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 
     /* if (gts.outfd[id]) { */
     if (obs) {
-        size_t * lens = malloc(count * sizeof(size_t));
+        size_t *lens = malloc(count * sizeof(size_t));
         size_t row_len = count + 1; /* one delimiter per column + newline */
         for(int i = 0; i < count; i++) {
             lens[i] = strlen(data[i]);
             row_len += lens[i];
         }
 
-        struct OutputBuffer * ob = &obs->buffers[id];
+        struct OutputBuffer *ob = &obs->buffers[id];
 
         /* if a row cannot fit the buffer for whatever reason, flush the existing bufffer */
         if ((ob->capacity - ob->filled) < row_len) {
@@ -413,7 +413,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
         /* if the old data + this row cannot fit the buffer, works since old data has been flushed */
         /* if the old data + this row fit the buffer, old data was not flushed, but no issue */
         else {
-            char * buf = ob->buf;
+            char *buf = ob->buf;
             size_t filled = ob->filled;
             for(int i = 0; i < count; i++) {
                 memcpy(&buf[filled], data[i], lens[i]);
@@ -475,7 +475,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
-    DIR * dir = NULL;
+    DIR *dir = NULL;
 
     /* /\* Can probably skip this *\/ */
     /* if (!data) { */
@@ -488,23 +488,23 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
     /*     return 1; */
     /* } */
 
-    struct work * work = (struct work *) data;
+    struct work *work = (struct work *) data;
     const size_t work_name_len = strlen(work->name);
 
     /* /\* print directory *\/ */
     /* if (in.printdir) { */
-    /*     struct ThreadArgs * ta = (struct ThreadArgs *) args; */
+    /*     struct ThreadArgs *ta = (struct ThreadArgs *) args; */
     /*     struct CallbackArgs ca; */
     /*     ca.output_buffers = &ta->output_buffers; */
     /*     ca.id = id; */
-    /*     char * ptr = &(work->name[0]); */
+    /*     char *ptr = &(work->name[0]); */
     /*     ta->print_callback_func(&ca, 1, &ptr, NULL); */
     /* } */
 
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, MAXPATH, 2, work->name, work_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
-    struct ThreadArgs * ta = (struct ThreadArgs *) args;
+    struct ThreadArgs *ta = (struct ThreadArgs *) args;
 
     timestamp_create_zero(opendir_call,       ta->start_time);
     timestamp_create_zero(open_call,          ta->start_time);
@@ -835,7 +835,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
 
         addqueryfuncs(gts.outdbd[i], i, -1, NULL);
 
-        // create table
+        /* create table */
         if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
             fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, intermediate_name);
             outdbs_fin(gts.outdbd, i, NULL, 0);
@@ -860,7 +860,7 @@ static sqlite3 *aggregate_init(const char *AGGREGATE_NAME_TEMPLATE,
 
     addqueryfuncs(aggregate, in.maxthreads, -1, NULL);
 
-    // create table
+    /* create table */
     if (sqlite3_exec(aggregate, strlen(in.create_aggregate)?in.create_aggregate:in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
         fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
         outdbs_fin(gts.outdbd, in.maxthreads, NULL, 0);
@@ -948,7 +948,7 @@ int main(int argc, char *argv[])
     #endif
 
     char aggregate_name[MAXSQL];
-    sqlite3 * aggregate = NULL;
+    sqlite3 *aggregate = NULL;
     if (in.show_results == AGGREGATE) {
         if (!(aggregate = aggregate_init(AGGREGATE_NAME, aggregate_name, in.maxthreads))) {
             OutputBuffers_destroy(&args.output_buffers);
@@ -971,7 +971,7 @@ int main(int argc, char *argv[])
 
     /* provide a function to print if PRINT is set */
     args.print_callback_func = ((in.show_results == PRINT)?print_callback:NULL);
-    struct QPTPool * pool = QPTPool_init(in.maxthreads
+    struct QPTPool *pool = QPTPool_init(in.maxthreads
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , timestamp_buffers
                                          #endif
@@ -1005,7 +1005,7 @@ int main(int argc, char *argv[])
             len = 1;
         }
 
-        struct work * mywork = calloc(1, sizeof(struct work));
+        struct work *mywork = calloc(1, sizeof(struct work));
 
         /* copy argv[i] into the work item */
         SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
@@ -1073,7 +1073,7 @@ int main(int argc, char *argv[])
         /* ca.rows = 0; */
         /* ca.printed = 0; */
 
-        char * err;
+        char *err;
         if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
             fprintf(stderr, "Final aggregation error: %s: %s\n", in.aggregate, err);
             rc = -1;

@@ -79,7 +79,7 @@ OF SUCH DAMAGE.
 
 /* extra AscendFunc_t argments */
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    #define timestamp_sig  , struct OutputBuffers * timestamp_buffers
+    #define timestamp_sig  , struct OutputBuffers *timestamp_buffers
     #define timestamp_args , timestamp_buffers
 #else
     #define timestamp_sig
@@ -97,6 +97,7 @@ OF SUCH DAMAGE.
 */
 struct BottomUp {
     char name[MAXPATH];
+    size_t name_len;
     struct {
         pthread_mutex_t mutex;
         size_t remaining;
@@ -105,10 +106,10 @@ struct BottomUp {
     size_t subnondir_count;
     struct sll subdirs;
     struct sll subnondirs;
-    struct BottomUp * parent;
+    struct BottomUp *parent;
 
     /* extra arguments available at all times */
-    void * extra_args;
+    void *extra_args;
 
     size_t level;
     struct {
@@ -119,17 +120,17 @@ struct BottomUp {
 
 /* Signature of function for processing */
 /* a directory as the tree is ascending */
-typedef void (*AscendFunc_t)(void * user_struct
+typedef void (*AscendFunc_t)(void *user_struct
                              timestamp_sig);
 
 /* Function user should call to walk a tree bottom up in parallel */
-int parallel_bottomup(char ** root_names, size_t root_count,
+int parallel_bottomup(char **root_names, size_t root_count,
                       const size_t thread_count,
                       const size_t user_struct_size, AscendFunc_t func,
                       const int track_non_dirs,
-                      void * extra_args
+                      void *extra_args
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                      , struct OutputBuffers * debug_buffers
+                      , struct OutputBuffers *debug_buffers
                       #endif
 );
 

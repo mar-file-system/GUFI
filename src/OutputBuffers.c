@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const size_t capacity) {
+struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t capacity) {
     if (obuf) {
         if (!(obuf->buf = malloc(capacity))) {
             return NULL;
@@ -80,7 +80,7 @@ struct OutputBuffer * OutputBuffer_init(struct OutputBuffer * obuf, const size_t
     return obuf;
 }
 
-size_t OutputBuffer_write(struct OutputBuffer * obuf, const void * buf, const size_t size, const int increment_count) {
+size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size_t size, const int increment_count) {
     if ((obuf->filled + size) > obuf->capacity) {
         return 0;
     }
@@ -92,7 +92,7 @@ size_t OutputBuffer_write(struct OutputBuffer * obuf, const void * buf, const si
     return size;
 }
 
-size_t OutputBuffer_flush(struct OutputBuffer * obuf, FILE * out) {
+size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out) {
     /* /\* skip argument checking *\/ */
     /* if (!output_buffer || !out) { */
     /*     return 0; */
@@ -104,13 +104,13 @@ size_t OutputBuffer_flush(struct OutputBuffer * obuf, FILE * out) {
     return rc;
 }
 
-void OutputBuffer_destroy(struct OutputBuffer * obuf) {
+void OutputBuffer_destroy(struct OutputBuffer *obuf) {
     if (obuf) {
         free(obuf->buf);
     }
 }
 
-struct OutputBuffers * OutputBuffers_init(struct OutputBuffers * obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex) {
+struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex) {
     if (!obufs) {
         return NULL;
     }
@@ -132,7 +132,7 @@ struct OutputBuffers * OutputBuffers_init(struct OutputBuffers * obufs, const si
     return obufs;
 }
 
-size_t OutputBuffers_flush_to_single(struct OutputBuffers * obufs, FILE * out) {
+size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
     /* skip argument checking */
 
     if (obufs->mutex) {
@@ -151,7 +151,7 @@ size_t OutputBuffers_flush_to_single(struct OutputBuffers * obufs, FILE * out) {
     return octets;
 }
 
-size_t OutputBuffers_flush_to_multiple(struct OutputBuffers * obufs, FILE ** out) {
+size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) {
     /* skip argument checking */
 
     if (obufs->mutex) {
@@ -170,7 +170,7 @@ size_t OutputBuffers_flush_to_multiple(struct OutputBuffers * obufs, FILE ** out
     return octets;
 }
 
-void OutputBuffers_destroy(struct OutputBuffers * obufs) {
+void OutputBuffers_destroy(struct OutputBuffers *obufs) {
     if (obufs) {
         if (obufs->buffers) {
             for(size_t i = 0; i < obufs->count; i++) {

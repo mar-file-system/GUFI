@@ -82,29 +82,29 @@ extern "C" {
 /* Single Buffer */
 /* Should only be used by a single thread at a time */
 struct OutputBuffer {
-    void * buf;
+    void *buf;
     size_t capacity;
     size_t filled;
     size_t count;     /* GUFI specific; counter for number of rows that were buffered here; these are not reset after flushes */
 };
 
 /* returns how much was written; should be either 0 or size */
-size_t OutputBuffer_write(struct OutputBuffer * obuf, const void * buf, const size_t size, const int increment_count);
+size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size_t size, const int increment_count);
 
 /* returns how much was flushed (output from fwrite; no fflush) */
-size_t OutputBuffer_flush(struct OutputBuffer * obuf, FILE * out);
+size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out);
 
 /* Buffers for all threads */
 struct OutputBuffers {
     pthread_mutex_t *mutex;
     size_t count;
-    struct OutputBuffer * buffers;
+    struct OutputBuffer *buffers;
 };
 
-struct OutputBuffers * OutputBuffers_init(struct OutputBuffers * obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex);
-size_t OutputBuffers_flush_to_single(struct OutputBuffers * obufs, FILE * out);
-size_t OutputBuffers_flush_to_multiple(struct OutputBuffers * obufs, FILE ** out);
-void OutputBuffers_destroy(struct OutputBuffers * obufs);
+struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex);
+size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out);
+size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out);
+void OutputBuffers_destroy(struct OutputBuffers *obufs);
 
 #ifdef __cplusplus
 }

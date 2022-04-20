@@ -73,14 +73,11 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-// write a work struct to a file
-int worktofile(FILE * file, char * delim, struct work * work);
+/* write a work struct to a file */
+int worktofile(FILE *file, char *delim, struct work *work);
 
-// get a line from a file and convert the line to a work struct
-int filetowork(FILE * file, char * delim, struct work * work);
-
-// convert a formatted string to a work struct
-int linetowork(char * line, const size_t len, char * delim, struct work * work);
+/* convert a formatted string to a work struct */
+int linetowork(char *line, const size_t len, char *delim, struct work *work);
 
 #ifdef __cplusplus
 }
