@@ -166,6 +166,22 @@ endif()
 set(CMAKE_SKIP_BUILD_RPATH TRUE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
+# Python 3 is required
+if ("${CMAKE_VERSION}" VERSION_GREATER "3.12.0")
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+else()
+  find_program(PYTHON3 python3)
+  if (PYTHON3)
+    execute_process(COMMAND ${PYTHON3} --version
+      OUTPUT_VARIABLE PYTHON3_VERSION_STR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE "^Python " "" PYTHON3_VERSION "${PYTHON3_VERSION_STR}")
+    message(STATUS "Found Python: ${PYTHON3} (found version \"${PYTHON3_VERSION}\") found components: Interpreter")
+  else()
+    message(FATAL "Python 3 not found")
+  endif()
+endif()
+
 # Need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
 
