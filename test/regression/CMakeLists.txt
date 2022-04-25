@@ -62,9 +62,32 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
+function(check_test_dependencies var exec)
+  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
+  if (${var})
+    message(STATUS "Found ${exec}: ${${var}}")
+  else ()
+    # try alternative
+    if (${ARGC} GREATER 2)
+      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
+      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
+    endif()
+
+    if (NOT ${var})
+      message(FATAL_ERROR "${var} not found. Cannot build tests.")
+    endif()
+  endif()
+endfunction()
+
+check_test_dependencies(SETFATTR setfattr)
+check_test_dependencies(GETFATTR getfattr)
+check_test_dependencies(SED      sed)
+check_test_dependencies(DIFF     colordiff diff)
+check_test_dependencies(TEE      tee)
+
 # regression test specific files
 set(CORE
-  generatetree
+  generatetree.sh
   setup.sh
   common.py
 )
@@ -99,11 +122,11 @@ if (NOT APPLE)
 endif()
 
 foreach(NAME ${CORE})
-  configure_file(${NAME} ${NAME} @ONLY)
+  configure_file("${NAME}.in" "${NAME}" @ONLY)
 endforeach()
 
 foreach(NAME ${SH_AND_EXPECTED})
-  configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
+  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
   configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
   add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
@@ -111,8 +134,8 @@ foreach(NAME ${SH_AND_EXPECTED})
 endforeach()
 
 foreach(NAME ${SH_PY_AND_EXPECTED})
-  configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
-  configure_file("${NAME}.py"       "${NAME}.py"       @ONLY)
+  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
+  configure_file("${NAME}.py.in"    "${NAME}.py"       @ONLY)
   configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
   add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
@@ -129,7 +152,7 @@ if (SUDO)
     )
 
   foreach(NAME ${NEED_SUDO})
-    configure_file("${NAME}.sh"       "${NAME}.sh"       COPYONLY)
+    configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
     configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
     add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh")

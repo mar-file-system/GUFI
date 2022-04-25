@@ -160,9 +160,6 @@ static int to_string(char *line, const size_t size, struct work *work) {
                                work->statuso.st_mtime,   delim[0],
                                work->statuso.st_ctime,   delim[0],
                                work->linkname,           delim[0]);
-    if (part1 < 0) {
-        return -1;
-    }
 
     line += part1;
 
@@ -189,9 +186,6 @@ static int to_string(char *line, const size_t size, struct work *work) {
                                work->osstext1, delim[0],
                                work->osstext2, delim[0],
                                work->pinode,   delim[0]);
-    if (part2 < 0) {
-        return -1;
-    }
 
     line += part2;
     *line = '\0';

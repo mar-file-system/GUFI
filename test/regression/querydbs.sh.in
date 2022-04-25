@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -62,41 +61,52 @@
 
 
 
-# source this file in regression test scripts
+set -e
 
-if [[ "$#" -lt 3 ]]
-then
-    echo "Syntax: $0 root srcdir indexroot"
-    exit 1
-fi
+ROOT="$(realpath ${BASH_SOURCE[0]})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
+ROOT="$(dirname ${ROOT})"
 
-ROOT="$1"
-SRCDIR="$2"
-INDEXROOT="$3"
-CONFIG="$(realpath config.test)"
+BFQ="${ROOT}/src/gufi_query"
+QUERYDBS="${ROOT}/src/querydbs"
+OUTDB="outdb"
+TABLE="out"
+THREADS="2"
 
-function setup_cleanup {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
+# output directories
+SRCDIR="prefix"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+
+function cleanup() {
+    rm -f ${OUTDB} ${OUTDB}.*
 }
 
-trap setup_cleanup EXIT
+trap cleanup EXIT
 
-setup_cleanup
+cleanup
 
-umask 002
-export LC_ALL=C
-export PATH=${ROOT}/scripts:${PATH}
-export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
+OUTPUT="querydbs.out"
 
-# generate a fake config file
-echo "Threads=1" > ${CONFIG}
-echo "Executable=${ROOT}/src/gufi_query" >> ${CONFIG}
-echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
-echo "OutputBuffer=4096" >> ${CONFIG}
-chmod 666 ${CONFIG}
+function replace() {
+    echo "$@" | @SED@ "s/${BFQ//\//\\/}/gufi_query/g; s/${QUERYDBS//\//\\/}/querydbs/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
+}
 
-# generate the tree
-${ROOT}/test/regression/generatetree "${SRCDIR}"
+(
+replace "# Use ${BFQ} to generate per-thread result database files"
+replace "${BFQ} -n ${THREADS} -O ${OUTDB} -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path() || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentires.type=='f') AND (summary.inode == pentries.pinode)\" ${INDEXROOT}"
+output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT, size INT64)" -E "INSERT INTO ${TABLE} SELECT path() || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentries.type=='f') AND (summary.inode == pentries.pinode)" "${INDEXROOT}")
+echo "${output}"
 
-# generate the index
-${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"
+replace "# Query all per-thread result databse files at once"
+replace  "${QUERYDBS} -NV outdb \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+output=$(${QUERYDBS} -NV outdb "${TABLE}" "SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC" outdb.*)
+replace "${output}"
+echo
+
+) | @TEE@ "${OUTPUT}"
+
+@DIFF@ ${ROOT}/test/regression/querydbs.expected "${OUTPUT}"
+rm "${OUTPUT}"

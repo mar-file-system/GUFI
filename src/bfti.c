@@ -110,7 +110,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     int recs;
     int trecs;
 
-    (void) args;
+    trie_t *skip = (trie_t *) args;
 
     if (!(dir = opendir(passmywork->name)))
        goto out_free;
@@ -136,7 +136,8 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(ctx, id, passmywork, dir, processdir, in.max_level);
+         descend(ctx, id, passmywork, dir, skip, processdir,
+                   NULL, NULL, NULL, NULL, NULL);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {
          querytsdb(passmywork->name,&sumin,db,&recs,1);
@@ -272,6 +273,11 @@ int main(int argc, char *argv[])
      if (validate_inputs())
         return -1;
 
+     trie_t *skip = NULL;
+     if (setup_directory_skip(in.skip, &skip) != 0) {
+         return -1;
+     }
+
      struct QPTPool * pool = QPTPool_init(in.maxthreads
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , NULL
@@ -282,7 +288,7 @@ int main(int argc, char *argv[])
          return -1;
      }
 
-     if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+     if (QPTPool_start(pool, skip) != (size_t) in.maxthreads) {
          fprintf(stderr, "Failed to start threads\n");
          return -1;
      }

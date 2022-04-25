@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -69,93 +68,78 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-# gufi_stats wrapper
-GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
-
 # output directories
 SRCDIR="prefix"
 INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source ${ROOT}/scripts/completions "${CONFIG}"
 
-OUTPUT="gufi_stats.out"
-
-function replace() {
-    echo "$@" | sed "s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/$(id -un)/1001/g"
-}
-
-function user() {
-    replace "$ $@"
-    replace "$($@)"
+function get_function_name() {
+    echo "$@ completion function:"
+    complete -p $@ | sed "s/.*-F \\([^ ]*\\) .*/\\1/"
     echo
 }
 
+# Adapted from the answer posted by bonsaiviking at
+# https://stackoverflow.com/a/9505024
+function tabtab() {
+    # manually fill in COMP variables
+    # COMP_LINE="__gufi $@"
+    COMP_WORDS=("__gufi" "$@")
+    COMP_CWORD=$((${#COMP_WORDS[@]} - 1))
+    # COMP_POINT=$((${#COMP_LINE}))
+
+    __gufi && echo "${COMPREPLY[*]}"
+}
+
+OUTPUT="completions.out"
+
 (
-user "${GUFI_STATS}    depth"
-user "${GUFI_STATS} -r depth"
+get_function_name gufi_find
+get_function_name gufi_ls
+get_function_name gufi_stats
 
-user "${GUFI_STATS}    filesize"
-user "${GUFI_STATS} -r filesize"
+echo "Root entries:"
+tabtab ""
+echo
 
-user "${GUFI_STATS}    filecount"
-user "${GUFI_STATS} -r filecount"
+echo "Root entries starting with \".\":"
+tabtab "."
+echo
 
-user "${GUFI_STATS}    linkcount"
-user "${GUFI_STATS} -r linkcount"
+echo "Root entries starting with \"1\":"
+tabtab 1
+echo
 
-user "${GUFI_STATS}    total-filesize"
-user "${GUFI_STATS} -c total-filesize"
+echo "Root entries starting with \"e\":"
+tabtab e
+echo
 
-user "${GUFI_STATS}    total-filecount"
-user "${GUFI_STATS} -c total-filecount"
+echo "Root entries starting with \"w\":"
+tabtab w
+echo
 
-user "${GUFI_STATS}    total-linkcount"
-user "${GUFI_STATS} -c total-linkcount"
+echo "Root entries starting with \"dir\":"
+tabtab dir
+echo
 
-user "${GUFI_STATS}    dircount"
-user "${GUFI_STATS} -r dircount"
+echo "The \"directory\" directory:"
+tabtab directory
+echo
 
-user "${GUFI_STATS}    total-dircount"
-user "${GUFI_STATS} -c total-dircount"
+echo "The \"directory\" directory with a slash:"
+tabtab directory/
+echo
 
-user "${GUFI_STATS}    files-per-level"
-user "${GUFI_STATS} -c files-per-level"
+echo "Directories under directory whose names start with \"sub\":"
+tabtab directory/sub
+echo
 
-user "${GUFI_STATS}    links-per-level"
-user "${GUFI_STATS} -c links-per-level"
+echo "The \"directory/subdirectory\" directory:"
+tabtab directory/subdirectory
+echo
+) | @TEE@ "${OUTPUT}"
 
-user "${GUFI_STATS}    dirs-per-level"
-user "${GUFI_STATS} -c dirs-per-level"
-
-user "${GUFI_STATS}    duplicate-names"
-
-if [[ "$(uname)" != "Darwin" ]]
-then
-    user "${GUFI_STATS}    leaf-dirs"
-    user "${GUFI_STATS} -r leaf-dirs"
-
-    user "${GUFI_STATS}    leaf-depth"
-    user "${GUFI_STATS} -r leaf-depth"
-
-    user "${GUFI_STATS}    leaf-files"
-    user "${GUFI_STATS} -r leaf-files"
-
-    user "${GUFI_STATS}    total-leaf-files"
-    user "${GUFI_STATS} -c total-leaf-files"
-
-    user "${GUFI_STATS}    median-leaf-files"
-fi
-) | tee "${OUTPUT}"
-
-EXPECTED="${ROOT}/test/regression/gufi_stats.expected"
-COPY="${EXPECTED}.copy"
-
-if [[ "$(uname)" == "Darwin" ]]
-then
-    sed '/leaf-/,$d' "${EXPECTED}" > "${COPY}"
-else
-    cp "${EXPECTED}" "${COPY}"
-fi
-
-diff -w "${COPY}" "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/completions.expected "${OUTPUT}"
 rm "${OUTPUT}"

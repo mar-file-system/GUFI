@@ -80,7 +80,7 @@ source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 OUTPUT="gufi_query.out"
 
 function replace() {
-    echo "$@" | sed "s/[[:space:]]*$//g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${INDEXROOT//\//\\/}\\///g; s/\\/${SRCDIR//\//\\/}/./g"
+    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${INDEXROOT//\//\\/}\\///g; s/\\/${SRCDIR//\//\\/}/./g"
 }
 
 (
@@ -105,29 +105,29 @@ replace "${output}"
 echo
 
 echo "# Get relative paths of all directories and non-directories ascending names"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT)\" -S \"INSERT INTO out SELECT path(name) FROM summary\" -E \"INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY name ASC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path(name) FROM summary" -E "INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT)\" -S \"INSERT INTO out SELECT path() FROM summary\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY name ASC\" ${INDEXROOT}"
+output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" ${INDEXROOT})
 replace "${output}" | sed "s/${INDEXROOT//\//\\/}/./g"
 echo
 
 echo "# Get relative paths of all directories and non-directories descending names"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT)\" -S \"INSERT INTO out SELECT path(name) FROM summary\" -E \"INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name || '/' || name FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY name DESC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path(name) FROM summary" -E "INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT)\" -S \"INSERT INTO out SELECT path() FROM summary\" -E \"INSERT INTO out SELECT path() || '/' || name || '/' || name FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY name DESC\" ${INDEXROOT}"
+output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" ${INDEXROOT})
 replace "${output}" | sed "s/${INDEXROOT//\//\\/}/./g"
 echo
 
 echo "# Get relative paths of all directories and non-directories ascending sizes"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path(name) || '/' || name, size FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size ASC, name ASC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size ASC, name ASC\" ${INDEXROOT}"
+output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" ${INDEXROOT})
 replace "${output}"
 echo
 
 echo "# Get relative paths of all directories and non-directories descending sizes"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name, size FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size DESC, name DESC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" ${INDEXROOT})
+replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size DESC, name DESC\" ${INDEXROOT}"
+output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" ${INDEXROOT})
 replace "${output}"
 echo
-) | tee "${OUTPUT}"
+) | @TEE@ "${OUTPUT}"
 
-diff ${ROOT}/test/regression/gufi_query.expected "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/gufi_query.expected "${OUTPUT}"
 rm "${OUTPUT}"

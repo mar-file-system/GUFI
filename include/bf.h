@@ -280,7 +280,7 @@ typedef enum {
 } CleanUpTasks;
 
 struct work {
-   char*         root;
+   const char*   root;
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;

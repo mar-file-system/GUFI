@@ -70,18 +70,14 @@ ROOT="$(dirname ${ROOT})"
 
 GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
 ROLLUP="${ROOT}/src/rollup"
+UNROLLUP="${ROOT}/src/unrollup"
 GUFI_QUERY="${ROOT}/src/gufi_query"
-GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
-GUFI_LS="${ROOT}/test/regression/gufi_ls.py"
-GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
 
 TMP="tmp"
 SRCDIR="prefix"
 INDEXROOT="${SRCDIR}.gufi"
 
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
-
-OUTPUT="rollup.out"
+OUTPUT="unrollup.out"
 
 function cleanup() {
     rm -rf "${TMP}" "${SRCDIR}" "${INDEXROOT}"
@@ -91,8 +87,10 @@ trap cleanup EXIT
 
 cleanup
 
+export LC_ALL=C
+
 function replace() {
-    echo "$@" | sed "s/[[:space:]]*$//g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${GUFI_LS//\//\\/}/gufi_ls/g; s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/${INDEXROOT//\//\\/}\\//prefix.gufi\\//g; s/\\/${SRCDIR//\//\\/}/./g;"
+    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g; s/${ROLLUP//\//\\/}/rollup/g; s/${UNROLLUP//\//\\/}/unrollup/g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${INDEXROOT//\//\\/}\\//prefix.gufi\\//g; s/\\/${SRCDIR//\//\\/}/./g;"
 }
 
 function run() {
@@ -181,78 +179,37 @@ chmod 700 ${SRCDIR}/u
 
 rm -r ${TMP}
 
-${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXROOT}
-${ROLLUP} ${INDEXROOT}
+# add some xattrs
+for f in $(find ${SRCDIR} -type f)
+do
+    count=$(echo "${f}" | grep -o "[0-9]*$")
+    for i in $(seq "${count}" )
+    do
+        setfattr -n "user.$(basename ${f})-${i}" -v "$(basename ${f})-${i}" "${f}"
+    done
+done
 
-# get results from querying
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary\" \"${INDEXROOT}\" | wc -l"
-${GUFI_QUERY} -d " " -S "SELECT path(name) from summary" "${INDEXROOT}" | wc -l
+# generate the index
+run ${GUFI_DIR2INDEX} -x ${SRCDIR} ${INDEXROOT}
+
+# roll up the index
+run ${ROLLUP} ${INDEXROOT}
+
+echo "# rolled up directories should have rows in pentries_rollup"
+replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT path(), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1\" ${INDEXROOT} | sort"
+output=$(${GUFI_QUERY} -d " " -S "SELECT path(), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1" "${INDEXROOT}" | sort)
+replace "${output}"
 echo
 
-replace "$ ${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
-${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | wc -l
+# unroll up the index
+run ${UNROLLUP} ${INDEXROOT}
+
+echo "# level, COUNT(entries), COUNT(pentries_rollup), directory"
+replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC\" ${INDEXROOT} | sort -k4"
+output=$(${GUFI_QUERY} -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC" ${INDEXROOT} | sort -k4)
+replace "${output}"
 echo
+) | @TEE@ "${OUTPUT}"
 
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary\" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
-${GUFI_QUERY} -d " " -S "SELECT path(name) from summary" -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | wc -l
-echo
-
-replace "$ ${GUFI_FIND} -type d | wc -l"
-${GUFI_FIND} -type d | wc -l
-echo
-
-replace "$ ${GUFI_FIND} -type f | wc -l"
-${GUFI_FIND} -type f | wc -l
-echo
-
-replace "$ ${GUFI_FIND} | wc -l"
-${GUFI_FIND} | wc -l
-echo
-
-# gufi_ls
-run "${GUFI_LS}"
-run "${GUFI_LS} o+rx"
-run "${GUFI_LS} o+rx/o+rx"
-run "${GUFI_LS} o+rx/ugo"
-run "${GUFI_LS} o+rx/ug"
-run "${GUFI_LS} o+rx/u"
-run "${GUFI_LS} ugo"
-run "${GUFI_LS} ugo/o+rx"
-run "${GUFI_LS} ugo/ugo"
-run "${GUFI_LS} ugo/ug"
-run "${GUFI_LS} ugo/u"
-run "${GUFI_LS} ug"
-run "${GUFI_LS} ug/o+rx"
-run "${GUFI_LS} ug/ugo"
-run "${GUFI_LS} ug/ug"
-run "${GUFI_LS} ug/u"
-run "${GUFI_LS} u"
-run "${GUFI_LS} u/o+rx"
-run "${GUFI_LS} u/ugo"
-run "${GUFI_LS} u/ug"
-run "${GUFI_LS} u/u"
-
-echo "# 1 less because gufi_ls does not list the input dir"
-replace  $ "${GUFI_LS} -R | wc -l"
-${GUFI_LS} -R | wc -l
-echo
-
-# gufi_stats
-run "${GUFI_STATS}    depth"
-run "${GUFI_STATS} -r depth"
-
-run "${GUFI_STATS}    filecount"
-run "${GUFI_STATS} -r filecount"
-
-run "${GUFI_STATS}    total-filecount"
-run "${GUFI_STATS} -c total-filecount"
-
-run "${GUFI_STATS}    dircount"
-run "${GUFI_STATS} -r dircount"
-
-run "${GUFI_STATS}    total-dircount"
-run "${GUFI_STATS} -c total-dircount"
-) | tee "${OUTPUT}"
-
-diff ${ROOT}/test/regression/rollup.expected "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/unrollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

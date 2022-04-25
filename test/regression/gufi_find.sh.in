@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -68,45 +69,55 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-BFQ="${ROOT}/src/gufi_query"
-QUERYDBS="${ROOT}/src/querydbs"
-OUTDB="outdb"
-TABLE="out"
-THREADS="2"
+# gufi_find wrapper
+GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
 
 # output directories
 SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+INDEXROOT="${SRCDIR}.gufi"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
-function cleanup() {
-    rm -f ${OUTDB} ${OUTDB}.*
-}
-
-trap cleanup EXIT
-
-cleanup
-
-OUTPUT="querydbs.out"
+OUTPUT="gufi_find.out"
 
 function replace() {
-    echo "$@" | sed "s/${BFQ//\//\\/}/gufi_query/g; s/${QUERYDBS//\//\\/}/querydbs/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
+    echo "$@" | @SED@ "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
+}
+
+function run_unsorted() {
+    replace "$ $@"
+    replace "$($@)"
+    echo
+}
+
+function run_sorted() {
+    replace "$ $@"
+    replace "$($@)" | sort
+    echo
 }
 
 (
-replace "# Use ${BFQ} to generate per-thread result database files"
-replace "${BFQ} -n ${THREADS} -O ${OUTDB} -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path(summary.name) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentires.type=='f') AND (summary.inode == pentries.pinode)\" ${INDEXROOT}"
-output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT, size INT64)" -E "INSERT INTO ${TABLE} SELECT path(summary.name) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentries.type=='f') AND (summary.inode == pentries.pinode)" "${INDEXROOT}")
-echo "${output}"
+run_sorted   "${GUFI_FIND}"
+run_sorted   "${GUFI_FIND} -empty"
+run_sorted   "${GUFI_FIND} -type d"
+run_sorted   "${GUFI_FIND} -type f"
+run_sorted   "${GUFI_FIND} -type l"
+run_sorted   "${GUFI_FIND} -readable"
+run_sorted   "${GUFI_FIND} -writable"
+run_sorted   "${GUFI_FIND} -executable"
+run_sorted   "${GUFI_FIND} -mindepth 2"
+run_sorted   "${GUFI_FIND} -maxdepth 0"
+# don't include directories or links because their
+# sizes are not consistent across filesystems
+run_sorted   "${GUFI_FIND} -type f -size 1c"
+run_sorted   "${GUFI_FIND} -type f -size=-1c"
+run_sorted   "${GUFI_FIND} -type f -size +1c"
+run_sorted   "${GUFI_FIND} -type f -size +1024c"
+run_sorted   "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
+run_sorted   "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
+run_unsorted "${GUFI_FIND} -type f --smallest"
+run_unsorted "${GUFI_FIND} -type f --largest"
+) | @TEE@ "${OUTPUT}"
 
-replace "# Query all per-thread result databse files at once"
-replace  "${QUERYDBS} -NV outdb \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
-output=$(${QUERYDBS} -NV outdb "${TABLE}" "SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC" outdb.*)
-replace "${output}"
-echo
-
-) | tee "${OUTPUT}"
-
-diff -b ${ROOT}/test/regression/querydbs.expected "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"
