@@ -93,7 +93,58 @@ struct ThreadArgs {
     trie_t *skip;
 };
 
-int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+struct nondir_args {
+    /* thread args */
+    struct templates *templates;
+    struct work *work;
+
+    /* index path */
+    char topath[MAXPATH];
+    size_t topath_len;
+
+    /* summary of the current directory */
+    struct sum summary;
+
+    /* db.db */
+    sqlite3 *db;
+
+    /* prepared statements */
+    sqlite3_stmt *entries_res;
+    sqlite3_stmt *xattrs_res;
+    sqlite3_stmt *xattr_files_res;
+
+    /* list of xattr dbs */
+    struct sll xattr_db_list;
+};
+
+static int process_nondir(struct work *entry, void *args) {
+    struct nondir_args *nda = (struct nondir_args *) args;
+
+    if (in.xattrs.enabled) {
+        insertdbgo_xattrs(&nda->work->statuso, entry,
+                          &nda->xattr_db_list, &nda->templates->xattr,
+                          nda->topath, nda->topath_len,
+                          nda->xattrs_res, nda->xattr_files_res);
+    }
+
+    /* get entry relative path (use extra buffer to prevent memcpy overlap) */
+    char relpath[MAXPATH];
+    const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1,
+                                          entry->name + in.name_len + 1, entry->name_len - in.name_len - 1);
+
+    /* overwrite full path with relative path */
+    /* e.name_len = */ SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
+
+    /* update summary table */
+    sumit(&nda->summary, entry);
+
+    /* add entry + xattr names into bulk insert */
+    insertdbgo(entry, nda->db, nda->entries_res);
+
+    return 0;
+}
+
+static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
@@ -110,39 +161,29 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /*     return 1; */
     /* } */
 
-    struct work *work = (struct work *) data;
-
     struct ThreadArgs *ta = (struct ThreadArgs *) args;
-    struct templates *templates = &ta->templates;
-    trie_t *skip = ta->skip;
 
-    DIR *dir = opendir(work->name);
+    struct nondir_args nda;
+    nda.templates = &ta->templates;
+    nda.work      = (struct work *) data;
+
+    DIR *dir = opendir(nda.work->name);
     if (!dir) {
-        fprintf(stderr, "Could not open directory \"%s\"\n", work->name);
+        fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
         return 1;
     }
-
-    /* get source directory info */
-    struct stat dir_st;
-    if (lstat(work->name, &dir_st) < 0)  {
-        closedir(dir);
-        return 1;
-    }
-
-    /* create the directory */
-    char topath[MAXPATH];
 
     /* offset by in.name_len to remove prefix */
-    const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         in.nameto, in.nameto_len,
-                                         "/", (size_t) 1,
-                                         work->name + in.name_len, work->name_len - in.name_len);
+    nda.topath_len = SNFORMAT_S(nda.topath, MAXPATH, 3,
+                                in.nameto, in.nameto_len,
+                                "/", (size_t) 1,
+                                nda.work->name + in.name_len, nda.work->name_len - in.name_len);
 
     /* don't need recursion because parent is guaranteed to exist */
-    if (mkdir(topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+    if (mkdir(nda.topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
         const int err = errno;
         if (err != EEXIST) {
-            fprintf(stderr, "mkdir %s failure: %d %s\n", topath, err, strerror(err));
+            fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath, err, strerror(err));
             closedir(dir);
             return 1;
         }
@@ -151,171 +192,93 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* create the database name */
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, MAXPATH, 3,
-               topath, topath_len,
+               nda.topath, nda.topath_len,
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
     /* copy the template file */
-    if (copy_template(&templates->db, dbname, dir_st.st_uid, dir_st.st_gid)) {
+    if (copy_template(&nda.templates->db, dbname, nda.work->statuso.st_uid, nda.work->statuso.st_gid)) {
         closedir(dir);
         return 1;
     }
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
-                         , NULL, NULL
-                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                         , NULL, NULL
-                         , NULL, NULL
-                         #endif
+    nda.db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
+                    , NULL, NULL
+                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                    , NULL, NULL
+                    , NULL, NULL
+                    #endif
         );
-    if (!db) {
+    if (!nda.db) {
         closedir(dir);
         return 1;
     }
-
-    const size_t next_level = work->level + 1;
 
     /* prepare to insert into the database */
-    struct sum summary;
-    zeroit(&summary);
+    zeroit(&nda.summary);
 
     /* prepared statements within db.db */
-    sqlite3_stmt *entries_res = insertdbprep(db, ENTRIES_INSERT);
-    sqlite3_stmt *xattrs_res = NULL;
-    sqlite3_stmt *xattr_files_res = NULL;
-
-    /* external per-user and per-group dbs */
-    struct sll xattr_db_list;
-    sll_init(&xattr_db_list);
+    nda.entries_res = insertdbprep(nda.db, ENTRIES_INSERT);
+    nda.xattrs_res = NULL;
+    nda.xattr_files_res = NULL;
 
     if (in.xattrs.enabled) {
-        xattrs_res = insertdbprep(db, XATTRS_PWD_INSERT);
-        xattr_files_res = insertdbprep(db, XATTR_FILES_PWD_INSERT);
+        nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
+        nda.xattr_files_res = insertdbprep(nda.db, XATTR_FILES_PWD_INSERT);
+
+        /* external per-user and per-group dbs */
+        sll_init(&nda.xattr_db_list);
     }
 
-    startdb(db);
-
-    struct dirent *entry = NULL;
-    size_t rows = 0;
-    while ((entry = readdir(dir))) {
-        const size_t len = strlen(entry->d_name);
-
-        /* skip ., .., and user provided names */
-        if (trie_search(skip, entry->d_name, len)) {
-            continue;
-        }
-
-        /* get entry path */
-        struct work e;
-        memset(&e, 0, sizeof(struct work));
-        e.name_len = SNFORMAT_S(e.name, MAXPATH, 3,
-                                work->name, work->name_len,
-                                "/", (size_t) 1,
-                                entry->d_name, len);
-
-        /* get the entry's metadata */
-        if (lstat(e.name, &e.statuso) < 0) {
-            continue;
-        }
-
-        /* push subdirectories onto the queue */
-        if (S_ISDIR(e.statuso.st_mode)) {
-            if (work->level < in.max_level) {
-                e.type[0] = 'd';
-                e.pinode = work->statuso.st_ino;
-                e.level = next_level;
-
-                /* make a copy here so that the data can be pushed into the queue */
-                /* this is more efficient than malloc+free for every single entry */
-                struct work *copy = (struct work *) calloc(1, sizeof(struct work));
-                memcpy(copy, &e, sizeof(struct work));
-
-                QPTPool_enqueue(ctx, id, processdir, copy);
-            }
-            continue;
-        }
-
-        rows++;
-
-        /* non directories */
-        if (S_ISLNK(e.statuso.st_mode)) {
-            e.type[0] = 'l';
-            readlink(e.name, e.linkname, MAXPATH);
-        }
-        else if (S_ISREG(e.statuso.st_mode)) {
-            e.type[0] = 'f';
-        }
-        else {
-            /* other types are not stored */
-            continue;
-        }
-
-        #if BENCHMARK
-        pthread_mutex_lock(&global_mutex);
-        total_files++;
-        pthread_mutex_unlock(&global_mutex);
-        #endif
-
-        xattrs_setup(&e.xattrs);
-        if (in.xattrs.enabled) {
-            xattrs_get(e.name, &e.xattrs);
-            insertdbgo_xattrs(&work->statuso, &e,
-                              &xattr_db_list, &templates->xattr,
-                              topath, topath_len,
-                              xattrs_res, xattr_files_res);
-        }
-
-        /* get entry relative path (use extra buffer to prevent memcpy overlap) */
-        char relpath[MAXPATH];
-        const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1, e.name + in.name_len + 1, e.name_len - in.name_len - 1);
-
-        /* overwrite full path with relative path */
-        /* e.name_len = */ SNFORMAT_S(e.name, MAXPATH, 1, relpath, relpath_len);
-
-        /* update summary table */
-        sumit(&summary, &e);
-
-        /* add entry + xattr names into bulk insert */
-        insertdbgo(&e, db, entries_res);
-
-        xattrs_cleanup(&e.xattrs);
-    }
-
-    stopdb(db);
+    startdb(nda.db);
+    size_t nondirs_processed = 0;
+    descend(ctx, id, nda.work, dir, ta->skip,
+            processdir, process_nondir, &nda,
+            NULL, NULL, &nondirs_processed);
+    stopdb(nda.db);
 
     /* entries and xattrs have been inserted */
 
-    /* pull this directory's xattrs because they were not pulled by the parent */
-    xattrs_setup(&work->xattrs);
     if (in.xattrs.enabled) {
         /* write out per-user and per-group xattrs */
-        sll_destroy(&xattr_db_list, destroy_xattr_db);
+        sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
         /* keep track of per-user and per-group xattr dbs */
-        insertdbfin(xattr_files_res);
+        insertdbfin(nda.xattr_files_res);
+
+        /* pull this directory's xattrs because they were not pulled by the parent */
+        xattrs_setup(&nda.work->xattrs);
+        xattrs_get(nda.work->name, &nda.work->xattrs);
 
         /* directory xattrs go into the same table as entries xattrs */
-        xattrs_get(work->name, &work->xattrs);
-        insertdbgo_xattrs_avail(work, xattrs_res);
-        insertdbfin(xattrs_res);
+        insertdbgo_xattrs_avail(nda.work, nda.xattrs_res);
+        insertdbfin(nda.xattrs_res);
     }
-    insertdbfin(entries_res);
+    insertdbfin(nda.entries_res);
 
     /* insert this directory's summary data */
     /* the xattrs go into the xattrs_avail table in db.db */
-    insertsumdb(db, work, &summary);
-    xattrs_cleanup(&work->xattrs);
+    insertsumdb(nda.db, nda.work, &nda.summary);
+    if (in.xattrs.enabled) {
+        xattrs_cleanup(&nda.work->xattrs);
+    }
 
-    closedb(db);
-    db = NULL;
+    closedb(nda.db);
+    nda.db = NULL;
 
     /* ignore errors */
-    chmod(topath, work->statuso.st_mode);
-    chown(topath, work->statuso.st_uid, work->statuso.st_gid);
+    chmod(nda.topath, nda.work->statuso.st_mode);
+    chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
     closedir(dir);
 
-    free(work);
+    free(nda.work);
+
+    #if BENCHMARK
+    pthread_mutex_lock(&global_mutex);
+    total_files += nondirs_processed;
+    pthread_mutex_unlock(&global_mutex);
+    #endif
 
     return 0;
 }

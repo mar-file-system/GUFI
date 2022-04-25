@@ -90,6 +90,12 @@ size_t total_dirs = 0;
 size_t total_files = 0;
 #endif
 
+static int process_nondir(struct work *entry, void *args) {
+    size_t *id = (size_t *) args;
+    worktofile(gts.outfd[*id], in.delim, in.name_len, entry);
+    return 0;
+}
+
 /* process the work under one directory (no recursion) */
 /* deletes work */
 int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
@@ -120,85 +126,35 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     }
 
     /* get source directory xattrs */
-    xattrs_setup(&work->xattrs);
     if (in.xattrs.enabled) {
+        xattrs_setup(&work->xattrs);
         xattrs_get(work->name, &work->xattrs);
     }
 
     /* write start of stanza */
     worktofile(gts.outfd[id], in.delim, in.name_len, work);
 
-    xattrs_cleanup(&work->xattrs);
-
-    struct dirent *entry = NULL;
-    size_t rows = 0;
-    while ((entry = readdir(dir))) {
-        const size_t len = strlen(entry->d_name);
-
-        /* skip ., .., and user provided names */
-        if (trie_search(skip, entry->d_name, len)) {
-            continue;
-        }
-
-        struct work e;
-        memset(&e, 0, sizeof(struct work));
-
-        /* this is the actual path */
-        e.name_len = SNFORMAT_S(e.name, MAXPATH, 3,
-                                work->name, work->name_len,
-                                "/", (size_t) 1,
-                                entry->d_name, len);
-
-        /* get the entry's metadata */
-        if (lstat(e.name, &e.statuso) < 0) {
-            continue;
-        }
-
-        /* push subdirectories onto the queue */
-        if (S_ISDIR(e.statuso.st_mode)) {
-            e.type[0] = 'd';
-            e.pinode = work->statuso.st_ino;
-
-            /* make a copy here so that the data can be pushed into the queue */
-            /* this is more efficient than malloc+free for every single entry */
-            struct work *copy = (struct work *) calloc(1, sizeof(struct work));
-            memcpy(copy, &e, sizeof(struct work));
-            QPTPool_enqueue(ctx, id, processdir, copy);
-            continue;
-        }
-
-        rows++;
-
-        /* non directories */
-        if (S_ISLNK(e.statuso.st_mode)) {
-            e.type[0] = 'l';
-            readlink(e.name, e.linkname, MAXPATH);
-        }
-        else if (S_ISREG(e.statuso.st_mode)) {
-            e.type[0] = 'f';
-        }
-        else {
-            /* other types are not stored */
-            continue;
-        }
-
-        xattrs_setup(&e.xattrs);
-        if (in.xattrs.enabled) {
-            xattrs_get(e.name, &e.xattrs);
-        }
-
-        #if BENCHMARK
-        pthread_mutex_lock(&global_mutex);
-        total_files++;
-        pthread_mutex_unlock(&global_mutex);
-        #endif
-
-        worktofile(gts.outfd[id], in.delim, in.name_len, &e);
-        xattrs_cleanup(&e.xattrs);
+    if (in.xattrs.enabled) {
+        xattrs_cleanup(&work->xattrs);
     }
+
+    size_t *nondirs_processed = NULL;
+    #if BENCHMARK
+    size_t nondirs_processed_benchmark = 0;
+    *nondirs_processed = &nondirs_processed_benchmark;
+    #endif
+    descend(ctx, id, work, dir, skip,
+            processdir, process_nondir, (void *) &id,
+            NULL, NULL, nondirs_processed);
 
     closedir(dir);
     free(data);
+
+    #if BENCHMARK
+    pthread_mutex_lock(&global_mutex);
+    total_files += nondirs_processed_benchmark;
+    pthread_mutex_unlock(&global_mutex);
+    #endif
 
     return 0;
 }

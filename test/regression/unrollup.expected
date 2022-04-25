@@ -1,4 +1,4 @@
-$ gufi_dir2index prefix prefix.gufi
+$ gufi_dir2index -x prefix prefix.gufi
 
 
 $ rollup prefix.gufi
@@ -56,98 +56,98 @@ Directories:    69 (21 empty)
 Total:          165
 Remaining Dirs: 17 (24.64%)
 
-# rolled up directories should have pentries tables
-$ gufi_query -d " " -S "SELECT (SELECT type FROM sqlite_master where name == 'pentries'), (SELECT path(name) FROM summary) AS fullpath ORDER BY fullpath ASC" | sort -k2 -k1
-view prefix.gufi
-view prefix.gufi/o+rx
-view prefix.gufi/o+rx/o+rx
-view prefix.gufi/o+rx/u
-view prefix.gufi/o+rx/ug
-view prefix.gufi/o+rx/ugo
-view prefix.gufi/u
-view prefix.gufi/u/o+rx
-view prefix.gufi/u/u
-view prefix.gufi/u/ug
-view prefix.gufi/u/ugo
-view prefix.gufi/ug
-view prefix.gufi/ug/o+rx
-view prefix.gufi/ug/u
-view prefix.gufi/ug/ug
-view prefix.gufi/ug/ugo
-view prefix.gufi/ugo
+# rolled up directories should have rows in pentries_rollup
+$ gufi_query -d " " -S "SELECT path(), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1" prefix.gufi | sort
+prefix.gufi 0 0
+prefix.gufi/o+rx 0 0
+prefix.gufi/o+rx/o+rx 1 6
+prefix.gufi/o+rx/u 1 6
+prefix.gufi/o+rx/ug 1 6
+prefix.gufi/o+rx/ugo 1 6
+prefix.gufi/u 0 0
+prefix.gufi/u/o+rx 1 6
+prefix.gufi/u/u 1 6
+prefix.gufi/u/ug 1 6
+prefix.gufi/u/ugo 1 6
+prefix.gufi/ug 0 0
+prefix.gufi/ug/o+rx 1 6
+prefix.gufi/ug/u 1 6
+prefix.gufi/ug/ug 1 6
+prefix.gufi/ug/ugo 1 6
+prefix.gufi/ugo 1 24
 
 $ unrollup prefix.gufi
 
 
-# COUNT(entries), COUNT(restored PENTRIES), view, directory
-$ gufi_query -d " " -S "SELECT (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries), (SELECT type FROM sqlite_master where name == 'pentries'), path(name) AS fullpath FROM summary ORDER BY fullpath ASC" prefix.gufi | sort -k4 -k3
-0 0 view prefix.gufi
-0 0 view prefix.gufi/o+rx
-0 0 view prefix.gufi/o+rx/o+rx
-1 1 view prefix.gufi/o+rx/o+rx/dir1
-2 2 view prefix.gufi/o+rx/o+rx/dir2
-3 3 view prefix.gufi/o+rx/o+rx/dir3
-0 0 view prefix.gufi/o+rx/u
-1 1 view prefix.gufi/o+rx/u/dir1
-2 2 view prefix.gufi/o+rx/u/dir2
-3 3 view prefix.gufi/o+rx/u/dir3
-0 0 view prefix.gufi/o+rx/ug
-1 1 view prefix.gufi/o+rx/ug/dir1
-2 2 view prefix.gufi/o+rx/ug/dir2
-3 3 view prefix.gufi/o+rx/ug/dir3
-0 0 view prefix.gufi/o+rx/ugo
-1 1 view prefix.gufi/o+rx/ugo/dir1
-2 2 view prefix.gufi/o+rx/ugo/dir2
-3 3 view prefix.gufi/o+rx/ugo/dir3
-0 0 view prefix.gufi/u
-0 0 view prefix.gufi/u/o+rx
-1 1 view prefix.gufi/u/o+rx/dir1
-2 2 view prefix.gufi/u/o+rx/dir2
-3 3 view prefix.gufi/u/o+rx/dir3
-0 0 view prefix.gufi/u/u
-1 1 view prefix.gufi/u/u/dir1
-2 2 view prefix.gufi/u/u/dir2
-3 3 view prefix.gufi/u/u/dir3
-0 0 view prefix.gufi/u/ug
-1 1 view prefix.gufi/u/ug/dir1
-2 2 view prefix.gufi/u/ug/dir2
-3 3 view prefix.gufi/u/ug/dir3
-0 0 view prefix.gufi/u/ugo
-1 1 view prefix.gufi/u/ugo/dir1
-2 2 view prefix.gufi/u/ugo/dir2
-3 3 view prefix.gufi/u/ugo/dir3
-0 0 view prefix.gufi/ug
-0 0 view prefix.gufi/ug/o+rx
-1 1 view prefix.gufi/ug/o+rx/dir1
-2 2 view prefix.gufi/ug/o+rx/dir2
-3 3 view prefix.gufi/ug/o+rx/dir3
-0 0 view prefix.gufi/ug/u
-1 1 view prefix.gufi/ug/u/dir1
-2 2 view prefix.gufi/ug/u/dir2
-3 3 view prefix.gufi/ug/u/dir3
-0 0 view prefix.gufi/ug/ug
-1 1 view prefix.gufi/ug/ug/dir1
-2 2 view prefix.gufi/ug/ug/dir2
-3 3 view prefix.gufi/ug/ug/dir3
-0 0 view prefix.gufi/ug/ugo
-1 1 view prefix.gufi/ug/ugo/dir1
-2 2 view prefix.gufi/ug/ugo/dir2
-3 3 view prefix.gufi/ug/ugo/dir3
-0 0 view prefix.gufi/ugo
-0 0 view prefix.gufi/ugo/o+rx
-1 1 view prefix.gufi/ugo/o+rx/dir1
-2 2 view prefix.gufi/ugo/o+rx/dir2
-3 3 view prefix.gufi/ugo/o+rx/dir3
-0 0 view prefix.gufi/ugo/u
-1 1 view prefix.gufi/ugo/u/dir1
-2 2 view prefix.gufi/ugo/u/dir2
-3 3 view prefix.gufi/ugo/u/dir3
-0 0 view prefix.gufi/ugo/ug
-1 1 view prefix.gufi/ugo/ug/dir1
-2 2 view prefix.gufi/ugo/ug/dir2
-3 3 view prefix.gufi/ugo/ug/dir3
-0 0 view prefix.gufi/ugo/ugo
-1 1 view prefix.gufi/ugo/ugo/dir1
-2 2 view prefix.gufi/ugo/ugo/dir2
-3 3 view prefix.gufi/ugo/ugo/dir3
+# level, COUNT(entries), COUNT(pentries_rollup), directory
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC" prefix.gufi | sort -k4
+0 0 0 prefix.gufi
+1 0 0 prefix.gufi/o+rx
+2 0 0 prefix.gufi/o+rx/o+rx
+3 1 0 prefix.gufi/o+rx/o+rx/dir1
+3 2 0 prefix.gufi/o+rx/o+rx/dir2
+3 3 0 prefix.gufi/o+rx/o+rx/dir3
+2 0 0 prefix.gufi/o+rx/u
+3 1 0 prefix.gufi/o+rx/u/dir1
+3 2 0 prefix.gufi/o+rx/u/dir2
+3 3 0 prefix.gufi/o+rx/u/dir3
+2 0 0 prefix.gufi/o+rx/ug
+3 1 0 prefix.gufi/o+rx/ug/dir1
+3 2 0 prefix.gufi/o+rx/ug/dir2
+3 3 0 prefix.gufi/o+rx/ug/dir3
+2 0 0 prefix.gufi/o+rx/ugo
+3 1 0 prefix.gufi/o+rx/ugo/dir1
+3 2 0 prefix.gufi/o+rx/ugo/dir2
+3 3 0 prefix.gufi/o+rx/ugo/dir3
+1 0 0 prefix.gufi/u
+2 0 0 prefix.gufi/u/o+rx
+3 1 0 prefix.gufi/u/o+rx/dir1
+3 2 0 prefix.gufi/u/o+rx/dir2
+3 3 0 prefix.gufi/u/o+rx/dir3
+2 0 0 prefix.gufi/u/u
+3 1 0 prefix.gufi/u/u/dir1
+3 2 0 prefix.gufi/u/u/dir2
+3 3 0 prefix.gufi/u/u/dir3
+2 0 0 prefix.gufi/u/ug
+3 1 0 prefix.gufi/u/ug/dir1
+3 2 0 prefix.gufi/u/ug/dir2
+3 3 0 prefix.gufi/u/ug/dir3
+2 0 0 prefix.gufi/u/ugo
+3 1 0 prefix.gufi/u/ugo/dir1
+3 2 0 prefix.gufi/u/ugo/dir2
+3 3 0 prefix.gufi/u/ugo/dir3
+1 0 0 prefix.gufi/ug
+2 0 0 prefix.gufi/ug/o+rx
+3 1 0 prefix.gufi/ug/o+rx/dir1
+3 2 0 prefix.gufi/ug/o+rx/dir2
+3 3 0 prefix.gufi/ug/o+rx/dir3
+2 0 0 prefix.gufi/ug/u
+3 1 0 prefix.gufi/ug/u/dir1
+3 2 0 prefix.gufi/ug/u/dir2
+3 3 0 prefix.gufi/ug/u/dir3
+2 0 0 prefix.gufi/ug/ug
+3 1 0 prefix.gufi/ug/ug/dir1
+3 2 0 prefix.gufi/ug/ug/dir2
+3 3 0 prefix.gufi/ug/ug/dir3
+2 0 0 prefix.gufi/ug/ugo
+3 1 0 prefix.gufi/ug/ugo/dir1
+3 2 0 prefix.gufi/ug/ugo/dir2
+3 3 0 prefix.gufi/ug/ugo/dir3
+1 0 0 prefix.gufi/ugo
+2 0 0 prefix.gufi/ugo/o+rx
+3 1 0 prefix.gufi/ugo/o+rx/dir1
+3 2 0 prefix.gufi/ugo/o+rx/dir2
+3 3 0 prefix.gufi/ugo/o+rx/dir3
+2 0 0 prefix.gufi/ugo/u
+3 1 0 prefix.gufi/ugo/u/dir1
+3 2 0 prefix.gufi/ugo/u/dir2
+3 3 0 prefix.gufi/ugo/u/dir3
+2 0 0 prefix.gufi/ugo/ug
+3 1 0 prefix.gufi/ugo/ug/dir1
+3 2 0 prefix.gufi/ugo/ug/dir2
+3 3 0 prefix.gufi/ugo/ug/dir3
+2 0 0 prefix.gufi/ugo/ugo
+3 1 0 prefix.gufi/ugo/ugo/dir1
+3 2 0 prefix.gufi/ugo/ugo/dir2
+3 3 0 prefix.gufi/ugo/ugo/dir3
 

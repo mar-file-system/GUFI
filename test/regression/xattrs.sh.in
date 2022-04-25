@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -69,36 +68,105 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-# gufi_ls wrapper
-GUFI_LS="${ROOT}/test/regression/gufi_ls.py"
+GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
+GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
+GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
+GUFI_QUERY="${ROOT}/src/gufi_query"
 
-# output directories
 SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
+INDEXROOT="${SRCDIR}.gufi"
+TRACE="${SRCDIR}.trace"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
-OUTPUT="gufi_ls.out"
+OUTPUT="xattrs.out"
 
-function replace() {
-    echo "$@" | sed "s/[[:space:]]*$//g; s/${GUFI_LS//\//\\/}/gufi_ls/g; s/.*${INDEXROOT//\//\\/}\\/$/./g; s/${INDEXROOT//\//\\/}\\///g"
+function cleanup() {
+    rm -rf "${TMP}" "${SRCDIR}" "${INDEXROOT}" "${TRACE}.0"
 }
 
-function run() {
-    replace "$ $@"
-    replace "$($@)"
-    echo
+trap cleanup EXIT
+
+cleanup
+
+function replace() {
+    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g; s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${INDEXROOT//\//\\/}\\//prefix.gufi\\//g; s/\\/${SRCDIR//\//\\/}/./g;"
+}
+
+function create() {
+    # run in subshell
+    (
+        name="$1"
+        perms="$2"
+        mkdir -m "${perms}" "${name}"
+        setfattr -n "user.${name}" -v "${perms}" "${name}"
+        cd "${name}"
+
+        # good
+        touch ugo
+        setfattr -n "user.ugo" -v "666" ugo
+        chmod 666 ugo
+
+        touch ug
+        setfattr -n "user.ug"  -v "660" ug
+        chmod 660 ug
+
+        touch u
+        setfattr -n "user.u"   -v "600" u
+        chmod 600 u
+
+        # bad
+        touch o
+        setfattr -n "user.o"   -v "006" o
+        chmod 006 o
+
+        touch go
+        setfattr -n "user.go"  -v "066" go
+        chmod 066 go
+    )
 }
 
 (
-run "${GUFI_LS}"
-run "${GUFI_LS} -a"
-run "${GUFI_LS} -h"
-run "${GUFI_LS} -R"
-run "${GUFI_LS} -r"
-run "${GUFI_LS} -ar"
-run "${GUFI_LS} -arR"
-) | tee "${OUTPUT}"
+    mkdir -p -m 555 "${SRCDIR}"
+    cd "${SRCDIR}"
 
-diff -b ${ROOT}/test/regression/gufi_ls.expected "${OUTPUT}"
+    # Rule 1: File is 0+R (doesn’t matter what the parent dir perms or ownership is)
+    # create o+r 005
+
+    # Rule 2: File is UG+R doesn’t matter on other, with file and parent same usr and grp and parent has only UG+R with no other read
+    create ug+r 550
+
+    # Rule 3: File is U+R doesn’t matter on grp and other, with file and parent same usr and parent dir has only U+R, no grp and other read
+    create u+r 500
+
+    # Rule 4: Directory has write for every read: drw*rw_*rw* or drw*rw*___ or drw*______ - if you can write the dir you can chmod the files to see the xattrs
+    create ugo+rw 777
+    create ug+rw  770
+    create u+rw   700
+)
+
+(
+replace "$ ${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXROOT}\""
+${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
+echo
+
+replace "$ ${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries\" \"${INDEXROOT}\" | sort"
+${GUFI_QUERY} -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries" "${INDEXROOT}" | sort
+echo
+
+rm -r "${INDEXROOT}"
+
+replace "$ ${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
+${GUFI_DIR2TRACE} -x "${SRCDIR}" "${TRACE}"
+echo
+
+replace "$ ${GUFI_TRACE2INDEX} \"${TRACE}\" \"${INDEXROOT}\""
+${GUFI_TRACE2INDEX} "${TRACE}.0" "${INDEXROOT}" | tail -n 4 | head -n 3
+echo
+
+replace "$ ${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries\" \"${INDEXROOT}\" | sort"
+${GUFI_QUERY} -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries" "${INDEXROOT}" | sort
+) | @TEE@ "${OUTPUT}"
+
+@DIFF@ ${ROOT}/test/regression/xattrs.expected "${OUTPUT}"
 rm "${OUTPUT}"

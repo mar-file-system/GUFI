@@ -120,11 +120,16 @@ typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
 
-// Function used in processdir to decend into subdirectories.
-size_t descend(struct QPTPool *ctx, const size_t id,
-               struct work *passmywork, DIR *dir,
-               QPTPoolFunc_t func,
-               const size_t max_level);
+/*
+ * Push the subdirectories in the current directory onto the queue
+ * and process non directories using a user provided function
+ */
+int descend(struct QPTPool *ctx, const size_t id,
+            struct work *work, DIR *dir,
+            trie_t *skip,
+            QPTPoolFunc_t processdir,
+            int (*process_nondir)(struct work *nondir, void *args), void *args,
+            size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed);
 
 /* convert a mode to a human readable string */
 char *modetostr(char *str, const size_t size, const mode_t mode);

@@ -62,87 +62,41 @@
 
 
 
-set -e
+# source this file in regression test scripts
 
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
+if [[ "$#" -lt 3 ]]
+then
+    echo "Syntax: $0 root srcdir indexroot"
+    exit 1
+fi
 
-GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
-GUFI_QUERY="${ROOT}/src/gufi_query"
+ROOT="$1"
+SRCDIR="$2"
+INDEXROOT="$3"
+CONFIG="$(realpath config.test)"
 
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-function cleanup {
-    rm -rf "${SRCDIR}" "${INDEXROOT}"
+function setup_cleanup {
+    rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
 }
 
-trap cleanup EXIT
+trap setup_cleanup EXIT
 
-cleanup
+setup_cleanup
 
+umask 002
 export LC_ALL=C
+export PATH=${ROOT}/scripts:${PATH}
+export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
+
+# generate a fake config file
+echo "Threads=1" > ${CONFIG}
+echo "Executable=${ROOT}/src/gufi_query" >> ${CONFIG}
+echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
+echo "OutputBuffer=4096" >> ${CONFIG}
+chmod 666 ${CONFIG}
 
 # generate the tree
-${ROOT}/test/regression/generatetree "${SRCDIR}"
+${ROOT}/test/regression/generatetree.sh "${SRCDIR}"
 
-OUTPUT="gufi_dir2index.out"
-
-# index everything
-(
-    # remove preexisting indicies
-    rm -rf "${INDEXROOT}"
-
-    # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
-
-    src_dirs=$(find "${SRCDIR}" -type d)
-    src_nondirs=$(find "${SRCDIR}" -not -type d)
-    src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
-
-    index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-    index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
-
-    echo "Index Everything:"
-    echo "    Source Directory:"
-    echo "${src}" | awk '{ printf "        " $0 "\n" }'
-    echo
-    echo "    GUFI Index:"
-    echo "${index}" | awk '{ printf "        " $0 "\n" }'
-    echo
-) | tee "${OUTPUT}"
-
-# index up to different levels of the tree
-for level in 0 1 2
-do
-    (
-        # remove preexisting indicies
-        rm -rf "${INDEXROOT}"
-
-        # generate the index
-        ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
-
-        src_dirs=$(find "${SRCDIR}" -maxdepth ${level} -type d)
-        src_nondirs=$(find "${SRCDIR}" -maxdepth $((${level} + 1)) -not -type d)
-        src=$((echo "${src_dirs}"; echo "${src_nondirs}") | sort)
-
-        index_dirs=$(find "${INDEXROOT}" -type d | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index_nondirs=$(${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g")
-        index=$((echo "${index_dirs}"; echo "${index_nondirs}") | sort)
-
-        echo "Index up to level ${level}:"
-        echo "    Source Directory:"
-        echo "${src}" | awk '{ printf "        " $0 "\n" }'
-        echo
-        echo "    GUFI Index:"
-        echo "${index}" | awk '{ printf "        " $0 "\n" }'
-        echo
-    ) | tee -a "${OUTPUT}"
-done
-
-diff ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
-rm "${OUTPUT}"
+# generate the index
+${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"

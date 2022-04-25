@@ -490,7 +490,7 @@ TEST(INSTALL_STR, good) {
 TEST(INSTALL_STR, bad) {
     int retval = 0;
     const char SOURCE[] = "INSTALL_STR bad test";
-    char dst[MAXPATH];
+    char dst[MAXPATH] = {0};
     INSTALL_STR(dst, SOURCE, 1, SOURCE);
     EXPECT_EQ(retval, -1);
     EXPECT_STRNE(SOURCE, dst);

@@ -70,64 +70,68 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
 GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
+GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
 
-# output paths
+# output directories
 SRCDIR="prefix"
-TRACE="${SRCDIR}.trace"
+TRACE="trace"
+INDEXROOT="${SRCDIR}.gufi"
+BADTRACE="badtrace"
 
 # trace delimiter
 DELIM="|"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".*
+    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${INDEXROOT}" "${BADTRACE}"
 }
 
 trap cleanup EXIT
 
 cleanup
 
-export LC_ALL=C
-
-OUTPUT="gufi_dir2trace.out"
+OUTPUT="verifytraceintree.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
+    echo "$@" | @SED@ "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
 }
 
 (
-# generate the tree
-${ROOT}/test/regression/generatetree "${SRCDIR}"
+umask 002
 
-# generate the trace
+replace "# generate the tree"
+replace "$ generatetree ${SRCDIR}"
+${ROOT}/test/regression/generatetree.sh "${SRCDIR}" 2> /dev/null
+echo
+
+replace "# generate the trace"
 replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}"
-
-# count output files
-expected=2
-found=$(find ${TRACE}.* | wc -l | awk '{print $1}')
-echo "Expecting ${expected} trace files. Found ${found}."
-
-# count lines
+${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}" 2> /dev/null
 cat ${TRACE}.* > "${TRACE}"
-trace_lines=$(cat "${TRACE}" | wc -l | awk '{print $1}')
-contents=$(find "${SRCDIR}")
-content_lines=$(echo "${contents}" | wc -l | awk '{print $1}')
-echo "Expecting ${content_lines} lines. Got ${trace_lines}."
+echo
 
-# count separators
-columns=$(sed "s/[^${DELIM}]//g" "${TRACE}" | awk '{ print length }' | sort | uniq)
-echo "Expecting 23 columns per row. Got ${columns}."
+replace "# generate the index"
+replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
+${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" | tail -n 4 | head -n 3
+echo
 
-# compare names
-src=$(find "${SRCDIR}/" | sed 's/\/\//\//g' | sort)
-lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sed "s/\\/\\//\\//g" | sort)
+replace "# verify that all entries in the trace can be found in the GUFI tree"
+replace "$ verifytraceintree ${TRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytraceintree "${TRACE}" "${DELIM}" "${INDEXROOT}"
+echo
 
-echo "Source Directory:"
-echo "${src}"   | awk '{ print "    " $1 }'
-echo "Trace File:"
-echo "${lines}" | awk '{ print "    " $1 }'
+replace "# replace a file name"
+sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
+replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+echo
 
-) | tee "${OUTPUT}"
+replace "# replace a directory name"
+sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
+replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
+${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
+echo
 
-diff ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
+) |& @SED@ '/qptpool.*/d' |@TEE@ "${OUTPUT}"
+
+@DIFF@ ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"

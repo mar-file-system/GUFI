@@ -276,7 +276,7 @@ def build_order_by(args, table):
 
     # order by name last so it doesnt break user requested ordering
     if table in [SUMMARY, PENTRIES]:
-        order_by += ['path({}.name) ASC'.format(table)]
+        order_by += ['path() ASC']
     else:
         order_by += ['({0}.path || "/" || {0}.name) ASC'.format(table)]
 
@@ -413,7 +413,7 @@ def build_output(args, table):
 
     path = 'path'
     if not need_aggregation(args):
-        path += '({}.name)'.format(SUMMARY)
+        path += '()'
 
     if args.printf is not None:
         i = 0
@@ -614,7 +614,7 @@ def run(argv, config_path):
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path(name) as fullpath'] + ['{}.{}'.format(SUMMARY, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path() as fullpath'] + ['{}.{}'.format(SUMMARY, column) for column in columns],
                                     [SUMMARY],
                                     build_where(args, SUMMARY),
                                     build_group_by(args, SUMMARY),
@@ -623,7 +623,7 @@ def run(argv, config_path):
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({}.name) as fullpath'.format(SUMMARY)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path() as fullpath'.format(SUMMARY)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
                                     [SUMMARY, PENTRIES],
                                     build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),

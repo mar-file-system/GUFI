@@ -98,7 +98,10 @@ const char ENTRIES_INSERT[] =
 
 const char SUMMARY_CREATE[] =
     DROP_TABLE(SUMMARY)
-    "CREATE TABLE summary(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
+    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattrs BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
+
+static const char SUMMARY_INSERT[] =
+    "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattrs, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
 
 const char PENTRIES_ROLLUP_CREATE[] =
     DROP_TABLE(PENTRIES_ROLLUP)
@@ -718,104 +721,94 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
 
 int insertsumdb(sqlite3 *sdb, struct work *pwork, struct sum *su)
 {
-    char *err_msg = 0;
-    char sqlstmt[MAXSQL];
-    int rc;
-    int depth = 0;
-    int rectype = 0;
+    sqlite3_stmt *res = insertdbprep(sdb, SUMMARY_INSERT);
+    if (!res) {
+        return 1;
+    }
 
     /* get the basename */
     char nameout[MAXPATH];
     char shortname[MAXPATH];
     shortpath(pwork->name, nameout, shortname);
 
-    char *zname     = sqlite3_mprintf("%q",shortname);
-    char *ztype     = sqlite3_mprintf("%q",pwork->type);
-    char *zlinkname = sqlite3_mprintf("%q",pwork->linkname);
+    char *zname     = sqlite3_mprintf("%q", shortname);
+    char *ztype     = sqlite3_mprintf("%q", pwork->type);
+    char *zlinkname = sqlite3_mprintf("%q", pwork->linkname);
 
-    char xattr_names[MAXXATTR] = "\x00";
-    xattr_get_names(&pwork->xattrs, xattr_names, sizeof(xattr_names), XATTRDELIM);
+    char xattrnames[MAXXATTR] = "\x00";
+    xattr_get_names(&pwork->xattrs, xattrnames, sizeof(xattrnames), XATTRDELIM);
 
-    char *zxattr    = sqlite3_mprintf("%q", xattr_names);
+    char *zxattrnames = sqlite3_mprintf("%q", xattrnames);
 
-    SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO summary VALUES "
-            "(\'%s\', \'%s\', "
-            "%"STAT_ino", %d, %"STAT_nlink", %" PRId64 ", %" PRId64 ", %"STAT_size", %"STAT_bsize", %"STAT_blocks", %ld, %ld, %ld, "
-            "\'%s\', \'%s\', "
-            "%lld, %lld, %" PRId64  ", %" PRId64 ", %" PRId64 ", %" PRId64 ", %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, 1, 0);",
-            zname,
-            ztype,
+    sqlite3_bind_text(res,   1, zname, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,   2, ztype, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res,  3, pwork->statuso.st_ino);
+    sqlite3_bind_int64(res,  4, pwork->statuso.st_mode);
+    sqlite3_bind_int64(res,  5, pwork->statuso.st_nlink);
+    sqlite3_bind_int64(res,  6, pwork->statuso.st_uid);
+    sqlite3_bind_int64(res,  7, pwork->statuso.st_gid);
+    sqlite3_bind_int64(res,  8, pwork->statuso.st_size);
+    sqlite3_bind_int64(res,  9, pwork->statuso.st_blksize);
+    sqlite3_bind_int64(res,  10, pwork->statuso.st_blocks);
+    sqlite3_bind_int64(res,  11, pwork->statuso.st_atime);
+    sqlite3_bind_int64(res,  12, pwork->statuso.st_mtime);
+    sqlite3_bind_int64(res,  13, pwork->statuso.st_ctime);
+    sqlite3_bind_text(res,   14, zlinkname, -1, SQLITE_STATIC);
+    sqlite3_bind_blob64(res, 15, zxattrnames, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res,  16, su->totfiles);
+    sqlite3_bind_int64(res,  17, su->totlinks);
+    sqlite3_bind_int64(res,  18, su->minuid);
+    sqlite3_bind_int64(res,  19, su->maxuid);
+    sqlite3_bind_int64(res,  20, su->mingid);
+    sqlite3_bind_int64(res,  21, su->maxgid);
+    sqlite3_bind_int64(res,  22, su->minsize);
+    sqlite3_bind_int64(res,  23, su->maxsize);
+    sqlite3_bind_int64(res,  24, su->totltk);
+    sqlite3_bind_int64(res,  25, su->totmtk);
+    sqlite3_bind_int64(res,  26, su->totltm);
+    sqlite3_bind_int64(res,  27, su->totmtm);
+    sqlite3_bind_int64(res,  28, su->totmtg);
+    sqlite3_bind_int64(res,  29, su->totmtt);
+    sqlite3_bind_int64(res,  30, su->totsize);
+    sqlite3_bind_int64(res,  31, su->minctime);
+    sqlite3_bind_int64(res,  32, su->maxctime);
+    sqlite3_bind_int64(res,  33, su->minmtime);
+    sqlite3_bind_int64(res,  34, su->maxmtime);
+    sqlite3_bind_int64(res,  35, su->minatime);
+    sqlite3_bind_int64(res,  36, su->maxatime);
+    sqlite3_bind_int64(res,  37, su->minblocks);
+    sqlite3_bind_int64(res,  38, su->maxblocks);
+    sqlite3_bind_int64(res,  39, su->totxattr);
+    sqlite3_bind_int64(res,  40, 0); /* depth */
+    sqlite3_bind_int64(res,  41, su->mincrtime);
+    sqlite3_bind_int64(res,  42, su->maxcrtime);
+    sqlite3_bind_int64(res,  43, su->minossint1);
+    sqlite3_bind_int64(res,  44, su->maxossint1);
+    sqlite3_bind_int64(res,  45, su->totossint1);
+    sqlite3_bind_int64(res,  46, su->minossint2);
+    sqlite3_bind_int64(res,  47, su->maxossint2);
+    sqlite3_bind_int64(res,  48, su->totossint2);
+    sqlite3_bind_int64(res,  49, su->minossint3);
+    sqlite3_bind_int64(res,  50, su->maxossint3);
+    sqlite3_bind_int64(res,  51, su->totossint3);
+    sqlite3_bind_int64(res,  52, su->minossint4);
+    sqlite3_bind_int64(res,  53, su->maxossint4);
+    sqlite3_bind_int64(res,  54, su->totossint4);
+    sqlite3_bind_int64(res,  55, 0); /* rectype */
+    sqlite3_bind_int64(res,  56, pwork->pinode);
+    sqlite3_bind_int64(res,  57, 1); /* isroot */
+    sqlite3_bind_int64(res,  58, 0); /* rollupscore */
 
-            pwork->statuso.st_ino,      // STAT_ino
-            pwork->statuso.st_mode,
-            pwork->statuso.st_nlink,    // STAT_nlink
-            (int64_t) pwork->statuso.st_uid,
-            (int64_t) pwork->statuso.st_gid,
-            pwork->statuso.st_size,     // STAT_size
-            pwork->statuso.st_blksize,  // STAT_bsize
-            pwork->statuso.st_blocks,   // STAT_blocks
-            pwork->statuso.st_atime,
-            pwork->statuso.st_mtime,
-            pwork->statuso.st_ctime,
+    sqlite3_step(res);
+    sqlite3_clear_bindings(res);
+    sqlite3_reset(res);
 
-            zlinkname,
-            zxattr,
-
-            su->totfiles,
-            su->totlinks,
-            (int64_t) su->minuid,
-            (int64_t) su->maxuid,
-            (int64_t) su->mingid,
-            (int64_t) su->maxgid,
-            su->minsize,
-            su->maxsize,
-            su->totltk,
-            su->totmtk,
-            su->totltm,
-            su->totmtm,
-            su->totmtg,
-            su->totmtt,
-            su->totsize,
-            su->minctime,
-            su->maxctime,
-            su->minmtime,
-            su->maxmtime,
-            su->minatime,
-            su->maxatime,
-            su->minblocks,
-            su->maxblocks,
-            su->totxattr,
-            depth,
-            su->mincrtime,
-            su->maxcrtime,
-            su->minossint1,
-            su->maxossint1,
-            su->totossint1,
-            su->minossint2,
-            su->maxossint2,
-            su->totossint2,
-            su->minossint3,
-            su->maxossint3,
-            su->totossint3,
-            su->minossint4,
-            su->maxossint4,
-            su->totossint4,
-            rectype,
-            pwork->pinode);
-
-    sqlite3_free(zname);
-    sqlite3_free(ztype);
+    sqlite3_free(zxattrnames);
     sqlite3_free(zlinkname);
-    sqlite3_free(zxattr);
+    sqlite3_free(ztype);
+    sqlite3_free(zname);
 
-    rc = sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg);
-    if (rc != SQLITE_OK ) {
-        fprintf(stderr, "SQL error on insert (summary): %s\n", err_msg);
-        sqlite3_free(err_msg);
-        return -1;
-    }
-
-    return 0;
+    return insertdbfin(res);
 }
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid)
@@ -845,59 +838,39 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return 0;
 }
 
-/* static void path(sqlite3_context *context, int argc, sqlite3_value **argv) */
-/* { */
-/*     const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context); */
-/*     const ino_t pinode = (ino_t) sqlite3_value_int64(argv[0]); */
-/*     char *name = (char *) sqlite3_value_text(argv[1]); */
-
-/*     const char *prefix = gps[id].gpath; */
-/*     if (pinode == 0) { */
-/*         /\* summary *\/ */
-/*         /\* there are two copies of the top level directory *\/ */
-/*         /\* name, so remove the first path from the name *\/ */
-/*         while (*name && (*name != '/')) { */
-/*             name++; */
-/*         } */
-/*         name++; */
-/*     } */
-/*     else { */
-/*         /\* entries *\/ */
-/*         /\* just append the name *\/ */
-/*     } */
-
-/*     const size_t len = strlen(name); */
-/*     char buf[MAXPATH]; */
-/*     if (len) { */
-/*         SNFORMAT_S(buf, MAXPATH, 3, prefix, strlen(prefix), "/", 1, name, len); */
-/*     } */
-/*     else { */
-/*         SNFORMAT_S(buf, MAXPATH, 1, prefix, strlen(prefix)); */
-/*     } */
-/*     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT); */
-
-/*     return; */
-/* } */
-
+/* 0 or 1 args only */
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-    /* get thread id */
-    const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context);
+    /* work->name contains the current directory being operated on */
+    struct work *work = (struct work *) sqlite3_user_data(context);
 
-    /* get path found in summary */
-    const char *summary = (char *) sqlite3_value_text(argv[0]);
-
-    /* find first slash */
-    const char *s = summary;
-    while (*s && (*s != '/')) {
-        s++;
+    /* no args - return current directory */
+    if (argc == 0) {
+        sqlite3_result_text(context, work->name, -1, SQLITE_STATIC);
     }
+    /* use first arg - combine with pwd to get full path */
+    else {
+        const char *name = (char *) sqlite3_value_text(argv[0]);
 
-    /* join path segments, removing duplicate at join point */
-    char final_path[MAXPATH];
-    SNFORMAT_S(final_path, MAXPATH, 2, gps[id].gpath, strlen(gps[id].gpath), s, strlen(s));
+        char fullpath[MAXPATH];
+        size_t len = SNFORMAT_S(fullpath, MAXPATH, 1, work->name, work->name_len);
 
-    sqlite3_result_text(context, final_path, -1, SQLITE_TRANSIENT);
+        /* remove trailing '/' */
+        while (len && (fullpath[len - 1] == '/')) {
+            len--;
+        }
+
+        /* basename(work->name) will be the same as the first part of the input path, so remove it */
+        while (len && (fullpath[len - 1] != '/')) {
+            len--;
+        }
+
+        /* do not strip trailing '/' or explicitly add an '/' */
+        SNFORMAT_S(fullpath + len, MAXPATH - len, 1,
+                   name, strlen(name));
+
+        sqlite3_result_text(context, fullpath, -1, SQLITE_TRANSIENT);
+    }
 
     return;
 }
@@ -1077,41 +1050,64 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     char *path = (char *) sqlite3_value_text(argv[0]);
 
     if (!path) {
-        sqlite3_result_text(context, "", -1, SQLITE_TRANSIENT);
+        sqlite3_result_text(context, "", 0, SQLITE_TRANSIENT);
         return;
     }
 
-    sqlite3_result_text(context, basename(path), -1, SQLITE_TRANSIENT);
+    const size_t path_len = strlen(path);
+
+    /* remove trailing '/' */
+    size_t trimmed_len = path_len;
+    while (trimmed_len && (path[trimmed_len - 1] == '/')) {
+        trimmed_len--;
+    }
+
+    if (!trimmed_len) {
+        sqlite3_result_text(context, "/", 1, SQLITE_TRANSIENT);
+        return;
+    }
+
+    /* basename(work->name) will be the same as the first part of the input path, so remove it */
+    size_t offset = trimmed_len;
+    while (offset && (path[offset - 1] != '/')) {
+        offset--;
+    }
+
+    const size_t bn_len = trimmed_len - offset;
+    char *bn = path + offset;
+
+    sqlite3_result_text(context, bn, bn_len, SQLITE_TRANSIENT);
 
     return;
 }
 
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
     void *lvl = (void *) (uintptr_t) work->level;
-    return ((sqlite3_create_function(db, "path",                1, SQLITE_UTF8,
-                 (void *) (uintptr_t) id,&path,                 NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "fpath",               0, SQLITE_UTF8,
-                 (void *) (uintptr_t) id,&fpath,                NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "epath",               0, SQLITE_UTF8,
-                 (void *) (uintptr_t) id,&epath,                NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "uidtouser",           2, SQLITE_UTF8,
-                 NULL,                   &uidtouser,            NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "gidtogroup",          2, SQLITE_UTF8,
-                 NULL,                   &gidtogroup,           NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "modetotxt",           1, SQLITE_UTF8,
-                 NULL,                   &modetotxt,            NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "strftime",            2, SQLITE_UTF8,
-                 NULL,                   &sqlite3_strftime,     NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "blocksize",           3, SQLITE_UTF8,
-                 NULL,                   &blocksize,            NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "human_readable_size", 2, SQLITE_UTF8,
-                 NULL,                   &human_readable_size,  NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "level",               0, SQLITE_UTF8,
-                 lvl,                    &relative_level,       NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "starting_point",      0, SQLITE_UTF8,
-                 work->root,             &starting_point,       NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db, "basename",            1, SQLITE_UTF8,
-                 NULL,                   &sqlite_basename,      NULL, NULL) == SQLITE_OK))?0:1;
+    void *id_ptr = (void *) (uintptr_t) id;
+    return ((sqlite3_create_function(db,  "path",                -1, SQLITE_UTF8,
+                  work,                   &path,                 NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "fpath",               0,  SQLITE_UTF8,
+                 id_ptr,                  &fpath,                NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "epath",               0,  SQLITE_UTF8,
+                 id_ptr,                  &epath,                NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "uidtouser",           2,  SQLITE_UTF8,
+                 NULL,                    &uidtouser,            NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "gidtogroup",          2,  SQLITE_UTF8,
+                 NULL,                    &gidtogroup,           NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "modetotxt",           1,  SQLITE_UTF8,
+                 NULL,                    &modetotxt,            NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "strftime",            2,  SQLITE_UTF8,
+                 NULL,                    &sqlite3_strftime,     NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "blocksize",           3,  SQLITE_UTF8,
+                 NULL,                    &blocksize,            NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "human_readable_size", 2,  SQLITE_UTF8,
+                 NULL,                    &human_readable_size,  NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,
+                 lvl,                     &relative_level,       NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
+                (void *) work->root,      &starting_point,       NULL, NULL) == SQLITE_OK) &&
+            (sqlite3_create_function(db,  "basename",            1,  SQLITE_UTF8,
+                 NULL,                    &sqlite_basename,      NULL, NULL) == SQLITE_OK))?0:1;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {

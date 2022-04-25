@@ -93,14 +93,14 @@ export LC_ALL=C
 OUTPUT="gufi_trace2index.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
+    echo "$@" | @SED@ "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
 }
 
 (
 
 # generate the tree
 replace "$ generatetree ${SRCDIR}"
-${ROOT}/test/regression/generatetree "${SRCDIR}"
+${ROOT}/test/regression/generatetree.sh "${SRCDIR}"
 echo
 
 # generate the trace
@@ -116,7 +116,7 @@ echo
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path(name) FROM summary" -E "SELECT path((SELECT name FROM summary WHERE summary.inode == pentries.pinode)) || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
+index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'
@@ -125,7 +125,7 @@ echo "GUFI Index:"
 echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
 echo
 
-) | tee "${OUTPUT}"
+) | @TEE@ "${OUTPUT}"
 
-diff ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

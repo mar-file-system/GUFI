@@ -553,95 +553,124 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
     return dst_len - max_len - 1;
 }
 
-/* Push the subdirectories in the current directory onto the queue */
-size_t descend(struct QPTPool *ctx, const size_t id,
-               struct work *passmywork, DIR *dir,
-               QPTPoolFunc_t func,
-               const size_t max_level
-    ) {
-    /* passmywork was already checked in the calling thread */
-    /* if (!passmywork) { */
-    /*     fprintf(stderr, "Got NULL work\n"); */
-    /*     return 0; */
-    /* } */
+/*
+ * Push the subdirectories in the current directory onto the queue
+ * and process non directories using a user provided function
+ */
+int descend(struct QPTPool *ctx, const size_t id,
+            struct work *work, DIR *dir, trie_t *skip_names,
+            QPTPoolFunc_t processdir,
+            int (*process_nondir)(struct work *nondir, void *args), void *args,
+            size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed) {
+    if (!work) {
+        return 1;
+    }
 
-    /* dir was already checked in the calling thread */
-    /* if (!dir) { */
-    /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
-    /*     return 0; */
-    /* } */
+    if (dir_count) {
+        *dir_count = 0;
+    }
 
-    size_t pushed = 0;
+    if (nondir_count) {
+        *nondir_count = 0;
+    }
 
-    const size_t next_level = passmywork->level + 1;
-    const int level_check = (next_level <= max_level);
+    if (nondirs_processed) {
+        *nondirs_processed = 0;
+    }
 
-    if (level_check) {
-        /* go ahead and send the subdirs to the queue since we need to look */
-        /* further down the tree.  loop over dirents, if link push it on the */
-        /* queue, if file or link print it, fill up qwork structure for */
-        /* each */
-        while (1) {
-            struct dirent *entry = readdir(dir);
+    size_t dirs = 0;
+    size_t nondirs = 0;
+    size_t processed = 0;
 
-            if (!entry) {
-                break;
-            }
+    if (work->level < in.max_level) {
+        /* calculate once */
+        const size_t next_level = work->level + 1;
 
-            const size_t len = strlen(entry->d_name);
+        struct dirent *dir_child = NULL;
+        while ((dir_child = readdir(dir))) {
+            const size_t len = strlen(dir_child->d_name);
 
             /* skip . and .. and *.db*/
-            const int skip = (((len == 1) && (strncmp(entry->d_name, ".",   1) == 0)) ||
-                              ((len == 2) && (strncmp(entry->d_name, "..",  2) == 0)) ||
-                              (strncmp(entry->d_name + len - 3,      ".db", 3) == 0));
+            const int skip = (trie_search(skip_names, dir_child->d_name, len) ||
+                              (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0));
             if (skip) {
                 continue;
             }
 
-            struct work qwork;
-            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
+            /* get child path */
+            struct work child;
+            memset(&child, 0, sizeof(struct work));
+            child.name_len = SNFORMAT_S(child.name, MAXPATH, 3,
+                                        work->name, work->name_len,
+                                        "/", (size_t) 1,
+                                        dir_child->d_name, len);
 
-            /* #ifdef DEBUG */
-            /* struct start_end * lstat_call = buffer_get(&timers->lstat); */
-            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->start); */
-            /* #endif */
-            /* lstat(qwork.name, &qwork.statuso); */
-            /* #ifdef DEBUG */
-            /* clock_gettime(CLOCK_MONOTONIC, &lstat_call->end); */
-            /* #endif */
+            /* get the child's metadata */
+            if (lstat(child.name, &child.statuso) < 0) {
+                continue;
+            }
 
-            const int isdir = (entry->d_type == DT_DIR);
-            /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
+            /* push subdirectories onto the queue */
+            if (S_ISDIR(child.statuso.st_mode)) {
+                child.type[0] = 'd';
+                child.level = next_level;
+                child.root = work->root;
+                child.pinode = work->statuso.st_ino;
 
-            if (isdir) {
-                /* const int accessible = !access(qwork.name, R_OK | X_OK); */
+                /* make a copy here so that the data can be pushed into the queue */
+                /* this is more efficient than malloc+free for every single child */
+                struct work *copy = (struct work *) calloc(1, sizeof(struct work));
+                memcpy(copy, &child, sizeof(struct work));
 
-                /* if (accessible) { */
-                    qwork.level = next_level;
-                    /* qwork.type[0] = 'd'; */
+                QPTPool_enqueue(ctx, id, processdir, copy);
 
-                    /* this is how the parent gets passed on */
-                    /* qwork.pinode = passmywork->statuso.st_ino; */
+                dirs++;
 
-                    /* make a clone here so that the data can be pushed into the queue */
-                    /* this is more efficient than malloc+free for every single entry */
-                    struct work *clone = (struct work *) malloc(sizeof(struct work));
-                    memcpy(clone, &qwork, sizeof(struct work));
+                continue;
+            }
+            /* non directories */
+            else if (S_ISLNK(child.statuso.st_mode)) {
+                child.type[0] = 'l';
+                readlink(child.name, child.linkname, MAXPATH);
+            }
+            else if (S_ISREG(child.statuso.st_mode)) {
+                child.type[0] = 'f';
+            }
+            else {
+                /* other types are not stored */
+                continue;
+            }
 
-                    /* push the subdirectory into the queue for processing */
-                    QPTPool_enqueue(ctx, id, func, clone);
+            nondirs++;
 
-                    pushed++;
-                /* } */
-                /* else { */
-                /*     fprintf(stderr, "couldn't access dir '%s': %s\n", */
-                /*             qwork->name, strerror(errno)); */
-                /* } */
+            if (process_nondir) {
+                if (in.xattrs.enabled) {
+                    xattrs_setup(&child.xattrs);
+                    xattrs_get(child.name, &child.xattrs);
+                }
+
+                processed += !process_nondir(&child, args);
+
+                if (in.xattrs.enabled) {
+                    xattrs_cleanup(&child.xattrs);
+                }
             }
         }
     }
 
-    return pushed;
+    if (dir_count) {
+        *dir_count = dirs;
+    }
+
+    if (nondir_count) {
+        *nondir_count = nondirs;
+    }
+
+    if (nondirs_processed) {
+        *nondirs_processed = processed;
+    }
+
+    return 0;
 }
 
 /* convert a mode to a human readable string */

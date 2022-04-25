@@ -69,7 +69,8 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-GUFI_STAT="${ROOT}/src/gufi_stat"
+GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
+GUFI_QUERY="${ROOT}/src/gufi_query"
 
 # output directories
 SRCDIR="prefix"
@@ -77,39 +78,53 @@ INDEXROOT="${SRCDIR}.gufi"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
-OUTPUT="gufi_stat.out"
+OUTPUT="gufi_dir2index.out"
 
-function replace() {
-    echo "$@" | sed "s/${GUFI_STAT//\//\\/}/gufi_stat/g"
-}
-
+# index everything
 (
-# entries in the index with a fixed size
-fixed_size=(
-    "empty_file"
-    "1KB"
-    "1MB"
-    "unusual, name?#"
-    ".hidden"
-    "repeat_name"
-    "old_file"
-    "directory/readonly"
-    "directory/writable"
-    "directory/executable"
-    "directory/subdirectory/repeat_name"
-    "leaf_directory/leaf_file1"
-    "leaf_directory/leaf_file2"
-)
+    # remove preexisting indicies
+    rm -rf "${INDEXROOT}"
 
-for entry in "${fixed_size[@]}"
+    # generate the index
+    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
+
+    src=$(find "${SRCDIR}" | sort)
+
+    index=$(${GUFI_QUERY} -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sort)
+
+    echo "Index Everything:"
+    echo "    Source Directory:"
+    echo "${src}" | awk '{ printf "        " $0 "\n" }'
+    echo
+    echo "    GUFI Index:"
+    echo "${index}" | awk '{ printf "        " $0 "\n" }'
+    echo
+) | @TEE@ "${OUTPUT}"
+
+# index up to @DIFF@erent levels of the tree
+for level in 0 1 2 3
 do
-    output=$(${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}")
-    replace "${output}"
+    (
+        # remove preexisting indicies
+        rm -rf "${INDEXROOT}"
+
+        # generate the index
+        ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
+
+        src=$(find "${SRCDIR}" -maxdepth ${level} | sort)
+
+        index=$(${GUFI_QUERY} -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sort)
+
+        echo "Index up to level ${level}:"
+        echo "    Source Directory:"
+        echo "${src}" | awk '{ printf "        " $0 "\n" }'
+        echo
+        echo "    GUFI Index:"
+        echo "${index}" | awk '{ printf "        " $0 "\n" }'
+        echo
+    ) | @TEE@ -a "${OUTPUT}"
 done
 
-# the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file"
-) | tee "${OUTPUT}"
-
-diff -b ${ROOT}/test/regression/gufi_stat.expected "${OUTPUT}"
+sed -i "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

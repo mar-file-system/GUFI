@@ -93,13 +93,13 @@ export LC_ALL=C
 OUTPUT="verifytrace.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+    echo "$@" | @SED@ "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
 }
 
 (
 replace "# generate the tree"
 replace "$ generatetree ${SRCDIR}"
-${ROOT}/test/regression/generatetree "${SRCDIR}" 2> /dev/null
+${ROOT}/test/regression/generatetree.sh "${SRCDIR}" 2> /dev/null
 echo
 
 replace "# generate the trace"
@@ -168,7 +168,7 @@ output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
 replace "${output}"
 echo
 
-) | tee "${OUTPUT}"
+) | @TEE@ "${OUTPUT}"
 
-diff ${ROOT}/test/regression/verifytrace.expected "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

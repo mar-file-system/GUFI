@@ -107,10 +107,10 @@ def depth(config, args, where):
     root_len = len(config.indexroot())
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['name TEXT', 'level INT64']),
+        '-I', build_create(args.inmemory_name, ['name TEXT']),
 
         '-S', 'INSERT INTO {} {} '.format(args.inmemory_name,
-                                          gufi_common.build_query(['path(name)', '0'],
+                                          gufi_common.build_query(['substr(path(name), {})'.format(root_len + 2)],
                                                                   ['summary'],
                                                                   where,
                                                                   None,
@@ -119,8 +119,7 @@ def depth(config, args, where):
                                                                   None)),
 
         '-J', 'INSERT INTO aggregate.{} {} '.format(args.inmemory_name,
-                                                    gufi_common.build_query(['substr(name, {})'.format(root_len + 2),
-                                                                             '(length(name) - length(replace(name, "/", ""))) - {}'.format(root_slash_count)],
+                                                    gufi_common.build_query(['*'],
                                                                             [args.inmemory_name],
                                                                             None,
                                                                             None,
@@ -129,7 +128,7 @@ def depth(config, args, where):
                                                                             None)),
 
         '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN "." ELSE name END'] if args.recursive else []) +
-                                      ['level'],
+                                      ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, "/", "")) + 1 END'],
                                       [args.inmemory_name],
                                       None,
                                       None,
@@ -400,25 +399,29 @@ def dircount(config, args, where):
     root_len = len(config.indexroot())
 
     queries = [
-        '-I', build_create(args.inmemory_name, ['path TEXT', 'inode INT64', 'pinode INT64']),
+        '-I', build_create(args.inmemory_name, ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(name)', 'inode', 'pinode'],
+                                         gufi_common.build_query(['path(name)', 'inode', 'pinode', 'level()'],
                                                                  ['summary'],
-                                                                 where,
+                                                                 ([] if args.recursive else ['isroot == 1']) + where,
                                                                  None,
                                                                  None,
                                                                  None)),
 
-        '-J', 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name),
+        '-J', 'INSERT INTO aggregate.{} {}'.format(args.inmemory_name,
+                                                   gufi_common.build_query(['substr(path, {} + 2)'.format(root_len), 'inode', 'pinode', 'level'],
+                                                                           [args.inmemory_name],
+                                                                           None,
+                                                                           None,
+                                                                           None,
+                                                                           None)),
 
-        '-G', gufi_common.build_query((['CASE (length(parent.path) - {0}) WHEN 0 THEN "." ELSE substr(parent.path, {1}) END'.format(root_len, root_len + 2)] if args.recursive else []) +
-                                      ['IFNULL(COUNT(child.pinode), 0) END'],
-                                      ['out parent LEFT JOIN out child On parent.inode == child.pinode'],
-                                      where + ([] if args.recursive else ['parent.path == "{}"'.format(args.path)]),
-                                      ['parent.inode'],
-                                      ['parent.path'],
-                                      args.num_results,
+        '-G', gufi_common.build_query((['CASE length(path) WHEN 0 THEN "." ELSE path END as print_path'] if args.recursive else []) + ['(SELECT COUNT(*) FROM {0} AS nested WHERE nested.pinode == {0}.inode)'.format(args.inmemory_name)],
+                                      [args.inmemory_name],
+                                      None if args.recursive else ['level == 0'],
+                                      None,
+                                      ['print_path ASC'] if args.recursive else None,
                                       None),
     ]
 
@@ -820,18 +823,18 @@ def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
 def duplicate_names(config, args, where):
-    columns = ['name', 'type', 'inode', 'mode', 'nlink', 'uid', 'gid', 'size', 'blksize', 'blocks', 'atime', 'mtime', 'ctime', 'linkname', 'xattrs']
+    columns = ['name', 'type', 'inode', 'mode', 'size']
 
     root = os.path.normpath(config.indexroot())
     root_len = len(root)
 
     queries = [
         '-I',
-        build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT', 'type TEXT', 'inode INT64', 'mode INT64', 'nlink INT64', 'uid INT64', 'gid INT64', 'size INT64', 'blksize INT64', 'blocks INT64', 'atime INT64', 'mtime INT64', 'ctime INT64', 'linkname TEXT', 'xattrs TEXT']),
+        build_create(args.inmemory_name, ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT', 'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
 
         '-S',
         'INSERT INTO {} {}'.format(args.inmemory_name,
-                                   gufi_common.build_query(['NULL', 'path(name)'] +
+                                   gufi_common.build_query(['NULL', 'path()'] +
                                                            columns,
                                                            ['summary'],
                                                            where,
@@ -842,7 +845,7 @@ def duplicate_names(config, args, where):
 
         '-E',
         'INSERT INTO {} {}'.format(args.inmemory_name,
-                                   gufi_common.build_query(['NULL', 'path(name)'] +
+                                   gufi_common.build_query(['NULL', 'path()'] +
                                                            columns,
                                                            ['entries'],
                                                            where,

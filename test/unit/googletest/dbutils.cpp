@@ -79,26 +79,39 @@ extern "C" {
 
 int str_output(void *args, int, char **data, char **) {
     char *output = static_cast <char *> (args);
-    memcpy(output, data[0], strlen(data[0]));
+    const size_t len = strlen(data[0]);
+    memcpy(output, data[0], len);
+    output[len] = '\0';
     return 0;
 }
 
 TEST(addqueryfuncs, path) {
-    // index was placed into basename
-    const char index[MAXPATH] = "/prefix0/prefix1/basename";
-    const size_t index_len = SNPRINTF(gps[0].gpath, MAXPATH, "%s", index);
+    // currently at this path
+    const char pwd[MAXPATH] = "index_root";
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = (char *) index;
-    memcpy(work.name, index, index_len);
+    work.root = (char *) pwd;
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s", pwd);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
-    // pass in an empty string into path
+    // 0 args - get work->name back
+    {
+        char query[MAXSQL] = {};
+        SNPRINTF(query, MAXSQL, "SELECT path()");
+
+        // the path returned by the query is the index prefix with the original basename
+        char output[MAXPATH] = {};
+        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
+
+        EXPECT_STREQ(output, pwd);
+    }
+
+    // empty string arg - get dirname(work->name) back
     {
         char query[MAXSQL] = {};
         SNPRINTF(query, MAXSQL, "SELECT path('')");
@@ -107,22 +120,31 @@ TEST(addqueryfuncs, path) {
         char output[MAXPATH] = {};
         EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
 
-        EXPECT_STREQ(output, "/prefix0/prefix1/basename");
+        EXPECT_STREQ(output, "");
     }
 
-    // call path with contents
+    // path without rollup
     {
-        const char src[MAXPATH] = "root/level1/level2";
-
-        // use value obtained from summary table
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT path('%s')", src);
+        SNPRINTF(query, MAXSQL, "SELECT path('index_root')");
 
         // the path returned by the query is the index prefix with the original basename
         char output[MAXPATH] = {};
         EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
 
-        EXPECT_STREQ(output, "/prefix0/prefix1/basename/level1/level2");
+        EXPECT_STREQ(output, pwd);
+    }
+
+    // rolled up path
+    {
+        char query[MAXSQL] = {};
+        SNPRINTF(query, MAXSQL, "SELECT path('index_root/dir0/dir1')");
+
+        // the path returned by the query is the index prefix with the original basename
+        char output[MAXPATH] = {};
+        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
+
+        EXPECT_STREQ(output, "index_root/dir0/dir1");
     }
 
     sqlite3_close(db);
@@ -411,6 +433,61 @@ TEST(addqueryfuncs, level) {
 
         EXPECT_STREQ(output, expected);
     }
+
+    sqlite3_close(db);
+}
+
+TEST(addqueryfuncs, starting_point) {
+    const char root[] = "/index_root";
+    struct work work;
+    memset(&work, 0, sizeof(work));
+    work.root = root;
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+
+    char output[MAXPATH] = {};
+    ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, NULL), SQLITE_OK);
+
+    EXPECT_STREQ(output, work.root);
+
+    sqlite3_close(db);
+}
+
+TEST(addqueryfuncs, basename) {
+    struct work work;
+    memset(&work, 0, sizeof(work));
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+
+    char output[MAXPATH] = {};
+
+    /* from basename(3) manpage */
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/usr/lib')", str_output, output, NULL), SQLITE_OK);
+    EXPECT_STREQ(output, "lib");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/usr/')", str_output, output, NULL), SQLITE_OK);
+    EXPECT_STREQ(output, "usr");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('usr')", str_output, output, NULL), SQLITE_OK);
+    EXPECT_STREQ(output, "usr");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/')", str_output, output, NULL), SQLITE_OK);
+    EXPECT_STREQ(output, "/");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('.')", str_output, output, NULL), SQLITE_OK);
+    EXPECT_STREQ(output, ".");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('..')", str_output, output, NULL), SQLITE_OK);
+    EXPECT_STREQ(output, "..");
 
     sqlite3_close(db);
 }

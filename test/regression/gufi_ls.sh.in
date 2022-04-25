@@ -69,69 +69,36 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
-GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
+# gufi_ls wrapper
+GUFI_LS="${ROOT}/test/regression/gufi_ls.py"
 
 # output directories
 SRCDIR="prefix"
-TRACE="trace"
-INDEXROOT="${SRCDIR}.gufi"
-BADTRACE="badtrace"
+INDEXROOT="$(realpath ${SRCDIR}.gufi)"
 
-# trace delimiter
-DELIM="|"
+source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
-function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${INDEXROOT}" "${BADTRACE}"
-}
-
-trap cleanup EXIT
-
-cleanup
-
-OUTPUT="verifytraceintree.out"
+OUTPUT="gufi_ls.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
+    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_LS//\//\\/}/gufi_ls/g; s/.*${INDEXROOT//\//\\/}\\/$/./g; s/${INDEXROOT//\//\\/}\\///g"
+}
+
+function run() {
+    replace "$ $@"
+    replace "$($@)"
+    echo
 }
 
 (
-umask 002
+run "${GUFI_LS}"
+run "${GUFI_LS} -a"
+run "${GUFI_LS} -h"
+run "${GUFI_LS} -R"
+run "${GUFI_LS} -r"
+run "${GUFI_LS} -ar"
+run "${GUFI_LS} -arR"
+) | @TEE@ "${OUTPUT}"
 
-replace "# generate the tree"
-replace "$ generatetree ${SRCDIR}"
-${ROOT}/test/regression/generatetree "${SRCDIR}" 2> /dev/null
-echo
-
-replace "# generate the trace"
-replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}" 2> /dev/null
-cat ${TRACE}.* > "${TRACE}"
-echo
-
-replace "# generate the index"
-replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" | tail -n 4 | head -n 3
-echo
-
-replace "# verify that all entries in the trace can be found in the GUFI tree"
-replace "$ verifytraceintree ${TRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytraceintree "${TRACE}" "${DELIM}" "${INDEXROOT}"
-echo
-
-replace "# replace a file name"
-sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
-replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
-echo
-
-replace "# replace a directory name"
-sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
-replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
-${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
-echo
-
-) |& sed '/qptpool.*/d' | tee "${OUTPUT}"
-
-diff ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
+@DIFF@ ${ROOT}/test/regression/gufi_ls.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -69,8 +69,7 @@ ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 ROOT="$(dirname ${ROOT})"
 
-# gufi_find wrapper
-GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
+GUFI_STAT="${ROOT}/src/gufi_stat"
 
 # output directories
 SRCDIR="prefix"
@@ -78,46 +77,39 @@ INDEXROOT="${SRCDIR}.gufi"
 
 source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
-OUTPUT="gufi_find.out"
+OUTPUT="gufi_stat.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
-}
-
-function run_unsorted() {
-    replace "$ $@"
-    replace "$($@)"
-    echo
-}
-
-function run_sorted() {
-    replace "$ $@"
-    replace "$($@)" | sort
-    echo
+    echo "$@" | @SED@ "s/${GUFI_STAT//\//\\/}/gufi_stat/g"
 }
 
 (
-run_sorted   "${GUFI_FIND}"
-run_sorted   "${GUFI_FIND} -empty"
-run_sorted   "${GUFI_FIND} -type d"
-run_sorted   "${GUFI_FIND} -type f"
-run_sorted   "${GUFI_FIND} -type l"
-run_sorted   "${GUFI_FIND} -readable"
-run_sorted   "${GUFI_FIND} -writable"
-run_sorted   "${GUFI_FIND} -executable"
-run_sorted   "${GUFI_FIND} -mindepth 2"
-run_sorted   "${GUFI_FIND} -maxdepth 0"
-# don't include directories or links because their
-# sizes are not consistent across filesystems
-run_sorted   "${GUFI_FIND} -type f -size 1c"
-run_sorted   "${GUFI_FIND} -type f -size=-1c"
-run_sorted   "${GUFI_FIND} -type f -size +1c"
-run_sorted   "${GUFI_FIND} -type f -size +1024c"
-run_sorted   "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
-run_sorted   "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
-run_unsorted "${GUFI_FIND} -type f --smallest"
-run_unsorted "${GUFI_FIND} -type f --largest"
-) | tee "${OUTPUT}"
+# entries in the index with a fixed size
+fixed_size=(
+    "empty_file"
+    "1KB"
+    "1MB"
+    "unusual, name?#"
+    ".hidden"
+    "repeat_name"
+    "old_file"
+    "directory/readonly"
+    "directory/writable"
+    "directory/executable"
+    "directory/subdirectory/repeat_name"
+    "leaf_directory/leaf_file1"
+    "leaf_directory/leaf_file2"
+)
 
-diff ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
+for entry in "${fixed_size[@]}"
+do
+    output=$(${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}")
+    replace "${output}"
+done
+
+# the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
+${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file"
+) | @TEE@ "${OUTPUT}"
+
+@DIFF@ ${ROOT}/test/regression/gufi_stat.expected "${OUTPUT}"
 rm "${OUTPUT}"
