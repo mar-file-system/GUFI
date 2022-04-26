@@ -62,7 +62,6 @@ OF SUCH DAMAGE.
 
 
 
-#include <dirent.h>
 #include <errno.h>
 #include <grp.h>
 #include <pwd.h>
@@ -70,6 +69,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -413,18 +413,26 @@ int print_callback(void * args, int count, char **data, char **columns) {
 }
 
 int process_path(const char *path, FILE *out, const char *format) {
-    char dbname[MAXPATH + MAXPATH];
-    sqlite3 *db = NULL;
+    char dbname[MAXPATH];
     char query[MAXSQL];
+    struct stat st;
 
-    /* assume the provided path is a directory */
-    DIR *dir = opendir(path);
-    if (dir) {
+    /* path is directory */
+    if ((lstat(path, &st) == 0) && S_ISDIR(st.st_mode)) {
         SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, path);
-        SNPRINTF(query, sizeof(query), query_prefix, "summary", "");
+        SNPRINTF(query, sizeof(query), query_prefix, "summary");
     }
+    /*
+     * path does exist:    path is in the filesystem the index is on,
+     *                     rather than in the index (e.g. db.db)
+     *
+     * path doesn't exist: path is a file/link name that might exist
+     *                     within the index
+     *
+     * either way, search index at dirname(path)
+     */
     else {
-        /* remove file name from the path */
+        /* remove basename from the path */
         char parent[MAXPATH];
         char name[MAXPATH];
         shortpath(path, parent, name);
@@ -438,15 +446,14 @@ int process_path(const char *path, FILE *out, const char *format) {
         SNPRINTF(query, sizeof(query), query_prefix, "entries", where);
     }
 
-    closedir(dir);
-
     struct callback_args ca;
     ca.found = 0;
     ca.path = path;
     ca.out = out;
     ca.format = format;
 
-    int rc = 1;
+    int rc = 0;
+    sqlite3 *db = NULL;
     if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 1
                      , NULL, NULL
                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -454,8 +461,6 @@ int process_path(const char *path, FILE *out, const char *format) {
                      , NULL, NULL
                      #endif
                      ))) {
-        rc = 0;
-
         /* query the database */
         char *err = NULL;
         if (sqlite3_exec(db, query, print_callback, &ca, &err) != SQLITE_OK) {
@@ -473,6 +478,7 @@ int process_path(const char *path, FILE *out, const char *format) {
     }
     else {
         fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);
+        rc = 1;
     }
 
     /* close no matter what to avoid memory leaks */
