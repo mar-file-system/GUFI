@@ -460,9 +460,9 @@ do {                                                                    \
     char *err = NULL;                                                   \
     if (sqlite3_exec(db, query, callback, &ca, &err) != SQLITE_OK) {    \
         fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query); \
-        sqlite3_free(err);                                              \
     }                                                                   \
     timestamp_set_end(ts_name);                                         \
+    sqlite3_free(err);                                                  \
                                                                         \
     rc = ca.rows;                                                       \
 } while (0)
