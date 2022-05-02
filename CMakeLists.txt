@@ -170,18 +170,14 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 if ("${CMAKE_VERSION}" VERSION_GREATER "3.12.0")
   find_package(Python REQUIRED COMPONENTS Interpreter)
 else()
-  find_program(Python python)
-  if (Python)
-    execute_process(COMMAND ${Python} --version
-      OUTPUT_VARIABLE Python_VERSION_STR
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX REPLACE "^Python " "" Python_VERSION "${Python_VERSION_STR}")
-    string(REPLACE "." ";" Python_VERSION_LIST ${Python_VERSION})
-    list(GET Python_VERSION_LIST 0 Python_VERSION_MAJOR)
-    message(STATUS "Found Python: ${Python} (found version \"${Python_VERSION}\") found components: Interpreter")
-  else()
-    message(FATAL "Python not found")
-  endif()
+  find_program(Python python REQUIRED)
+  execute_process(COMMAND ${Python} --version
+    OUTPUT_VARIABLE Python_VERSION_STR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE "^Python " "" Python_VERSION "${Python_VERSION_STR}")
+  string(REPLACE "." ";" Python_VERSION_LIST ${Python_VERSION})
+  list(GET Python_VERSION_LIST 0 Python_VERSION_MAJOR)
+  message(STATUS "Found Python: ${Python} (found version \"${Python_VERSION}\") found components: Interpreter")
 endif()
 
 set(PYTHON_INTERPRETER "python${Python_VERSION_MAJOR}" CACHE STRING "Python Interpreter")
