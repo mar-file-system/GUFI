@@ -1,0 +1,461 @@
+# 0 xattrs
+$ gufi_getfattr .
+
+
+# 1 xattr
+$ gufi_getfattr 1MB
+prefix/1MB user.size 
+
+# 2 xattrs
+$ gufi_getfattr directory/subdirectory
+subdirectory user.name 
+subdirectory user.type 
+
+# 2 xattrs
+$ gufi_getfattr leaf_directory
+leaf_directory user.name 
+leaf_directory user.type 
+
+# 3 xattrs
+$ gufi_getfattr leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 
+leaf_directory/leaf_file1 user.name2 
+leaf_directory/leaf_file1 user.name3 
+
+# 3 xattrs
+$ gufi_getfattr leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 
+leaf_directory/leaf_file2 user.name5 
+leaf_directory/leaf_file2 user.name6 
+
+# 0 xattrs
+$ gufi_getfattr nonexistant_path
+
+
+# 1 xattr
+$ gufi_getfattr --dump 1MB
+prefix/1MB user.size 1MB 
+
+# 2 xattrs
+$ gufi_getfattr --dump directory/subdirectory
+subdirectory user.name sub 
+subdirectory user.type dir 
+
+# 2 xattrs
+$ gufi_getfattr --dump leaf_directory
+leaf_directory user.name leaf 
+leaf_directory user.type dir 
+
+# 3 xattrs
+$ gufi_getfattr --dump leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 value1 
+leaf_directory/leaf_file1 user.name2 value2 
+leaf_directory/leaf_file1 user.name3 value3 
+
+# 3 xattrs
+$ gufi_getfattr --dump leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 value4 
+leaf_directory/leaf_file2 user.name5 value5 
+leaf_directory/leaf_file2 user.name6 value6 
+
+# No matching name
+$ gufi_getfattr --name user.name 1MB
+
+
+# 1 xattr
+$ gufi_getfattr --name user.size 1MB
+prefix/1MB user.size 
+
+# 1 xattr
+$ gufi_getfattr --name user.type directory/subdirectory
+subdirectory user.type 
+
+# 1 xattr
+$ gufi_getfattr --name user.name leaf_directory
+leaf_directory user.name 
+
+# 1 xattr
+$ gufi_getfattr --name user.name1 leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 
+
+# 1 xattr
+$ gufi_getfattr --name user.name4 leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 
+
+# No matching name
+$ gufi_getfattr --match system.* 1MB
+
+
+# 1 xattr
+$ gufi_getfattr --match user.* 1MB
+prefix/1MB user.size 
+
+# 2 xattrs
+$ gufi_getfattr --match .*name directory/subdirectory
+subdirectory user.name 
+
+# 2 xattrs
+$ gufi_getfattr --match .*type leaf_directory
+leaf_directory user.type 
+
+# 3 xattrs
+$ gufi_getfattr --match .*name.* leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 
+leaf_directory/leaf_file1 user.name2 
+leaf_directory/leaf_file1 user.name3 
+
+# 3 xattrs
+$ gufi_getfattr --match user\..* leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 
+leaf_directory/leaf_file2 user.name5 
+leaf_directory/leaf_file2 user.name6 
+
+# 1 xattr
+$ gufi_getfattr --only-values 1MB
+1MB 
+
+# 2 xattrs
+$ gufi_getfattr --only-values directory/subdirectory
+sub 
+dir 
+
+# 2 xattrs
+$ gufi_getfattr --only-values leaf_directory
+leaf 
+dir 
+
+# 3 xattrs
+$ gufi_getfattr --only-values leaf_directory/leaf_file1
+value1 
+value2 
+value3 
+
+# 3 xattrs
+$ gufi_getfattr --only-values leaf_directory/leaf_file2
+value4 
+value5 
+value6 
+
+# 11 xattrs
+$ gufi_getfattr --recursive .
+/directory/subdirectory user.name 
+/directory/subdirectory user.type 
+/leaf_directory user.name 
+/leaf_directory user.type 
+/leaf_directory/leaf_file1 user.name1 
+/leaf_directory/leaf_file1 user.name2 
+/leaf_directory/leaf_file1 user.name3 
+/leaf_directory/leaf_file2 user.name4 
+/leaf_directory/leaf_file2 user.name5 
+/leaf_directory/leaf_file2 user.name6 
+prefix/1MB user.size 
+
+# 1 xattr - ignore --recursive because path is a file
+$ gufi_getfattr --recursive 1MB
+prefix/1MB user.size 
+
+# 2 xattrs
+$ gufi_getfattr --recursive directory
+/subdirectory user.name 
+/subdirectory user.type 
+
+# 2 xattrs
+$ gufi_getfattr --recursive directory/subdirectory
+subdirectory user.name 
+subdirectory user.type 
+
+# 8 xattrs
+$ gufi_getfattr --recursive leaf_directory
+leaf_directory user.name 
+leaf_directory user.type 
+leaf_directory/leaf_file1 user.name1 
+leaf_directory/leaf_file1 user.name2 
+leaf_directory/leaf_file1 user.name3 
+leaf_directory/leaf_file2 user.name4 
+leaf_directory/leaf_file2 user.name5 
+leaf_directory/leaf_file2 user.name6 
+
+# --name takes precedence over --match (bad name)
+$ gufi_getfattr --name user.name --match user.* 1MB
+
+
+# --name takes precedence over --match (bad match)
+$ gufi_getfattr --name user.size --match .*name.* 1MB
+prefix/1MB user.size 
+
+# --only-values overwrites --dump
+$ gufi_getfattr --only-values --dump 1MB
+1MB 
+
+# --only-values overwrites --dump, and is affected by bad name
+$ gufi_getfattr --only-values --dump --name user.name 1MB
+
+
+# --only-values overwrites --dump, and is affected by good name
+$ gufi_getfattr --only-values --dump --name user.size 1MB
+1MB 
+
+# --only-values overwrites --dump, and is affected by bad match pattern
+$ gufi_getfattr --only-values --dump --match .*name.* 1MB
+
+
+# --only-values overwrites --dump, and is affected by good match pattern
+$ gufi_getfattr --only-values --dump --match .*size.* 1MB
+1MB 
+
+# --only-values overwrites --dump, and is affected by --name and --match (bad name)
+$ gufi_getfattr --only-values --dump --name user.name --match .*user.* 1MB
+
+
+# --only-values overwrites --dump, and is affected by --name and --match (bad match)
+$ gufi_getfattr --only-values --dump --name user.size --match .*name.* 1MB
+1MB 
+
+$ rollup prefix
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:          -1
+
+Not Processed:               0
+Cannot Roll Up:              0
+Can Roll Up:                 4
+    Subdirectories:
+        min:                 0
+        max:                 2
+        median:           0.50
+        sum:                 3
+        average:          0.75
+    Files/Links:
+        min:                 2
+        max:                 8
+        median:           2.50
+        sum:                15
+        average:          3.75
+    Level:
+        min:                 0
+        max:                 2
+        median:           1.00
+        sum:                 4
+        average:          1.00
+    Successful:              4
+    Failed:                  0
+Files/Links:    15
+Directories:    4 (0 empty)
+Total:          19
+Remaining Dirs: 1 (25.00%)
+
+# 0 xattrs
+$ gufi_getfattr .
+
+
+# 1 xattr
+$ gufi_getfattr 1MB
+prefix/1MB user.size 
+
+# 2 xattrs
+$ gufi_getfattr directory/subdirectory
+subdirectory user.name 
+subdirectory user.type 
+
+# 2 xattrs
+$ gufi_getfattr leaf_directory
+leaf_directory user.name 
+leaf_directory user.type 
+
+# 3 xattrs
+$ gufi_getfattr leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 
+leaf_directory/leaf_file1 user.name2 
+leaf_directory/leaf_file1 user.name3 
+
+# 3 xattrs
+$ gufi_getfattr leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 
+leaf_directory/leaf_file2 user.name5 
+leaf_directory/leaf_file2 user.name6 
+
+# 0 xattrs
+$ gufi_getfattr nonexistant_path
+
+
+# 1 xattr
+$ gufi_getfattr --dump 1MB
+prefix/1MB user.size 1MB 
+
+# 2 xattrs
+$ gufi_getfattr --dump directory/subdirectory
+subdirectory user.name sub 
+subdirectory user.type dir 
+
+# 2 xattrs
+$ gufi_getfattr --dump leaf_directory
+leaf_directory user.name leaf 
+leaf_directory user.type dir 
+
+# 3 xattrs
+$ gufi_getfattr --dump leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 value1 
+leaf_directory/leaf_file1 user.name2 value2 
+leaf_directory/leaf_file1 user.name3 value3 
+
+# 3 xattrs
+$ gufi_getfattr --dump leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 value4 
+leaf_directory/leaf_file2 user.name5 value5 
+leaf_directory/leaf_file2 user.name6 value6 
+
+# No matching name
+$ gufi_getfattr --name user.name 1MB
+
+
+# 1 xattr
+$ gufi_getfattr --name user.size 1MB
+prefix/1MB user.size 
+
+# 1 xattr
+$ gufi_getfattr --name user.type directory/subdirectory
+subdirectory user.type 
+
+# 1 xattr
+$ gufi_getfattr --name user.name leaf_directory
+leaf_directory user.name 
+
+# 1 xattr
+$ gufi_getfattr --name user.name1 leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 
+
+# 1 xattr
+$ gufi_getfattr --name user.name4 leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 
+
+# No matching name
+$ gufi_getfattr --match system.* 1MB
+
+
+# 1 xattr
+$ gufi_getfattr --match user.* 1MB
+prefix/1MB user.size 
+
+# 2 xattrs
+$ gufi_getfattr --match .*name directory/subdirectory
+subdirectory user.name 
+
+# 2 xattrs
+$ gufi_getfattr --match .*type leaf_directory
+leaf_directory user.type 
+
+# 3 xattrs
+$ gufi_getfattr --match .*name.* leaf_directory/leaf_file1
+leaf_directory/leaf_file1 user.name1 
+leaf_directory/leaf_file1 user.name2 
+leaf_directory/leaf_file1 user.name3 
+
+# 3 xattrs
+$ gufi_getfattr --match user\..* leaf_directory/leaf_file2
+leaf_directory/leaf_file2 user.name4 
+leaf_directory/leaf_file2 user.name5 
+leaf_directory/leaf_file2 user.name6 
+
+# 1 xattr
+$ gufi_getfattr --only-values 1MB
+1MB 
+
+# 2 xattrs
+$ gufi_getfattr --only-values directory/subdirectory
+sub 
+dir 
+
+# 2 xattrs
+$ gufi_getfattr --only-values leaf_directory
+leaf 
+dir 
+
+# 3 xattrs
+$ gufi_getfattr --only-values leaf_directory/leaf_file1
+value1 
+value2 
+value3 
+
+# 3 xattrs
+$ gufi_getfattr --only-values leaf_directory/leaf_file2
+value4 
+value5 
+value6 
+
+# 11 xattrs
+$ gufi_getfattr --recursive .
+prefix/1MB user.size 
+prefix/directory/subdirectory user.name 
+prefix/directory/subdirectory user.type 
+prefix/leaf_directory user.name 
+prefix/leaf_directory user.type 
+prefix/leaf_directory/leaf_file1 user.name1 
+prefix/leaf_directory/leaf_file1 user.name2 
+prefix/leaf_directory/leaf_file1 user.name3 
+prefix/leaf_directory/leaf_file2 user.name4 
+prefix/leaf_directory/leaf_file2 user.name5 
+prefix/leaf_directory/leaf_file2 user.name6 
+
+# 1 xattr - ignore --recursive because path is a file
+$ gufi_getfattr --recursive 1MB
+prefix/1MB user.size 
+
+# 2 xattrs
+$ gufi_getfattr --recursive directory
+directory/subdirectory user.name 
+directory/subdirectory user.type 
+
+# 2 xattrs
+$ gufi_getfattr --recursive directory/subdirectory
+subdirectory user.name 
+subdirectory user.type 
+
+# 8 xattrs
+$ gufi_getfattr --recursive leaf_directory
+leaf_directory user.name 
+leaf_directory user.type 
+leaf_directory/leaf_file1 user.name1 
+leaf_directory/leaf_file1 user.name2 
+leaf_directory/leaf_file1 user.name3 
+leaf_directory/leaf_file2 user.name4 
+leaf_directory/leaf_file2 user.name5 
+leaf_directory/leaf_file2 user.name6 
+
+# --name takes precedence over --match (bad name)
+$ gufi_getfattr --name user.name --match user.* 1MB
+
+
+# --name takes precedence over --match (bad match)
+$ gufi_getfattr --name user.size --match .*name.* 1MB
+prefix/1MB user.size 
+
+# --only-values overwrites --dump
+$ gufi_getfattr --only-values --dump 1MB
+1MB 
+
+# --only-values overwrites --dump, and is affected by bad name
+$ gufi_getfattr --only-values --dump --name user.name 1MB
+
+
+# --only-values overwrites --dump, and is affected by good name
+$ gufi_getfattr --only-values --dump --name user.size 1MB
+1MB 
+
+# --only-values overwrites --dump, and is affected by bad match pattern
+$ gufi_getfattr --only-values --dump --match .*name.* 1MB
+
+
+# --only-values overwrites --dump, and is affected by good match pattern
+$ gufi_getfattr --only-values --dump --match .*size.* 1MB
+1MB 
+
+# --only-values overwrites --dump, and is affected by --name and --match (bad name)
+$ gufi_getfattr --only-values --dump --name user.name --match .*user.* 1MB
+
+
+# --only-values overwrites --dump, and is affected by --name and --match (bad match)
+$ gufi_getfattr --only-values --dump --name user.size --match .*name.* 1MB
+1MB 
+

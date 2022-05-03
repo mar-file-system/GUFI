@@ -1,3 +1,4 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,103 +61,13 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+import imp
+import os
+import sys
 
-function(check_test_dependencies var exec)
-  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
-  if (${var})
-    message(STATUS "Found ${exec}: ${${var}}")
-  else ()
-    # try alternative
-    if (${ARGC} GREATER 2)
-      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
-      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
-    endif()
+import common
 
-    if (NOT ${var})
-      message(FATAL_ERROR "${var} not found. Cannot build tests.")
-    endif()
-  endif()
-endfunction()
+gufi_getfattr = imp.load_source('gufi_getfattr', os.path.join(common.root, 'scripts', 'gufi_getfattr'))
 
-check_test_dependencies(SETFATTR setfattr)
-check_test_dependencies(GETFATTR getfattr)
-check_test_dependencies(SED      sed)
-check_test_dependencies(DIFF     colordiff diff)
-check_test_dependencies(TEE      tee)
-
-# regression test specific files
-set(CORE
-  generatetree.sh
-  setup.sh
-  common.py
-)
-
-# .sh and .expected
-set(SH_AND_EXPECTED
-  completions
-  gufi_dir2index
-  gufi_dir2trace
-  gufi_trace2index
-  gufi_query
-  querydbs
-)
-
-# .sh, .py, and .expected
-set(SH_PY_AND_EXPECTED
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stats
-)
-
-if (CMAKE_CXX_COMPILER)
-  list(APPEND SH_AND_EXPECTED
-    verifytrace
-    verifytraceintree
-  )
-endif()
-
-if (NOT APPLE)
-  list(APPEND SH_AND_EXPECTED
-    gufi_stat)
-endif()
-
-foreach(NAME ${CORE})
-  configure_file("${NAME}.in" "${NAME}" @ONLY)
-endforeach()
-
-foreach(NAME ${SH_AND_EXPECTED})
-  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-  add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
-  set_tests_properties("${NAME}" PROPERTIES LABELS regression)
-endforeach()
-
-foreach(NAME ${SH_PY_AND_EXPECTED})
-  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-  configure_file("${NAME}.py.in"    "${NAME}.py"       @ONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-  add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
-  set_tests_properties("${NAME}" PROPERTIES LABELS regression)
-endforeach()
-
-find_program(SUDO sudo)
-if (SUDO)
-  # .sh and .expected
-  set(NEED_SUDO
-    rollup
-    unrollup
-    xattrs
-    )
-
-  foreach(NAME ${NEED_SUDO})
-    configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-    configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-    add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh")
-    set_tests_properties("${NAME}" PROPERTIES LABELS sudo)
-  endforeach()
-endif()
+if __name__=='__main__':
+    sys.exit(gufi_getfattr.run(sys.argv, common.config_path))

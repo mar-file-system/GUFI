@@ -281,6 +281,7 @@ typedef enum {
 
 struct work {
    const char*   root;
+   size_t        root_len;
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;

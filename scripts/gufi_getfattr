@@ -1,0 +1,252 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import os
+import subprocess
+import sys
+
+import gufi_common
+import gufi_config
+
+SUMMARY   = 'summary'
+XSUMMARY  = 'xsummary'
+XPENTRIES = 'xpentries'
+
+def getfattr(args, config, dirname, nondirname):
+    # always grab everything - don't necessarily print everything
+    S_cols = ['path(name, 1)', 'xattr_name', 'xattr_value']
+    E_cols = ['path({}.name, 1) || \'/\' || {}.name'.format(SUMMARY, XPENTRIES), 'xattr_name', 'xattr_value']
+
+    S_where = []
+    E_where = []
+
+    if not args.recursive:
+        # make sure name matches
+        S_where += [' OR '.join(['({}.name REGEXP \'^{}$\')'.format(XSUMMARY, os.path.basename(dirname))])]
+
+        # only get the original summary
+        S_where += ['{}.isroot == 1'.format(XSUMMARY)]
+
+        if nondirname:
+            E_where += [' OR '.join(['({}.name REGEXP \'^{}$\')'.format(XPENTRIES, nondirname)])]
+
+    if args.name:
+        # name uses exact match
+        S_where += ['CAST({}.xattr_name AS TEXT) == CAST(\'{}\' AS TEXT)'.format(XSUMMARY,  args.name)]
+        E_where += ['CAST({}.xattr_name AS TEXT) == CAST(\'{}\' AS TEXT)'.format(XPENTRIES, args.name)]
+    else:
+        S_where += ['{}.xattr_name REGEXP \'{}\''.format(XSUMMARY,  args.pattern)]
+        E_where += ['{}.xattr_name REGEXP \'{}\''.format(XPENTRIES, args.pattern)]
+
+    G_cols = []
+    if args.only_values:
+        # --only-values overrides selections
+        G_cols = ['value']
+    else:
+        # default to getting path and xattr name
+        G_cols = ['path',
+                  'name']
+
+        # also get xattr value
+        if args.dump:
+            G_cols += ['value']
+
+    query_args = ['-x', '-a',
+                  '-e', '0',
+                  '-I', 'CREATE TABLE {} ({})'.format(args.inmemory_name,
+                                                      ', '.join(['path TEXT', 'name TEXT', 'value BLOB'])),
+                  '-J', 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name),
+                  '-G', gufi_common.build_query(G_cols,
+                                                [args.inmemory_name],
+                                                None,
+                                                None,
+                                                None if args.only_values else ['path ASC'],
+                                                None)
+              ]
+
+
+    E_where += ['{}.pinode == {}.inode'.format(XPENTRIES, SUMMARY)]
+
+    if args.recursive:
+        # if input directory is not a directory, filter xattrs to those in the current directory
+        if nondirname:
+            E_where += ['{}.isroot == 1'.format(SUMMARY)]
+
+        # if input path is a directory, get directory xattrs as well
+        else:
+            query_args += ['-S', 'INSERT INTO {} {}'.format(
+                args.inmemory_name,
+                gufi_common.build_query(S_cols,
+                                        [XSUMMARY],
+                                        S_where,
+                                        None,
+                                        None,
+                                        None))]
+
+        # if input path is not a directory, get non directory xattrs
+        # if input path is     a directory, get non directory xattrs
+        query_args += ['-E', 'INSERT INTO {} {}'.format(
+            args.inmemory_name,
+            gufi_common.build_query(E_cols,
+                                    [XPENTRIES, SUMMARY],
+                                    E_where,
+                                    None,
+                                    None,
+                                    None))]
+
+    else:
+        # only get non directory xattrs
+        if nondirname:
+            E_where += ['{}.isroot == 1'.format(SUMMARY)]
+
+            query_args += ['-E', 'INSERT INTO {} {}'.format(
+                args.inmemory_name,
+                gufi_common.build_query(E_cols,
+                                        [XPENTRIES, SUMMARY],
+                                        E_where,
+                                        None,
+                                        None,
+                                        None))]
+        # only get directory xattrs
+        else:
+            query_args += ['-S', 'INSERT INTO {} {}'.format(
+                args.inmemory_name,
+                gufi_common.build_query(S_cols,
+                                        [XSUMMARY],
+                                        S_where,
+                                        None,
+                                        None,
+                                        None))]
+
+    # a non directory prevents recursion
+    if nondirname:
+        query_args += ['-y', '0',
+                       '-z', '0']
+
+    return query_args + [os.path.join(config.indexroot(), dirname)]
+
+def run(argv, config_path):
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
+
+    # parse the arguments
+    parser = argparse.ArgumentParser(description='GUFI version of getfattr\n\nNote: --no-dereference/-h is always set', add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    # override help to not use -h
+    parser.add_argument('--help',                                                   action='help',
+                        help='show this help message and exit')
+    parser.add_argument('--version', '-v',                                          action='version',
+                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+
+    parser.add_argument('--name', '-n',                        dest='name',         type=str,
+                        help='Dump the values of the named extended attribute')
+    parser.add_argument('--dump', '-d',                        dest='dump',         action='store_true',
+                        help='Dump the values of all extended attributes associated with pathname.')
+    parser.add_argument('--match', '-m',                       dest='pattern',      type=str,
+                        help='Only include attributes with names matching the regular expression pattern. The default value for pattern is "^user\\.", which includes all the attributes in the user namespace. Specify "-" for including all attributes". Refer to attr(5) for a more detailed discussion of namespaces.',
+                        default='^user\\.')
+    parser.add_argument('--only-values',                       dest='only_values',  action='store_true',
+                        help='Dump out the raw extended attribute value(s) without encoding them.')
+    parser.add_argument('--recursive', '-R',                   dest='recursive',    action='store_true',
+                        help='List the atttributes of all files and directories recursively.')
+    parser.add_argument('--delim',             metavar='c',    dest='delim',        type=gufi_common.get_char,
+                        help='delimiter separating output columns',
+                        default=' ')
+    parser.add_argument('--in-memory-name',    metavar='name', dest='inmemory_name',type=str,
+                        help='Name of in-memory database when aggregation is performed',
+                        default='out', )
+
+    parser.add_argument('path',                                                     type=str, nargs='+')
+
+    args = parser.parse_args(argv[1:]);
+
+    rc = 0
+
+    # process one input arg at a time
+    # not sure if it makes sense/is possible to process all at once
+    for path in args.path:
+        fullpath = os.path.join(config.indexroot(), path)
+        dirname = path
+        nondir = None
+
+        if not os.path.isdir(fullpath):
+            dirname = os.path.dirname(path)
+            nondir = os.path.basename(path)
+
+        # create the query command
+        query_cmd = [config.executable(),
+                     '-n', str(config.threads()),
+                     '-B', str(config.outputbuffer()),
+                     '-d', args.delim] + getfattr(args, config, dirname, nondir)
+
+        query = subprocess.Popen(query_cmd)
+        query.communicate() # block until query finishes
+
+        if query.returncode:
+            rc = query.returncode
+
+    return rc
+
+if __name__=='__main__':
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

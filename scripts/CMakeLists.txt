@@ -93,8 +93,9 @@ endif()
 # scripts that act as executables on the server
 set(TOOLS
   gufi_find
-  gufi_stats
-  gufi_ls)
+  gufi_getfattr
+  gufi_ls
+  gufi_stats)
 
 # python libraries installed into bin for convenience
 set(LIBRARIES

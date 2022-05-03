@@ -112,7 +112,7 @@ const char PENTRIES_ROLLUP_INSERT[] =
 
 const char PENTRIES_CREATE[] =
     DROP_VIEW(PENTRIES)
-    "CREATE VIEW " PENTRIES " AS SELECT " ENTRIES ".*, " SUMMARY ".inode AS pinode FROM " ENTRIES ", " SUMMARY " WHERE rectype=0 UNION SELECT * FROM " PENTRIES_ROLLUP ";";
+    "CREATE VIEW " PENTRIES " AS SELECT " ENTRIES ".*, " SUMMARY ".inode AS pinode FROM " ENTRIES ", " SUMMARY " WHERE isroot == 1 UNION SELECT * FROM " PENTRIES_ROLLUP ";";
 
 const char tsql[] =
     DROP_TABLE(TREESUMMARY)
@@ -838,7 +838,13 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return 0;
 }
 
-/* 0 or 1 args only */
+/*
+ * path(name (optional), remove root (optional))
+ *
+ * 0 args - get current directory: work->name (real path of index)
+ * 1 arg  - dirname(work->name) + "/" + input arg
+ * 2 args - int: if set to non-zero, remove work->root
+ */
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     /* work->name contains the current directory being operated on */
@@ -851,25 +857,37 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     /* use first arg - combine with pwd to get full path */
     else {
         const char *name = (char *) sqlite3_value_text(argv[0]);
+        int remove_root = 0;
+        if (argc > 1) {
+            remove_root = sqlite3_value_int(argv[1]);
+        }
 
-        char fullpath[MAXPATH];
-        size_t len = SNFORMAT_S(fullpath, MAXPATH, 1, work->name, work->name_len);
+        char *path = work->name;
+        size_t path_len = work->name_len;
+
+        if (remove_root) {
+            path += work->root_len;
+            path_len -= work->root_len;
+        }
 
         /* remove trailing '/' */
-        while (len && (fullpath[len - 1] == '/')) {
-            len--;
+        while (path_len && (path[path_len - 1] == '/')) {
+            path_len--;
         }
 
         /* basename(work->name) will be the same as the first part of the input path, so remove it */
-        while (len && (fullpath[len - 1] != '/')) {
-            len--;
+        while (path_len && (path[path_len - 1] != '/')) {
+            path_len--;
         }
 
-        /* do not strip trailing '/' or explicitly add an '/' */
-        SNFORMAT_S(fullpath + len, MAXPATH - len, 1,
-                   name, strlen(name));
+        char fullpath[MAXPATH];
 
-        sqlite3_result_text(context, fullpath, -1, SQLITE_TRANSIENT);
+        /* do not strip trailing '/' or explicitly add an '/' */
+        const size_t len = SNFORMAT_S(fullpath, MAXPATH, 2,
+                                      path, path_len,
+                                      name, strlen(name));
+
+        sqlite3_result_text(context, fullpath, len, SQLITE_STATIC);
     }
 
     return;
