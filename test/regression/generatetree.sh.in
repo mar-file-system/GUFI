@@ -66,20 +66,20 @@
 #
 # ${DIR}/
 # |---- 1KB
-# |---- 1MB
+# |---- 1MB                        (user.type=file)
 # |---- directory/
 #       |---- executable
 #       |---- readonly
 #       |---- writable
-#       |---- subdirectory/
+#       |---- subdirectory/        (user.type=dir, user.name=sub)
 #             |---- directory_symlink -> subdirectory
 #             |---- repeat_name
 # |---- empty_file
 # |---- file_symlink -> 1KB
 # |---- .hidden
-# |---- leaf_directory/  (user.name1=value1, user.name2=value2)
-#       |---- leaf_file1 (user.name1=value1, user.name2=value2)
-#       |---- leaf_file2 (user.name1=value1, user.name2=value2)
+# |---- leaf_directory/            (user.type=dir, user.name=leaf)
+#       |---- leaf_file1           (user.name1=value1, user.name2=value2, user.name3=value3)
+#       |---- leaf_file2           (user.name4=value4, user.name5=value5, user.name6=value6)
 # |---- old_file
 # |---- repeat_name
 # |---- unusual, name?#
@@ -104,6 +104,7 @@ cd "${DIR}"
 truncate -s 1024 1KB
 
 truncate -s 1048576 1MB
+setfattr -n "user.size" -v "1MB" 1MB
 
 mkdir directory
 (
@@ -115,6 +116,8 @@ mkdir directory
     truncate -s 1 executable
     chmod 777 executable
     mkdir subdirectory
+    setfattr -n "user.type" -v "dir" subdirectory
+    setfattr -n "user.name" -v "sub" subdirectory
     (
         cd subdirectory
         ln -f -s $(realpath .) directory_symlink
@@ -129,14 +132,20 @@ ln -f -s $(realpath 1KB) file_symlink
 truncate -s 1 .hidden
 
 mkdir leaf_directory
-setfattr -n "user.name1" -v "value1" leaf_directory
-setfattr -n "user.name2" -v "value2" leaf_directory
+setfattr -n "user.type" -v "dir"  leaf_directory
+setfattr -n "user.name" -v "leaf" leaf_directory
 (
     cd leaf_directory
+
     truncate -s 1 leaf_file1
-    truncate -s 1 leaf_file2
     setfattr -n "user.name1" -v "value1" leaf_file1
-    setfattr -n "user.name2" -v "value2" leaf_file2
+    setfattr -n "user.name2" -v "value2" leaf_file1
+    setfattr -n "user.name3" -v "value3" leaf_file1
+
+    truncate -s 1 leaf_file2
+    setfattr -n "user.name4" -v "value4" leaf_file2
+    setfattr -n "user.name5" -v "value5" leaf_file2
+    setfattr -n "user.name6" -v "value6" leaf_file2
 )
 
 truncate -s 1 old_file
