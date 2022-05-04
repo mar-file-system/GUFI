@@ -597,7 +597,7 @@ def run(argv, config_path):
     if need_aggregation(args):
         columns = ['name', 'type', 'inode', 'mode', 'nlink', 'uid',
                    'gid', 'size', 'blksize', 'blocks', 'atime',
-                   'mtime', 'ctime', 'linkname', 'xattrs']
+                   'mtime', 'ctime', 'linkname', 'xattr_names']
 
         I = 'CREATE TABLE {0} ({1})'.format(
             args.inmemory_name,
@@ -610,7 +610,7 @@ def run(argv, config_path):
                        'blksize INT64', 'blocks INT64',
                        'atime INT64',   'mtime INT64',
                        'ctime INT64',   'linkname TEXT',
-                       'xattrs TEXT']))
+                       'xattr_names TEXT']))
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
