@@ -133,11 +133,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-   // add query funcs to get path() uidtouser() gidtogroup()
-   struct work work;
-   memset(&work, 0, sizeof(work));
-   work.level = -1;
-   addqueryfuncs(db, 0, &work);
+   // add query funcs to get uidtouser() gidtogroup()
+   addqueryfuncs(db, 0, NULL);
 
    const int start = idx;
    const int numdbs = argc - idx;

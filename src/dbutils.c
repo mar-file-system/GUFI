@@ -1100,32 +1100,42 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
 }
 
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
-    void *lvl = (void *) (uintptr_t) work->level;
-    void *id_ptr = (void *) (uintptr_t) id;
-    return ((sqlite3_create_function(db,  "path",                -1, SQLITE_UTF8,
-                  work,                   &path,                 NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "fpath",               0,  SQLITE_UTF8,
-                 id_ptr,                  &fpath,                NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "epath",               0,  SQLITE_UTF8,
-                 id_ptr,                  &epath,                NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "uidtouser",           2,  SQLITE_UTF8,
-                 NULL,                    &uidtouser,            NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "gidtogroup",          2,  SQLITE_UTF8,
-                 NULL,                    &gidtogroup,           NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "modetotxt",           1,  SQLITE_UTF8,
-                 NULL,                    &modetotxt,            NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "strftime",            2,  SQLITE_UTF8,
-                 NULL,                    &sqlite3_strftime,     NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "blocksize",           3,  SQLITE_UTF8,
-                 NULL,                    &blocksize,            NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "human_readable_size", 2,  SQLITE_UTF8,
-                 NULL,                    &human_readable_size,  NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,
-                 lvl,                     &relative_level,       NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
-                (void *) work->root,      &starting_point,       NULL, NULL) == SQLITE_OK) &&
-            (sqlite3_create_function(db,  "basename",            1,  SQLITE_UTF8,
-                 NULL,                    &sqlite_basename,      NULL, NULL) == SQLITE_OK))?0:1;
+    if (!((sqlite3_create_function(db,  "uidtouser",           2,  SQLITE_UTF8,
+               NULL,                    &uidtouser,            NULL, NULL) == SQLITE_OK) &&
+          (sqlite3_create_function(db,  "gidtogroup",          2,  SQLITE_UTF8,
+               NULL,                    &gidtogroup,           NULL, NULL) == SQLITE_OK) &&
+          (sqlite3_create_function(db,  "modetotxt",           1,  SQLITE_UTF8,
+               NULL,                    &modetotxt,            NULL, NULL) == SQLITE_OK) &&
+          (sqlite3_create_function(db,  "strftime",            2,  SQLITE_UTF8,
+               NULL,                    &sqlite3_strftime,     NULL, NULL) == SQLITE_OK) &&
+          (sqlite3_create_function(db,  "blocksize",           3,  SQLITE_UTF8,
+               NULL,                    &blocksize,            NULL, NULL) == SQLITE_OK) &&
+          (sqlite3_create_function(db,  "human_readable_size", 2,  SQLITE_UTF8,
+               NULL,                    &human_readable_size,  NULL, NULL) == SQLITE_OK) &&
+          (sqlite3_create_function(db,  "basename",            1,  SQLITE_UTF8,
+               NULL,                    &sqlite_basename,      NULL, NULL) == SQLITE_OK))) {
+        return 1;
+    }
+
+    /* only available if work is valid */
+    if (work) {
+        void *lvl = (void *) (uintptr_t) work->level;
+        void *id_ptr = (void *) (uintptr_t) id;
+        if (!((sqlite3_create_function(db,  "path",                -1, SQLITE_UTF8,
+                   work,                    &path,                 NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "fpath",               0,  SQLITE_UTF8,
+                   id_ptr,                  &fpath,                NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "epath",               0,  SQLITE_UTF8,
+                   id_ptr,                  &epath,                NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
+                   (void *) work->root,     &starting_point,       NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,
+                   lvl,                     &relative_level,       NULL, NULL) == SQLITE_OK))) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
