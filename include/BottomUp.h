@@ -74,11 +74,13 @@ OF SUCH DAMAGE.
 
 #include <pthread.h>
 
-#include "debug.h"
 #include "SinglyLinkedList.h"
+#include "bf.h"
+#include "debug.h"
 
 /* extra AscendFunc_t argments */
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    #include "OutputBuffers.h"
     #define timestamp_sig  , struct OutputBuffers *timestamp_buffers
     #define timestamp_args , timestamp_buffers
 #else

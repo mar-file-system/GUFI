@@ -114,12 +114,12 @@ TEST(OutputBuffer, use) {
     EXPECT_STREQ(buf, STR);
 
     // one copy in the buffer
-    EXPECT_STREQ((char *) obuf.buf, STR);
+    EXPECT_EQ(memcmp((char *) obuf.buf, STR, LEN), 0);
 
     EXPECT_NO_THROW(OutputBuffer_destroy(&obuf));
 }
 
-TEST(OutputBuffers, usse) {
+TEST(OutputBuffers, use) {
     pthread_mutex_t mutex;
     ASSERT_EQ(pthread_mutex_init(&mutex, nullptr), 0);
 

@@ -105,10 +105,10 @@ struct start_end {
 /* nanoseconds since an unspecified epoch */
 uint64_t since_epoch(struct timespec * ts);
 
-/* Get number of seconds between two events recorded in struct timespecs */
-uint64_t elapsed(struct start_end * se);
+/* Get number of nanoseconds between two events recorded in struct timespecs */
+uint64_t nsec(struct start_end * se);
 
-long double sec(uint64_t nsec);
+long double sec(uint64_t ns);
 
 int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const size_t size, const char * name, struct start_end * se);
 
@@ -166,7 +166,7 @@ int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const
 #endif /* PER_THREAD_STATS */
 
 #define timestamp_elapsed(name)                             \
-    elapsed(&timestamp_get_name(name))
+    nsec(&timestamp_get_name(name))
 
 #define timestamp_destroy(obs)                              \
     OutputBuffers_flush_to_single(obs, stderr);             \

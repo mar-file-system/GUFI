@@ -359,7 +359,7 @@ if (RPMBUILD)
 
   # get the architecture of this machine
   # assumes that we are not cross compiling
-  find_program(UNAME uname)
+  find_program(UNAME uname) # REQUIRED option was not added until 3.18
   if (NOT UNAME)
     message(FATAL_ERROR "uname not found. Cannot build RPMs.")
   endif()

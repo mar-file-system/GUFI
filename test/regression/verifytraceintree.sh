@@ -92,7 +92,7 @@ cleanup
 OUTPUT="verifytraceintree.out"
 
 function replace() {
-    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
+    echo "$@" | sed "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
 }
 
 (
@@ -131,7 +131,7 @@ replace "$ verifytraceintree ${BADTRACE} \"${DELIM}\" ${INDEXROOT}"
 ${ROOT}/contrib/verifytraceintree "${BADTRACE}" "${DELIM}" "${INDEXROOT}"
 echo
 
-) |& tee "${OUTPUT}"
+) |& sed '/qptpool.*/d' | tee "${OUTPUT}"
 
-diff -b ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
+diff ${ROOT}/test/regression/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"

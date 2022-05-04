@@ -197,7 +197,7 @@ uint64_t buffer_sum(struct sll * timers) {
     uint64_t sum = 0;
     sll_loop(timers, node) {
         struct start_end * timer = (struct start_end *) sll_node_data(node);
-        sum += elapsed(timer);
+        sum += nsec(timer);
     }
 
     return sum;
@@ -213,7 +213,7 @@ uint64_t buffer_sum(struct sll * timers) {
 
 #endif
 #else
-struct sll * descend_timers_init() {}
+struct sll *descend_timers_init() { return NULL; }
 void descend_timers_destroy(struct sll * dt) {}
 #define buffered_start(name)
 #define buffered_end(name)

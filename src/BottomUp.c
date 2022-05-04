@@ -78,12 +78,11 @@ processed before processing the current one
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "bf.h"
 #include "BottomUp.h"
-#include "dbutils.h"
-#include "debug.h"
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
+#include "dbutils.h"
+#include "debug.h"
 #include "utils.h"
 
 
@@ -178,7 +177,7 @@ static struct BottomUp *track(const char *name, const size_t name_len,
                               const size_t level) {
     struct BottomUp *copy = malloc(user_struct_size);
 
-    memcpy(copy->name, name, name_len + 1);
+    memcpy(copy->name, name, name_len + 1); /* NULL terminate */
     copy->name_len = name_len;
 
     copy->level = level;
@@ -229,13 +228,19 @@ int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *ar
             break;
         }
 
-        if ((strncmp(entry->d_name, ".",  2) == 0) ||
-            (strncmp(entry->d_name, "..", 3) == 0)) {
-            continue;
+        const size_t name_len = strlen(entry->d_name);
+        if (name_len < 3) {
+            if ((strncmp(entry->d_name, ".",  1) == 0) ||
+                (strncmp(entry->d_name, "..", 2) == 0)) {
+                continue;
+            }
         }
 
         struct BottomUp new_work;
-        new_work.name_len = SNPRINTF(new_work.name, MAXPATH, "%s/%s", bu->name, entry->d_name);
+        new_work.name_len = SNFORMAT_S(new_work.name, MAXPATH, 3,
+                                       bu->name, bu->name_len,
+                                       "/", (size_t) 1,
+                                       entry->d_name, name_len);
 
         timestamp_start(lstat_entry);
         struct stat st;
@@ -335,9 +340,9 @@ int parallel_bottomup(char **root_names, size_t root_count,
     #endif
 
     struct QPTPool *pool = QPTPool_init(thread_count
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , timestamp_buffers
-                                         #endif
+                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                        , timestamp_buffers
+                                        #endif
     );
 
     if (!pool) {

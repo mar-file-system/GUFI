@@ -90,8 +90,8 @@ struct DirStats {
     size_t subdir_count;    /* unrolled up count from readdir, not summary */
     size_t subnondir_count; /* rolled up count from entries and subdir.pentries */
 
-    int too_many_before;    /* current directory is too big to roll up */
-    int too_many_after;     /* rolling up would result in too many rows in pentries */
+    size_t too_many_before; /* current directory is too big to roll up */
+    size_t too_many_after;  /* rolling up would result in too many rows in pentries */
     int score;              /* roll up score regardless of success or failure */
     int success;            /* whether or not the roll up succeeded */
 };
@@ -214,8 +214,8 @@ do {                                                                     \
 
 void print_stanza(const char * name, struct sll * stats) {
     fprintf(stdout, "%s %*zu\n", name, (int) (29 - strlen(name)), sll_get_size(stats));
-    sll_dir_stats("Subdirectories", stats, subdir_count,    10);
-    sll_dir_stats("Files/Links",    stats, subnondir_count, 10);
+    sll_dir_stats("Subdirectories", stats, subdir_count,    (size_t) 10);
+    sll_dir_stats("Files/Links",    stats, subnondir_count, (size_t) 10);
     sll_dir_stats("Level",          stats, level,           10);
 }
 
@@ -842,7 +842,7 @@ int main(int argc, char * argv[]) {
     free(stats);
 
     timestamp_set_end_raw(runtime);
-    fprintf(stderr, "Took %.2Lf seconds\n", sec(elapsed(&runtime)));
+    fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
 
     return rc;
 }
