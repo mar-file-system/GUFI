@@ -90,10 +90,10 @@ extern int errno;
 
 static int create_tables(const char *name, sqlite3 *db, void * args) {
      printf("writetsum %d\n", in.writetsum);
-    if ((create_table_wrapper(name, db, "tsql",        tsql,        NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir,   NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser,  NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup, NULL, NULL) != SQLITE_OK)) {
+    if ((create_table_wrapper(name, db, "tsql",        tsql)        != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)   != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)  != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup) != SQLITE_OK)) {
         return -1;
     }
 

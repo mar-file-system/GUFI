@@ -96,12 +96,12 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
 extern int errno;
 
 static int create_tables(const char *name, sqlite3 *db, void *args) {
-    if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+    if ((create_table_wrapper(name, db, "esql",        esql)       != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "ssql",        ssql)       != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",    vssqldir)   != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",   vssqluser)  != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vesql",       vesql)      != SQLITE_OK)) {
         return -1;
     }
 

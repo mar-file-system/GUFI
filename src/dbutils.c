@@ -155,9 +155,9 @@ sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn)
   return db;
 }
 
-int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql, int (*callback)(void*,int,char**,char**), void *args) {
+int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql) {
     char *err_msg = NULL;
-    const int rc = sqlite3_exec(db, sql, callback, args, &err_msg);
+    const int rc = sqlite3_exec(db, sql, NULL, NULL, &err_msg);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "%s:%d SQL error while executing '%s' on %s: '%s' (%d)\n",
                 __FILE__, __LINE__, sql_name, name, err_msg, rc);

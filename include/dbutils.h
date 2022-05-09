@@ -94,7 +94,7 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
 
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn);
 
-int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql, int (*callback)(void*,int,char**,char**), void *args);
+int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql);
 
 int set_db_pragmas(sqlite3 *db);
 
