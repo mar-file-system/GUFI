@@ -89,9 +89,9 @@ size_t total_files = 0;
 #endif
 
 struct ThreadArgs {
+    trie_t *skip;
     struct template_db db;
     struct template_db xattr;
-    trie_t *skip;
 };
 
 struct nondir_args {

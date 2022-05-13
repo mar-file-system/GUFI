@@ -70,13 +70,14 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 
 // allocate the array of FILE * and open file
-FILE ** outfiles_init(FILE ** files, const int openfiles, char * prefix, const int count) {
-    if (!files) {
-        return NULL;
-    }
+FILE **outfiles_init(const int openfiles, char *prefix, const size_t count) {
+    FILE **files = calloc(count, sizeof(FILE *));
+    /* if (!files) { */
+    /*     return NULL; */
+    /* } */
 
     if (openfiles) {
-        for(int i = 0; i < count; i++) {
+        for(size_t i = 0; i < count; i++) {
             char buf[MAXPATH];
             SNPRINTF(buf, MAXPATH, "%s.%d", prefix, i);
             if (!(files[i] = fopen(buf, "w"))) {
@@ -88,19 +89,24 @@ FILE ** outfiles_init(FILE ** files, const int openfiles, char * prefix, const i
     }
     else {
         // default to stdout
-        for(int i = 0; i < count; i++) {
+        for(size_t i = 0; i < count; i++) {
             files[i] = stdout;
         }
     }
+
     return files;
 }
 
 // close all output files
-int outfiles_fin(FILE ** files, const int end) {
+int outfiles_fin(FILE **files, const size_t end) {
     if (files) {
-        for(int i = 0; i < end; i++) {
-            fclose(files[i]);
+        for(size_t i = 0; i < end; i++) {
+            fflush(files[i]);
+            if (files[i] != stdout) {
+                fclose(files[i]);
+            }
         }
+        free(files);
     }
     return 0;
 }

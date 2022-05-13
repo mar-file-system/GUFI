@@ -361,6 +361,7 @@ static size_t descend2(struct QPTPool *ctx,
 /* sqlite3_exec callback argument data */
 struct CallbackArgs {
     struct OutputBuffers *output_buffers; /* buffers for printing into before writing to stdout */
+    FILE **outfiles;
     int id;                               /* thread id */
     size_t rows;                          /* number of rows returned by the query */
     /* size_t printed;                    /\* number of records printed by the callback *\/ */
@@ -376,7 +377,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
     const int id = ca->id;
     struct OutputBuffers *obs = ca->output_buffers;
 
-    /* if (gts.outfd[id]) { */
+    /* if (ca->outfiles[id]) { */
     if (obs) {
         size_t *lens = malloc(count * sizeof(size_t));
         size_t row_len = count + 1; /* one delimiter per column + newline */
@@ -395,7 +396,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
             if (obs->mutex) {
                 pthread_mutex_lock(obs->mutex);
             }
-            OutputBuffer_flush(ob, gts.outfd[id]);
+            OutputBuffer_flush(ob, ca->outfiles[id]);
             if (obs->mutex) {
                 pthread_mutex_unlock(obs->mutex);
             }
@@ -409,11 +410,11 @@ static int print_callback(void *args, int count, char **data, char **columns) {
             }
             for(int i = 0; i < count; i++) {
                 if (data[i]) {
-                    fwrite(data[i], sizeof(char), lens[i], gts.outfd[id]);
+                    fwrite(data[i], sizeof(char), lens[i], ca->outfiles[id]);
                 }
-                fwrite(in.delim, sizeof(char), 1, gts.outfd[id]);
+                fwrite(in.delim, sizeof(char), 1, ca->outfiles[id]);
             }
-            fwrite("\n", sizeof(char), 1, gts.outfd[id]);
+            fwrite("\n", sizeof(char), 1, ca->outfiles[id]);
             obs->buffers[id].count++;
             if (obs->mutex) {
                 pthread_mutex_unlock(obs->mutex);
@@ -453,6 +454,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 struct ThreadArgs {
     struct OutputBuffers output_buffers;
     trie_t *skip;
+    FILE **outfiles;
     size_t *queries; /* per thread query count, not including -T, -S, and -E */
     int (*print_callback_func)(void*,int,char**,char**);
     #ifdef DEBUG
@@ -462,26 +464,27 @@ struct ThreadArgs {
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
 #ifdef SQL_EXEC
-#define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)    \
-do {                                                                    \
-    struct CallbackArgs ca;                                             \
-    ca.output_buffers = obufs;                                          \
-    ca.id = id;                                                         \
-    ca.rows = 0;                                                        \
-    /* ca.printed = 0; */                                               \
-                                                                        \
-    timestamp_set_start(ts_name);                                       \
-    char *err = NULL;                                                   \
-    if (sqlite3_exec(db, query, callback, &ca, &err) != SQLITE_OK) {    \
-        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query); \
-    }                                                                   \
-    timestamp_set_end(ts_name);                                         \
-    sqlite3_free(err);                                                  \
-                                                                        \
-    rc = ca.rows;                                                       \
+#define querydb(dbname, db, query, callback, obufs, ofiles, id, ts_name, rc)   \
+do {                                                                           \
+    struct CallbackArgs ca;                                                    \
+    ca.output_buffers = obufs;                                                 \
+    ca.outfiles = ofiles;                                                      \
+    ca.id = id;                                                                \
+    ca.rows = 0;                                                               \
+    /* ca.printed = 0; */                                                      \
+                                                                               \
+    timestamp_set_start(ts_name);                                              \
+    char *err = NULL;                                                          \
+    if (sqlite3_exec(db, query, callback, &ca, &err) != SQLITE_OK) {           \
+        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query);        \
+    }                                                                          \
+    timestamp_set_end(ts_name);                                                \
+    sqlite3_free(err);                                                         \
+                                                                               \
+    rc = ca.rows;                                                              \
 } while (0)
 #else
-#define querydb(dbname, db, query, callback, obufs, id, ts_name, rc)
+#define querydb(dbname, db, query, callback, obufs, ofiles, id, ts_name, rc)
 #endif
 
 int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
@@ -606,7 +609,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             /* make sure the treesummary table exists */
             querydb(dbname, db, "select name from sqlite_master where type=\'table\' and name='treesummary';",
                     ta->print_callback_func, NULL,
-                    id, sqltsumcheck, recs);
+                    NULL, id, sqltsumcheck, recs);
 
             if (recs < 1) {
                 recs = -1;
@@ -615,7 +618,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                 /* run in.sqltsum */
                 querydb(dbname, db, in.sqltsum,
                         ta->print_callback_func, &ta->output_buffers,
-                        id, sqltsum, recs);
+                        ta->outfiles, id, sqltsum, recs);
             }
         }
       /* this is an OR or we got a record back. go on to summary/entries */
@@ -682,7 +685,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
                     querydb(dbname, db, in.sqlsum,
                             ta->print_callback_func, &ta->output_buffers,
-                            id, sqlsum, recs);
+                            ta->outfiles, id, sqlsum, recs);
                 } else {
                     recs = 1;
                 }
@@ -700,7 +703,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
                         querydb(dbname, db, in.sqlent,
                                 ta->print_callback_func, &ta->output_buffers,
-                                id, sqlent, recs); /* recs is not used */
+                                ta->outfiles, id, sqlent, recs); /* recs is not used */
                     }
                 }
             }
@@ -1016,12 +1019,14 @@ int main(int argc, char *argv[])
     }
 
     const size_t output_count = in.maxthreads + !!(in.show_results == AGGREGATE);
-    if (!outfiles_init(gts.outfd,  in.outfile, in.outfilen, output_count)                              ||
-        !outdbs_init  (gts.outdbd, in.outdb,   in.outdbn,   in.maxthreads, in.sqlinit, in.sqlinit_len) ||
-        !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size, print_mutex))    {
+    args.outfiles = outfiles_init(in.outfile, in.outfilen, output_count);
+
+    if (!args.outfiles                                                                              ||
+        !outdbs_init(gts.outdbd, in.outdb, in.outdbn, in.maxthreads, in.sqlinit, in.sqlinit_len)    ||
+        !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size, print_mutex)) {
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
-        outfiles_fin(gts.outfd, output_count);
+        outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
     }
@@ -1053,7 +1058,7 @@ int main(int argc, char *argv[])
         if (!(aggregate = aggregate_init(aggregate_name, in.maxthreads))) {
             OutputBuffers_destroy(&args.output_buffers);
             outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
-            outfiles_fin(gts.outfd, output_count);
+            outfiles_fin(args.outfiles, output_count);
             trie_free(args.skip);
             return -1;
         }
@@ -1086,7 +1091,7 @@ int main(int argc, char *argv[])
         free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
-        outfiles_fin(gts.outfd, output_count);
+        outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
     }
@@ -1096,7 +1101,7 @@ int main(int argc, char *argv[])
         free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
-        outfiles_fin(gts.outfd, output_count);
+        outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
     }
@@ -1210,7 +1215,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* clear out buffered data */
-    OutputBuffers_flush_to_multiple(&args.output_buffers, gts.outfd);
+    OutputBuffers_flush_to_multiple(&args.output_buffers, args.outfiles);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     size_t rows = 0;
@@ -1223,7 +1228,7 @@ int main(int argc, char *argv[])
     free(args.queries);
     OutputBuffers_destroy(&args.output_buffers);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
-    outfiles_fin(gts.outfd, output_count);
+    outfiles_fin(args.outfiles, output_count);
     trie_free(args.skip);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
