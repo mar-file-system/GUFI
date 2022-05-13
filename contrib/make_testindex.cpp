@@ -618,7 +618,7 @@ std::size_t random_from_bucket(const std::size_t seed,
 }
 
 template <typename DirGenerator, typename DBGenerator, typename BucketDistribution>
-int generatedir(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int generatedir(struct QPTPool * ctx, const size_t id, void * data, void *) {
     ThreadArgs *arg = (ThreadArgs *) data;
     if (!arg) {
         return 1;

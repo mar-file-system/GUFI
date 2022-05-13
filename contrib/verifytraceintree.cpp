@@ -124,7 +124,7 @@ struct CheckStanzaArgs {
     std::vector <std::istream *> traces;
 };
 
-int check_stanza(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int check_stanza(struct QPTPool *, const size_t id, void * data, void * args) {
     struct CheckStanzaArgs * csa = static_cast <struct CheckStanzaArgs *> (args);
     std::istream & trace = *(csa->traces[id]);
 
