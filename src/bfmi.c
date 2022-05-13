@@ -137,6 +137,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
     struct group *lmygrp;
     char myinsql[MAXSQL];
 
+    FILE **outfile = (FILE **) args;
+
     // get thread id so we can get access to thread state we need to keep until the thread ends
     //printf("id is %zu\n",id);
 
@@ -276,19 +278,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 int processinit(struct QPTPool * ctx) {
      struct work * mywork = malloc(sizeof(struct work));
      int i;
-     char outfn[MAXPATH];
      FILE *robinfd;
      char tchar[256];
-
-     //open up the output files if needed
-     if (in.outfile > 0) {
-       i=0;
-       while (i < in.maxthreads) {
-         SNPRINTF(outfn,MAXPATH,"%s.%d",in.outfilen,i);
-         gts.outfd[i]=fopen(outfn,"w");
-         i++;
-       }
-     }
 
      // read in how we start off the first root query from robinhoodin file
      robinfd=fopen(msn.robinin,"r");
@@ -336,29 +327,19 @@ int processinit(struct QPTPool * ctx) {
      return 0;
 }
 
-int processfin() {
-     int i;
-
+int processfin(FILE **outfiles) {
      // close output files
      if (in.outfile > 0) {
-       i=0;
-       while (i < in.maxthreads) {
-         fclose(gts.outfd[i]);
-         i++;
-       }
+       outfiles_fin(outfiles, in.maxthreads);
      }
 
      // close mysql connections
-     i=0;
-     while (i < in.maxthreads) {
+     for(size_t i = 0; i < in.maxthreads; i++) {
        mysql_close(&msn.mysql[i]);
-       i++;
      }
 
      return 0;
 }
-
-
 
 int validate_inputs() {
    if (in.buildindex && !in.nameto[0]) {
@@ -412,6 +393,11 @@ int main(int argc, char *argv[])
     if (validate_inputs())
         return -1;
 
+    FILE **outfiles = outfiles_init(!!in.outname.len, in.outname, in.maxthreads);
+    if (!outfiles) {
+        return -1;
+    }
+
     struct QPTPool * pool = QPTPool_init(in.maxthreads
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , NULL
@@ -419,11 +405,13 @@ int main(int argc, char *argv[])
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        processfin(outfiles);
         return -1;
     }
 
-    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, outfiles) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
+        processfin(outfiles);
         return -1;
     }
 
@@ -433,7 +421,7 @@ int main(int argc, char *argv[])
 
     QPTPool_destroy(pool);
 
-    processfin();
+    processfin(outfiles);
 
     return 0;
 }
