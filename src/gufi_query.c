@@ -455,6 +455,7 @@ struct ThreadArgs {
     struct OutputBuffers output_buffers;
     trie_t *skip;
     FILE **outfiles;
+    sqlite3 **outdbs;
     size_t *queries; /* per thread query count, not including -T, -S, and -E */
     int (*print_callback_func)(void*,int,char**,char**);
     #ifdef DEBUG
@@ -557,9 +558,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     #if OPENDB
     timestamp_set_start(open_call);
-    if (gts.outdbd[id]) {
+    if (ta->outdbs[id]) {
       /* if we have an out db then only have to attach the gufi db */
-      db = gts.outdbd[id];
+      db = ta->outdbs[id];
       if (!attachdb(dbname, db, "tree", in.open_flags, 1)) {
           goto close_dir;
       }
@@ -713,7 +714,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #ifdef OPENDB
     timestamp_set_start(close_call);
     /* if we have an out db we just detach gufi db */
-    if (gts.outdbd[id]) {
+    if (ta->outdbs[id]) {
       detachdb(dbname, db, "tree");
     } else {
       closedb(db);
@@ -854,11 +855,11 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
  * the user must create the intermediate table with -I and insert into it
  * the per-thread databases reuse outdb array
  */
-static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
+static sqlite3 *aggregate_init(char *aggregate_name, struct ThreadArgs *ta, size_t count) {
     for(size_t i = 0; i < count; i++) {
         char intermediate_name[MAXSQL];
         SNPRINTF(intermediate_name, MAXSQL, AGGREGATE_NAME, (int) i);
-        if (!(gts.outdbd[i] = opendb(intermediate_name, SQLITE_OPEN_READWRITE, 1, 1
+        if (!(ta->outdbs[i] = opendb(intermediate_name, SQLITE_OPEN_READWRITE, 1, 1
                                      , NULL, NULL
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , NULL, NULL
@@ -866,16 +867,16 @@ static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
                                      #endif
                   ))) {
             fprintf(stderr, "Could not open %s\n", intermediate_name);
-            outdbs_fin(gts.outdbd, i, NULL, 0);
+            outdbs_fin(ta->outdbs, i, NULL, 0);
             return NULL;
         }
 
-        addqueryfuncs(gts.outdbd[i], i, NULL);
+        addqueryfuncs(ta->outdbs[i], i, NULL);
 
         /* create table */
-        if (sqlite3_exec(gts.outdbd[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
+        if (sqlite3_exec(ta->outdbs[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
             fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, intermediate_name);
-            outdbs_fin(gts.outdbd, i, NULL, 0);
+            outdbs_fin(ta->outdbs, i, NULL, 0);
             return NULL;
         }
     }
@@ -890,7 +891,7 @@ static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
                              #endif
               ))) {
         fprintf(stderr, "Could not open %s\n", aggregate_name);
-        outdbs_fin(gts.outdbd, count, NULL, 0);
+        outdbs_fin(ta->outdbs, count, NULL, 0);
         closedb(aggregate);
         return NULL;
     }
@@ -900,7 +901,7 @@ static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
     /* create table */
     if (sqlite3_exec(aggregate, in.create_aggregate, NULL, NULL, NULL) != SQLITE_OK) {
         fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
-        outdbs_fin(gts.outdbd, count, NULL, 0);
+        outdbs_fin(ta->outdbs, count, NULL, 0);
         closedb(aggregate);
         return NULL;
     }
@@ -1020,12 +1021,11 @@ int main(int argc, char *argv[])
 
     const size_t output_count = in.maxthreads + !!(in.show_results == AGGREGATE);
     args.outfiles = outfiles_init(in.outfile, in.outfilen, output_count);
-
-    if (!args.outfiles                                                                              ||
-        !outdbs_init(gts.outdbd, in.outdb, in.outdbn, in.maxthreads, in.sqlinit, in.sqlinit_len)    ||
+    args.outdbs = outdbs_init(in.outdb, in.outdbn, in.maxthreads, in.sqlinit, in.sqlinit_len);
+    if (!args.outfiles || !args.outdbs ||
         !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size, print_mutex)) {
         OutputBuffers_destroy(&args.output_buffers);
-        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
@@ -1055,9 +1055,9 @@ int main(int argc, char *argv[])
     char aggregate_name[MAXSQL];
     sqlite3 *aggregate = NULL;
     if (in.show_results == AGGREGATE) {
-        if (!(aggregate = aggregate_init(aggregate_name, in.maxthreads))) {
+        if (!(aggregate = aggregate_init(aggregate_name, &args, in.maxthreads))) {
             OutputBuffers_destroy(&args.output_buffers);
-            outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+            outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
             outfiles_fin(args.outfiles, output_count);
             trie_free(args.skip);
             return -1;
@@ -1090,7 +1090,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to initialize thread pool\n");
         free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
-        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
@@ -1100,7 +1100,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to start threads\n");
         free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
-        outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
@@ -1165,9 +1165,9 @@ int main(int argc, char *argv[])
 
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
-            if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1) ||
-                (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK))             {
-                fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
+            if (!attachdb(aggregate_name, args.outdbs[i], AGGREGATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1) ||
+                (sqlite3_exec(args.outdbs[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK))             {
+                fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(args.outdbs[i]));
             }
         }
 
@@ -1227,7 +1227,7 @@ int main(int argc, char *argv[])
     /* clean up globals */
     free(args.queries);
     OutputBuffers_destroy(&args.output_buffers);
-    outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
+    outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(args.outfiles, output_count);
     trie_free(args.skip);
 

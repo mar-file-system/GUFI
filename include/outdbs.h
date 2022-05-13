@@ -65,12 +65,14 @@ OF SUCH DAMAGE.
 #ifndef GUFI_OUTDBS_H
 #define GUFI_OUTDBS_H
 
+#include <stddef.h>
+
 #include <sqlite3.h>
 
-/* opens an array of sqlite3 *s; if opendbs == 0, uses stdout */
-sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit, const size_t sqlinit_len);
+/* opens an array of sqlite3 *s; if opendbs == 0, array contains NULLs */
+sqlite3 **outdbs_init(const int opendbs, char *prefix, const size_t count, const char *sqlinit, const size_t sqlinit_len);
 
 /* closes the sqlite3 *s */
-int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin, const size_t sqlfin_len);
+int outdbs_fin(sqlite3 **dbs, const size_t end, const char *sqlfin, const size_t sqlfin_len);
 
 #endif
