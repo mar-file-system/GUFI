@@ -72,65 +72,69 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 /* the array of db handles should already be allocated */
-sqlite3 ** outdbs_init(sqlite3 ** dbs, const int opendbs, char * prefix, const int count, const char * sqlinit, const size_t sqlinit_len) {
-    if (!dbs) {
-        return NULL;
+sqlite3 **outdbs_init(const int opendbs, char *prefix, const size_t count, const char *sqlinit, const size_t sqlinit_len) {
+    sqlite3 **dbs = calloc(count, sizeof(sqlite3 *));
+    /* if (!dbs) { */
+    /*     return NULL; */
+    /* } */
+
+    if (!opendbs) {
+        return dbs;
     }
 
-    for(int i = 0; i < count; i++) {
-        dbs[i] = NULL;
+    /* output results to database files */
+    for(size_t i = 0; i < count; i++) {
+        char buf[MAXPATH];
+        SNPRINTF(buf, MAXPATH, "%s.%d", prefix, i);
+        if (!(dbs[i] = opendb(buf, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
+                              , NULL, NULL
+                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                              , NULL, NULL
+                              , NULL, NULL
+                              #endif
+                              ))) {
+            outdbs_fin(dbs, i, NULL, 0);
+            fprintf(stderr, "Could not open output database file %s\n", buf);
+            return NULL;
+        }
     }
 
-    if (opendbs) {
-        for(int i = 0; i < count; i++) {
-            char buf[MAXPATH];
-            SNPRINTF(buf, MAXPATH, "%s.%d", prefix, i);
-            if (!(dbs[i] = opendb(buf, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
-                                  , NULL, NULL
-                                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                  , NULL, NULL
-                                  , NULL, NULL
-                                  #endif
-                                  ))) {
+    if (sqlinit && sqlinit_len) {
+        for(size_t i = 0; i < count; i++) {
+            char *err = NULL;
+            if (sqlite3_exec(dbs[i], sqlinit, NULL, NULL, &err) != SQLITE_OK) {
                 outdbs_fin(dbs, i, NULL, 0);
-                fprintf(stderr, "Could not open output database file %s\n", buf);
+                fprintf(stderr, "Initial SQL Error: %s\n", err);
+                sqlite3_free(err);
                 return NULL;
             }
-        }
-
-        if (sqlinit && sqlinit_len) {
-            for(int i = 0; i < count; i++) {
-                char * err = NULL;
-                if (sqlite3_exec(dbs[i], sqlinit, NULL, NULL, &err) != SQLITE_OK) {
-                    outdbs_fin(dbs, i, NULL, 0);
-                    fprintf(stderr, "Initial SQL Error: %s\n", err);
-                    sqlite3_free(err);
-                    return NULL;
-                }
-                sqlite3_free(err);
-            }
+            sqlite3_free(err);
         }
     }
+
     return dbs;
 }
 
 /* close all output dbs */
-int outdbs_fin(sqlite3 ** dbs, const int end, const char * sqlfin, const size_t sqlfin_len) {
-    if (dbs) {
-        if (sqlfin && sqlfin_len) {
-            for(int i = 0; i < end; i++) {
-                char * err = NULL;
-                if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {
-                    fprintf(stderr, "Final SQL Error: %s\n", err);
-                    /* ignore errors, since the database is closing anyways */
-                }
-                sqlite3_free(err);
-            }
-        }
+int outdbs_fin(sqlite3 **dbs, const size_t end, const char *sqlfin, const size_t sqlfin_len) {
+    /* if (!dbs) { */
+    /*    return 0; */
+    /* } */
 
-        for(int i = 0; i < end; i++) {
-            closedb(dbs[i]);
+    if (sqlfin && sqlfin_len) {
+        for(size_t i = 0; i < end; i++) {
+            char *err = NULL;
+            if (sqlite3_exec(dbs[i], sqlfin, NULL, NULL, &err) != SQLITE_OK) {
+                fprintf(stderr, "Final SQL Error: %s\n", err);
+                /* ignore errors, since the database is closing anyways */
+            }
+            sqlite3_free(err);
         }
     }
+
+    for(size_t i = 0; i < end; i++) {
+        closedb(dbs[i]);
+    }
+
     return 0;
 }
