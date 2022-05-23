@@ -8,7 +8,7 @@ set -e
 googletest_name="googletest"
 googletest_prefix="${INSTALL_DIR}/${googletest_name}"
 if [[ ! -d "${googletest_prefix}" ]]; then
-    googletest_build="${BUILD_DIR}/googletest-master"
+    googletest_build="${BUILD_DIR}/googletest-main"
     if [[ ! -d "${googletest_build}" ]]; then
         googletest_tarball="${DOWNLOAD_DIR}/googletest.tar.gz"
         if [[ ! -f "${googletest_tarball}" ]]; then
@@ -24,6 +24,6 @@ if [[ ! -d "${googletest_prefix}" ]]; then
     if [[ ! -f Makefile ]]; then
         $CMAKE .. -DCMAKE_INSTALL_PREFIX="${googletest_prefix}" -DBUILD_GMOCK=OFF
     fi
-    make
+    make -j "${THREADS}"
     make install
 fi

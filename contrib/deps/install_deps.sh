@@ -17,6 +17,7 @@ else
   exit 1
 fi
 
+THREADS="1"
 BUILD_CXX="false"
 PARAMIKO="false"
 
@@ -28,19 +29,21 @@ do
 key="$1"
 
 case $key in
+    --threads)
+        THREADS="$2"
+        shift # past count
+        ;;
     --cxx)
-    BUILD_CXX="true"
-    shift # past argument
-    ;;
+        BUILD_CXX="true"
+        ;;
     --paramiko)
-    PARAMIKO="true"
-    shift # past argument
-    ;;
+        PARAMIKO="true"
+        ;;
     *)    # unknown option
-    POSITIONAL+=("$1") # save it in an array for later
-    shift # past argument
-    ;;
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
 esac
+    shift # past flag
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -65,6 +68,7 @@ export DOWNLOAD_DIR
 export BUILD_DIR
 export INSTALL_DIR
 export CMAKE
+export THREADS
 
 echo "Installing SQLite3"
 . ${SCRIPT_PATH}/sqlite3.sh

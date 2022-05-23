@@ -25,6 +25,6 @@ if [[ ! -d "${jemalloc_prefix}" ]]; then
     if [[ ! -f Makefile ]]; then
         ../configure --prefix="${jemalloc_prefix}"
     fi
-    make
+    make -j "${THREADS}"
     make -i install
 fi
