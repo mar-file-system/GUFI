@@ -12,7 +12,7 @@ if [[ ! -d "${googletest_prefix}" ]]; then
     if [[ ! -d "${googletest_build}" ]]; then
         googletest_tarball="${DOWNLOAD_DIR}/googletest.tar.gz"
         if [[ ! -f "${googletest_tarball}" ]]; then
-            wget https://github.com/google/googletest/archive/master.tar.gz -O "${googletest_tarball}"
+            wget https://github.com/google/googletest/archive/main.tar.gz -O "${googletest_tarball}"
         fi
 
         tar -xf "${googletest_tarball}" -C "${BUILD_DIR}"
