@@ -143,13 +143,13 @@ $ gufi_find -type f -size 2048
 
 $ gufi_find -type f --smallest
 empty_file
-.hidden
 directory/executable
 directory/readonly
 directory/subdirectory/repeat_name
 directory/writable
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
+.hidden
 old_file
 repeat_name
 unusual, name?#
@@ -159,13 +159,13 @@ unusual, name?#
 $ gufi_find -type f --largest
 1MB
 1KB
-.hidden
 directory/executable
 directory/readonly
 directory/subdirectory/repeat_name
 directory/writable
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
+.hidden
 old_file
 repeat_name
 unusual, name?#

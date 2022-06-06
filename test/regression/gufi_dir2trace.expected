@@ -1,4 +1,5 @@
-$ gufi_dir2trace -d "|" -n 2 -x -o "prefix.trace" "prefix"
+$ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
+
 Expecting 2 trace files. Found 2.
 Expecting 19 lines. Got 19.
 Expecting 23 columns per row. Got 23.

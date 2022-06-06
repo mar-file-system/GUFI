@@ -64,19 +64,22 @@
 
 # source this file in regression test scripts
 
-if [[ "$#" -lt 3 ]]
+set -e
+
+if [[ "$#" -ne "1" ]]
 then
-    echo "Syntax: $0 root srcdir indexroot"
+    echo "Syntax: $0 <generate tree>" 1>&2
     exit 1
 fi
 
-ROOT="$1"
-SRCDIR="$2"
-INDEXROOT="$3"
-CONFIG="$(realpath config.test)"
+GENERATE_INDEX="$1"
+SRCDIR="prefix"
+TRACE="trace"
+INDEXROOT="${SRCDIR}.gufi"
 
+# always clean up
 function setup_cleanup {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${INDEXROOT}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${INDEXROOT}"
 }
 
 trap setup_cleanup EXIT
@@ -85,18 +88,84 @@ setup_cleanup
 
 umask 002
 export LC_ALL=C
-export PATH=${ROOT}/scripts:${PATH}
-export PYTHONPATH=${ROOT}/scripts:${ROOT}/test/regression:${PYTHONPATH}
+export PATH=@CMAKE_BINARY_DIR@/scripts:${PATH}
+export PYTHONPATH=@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test/regression:${PYTHONPATH}
 
 # generate a fake config file
+CONFIG="@CMAKE_CURRENT_BINARY_DIR@/config.test"
 echo "Threads=1" > ${CONFIG}
-echo "Executable=${ROOT}/src/gufi_query" >> ${CONFIG}
+echo "Executable=@CMAKE_BINARY_DIR@/src/gufi_query" >> ${CONFIG}
 echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
 echo "OutputBuffer=4096" >> ${CONFIG}
 chmod 666 ${CONFIG}
 
-# generate the tree
-${ROOT}/test/regression/generatetree.sh "${SRCDIR}"
+# paths of all executables
+GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
+GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
+GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
+GUFI_FIND="@CMAKE_CURRENT_BINARY_DIR@/gufi_find.py"
+GUFI_GETFATTR="@CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.py"
+GUFI_LS="@CMAKE_CURRENT_BINARY_DIR@/gufi_ls.py"
+GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
+GUFI_STAT="@CMAKE_BINARY_DIR@/src/gufi_stat"
+GUFI_STATS="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.py"
+GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
+QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
+ROLLUP="@CMAKE_BINARY_DIR@/src/rollup"
+UNROLLUP="@CMAKE_BINARY_DIR@/src/unrollup"
+VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
+VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
-# generate the index
-${ROOT}/src/gufi_dir2index -x "${SRCDIR}" "${INDEXROOT}"
+# only replaces executables and whitespace
+function replace() {
+    @SED@ "
+    s/${GENERATETREE//\//\\/}/generatetree/g;
+    s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
+    s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
+    s/${GUFI_FIND//\//\\/}/gufi_find/g;
+    s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
+    s/${GUFI_LS//\//\\/}/gufi_ls/g;
+    s/${GUFI_QUERY//\//\\/}/gufi_query/g;
+    s/${GUFI_STAT//\//\\/}/gufi_stat/g
+    s/${GUFI_STATS//\//\\/}/gufi_stats/g;
+    s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
+    s/${QUERYDBS//\//\\/}/querydbs/g;
+    s/${ROLLUP//\//\\/}/rollup/g;
+    s/${UNROLLUP//\//\\/}/unrollup/g;
+    s/${VERIFYTRACE//\//\\/}/verifytrace/g;
+    s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
+
+    s/[[:space:]]*$//g;
+    "
+}
+
+function replace_output() {
+    @SED@  "
+    s/${INDEXROOT//\//\\/}\\///g;
+    s/${INDEXROOT//\//\\/}/./g;
+    s/${SRCDIR//\//\\/}\\///g;
+    s/${SRCDIR//\//\\/}/./g;
+    s/\\\"\./\\\"${SRCDIR//\//\\/}/g;
+    "
+}
+
+function run_sort() {
+    echo "$ $@" |& replace
+    eval "$@"   |& replace | replace_output | sort
+    echo
+}
+
+function run_no_sort() {
+    echo "$ $@" | replace
+    eval "$@"   |& replace | replace_output
+    echo
+}
+
+if [[ "${GENERATE_INDEX}" == "1" ]]
+then
+    # generate the tree
+    ${GENERATETREE} "${SRCDIR}"
+
+    # generate the index
+    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
+fi

@@ -62,44 +62,23 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
-ROLLUP="${ROOT}/src/rollup"
-GUFI_QUERY="${ROOT}/src/gufi_query"
-GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
-GUFI_LS="${ROOT}/test/regression/gufi_ls.py"
-GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 TMP="tmp"
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
-
 OUTPUT="rollup.out"
 
 function cleanup() {
-    rm -rf "${TMP}" "${SRCDIR}" "${INDEXROOT}"
+    rm -rf "${TMP}"
 }
 
-trap cleanup EXIT
+function cleanup_exit {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
 
 cleanup
-
-function replace() {
-    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${GUFI_LS//\//\\/}/gufi_ls/g; s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/${INDEXROOT//\//\\/}\\//prefix.gufi\\//g; s/\\/${SRCDIR//\//\\/}/./g;"
-}
-
-function run() {
-    replace "$ $@"
-    replace "$($@)"
-    echo
-}
 
 (
 
@@ -184,75 +163,54 @@ rm -r ${TMP}
 ${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXROOT}
 ${ROLLUP} ${INDEXROOT}
 
-# get results from querying
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary\" \"${INDEXROOT}\" | wc -l"
-${GUFI_QUERY} -d " " -S "SELECT path(name) from summary" "${INDEXROOT}" | wc -l
-echo
+run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary;\" \"${INDEXROOT}\" | wc -l"
+run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
+run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary\" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
 
-replace "$ ${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
-${GUFI_QUERY} -d " " -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | wc -l
-echo
+run_no_sort "${GUFI_FIND} -type d | wc -l"
+run_no_sort "${GUFI_FIND} -type f | wc -l"
+run_no_sort "${GUFI_FIND} | wc -l"
 
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary\" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
-${GUFI_QUERY} -d " " -S "SELECT path(name) from summary" -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | wc -l
-echo
-
-replace "$ ${GUFI_FIND} -type d | wc -l"
-${GUFI_FIND} -type d | wc -l
-echo
-
-replace "$ ${GUFI_FIND} -type f | wc -l"
-${GUFI_FIND} -type f | wc -l
-echo
-
-replace "$ ${GUFI_FIND} | wc -l"
-${GUFI_FIND} | wc -l
-echo
-
-# gufi_ls
-run "${GUFI_LS}"
-run "${GUFI_LS} o+rx"
-run "${GUFI_LS} o+rx/o+rx"
-run "${GUFI_LS} o+rx/ugo"
-run "${GUFI_LS} o+rx/ug"
-run "${GUFI_LS} o+rx/u"
-run "${GUFI_LS} ugo"
-run "${GUFI_LS} ugo/o+rx"
-run "${GUFI_LS} ugo/ugo"
-run "${GUFI_LS} ugo/ug"
-run "${GUFI_LS} ugo/u"
-run "${GUFI_LS} ug"
-run "${GUFI_LS} ug/o+rx"
-run "${GUFI_LS} ug/ugo"
-run "${GUFI_LS} ug/ug"
-run "${GUFI_LS} ug/u"
-run "${GUFI_LS} u"
-run "${GUFI_LS} u/o+rx"
-run "${GUFI_LS} u/ugo"
-run "${GUFI_LS} u/ug"
-run "${GUFI_LS} u/u"
+run_no_sort "${GUFI_LS}"
+run_no_sort "${GUFI_LS} o+rx"
+run_no_sort "${GUFI_LS} o+rx/o+rx"
+run_no_sort "${GUFI_LS} o+rx/ugo"
+run_no_sort "${GUFI_LS} o+rx/ug"
+run_no_sort "${GUFI_LS} o+rx/u"
+run_no_sort "${GUFI_LS} ugo"
+run_no_sort "${GUFI_LS} ugo/o+rx"
+run_no_sort "${GUFI_LS} ugo/ugo"
+run_no_sort "${GUFI_LS} ugo/ug"
+run_no_sort "${GUFI_LS} ugo/u"
+run_no_sort "${GUFI_LS} ug"
+run_no_sort "${GUFI_LS} ug/o+rx"
+run_no_sort "${GUFI_LS} ug/ugo"
+run_no_sort "${GUFI_LS} ug/ug"
+run_no_sort "${GUFI_LS} ug/u"
+run_no_sort "${GUFI_LS} u"
+run_no_sort "${GUFI_LS} u/o+rx"
+run_no_sort "${GUFI_LS} u/ugo"
+run_no_sort "${GUFI_LS} u/ug"
+run_no_sort "${GUFI_LS} u/u"
 
 echo "# 1 less because gufi_ls does not list the input dir"
-replace  $ "${GUFI_LS} -R | wc -l"
-${GUFI_LS} -R | wc -l
-echo
+run_no_sort "${GUFI_LS} -R | wc -l"
 
-# gufi_stats
-run "${GUFI_STATS}    depth"
-run "${GUFI_STATS} -r depth"
+run_no_sort "${GUFI_STATS}    depth"
+run_no_sort "${GUFI_STATS} -r depth"
 
-run "${GUFI_STATS}    filecount"
-run "${GUFI_STATS} -r filecount"
+run_no_sort "${GUFI_STATS}    filecount"
+run_no_sort "${GUFI_STATS} -r filecount"
 
-run "${GUFI_STATS}    total-filecount"
-run "${GUFI_STATS} -c total-filecount"
+run_no_sort "${GUFI_STATS}    total-filecount"
+run_no_sort "${GUFI_STATS} -c total-filecount"
 
-run "${GUFI_STATS}    dircount"
-run "${GUFI_STATS} -r dircount"
+run_no_sort "${GUFI_STATS}    dircount"
+run_no_sort "${GUFI_STATS} -r dircount"
 
-run "${GUFI_STATS}    total-dircount"
-run "${GUFI_STATS} -c total-dircount"
+run_no_sort "${GUFI_STATS}    total-dircount"
+run_no_sort "${GUFI_STATS} -c total-dircount"
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/rollup.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/rollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

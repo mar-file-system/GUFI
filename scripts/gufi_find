@@ -275,10 +275,7 @@ def build_order_by(args, table):
         order_by += ['{}.size DESC'.format(table)]
 
     # order by name last so it doesnt break user requested ordering
-    if table in [SUMMARY, PENTRIES]:
-        order_by += ['path() ASC']
-    else:
-        order_by += ['({0}.path || "/" || {0}.name) ASC'.format(table)]
+    order_by += ['{}.name ASC'.format(table)]
 
     return order_by
 
@@ -413,7 +410,7 @@ def build_output(args, table):
 
     path = 'path'
     if not need_aggregation(args):
-        path += '()'
+        path += '({}.name)'.format(SUMMARY)
 
     if args.printf is not None:
         i = 0
@@ -443,15 +440,15 @@ def help(parser):
     expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
     expr = [expr[i:i+5] for i in range(0, len(expr), 5)]
 
-    print(('Usage: gufi_find [-P] [path...] [expression]\n' +
-           '\n' +
-           'default path is the current directory;\n' +
-           'expression may consist of:\n' +
-           '\n' +
-           '\n'.join(['    ' + ' '.join(row) for row in expr]) + '\n' +
-           '\n' +
-           'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
-           'page at https://github.com/mar-file-system/GUFI/issues\n'))
+    print('Usage: gufi_find [-P] [path...] [expression]\n' +
+          '\n' +
+          'default path is the current directory;\n' +
+          'expression may consist of:\n' +
+          '\n' +
+          '\n'.join(['    ' + ' '.join(row) for row in expr]) + '\n' +
+          '\n' +
+          'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
+          'page at https://github.com/mar-file-system/GUFI/issues\n')
 
     exit(0)
 
@@ -521,6 +518,7 @@ def build_expression_parser():
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
+    parser.add_argument('--aggregate-name',    metavar='name',       dest='aggregate_name',        type=str,                     default='aggregate',  help='Name of final database when aggregation is performed')
     parser.add_argument('--skip-file',         metavar='filename',   dest='skip',                  type=str,                     default=None,         help='Name of file containing directory basenames to skip')
 
     return parser
@@ -588,22 +586,19 @@ def run(argv, config_path):
 
     # create the query command
     query_cmd = [config.executable(),
-                 '-n', str(config.threads())]
+                 '-n', str(config.threads()),
+                 '-a',
+                 '-d', ' ']
 
-    S = None
-    E = None
-
-    # aggregation is required
     if need_aggregation(args):
-        columns = ['name', 'type', 'inode', 'mode', 'nlink', 'uid',
-                   'gid', 'size', 'blksize', 'blocks', 'atime',
-                   'mtime', 'ctime', 'linkname', 'xattr_names']
+        columns = ['type', 'inode', 'mode', 'nlink', 'uid', 'gid',
+                   'size', 'blksize', 'blocks', 'atime', 'mtime',
+                   'ctime', 'linkname', 'xattr_names']
 
         I = 'CREATE TABLE {0} ({1})'.format(
             args.inmemory_name,
             ', '.join(['id INTEGER PRIMARY KEY',
-                       'path TEXT',
-                       'name TEXT',     'type TEXT',
+                       'name TEXT', 'type TEXT',
                        'inode INT64',   'mode INT64',
                        'nlink INT64',   'uid INT64',
                        'gid INT64',     'size INT64',
@@ -614,7 +609,7 @@ def run(argv, config_path):
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path() as fullpath'] + ['{}.{}'.format(SUMMARY, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path({}.name)'.format(SUMMARY)] + ['{}.{}'.format(SUMMARY, column) for column in columns],
                                     [SUMMARY],
                                     build_where(args, SUMMARY),
                                     build_group_by(args, SUMMARY),
@@ -623,34 +618,48 @@ def run(argv, config_path):
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path() as fullpath'.format(SUMMARY)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path({}.name) || "/" || {}.name'.format(SUMMARY, PENTRIES)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
                                     [SUMMARY, PENTRIES],
                                     build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),
                                     build_order_by(args, PENTRIES),
                                     args.num_results))
 
-        J = "INSERT INTO aggregate.{0} {1}".format(
-            args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path as fullpath'] + columns,
+        K = 'CREATE TABLE {0} ({1})'.format(
+            args.aggregate_name,
+            ', '.join(['id INTEGER PRIMARY KEY',
+                       'name TEXT',     'type TEXT',
+                       'inode INT64',   'mode INT64',
+                       'nlink INT64',   'uid INT64',
+                       'gid INT64',     'size INT64',
+                       'blksize INT64', 'blocks INT64',
+                       'atime INT64',   'mtime INT64',
+                       'ctime INT64',   'linkname TEXT',
+                       'xattr_names TEXT']))
+
+        J = "INSERT INTO {0} {1}".format(
+            args.aggregate_name,
+            gufi_common.build_query(['NULL', 'name'] + columns,
                                     [args.inmemory_name],
                                     build_where(args, args.inmemory_name),
                                     build_group_by(args, args.inmemory_name),
                                     build_order_by(args, args.inmemory_name),
                                     args.num_results))
 
-        G = gufi_common.build_query(build_output(args, args.inmemory_name),
-                                    [args.inmemory_name],
-                                    build_where(args, args.inmemory_name),
-                                    build_group_by(args, args.inmemory_name),
-                                    build_order_by(args, args.inmemory_name),
+        G = gufi_common.build_query(['name'],
+                                    [args.aggregate_name],
+                                    build_where(args, args.aggregate_name),
+                                    build_group_by(args, args.aggregate_name),
+                                    build_order_by(args, args.aggregate_name),
                                     args.num_results)
 
         query_cmd += ['-e', '0',
                       '-I', I,
+                      '-S', S,
+                      '-E', E,
                       '-J', J,
+                      '-K', K,
                       '-G', G]
-
     else:
         S = gufi_common.build_query(build_output(args, SUMMARY),
                                     [SUMMARY],
@@ -665,11 +674,8 @@ def run(argv, config_path):
                                     build_group_by(args, PENTRIES),
                                     build_order_by(args, PENTRIES),
                                     args.num_results)
-
-    query_cmd += ['-S', S,
-                  '-E', E,
-                  '-a',
-                  '-d', ' ']
+        query_cmd += ['-S', S,
+                      '-E', E]
 
     if args.maxdepth is not None:
         query_cmd += ['-z', str(args.maxdepth)]

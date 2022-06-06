@@ -65,9 +65,7 @@ import os
 import sys
 
 # get root directory of GUFI
-root = os.path.abspath(__file__)
-for _ in range(3):
-    root = os.path.dirname(root)
+root = "@CMAKE_BINARY_DIR@"
 
 # test config file name
-config_path="config.test"
+config_path = "@CMAKE_CURRENT_BINARY_DIR@/config.test"

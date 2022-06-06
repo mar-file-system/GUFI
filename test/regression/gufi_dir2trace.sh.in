@@ -63,48 +63,36 @@
 
 
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
+function cleanup() {
+    rm -rf ${TRACE}.*
+}
 
-GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
+function cleanup_exit {
+    cleanup
+    setup_cleanup
+}
 
-# output paths
-SRCDIR="prefix"
-TRACE="${SRCDIR}.trace"
+trap cleanup_exit EXIT
+
+cleanup
 
 # trace delimiter
 DELIM="|"
 
-function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".*
-}
-
-trap cleanup EXIT
-
-cleanup
-
-export LC_ALL=C
-
 OUTPUT="gufi_dir2trace.out"
-
-function replace() {
-    echo "$@" | @SED@ "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
-}
 
 (
 # generate the tree
-${ROOT}/test/regression/generatetree.sh "${SRCDIR}"
+@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"
 
 # generate the trace
-replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
 
 # count output files
 expected=2
-found=$(find ${TRACE}.* | wc -l | awk '{print $1}')
+found=$(find ${TRACE}.* | wc -l)
 echo "Expecting ${expected} trace files. Found ${found}."
 
 # count lines
@@ -126,8 +114,7 @@ echo "Source Directory:"
 echo "${src}"   | awk '{ print "    " $1 }'
 echo "Trace File:"
 echo "${lines}" | awk '{ print "    " $1 }'
-
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/gufi_dir2trace.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"
 rm "${OUTPUT}"

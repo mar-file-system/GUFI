@@ -63,20 +63,7 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
-GUFI_QUERY="${ROOT}/src/gufi_query"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_dir2index.out"
 
@@ -126,5 +113,5 @@ do
 done
 
 sed -i "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" "${OUTPUT}"
-@DIFF@ ${ROOT}/test/regression/gufi_dir2index.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

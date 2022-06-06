@@ -63,61 +63,32 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-# gufi_find wrapper
-GUFI_FIND="${ROOT}/test/regression/gufi_find.py"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_find.out"
 
-function replace() {
-    echo "$@" | @SED@ "s/${GUFI_FIND//\//\\/}/gufi_find/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
-}
-
-function run_unsorted() {
-    replace "$ $@"
-    replace "$($@)"
-    echo
-}
-
-function run_sorted() {
-    replace "$ $@"
-    replace "$($@)" | sort
-    echo
-}
-
 (
-run_sorted   "${GUFI_FIND}"
-run_sorted   "${GUFI_FIND} -empty"
-run_sorted   "${GUFI_FIND} -type d"
-run_sorted   "${GUFI_FIND} -type f"
-run_sorted   "${GUFI_FIND} -type l"
-run_sorted   "${GUFI_FIND} -readable"
-run_sorted   "${GUFI_FIND} -writable"
-run_sorted   "${GUFI_FIND} -executable"
-run_sorted   "${GUFI_FIND} -mindepth 2"
-run_sorted   "${GUFI_FIND} -maxdepth 0"
+run_sort    "${GUFI_FIND}"
+run_sort    "${GUFI_FIND} -empty"
+run_sort    "${GUFI_FIND} -type d"
+run_sort    "${GUFI_FIND} -type f"
+run_sort    "${GUFI_FIND} -type l"
+run_sort    "${GUFI_FIND} -readable"
+run_sort    "${GUFI_FIND} -writable"
+run_sort    "${GUFI_FIND} -executable"
+run_sort    "${GUFI_FIND} -mindepth 2"
+run_sort    "${GUFI_FIND} -maxdepth 0"
 # don't include directories or links because their
 # sizes are not consistent across filesystems
-run_sorted   "${GUFI_FIND} -type f -size 1c"
-run_sorted   "${GUFI_FIND} -type f -size=-1c"
-run_sorted   "${GUFI_FIND} -type f -size +1c"
-run_sorted   "${GUFI_FIND} -type f -size +1024c"
-run_sorted   "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
-run_sorted   "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
-run_unsorted "${GUFI_FIND} -type f --smallest"
-run_unsorted "${GUFI_FIND} -type f --largest"
+run_sort    "${GUFI_FIND} -type f -size 1c"
+run_sort    "${GUFI_FIND} -type f -size=-1c"
+run_sort    "${GUFI_FIND} -type f -size +1c"
+run_sort    "${GUFI_FIND} -type f -size +1024c"
+run_sort    "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
+run_sort    "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
+run_no_sort "${GUFI_FIND} -type f --smallest"
+run_no_sort "${GUFI_FIND} -type f --largest"
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/gufi_find.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"

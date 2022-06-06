@@ -232,6 +232,7 @@ def run(argv, config_path):
     # GUFI specific arguments
     parser.add_argument('--delim',          metavar='c',          dest='delim',          type=gufi_common.get_char,         default=' ',   help='delimiter separating output columns')
     parser.add_argument('--in-memory-name', metavar='name',       dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
+    parser.add_argument('--aggregate-name', metavar='name',       dest='aggregate_name', type=str, default='aggregate',                    help='Name of final database when -R is used')
     parser.add_argument('--nlink-width',    metavar='chars',      dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
     parser.add_argument('--size-width',     metavar='chars',      dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
     parser.add_argument('--user-width',     metavar='chars',      dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
@@ -262,8 +263,8 @@ def run(argv, config_path):
                      '-n', str(config.threads())]
 
         if not args.recursive:
-                query_cmd += ['-y', '0',
-                              '-z', '1']
+            query_cmd += ['-y', '0',
+                          '-z', '1']
 
         query_cmd += []
 
@@ -300,26 +301,28 @@ def run(argv, config_path):
                                                                  None,
                                                                  None))
 
-        J = 'INSERT INTO aggregate.{0} {1}'.format(args.inmemory_name,
-                                                   gufi_common.build_query(['*'],
-                                                                           [args.inmemory_name],
-                                                                           None,
-                                                                           None,
-                                                                           None,
-                                                                           None))
+        J = 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                         gufi_common.build_query(['*'],
+                                                                 [args.inmemory_name],
+                                                                 None,
+                                                                 None,
+                                                                 None,
+                                                                 None))
+
+        K = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);'.format(args.aggregate_name)
 
         G = gufi_common.build_query(build_select(args),
-                                    [args.inmemory_name],
+                                    [args.aggregate_name],
                                     None,
                                     None,
                                     build_order_by(args),
                                     None)
 
-        query_cmd += ['-e', '0',
-                      '-I', I,
+        query_cmd += ['-I', I,
                       '-S', S,
                       '-E', E,
                       '-J', J,
+                      '-K', K,
                       '-G', G,
                       '-a',
                       '-B', str(config.outputbuffer())]

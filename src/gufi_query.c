@@ -895,7 +895,7 @@ static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
     addqueryfuncs(aggregate, count, NULL);
 
     /* create table */
-    if (sqlite3_exec(aggregate, strlen(in.create_aggregate)?in.create_aggregate:in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
+    if (sqlite3_exec(aggregate, in.create_aggregate, NULL, NULL, NULL) != SQLITE_OK) {
         fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
         outdbs_fin(gts.outdbd, count, NULL, 0);
         closedb(aggregate);
@@ -907,6 +907,62 @@ static sqlite3 *aggregate_init(char *aggregate_name, size_t count) {
 
 static void aggregate_fin(sqlite3 *aggregate) {
     closedb(aggregate);
+}
+
+int validate_inputs(struct input *in) {
+    if (in->outdb || in->show_results == AGGREGATE) {
+        /* -I (required) */
+        if (!in->sqlinit_len) {
+            fprintf(stderr, "Error: Missing -I\n");
+            return -1;
+        }
+    }
+
+    /* -T, -S, -E (at least 1) */
+    if ((!!in->sqltsum_len + !!in->sqlsum_len + !!in->sqlent_len) == 0) {
+        fprintf(stderr, "Error: Need at least one of -T, -S, or -E\n");
+        return -1;
+    }
+
+    /* not aggregating */
+    if (in->show_results == PRINT) {
+        if (in->create_aggregate_len) {
+            fprintf(stderr, "Warning: Got -K even though not aggregating. Ignoring\n");
+        }
+
+        if (in->intermediate_len) {
+            fprintf(stderr, "Warning: Got -J even though not aggregating. Ignoring\n");
+        }
+
+        if (in->aggregate_len) {
+            fprintf(stderr, "Warning: Got -G even though not aggregating. Ignoring\n");
+        }
+    }
+    /* aggregating */
+    else {
+        /* need -K to write per-thread results into */
+        if (!in->create_aggregate_len) {
+            fprintf(stderr, "Error: Missing -K\n");
+            return -1;
+        }
+
+        /* need -J to write to aggregate db */
+        if (!in->intermediate_len) {
+            fprintf(stderr, "Error: Missing -J\n");
+            return -1;
+        }
+
+        if (in->outfile) {
+            /* need -G to write out results */
+            if (!in->aggregate_len) {
+                fprintf(stderr, "Error: Missing -G\n");
+                return -1;
+            }
+        }
+        /* -G can be called when aggregating, but is not necessary */
+    }
+
+    return 0;
 }
 
 void sub_help() {
@@ -931,6 +987,10 @@ int main(int argc, char *argv[])
         sub_help();
     if (idx < 0)
         return -1;
+
+    if (validate_inputs(&in) != 0) {
+        return -1;
+    }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_start(setup_globals);
@@ -1101,7 +1161,7 @@ int main(int argc, char *argv[])
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
             if (!attachdb(aggregate_name, gts.outdbd[i], AGGREGATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1) ||
-                (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK))          {
+                (sqlite3_exec(gts.outdbd[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK))             {
                 fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(gts.outdbd[i]));
             }
         }
