@@ -63,17 +63,9 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 # output directories
-SRCDIR="prefix"
-TRACE="trace"
 BADTRACE="badtrace"
 
 # trace delimiter
@@ -81,32 +73,27 @@ DELIM="|"
 BADDELIM="?"
 
 function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${BADTRACE}"
+    rm -rf "${TRACE}".* "${BADTRACE}"
 }
 
-trap cleanup EXIT
+function cleanup_exit {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
 
 cleanup
 
-export LC_ALL=C
-
 OUTPUT="verifytrace.out"
 
-function replace() {
-    echo "$@" | @SED@ "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g"
-}
-
 (
-replace "# generate the tree"
-replace "$ generatetree ${SRCDIR}"
-${ROOT}/test/regression/generatetree.sh "${SRCDIR}" 2> /dev/null
-echo
+echo "# generate the tree"
+run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
-replace "# generate the trace"
-replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 \"${SRCDIR}\" \"${TRACE}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 "${SRCDIR}" "${TRACE}" 2> /dev/null
+echo "# generate the trace"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 \"${SRCDIR}\" \"${TRACE}\""
 cat ${TRACE}.* > "${TRACE}"
-echo
 
 # replace the numeric fields in the trace with 0s
 sed -i 's/[[:digit:]]\+/0/g' "${TRACE}"
@@ -117,58 +104,40 @@ sed -i "s/^leaf_directory${DELIM}d${DELIM}.*\$/leaf_directory${DELIM}d${DELIM}4$
 sed -i "s/^directory${DELIM}d${DELIM}.*\$/directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
 sed -i "s/^directory\\/subdirectory${DELIM}d${DELIM}.*\$/directory\\/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}/g" "${TRACE}"
 
-replace "# valid trace"
-replace "$ verifytrace \"${DELIM}\" ${TRACE}"
-replace $(${ROOT}/contrib/verifytrace "${DELIM}" "${TRACE}")
-echo
+echo "# valid trace"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${TRACE}\""
 
-replace "# wrong delimiter used"
-replace "$ verifytrace \"${BADDELIM}\" ${TRACE}"
-output=$(${ROOT}/contrib/verifytrace "${BADDELIM}" "${TRACE}" 2>&1)
-replace "${output}"
-echo
+echo "# wrong delimiter used"
+run_no_sort "${VERIFYTRACE} \"${BADDELIM}\" ${TRACE}"
 
 # get a file line, without the name
 file_line=$(grep "${DELIM}f${DELIM}" "${TRACE}" | sort | tail -n 1)
 without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
 
-replace "# trace starts with a file"
+echo "# trace starts with a file"
 echo "file${DELIM}${without_name}" > "${BADTRACE}"
-replace "$ verifytrace \"${DELIM}\" ${BADTRACE}"
-output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
-replace "${output}"
-echo
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
-replace "# too few columns"
+echo "# too few columns"
 echo "${without_name}" > "${BADTRACE}"
-replace "$ verifytrace \"${DELIM}\" ${BADTRACE}"
-output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
-replace "${output}"
-echo
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-replace "# directory followed by file not in directory"
+echo "# directory followed by file not in directory"
 dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
 dir_name=$(echo "${dir_line}" | awk -F "${DELIM}" '{print $1}')
 bad_name=$(echo "${dir_name}/non-existant_dir/file${DELIM}${without_name}")
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
-output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
-replace "${output}"
-echo
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-replace "# bad directory pinode"
+echo "# bad directory pinode"
 head -n 1 "${TRACE}" | awk -F "${DELIM}" '{$23="bad_pinode"; print}' OFS="${DELIM}" > "${BADTRACE}"
-output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
-replace "${output}"
-echo
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-replace "# bad child pinode"
+echo "# bad child pinode"
 head -n 1 "${TRACE}" > "${BADTRACE}"
 echo "${file_line}"| awk -F "${DELIM}" '{$23="1234"; print}' OFS="${DELIM}" >> "${BADTRACE}"
-output=$(${ROOT}/contrib/verifytrace "${DELIM}" "${BADTRACE}" 2>&1)
-replace "${output}"
-echo
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
+) |& @TEE@ "${OUTPUT}"
 
-) | @TEE@ "${OUTPUT}"
-
-@DIFF@ ${ROOT}/test/regression/verifytrace.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

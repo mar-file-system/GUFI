@@ -1,12 +1,12 @@
 # Get only directories
-$ gufi_query -d " " -S "SELECT name FROM summary" prefix.gufi
+$ gufi_query -d " " -S "SELECT name FROM summary;" "prefix.gufi"
+.
 directory
 leaf_directory
-prefix
 subdirectory
 
 # Get only non-directories
-$ gufi_query -d " " -E SELECT name FROM entries prefix.gufi
+$ gufi_query -d " " -E "SELECT name FROM pentries;" "prefix.gufi"
 .hidden
 1KB
 1MB
@@ -23,8 +23,9 @@ repeat_name
 unusual, name?#
 writable
 
-# Get all directory and non-directory names only
-$ gufi_query -d " " -S "SELECT name FROM summary" -E "SELECT name FROM entries" prefix.gufi
+# Get all directory and non-directory names
+$ gufi_query -d " " -S "SELECT name FROM summary;" -E "SELECT name FROM pentries;" "prefix.gufi"
+.
 .hidden
 1KB
 1MB
@@ -37,7 +38,6 @@ leaf_directory
 leaf_file1
 leaf_file2
 old_file
-prefix
 readonly
 repeat_name
 repeat_name
@@ -46,7 +46,7 @@ unusual, name?#
 writable
 
 # Get relative paths of all directories and non-directories ascending names
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" prefix.gufi
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name) FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix.gufi"
 .
 .hidden
 1KB
@@ -68,7 +68,7 @@ repeat_name
 unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" prefix.gufi
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name) FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix.gufi"
 unusual, name?#
 repeat_name
 old_file
@@ -90,7 +90,7 @@ directory
 .
 
 # Get relative paths of all directories and non-directories ascending sizes
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" prefix.gufi
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT path(name), size FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix.gufi"
 empty_file
 .hidden
 directory/executable
@@ -105,23 +105,74 @@ unusual, name?#
 file_symlink
 directory/subdirectory/directory_symlink
 1KB
+.
+directory
+directory/subdirectory
+leaf_directory
 1MB
 
 # Get relative paths of all directories and non-directories descending sizes
-$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" prefix.gufi
+$ gufi_query -d " " -e 0 -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -S "INSERT INTO out SELECT path(name), size FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries;" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix.gufi"
 1MB
+.
+directory
+directory/subdirectory
+leaf_directory
 1KB
 directory/subdirectory/directory_symlink
 file_symlink
-unusual, name?#
-repeat_name
-old_file
-leaf_directory/leaf_file2
-leaf_directory/leaf_file1
-directory/writable
-directory/subdirectory/repeat_name
-directory/readonly
-directory/executable
 .hidden
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual, name?#
 empty_file
+
+#####################################
+# Invalid Inputs                    #
+#####################################
+# Missing -I (outdb)
+$ gufi_query -O outdb "prefix.gufi"
+Error: Missing -I
+
+# Missing -I (aggregating, stdout)
+$ gufi_query -e 0 -K "create;" "prefix.gufi"
+Error: Missing -I
+
+# Missing -I (aggregating, outfile)
+$ gufi_query -e 0 -o outfile -K "create;" "prefix.gufi"
+Error: Missing -I
+
+# Missing -I (aggregating, outdb)
+$ gufi_query -e 0 -O outdb -K "create;" "prefix.gufi"
+Error: Missing -I
+
+# Missing -T/-S/-E
+$ gufi_query "prefix.gufi"
+Error: Need at least one of -T, -S, or -E
+
+# Missing -J (aggregate, stdout)
+$ gufi_query -e 0            -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix.gufi"
+Error: Missing -J
+
+# Missing -J (aggregate, outfile)
+$ gufi_query -e 0 -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix.gufi"
+Error: Missing -J
+
+# Missing -J (aggregate, outdb)
+$ gufi_query -e 0 -O outdb   -I "create" -S "insert;" -E "insert;" -K "create;"              "prefix.gufi"
+Error: Missing -J
+
+# Missing -G (aggregate, stdout)
+$ gufi_query -e 0            -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix.gufi"
+Could not run SQL Init "create" on file:aggregate0?mode=memory&cache=shared
+
+# Missing -G (aggregate, outfile)
+$ gufi_query -e 0 -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix.gufi"
+Error: Missing -G
 

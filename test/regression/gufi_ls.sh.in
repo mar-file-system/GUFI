@@ -63,42 +63,19 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-# gufi_ls wrapper
-GUFI_LS="${ROOT}/test/regression/gufi_ls.py"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_ls.out"
 
-function replace() {
-    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_LS//\//\\/}/gufi_ls/g; s/.*${INDEXROOT//\//\\/}\\/$/./g; s/${INDEXROOT//\//\\/}\\///g"
-}
-
-function run() {
-    replace "$ $@"
-    replace "$($@)"
-    echo
-}
-
 (
-run "${GUFI_LS}"
-run "${GUFI_LS} -a"
-run "${GUFI_LS} -h"
-run "${GUFI_LS} -R"
-run "${GUFI_LS} -r"
-run "${GUFI_LS} -ar"
-run "${GUFI_LS} -arR"
-) | @TEE@ "${OUTPUT}"
+run_no_sort "${GUFI_LS}"
+run_no_sort "${GUFI_LS} -a"
+run_no_sort "${GUFI_LS} -h"
+run_no_sort "${GUFI_LS} -R"
+run_no_sort "${GUFI_LS} -r"
+run_no_sort "${GUFI_LS} -ar"
+run_no_sort "${GUFI_LS} -arR"
+) |& @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/gufi_ls.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"
 rm "${OUTPUT}"

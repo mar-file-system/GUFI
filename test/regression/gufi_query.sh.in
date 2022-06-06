@@ -63,71 +63,66 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-GUFI_QUERY="${ROOT}/src/gufi_query"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_query.out"
 
-function replace() {
-    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${INDEXROOT//\//\\/}\\///g; s/\\/${SRCDIR//\//\\/}/./g"
-}
-
 (
-export LC_ALL=C
-
 echo "# Get only directories"
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT name FROM summary\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -S "SELECT name FROM summary" ${INDEXROOT} | sort)
-replace "${output}"
-echo
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM summary;\" \"${INDEXROOT}\""
 
 echo "# Get only non-directories"
-replace "$ ${GUFI_QUERY} -d \" \" -E "SELECT name FROM entries" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -E "SELECT name FROM entries" ${INDEXROOT} | sort)
-replace "${output}"
-echo
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT name FROM pentries;\" \"${INDEXROOT}\""
 
-echo "# Get all directory and non-directory names only"
-replace "$ ${GUFI_QUERY} -d \" \" -S \"SELECT name FROM summary\" -E \"SELECT name FROM entries\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -S "SELECT name FROM summary" -E "SELECT name FROM entries" ${INDEXROOT} | sort)
-replace "${output}"
-echo
+echo "# Get all directory and non-directory names"
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM summary;\" -E \"SELECT name FROM pentries;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending names"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT)\" -S \"INSERT INTO out SELECT path() FROM summary\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY name ASC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name ASC" ${INDEXROOT})
-replace "${output}" | sed "s/${INDEXROOT//\//\\/}/./g"
-echo
+run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending names"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT)\" -S \"INSERT INTO out SELECT path() FROM summary\" -E \"INSERT INTO out SELECT path() || '/' || name || '/' || name FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY name DESC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT)" -S "INSERT INTO out SELECT path() FROM summary" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY name DESC" ${INDEXROOT})
-replace "${output}" | sed "s/${INDEXROOT//\//\\/}/./g"
-echo
+run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending sizes"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size ASC, name ASC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size ASC, name ASC" ${INDEXROOT})
-replace "${output}"
-echo
+run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT path(name), size FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending sizes"
-replace "$ ${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(name TEXT, size INT64)\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries\" -J \"INSERT INTO aggregate.out SELECT * FROM out\" -G \"SELECT name FROM out ORDER BY size DESC, name DESC\" ${INDEXROOT}"
-output=$(${GUFI_QUERY} -d " " -e 0 -a -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries" -J "INSERT INTO aggregate.out SELECT * FROM out" -G "SELECT name FROM out ORDER BY size DESC, name DESC" ${INDEXROOT})
-replace "${output}"
-echo
-) | @TEE@ "${OUTPUT}"
+run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT path(name), size FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
 
-@DIFF@ ${ROOT}/test/regression/gufi_query.expected "${OUTPUT}"
+echo "#####################################"
+echo "# Invalid Inputs                    #"
+echo "#####################################"
+
+echo "# Missing -I (outdb)"
+run_sort "${GUFI_QUERY} -O outdb \"${INDEXROOT}\""
+
+echo "# Missing -I (aggregating, stdout)"
+run_sort "${GUFI_QUERY} -e 0 -K \"create;\" \"${INDEXROOT}\""
+
+echo "# Missing -I (aggregating, outfile)"
+run_sort "${GUFI_QUERY} -e 0 -o outfile -K \"create;\" \"${INDEXROOT}\""
+
+echo "# Missing -I (aggregating, outdb)"
+run_sort "${GUFI_QUERY} -e 0 -O outdb -K \"create;\" \"${INDEXROOT}\""
+
+echo "# Missing -T/-S/-E"
+run_sort "${GUFI_QUERY} \"${INDEXROOT}\""
+
+echo "# Missing -J (aggregate, stdout)"
+run_sort "${GUFI_QUERY} -e 0            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
+
+echo "# Missing -J (aggregate, outfile)"
+run_sort "${GUFI_QUERY} -e 0 -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
+
+echo "# Missing -J (aggregate, outdb)"
+run_sort "${GUFI_QUERY} -e 0 -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"              \"${INDEXROOT}\""
+
+echo "# Missing -G (aggregate, stdout)"
+run_sort "${GUFI_QUERY} -e 0            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
+
+echo "# Missing -G (aggregate, outfile)"
+run_sort "${GUFI_QUERY} -e 0 -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
+) |& @TEE@ "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"
 rm "${OUTPUT}"

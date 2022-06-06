@@ -62,51 +62,34 @@
 
 
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-BFQ="${ROOT}/src/gufi_query"
-QUERYDBS="${ROOT}/src/querydbs"
 OUTDB="outdb"
 TABLE="out"
 THREADS="2"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
 
 function cleanup() {
     rm -f ${OUTDB} ${OUTDB}.*
 }
 
-trap cleanup EXIT
+function cleanup_exit {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
 
 cleanup
 
 OUTPUT="querydbs.out"
 
-function replace() {
-    echo "$@" | @SED@ "s/${BFQ//\//\\/}/gufi_query/g; s/${QUERYDBS//\//\\/}/querydbs/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/[[:space:]]*$//g"
-}
-
 (
-replace "# Use ${BFQ} to generate per-thread result database files"
-replace "${BFQ} -n ${THREADS} -O ${OUTDB} -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path() || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentires.type=='f') AND (summary.inode == pentries.pinode)\" ${INDEXROOT}"
-output=$(${BFQ} -n ${THREADS} -O "${OUTDB}" -I "CREATE TABLE ${TABLE}(name TEXT, size INT64)" -E "INSERT INTO ${TABLE} SELECT path() || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentries.type=='f') AND (summary.inode == pentries.pinode)" "${INDEXROOT}")
-echo "${output}"
+echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replace
+run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path() || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (pentries.type=='f') AND (summary.inode == pentries.pinode)\" \"${INDEXROOT}\""
 
-replace "# Query all per-thread result databse files at once"
-replace  "${QUERYDBS} -NV outdb \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
-output=$(${QUERYDBS} -NV outdb "${TABLE}" "SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC" outdb.*)
-replace "${output}"
-echo
-
+echo "# Query all per-thread result databse files at once"
+run_no_sort "${QUERYDBS} -NV outdb \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/querydbs.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -51,10 +51,10 @@ Files/Links:    96
 Directories:    69 (21 empty)
 Total:          165
 Remaining Dirs: 17 (24.64%)
-$ gufi_query -d " " -S "SELECT path(name) from summary" "prefix.gufi" | wc -l
+$ gufi_query -d " " -S "SELECT path(name) from summary;" "prefix.gufi" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "prefix.gufi" | wc -l
+$ gufi_query -d " " -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode;" "prefix.gufi" | wc -l
 96
 
 $ gufi_query -d " " -S "SELECT path(name) from summary" -E "SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode" "prefix.gufi" | wc -l

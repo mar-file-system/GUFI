@@ -63,60 +63,41 @@
 
 
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
+function cleanup {
+    rm -rf ${TRACE}.*
+}
 
-GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
-GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
+function cleanup_exit {
+    cleanup
+    setup_cleanup
+}
 
-# output directories
-SRCDIR="prefix"
-TRACE="${SRCDIR}.trace"
-INDEXROOT="${SRCDIR}.gufi"
+trap cleanup_exit EXIT
+
+cleanup
 
 # trace delimiter
 DELIM="|"
 
-function cleanup {
-    rm -rf "${SRCDIR}" "${TRACE}" "${TRACE}".* "${INDEXROOT}"
-}
-
-trap cleanup EXIT
-
-cleanup
-
-export LC_ALL=C
-
 OUTPUT="gufi_trace2index.out"
-
-function replace() {
-    echo "$@" | @SED@ "s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${TRACE//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g; s/[[:space:]]*$//g"
-}
 
 (
 
 # generate the tree
-replace "$ generatetree ${SRCDIR}"
-${ROOT}/test/regression/generatetree.sh "${SRCDIR}"
-echo
+run_no_sort "${GENERATETREE} ${SRCDIR}"
 
 # generate the trace
-replace "$ ${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x -o \"${TRACE}\" \"${SRCDIR}\""
-${GUFI_DIR2TRACE} -d "${DELIM}" -n 2 -x "${SRCDIR}" "${TRACE}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
 cat ${TRACE}.* > "${TRACE}"
-echo
 
 # generate the index
-replace "$ ${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} -d "${DELIM}" "${TRACE}" "${INDEXROOT}" | tail -n 4 | head -n 3
-echo
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$(${ROOT}/src/gufi_query -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
+index_contents=$(${GUFI_QUERY} -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'
@@ -124,8 +105,7 @@ echo
 echo "GUFI Index:"
 echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
 echo
-
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/gufi_trace2index.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -74,9 +74,21 @@ XSUMMARY  = 'xsummary'
 XPENTRIES = 'xpentries'
 
 def getfattr(args, config, dirname, nondirname):
-    # always grab everything - don't necessarily print everything
-    S_cols = ['path(name, 1)', 'xattr_name', 'xattr_value']
-    E_cols = ['path({}.name, 1) || \'/\' || {}.name'.format(SUMMARY, XPENTRIES), 'xattr_name', 'xattr_value']
+    S_cols = []
+    E_cols = []
+    if args.only_values:
+        # --only-values overrides selections
+        S_cols = ['xattr_value']
+        E_cols = ['xattr_value']
+    else:
+        # default to getting path and xattr name
+        S_cols = ['path(name, 1)', 'xattr_name']
+        E_cols = ['path({}.name, 1) || \'/\' || {}.name'.format(SUMMARY, XPENTRIES), 'xattr_name']
+
+        # also get xattr value
+        if args.dump:
+            S_cols += ['xattr_value']
+            E_cols += ['xattr_value']
 
     S_where = []
     E_where = []
@@ -99,32 +111,7 @@ def getfattr(args, config, dirname, nondirname):
         S_where += ['{}.xattr_name REGEXP \'{}\''.format(XSUMMARY,  args.pattern)]
         E_where += ['{}.xattr_name REGEXP \'{}\''.format(XPENTRIES, args.pattern)]
 
-    G_cols = []
-    if args.only_values:
-        # --only-values overrides selections
-        G_cols = ['value']
-    else:
-        # default to getting path and xattr name
-        G_cols = ['path',
-                  'name']
-
-        # also get xattr value
-        if args.dump:
-            G_cols += ['value']
-
-    query_args = ['-x', '-a',
-                  '-e', '0',
-                  '-I', 'CREATE TABLE {} ({})'.format(args.inmemory_name,
-                                                      ', '.join(['path TEXT', 'name TEXT', 'value BLOB'])),
-                  '-J', 'INSERT INTO aggregate.{0} SELECT * FROM {0}'.format(args.inmemory_name),
-                  '-G', gufi_common.build_query(G_cols,
-                                                [args.inmemory_name],
-                                                None,
-                                                None,
-                                                None if args.only_values else ['path ASC'],
-                                                None)
-              ]
-
+    query_args = ['-x', '-a']
 
     E_where += ['{}.pinode == {}.inode'.format(XPENTRIES, SUMMARY)]
 
@@ -135,49 +122,41 @@ def getfattr(args, config, dirname, nondirname):
 
         # if input path is a directory, get directory xattrs as well
         else:
-            query_args += ['-S', 'INSERT INTO {} {}'.format(
-                args.inmemory_name,
-                gufi_common.build_query(S_cols,
-                                        [XSUMMARY],
-                                        S_where,
-                                        None,
-                                        None,
-                                        None))]
+            query_args += ['-S', gufi_common.build_query(S_cols,
+                                                         [XSUMMARY],
+                                                         S_where,
+                                                         None,
+                                                         None,
+                                                         None)]
 
         # if input path is not a directory, get non directory xattrs
         # if input path is     a directory, get non directory xattrs
-        query_args += ['-E', 'INSERT INTO {} {}'.format(
-            args.inmemory_name,
-            gufi_common.build_query(E_cols,
-                                    [XPENTRIES, SUMMARY],
-                                    E_where,
-                                    None,
-                                    None,
-                                    None))]
+        query_args += ['-E', gufi_common.build_query(E_cols,
+                                                     [XPENTRIES, SUMMARY],
+                                                     E_where,
+                                                     None,
+                                                     None,
+                                                     None)]
 
     else:
         # only get non directory xattrs
         if nondirname:
             E_where += ['{}.isroot == 1'.format(SUMMARY)]
 
-            query_args += ['-E', 'INSERT INTO {} {}'.format(
-                args.inmemory_name,
-                gufi_common.build_query(E_cols,
-                                        [XPENTRIES, SUMMARY],
-                                        E_where,
-                                        None,
-                                        None,
-                                        None))]
-        # only get directory xattrs
+            query_args += ['-E', gufi_common.build_query(E_cols,
+                                                         [XPENTRIES, SUMMARY],
+                                                         E_where,
+                                                         None,
+                                                         None,
+                                                         None)]
+            # only get directory xattrs
         else:
-            query_args += ['-S', 'INSERT INTO {} {}'.format(
-                args.inmemory_name,
-                gufi_common.build_query(S_cols,
-                                        [XSUMMARY],
-                                        S_where,
-                                        None,
-                                        None,
-                                        None))]
+            query_args += ['-S', gufi_common.build_query(S_cols,
+                                                         [XSUMMARY],
+                                                         S_where,
+                                                         None,
+                                                         None,
+                                                         None)]
 
     # a non directory prevents recursion
     if nondirname:
@@ -194,28 +173,31 @@ def run(argv, config_path):
     parser = argparse.ArgumentParser(description='GUFI version of getfattr\n\nNote: --no-dereference/-h is always set', add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # override help to not use -h
-    parser.add_argument('--help',                                                   action='help',
+    parser.add_argument('--help',                                                     action='help',
                         help='show this help message and exit')
-    parser.add_argument('--version', '-v',                                          action='version',
+    parser.add_argument('--version', '-v',                                            action='version',
                         version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
 
-    parser.add_argument('--name', '-n',                        dest='name',         type=str,
+    parser.add_argument('--name', '-n',                        dest='name',           type=str,
                         help='Dump the values of the named extended attribute')
-    parser.add_argument('--dump', '-d',                        dest='dump',         action='store_true',
+    parser.add_argument('--dump', '-d',                        dest='dump',           action='store_true',
                         help='Dump the values of all extended attributes associated with pathname.')
-    parser.add_argument('--match', '-m',                       dest='pattern',      type=str,
+    parser.add_argument('--match', '-m',                       dest='pattern',        type=str,
                         help='Only include attributes with names matching the regular expression pattern. The default value for pattern is "^user\\.", which includes all the attributes in the user namespace. Specify "-" for including all attributes". Refer to attr(5) for a more detailed discussion of namespaces.',
                         default='^user\\.')
-    parser.add_argument('--only-values',                       dest='only_values',  action='store_true',
+    parser.add_argument('--only-values',                       dest='only_values',    action='store_true',
                         help='Dump out the raw extended attribute value(s) without encoding them.')
-    parser.add_argument('--recursive', '-R',                   dest='recursive',    action='store_true',
+    parser.add_argument('--recursive', '-R',                   dest='recursive',      action='store_true',
                         help='List the atttributes of all files and directories recursively.')
-    parser.add_argument('--delim',             metavar='c',    dest='delim',        type=gufi_common.get_char,
+    parser.add_argument('--delim',             metavar='c',    dest='delim',          type=gufi_common.get_char,
                         help='delimiter separating output columns',
                         default=' ')
-    parser.add_argument('--in-memory-name',    metavar='name', dest='inmemory_name',type=str,
+    parser.add_argument('--in-memory-name',    metavar='name', dest='inmemory_name',  type=str,
                         help='Name of in-memory database when aggregation is performed',
-                        default='out', )
+                        default='out')
+    parser.add_argument('--aggregate-name',    metavar='name', dest='aggregate_name', type=str,
+                        help='Name of final database when aggregation is performed',
+                        default='aggregate')
 
     parser.add_argument('path',                                                     type=str, nargs='+')
 

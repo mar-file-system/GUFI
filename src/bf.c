@@ -454,14 +454,17 @@ int parse_cmd_line(int         argc,
 
       case 'J':
          INSTALL_STR(in->intermediate, optarg, MAXSQL, "-J");
+         in->intermediate_len = strlen(in->intermediate);
          break;
 
       case 'K':
          INSTALL_STR(in->create_aggregate, optarg, MAXSQL, "-K");
+         in->create_aggregate_len = strlen(in->create_aggregate);
          break;
 
       case 'G':
          INSTALL_STR(in->aggregate, optarg, MAXSQL, "-G");
+         in->aggregate_len = strlen(in->aggregate);
          break;
 
       case 'm':
@@ -508,26 +511,6 @@ int parse_cmd_line(int         argc,
          retval = -1;
          fprintf(stderr, "?? getopt returned character code 0%o ??\n", ch);
       };
-   }
-
-   // -o and -O imply -e 1
-   if ((in->outfile || in->outdb) && (in->show_results == AGGREGATE)) {
-       fprintf(stderr, "Warning: An output prefix has been specified with aggregation. Turning off aggregation.\n");
-       in->show_results = PRINT;
-   }
-
-   // aggregating requires -S or -E, and 3 more SQL queries (-I, -J, and -G)
-   if (in->show_results == AGGREGATE) {
-       if (!in->sqlinit_len || (!in->sqlsum_len && !in->sqlent_len) || !strlen(in->aggregate) || !strlen(in->intermediate)) {
-           fprintf(stderr, "Missing SQL statements. Need: -I (init), -S (summary) or -E (entries), and -J (intermediate) and -G (aggregate)\n");
-           return retval = -1;
-       }
-   }
-
-   // only one output type is allowed
-   if (in->outfile && in->outdb) {
-       fprintf(stderr, "Cannot specify -o and -O at the same time\n");
-       return retval = -1;
    }
 
    // if there were no other errors,

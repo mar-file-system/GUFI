@@ -62,36 +62,22 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-GUFI_DIR2INDEX="${ROOT}/src/gufi_dir2index"
-GUFI_DIR2TRACE="${ROOT}/src/gufi_dir2trace"
-GUFI_TRACE2INDEX="${ROOT}/src/gufi_trace2index"
-GUFI_QUERY="${ROOT}/src/gufi_query"
-
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-TRACE="${SRCDIR}.trace"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 OUTPUT="xattrs.out"
 
 function cleanup() {
-    rm -rf "${TMP}" "${SRCDIR}" "${INDEXROOT}" "${TRACE}.0"
+    rm -rf ${TRACE}.*
 }
 
-trap cleanup EXIT
+function cleanup_exit {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
 
 cleanup
-
-function replace() {
-    echo "$@" | @SED@ "s/[[:space:]]*$//g; s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g; s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g; s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g; s/${GUFI_QUERY//\//\\/}/gufi_query/g; s/${INDEXROOT//\//\\/}\\//prefix.gufi\\//g; s/\\/${SRCDIR//\//\\/}/./g;"
-}
 
 function create() {
     # run in subshell
@@ -146,27 +132,18 @@ function create() {
 )
 
 (
-replace "$ ${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXROOT}\""
-${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
-echo
+run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXROOT}\""
 
-replace "$ ${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries\" \"${INDEXROOT}\" | sort"
-${GUFI_QUERY} -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries" "${INDEXROOT}" | sort
-echo
+run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;\" \"${INDEXROOT}\""
 
 rm -r "${INDEXROOT}"
 
-replace "$ ${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
-${GUFI_DIR2TRACE} -x "${SRCDIR}" "${TRACE}"
-echo
+run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
 
-replace "$ ${GUFI_TRACE2INDEX} \"${TRACE}\" \"${INDEXROOT}\""
-${GUFI_TRACE2INDEX} "${TRACE}.0" "${INDEXROOT}" | tail -n 4 | head -n 3
-echo
+run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
 
-replace "$ ${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries\" \"${INDEXROOT}\" | sort"
-${GUFI_QUERY} -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries" "${INDEXROOT}" | sort
+run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;\" \"${INDEXROOT}\""
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/xattrs.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${OUTPUT}"
 rm "${OUTPUT}"

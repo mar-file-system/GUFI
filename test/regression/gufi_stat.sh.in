@@ -63,25 +63,9 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-GUFI_STAT="${ROOT}/src/gufi_stat"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="${SRCDIR}.gufi"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_stat.out"
-
-function replace() {
-    echo "$@" | @SED@ "s/${GUFI_STAT//\//\\/}/gufi_stat/g"
-}
 
 (
 # entries in the index with a fixed size
@@ -103,13 +87,12 @@ fixed_size=(
 
 for entry in "${fixed_size[@]}"
 do
-    output=$(${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}")
-    replace "${output}"
+    ${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}" | replace | replace_output
 done
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
 ${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file"
 ) | @TEE@ "${OUTPUT}"
 
-@DIFF@ ${ROOT}/test/regression/gufi_stat.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"
 rm "${OUTPUT}"

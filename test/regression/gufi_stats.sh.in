@@ -63,91 +63,72 @@
 
 
 set -e
-
-ROOT="$(realpath ${BASH_SOURCE[0]})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-ROOT="$(dirname ${ROOT})"
-
-# gufi_stats wrapper
-GUFI_STATS="${ROOT}/test/regression/gufi_stats.py"
-
-# output directories
-SRCDIR="prefix"
-INDEXROOT="$(realpath ${SRCDIR}.gufi)"
-
-source ${ROOT}/test/regression/setup.sh "${ROOT}" "${SRCDIR}" "${INDEXROOT}"
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_stats.out"
 
-function replace() {
-    echo "$@" | @SED@ "s/${GUFI_STATS//\//\\/}/gufi_stats/g; s/${INDEXROOT//\//\\/}\\///g; s/${INDEXROOT//\//\\/}/./g; s/$(id -un)/1001/g"
-}
-
-function user() {
-    replace "$ $@"
-    replace "$($@)"
-    echo
+function run() {
+    run_no_sort "$@" | @SED@ "s/$(id -un)/1001/g"
 }
 
 (
-user "${GUFI_STATS}    depth"
-user "${GUFI_STATS} -r depth"
+run "${GUFI_STATS}    depth"
+run "${GUFI_STATS} -r depth"
 
-user "${GUFI_STATS}    filesize"
-user "${GUFI_STATS} -r filesize"
+run "${GUFI_STATS}    filesize"
+run "${GUFI_STATS} -r filesize"
 
-user "${GUFI_STATS}    filecount"
-user "${GUFI_STATS} -r filecount"
+run "${GUFI_STATS}    filecount"
+run "${GUFI_STATS} -r filecount"
 
-user "${GUFI_STATS}    linkcount"
-user "${GUFI_STATS} -r linkcount"
+run "${GUFI_STATS}    linkcount"
+run "${GUFI_STATS} -r linkcount"
 
-user "${GUFI_STATS}    total-filesize"
-user "${GUFI_STATS} -c total-filesize"
+run "${GUFI_STATS}    total-filesize"
+run "${GUFI_STATS} -c total-filesize"
 
-user "${GUFI_STATS}    total-filecount"
-user "${GUFI_STATS} -c total-filecount"
+run "${GUFI_STATS}    total-filecount"
+run "${GUFI_STATS} -c total-filecount"
 
-user "${GUFI_STATS}    total-linkcount"
-user "${GUFI_STATS} -c total-linkcount"
+run "${GUFI_STATS}    total-linkcount"
+run "${GUFI_STATS} -c total-linkcount"
 
-user "${GUFI_STATS}    dircount"
-user "${GUFI_STATS} -r dircount"
+run "${GUFI_STATS}    dircount"
+run "${GUFI_STATS} -r dircount"
 
-user "${GUFI_STATS}    total-dircount"
-user "${GUFI_STATS} -c total-dircount"
+run "${GUFI_STATS}    total-dircount"
+run "${GUFI_STATS} -c total-dircount"
 
-user "${GUFI_STATS}    files-per-level"
-user "${GUFI_STATS} -c files-per-level"
+run "${GUFI_STATS}    files-per-level"
+run "${GUFI_STATS} -c files-per-level"
 
-user "${GUFI_STATS}    links-per-level"
-user "${GUFI_STATS} -c links-per-level"
+run "${GUFI_STATS}    links-per-level"
+run "${GUFI_STATS} -c links-per-level"
 
-user "${GUFI_STATS}    dirs-per-level"
-user "${GUFI_STATS} -c dirs-per-level"
+run "${GUFI_STATS}    dirs-per-level"
+run "${GUFI_STATS} -c dirs-per-level"
 
-user "${GUFI_STATS}    duplicate-names"
+run "${GUFI_STATS}    duplicate-names"
 
 if [[ "$(uname)" != "Darwin" ]]
 then
-    user "${GUFI_STATS}    leaf-dirs"
-    user "${GUFI_STATS} -r leaf-dirs"
+    run "${GUFI_STATS}    leaf-dirs"
+    run "${GUFI_STATS} -r leaf-dirs"
 
-    user "${GUFI_STATS}    leaf-depth"
-    user "${GUFI_STATS} -r leaf-depth"
+    run "${GUFI_STATS}    leaf-depth"
+    run "${GUFI_STATS} -r leaf-depth"
 
-    user "${GUFI_STATS}    leaf-files"
-    user "${GUFI_STATS} -r leaf-files"
+    run "${GUFI_STATS}    leaf-files"
+    run "${GUFI_STATS} -r leaf-files"
 
-    user "${GUFI_STATS}    total-leaf-files"
-    user "${GUFI_STATS} -c total-leaf-files"
+    run "${GUFI_STATS}    total-leaf-files"
+    run "${GUFI_STATS} -c total-leaf-files"
 
-    user "${GUFI_STATS}    median-leaf-files"
+    run "${GUFI_STATS}    median-leaf-files"
 fi
-) | @TEE@ "${OUTPUT}"
+) |& @TEE@ "${OUTPUT}"
 
-EXPECTED="${ROOT}/test/regression/gufi_stats.expected"
+EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 COPY="${EXPECTED}.copy"
 
 if [[ "$(uname)" == "Darwin" ]]

@@ -1,11 +1,11 @@
 # generate the tree
-$ generatetree prefix
+$ generatetree "prefix"
 
 # generate the trace
 $ gufi_dir2trace -d "|" -n 2 "prefix" "trace"
 
 # valid trace
-$ verifytrace "|" trace
+$ verifytrace "|" "trace"
 trace: Pass
 
 # wrong delimiter used
@@ -19,19 +19,22 @@ badtrace: Error: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|
 Fail
 
 # too few columns
-$ verifytrace "|" badtrace
+$ verifytrace "|" "badtrace"
 badtrace: Error: Not enough columns: f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
 # directory followed by file not in directory
+$ verifytrace "|" "badtrace"
 badtrace: Error: Bad child: /non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
 # bad directory pinode
+$ verifytrace "|" "badtrace"
 badtrace: Error: Bad parent pinode: |d|1|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
 Fail
 
 # bad child pinode
+$ verifytrace "|" "badtrace"
 badtrace: Error: Bad child pinode: unusual, name?#|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
 Fail
 
