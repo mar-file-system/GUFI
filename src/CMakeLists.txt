@@ -201,7 +201,6 @@ set(C_SOURCES
   gufi_dir2index.c
   gufi_dir2trace.c
   gufi_trace2index.c
-  gufi_query.c
   gufi_stat.c
   parallel_rmr.c
   querydbs.c
@@ -211,6 +210,16 @@ set(C_SOURCES
 
 # build the C executables
 build_and_install(${BIN} TRUE ${C_SOURCES})
+
+# gufi_query is split up into multiple files
+build_and_install_one(${BIN} TRUE gufi_query
+  gufi_query/PoolArgs.c
+  gufi_query/aggregate.c
+  gufi_query/main.c
+  gufi_query/print.c
+  gufi_query/query.c
+  gufi_query/rollup.c
+)
 
 # build binaries that do not need to link with GUFI
 set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)

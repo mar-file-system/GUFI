@@ -61,15 +61,15 @@ OF SUCH DAMAGE.
 */
 
 
+
+#include "pcre.h"
 #include <errno.h>
+#include <grp.h>
 #include <libgen.h>
+#include <pwd.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <pwd.h>
-#include <grp.h>
-#include "pcre.h"
 
 #include "config.h"
 #include "dbutils.h"
@@ -1213,23 +1213,6 @@ size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const in
     return rec_count;
 }
 
-static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
-    int *rollupscore = (int *) args;
-    *rollupscore = atoi(data[0]);
-    return 0;
-}
-
-int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
-    char *err = NULL;
-    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
-                     get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
-        sqlite3_free(err);
-        return -1;
-    }
-
-    return 0;
-}
-
 struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  const char *path, const size_t path_len,
                                  uid_t uid, gid_t gid, mode_t mode,
@@ -1329,6 +1312,8 @@ void destroy_xattr_db(void *ptr) {
     free(xdb);
 }
 
+static const char XATTR_GET_DB_LIST[] = "SELECT filename, attachname FROM " XATTR_FILES ";";
+
 /*
  * Attach the files listed in the xattr_files table to db.db and
  * create the xattrs view of all xattrs accessible by the caller.
@@ -1339,7 +1324,7 @@ void destroy_xattr_db(void *ptr) {
  */
 int xattrprep(const char *path, const size_t path_len, sqlite3 *db
               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-              ,size_t *query_count
+              , size_t *query_count
               #endif
     )
 {
@@ -1349,11 +1334,17 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 
     int           rec_count = 0;
     sqlite3_stmt *res = NULL;
-    char          unioncmd[MAXSQL] = "CREATE TEMP VIEW IF NOT EXISTS " XATTRS " AS";
+    /* not checking if the view exists - if it does, it's an error and will error */
+    char          unioncmd[MAXSQL] = "CREATE TEMP VIEW " XATTRS " AS";
     char         *unioncmdp = unioncmd + strlen(unioncmd);
 
     /* step through each xattr db file */
-    int error = sqlite3_prepare_v2(db, "SELECT filename, attachname FROM " XATTR_FILES, MAXSQL, &res, NULL);
+    int error = sqlite3_prepare_v2(db, XATTR_GET_DB_LIST, MAXSQL, &res, NULL);
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    (*query_count)++;
+    #endif
+
     if (error != SQLITE_OK) {
         fprintf(stderr, "xattrprep Error: %s: Could not get filenames from table %s: %d err %s\n",
                path, XATTR_FILES, error, sqlite3_errmsg(db));
@@ -1382,7 +1373,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
                    attachname, attachname_len);
 
         /* if attach fails, you don't have access to the xattrs - just continue */
-        if (sqlite3_exec(db, attcmd, 0, 0, NULL) == SQLITE_OK) {
+        if (sqlite3_exec(db, attcmd, NULL, NULL, NULL) == SQLITE_OK) {
             rec_count++;
             /* SELECT inode, name, value FROM <attach name>.xattrs_avail UNION */
             unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 5,
@@ -1392,10 +1383,6 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
                                     XATTRS_AVAIL, XATTRS_AVAIL_LEN,
                                     " UNION", (size_t) 6);
         }
-
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-        (*query_count)++;
-        #endif
     }
     sqlite3_finalize(res);
 
@@ -1404,7 +1391,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
                XATTRS_AVAIL, XATTRS_AVAIL_LEN);
 
     /* create xattrs view */
-    int rc = sqlite3_exec(db, unioncmd, 0, 0, NULL);
+    int rc = sqlite3_exec(db, unioncmd, NULL, NULL, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
@@ -1416,8 +1403,9 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
     }
 
     /* create LEFT JOIN views (all rows, with and without xattrs) */
+    /* these should run once, and be no-ops afterwards since the backing data of the views get swapped out */
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xentries AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode", 0, 0, NULL);
+    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XENTRIES " AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
@@ -1428,7 +1416,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
         return -1;
     }
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xpentries AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN xattrs ON " PENTRIES ".inode == " XATTRS ".inode", 0, 0, NULL);
+    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XPENTRIES " AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN " XATTRS " ON " PENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
@@ -1439,7 +1427,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
         return -1;
     }
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS xsummary AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN xattrs ON " SUMMARY ".inode == " XATTRS ".inode", 0, 0, NULL);
+    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
@@ -1451,4 +1439,28 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
     }
 
     return rec_count;
+}
+
+static int detach_xattr_db(void *args, int count, char **data, char **columns) {
+    detachdb(NULL, (sqlite3 *) args, data[1], 0); /* don't check for errors */
+    return 0;
+}
+
+void xattrdone(sqlite3 *db
+               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+               , size_t *query_count
+               #endif
+    )
+{
+    /* no need to drop xentries, xpentries, and xsummary */
+
+    sqlite3_exec(db, "DROP VIEW IF EXISTS " XATTRS ";", NULL, NULL, NULL);
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    (*query_count)++;
+    #endif
+
+    sqlite3_exec(db, XATTR_GET_DB_LIST, detach_xattr_db, db, NULL);
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    (*query_count)++;
+    #endif
 }

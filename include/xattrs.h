@@ -141,6 +141,10 @@ extern const char XATTR_GID_W_READ_ATTACH_FORMAT[];
 extern const char XATTR_GID_WO_READ_FILENAME_FORMAT[];
 extern const char XATTR_GID_WO_READ_ATTACH_FORMAT[];
 
+#define XENTRIES  "xentries"
+#define XPENTRIES "xpentries"
+#define XSUMMARY  "xsummary"
+
 /* single xattr name-value pair */
 struct xattr {
     char   name[MAXXATTR];
