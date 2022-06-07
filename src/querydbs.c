@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     }
 
    // add query funcs to get uidtouser() gidtogroup()
-   addqueryfuncs(db, 0, NULL);
+   addqueryfuncs_common(db);
 
    const int start = idx;
    const int numdbs = argc - idx;
