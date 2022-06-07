@@ -162,8 +162,6 @@ int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
-int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore);
-
 /* xattr db list item */
 struct xattr_db {
     char filename[MAXPATH];
@@ -191,8 +189,15 @@ void destroy_xattr_db(void *ptr);
 /* create view of all accessible xattrs when querying */
 int xattrprep(const char *path, const size_t path_len, sqlite3 *db
               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-              ,size_t *query_count
+              , size_t *query_count
               #endif
+    );
+
+/* detach xattr dbs */
+void xattrdone(sqlite3 *db
+               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+               , size_t *query_count
+               #endif
     );
 
 #endif
