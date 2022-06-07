@@ -1026,7 +1026,7 @@ int main(int argc, char *argv[])
         print_mutex = &static_print_mutex;
     }
 
-    const size_t output_count = in.maxthreads + !!(in.show_results == AGGREGATE);
+    const size_t output_count = in.maxthreads + (in.show_results == AGGREGATE);
     args.outfiles = outfiles_init(in.outfile, in.outfilen, output_count);
     args.outdbs = outdbs_init(in.outdb, in.outdbn, in.maxthreads, in.sqlinit, in.sqlinit_len);
     if (!args.outfiles || !args.outdbs ||
@@ -1162,6 +1162,7 @@ int main(int argc, char *argv[])
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     uint64_t aggregate_time = 0;
     uint64_t output_time = 0;
+    size_t rows = 0;
     #endif
 
     int rc = 0;
@@ -1192,7 +1193,7 @@ int main(int argc, char *argv[])
         struct CallbackArgs ca;
         ca.output_buffers = &args.output_buffers;
         ca.id = in.maxthreads;
-        /* ca.rows = 0; */
+        ca.rows = 0;
         /* ca.printed = 0; */
 
         char *err;
@@ -1206,6 +1207,7 @@ int main(int argc, char *argv[])
         timestamp_set_end(output);
         output_time = timestamp_elapsed(output);
         total_time += output_time;
+        rows += ca.rows;
         #endif
 
         aggregate_fin(aggregate);
@@ -1225,7 +1227,6 @@ int main(int argc, char *argv[])
     OutputBuffers_flush_to_multiple(&args.output_buffers, args.outfiles);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
-    size_t rows = 0;
     for(size_t i = 0; i < args.output_buffers.count; i++) {
         rows += args.output_buffers.buffers[i].count;
     }
@@ -1252,11 +1253,10 @@ int main(int argc, char *argv[])
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     const long double thread_time = total_opendir_time + total_open_time +
-        total_addqueryfuncs_time + total_descend_time +
-        total_attach_time + total_sqlsum_time +
-        total_sqlent_time + total_detach_time +
-        total_close_time + total_closedir_time +
-        total_utime_time + total_free_work_time +
+        total_addqueryfuncs_time + total_descend_time + total_attach_time +
+        total_sqltsumcheck_time + total_sqltsum_time + total_sqlsum_time +
+        total_sqlent_time + total_detach_time + total_close_time +
+        total_closedir_time + total_utime_time + total_free_work_time +
         total_output_timestamps_time;
 
     print_stats("set up globals:                             %.2Lfs", "%Lf", sec(setup_globals_time));
