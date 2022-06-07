@@ -114,8 +114,8 @@ void print_help(const char* prog_name,
       case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim[0]); break;
       case 'i': printf("  -i <input_dir>         input directory path"); break;
       case 't': printf("  -t <to_dir>            build GUFI index (under) here"); break;
-      case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix), implies -e 1"); break;
-      case 'O': printf("  -O <out_DB>            output DB, implies -e 1"); break;
+      case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix)"); break;
+      case 'O': printf("  -O <out_DB>            output DB"); break;
       case 'I': printf("  -I <SQL_init>          SQL init"); break;
       case 'T': printf("  -T <SQL_tsum>          SQL for tree-summary table"); break;
       case 'S': printf("  -S <SQL_sum>           SQL for summary table"); break;
@@ -133,10 +133,10 @@ void print_help(const char* prog_name,
       case 'u': printf("  -u                     input mode is from a file so input is a file not a dir"); break;
       case 'y': printf("  -y <min level>         minimum level to go down"); break;
       case 'z': printf("  -z <max level>         maximum level to go down"); break;
-      case 'J': printf("  -J <SQL_interm>        SQL for intermediate results (no default: recommend using \"SELECT * FROM entries\")"); break;
-      case 'K': printf("  -K <create aggregate>  SQL to create the final aggregation table (if not specified, -I will be used)"); break;
-      case 'G': printf("  -G <SQL_aggregate>     SQL for aggregated results   (no default: recommend using \"SELECT * FROM entries\")"); break;
-      case 'e': printf("  -e <0 or 1>            0 for aggregate, 1 for print without aggregating (implied by -o and -O)"); break;
+      case 'J': printf("  -J <SQL_interm>        SQL for intermediate results"); break;
+      case 'K': printf("  -K <create aggregate>  SQL to create the final aggregation table"); break;
+      case 'G': printf("  -G <SQL_aggregate>     SQL for aggregated results"); break;
+break;
       case 'm': printf("  -m                     Keep mtime and atime same on the database files"); break;
       case 'B': printf("  -B <buffer size>       size of each thread's output buffer in bytes"); break;
       case 'w': printf("  -w                     open the database files in read-write mode instead of read only mode"); break;
@@ -175,11 +175,11 @@ void show_input(struct input* in, int retval) {
    printf("in.xattr.enabled      = %d\n",    in->xattrs.enabled);
    printf("in.xattr.nobody.uid   = %d\n",    (int) in->xattrs.nobody.uid);
    printf("in.xattr.nobody.gid   = %d\n",    (int) in->xattrs.nobody.gid);
-   printf("in.sqlinit            = '%s'\n",  in->sqlinit);
-   printf("in.sqltsum            = '%s'\n",  in->sqltsum);
-   printf("in.sqlsum             = '%s'\n",  in->sqlsum);
-   printf("in.sqlent             = '%s'\n",  in->sqlent);
-   printf("in.sqlfin             = '%s'\n",  in->sqlfin);
+   printf("in.sql.init           = '%s'\n",  in->sql.init);
+   printf("in.sql.tsum           = '%s'\n",  in->sql.tsum);
+   printf("in.sql.sum            = '%s'\n",  in->sql.sum);
+   printf("in.sql.ent            = '%s'\n",  in->sql.ent);
+   printf("in.sql.fin            = '%s'\n",  in->sql.fin);
    printf("in.insertdir          = '%d'\n",  in->insertdir);
    printf("in.insertfl           = '%d'\n",  in->insertfl);
    printf("in.dontdescend        = '%d'\n",  in->dontdescend);
@@ -193,10 +193,9 @@ void show_input(struct input* in, int retval) {
    printf("in.infile             = '%d'\n",  in->infile);
    printf("in.min_level          = %zu\n",   in->min_level);
    printf("in.max_level          = %zu\n",   in->max_level);
-   printf("in.intermediate       = '%s'\n",  in->intermediate);
-   printf("in.create_aggregate   = '%s'\n",  in->create_aggregate);
-   printf("in.aggregate          = '%s'\n",  in->aggregate);
-   printf("in.show_results       = %d\n",    in->show_results);
+   printf("in.sql.intermediate   = '%s'\n",  in->sql.intermediate);
+   printf("in.sql.init_agg       = '%s'\n",  in->sql.init_agg);
+   printf("in.sql.agg            = '%s'\n",  in->sql.agg);
    printf("in.keep_matime        = %d\n",    in->keep_matime);
    printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
    printf("in.open_flags         = %d\n",    in->open_flags);
@@ -228,29 +227,10 @@ int parse_cmd_line(int         argc,
                    int         n_positional,
                    const char* positional_args_help_str,
                    struct input *in) {
+   memset(in, 0, sizeof(*in));
    in->maxthreads         = 1;                      // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), "|");
-   in->name_len           = 0;
-   in->sqlinit_len        = 0;
-   in->sqltsum_len        = 0;
-   in->sqlsum_len         = 0;
-   in->sqlent_len         = 0;
-   in->sqlfin_len         = 0;
-   in->dontdescend        = 0;                      // default to descend
-   in->buildinindir       = 0;                      // default to not building db in input dir
-   in->suspectd           = 0;
-   in->suspectfl          = 0;
-   in->suspectfile        = 0;
-   in->suspectmethod      = 0;
-   in->stride             = 0;                      // default striping of inodes
-   in->infile             = 0;                      // default infile being used
-   in->outfile            = 0;                      // no default outfile name
-   memset(in->outfilen,     0, MAXPATH);
-   in->outdb              = 0;                      // no default outdb name
-   memset(in->outdbn,       0, MAXPATH);
-   in->min_level          = 0;                      // default to the top
    in->max_level          = -1;                     // default to all the way down
-   memset(&in->xattrs,          0, sizeof(in->xattrs));
    in->xattrs.nobody.uid  = 65534;
    in->xattrs.nobody.gid  = 65534;
    struct passwd *passwd = getpwnam("nobody");
@@ -258,20 +238,10 @@ int parse_cmd_line(int         argc,
        in->xattrs.nobody.uid = passwd->pw_uid;
        in->xattrs.nobody.gid = passwd->pw_gid;
    }
-   memset(in->sqltsum,          0, MAXSQL);
-   memset(in->sqlsum,           0, MAXSQL);
-   memset(in->sqlent,           0, MAXSQL);
-   memset(in->create_aggregate, 0, MAXSQL);
-   memset(in->intermediate,     0, MAXSQL);
-   memset(in->aggregate,        0, MAXSQL);
-   in->show_results       = PRINT;                  // print without aggregating by default
-   in->keep_matime        = 0;                      // default to not keeping mtime and atime
+
+   in->output             = STDOUT;
    in->output_buffer_size = 4096;
    in->open_flags         = SQLITE_OPEN_READONLY;   // default to read-only opens
-   in->format_set         = 0;
-   memset(in->format,       0, MAXPATH);
-   in->terse              = 0;
-   in->dry_run            = 0;
    in->max_in_dir         = (size_t) -1;
    memset(in->skip, 0, MAXPATH);
 
@@ -341,13 +311,23 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'o':
+         /* TODO: Remove in->outfile */
          in->outfile = 1;
          INSTALL_STR(in->outfilen, optarg, MAXPATH, "-o");
+
+         in->output = OUTFILE;
+         INSTALL_STR(in->outname, optarg, MAXPATH, "-o");
+         in->outname_len = strlen(in->outname);
          break;
 
       case 'O':
+         /* TODO: Remove in->outdb */
          in->outdb = 1;
          INSTALL_STR(in->outdbn, optarg, MAXPATH, "-O");
+
+         in->output = OUTDB;
+         INSTALL_STR(in->outname, optarg, MAXPATH, "-O");
+         in->outname_len = strlen(in->outname);
          break;
 
       case 't':
@@ -361,28 +341,28 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'I':               // SQL initializations
-         INSTALL_STR(in->sqlinit, optarg, MAXSQL, "-I");
-         in->sqlinit_len = strlen(in->sqlinit);
+         INSTALL_STR(in->sql.init, optarg, MAXSQL, "-I");
+         in->sql.init_len = strlen(in->sql.init);
          break;
 
       case 'T':               // SQL for tree-summary
-         INSTALL_STR(in->sqltsum, optarg, MAXSQL, "-T");
-         in->sqltsum_len = strlen(in->sqltsum);
+         INSTALL_STR(in->sql.tsum, optarg, MAXSQL, "-T");
+         in->sql.tsum_len = strlen(in->sql.tsum);
          break;
 
       case 'S':               // SQL for summary
-         INSTALL_STR(in->sqlsum, optarg, MAXSQL, "-S");
-         in->sqlsum_len = strlen(in->sqlsum);
+         INSTALL_STR(in->sql.sum, optarg, MAXSQL, "-S");
+         in->sql.sum_len = strlen(in->sql.sum);
          break;
 
       case 'E':               // SQL for entries
-         INSTALL_STR(in->sqlent, optarg, MAXSQL, "-E");
-         in->sqlent_len = strlen(in->sqlent);
+         INSTALL_STR(in->sql.ent, optarg, MAXSQL, "-E");
+         in->sql.ent_len = strlen(in->sql.ent);
          break;
 
       case 'F':               // SQL clean-up
-         INSTALL_STR(in->sqlfin, optarg, MAXSQL, "-F");
-         in->sqlfin_len = strlen(in->sqlfin);
+         INSTALL_STR(in->sql.fin, optarg, MAXSQL, "-F");
+         in->sql.fin_len = strlen(in->sql.fin);
          break;
 
       case 'a':               // and/or
@@ -422,25 +402,6 @@ int parse_cmd_line(int         argc,
          INSTALL_INT(in->suspecttime, optarg, 1, 2147483646, "-c");
          break;
 
-      case 'e':
-         {
-            int show_results = 0;
-            INSTALL_INT(show_results, optarg, 0, 1, "-e");
-
-            switch (show_results) {
-                case 0:
-                    in->show_results = AGGREGATE;
-                    break;
-                case 1:
-                    in->show_results = PRINT;
-                    break;
-                default:
-                    retval = -1;
-                    break;
-            }
-         }
-         break;
-
       case 'y':
          INSTALL_UINT(in->min_level, optarg, (size_t) 0, (size_t) -1, "-y");
          break;
@@ -454,18 +415,18 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'J':
-         INSTALL_STR(in->intermediate, optarg, MAXSQL, "-J");
-         in->intermediate_len = strlen(in->intermediate);
+         INSTALL_STR(in->sql.intermediate, optarg, MAXSQL, "-J");
+         in->sql.intermediate_len = strlen(in->sql.intermediate);
          break;
 
       case 'K':
-         INSTALL_STR(in->create_aggregate, optarg, MAXSQL, "-K");
-         in->create_aggregate_len = strlen(in->create_aggregate);
+         INSTALL_STR(in->sql.init_agg, optarg, MAXSQL, "-K");
+         in->sql.init_agg_len = strlen(in->sql.init_agg);
          break;
 
       case 'G':
-         INSTALL_STR(in->aggregate, optarg, MAXSQL, "-G");
-         in->aggregate_len = strlen(in->aggregate);
+         INSTALL_STR(in->sql.agg, optarg, MAXSQL, "-G");
+         in->sql.agg_len = strlen(in->sql.agg);
          break;
 
       case 'm':

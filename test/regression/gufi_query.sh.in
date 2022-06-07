@@ -78,16 +78,16 @@ echo "# Get all directory and non-directory names"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM summary;\" -E \"SELECT name FROM pentries;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
 
-echo "# Get relative paths of all directories and non-directories ascending sizes"
-run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT path(name), size FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
+echo "# Get relative paths of all directories and non-directories ascending sizes (files only)"
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
 
-echo "# Get relative paths of all directories and non-directories descending sizes"
-run_no_sort "${GUFI_QUERY} -d \" \" -e 0 -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -S \"INSERT INTO out SELECT path(name), size FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries;\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
+echo "# Get relative paths of all directories and non-directories descending sizes (files only)"
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
 
 echo "#####################################"
 echo "# Invalid Inputs                    #"
@@ -97,31 +97,31 @@ echo "# Missing -I (outdb)"
 run_sort "${GUFI_QUERY} -O outdb \"${INDEXROOT}\""
 
 echo "# Missing -I (aggregating, stdout)"
-run_sort "${GUFI_QUERY} -e 0 -K \"create;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -K \"create;\" \"${INDEXROOT}\""
 
 echo "# Missing -I (aggregating, outfile)"
-run_sort "${GUFI_QUERY} -e 0 -o outfile -K \"create;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -o outfile -K \"create;\" \"${INDEXROOT}\""
 
 echo "# Missing -I (aggregating, outdb)"
-run_sort "${GUFI_QUERY} -e 0 -O outdb -K \"create;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -O outdb -K \"create;\" \"${INDEXROOT}\""
 
 echo "# Missing -T/-S/-E"
 run_sort "${GUFI_QUERY} \"${INDEXROOT}\""
 
 echo "# Missing -J (aggregate, stdout)"
-run_sort "${GUFI_QUERY} -e 0            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
 
 echo "# Missing -J (aggregate, outfile)"
-run_sort "${GUFI_QUERY} -e 0 -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
 
 echo "# Missing -J (aggregate, outdb)"
-run_sort "${GUFI_QUERY} -e 0 -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"              \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"                \"${INDEXROOT}\""
 
 echo "# Missing -G (aggregate, stdout)"
-run_sort "${GUFI_QUERY} -e 0            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
 
 echo "# Missing -G (aggregate, outfile)"
-run_sort "${GUFI_QUERY} -e 0 -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
 ) |& @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"

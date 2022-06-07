@@ -600,7 +600,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
     /* if this is OR, as well as no-sql-to-run, skip this query */
-    if (in.sqltsum_len > 1) {
+    if (in.sql.tsum_len > 1) {
         if (in.andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
             timestamp_set_start(sqltsumcheck);
@@ -614,9 +614,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                 recs = -1;
             }
             else {
-                /* run in.sqltsum */
+                /* run in.sql.tsum */
                 timestamp_set_start(sqltsum);
-                querydb(dbname, db, in.sqltsum, ta, id, &recs);
+                querydb(dbname, db, in.sql.tsum, ta, id, &recs);
                 timestamp_set_end(sqltsum);
                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                 ta->queries[id]++;
@@ -678,7 +678,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                 shortpath(work->name,shortname,endname);
                 SNFORMAT_S(gps[id].gepath, MAXPATH, 1, endname, strlen(endname));
 
-                if (in.sqlsum_len > 1) {
+                if (in.sql.sum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
                     SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
@@ -686,7 +686,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                     realpath(work->name,gps[id].gfpath);
 
                     timestamp_set_start(sqlsum);
-                    querydb(dbname, db, in.sqlsum, ta, id, &recs);
+                    querydb(dbname, db, in.sql.sum, ta, id, &recs);
                     timestamp_set_end(sqlsum);
                     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                     ta->queries[id]++;
@@ -700,14 +700,14 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
                 /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
-                    if (in.sqlent_len > 1) {
+                    if (in.sql.ent_len > 1) {
                         /* set the path so users can put path() in their queries */
-                        /* printf("****entries len of in.sqlent %lu\n",strlen(in.sqlent)); */
+                        /* printf("****entries len of in.sql.ent %lu\n",strlen(in.sql.ent)); */
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
                         realpath(work->name,gps[id].gfpath);
 
                         timestamp_set_start(sqlent);
-                        querydb(dbname, db, in.sqlent, ta, id, &recs); /* recs is not used */
+                        querydb(dbname, db, in.sql.ent, ta, id, &recs); /* recs is not used */
                         timestamp_set_end(sqlent);
                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                         ta->queries[id]++;
@@ -881,8 +881,8 @@ static sqlite3 *aggregate_init(char *aggregate_name, struct ThreadArgs *ta, size
         addqueryfuncs(ta->outdbs[i], i, NULL);
 
         /* create table */
-        if (sqlite3_exec(ta->outdbs[i], in.sqlinit, NULL, NULL, NULL) != SQLITE_OK) {
-            fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, intermediate_name);
+        if (sqlite3_exec(ta->outdbs[i], in.sql.init, NULL, NULL, NULL) != SQLITE_OK) {
+            fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sql.init, intermediate_name);
             outdbs_fin(ta->outdbs, i, NULL, 0);
             return NULL;
         }
@@ -906,8 +906,8 @@ static sqlite3 *aggregate_init(char *aggregate_name, struct ThreadArgs *ta, size
     addqueryfuncs(aggregate, count, NULL);
 
     /* create table */
-    if (sqlite3_exec(aggregate, in.create_aggregate, NULL, NULL, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sqlinit, aggregate_name);
+    if (sqlite3_exec(aggregate, in.sql.init_agg, NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Could not run SQL Init \"%s\" on %s\n", in.sql.init, aggregate_name);
         outdbs_fin(ta->outdbs, count, NULL, 0);
         closedb(aggregate);
         return NULL;
@@ -921,51 +921,70 @@ static void aggregate_fin(sqlite3 *aggregate) {
 }
 
 int validate_inputs(struct input *in) {
-    if (in->outdb || in->show_results == AGGREGATE) {
+    /*
+     * - Leaves are final outputs
+     * - OUTFILE/OUTDB + aggregation will create per thread and final aggregation files
+     *
+     *                         init                       | if writing to outdb or aggregating
+     *                          |                         | -I CREATE [TEMP] TABLE <name>
+     *                          |
+     *                          |                         | if aggregating, create an aggregate table
+     *                          |                         | -K CREATE [TEMP] <name>
+     *                          |
+     *   -----------------------------------------------  | start walk
+     *                          |
+     *                       thread
+     *                          |
+     *          -------------------------------
+     *          |               |             |
+     *          |               |       stdout/outfile    | -T/-S/-E SELECT FROM <index table>
+     *          |               |
+     *   intermediate db      outdb                       | -T/-S/-E INSERT into <name> SELECT FROM <index table>
+     *          |
+     *          |
+     *   -----------------------------------------------  | after walking index
+     *          |
+     *          |                                         | move results into aggregate table
+     *    aggregate db - outdb                            | -J INSERT INTO <aggregate name>
+     *    |          |
+     * outfile     stdout                                 | Get final results
+     *                                                    | -G SELECT * FROM <aggregate name>
+     */
+     if ((in->output == OUTDB) || in->sql.init_agg_len) {
         /* -I (required) */
-        if (!in->sqlinit_len) {
+        if (!in->sql.init_len) {
             fprintf(stderr, "Error: Missing -I\n");
             return -1;
         }
     }
 
     /* -T, -S, -E (at least 1) */
-    if ((!!in->sqltsum_len + !!in->sqlsum_len + !!in->sqlent_len) == 0) {
+    if ((in->sql.tsum_len + in->sql.sum_len + in->sql.ent_len) == 0) {
         fprintf(stderr, "Error: Need at least one of -T, -S, or -E\n");
         return -1;
     }
 
     /* not aggregating */
-    if (in->show_results == PRINT) {
-        if (in->create_aggregate_len) {
-            fprintf(stderr, "Warning: Got -K even though not aggregating. Ignoring\n");
-        }
-
-        if (in->intermediate_len) {
+    if (!in->sql.init_agg_len) {
+        if (in->sql.intermediate_len) {
             fprintf(stderr, "Warning: Got -J even though not aggregating. Ignoring\n");
         }
 
-        if (in->aggregate_len) {
+        if (in->sql.agg_len) {
             fprintf(stderr, "Warning: Got -G even though not aggregating. Ignoring\n");
         }
     }
     /* aggregating */
     else {
-        /* need -K to write per-thread results into */
-        if (!in->create_aggregate_len) {
-            fprintf(stderr, "Error: Missing -K\n");
-            return -1;
-        }
-
         /* need -J to write to aggregate db */
-        if (!in->intermediate_len) {
+        if (!in->sql.intermediate_len) {
             fprintf(stderr, "Error: Missing -J\n");
             return -1;
         }
 
-        if (in->outfile) {
+        if ((in->output == STDOUT) || (in->output == OUTFILE)) {
             /* need -G to write out results */
-            if (!in->aggregate_len) {
+            if (!in->sql.agg_len) {
                 fprintf(stderr, "Error: Missing -G\n");
                 return -1;
             }
@@ -993,7 +1012,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:wxk:", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -1026,13 +1045,13 @@ int main(int argc, char *argv[])
         print_mutex = &static_print_mutex;
     }
 
-    const size_t output_count = in.maxthreads + (in.show_results == AGGREGATE);
-    args.outfiles = outfiles_init(in.outfile, in.outfilen, output_count);
-    args.outdbs = outdbs_init(in.outdb, in.outdbn, in.maxthreads, in.sqlinit, in.sqlinit_len);
+    const size_t output_count = in.maxthreads + !!in.sql.init_agg_len;
+    args.outfiles = outfiles_init(in.output == OUTFILE, in.outfilen, output_count);
+    args.outdbs = outdbs_init(in.output == OUTDB, in.outdbn, in.maxthreads, in.sql.init, in.sql.init_len);
     if (!args.outfiles || !args.outdbs ||
         !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size, print_mutex)) {
         OutputBuffers_destroy(&args.output_buffers);
-        outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outdbs_fin  (args.outdbs, in.maxthreads, in.sql.fin, in.sql.fin_len);
         outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
@@ -1061,10 +1080,10 @@ int main(int argc, char *argv[])
 
     char aggregate_name[MAXSQL];
     sqlite3 *aggregate = NULL;
-    if (in.show_results == AGGREGATE) {
+    if (in.sql.init_agg_len) {
         if (!(aggregate = aggregate_init(aggregate_name, &args, in.maxthreads))) {
             OutputBuffers_destroy(&args.output_buffers);
-            outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
+            outdbs_fin  (args.outdbs, in.maxthreads, in.sql.fin, in.sql.fin_len);
             outfiles_fin(args.outfiles, output_count);
             trie_free(args.skip);
             return -1;
@@ -1086,7 +1105,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    args.callback = ((in.show_results == PRINT)?print_callback:NULL);
+    args.callback = ((in.output != OUTDB)?print_callback:NULL);
     struct QPTPool *pool = QPTPool_init(in.maxthreads
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , timestamp_buffers
@@ -1097,7 +1116,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to initialize thread pool\n");
         free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
-        outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outdbs_fin  (args.outdbs, in.maxthreads, in.sql.fin, in.sql.fin_len);
         outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
@@ -1107,7 +1126,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to start threads\n");
         free(args.queries);
         OutputBuffers_destroy(&args.output_buffers);
-        outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
+        outdbs_fin  (args.outdbs, in.maxthreads, in.sql.fin, in.sql.fin_len);
         outfiles_fin(args.outfiles, output_count);
         trie_free(args.skip);
         return -1;
@@ -1166,7 +1185,7 @@ int main(int argc, char *argv[])
     #endif
 
     int rc = 0;
-    if (in.show_results == AGGREGATE) {
+    if (in.sql.init_agg_len) {
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
         timestamp_start(aggregation);
         #endif
@@ -1174,7 +1193,7 @@ int main(int argc, char *argv[])
         /* aggregate the intermediate results */
         for(int i = 0; i < in.maxthreads; i++) {
             if (!attachdb(aggregate_name, args.outdbs[i], AGGREGATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1) ||
-                (sqlite3_exec(args.outdbs[i], in.intermediate, NULL, NULL, NULL) != SQLITE_OK))             {
+                (sqlite3_exec(args.outdbs[i], in.sql.intermediate, NULL, NULL, NULL) != SQLITE_OK))         {
                 fprintf(stderr, "Aggregation of intermediate databases error: %s\n", sqlite3_errmsg(args.outdbs[i]));
             }
         }
@@ -1197,8 +1216,8 @@ int main(int argc, char *argv[])
         /* ca.printed = 0; */
 
         char *err;
-        if (sqlite3_exec(aggregate, in.aggregate, print_callback, &ca, &err) != SQLITE_OK) {
-            fprintf(stderr, "Final aggregation error: %s: %s\n", in.aggregate, err);
+        if (sqlite3_exec(aggregate, in.sql.agg, print_callback, &ca, &err) != SQLITE_OK) {
+            fprintf(stderr, "Final aggregation error: %s: %s\n", in.sql.agg, err);
             rc = -1;
         }
         sqlite3_free(err);
@@ -1235,7 +1254,7 @@ int main(int argc, char *argv[])
     /* clean up globals */
     free(args.queries);
     OutputBuffers_destroy(&args.output_buffers);
-    outdbs_fin  (args.outdbs, in.maxthreads, in.sqlfin, in.sqlfin_len);
+    outdbs_fin  (args.outdbs, in.maxthreads, in.sql.fin, in.sql.fin_len);
     outfiles_fin(args.outfiles, output_count);
     trie_free(args.skip);
 

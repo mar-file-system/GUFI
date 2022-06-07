@@ -92,7 +92,6 @@ __gufi() {
         # return all entries in the directory and directory names in subdirectories
         matches=$(${bfq} \
             -a \
-            -e 0 \
             -z 1 \
             -d $' ' \
             -I "CREATE TABLE out(name TEXT, type TEXT);" \
@@ -120,7 +119,6 @@ __gufi() {
         # search the index for matches on the name
         matches=$(${bfq} \
             -a \
-            -e 0 \
             -z 1 \
             -d " " \
             -I "CREATE TABLE out(name TEXT, type TEXT);" \
