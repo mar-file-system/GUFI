@@ -88,11 +88,15 @@ struct OutputBuffer {
     size_t count;     /* GUFI specific; counter for number of rows that were buffered here; these are not reset after flushes */
 };
 
+struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t capacity);
+
 /* returns how much was written; should be either 0 or size */
 size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size_t size, const int increment_count);
 
 /* returns how much was flushed (output from fwrite; no fflush) */
 size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out);
+
+void OutputBuffer_destroy(struct OutputBuffer *obuf);
 
 /* Buffers for all threads */
 struct OutputBuffers {

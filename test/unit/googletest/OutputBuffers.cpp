@@ -67,12 +67,6 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 
-
-extern "C" {
-    struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t capacity);
-    void OutputBuffer_destroy(struct OutputBuffer *obuf);
-}
-
 const char STR[] = "string";
 const std::size_t LEN = strlen(STR); // includes the null terminator
 
