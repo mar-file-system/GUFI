@@ -1041,13 +1041,13 @@ int main(int argc, char *argv[])
     /* (all output files point to the same file, probably stdout) */
     pthread_mutex_t static_print_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t *print_mutex = NULL;
-    if (!in.outfile) {
+    if (in.output == STDOUT) {
         print_mutex = &static_print_mutex;
     }
 
     const size_t output_count = in.maxthreads + !!in.sql.init_agg_len;
-    args.outfiles = outfiles_init(in.output == OUTFILE, in.outfilen, output_count);
-    args.outdbs = outdbs_init(in.output == OUTDB, in.outdbn, in.maxthreads, in.sql.init, in.sql.init_len);
+    args.outfiles = outfiles_init(in.output == OUTFILE, in.outname, output_count);
+    args.outdbs = outdbs_init(in.output == OUTDB, in.outname, in.maxthreads, in.sql.init, in.sql.init_len);
     if (!args.outfiles || !args.outdbs ||
         !OutputBuffers_init(&args.output_buffers, output_count, in.output_buffer_size, print_mutex)) {
         OutputBuffers_destroy(&args.output_buffers);

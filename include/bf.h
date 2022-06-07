@@ -190,11 +190,7 @@ struct input {
    int  buildindex;
    int  maxthreads;
    int  writetsum;
-   int  outfile;
-   char outfilen[MAXPATH];
    int  andor;
-   int  outdb;
-   char outdbn[MAXPATH];
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
    int  dontdescend;              // added to allow single level directory operations

@@ -174,8 +174,6 @@ TEST(parse_cmd_line, options) {
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
     EXPECT_EQ(in.maxthreads,          1);
     EXPECT_EQ(in.stride,              1);
-    EXPECT_EQ(in.outfile,             0);
-    EXPECT_EQ(in.outdb,               0);
     EXPECT_EQ(in.delim[0],            '|');
     EXPECT_STREQ(in.nameto,           t_arg.c_str());
     EXPECT_STREQ(in.name,             i_arg.c_str());

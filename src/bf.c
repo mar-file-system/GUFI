@@ -166,10 +166,6 @@ void show_input(struct input* in, int retval) {
    printf("in.delim              = '%s'\n",  in->delim);
    printf("in.name               = '%s'\n",  in->name);
    printf("in.name_len           = '%zu'\n", in->name_len);
-   printf("in.outfile            = %d\n",    in->outfile);
-   printf("in.outfilen           = '%s'\n",  in->outfilen);
-   printf("in.outdb              = %d\n",    in->outdb);
-   printf("in.outdbn             = '%s'\n",  in->outdbn);
    printf("in.nameto             = '%s'\n",  in->nameto);
    printf("in.andor              = %d\n",    in->andor);
    printf("in.xattr.enabled      = %d\n",    in->xattrs.enabled);
@@ -311,20 +307,12 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'o':
-         /* TODO: Remove in->outfile */
-         in->outfile = 1;
-         INSTALL_STR(in->outfilen, optarg, MAXPATH, "-o");
-
          in->output = OUTFILE;
          INSTALL_STR(in->outname, optarg, MAXPATH, "-o");
          in->outname_len = strlen(in->outname);
          break;
 
       case 'O':
-         /* TODO: Remove in->outdb */
-         in->outdb = 1;
-         INSTALL_STR(in->outdbn, optarg, MAXPATH, "-O");
-
          in->output = OUTDB;
          INSTALL_STR(in->outname, optarg, MAXPATH, "-O");
          in->outname_len = strlen(in->outname);

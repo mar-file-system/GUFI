@@ -86,7 +86,7 @@ int printits(struct work *pwork, int ptid) {
   FILE *out;
 
   out = stdout;
-  if (in.outfile > 0)
+  if (in.output == OUTFILE)
      out = gts.outfd[ptid];
 
   if (in.dodelim == 0) {
