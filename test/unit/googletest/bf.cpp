@@ -130,7 +130,7 @@ TEST(parse_cmd_line, flags) {
 }
 
 TEST(parse_cmd_line, options) {
-    const char opts[] = "n:g:d:t:i:I:T:S:E:F:W:A:c:e:v:w:y:z:";
+    const char opts[] = "n:g:d:t:i:I:T:S:E:F:W:A:c:v:w:y:z:";
     const std::string exec = "exec";
     const std::string n = "-n"; const std::string n_arg = "1";
     const std::string g = "-g"; const std::string g_arg = "1";
@@ -145,64 +145,70 @@ TEST(parse_cmd_line, options) {
     const std::string W = "-W"; const std::string W_arg = "W arg";
     const std::string A = "-A"; const std::string A_arg = "1";
     const std::string c = "-c"; const std::string c_arg = "1";
-    const std::string e = "-e"; const std::string e_arg = "1";
     const std::string y = "-y"; const std::string y_arg = "1";
     const std::string z = "-z"; const std::string z_arg = "1";
 
-    // options without conflicts
+    const char *argv[] = {
+        exec.c_str(),
+        n.c_str(), n_arg.c_str(),
+        g.c_str(), g_arg.c_str(),
+        d.c_str(), d_arg.c_str(),
+        t.c_str(), t_arg.c_str(),
+        i.c_str(), i_arg.c_str(),
+        I.c_str(), I_arg.c_str(),
+        T.c_str(), T_arg.c_str(),
+        S.c_str(), S_arg.c_str(),
+        E.c_str(), E_arg.c_str(),
+        F.c_str(), F_arg.c_str(),
+        W.c_str(), W_arg.c_str(),
+        A.c_str(), A_arg.c_str(),
+        c.c_str(), c_arg.c_str(),
+        y.c_str(), y_arg.c_str(),
+        z.c_str(), z_arg.c_str(),
+        // no nullptr since getopt will try to dereference it
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]);
+
+    struct input in;
+    ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+    EXPECT_EQ(in.maxthreads,          1);
+    EXPECT_EQ(in.stride,              1);
+    EXPECT_EQ(in.outfile,             0);
+    EXPECT_EQ(in.outdb,               0);
+    EXPECT_EQ(in.delim[0],            '|');
+    EXPECT_STREQ(in.nameto,           t_arg.c_str());
+    EXPECT_STREQ(in.name,             i_arg.c_str());
+    EXPECT_STREQ(in.sql.init,         I_arg.c_str());
+    EXPECT_STREQ(in.sql.tsum,         T_arg.c_str());
+    EXPECT_STREQ(in.sql.sum,          S_arg.c_str());
+    EXPECT_STREQ(in.sql.ent,          E_arg.c_str());
+    EXPECT_STREQ(in.sql.fin,          F_arg.c_str());
+    EXPECT_STREQ(in.insuspect,        W_arg.c_str());
+    EXPECT_EQ(in.suspectmethod,       1);
+    EXPECT_EQ(in.suspecttime,         1);
+    EXPECT_EQ(in.min_level,           (std::size_t) 1);
+    EXPECT_EQ(in.max_level,           (std::size_t) 1);
+}
+
+TEST(parse_cmd_line, output_arguments) {
+    const char opts[] = "o:O:";
+    const std::string exec = "exec";
+    const std::string o = "-o"; const std::string o_arg = "filename";
+    const std::string O = "-O"; const std::string O_arg = "dbname";
+
+    // neither
     {
         const char *argv[] = {
             exec.c_str(),
-            n.c_str(), n_arg.c_str(),
-            g.c_str(), g_arg.c_str(),
-            d.c_str(), d_arg.c_str(),
-            t.c_str(), t_arg.c_str(),
-            i.c_str(), i_arg.c_str(),
-            I.c_str(), I_arg.c_str(),
-            T.c_str(), T_arg.c_str(),
-            S.c_str(), S_arg.c_str(),
-            E.c_str(), E_arg.c_str(),
-            F.c_str(), F_arg.c_str(),
-            W.c_str(), W_arg.c_str(),
-            A.c_str(), A_arg.c_str(),
-            c.c_str(), c_arg.c_str(),
-            e.c_str(), e_arg.c_str(),
-            y.c_str(), y_arg.c_str(),
-            z.c_str(), z_arg.c_str(),
-            // no nullptr since getopt will try to dereference it
         };
 
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.maxthreads,          1);
-        EXPECT_EQ(in.stride,              1);
-        EXPECT_EQ(in.outfile,             0);
-        EXPECT_EQ(in.outdb,               0);
-        EXPECT_EQ(in.delim[0],            '|');
-        EXPECT_STREQ(in.nameto,           t_arg.c_str());
-        EXPECT_STREQ(in.name,             i_arg.c_str());
-        EXPECT_STREQ(in.sqlinit,          I_arg.c_str());
-        EXPECT_STREQ(in.sqltsum,          T_arg.c_str());
-        EXPECT_STREQ(in.sqlsum,           S_arg.c_str());
-        EXPECT_STREQ(in.sqlent,           E_arg.c_str());
-        EXPECT_STREQ(in.sqlfin,           F_arg.c_str());
-        EXPECT_STREQ(in.insuspect,        W_arg.c_str());
-        EXPECT_EQ(in.suspectmethod,       1);
-        EXPECT_EQ(in.suspecttime,         1);
-        EXPECT_EQ(in.show_results,        PRINT);
-        EXPECT_EQ(in.min_level,           (std::size_t) 1);
-        EXPECT_EQ(in.max_level,           (std::size_t) 1);
+        EXPECT_EQ(in.output,      STDOUT);
     }
-}
-
-TEST(parse_cmd_line, output_arguments) {
-    const char opts[] = "o:O:I:";
-    const std::string exec = "exec";
-    const std::string I = "-I"; const std::string I_arg = "I arg";
-    const std::string o = "-o"; const std::string o_arg = "filename";
-    const std::string O = "-O"; const std::string O_arg = "dbname";
 
     // -o
     {
@@ -215,24 +221,55 @@ TEST(parse_cmd_line, output_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.outfile,         1);
-        EXPECT_STREQ(in.outfilen,     o_arg.c_str());
+        EXPECT_EQ(in.output,      OUTFILE);
+        EXPECT_STREQ(in.outname,  o_arg.c_str());
     }
 
-    // -O with -I
+    // -O
     {
         const char *argv[] = {
             exec.c_str(),
             O.c_str(), O_arg.c_str(),
-            I.c_str(), I_arg.c_str(),
         };
 
         int argc = sizeof(argv) / sizeof(argv[0]);
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.outdb,           1);
-        EXPECT_STREQ(in.outdbn,       O_arg.c_str());
+        EXPECT_EQ(in.output,      OUTDB);
+        EXPECT_STREQ(in.outname,  O_arg.c_str());
+    }
+
+    // -o then -O
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            o.c_str(), o_arg.c_str(),
+            O.c_str(), O_arg.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(in.output,      OUTDB);
+        EXPECT_STREQ(in.outname,  O_arg.c_str());
+    }
+
+    // -O then -o
+    {
+        const char *argv[] = {
+            exec.c_str(),
+            O.c_str(), O_arg.c_str(),
+            o.c_str(), o_arg.c_str(),
+        };
+
+        int argc = sizeof(argv) / sizeof(argv[0]);
+
+        struct input in;
+        ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
+        EXPECT_EQ(in.output,      OUTFILE);
+        EXPECT_STREQ(in.outname,  o_arg.c_str());
     }
 }
 
@@ -253,20 +290,19 @@ TEST(parse_cmd_line, positional) {
     // 1, since no options were read
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, "", 0, "", &in), 1);
 
-    EXPECT_EQ(in.maxthreads,         1);
-    EXPECT_EQ(in.delim[0],           '|');
-    EXPECT_EQ(in.dontdescend,        0);
-    EXPECT_EQ(in.buildinindir,       0);
-    EXPECT_EQ(in.suspectd,           0);
-    EXPECT_EQ(in.suspectfl,          0);
-    EXPECT_EQ(in.suspectfile,        0);
-    EXPECT_EQ(in.stride,             0);
-    EXPECT_EQ(in.infile,             0);
-    EXPECT_EQ(in.min_level,          (size_t) 0);
-    EXPECT_EQ(in.max_level,          (size_t) -1);
-    EXPECT_STREQ(in.intermediate,    "");
-    EXPECT_STREQ(in.aggregate,       "");
-    EXPECT_EQ(in.show_results,       PRINT);
+    EXPECT_EQ(in.maxthreads,          1);
+    EXPECT_EQ(in.delim[0],            '|');
+    EXPECT_EQ(in.dontdescend,         0);
+    EXPECT_EQ(in.buildinindir,        0);
+    EXPECT_EQ(in.suspectd,            0);
+    EXPECT_EQ(in.suspectfl,           0);
+    EXPECT_EQ(in.suspectfile,         0);
+    EXPECT_EQ(in.stride,              0);
+    EXPECT_EQ(in.infile,              0);
+    EXPECT_EQ(in.min_level,           (size_t) 0);
+    EXPECT_EQ(in.max_level,           (size_t) -1);
+    EXPECT_STREQ(in.sql.intermediate, "");
+    EXPECT_STREQ(in.sql.agg,          "");
 }
 
 TEST(INSTALL_STR, good) {

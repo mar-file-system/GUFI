@@ -653,8 +653,7 @@ def run(argv, config_path):
                                     build_order_by(args, args.aggregate_name),
                                     args.num_results)
 
-        query_cmd += ['-e', '0',
-                      '-I', I,
+        query_cmd += ['-I', I,
                       '-S', S,
                       '-E', E,
                       '-J', J,

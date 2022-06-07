@@ -132,10 +132,11 @@ struct sum {
   long long int totossint4;
 };
 
-typedef enum ShowResults {
-    AGGREGATE,
-    PRINT
-} ShowResults_t;
+typedef enum OutputMethod {
+    STDOUT,    /* default */
+    OUTFILE,   /* -o */
+    OUTDB,     /* -O */
+} OutputMethod_t;
 
 struct input {
    char name[MAXPATH];
@@ -149,12 +150,36 @@ struct input {
             gid_t gid;
         } nobody;
    } xattrs;
-   char sqltsum[MAXSQL];
-   size_t sqltsum_len;
-   char sqlsum[MAXSQL];
-   size_t sqlsum_len;
-   char sqlent[MAXSQL];
-   size_t sqlent_len;
+
+   struct {
+       /* set up per-thread intermidate tables */
+       char   init[MAXSQL];
+       size_t init_len;
+
+       /* set up final aggregation table */
+       char   init_agg[MAXSQL];
+       size_t init_agg_len;
+
+       char   tsum[MAXSQL];
+       size_t tsum_len;
+       char   sum[MAXSQL];
+       size_t sum_len;
+       char   ent[MAXSQL];
+       size_t ent_len;
+
+       /* if not aggregating, output results */
+       /* if aggregating, insert into aggregate table */
+       char   intermediate[MAXSQL];
+       size_t intermediate_len;
+
+       /* query table containing aggregated results */
+       char   agg[MAXSQL];
+       size_t agg_len;
+
+       char   fin[MAXSQL];
+       size_t fin_len;
+   } sql;
+
    int  printdir;
    int  printing;
    int  printheader;
@@ -170,10 +195,6 @@ struct input {
    int  andor;
    int  outdb;
    char outdbn[MAXPATH];
-   char sqlinit[MAXSQL];
-   size_t sqlinit_len;
-   char sqlfin[MAXSQL];
-   size_t sqlfin_len;
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
    int  dontdescend;              // added to allow single level directory operations
@@ -188,14 +209,13 @@ struct input {
    int infile;                    // added for gufi_query to be able to read input file to get dir/inode info
    size_t min_level;              // minimum level of recursion to reach before running queries
    size_t max_level;              // maximum level of recursion to run queries on
-   char intermediate[MAXSQL];     // SQL query to run on intermediate tables
-   size_t intermediate_len;
-   char create_aggregate[MAXSQL]; // SQL query to create the aggregate table
-   size_t create_aggregate_len;
-   char aggregate[MAXSQL];        // SQL query to run on aggregated data
-   size_t aggregate_len;
-   ShowResults_t show_results;
+
+   OutputMethod_t output;
+   char outname[MAXPATH];
+   size_t outname_len;
+
    int keep_matime;
+
    size_t output_buffer_size;
    int open_flags;
 
