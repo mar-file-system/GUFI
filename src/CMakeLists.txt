@@ -171,22 +171,25 @@ endif()
 #        -> compiles file2.cpp into file2
 #        -> installs file1 and file2 into bin
 #
+function(build_and_install_one PATH LINK_GUFI TARGET)
+  # create the target for building the executable
+  add_executable(${TARGET} ${ARGN})
+
+  # link GUFI libraries if needed
+  if (LINK_GUFI)
+    target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
+    add_dependencies(${TARGET} GUFI)
+  endif()
+
+  # install the executable
+  install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
+endfunction()
+
 function(build_and_install PATH LINK_GUFI)
   foreach(SOURCE ${ARGN})
     # get the filename only (no path or extension)
     string(REGEX REPLACE "\\.[^.]*$" "" TARGET ${SOURCE})
-
-    # create the target for building the executable
-    add_executable(${TARGET} ${SOURCE})
-
-    # link GUFI libraries if needed
-    if (LINK_GUFI)
-      target_link_libraries(${TARGET} ${COMMON_LIBRARIES})
-      add_dependencies(${TARGET} GUFI)
-    endif()
-
-    # install the executable
-    install(TARGETS ${TARGET} DESTINATION ${PATH} COMPONENT Server)
+    build_and_install_one("${PATH}" "${LINK_GUFI}" "${TARGET}" "${SOURCE}")
   endforeach()
 endfunction()
 
