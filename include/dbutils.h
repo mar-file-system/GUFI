@@ -156,6 +156,8 @@ int insertsumdb(sqlite3 *sdb, struct work *pwork, struct sum *su);
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
 
+int addqueryfuncs_common(sqlite3 *db);
+int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work);
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);

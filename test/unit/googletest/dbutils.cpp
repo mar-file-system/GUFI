@@ -97,7 +97,7 @@ TEST(addqueryfuncs, path) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
 
     // 0 args - get work->name back
     {
@@ -161,7 +161,7 @@ TEST(addqueryfuncs, fpath) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT fpath()", str_output, output, NULL), SQLITE_OK);
@@ -182,7 +182,7 @@ TEST(addqueryfuncs, epath) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT epath()", str_output, output, NULL), SQLITE_OK);
@@ -203,14 +203,11 @@ TEST(addqueryfuncs, uidtouser) {
     ASSERT_EQ(getpwuid_r(uid, &pwd, buf, MAXPATH, &result), 0);
     ASSERT_EQ(result, &pwd);
 
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     // use value obtained from summary table
     char query[MAXSQL] = {};
@@ -235,14 +232,11 @@ TEST(addqueryfuncs, gidtogroup) {
     ASSERT_EQ(getgrgid_r(gid, &grp, buf, MAXPATH, &result), 0);
     ASSERT_EQ(result, &grp);
 
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     // use value obtained from summary table
     char query[MAXSQL] = {};
@@ -257,14 +251,11 @@ TEST(addqueryfuncs, gidtogroup) {
 }
 
 TEST(addqueryfuncs, modetotxt) {
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     for(mode_t perm = 0; perm < 01000; perm++) {
         char query[MAXSQL] = {};
@@ -286,14 +277,11 @@ TEST(addqueryfuncs, modetotxt) {
 }
 
 TEST(addqueryfuncs, strftime) {
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     const char fmt[] = "%a %A %b %B %c %C %d %D %e %F %g %G %h %H %I %j %m %M %n %p %r %R %S %t %T %u %U %V %w %W %x %X %y %Y %z %Z %%";
 
@@ -326,14 +314,11 @@ static const char SIZE[] = {'K',    // 10
 };
 
 TEST(addqueryfuncs, blocksize) {
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     const char expecteds[] = {'1', '1', '2'};
 
@@ -380,14 +365,11 @@ TEST(addqueryfuncs, blocksize) {
 }
 
 TEST(addqueryfuncs, human_readable_size) {
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     char query[MAXSQL] = {};
     char output[MAXPATH] = {};
@@ -423,7 +405,7 @@ TEST(addqueryfuncs, level) {
     ASSERT_NE(db, nullptr);
 
     for(work.level = 0; work.level < 10; work.level++) {
-        ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+        ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
 
         char output[MAXPATH] = {};
         ASSERT_EQ(sqlite3_exec(db, "SELECT level()", str_output, output, NULL), SQLITE_OK);
@@ -447,7 +429,7 @@ TEST(addqueryfuncs, starting_point) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, NULL), SQLITE_OK);
@@ -458,14 +440,11 @@ TEST(addqueryfuncs, starting_point) {
 }
 
 TEST(addqueryfuncs, basename) {
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs_common(db), 0);
 
     char output[MAXPATH] = {};
 
