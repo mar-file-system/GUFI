@@ -749,7 +749,7 @@ int do_rollup(struct RollUp *rollup,
         }
 
         /* always detach subdir */
-        detachdb(child_dbname, dst, SUBDIR_ATTACH_NAME);
+        detachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, 1);
 
         timestamp_end(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
 

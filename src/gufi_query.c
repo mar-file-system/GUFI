@@ -715,7 +715,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     timestamp_set_start(close_call);
     /* if we have an out db we just detach gufi db */
     if (ta->outdbs[id]) {
-      detachdb(dbname, db, "tree");
+      detachdb(dbname, db, "tree", 1);
     } else {
       closedb(db);
     }

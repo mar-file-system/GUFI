@@ -162,16 +162,20 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
   return db;
 }
 
-sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn)
+sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err)
 {
   char detach[MAXSQL];
   if (!sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn)) {
-      fprintf(stderr, "Cannot create DETACH command\n");
+      if (print_err) {
+          fprintf(stderr, "Cannot create DETACH command\n");
+      }
       return NULL;
   }
 
   if (sqlite3_exec(db, detach, NULL, NULL, NULL) != SQLITE_OK) {
-      fprintf(stderr, "Cannot detach database: %s %s\n", name, sqlite3_errmsg(db));
+      if (print_err) {
+          fprintf(stderr, "Cannot detach database: %s %s\n", name, sqlite3_errmsg(db));
+      }
       return NULL;
   }
 

@@ -111,7 +111,7 @@ extern const char vtssqlgroup[];
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err);
 
-sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn);
+sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err);
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql);
 
