@@ -456,36 +456,32 @@ struct ThreadArgs {
     FILE **outfiles;
     sqlite3 **outdbs;
     size_t *queries; /* per thread query count, not including -T, -S, and -E */
-    int (*print_callback_func)(void*,int,char**,char**);
+    int (*callback)(void *, int, char **, char **);
     #ifdef DEBUG
     struct timespec *start_time;
     #endif
 };
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
+void querydb(const char *dbname, sqlite3 *db, const char *query,
+             struct ThreadArgs *ta, const int id, int *rc) {
+    struct CallbackArgs ca;
+    ca.output_buffers = &ta->output_buffers;
+    ca.outfiles = ta->outfiles;
+    ca.id = id;
+    ca.rows = 0;
+    /* ca.printed = 0; */
+
+    char *err = NULL;
 #ifdef SQL_EXEC
-#define querydb(dbname, db, query, callback, obufs, ofiles, id, ts_name, rc)   \
-do {                                                                           \
-    struct CallbackArgs ca;                                                    \
-    ca.output_buffers = obufs;                                                 \
-    ca.outfiles = ofiles;                                                      \
-    ca.id = id;                                                                \
-    ca.rows = 0;                                                               \
-    /* ca.printed = 0; */                                                      \
-                                                                               \
-    timestamp_set_start(ts_name);                                              \
-    char *err = NULL;                                                          \
-    if (sqlite3_exec(db, query, callback, &ca, &err) != SQLITE_OK) {           \
-        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query);        \
-    }                                                                          \
-    timestamp_set_end(ts_name);                                                \
-    sqlite3_free(err);                                                         \
-                                                                               \
-    rc = ca.rows;                                                              \
-} while (0)
-#else
-#define querydb(dbname, db, query, callback, obufs, ofiles, id, ts_name, rc)
+    if (sqlite3_exec(db, query, ta->callback, &ca, &err) != SQLITE_OK) {
+        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query);
+    }
 #endif
+    sqlite3_free(err);
+
+    *rc = ca.rows;
+}
 
 int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     sqlite3 *db = NULL;
@@ -607,18 +603,18 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     if (in.sqltsum_len > 1) {
         if (in.andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
+            timestamp_set_start(sqltsumcheck);
             querydb(dbname, db, "select name from sqlite_master where type=\'table\' and name='treesummary';",
-                    ta->print_callback_func, NULL,
-                    NULL, id, sqltsumcheck, recs);
-
+                    ta, id, &recs);
+            timestamp_set_end(sqltsumcheck);
             if (recs < 1) {
                 recs = -1;
             }
             else {
                 /* run in.sqltsum */
-                querydb(dbname, db, in.sqltsum,
-                        ta->print_callback_func, &ta->output_buffers,
-                        ta->outfiles, id, sqltsum, recs);
+                timestamp_set_start(sqltsum);
+                querydb(dbname, db, in.sqltsum, ta, id, &recs);
+                timestamp_set_end(sqltsum);
             }
         }
       /* this is an OR or we got a record back. go on to summary/entries */
@@ -683,9 +679,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                     /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
                     realpath(work->name,gps[id].gfpath);
 
-                    querydb(dbname, db, in.sqlsum,
-                            ta->print_callback_func, &ta->output_buffers,
-                            ta->outfiles, id, sqlsum, recs);
+                    timestamp_set_start(sqlsum);
+                    querydb(dbname, db, in.sqlsum, ta, id, &recs);
+                    timestamp_set_end(sqlsum);
                 } else {
                     recs = 1;
                 }
@@ -701,9 +697,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                         SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
                         realpath(work->name,gps[id].gfpath);
 
-                        querydb(dbname, db, in.sqlent,
-                                ta->print_callback_func, &ta->output_buffers,
-                                ta->outfiles, id, sqlent, recs); /* recs is not used */
+                        timestamp_set_start(sqlent);
+                        querydb(dbname, db, in.sqlent, ta, id, &recs); /* recs is not used */
+                        timestamp_set_end(sqlent);
                     }
                 }
             }
@@ -1078,7 +1074,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    args.print_callback_func = ((in.show_results == PRINT)?print_callback:NULL);
+    args.callback = ((in.show_results == PRINT)?print_callback:NULL);
     struct QPTPool *pool = QPTPool_init(in.maxthreads
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , timestamp_buffers
