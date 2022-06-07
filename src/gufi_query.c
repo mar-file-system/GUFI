@@ -455,7 +455,7 @@ struct ThreadArgs {
     trie_t *skip;
     FILE **outfiles;
     sqlite3 **outdbs;
-    size_t *queries; /* per thread query count, not including -T, -S, and -E */
+    size_t *queries;
     int (*callback)(void *, int, char **, char **);
     #ifdef DEBUG
     struct timespec *start_time;
@@ -607,6 +607,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             querydb(dbname, db, "select name from sqlite_master where type=\'table\' and name='treesummary';",
                     ta, id, &recs);
             timestamp_set_end(sqltsumcheck);
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            ta->queries[id]++;
+            #endif
             if (recs < 1) {
                 recs = -1;
             }
@@ -615,6 +618,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                 timestamp_set_start(sqltsum);
                 querydb(dbname, db, in.sqltsum, ta, id, &recs);
                 timestamp_set_end(sqltsum);
+                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                ta->queries[id]++;
+                #endif
             }
         }
       /* this is an OR or we got a record back. go on to summary/entries */
@@ -682,6 +688,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                     timestamp_set_start(sqlsum);
                     querydb(dbname, db, in.sqlsum, ta, id, &recs);
                     timestamp_set_end(sqlsum);
+                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                    ta->queries[id]++;
+                    #endif
                 } else {
                     recs = 1;
                 }
@@ -700,6 +709,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                         timestamp_set_start(sqlent);
                         querydb(dbname, db, in.sqlent, ta, id, &recs); /* recs is not used */
                         timestamp_set_end(sqlent);
+                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        ta->queries[id]++;
+                        #endif
                     }
                 }
             }
@@ -1247,8 +1259,6 @@ int main(int argc, char *argv[])
         total_utime_time + total_free_work_time +
         total_output_timestamps_time;
 
-    query_count += thread_count * (!!in.sqltsum_len + !!in.sqlsum_len + !!in.sqlent_len);
-
     print_stats("set up globals:                             %.2Lfs", "%Lf", sec(setup_globals_time));
     print_stats("set up intermediate databases:              %.2Lfs", "%Lf", sec(setup_aggregate_time));
     print_stats("thread pool:                                %.2Lfs", "%Lf", sec(work_time));
@@ -1279,9 +1289,9 @@ int main(int argc, char *argv[])
     print_stats("            pushdir:                        %.2Lfs", "%Lf", sec(total_pushdir_time));
     print_stats("    attach intermediate databases:          %.2Lfs", "%Lf", sec(total_attach_time));
     print_stats("    check if treesummary table exists       %.2Lfs", "%Lf", sec(total_sqltsumcheck_time));
-    print_stats("    sqltsum                                 %.2Lfs", "%Lf", sec(total_sqltsum_time));
-    print_stats("    sqlsum                                  %.2Lfs", "%Lf", sec(total_sqlsum_time));
-    print_stats("    sqlent                                  %.2Lfs", "%Lf", sec(total_sqlent_time));
+    print_stats("    sqltsum:                                %.2Lfs", "%Lf", sec(total_sqltsum_time));
+    print_stats("    sqlsum:                                 %.2Lfs", "%Lf", sec(total_sqlsum_time));
+    print_stats("    sqlent:                                 %.2Lfs", "%Lf", sec(total_sqlent_time));
     print_stats("    detach intermediate databases:          %.2Lfs", "%Lf", sec(total_detach_time));
     print_stats("    close databases:                        %.2Lfs", "%Lf", sec(total_close_time));
     print_stats("    close directories:                      %.2Lfs", "%Lf", sec(total_closedir_time));
@@ -1294,10 +1304,11 @@ int main(int argc, char *argv[])
     if (!in.terse) {
         fprintf(stderr, "\n");
     }
-    print_stats("Rows returned:                              %zu",    "%zu", rows);
+    print_stats("Threads run:                                %zu",    "%zu", thread_count);
     print_stats("Queries performed:                          %zu",    "%zu", query_count);
-    print_stats("Real time:                                  %.2Lfs", "%Lf", total_time_sec);
+    print_stats("Rows printed to stdout or outfiles:         %zu",    "%zu", rows);
     print_stats("Total Thread Time (not including main):     %.2Lfs", "%Lf", sec(thread_time));
+    print_stats("Real time (main):                           %.2Lfs", "%Lf", total_time_sec);
     if (in.terse) {
         fprintf(stderr, "\n");
     }
