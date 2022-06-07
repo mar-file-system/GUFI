@@ -481,7 +481,7 @@ int main(int argc, char *argv[]) {
 
     #if BENCHMARK
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
-    const long double processtime = sec(elapsed(&benchmark));
+    const long double processtime = sec(nsec(&benchmark));
 
     fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
     fprintf(stderr, "Total Files:           %zu\n",    total_files);

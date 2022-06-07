@@ -214,8 +214,8 @@ do {                                                                     \
 
 void print_stanza(const char * name, struct sll * stats) {
     fprintf(stdout, "%s %*zu\n", name, (int) (29 - strlen(name)), sll_get_size(stats));
-    sll_dir_stats("Subdirectories", stats, subdir_count,    (size_t) 10);
-    sll_dir_stats("Files/Links",    stats, subnondir_count, (size_t) 10);
+    sll_dir_stats("Subdirectories", stats, subdir_count,    10);
+    sll_dir_stats("Files/Links",    stats, subnondir_count, 10);
     sll_dir_stats("Level",          stats, level,           10);
 }
 

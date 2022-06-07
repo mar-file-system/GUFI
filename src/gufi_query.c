@@ -1090,25 +1090,26 @@ int main(int argc, char *argv[])
         aggregate_fin(aggregate);
     }
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     timestamp_start(cleanup_globals);
     #endif
 
     /* clear out buffered data */
+    OutputBuffers_flush_to_multiple(&args.output_buffers, gts.outfd);
+
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     size_t rows = 0;
     for(size_t i = 0; i < args.output_buffers.count; i++) {
         rows += args.output_buffers.buffers[i].count;
     }
     #endif
-    OutputBuffers_flush_to_multiple(&args.output_buffers, gts.outfd);
 
     /* clean up globals */
     OutputBuffers_destroy(&args.output_buffers);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(gts.outfd, output_count);
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     timestamp_set_end(cleanup_globals);
     const uint64_t cleanup_globals_time = timestamp_elapsed(cleanup_globals);
     total_time += cleanup_globals_time;
