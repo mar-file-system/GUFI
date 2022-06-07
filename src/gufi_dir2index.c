@@ -352,60 +352,6 @@ struct work *validate_inputs() {
         }
     }
 
-    /* check the output files, if a prefix was provided */
-    if (in.outfile) {
-        if (!strlen(in.outfilen)) {
-            fprintf(stderr, "No output file name specified\n");
-            free(root);
-            return NULL;
-        }
-
-        /* check if the destination path already exists (not an error) */
-        for(int i = 0; i < in.maxthreads; i++) {
-            char outname[MAXPATH];
-            SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
-
-            struct stat dst_st;
-            if (lstat(in.outfilen, &dst_st) == 0) {
-                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
-
-                /* if the destination path is not a directory (error) */
-                if (S_ISDIR(dst_st.st_mode)) {
-                    fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
-                    free(root);
-                    return NULL;
-                }
-            }
-        }
-    }
-
-    /* check the output dbs, if a prefix was provided */
-    if (in.outdb) {
-        if (!strlen(in.outdbn)) {
-            fprintf(stderr, "No output db name specified\n");
-            free(root);
-            return NULL;
-        }
-
-        /* check if the destination path already exists (not an error) */
-        for(int i = 0; i < in.maxthreads; i++) {
-            char outname[MAXPATH];
-            SNPRINTF(outname, MAXPATH, "%s.%d", in.outdbn, i);
-
-            struct stat dst_st;
-            if (lstat(in.outdbn, &dst_st) == 0) {
-                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
-
-                /* if the destination path is not a directory (error) */
-                if (S_ISDIR(dst_st.st_mode)) {
-                    fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outdbn);
-                    free(root);
-                    return NULL;
-                }
-            }
-        }
-    }
-
     /* create the source root under the destination directory using */
     /* the source directory's permissions and owners */
     /* this allows for the threads to not have to recursively create directories */

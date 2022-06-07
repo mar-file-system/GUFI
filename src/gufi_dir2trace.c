@@ -198,28 +198,26 @@ struct work *validate_inputs() {
     }
 
     /* check the output files, if a prefix was provided */
-    if (in.outfile) {
-        if (!strlen(in.outfilen)) {
-            fprintf(stderr, "No output file name specified\n");
-            free(root);
-            return NULL;
-        }
+    if (!in.nameto_len) {
+        fprintf(stderr, "No output file name specified\n");
+        free(root);
+        return NULL;
+    }
 
-        /* check if the destination path already exists (not an error) */
-        for(int i = 0; i < in.maxthreads; i++) {
-            char outname[MAXPATH];
-            SNPRINTF(outname, MAXPATH, "%s.%d", in.outfilen, i);
+    /* check if the destination path already exists (not an error) */
+    for(int i = 0; i < in.maxthreads; i++) {
+        char outname[MAXPATH];
+        SNPRINTF(outname, MAXPATH, "%s.%d", in.nameto, i);
 
-            struct stat dst_st;
-            if (lstat(in.outfilen, &dst_st) == 0) {
-                fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+        struct stat dst_st;
+        if (lstat(in.outname, &dst_st) == 0) {
+            fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
 
-                /* if the destination path is not a directory (error) */
-                if (S_ISDIR(dst_st.st_mode)) {
-                    fprintf(stderr, "Destination path is a directory \"%s\"\n", in.outfilen);
-                    free(root);
-                    return NULL;
-                }
+            /* if the destination path is not a directory (error) */
+            if (S_ISDIR(dst_st.st_mode)) {
+                fprintf(stderr, "Destination path is a directory \"%s\"\n", in.nameto);
+                free(root);
+                return NULL;
             }
         }
     }
@@ -243,8 +241,8 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(in.name,     argv[idx++], MAXPATH, "input_dir");
-        INSTALL_STR(in.outfilen, argv[idx++], MAXPATH, "output_prefix");
+        INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
+        INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_prefix");
 
         if (retval)
             return retval;
@@ -267,8 +265,6 @@ int main(int argc, char *argv[]) {
             /* add 1 more for the separator that is placed between this string and the entry */
             in.name_len++;
         }
-
-        in.outfile = 1;
     }
 
     /* get first work item by validating inputs */
@@ -278,7 +274,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    args.outfiles = outfiles_init(in.outfile, in.outfilen, in.maxthreads);
+    args.outfiles = outfiles_init(1, in.nameto, in.maxthreads);
     if (!args.outfiles) {
         free(root);
         trie_free(args.skip);
