@@ -122,7 +122,8 @@ int main(int argc, char * argv[]) {
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
                                      in.maxthreads,
-                                     sizeof(struct BottomUp), rm_dir,
+                                     sizeof(struct BottomUp),
+                                     NULL, rm_dir,
                                      1,
                                      NULL
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)

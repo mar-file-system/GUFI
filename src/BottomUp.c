@@ -88,9 +88,14 @@ processed before processing the current one
 
 extern int errno;
 
+/* define so that descend and ascend always have valid functions to call */
+static void noop(void *user_struct
+                 timestamp_sig) { (void) user_struct; }
+
 struct UserArgs {
     size_t user_struct_size;
-    AscendFunc_t func;
+    BU_f descend;
+    BU_f ascend;
     int track_non_dirs;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -139,19 +144,16 @@ int ascend_to_top(struct QPTPool *ctx, const size_t id, void *data, void *args) 
     /* keep track of which thread was used to go back up */
     bu->tid.up = id;
 
-    /* call user function */
-    timestamp_start(run_user_func);
-    ua->func(bu
-             #ifdef DEBUG
-                 #ifdef PER_THREAD_STATS
-                     , ua->timestamp_buffers
-                 #endif
-             #endif
+    /* call user ascend function */
+    timestamp_start(run_user_asc_func);
+    ua->ascend(bu
+               #ifdef DEBUG
+               #ifdef PER_THREAD_STATS
+               , ua->timestamp_buffers
+               #endif
+               #endif
         );
-    timestamp_end(ua->timestamp_buffers, id, "run_user_function", run_user_func);
-
-    /* clean up first, just in case parent runs before  */
-    /* the current `struct BottomUp` finishes cleaning up */
+    timestamp_end(ua->timestamp_buffers, id, "run_user_ascend_function", run_user_asc_func);
 
     /* clean up 'struct BottomUp's here, when they are */
     /* children instead of when they are the parent  */
@@ -243,8 +245,7 @@ int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *ar
                                        entry->d_name, name_len);
 
         timestamp_start(lstat_entry);
-        struct stat st;
-        const int rc = lstat(new_work.name, &st);
+        const int rc = lstat(new_work.name, &new_work.st);
         timestamp_end(ua->timestamp_buffers, id, "lstat", lstat_entry);
 
         if (rc != 0) {
@@ -253,7 +254,7 @@ int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *ar
         }
 
         timestamp_start(track_entry);
-        if (S_ISDIR(st.st_mode)) {
+        if (S_ISDIR(new_work.st.st_mode)) {
             track(new_work.name, new_work.name_len,
                   ua->user_struct_size, &bu->subdirs,
                   next_level);
@@ -276,6 +277,21 @@ int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *ar
     timestamp_start(close_dir);
     closedir(dir);
     timestamp_end(ua->timestamp_buffers, id, "closedir", close_dir);
+
+    /* call user descend function before further descent to ensure */
+    /* that the descent function runs before the ascent function */
+
+    /* this will probably be a bottleneck since subdirectories won't */
+    /* be queued/processed while the descend function runs */
+    timestamp_start(run_user_desc_func);
+    ua->descend(bu
+                #ifdef DEBUG
+                #ifdef PER_THREAD_STATS
+                , ua->timestamp_buffers
+                #endif
+                #endif
+        );
+    timestamp_end(ua->timestamp_buffers, id, "run_user_descend_function", run_user_desc_func);
 
     /* if there are subdirectories, this directory cannot go back up just yet */
     bu->refs.remaining = bu->subdir_count;
@@ -310,7 +326,8 @@ int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *ar
 
 int parallel_bottomup(char **root_names, size_t root_count,
                       const size_t thread_count,
-                      const size_t user_struct_size, AscendFunc_t func,
+                      const size_t user_struct_size,
+                      BU_f descend, BU_f ascend,
                       const int track_non_dirs,
                       void *extra_args
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -326,13 +343,9 @@ int parallel_bottomup(char **root_names, size_t root_count,
         return -1;
     }
 
-    if (!func) {
-        fprintf(stderr, "Error: No function provided\n");
-        return -1;
-    }
-
     ua.user_struct_size = user_struct_size;
-    ua.func = func;
+    ua.descend = descend?descend:noop;
+    ua.ascend = ascend?ascend:noop;
     ua.track_non_dirs = track_non_dirs;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -363,13 +376,12 @@ int parallel_bottomup(char **root_names, size_t root_count,
         struct BottomUp *root = &roots[i];
         root->name_len = SNPRINTF(root->name, MAXPATH, "%s", root_names[i]);
 
-        struct stat st;
-        if (lstat(root->name, &st) != 0) {
+        if (lstat(root->name, &root->st) != 0) {
             fprintf(stderr, "Could not stat %s\n", root->name);
             continue;
         }
 
-        if (!S_ISDIR(st.st_mode)) {
+        if (!S_ISDIR(root->st.st_mode)) {
             fprintf(stderr, "%s is not a directory\n", root->name);
             continue;
         }

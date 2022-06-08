@@ -69,8 +69,8 @@ OF SUCH DAMAGE.
    during the upward portion of the traversal.
 */
 
-#ifndef GUFI_BOTTOM_UP
-#define GUFI_BOTTOM_UP
+#ifndef GUFI_BOTTOM_UP_H
+#define GUFI_BOTTOM_UP_H
 
 #include <pthread.h>
 
@@ -100,6 +100,7 @@ OF SUCH DAMAGE.
 struct BottomUp {
     char name[MAXPATH];
     size_t name_len;
+    struct stat st;
     struct {
         pthread_mutex_t mutex;
         size_t remaining;
@@ -121,14 +122,20 @@ struct BottomUp {
 };
 
 /* Signature of function for processing */
-/* a directory as the tree is ascending */
-typedef void (*AscendFunc_t)(void *user_struct
-                             timestamp_sig);
+/* directories while traversing a tree */
+typedef void (*BU_f)(void *user_struct
+                     timestamp_sig);
 
-/* Function user should call to walk a tree bottom up in parallel */
+/*
+ * Function user should call to walk an existing tree in parallel.
+ *
+ * Similar to descent, returning from the bottom upwards does
+ * not happen until all subdirectories have been processed.
+ */
 int parallel_bottomup(char **root_names, size_t root_count,
                       const size_t thread_count,
-                      const size_t user_struct_size, AscendFunc_t func,
+                      const size_t user_struct_size,
+                      BU_f descend, BU_f ascend,
                       const int track_non_dirs,
                       void *extra_args
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
