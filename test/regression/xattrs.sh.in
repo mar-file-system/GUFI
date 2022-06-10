@@ -143,6 +143,10 @@ run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
 run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
 
 run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT path(), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;\" \"${INDEXROOT}\""
+
+run_no_sort "${ROLLUP} ${INDEXROOT}" 2>&1 | @SED@ '/Ran /d' | @SED@ '/Took /d'
+
+run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT path() || name, type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT path() || summary.name || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xpentries LEFT JOIN summary on xpentries.pinode == summary.inode;\" \"${INDEXROOT}\""
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${OUTPUT}"

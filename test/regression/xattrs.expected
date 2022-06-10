@@ -73,3 +73,71 @@ ugo+rw/u f user.u 600
 ugo+rw/ug f user.ug 660
 ugo+rw/ugo f user.ugo 666
 
+$ rollup prefix.gufi
+Roots:
+    .
+
+Thread Pool Size:            1
+Files/Links Limit:          -1
+
+Not Processed:               0
+Cannot Roll Up:              0
+Can Roll Up:                 6
+    Subdirectories:
+        min:                 0
+        max:                 5
+        median:           0.00
+        sum:                 5
+        average:          0.83
+    Files/Links:
+        min:                 0
+        max:                 5
+        median:           5.00
+        sum:                25
+        average:          4.17
+    Level:
+        min:                 0
+        max:                 1
+        median:           1.00
+        sum:                 5
+        average:          0.83
+    Successful:              6
+    Failed:                  0
+Files/Links:    25
+Directories:    6 (1 empty)
+Total:          31
+Remaining Dirs: 1 (16.67%)
+
+$ gufi_query -d " " -x -S "SELECT path() || name, type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || summary.name || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xpentries LEFT JOIN summary on xpentries.pinode == summary.inode;" "prefix.gufi"
+. d
+u+r d user.u+r 500
+u+r/go f user.go 066
+u+r/o f user.o 006
+u+r/u f user.u 600
+u+r/ug f user.ug 660
+u+r/ugo f user.ugo 666
+u+rw d user.u+rw 700
+u+rw/go f user.go 066
+u+rw/o f user.o 006
+u+rw/u f user.u 600
+u+rw/ug f user.ug 660
+u+rw/ugo f user.ugo 666
+ug+r d user.ug+r 550
+ug+r/go f user.go 066
+ug+r/o f user.o 006
+ug+r/u f user.u 600
+ug+r/ug f user.ug 660
+ug+r/ugo f user.ugo 666
+ug+rw d user.ug+rw 770
+ug+rw/go f user.go 066
+ug+rw/o f user.o 006
+ug+rw/u f user.u 600
+ug+rw/ug f user.ug 660
+ug+rw/ugo f user.ugo 666
+ugo+rw d user.ugo+rw 777
+ugo+rw/go f user.go 066
+ugo+rw/o f user.o 006
+ugo+rw/u f user.u 600
+ugo+rw/ug f user.ug 660
+ugo+rw/ugo f user.ugo 666
+
