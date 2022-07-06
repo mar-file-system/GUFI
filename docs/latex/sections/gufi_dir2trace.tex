@@ -1,0 +1,19 @@
+\section{gufi\_dir2trace}
+gufi\_dir2trace is to generate a trace of the files and directories inside of a specified root directory
+\subsection{Flags}
+
+\begin{table} [h]
+\centering
+\begin{tabular}{l|r}
+Flag & Functionality \\\hline
+-h & help manual \\
+-H & Show assigned input values \\
+-n \textless num\_threads\textgreater  & define number of threads to use \\
+-x & pull xattrs from source file-sys into GUFI \\
+-z \textless max\_level\textgreater & maximum level to go down to
+\end{tabular}
+\caption{\label{tab:widgets}Flags and Arguments}
+\end{table}
+
+\subsection{Usage}
+gufi\_dir2trace [flags] [directory to trace] [prefix of output files]
