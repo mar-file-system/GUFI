@@ -1,0 +1,33 @@
+\section{gufi\_ls}
+gufi\_ls functions like the POISX command ls. As with gufi\_find, there are a multitude of options available listed below
+
+\subsection{Flags and Functionality}
+\begin{table} [h]
+\centering
+\begin{tabular}{l|r}
+Flags & Functionality\\\hline
+--help & displays help menu\\
+-v, --version & show program's version number and exit \\
+-a, --all & do not ignore entries ending with .\\
+-A, --almost-all & do not list implied . and .. \\
+--block-size \textless block\_size\textgreater & with -l, scale sizes by block\_size when printing them \\
+-B, --ignore-backups & do not list implied entries ending with ~\\
+-G, --no-group & in a long listing, don't print group names\\
+-i, --inode & print the index number of each file\\
+-l & used a long listing format\\
+-r, --reverse & reverse order while sorting\\
+-R, --recursive & list sub-directories recursively\\
+-s, --size & print the allocated size of each file in blocks\\
+-S & sort by file size, largest first \\
+--time-style \textless TIME\_STYLE\textgreater & time/date format with -l\\
+-t & sort by modification time, newest first\\
+-U & do not sort; list entries in directory order\\
+--delim \textless c\textgreater & delimeter separating output columns\\ 
+--in-memory-name \textless name\textgreater & Name of in-memory database when -R is used\\
+--nlink-width \textless chars\textgreater & Width of nlink column\\
+--size-width \textless chars\textgreater & Width of size column\\
+--user-width \textless chars\textgreater & Width of user column\\
+--group-width \textless chars\textgreater & width of group column
+\end{tabular}
+\caption{\label{tab:widgets}Flags and Functionality}
+\end{table}
