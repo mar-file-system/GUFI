@@ -53,21 +53,18 @@ Flag & Functionality \\\hline
 \hline
 -w & open the database files in read-write mode instead of read only mode
 \end{tabular}
-\caption{\label{tab:widgets}Flags and Arguments}
+\caption{\label{tab:widgets}gufi\_query Flags and Arguments}
 \end{table}
 
 \clearpage
 
 \subsection{Example Calls}
 
-gufi\_query -S "SELECT * FROM summary" ~/directory\_of\_root\_index
+\texttt{gufi\_query -S "SELECT * FROM summary" ~/directory\_of\_root\_index}
 \\
-gufi\_query -E "SELECT * FROM pentries" ~/directory\_of\_root\_index
-
+\texttt{gufi\_query -E "SELECT * FROM pentries" ~/directory\_of\_root\_index}
 
 \subsection{Visualizing the Workflow}
-
-
 \begin{figure} [h]
 \centering
 \includegraphics[width=1.0\textwidth]{images/gufi_query.png}
