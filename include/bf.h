@@ -68,8 +68,6 @@ OF SUCH DAMAGE.
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "Trie.h"
-
 #define MAXPATH 4096
 #define MAXXATTR 1024
 #define MAXSQL 2048

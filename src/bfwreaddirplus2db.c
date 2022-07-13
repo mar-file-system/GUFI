@@ -83,6 +83,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "trie.h"
 #include "utils.h"
 
 extern int errno;
@@ -98,8 +99,8 @@ long long int glsuspectdmax;
 int gltodirmode;
 
 /* a triell for directories and one for files and links */
-struct Trie* headd;
-struct Trie* headfl;
+trie_t *headd;
+trie_t *headfl;
 
 /* search the trie either the directory trie type 0 or the filelink type 1 */
 int searchmyll(long long int lull, int lutype) {
@@ -113,7 +114,7 @@ int searchmyll(long long int lull, int lutype) {
      if (lull < glsuspectdmin) return 0;
      if (lull > glsuspectdmax) return 0;
      SNPRINTF(lut,256,"%lld",lull);
-     ret=searchll(headd,lut);
+     ret=trie_search(headd,lut);
      //printf("in searchmyll search dir %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headd,lut);  this is not thread safe
    }
@@ -122,7 +123,7 @@ int searchmyll(long long int lull, int lutype) {
      if (lull < glsuspectflmin) return 0;
      if (lull > glsuspectflmax) return 0;
      SNPRINTF(lut,256,"%lld",lull);
-     ret=searchll(headfl,lut);
+     ret=trie_search(headfl,lut);
      //printf("in searchmyll search fl %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headfl,lut); this is not thread safe
    }
@@ -560,8 +561,8 @@ int processinit(struct QPTPool * ctx) {
        cntfl=0;
        cntd=0;
        /* set up triell for directories and one for files and links */
-       headd = getNewTrieNode();
-       headfl = getNewTrieNode();
+       headd = trie_alloc();
+       headfl = trie_alloc();
        while (fscanf(isf,"%s %s",incsuspect, incsuspecttype)!= EOF) {
           //printf("insuspect |%s| |%s|\n",incsuspect, incsuspecttype );
           testll=atoll(incsuspect);
@@ -574,7 +575,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
-             insertll(headfl, incsuspect);
+             trie_insert(headfl, incsuspect);
              cntfl++;
           }
           if (!strncmp(incsuspecttype,"l",1)) {
@@ -586,7 +587,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
-             insertll(headfl, incsuspect);
+             trie_insert(headfl, incsuspect);
              cntfl++;
           }
           if (!strncmp(incsuspecttype,"d",1)) {
@@ -598,7 +599,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectdmax) glsuspectdmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );
-             insertll(headd, incsuspect);
+             trie_insert(headd, incsuspect);
              cntd++;
           }
        }
@@ -689,6 +690,9 @@ int i;
          i++;
        }
      }
+
+     trie_free(headfl);
+     trie_free(headd);
 
      return 0;
 }

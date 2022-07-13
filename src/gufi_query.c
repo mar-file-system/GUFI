@@ -84,7 +84,7 @@ OF SUCH DAMAGE.
 #include "pcre.h"
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
-#include "Trie.h"
+#include "trie.h"
 #include "utils.h"
 
 extern int errno;
@@ -225,7 +225,7 @@ static size_t descend2(struct QPTPool *ctx,
                        const size_t id,
                        struct work *passmywork,
                        DIR *dir,
-                       struct Trie *skip_names,
+                       trie_t *skip_names,
                        QPTPoolFunc_t func,
                        const size_t max_level
                        #ifdef DEBUG
@@ -279,7 +279,7 @@ static size_t descend2(struct QPTPool *ctx,
 
             buffered_start(strncmp_call);
             const size_t len = strlen(entry->d_name);
-            const int skip = (searchll(skip_names, entry->d_name) ||
+            const int skip = (trie_search(skip_names, entry->d_name) ||
                               (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
             buffered_end(strncmp_call);
 
@@ -442,7 +442,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 
 struct ThreadArgs {
     struct OutputBuffers output_buffers;
-    struct Trie *skip;
+    trie_t *skip;
     int (*print_callback_func)(void*,int,char**,char**);
     #ifdef DEBUG
     struct timespec *start_time;
@@ -930,7 +930,7 @@ int main(int argc, char *argv[])
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
-        cleanup(args.skip);
+        trie_free(args.skip);
         return -1;
     }
 
@@ -962,7 +962,7 @@ int main(int argc, char *argv[])
             OutputBuffers_destroy(&args.output_buffers);
             outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
             outfiles_fin(gts.outfd, output_count);
-            cleanup(args.skip);
+            trie_free(args.skip);
             return -1;
         }
     }
@@ -991,7 +991,7 @@ int main(int argc, char *argv[])
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
-        cleanup(args.skip);
+        trie_free(args.skip);
         return -1;
     }
 
@@ -1000,7 +1000,7 @@ int main(int argc, char *argv[])
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
-        cleanup(args.skip);
+        trie_free(args.skip);
         return -1;
     }
 
@@ -1118,7 +1118,7 @@ int main(int argc, char *argv[])
     OutputBuffers_destroy(&args.output_buffers);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(gts.outfd, output_count);
-    cleanup(args.skip);
+    trie_free(args.skip);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     timestamp_set_end(cleanup_globals);

@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "dbutils.h"
 #include "template_db.h"
+#include "trie.h"
 #include "utils.h"
 
 extern int errno;
@@ -110,7 +111,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     struct work *work = (struct work *) data;
-    struct Trie *skip = (struct Trie *) args;
+    trie_t *skip = (trie_t *) args;
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -174,7 +175,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         const size_t len = strlen(entry->d_name);
 
         /* skip ., .., and user provided names */
-        if (searchll(skip, entry->d_name)) {
+        if (trie_search(skip, entry->d_name)) {
             continue;
         }
 
@@ -410,7 +411,7 @@ void sub_help() {
 
 int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:xz:k:", 2, "input_dir output_dir", &in);
-    struct Trie *skip = NULL;
+    trie_t *skip = NULL;
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -445,7 +446,7 @@ int main(int argc, char *argv[]) {
     /* get first work item by validating inputs */
     struct work *root = validate_inputs();
     if (!root) {
-        cleanup(skip);
+        trie_free(skip);
         return -1;
     }
 
@@ -455,7 +456,7 @@ int main(int argc, char *argv[]) {
 
     if ((templatesize = create_template(&templatefd)) == (off_t) -1) {
         fprintf(stderr, "Could not create template file\n");
-        cleanup(skip);
+        trie_free(skip);
         return -1;
     }
 
@@ -471,13 +472,13 @@ int main(int argc, char *argv[]) {
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        cleanup(skip);
+        trie_free(skip);
         return -1;
     }
 
     if (QPTPool_start(pool, skip) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
-        cleanup(skip);
+        trie_free(skip);
         return -1;
     }
 
@@ -497,7 +498,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     close(templatefd);
-    cleanup(skip);
+    trie_free(skip);
 
     return 0;
 }
