@@ -113,8 +113,8 @@ int searchmyll(long long int lull, int lutype) {
      if (headd==NULL) return 0;
      if (lull < glsuspectdmin) return 0;
      if (lull > glsuspectdmax) return 0;
-     SNPRINTF(lut,256,"%lld",lull);
-     ret=trie_search(headd,lut);
+     const size_t len = SNPRINTF(lut, 256, "%lld", lull);
+     ret = trie_search(headd, lut, len);
      //printf("in searchmyll search dir %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headd,lut);  this is not thread safe
    }
@@ -122,8 +122,8 @@ int searchmyll(long long int lull, int lutype) {
      if (headfl==NULL) return 0;
      if (lull < glsuspectflmin) return 0;
      if (lull > glsuspectflmax) return 0;
-     SNPRINTF(lut,256,"%lld",lull);
-     ret=trie_search(headfl,lut);
+     const size_t len = SNPRINTF(lut, 256, "%lld", lull);
+     ret = trie_search(headfl, lut, len);
      //printf("in searchmyll search fl %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headfl,lut); this is not thread safe
    }
@@ -575,7 +575,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
-             trie_insert(headfl, incsuspect);
+             trie_insert(headfl, incsuspect,1);
              cntfl++;
           }
           if (!strncmp(incsuspecttype,"l",1)) {
@@ -587,7 +587,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
-             trie_insert(headfl, incsuspect);
+             trie_insert(headfl, incsuspect, 1);
              cntfl++;
           }
           if (!strncmp(incsuspecttype,"d",1)) {
@@ -599,7 +599,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectdmax) glsuspectdmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );
-             trie_insert(headd, incsuspect);
+             trie_insert(headd, incsuspect, 1);
              cntd++;
           }
        }

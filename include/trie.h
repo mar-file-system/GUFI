@@ -72,10 +72,10 @@ typedef struct trie
 } trie_t;
 
 trie_t *trie_alloc();
-void trie_insert(trie_t *head, const char* str);
-int trie_search(trie_t *head, const char* str);
+void trie_insert(trie_t *head, const char* str, const size_t len);
+int trie_search(trie_t *head, const char* str, const size_t len);
 int trie_have_children(trie_t *curr);
-int trie_delete(trie_t **curr, const char* str);
+int trie_delete(trie_t *head, const char* str, const size_t len);
 void trie_free(trie_t *head);
 
 #endif
