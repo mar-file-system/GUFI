@@ -64,16 +64,15 @@ OF SUCH DAMAGE.
 
 /* Adapted to character representation of long long from                  */
 /* http://www.techiedelight.com/trie-implementation-insert-search-delete/ */
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "Trie.h"
+#include "trie.h"
 
 // Function that returns a new Trie node
-struct Trie* getNewTrieNode()
+trie_t *trie_alloc()
 {
-    struct Trie* node = (struct Trie*)malloc(sizeof(struct Trie));
+    trie_t* node = (trie_t*)malloc(sizeof(trie_t));
     node->isLeaf = 0;
 
     for (int i = 0; i < 256; i++)
@@ -83,19 +82,19 @@ struct Trie* getNewTrieNode()
 }
 
 // Iterative function to insert a string in Trie.
-void insertll(struct Trie *head, const char* str)
+void trie_insert(trie_t *head, const char* str)
 {
     if (!head || !str) {
         return;
     }
 
     // start from root node
-    struct Trie *curr = head;
+    trie_t *curr = head;
     while (*str)
     {
         // create a new node if path doesn't exists
         if (curr->character[(uint8_t) (char) *str] == NULL)
-            curr->character[(uint8_t) (char) *str] = getNewTrieNode();
+            curr->character[(uint8_t) (char) *str] = trie_alloc();
 
         // go to next node
         curr = curr->character[(uint8_t) (char) *str];
@@ -110,7 +109,7 @@ void insertll(struct Trie *head, const char* str)
 
 // Iterative function to search a string in Trie. It returns 1
 // if the string is found in the Trie, else it returns 0
-int searchll(struct Trie *head, const char* str)
+int trie_search(trie_t *head, const char* str)
 {
     // return 0 if Trie is empty
     if (head == NULL)
@@ -120,7 +119,7 @@ int searchll(struct Trie *head, const char* str)
         return 0;
     }
 
-    struct Trie *curr = head;
+    trie_t *curr = head;
     while (*str)
     {
 
@@ -141,7 +140,7 @@ int searchll(struct Trie *head, const char* str)
 }
 
 // returns 1 if given node has any children
-int haveChildren(struct Trie *curr)
+int trie_have_children(trie_t *curr)
 {
     for (int i = 0; i < 256; i++)
         if (curr->character[i])
@@ -151,7 +150,7 @@ int haveChildren(struct Trie *curr)
 }
 
 // Recursive function to delete a string in Trie.
-int deletionll(struct Trie **curr, const char* str)
+int trie_delete(trie_t **curr, const char* str)
 {
     // return if Trie is empty
     if (*curr == NULL)
@@ -164,10 +163,10 @@ int deletionll(struct Trie **curr, const char* str)
         // the string and if it returns 1, delete current node
         // (if it is non-leaf)
         if (*curr != NULL && (*curr)->character[(uint8_t) (char) *str] != NULL &&
-            deletionll(&((*curr)->character[(uint8_t) (char) *str]), str + 1) &&
+            trie_delete(&((*curr)->character[(uint8_t) (char) *str]), str + 1) &&
             (*curr)->isLeaf == 0)
         {
-            if (!haveChildren(*curr))
+            if (!trie_have_children(*curr))
             {
                 free(*curr);
                 (*curr) = NULL;
@@ -183,7 +182,7 @@ int deletionll(struct Trie **curr, const char* str)
     if (*str == '\0' && (*curr)->isLeaf)
     {
         // if current node is a leaf node and don't have any children
-        if (!haveChildren(*curr))
+        if (!trie_have_children(*curr))
         {
             free(*curr); // delete current node
             (*curr) = NULL;
@@ -202,10 +201,10 @@ int deletionll(struct Trie **curr, const char* str)
     return 0;
 }
 
-void cleanup(struct Trie *head) {
+void trie_free(trie_t *head) {
     if (head) {
         for(int i = 0; i < 256; i++) {
-            cleanup(head->character[i]);
+            trie_free(head->character[i]);
         }
 
         free(head);

@@ -144,7 +144,7 @@ set(GUFI_SOURCES
   SinglyLinkedList.c
   template_db.c
   trace.c
-  Trie.c
+  trie.c
   utils.c)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)

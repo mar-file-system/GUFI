@@ -62,115 +62,20 @@ OF SUCH DAMAGE.
 
 
 
-#include <gtest/gtest.h>
+#ifndef TRIE_H
+#define TRIE_H
 
-extern "C" {
+typedef struct trie
+{
+    int isLeaf;    // 1 when node is a leaf node
+    struct trie *character[256];
+} trie_t;
 
-#include "bf.h"
-#include "Trie.h"
+trie_t *trie_alloc();
+void trie_insert(trie_t *head, const char* str);
+int trie_search(trie_t *head, const char* str);
+int trie_have_children(trie_t *curr);
+int trie_delete(trie_t **curr, const char* str);
+void trie_free(trie_t *head);
 
-}
-
-TEST(Trie, create_cleanup) {
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    cleanup(root);
-}
-
-TEST(Trie, insert_nullptr) {
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    insertll(root, nullptr);
-
-    EXPECT_EQ(searchll(root, nullptr), 0);
-
-    cleanup(root);
-}
-
-TEST(Trie, insert_empty) {
-    char buf[MAXPATH] = "";
-
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    insertll(root, buf);
-
-    EXPECT_EQ(searchll(root, buf), 1);
-
-    cleanup(root);
-}
-
-TEST(Trie, searchll) {
-    char buf[MAXPATH] = "1234";
-
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    insertll(root, buf);
-
-    EXPECT_EQ(searchll(root, buf),  1);
-
-    cleanup(root);
-}
-
-TEST(Trie, haveChildren) {
-    char buf[MAXPATH] = "1234";
-
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    EXPECT_EQ(haveChildren(root), 0);
-
-    insertll(root, buf);
-
-    EXPECT_EQ(haveChildren(root), 1);
-
-    cleanup(root);
-}
-
-TEST(Trie, deletionll) {
-    char buf[MAXPATH] = "1234";
-
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    insertll(root, buf);
-
-    EXPECT_EQ(deletionll(&root, buf), 1);
-    EXPECT_EQ(searchll(root, buf), 0);
-
-    cleanup(root);
-}
-
-TEST(Trie, substring) {
-    char sub[MAXPATH] = "12";
-    char str[MAXPATH] = "1234";
-
-    struct Trie *root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    insertll(root, sub);
-    EXPECT_EQ(searchll(root, sub), 1);
-    EXPECT_EQ(searchll(root, str), 0);
-
-    insertll(root, str);
-    EXPECT_EQ(searchll(root, sub), 1);
-    EXPECT_EQ(searchll(root, str), 1);
-
-    cleanup(root);
-
-    root = getNewTrieNode();
-    ASSERT_NE(root, nullptr);
-
-    insertll(root, str);
-    EXPECT_EQ(searchll(root, sub), 0);
-    EXPECT_EQ(searchll(root, str), 1);
-
-    insertll(root, sub);
-    EXPECT_EQ(searchll(root, sub), 1);
-    EXPECT_EQ(searchll(root, str), 1);
-
-    cleanup(root);
-}
+#endif

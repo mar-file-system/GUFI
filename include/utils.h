@@ -74,7 +74,7 @@ OF SUCH DAMAGE.
 #include "config.h"
 #include "bf.h"
 #include "QueuePerThreadPool.h"
-#include "Trie.h"
+#include "trie.h"
 
 /* Wrapper around snprintf to catch issues and print them to stderr */
 int SNPRINTF(char * str, size_t size, const char *format, ...);
@@ -135,6 +135,6 @@ char * modetostr(char * str, const size_t size, const mode_t mode);
 int remove_trailing(char * str, size_t * size,
                     const char * match, const size_t match_count);
 
-int setup_directory_skip(const char *filename, struct Trie **skip);
+int setup_directory_skip(const char *filename, trie_t **skip);
 
 #endif

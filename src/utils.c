@@ -785,27 +785,27 @@ int remove_trailing(char * str, size_t * size,
 }
 
 /* create a trie of directory names to skip from a file */
-int setup_directory_skip(const char *filename, struct Trie **skip) {
+int setup_directory_skip(const char *filename, trie_t **skip) {
     if (!skip) {
         return -1;
     }
 
-    *skip = getNewTrieNode();
+    *skip = trie_alloc();
     if (!*skip) {
         fprintf(stderr, "Error: Could not set up skip list\n");
         return -1;
     }
 
     /* always skip . and .. */
-    insertll(*skip, ".");
-    insertll(*skip, "..");
+    trie_insert(*skip, ".");
+    trie_insert(*skip, "..");
 
     /* add user defined directory names to skip */
     if (strlen(filename)) {
         FILE *skipfile = fopen(filename, "ro");
         if (!skipfile) {
             fprintf(stderr, "Error: Cannot open skip file %s\n", filename);
-            cleanup(*skip);
+            trie_free(*skip);
             *skip = NULL;
             return -1;
         }
@@ -819,7 +819,7 @@ int setup_directory_skip(const char *filename, struct Trie **skip) {
                 continue;
             }
 
-            insertll(*skip, name);
+            trie_insert(*skip, name);
         }
 
         fclose(skipfile);

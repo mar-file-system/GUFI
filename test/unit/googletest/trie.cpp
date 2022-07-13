@@ -62,20 +62,115 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef TRIE_H
-#define TRIE_H
+#include <gtest/gtest.h>
 
-struct Trie
-{
-    int isLeaf;    // 1 when node is a leaf node
-    struct Trie* character[256];
-};
+extern "C" {
 
-struct Trie* getNewTrieNode();
-void insertll(struct Trie *head, const char* str);
-int searchll(struct Trie *head, const char* str);
-int haveChildren(struct Trie *curr);
-int deletionll(struct Trie **curr, const char* str);
-void cleanup(struct Trie *head);
+#include "bf.h"
+#include "trie.h"
 
-#endif
+}
+
+TEST(Trie, alloc_free) {
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_free(root);
+}
+
+TEST(Trie, insert_nullptr) {
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, nullptr);
+
+    EXPECT_EQ(trie_search(root, nullptr), 0);
+
+    trie_free(root);
+}
+
+TEST(Trie, insert_empty) {
+    char buf[MAXPATH] = "";
+
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, buf);
+
+    EXPECT_EQ(trie_search(root, buf), 1);
+
+    trie_free(root);
+}
+
+TEST(Trie, search) {
+    char buf[MAXPATH] = "1234";
+
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, buf);
+
+    EXPECT_EQ(trie_search(root, buf),  1);
+
+    trie_free(root);
+}
+
+TEST(Trie, have_children) {
+    char buf[MAXPATH] = "1234";
+
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    EXPECT_EQ(trie_have_children(root), 0);
+
+    trie_insert(root, buf);
+
+    EXPECT_EQ(trie_have_children(root), 1);
+
+    trie_free(root);
+}
+
+TEST(Trie, del) {
+    char buf[MAXPATH] = "1234";
+
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, buf);
+
+    EXPECT_EQ(trie_delete(&root, buf), 1);
+    EXPECT_EQ(trie_search(root, buf), 0);
+
+    trie_free(root);
+}
+
+TEST(Trie, substring) {
+    char sub[MAXPATH] = "12";
+    char str[MAXPATH] = "1234";
+
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, sub);
+    EXPECT_EQ(trie_search(root, sub), 1);
+    EXPECT_EQ(trie_search(root, str), 0);
+
+    trie_insert(root, str);
+    EXPECT_EQ(trie_search(root, sub), 1);
+    EXPECT_EQ(trie_search(root, str), 1);
+
+    trie_free(root);
+
+    root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, str);
+    EXPECT_EQ(trie_search(root, sub), 0);
+    EXPECT_EQ(trie_search(root, str), 1);
+
+    trie_insert(root, sub);
+    EXPECT_EQ(trie_search(root, sub), 1);
+    EXPECT_EQ(trie_search(root, str), 1);
+
+    trie_free(root);
+}
