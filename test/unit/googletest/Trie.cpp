@@ -62,79 +62,115 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef UTILS_H
-#define UTILS_H
+#include <gtest/gtest.h>
 
-#include <dirent.h>
-#include <stdio.h>
-#include <sys/types.h>
+extern "C" {
 
-#include <sqlite3.h>
-
-#include "config.h"
 #include "bf.h"
-#include "QueuePerThreadPool.h"
 #include "Trie.h"
 
-/* Wrapper around snprintf to catch issues and print them to stderr */
-int SNPRINTF(char * str, size_t size, const char *format, ...);
+}
 
-/* Equivalent to snprintf printing only strings. Variadic arguments
-   should be pairs of strings and their lengths (to try to prevent
-   unnecessary calls to strlen). Make sure to typecast the lengths
-   to size_t or weird bugs may occur */
-size_t SNFORMAT_S(char * dst, const size_t dst_len, size_t count, ...);
+TEST(Trie, create_cleanup) {
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
 
-// global variable to hold per thread state goes here
-struct globalthreadstate {
-   FILE*    outfd[MAXPTHREAD];
-   sqlite3* outdbd[MAXPTHREAD];
-};
-extern struct globalthreadstate gts;
+    cleanup(root);
+}
 
-extern struct sum sumout;
+TEST(Trie, insert_nullptr) {
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
 
-int printits(struct work *pwork,int ptid);
+    insertll(root, nullptr);
 
-ssize_t pullxattrs(const char *filename, char *xattrs, const size_t xattrs_buf_size);
-const char *get_xattr_value(const char *xattrs, const size_t xattr_len, const char *key, const size_t key_len);
+    EXPECT_EQ(searchll(root, nullptr), 0);
 
-int zeroit(struct sum *summary);
+    cleanup(root);
+}
 
-int sumit (struct sum *summary,struct work *pwork);
+TEST(Trie, insert_empty) {
+    char buf[MAXPATH] = "";
 
-int tsumit (struct sum *sumin,struct sum *smout);
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
 
-// given a possibly-multi-level path of directories (final component is
-// also a dir), create the parent dirs all the way down.
-//
-int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid);
+    insertll(root, buf);
 
-int dupdir(char* path, struct stat * stat);
+    EXPECT_EQ(searchll(root, buf), 1);
 
-int shortpath(const char *name, char *nameout, char *endname);
+    cleanup(root);
+}
 
-int printit(const char *name, const struct stat *status, char *type, char *linkname, int xattrs, char * xattr,int printing, long long pinode);
+TEST(Trie, searchll) {
+    char buf[MAXPATH] = "1234";
 
-// NOTE: returns void, not void*, because threadpool threads
-//       do not return values outside the API.
-typedef void(DirFunc)(void*);
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
 
-int processdirs(DirFunc dir_fn);
+    insertll(root, buf);
 
-// Function used in processdir to decend into subdirectories.
-size_t descend(struct QPTPool * ctx, const size_t id,
-               struct work *passmywork, DIR *dir,
-               QPTPoolFunc_t func,
-               const size_t max_level);
+    EXPECT_EQ(searchll(root, buf),  1);
 
-/* convert a mode to a human readable string */
-char * modetostr(char * str, const size_t size, const mode_t mode);
+    cleanup(root);
+}
 
-/* remove trailing characters from paths */
-int remove_trailing(char * str, size_t * size,
-                    const char * match, const size_t match_count);
+TEST(Trie, haveChildren) {
+    char buf[MAXPATH] = "1234";
 
-int setup_directory_skip(const char *filename, struct Trie **skip);
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
 
-#endif
+    EXPECT_EQ(haveChildren(root), 0);
+
+    insertll(root, buf);
+
+    EXPECT_EQ(haveChildren(root), 1);
+
+    cleanup(root);
+}
+
+TEST(Trie, deletionll) {
+    char buf[MAXPATH] = "1234";
+
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
+
+    insertll(root, buf);
+
+    EXPECT_EQ(deletionll(&root, buf), 1);
+    EXPECT_EQ(searchll(root, buf), 0);
+
+    cleanup(root);
+}
+
+TEST(Trie, substring) {
+    char sub[MAXPATH] = "12";
+    char str[MAXPATH] = "1234";
+
+    struct Trie *root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
+
+    insertll(root, sub);
+    EXPECT_EQ(searchll(root, sub), 1);
+    EXPECT_EQ(searchll(root, str), 0);
+
+    insertll(root, str);
+    EXPECT_EQ(searchll(root, sub), 1);
+    EXPECT_EQ(searchll(root, str), 1);
+
+    cleanup(root);
+
+    root = getNewTrieNode();
+    ASSERT_NE(root, nullptr);
+
+    insertll(root, str);
+    EXPECT_EQ(searchll(root, sub), 0);
+    EXPECT_EQ(searchll(root, str), 1);
+
+    insertll(root, sub);
+    EXPECT_EQ(searchll(root, sub), 1);
+    EXPECT_EQ(searchll(root, str), 1);
+
+    cleanup(root);
+}

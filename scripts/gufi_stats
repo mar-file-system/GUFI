@@ -928,6 +928,7 @@ def run(argv, config_path):
     parser.add_argument('--num-results',     metavar='n',     dest='num_results',   type=gufi_common.get_non_negative,                     help='first n results')
     parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',           type=gufi_common.get_uid,                              help='restrict to user')
     parser.add_argument('--in-memory-name',  metavar='name',  dest='inmemory_name', type=str,                           default='out',     help='Name of in-memory database when -R is used')
+    parser.add_argument('--skip-file',       metavar='filename', dest='skip',       type=str,                           default=None,      help='Name of file containing directory basenames to skip')
     parser.add_argument('stat',                                                     choices=STATS.keys(),                                  help='statistic to get')
     parser.add_argument('path',                                                     type=str, nargs='?',                default='')
 
@@ -950,6 +951,9 @@ def run(argv, config_path):
                  '-n', str(config.threads()),
                  '-B', str(config.outputbuffer()),
                  '-d', args.delim] + STATS[args.stat](config, args, build_where(args))
+
+    if args.skip:
+        query_cmd += ['k', args.skip]
 
     query = subprocess.Popen(query_cmd + [args.path])
     query.communicate() # block until query finishes

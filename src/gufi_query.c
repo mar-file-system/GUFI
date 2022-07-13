@@ -84,6 +84,7 @@ OF SUCH DAMAGE.
 #include "pcre.h"
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
+#include "Trie.h"
 #include "utils.h"
 
 extern int errno;
@@ -224,6 +225,7 @@ static size_t descend2(struct QPTPool *ctx,
                        const size_t id,
                        struct work *passmywork,
                        DIR *dir,
+                       struct Trie *skip_names,
                        QPTPoolFunc_t func,
                        const size_t max_level
                        #ifdef DEBUG
@@ -277,9 +279,8 @@ static size_t descend2(struct QPTPool *ctx,
 
             buffered_start(strncmp_call);
             const size_t len = strlen(entry->d_name);
-            const int skip = (((len == 1) && (strncmp(entry->d_name, ".",   1) == 0)) ||
-                              ((len == 2) && (strncmp(entry->d_name, "..",  2) == 0)) ||
-                              (strncmp(entry->d_name + len - 3,      ".db", 3) == 0));
+            const int skip = (searchll(skip_names, entry->d_name) ||
+                              (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
             buffered_end(strncmp_call);
 
             buffered_start(strncmp_branch);
@@ -441,6 +442,7 @@ static int print_callback(void *args, int count, char **data, char **columns) {
 
 struct ThreadArgs {
     struct OutputBuffers output_buffers;
+    struct Trie *skip;
     int (*print_callback_func)(void*,int,char**,char**);
     #ifdef DEBUG
     struct timespec *start_time;
@@ -619,7 +621,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args) 
             const size_t pushed =
             #endif
             #endif
-            descend2(ctx, id, work, dir, processdir, in.max_level
+            descend2(ctx, id, work, dir, ta->skip, processdir, in.max_level
                      #ifdef DEBUG
                      , descend_timers
                      #endif
@@ -893,7 +895,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:w", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:e:m:B:w:k:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -907,6 +909,10 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
     args.start_time = &now;
     #endif
+
+    if (setup_directory_skip(in.skip, &args.skip) != 0) {
+        return -1;
+    }
 
     /* initialize globals */
     /* print_mutex is only needed if no output file prefix was specified */
@@ -924,6 +930,7 @@ int main(int argc, char *argv[])
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
+        cleanup(args.skip);
         return -1;
     }
 
@@ -955,6 +962,7 @@ int main(int argc, char *argv[])
             OutputBuffers_destroy(&args.output_buffers);
             outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
             outfiles_fin(gts.outfd, output_count);
+            cleanup(args.skip);
             return -1;
         }
     }
@@ -983,6 +991,7 @@ int main(int argc, char *argv[])
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
+        cleanup(args.skip);
         return -1;
     }
 
@@ -991,6 +1000,7 @@ int main(int argc, char *argv[])
         OutputBuffers_destroy(&args.output_buffers);
         outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
         outfiles_fin(gts.outfd, output_count);
+        cleanup(args.skip);
         return -1;
     }
 
@@ -1108,6 +1118,7 @@ int main(int argc, char *argv[])
     OutputBuffers_destroy(&args.output_buffers);
     outdbs_fin  (gts.outdbd, in.maxthreads, in.sqlfin, in.sqlfin_len);
     outfiles_fin(gts.outfd, output_count);
+    cleanup(args.skip);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
     timestamp_set_end(cleanup_globals);

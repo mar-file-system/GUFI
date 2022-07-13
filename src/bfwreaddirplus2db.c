@@ -103,7 +103,7 @@ struct Trie* headfl;
 
 /* search the trie either the directory trie type 0 or the filelink type 1 */
 int searchmyll(long long int lull, int lutype) {
-   char lut[CHAR_SIZE];
+   char lut[256];
    int ret;
 
    ret=0;
@@ -112,7 +112,7 @@ int searchmyll(long long int lull, int lutype) {
      if (headd==NULL) return 0;
      if (lull < glsuspectdmin) return 0;
      if (lull > glsuspectdmax) return 0;
-     SNPRINTF(lut,CHAR_SIZE,"%lld",lull);
+     SNPRINTF(lut,256,"%lld",lull);
      ret=searchll(headd,lut);
      //printf("in searchmyll search dir %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headd,lut);  this is not thread safe
@@ -121,7 +121,7 @@ int searchmyll(long long int lull, int lutype) {
      if (headfl==NULL) return 0;
      if (lull < glsuspectflmin) return 0;
      if (lull > glsuspectflmax) return 0;
-     SNPRINTF(lut,CHAR_SIZE,"%lld",lull);
+     SNPRINTF(lut,256,"%lld",lull);
      ret=searchll(headfl,lut);
      //printf("in searchmyll search fl %lld %d ret %d lut %s\n",lull, lutype,ret,lut);
      // if (ret==1) deletionll(&headfl,lut); this is not thread safe
@@ -574,7 +574,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
-             insertll(&headfl, incsuspect);
+             insertll(headfl, incsuspect);
              cntfl++;
           }
           if (!strncmp(incsuspecttype,"l",1)) {
@@ -586,7 +586,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectflmax) glsuspectflmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectflmin,glsuspectflmax );
-             insertll(&headfl, incsuspect);
+             insertll(headfl, incsuspect);
              cntfl++;
           }
           if (!strncmp(incsuspecttype,"d",1)) {
@@ -598,7 +598,7 @@ int processinit(struct QPTPool * ctx) {
                if (testll > glsuspectdmax) glsuspectdmax=testll;
              }
              //printf("insuspect %s %s %lld %lld\n",incsuspect, incsuspecttype,glsuspectdmin,glsuspectdmax );
-             insertll(&headd, incsuspect);
+             insertll(headd, incsuspect);
              cntd++;
           }
        }
