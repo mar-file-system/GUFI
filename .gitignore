@@ -3,3 +3,4 @@
 *.pyc
 db.db
 build
+.DS_Store

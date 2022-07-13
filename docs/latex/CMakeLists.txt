@@ -60,14 +60,61 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
 
-# build man pages
-add_subdirectory(man)
+cmake_minimum_required(VERSION 2.8)
+SET(LATEX_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build/docs/pdfs)
 
-# build pdfs from latex files
-add_subdirectory(latex)
 
-# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
-# in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
+
+INCLUDE(UseLATEX)
+
+set(image_path "images")
+
+set(gufi_user_inputs
+    sections/introduction.tex
+    sections/gufi_find.tex
+    sections/gufi_ls.tex
+    sections/gufi_stats.tex
+    sections/license.tex
+)
+
+
+set(gufi_developer_inputs
+    sections/introduction.tex
+    sections/understanding_the_data.tex
+    sections/gufi_query.tex
+    sections/process_dir_query.tex
+    sections/gufi_dir2index.tex
+    sections/understanding_rollup.tex
+    sections/gufi_dir2trace.tex
+    sections/license.tex
+)
+
+
+set(gufi_administrator_inputs
+    sections/introduction.tex
+    sections/understanding_the_data.tex
+    sections/gufi_query.tex
+    sections/gufi_dir2index.tex
+    sections/gufi_dir2trace.tex
+    sections/license.tex
+)
+
+
+ADD_LATEX_DOCUMENT(
+    gufi_user.tex
+    INPUTS ${gufi_user_inputs}
+    IMAGE_DIRS ${image_path}
+    )
+
+ADD_LATEX_DOCUMENT(
+    gufi_administrator.tex
+    INPUTS ${gufi_administrator_inputs}
+    IMAGE_DIRS ${image_path}
+    )
+
+ADD_LATEX_DOCUMENT(
+    gufi_developer.tex
+    INPUTS ${gufi_developer_inputs}
+    IMAGE_DIRS ${image_path}
+    )
