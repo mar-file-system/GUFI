@@ -82,7 +82,7 @@ trie_t *trie_alloc()
 }
 
 // Iterative function to insert a string in Trie.
-void trie_insert(trie_t *head, const char* str)
+void trie_insert(trie_t *head, const char *str, const size_t len)
 {
     if (!head || !str) {
         return;
@@ -90,17 +90,15 @@ void trie_insert(trie_t *head, const char* str)
 
     // start from root node
     trie_t *curr = head;
-    while (*str)
-    {
+    for(size_t i = 0; i < len; i++) {
+        const uint8_t c = str[i];
+
         // create a new node if path doesn't exists
-        if (curr->character[(uint8_t) (char) *str] == NULL)
-            curr->character[(uint8_t) (char) *str] = trie_alloc();
+        if (curr->character[c] == NULL)
+            curr->character[c] = trie_alloc();
 
         // go to next node
-        curr = curr->character[(uint8_t) (char) *str];
-
-        // move to next character
-        str++;
+        curr = curr->character[c];
     }
 
     // mark current node as leaf
@@ -109,7 +107,7 @@ void trie_insert(trie_t *head, const char* str)
 
 // Iterative function to search a string in Trie. It returns 1
 // if the string is found in the Trie, else it returns 0
-int trie_search(trie_t *head, const char* str)
+int trie_search(trie_t *head, const char *str, const size_t len)
 {
     // return 0 if Trie is empty
     if (head == NULL)
@@ -120,18 +118,15 @@ int trie_search(trie_t *head, const char* str)
     }
 
     trie_t *curr = head;
-    while (*str)
-    {
+    for(size_t i = 0; i < len; i++) {
+        const uint8_t c = str[i];
 
         // go to next node
-        curr = curr->character[(uint8_t) (char) *str];
+        curr = curr->character[c];
 
         // if string is invalid (reached end of path in Trie)
         if (curr == NULL)
             return 0;
-
-        // move to next character
-        str++;
     }
 
     // if current node is a leaf and we have reached the
@@ -150,20 +145,22 @@ int trie_have_children(trie_t *curr)
 }
 
 // Recursive function to delete a string in Trie.
-int trie_delete(trie_t **curr, const char* str)
+int trie_delete_recursive(trie_t **curr, const char *str, const size_t i, const size_t len)
 {
     // return if Trie is empty
     if (*curr == NULL)
         return 0;
 
     // if we have not reached the end of the string
-    if (*str)
+    if (i < len)
     {
+        const uint8_t c = str[i];
+
         // recurse for the node corresponding to next character in
         // the string and if it returns 1, delete current node
         // (if it is non-leaf)
-        if (*curr != NULL && (*curr)->character[(uint8_t) (char) *str] != NULL &&
-            trie_delete(&((*curr)->character[(uint8_t) (char) *str]), str + 1) &&
+        if (*curr != NULL && (*curr)->character[c] != NULL &&
+            trie_delete_recursive(&((*curr)->character[c]), str, i + 1, len) &&
             (*curr)->isLeaf == 0)
         {
             if (!trie_have_children(*curr))
@@ -179,7 +176,7 @@ int trie_delete(trie_t **curr, const char* str)
     }
 
     // if we have reached the end of the string
-    if (*str == '\0' && (*curr)->isLeaf)
+    if ((i == len) && (*curr)->isLeaf)
     {
         // if current node is a leaf node and don't have any children
         if (!trie_have_children(*curr))
@@ -199,6 +196,18 @@ int trie_delete(trie_t **curr, const char* str)
     }
 
     return 0;
+}
+
+int trie_delete(trie_t *head, const char *str, const size_t len) {
+    if (!head || !str) {
+        return 0;
+    }
+
+    if (len == 0) {
+        return !!head->isLeaf;
+    }
+
+    return trie_delete_recursive(&(head->character[(uint8_t) str[0]]), str, 1, len);
 }
 
 void trie_free(trie_t *head) {

@@ -140,8 +140,10 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     struct dirent *entry = NULL;
     size_t rows = 0;
     while ((entry = readdir(dir))) {
+        const size_t len = strlen(entry->d_name);
+
         /* skip ., .., and user provided names */
-        if (trie_search(skip, entry->d_name)) {
+        if (trie_search(skip, entry->d_name, len)) {
             continue;
         }
 
@@ -150,7 +152,10 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         memset(&e, 0, sizeof(struct work));
 
         char fullpath[MAXPATH];
-        const size_t fullpath_len = SNPRINTF(fullpath, MAXPATH, "%s/%s", work_name, entry->d_name);
+        const size_t fullpath_len = SNFORMAT_S(fullpath, MAXPATH, 3,
+                                               work_name, work_name_len,
+                                               "/",  (size_t) 1,
+                                               entry->d_name, len);
 
         /* the name that is stored in trace does not have the prefix */
         memcpy(e.name, fullpath + in.name_len, fullpath_len - in.name_len);

@@ -175,7 +175,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         const size_t len = strlen(entry->d_name);
 
         /* skip ., .., and user provided names */
-        if (trie_search(skip, entry->d_name)) {
+        if (trie_search(skip, entry->d_name, len)) {
             continue;
         }
 

@@ -797,8 +797,8 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
     }
 
     /* always skip . and .. */
-    trie_insert(*skip, ".");
-    trie_insert(*skip, "..");
+    trie_insert(*skip, ".",  1);
+    trie_insert(*skip, "..", 2);
 
     /* add user defined directory names to skip */
     if (strlen(filename)) {
@@ -819,7 +819,7 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
                 continue;
             }
 
-            trie_insert(*skip, name);
+            trie_insert(*skip, name, strlen(name));
         }
 
         fclose(skipfile);
