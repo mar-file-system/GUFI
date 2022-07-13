@@ -70,6 +70,7 @@ if (CMAKE_CXX_COMPILER)
   set(TEST_SRC
     OutputBuffers.cpp
     QueuePerThreadPool.cpp
+    Trie.cpp
     bf.cpp
     dbutils.cpp
     sll.cpp

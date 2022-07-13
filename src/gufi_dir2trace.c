@@ -111,6 +111,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     struct work *work = (struct work *) data;
+    struct Trie *skip = (struct Trie *) args;
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -138,13 +139,9 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     struct dirent *entry = NULL;
     size_t rows = 0;
     while ((entry = readdir(dir))) {
-        /* skip . and .. */
-        if (entry->d_name[0] == '.') {
-            size_t len = strlen(entry->d_name);
-            if ((len == 1) ||
-                ((len == 2) && (entry->d_name[1] == '.'))) {
-                continue;
-            }
+        /* skip ., .., and user provided names */
+        if (searchll(skip, entry->d_name)) {
+            continue;
         }
 
         /* get entry path */
@@ -287,7 +284,8 @@ void sub_help() {
 }
 
 int main(int argc, char *argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:", 2, "input_dir output_prefix", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:", 2, "input_dir output_prefix", &in);
+    struct Trie *skip = NULL;
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -300,6 +298,10 @@ int main(int argc, char *argv[]) {
 
         if (retval)
             return retval;
+
+        if (setup_directory_skip(in.skip, &skip) != 0) {
+            return -1;
+        }
 
         in.name_len = strlen(in.name);
         remove_trailing(in.name, &in.name_len, "/", 1);
@@ -338,11 +340,13 @@ int main(int argc, char *argv[]) {
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        cleanup(skip);
         return -1;
     }
 
-    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, skip) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
+        cleanup(skip);
         return -1;
     }
 
@@ -351,6 +355,7 @@ int main(int argc, char *argv[]) {
     QPTPool_destroy(pool);
 
     outfiles_fin(gts.outfd, in.maxthreads);
+    cleanup(skip);
 
     #if BENCHMARK
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);

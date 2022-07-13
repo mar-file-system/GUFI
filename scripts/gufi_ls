@@ -236,6 +236,7 @@ def run(argv, config_path):
     parser.add_argument('--size-width',     metavar='chars',      dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
     parser.add_argument('--user-width',     metavar='chars',      dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
     parser.add_argument('--group-width',    metavar='chars',      dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
+    parser.add_argument('--skip-file',      metavar='filename',   dest='skip',           type=str,                          default=None,  help='Name of file containing directory basenames to skip')
 
     args = parser.parse_args(argv[1:]);
 
@@ -321,12 +322,13 @@ def run(argv, config_path):
                       '-J', J,
                       '-G', G,
                       '-a',
-        ]
-
-        query_cmd += ['-B', str(config.outputbuffer())]
+                      '-B', str(config.outputbuffer())]
 
         if args.delim:
             query_cmd += ['-d', args.delim]
+
+        if args.skip:
+            query_cmd += ['-k', args.skip]
 
         query = subprocess.Popen(query_cmd + [fullpath])
         query.communicate() # block until query finishes

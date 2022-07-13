@@ -146,6 +146,7 @@ void print_help(const char* prog_name,
       case 'j': printf("  -j                     print the information in terse form\n"); break;
       case 'X': printf("  -X                     Dry run\n"); break;
       case 'L': printf("  -L                     Highest number of files/links in a directory allowed to be rolled up\n"); break;
+      case 'k': printf("  -k                     file containing directory names to skip\n");
 
       default: printf("print_help(): unrecognized option '%c'\n", (char)ch);
       }
@@ -203,6 +204,7 @@ void show_input(struct input* in, int retval) {
    printf("in.terse              = %d\n",    in->terse);
    printf("in.dry_run            = %d\n",    in->dry_run);
    printf("in.max_in_dir         = %zu\n",   in->max_in_dir);
+   printf("in.skip               = %s\n",    in->skip);
    printf("\n");
    printf("retval                = %d\n",    retval);
    printf("\n");
@@ -260,6 +262,7 @@ int parse_cmd_line(int         argc,
    in->terse              = 0;
    in->dry_run            = 0;
    in->max_in_dir         = (size_t) -1;
+   memset(in->skip, 0, MAXPATH);
 
    int show   = 0;
    int retval = 0;
@@ -476,6 +479,10 @@ int parse_cmd_line(int         argc,
 
       case 'L':
           INSTALL_UINT(in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L");
+          break;
+
+      case 'k':
+          INSTALL_STR(in->skip, optarg, MAXPATH, "-k");
           break;
 
       case '?':

@@ -65,8 +65,10 @@ OF SUCH DAMAGE.
 #ifndef BF_H
 #define BF_H
 
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
+#include "Trie.h"
 
 #define MAXPATH 4096
 #define MAXXATTR 1024
@@ -198,6 +200,9 @@ struct input {
    /* only used by rollup */
    int dry_run;
    size_t max_in_dir;
+
+   /* filename containing strings to skip during tree traversal */
+   char skip[MAXPATH];
 };
 extern struct input in;
 

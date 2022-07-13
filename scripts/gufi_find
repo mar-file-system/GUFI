@@ -521,6 +521,7 @@ def build_expression_parser():
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
     parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
     parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
+    parser.add_argument('--skip-file',         metavar='filename',   dest='skip',                  type=str,                     default=None,         help='Name of file containing directory basenames to skip')
 
     return parser
 
@@ -681,6 +682,9 @@ def run(argv, config_path):
 
     if args.output_buffer:
         query_cmd += ['-B', str(args.output_buffer)]
+
+    if args.skip:
+        query_cmd += ['-k', args.skip]
 
     query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
     query.communicate()                         # block until query finishes
