@@ -82,7 +82,7 @@ typedef struct PrintArgs {
     /* size_t printed;                    /\* number of records printed by the callback *\/ */
 } PrintArgs_t;
 
-int print_parallel(void *args, int count, char **data, char **columns);
+int print_parallel(void *args, sqlite3_stmt *stmt);
 int print_serial(void *args, int count, char **data, char **columns);
 
 #endif

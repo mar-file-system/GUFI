@@ -162,6 +162,15 @@ int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
 size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
 
+/*
+ * Run a compiled SQL statement. If this is the first
+ * time running it, prepare the statement first.
+ */
+int compiled_stmt_cache_run(sqlite3 *db,
+                            const char *sql, sqlite3_stmt **stmt,
+                            int (*callback)(void *args, sqlite3_stmt *stmt),
+                            void *args, size_t *rows);
+
 /* xattr db list item */
 struct xattr_db {
     char filename[MAXPATH];
@@ -186,15 +195,28 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
 
+/* compiled SQL statements used when querying xattrs */
+struct XAttrCache {
+    sqlite3_stmt *db_list;
+
+    /* no create_xattrs since the SQL changes for each directory */
+    sqlite3_stmt *create_xentries;
+    sqlite3_stmt *create_xpentries;
+    sqlite3_stmt *create_xsummary;
+
+    /* no need to drop xentries, xpentries, and xummary since they are views of views */
+    sqlite3_stmt *drop_xattrs;
+};
+
 /* create view of all accessible xattrs when querying */
-int xattrprep(const char *path, const size_t path_len, sqlite3 *db
+int xattrprep(const char *path, const size_t path_len, sqlite3 *db, struct XAttrCache *xcache
               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
               , size_t *query_count
               #endif
     );
 
 /* detach xattr dbs */
-void xattrdone(sqlite3 *db
+void xattrdone(sqlite3 *db, struct XAttrCache *xcache
                #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                , size_t *query_count
                #endif

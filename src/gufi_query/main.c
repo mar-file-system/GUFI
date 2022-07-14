@@ -228,7 +228,7 @@ static void increment_query_count(ThreadArgs_t *ta) {
 }
 
 /* name doesn't matter, so long as it is not used by callers */
-static const char ATTACH_NAME[] = "tree";
+#define ATTACH_NAME "tree"
 
 /* mutex doing global things */
 pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -443,7 +443,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* set up XATTRS_VIEW_NAME so that it can be used by -T, -S, and -E */
     if (db && in.xattrs.enabled) {
         timestamp_set_start(xattrprep_call);
-        xattrprep(work->name, work->name_len, db
+        xattrprep(work->name, work->name_len, db, &ta->csc.xattrs
                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                   ,&ta->queries
                   #endif
@@ -460,8 +460,8 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         if (in.andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
             timestamp_set_start(sqltsumcheck);
-            querydb(dbname, db, "SELECT name FROM sqlite_master WHERE type=\'table\' AND name='treesummary';",
-                  pa, id, &recs);
+            querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master WHERE type=\'table\' AND name='treesummary';",
+                    pa, &ta->csc.tsum_exists, id, &recs);
             timestamp_set_end(sqltsumcheck);
             increment_query_count(ta);
             if (recs < 1) {
@@ -470,7 +470,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             else {
                 /* run in.sql.tsum */
                 timestamp_set_start(sqltsum);
-                querydb(dbname, db, in.sql.tsum, pa, id, &recs);
+                querydb(dbname, db, in.sql.tsum, pa, &ta->csc.tsum, id, &recs);
                 timestamp_set_end(sqltsum);
                 increment_query_count(ta);
             }
@@ -491,7 +491,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         timestamp_set_start(get_rollupscore_call);
         int rollupscore = 0;
         if (db) {
-            get_rollupscore(work->name, db, &rollupscore);
+            get_rollupscore(db, &ta->csc.rollupscore, &rollupscore);
             increment_query_count(ta);
         }
         timestamp_set_end(get_rollupscore_call);
@@ -536,7 +536,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                     realpath(work->name,gps[id].gfpath);
 
                     timestamp_set_start(sqlsum);
-                    querydb(dbname, db, in.sql.sum, pa, id, &recs);
+                    querydb(dbname, db, in.sql.sum, pa, &ta->csc.sum, id, &recs);
                     timestamp_set_end(sqlsum);
                     increment_query_count(ta);
                 } else {
@@ -554,7 +554,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
                         realpath(work->name,gps[id].gfpath);
 
                         timestamp_set_start(sqlent);
-                        querydb(dbname, db, in.sql.ent, pa, id, &recs); /* recs is not used */
+                        querydb(dbname, db, in.sql.ent, pa, &ta->csc.ent, id, &recs); /* recs is not used */
                         timestamp_set_end(sqlent);
                         increment_query_count(ta);
                     }
@@ -566,7 +566,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* detach xattr dbs */
     timestamp_set_start(xattrdone_call);
     if (db && in.xattrs.enabled) {
-        xattrdone(db
+        xattrdone(db, &ta->csc.xattrs
                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                   , &ta->queries
                   #endif

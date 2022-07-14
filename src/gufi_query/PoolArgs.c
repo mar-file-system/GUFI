@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 
 #include "dbutils.h"
+#include "gufi_query/CompiledStmtCache.h"
 #include "gufi_query/PoolArgs.h"
 #include "utils.h"
 
@@ -167,6 +168,7 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     for(size_t i = 0; i < allocated; i++) {
         ThreadArgs_t *ta = &(pa->ta[i]);
 
+        compiled_stmt_fin(&ta->csc);
         closedb(ta->outdb);
 
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);

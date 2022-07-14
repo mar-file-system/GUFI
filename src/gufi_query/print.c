@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 
 #include "gufi_query/print.h"
 
-int print_parallel(void *args, int count, char **data, char **columns) {
+int print_parallel(void *args, sqlite3_stmt *stmt) {
     /* if (!stmt || !ca) { */
     /*     return 1; */
     /* } */
@@ -75,9 +75,16 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     PrintArgs_t *print = (PrintArgs_t *) args;
     struct OutputBuffer *ob = print->output_buffer;
 
+    const int count = sqlite3_data_count(stmt);
+    if (!count) {
+        return 0;
+    }
+
+    char **data = malloc(count * sizeof(char *));
     size_t *lens = malloc(count * sizeof(size_t));
     size_t row_len = count + 1; /* one delimiter per column + newline */
     for(int i = 0; i < count; i++) {
+        data[i] = (char *) sqlite3_column_text(stmt, i);
         lens[i] = 0;
         if (data[i]) {
             lens[i] = strlen(data[i]);
@@ -138,6 +145,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     }
 
     free(lens);
+    free(data);
 
     print->rows++;
 

@@ -213,6 +213,7 @@ build_and_install(${BIN} TRUE ${C_SOURCES})
 
 # gufi_query is split up into multiple files
 build_and_install_one(${BIN} TRUE gufi_query
+  gufi_query/CompiledStmtCache.c
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
   gufi_query/main.c

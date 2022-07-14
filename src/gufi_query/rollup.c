@@ -66,18 +66,25 @@ OF SUCH DAMAGE.
 
 #include "gufi_query/rollup.h"
 
-static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
+static int get_rollupscore_callback(void *args, sqlite3_stmt *stmt) {
     int *rollupscore = (int *) args;
-    *rollupscore = atoi(data[0]);
+    *rollupscore = sqlite3_column_int(stmt, 0);
     return 0;
 }
 
-int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
-    char *err = NULL;
-    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
-                     get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
-        sqlite3_free(err);
+int get_rollupscore(sqlite3 *db, sqlite3_stmt **stmt, int *rollupscore) {
+    /* if (!db || !stmt || !rollupscore) { */
+    /*     return -1; */
+    /* } */
+
+    size_t rows = 0;
+    if (compiled_stmt_cache_run(db, "SELECT rollupscore FROM summary WHERE isroot == 1;",
+                                stmt, get_rollupscore_callback, rollupscore, &rows)) {
         return -1;
+    }
+
+    if (rows != 1) {
+        fprintf(stderr, "Warning: Got %zu rows when getting rollup score. Using last score.\n", rows);
     }
 
     return 0;

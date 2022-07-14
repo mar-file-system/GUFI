@@ -62,13 +62,22 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_ROLLUP_H
-#define GUFI_QUERY_ROLLUP_H
+#ifndef GUFI_QUERY_COMPILED_STMT_CACHE_H
+#define GUFI_QUERY_COMPILED_STMT_CACHE_H
 
-#include <sqlite3.h>
+#include "dbutils.h"
 
-#include "gufi_query/CompiledStmtCache.h"
+typedef struct CompiledStmtCache {
+    struct XAttrCache xattrs;   /* -x */
 
-int get_rollupscore(sqlite3 *db, sqlite3_stmt **stmt, int *rollupscore);
+    sqlite3_stmt *tsum_exists;  /* -T */
+    sqlite3_stmt *tsum;         /* -T */
+    sqlite3_stmt *rollupscore;  /* get rollup score from summary table */
+    sqlite3_stmt *sum;          /* -S */
+    sqlite3_stmt *ent;          /* -E */
+    sqlite3_stmt *intermediate; /* write into aggregate */
+} CSC_t;
+
+void compiled_stmt_fin(CSC_t *csc);
 
 #endif

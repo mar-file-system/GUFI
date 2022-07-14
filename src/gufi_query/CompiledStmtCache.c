@@ -62,13 +62,21 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_ROLLUP_H
-#define GUFI_QUERY_ROLLUP_H
-
-#include <sqlite3.h>
-
 #include "gufi_query/CompiledStmtCache.h"
 
-int get_rollupscore(sqlite3 *db, sqlite3_stmt **stmt, int *rollupscore);
+void compiled_stmt_fin(CSC_t *csc) {
+    sqlite3_finalize(csc->intermediate);
+    sqlite3_finalize(csc->ent);
+    sqlite3_finalize(csc->sum);
+    sqlite3_finalize(csc->rollupscore);
+    sqlite3_finalize(csc->tsum);
+    sqlite3_finalize(csc->tsum_exists);
 
-#endif
+    sqlite3_finalize(csc->xattrs.drop_xattrs);
+    sqlite3_finalize(csc->xattrs.create_xsummary);
+    sqlite3_finalize(csc->xattrs.create_xpentries);
+    sqlite3_finalize(csc->xattrs.create_xentries);
+    sqlite3_finalize(csc->xattrs.db_list);
+
+    memset(csc, 0, sizeof(*csc));
+}

@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
 void querydb(const char *dbname, sqlite3 *db, const char *query,
-             PoolArgs_t *pa, int id, int *rc) {
+             PoolArgs_t *pa, sqlite3_stmt **stmt, int id, int *rc) {
     ThreadArgs_t *ta = &pa->ta[id];
     PrintArgs_t args;
     args.output_buffer = &ta->output_buffer;
@@ -77,13 +77,9 @@ void querydb(const char *dbname, sqlite3 *db, const char *query,
     args.rows = 0;
     /* ca.printed = 0; */
 
-    char *err = NULL;
 #ifdef SQL_EXEC
-    if (sqlite3_exec(db, query, print_parallel, &args, &err) != SQLITE_OK) {
-        fprintf(stderr, "Error: %s: %s: \"%s\"\n", err, dbname, query);
-    }
+    compiled_stmt_cache_run(db, query, stmt, print_parallel, &args, NULL);
 #endif
-    sqlite3_free(err);
 
     *rc = args.rows;
 }
