@@ -807,23 +807,8 @@ int main(int argc, char *argv[])
     #endif
 
     PoolArgs_t pa;
-    if (PoolArgs_init(&pa, &in) != 0) {
+    if (PoolArgs_init(&pa, &in, &global_mutex) != 0) {
         return -1;
-    }
-
-    /* outputting to stdout or file */
-    if (!in.sql.init_agg_len) {
-        pthread_mutex_t *stdout_mutex = NULL;
-
-        /* only STDOUT writes to the same destination */
-        if (in.output == STDOUT) {
-            stdout_mutex = &global_mutex;
-        }
-
-        /* STDOUT and OUTFILE need the print print */
-        if (in.output != OUTDB) {
-            pa.stdout_mutex = stdout_mutex;
-        }
     }
 
     #ifdef DEBUG

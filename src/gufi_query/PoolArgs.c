@@ -68,7 +68,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/PoolArgs.h"
 #include "utils.h"
 
-int PoolArgs_init(PoolArgs_t *pa, struct input *in) {
+int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
     /* if (!pa || !in) { */
     /*     return -1; */
     /* } */
@@ -78,6 +78,18 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in) {
 
     if (setup_directory_skip(in->skip, &pa->skip)) {
         return 1;
+    }
+
+    pthread_mutex_t *stdout_mutex = NULL;
+
+    /* only STDOUT writes to the same destination */
+    if (in->output == STDOUT) {
+        stdout_mutex = global_mutex;
+    }
+
+    /* STDOUT and OUTFILE need the print mutex */
+    if (in->output != OUTDB) {
+        pa->stdout_mutex = stdout_mutex;
     }
 
     pa->ta = calloc(in->maxthreads, sizeof(ThreadArgs_t));
@@ -165,5 +177,6 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
         }
     }
 
+    trie_free(pa->skip);
     free(pa->ta);
 }
