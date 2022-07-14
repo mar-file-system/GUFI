@@ -57,18 +57,26 @@
 % CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 % IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 % OF SUCH DAMAGE.
-\section{Understanding the data and how its stored}
-The data stored in these databases include filenames, access and creation dates, file attributes, and extended attributes. Depending on which table is viewed and what view is selected, there are currently 59 possible attributes(columns) per entry(row). More attributes may be added in the future. \\
-\\
-Below are the most commonly used tables and views. 
 
+
+\section{Understanding the data and how its stored}
+The data stored in these databases include filenames, access and creation dates, file attributes, and extended attributes. At the time of creating this document; depending on which table is viewed and what view is selected, there are currently 59 possible attributes(columns) per entry(row). More attributes may be added in the future. 
+\\
+\\
+\subsection{Tables}
+The \textbf{entries table} houses extracted metadata for files and links within the corresponding directory.  Database rows capture file name, size, inode (primary key), These are vital facts (attributes and extended attributes) about files without the heft of the actual files.
+\\
+\\
+ The directory \textbf{summary table} houses extracted information about everything within the corresponding directory. It is a summary of that directory, including information about minimum file size, maximum file size, the number of files, and more. 
+\\
+\\
 \begin{figure} [h]
 \centering
 \includegraphics[width=1.0\textwidth]{images/Database_Schemas.png}
 \caption{\label{fig:Database Schema}Database schema}
 \end{figure}
 
-\subsection{Why pentries is the most commonly used}
+\subsection{pentries view}
 \begin{itemize}
   \item Provides parent inode as a query-able variable to the entries table
   \item Exists solely because parent inodes are not stored

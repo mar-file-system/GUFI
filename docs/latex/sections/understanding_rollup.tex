@@ -76,7 +76,7 @@ One of the predominant optimizations in GUFI is the rollup feature which functio
 \clearpage
 
 \subsection{\texttt {ascend\_to\_top}}
-ascend\_to\_top is a versatile function that will perform a function as it ascends the tree.
+\texttt{ascend\_to\_top} is a versatile function that will perform a function as it ascends the tree.
 
 \begin{figure} [h]
 \centering
@@ -85,6 +85,9 @@ ascend\_to\_top is a versatile function that will perform a function as it ascen
 \end{figure}
 
 In this case, we will be passing in the rollup function inside of \texttt{rollup.c}.
+\\
+\\
+This function performs the necessary checks to ensure a child can rollup into its parent including: comparing permissions of both the child and parent directory and whether it should based on performance metrics. Should this directory be able to rollup, it will NOT be added to the remaining count unless it is the root of the index. If a directory cannot rollup, it will be added to the remaining count.
 
 \begin{figure} [h]
 \centering
