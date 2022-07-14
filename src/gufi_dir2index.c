@@ -89,13 +89,15 @@ size_t total_files = 0;
 #endif
 
 struct ThreadArgs {
-    struct templates templates;
+    struct template_db db;
+    struct template_db xattr;
     trie_t *skip;
 };
 
 struct nondir_args {
     /* thread args */
-    struct templates *templates;
+    struct template_db *temp_db;
+    struct template_db *temp_xattr;
     struct work *work;
 
     /* index path */
@@ -122,7 +124,7 @@ static int process_nondir(struct work *entry, void *args) {
 
     if (in.xattrs.enabled) {
         insertdbgo_xattrs(&nda->work->statuso, entry,
-                          &nda->xattr_db_list, &nda->templates->xattr,
+                          &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);
     }
@@ -164,8 +166,9 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
     struct ThreadArgs *ta = (struct ThreadArgs *) args;
 
     struct nondir_args nda;
-    nda.templates = &ta->templates;
-    nda.work      = (struct work *) data;
+    nda.temp_db    = &ta->db;
+    nda.temp_xattr = &ta->xattr;
+    nda.work       = (struct work *) data;
 
     DIR *dir = opendir(nda.work->name);
     if (!dir) {
@@ -197,7 +200,7 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
                DBNAME, DBNAME_LEN);
 
     /* copy the template file */
-    if (copy_template(&nda.templates->db, dbname, nda.work->statuso.st_uid, nda.work->statuso.st_gid)) {
+    if (copy_template(nda.temp_db, dbname, nda.work->statuso.st_uid, nda.work->statuso.st_gid)) {
         closedir(dir);
         return 1;
     }
@@ -465,17 +468,17 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Creating GUFI Index %s in %s with %d threads\n", in.name, in.nameto, in.maxthreads);
     #endif
 
-    init_template_db(&args.templates.db);
-    if (create_dbdb_template(&args.templates.db) != 0) {
+    init_template_db(&args.db);
+    if (create_dbdb_template(&args.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
         trie_free(args.skip);
         return -1;
     }
 
-    init_template_db(&args.templates.xattr);
-    if (create_xattrs_template(&args.templates.xattr) != 0) {
+    init_template_db(&args.xattr);
+    if (create_xattrs_template(&args.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        close_template_db(&args.templates.db);
+        close_template_db(&args.db);
         trie_free(args.skip);
         return -1;
     }
@@ -492,16 +495,16 @@ int main(int argc, char *argv[]) {
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        close_template_db(&args.templates.xattr);
-        close_template_db(&args.templates.db);
+        close_template_db(&args.xattr);
+        close_template_db(&args.db);
         trie_free(args.skip);
         return -1;
     }
 
     if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
-        close_template_db(&args.templates.xattr);
-        close_template_db(&args.templates.db);
+        close_template_db(&args.xattr);
+        close_template_db(&args.db);
         trie_free(args.skip);
         return -1;
     }
@@ -510,8 +513,8 @@ int main(int argc, char *argv[]) {
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
-    close_template_db(&args.templates.xattr);
-    close_template_db(&args.templates.db);
+    close_template_db(&args.xattr);
+    close_template_db(&args.db);
     trie_free(args.skip);
 
     #if BENCHMARK

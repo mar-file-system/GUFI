@@ -83,9 +83,11 @@ extern int errno;
 struct OutputBuffers debug_output_buffers;
 #endif
 
+/* global to pool - passed around in "args" argument */
 struct PoolArgs {
     FILE **traces;
-    struct templates *templates;
+    struct template_db db;
+    struct template_db xattr;
 };
 
 /* Data stored during first pass of input file */
@@ -193,7 +195,6 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     FILE *trace = ((FILE **) pa->traces)[id];
-    struct templates *templates = pa->templates;
 
     struct row *w = (struct row *) data;
 
@@ -241,7 +242,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     /* copy the template file */
-    if (copy_template(&templates->db, dbname, dir.statuso.st_uid, dir.statuso.st_gid)) {
+    if (copy_template(&pa->db, dbname, dir.statuso.st_uid, dir.statuso.st_gid)) {
         row_destroy(w);
         return 1;
     }
@@ -327,7 +328,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
             timestamp_start(insertdbgo);
             insertdbgo(&row, db, entries_res);
             insertdbgo_xattrs(&dir.statuso, &row,
-                              &xattr_db_list, &templates->xattr,
+                              &xattr_db_list, &pa->xattr,
                               topath, topath_len,
                               xattrs_res, xattr_files_res);
             timestamp_set_end(insertdbgo);
@@ -680,26 +681,29 @@ int main(int argc, char *argv[]) {
         in.nameto_len = strlen(in.nameto);
     }
 
-    struct templates templates;
-    init_template_db(&templates.db);
-    if (create_dbdb_template(&templates.db) != 0) {
-        fprintf(stderr, "Could not create template file\n");
-        return -1;
-    }
-
-    init_template_db(&templates.xattr);
-    if (create_xattrs_template(&templates.xattr) != 0) {
-        fprintf(stderr, "Could not create xattr template file\n");
-        close_template_db(&templates.db);
-        return -1;
-    }
+    struct PoolArgs args;
 
     /* open trace files for threads to jump around in */
     /* all have to be passed in at once because there's no way to send one to each thread */
     /* the trace files have to be opened outside of the thread in order to not repeatedly open the files */
-    FILE **traces = open_per_thread_traces(in.name, in.maxthreads);
-    if (!traces) {
+    args.traces = open_per_thread_traces(in.name, in.maxthreads);
+    if (!args.traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
+        return -1;
+    }
+
+
+    init_template_db(&args.db);
+    if (create_dbdb_template(&args.db) != 0) {
+        fprintf(stderr, "Could not create template file\n");
+        return -1;
+    }
+
+    init_template_db(&args.xattr);
+    if (create_xattrs_template(&args.xattr) != 0) {
+        fprintf(stderr, "Could not create xattr template file\n");
+        close_template_db(&args.db);
+        close_per_thread_traces(args.traces, in.maxthreads);
         return -1;
     }
 
@@ -714,22 +718,17 @@ int main(int argc, char *argv[]) {
                                          );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        close_per_thread_traces(traces, in.maxthreads);
-        close_template_db(&templates.xattr);
-        close_template_db(&templates.db);
+        close_template_db(&args.xattr);
+        close_template_db(&args.db);
+        close_per_thread_traces(args.traces, in.maxthreads);
         return -1;
     }
 
-    struct PoolArgs args = {
-        .traces = traces,
-        .templates = &templates,
-    };
-
     if (!QPTPool_start(pool, &args)) {
         fprintf(stderr, "Failed to start threads\n");
-        close_per_thread_traces(traces, in.maxthreads);
-        close_template_db(&templates.xattr);
-        close_template_db(&templates.db);
+        close_template_db(&args.xattr);
+        close_template_db(&args.db);
+        close_per_thread_traces(args.traces, in.maxthreads);
         return -1;
     }
 
@@ -742,8 +741,9 @@ int main(int argc, char *argv[]) {
     #endif
     QPTPool_destroy(pool);
 
-    close_template_db(&templates.xattr);
-    close_template_db(&templates.db);
+    close_template_db(&args.xattr);
+    close_template_db(&args.db);
+    close_per_thread_traces(args.traces, in.maxthreads);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_flush_to_single(&debug_output_buffers, stderr);

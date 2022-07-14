@@ -72,11 +72,6 @@ struct template_db {
     off_t size;
 };
 
-struct templates {
-    struct template_db db;
-    struct template_db xattr;
-};
-
 int init_template_db(struct template_db *tdb);
 int create_xattrs_template(struct template_db *tdb);
 int create_dbdb_template(struct template_db *tdb);
