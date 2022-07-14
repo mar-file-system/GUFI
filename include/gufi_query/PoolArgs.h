@@ -96,7 +96,7 @@ typedef struct PoolArgs {
     #endif
 } PoolArgs_t;
 
-int PoolArgs_init(PoolArgs_t *pa, struct input *in);
+int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex);
 void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated);
 
 #endif
