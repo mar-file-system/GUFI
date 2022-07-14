@@ -66,8 +66,8 @@ OF SUCH DAMAGE.
 #include "gufi_query/aggregate.h"
 #include "gufi_query/print.h"
 
-static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=private";
-static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate"; /* users should never use this name */
+static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared"; /* must have shared cache */
+static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate";                   /* users should never use this name */
 
 static sqlite3 *aggregate_setup(char *dbname, char *init_agg) {
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL
