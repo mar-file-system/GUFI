@@ -45,7 +45,7 @@ gufi_trace2index <trace_file> <index_dir>
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
 # use the index
-gufi_query/gufi_find/gufi_ls/gufi_stats/gufi_stat/bfti/bffuse/bfresultfuse/querydb/querydbn
+gufi_query/gufi_find/gufi_ls/gufi_stats/gufi_stat/bfti/bffuse/bfresultfuse/querydbs
 ```
 
 For the dependency list, detailed build and install instructions, and common issues, please see [INSTALL](INSTALL).
