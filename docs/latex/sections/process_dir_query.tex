@@ -61,7 +61,7 @@
 What you will quickly notice when tracing through the above diagram (Figure 3) the major functionality from this code comes from the processdir function. This function is where the -E -S and -T flags are processed. These queries access the index, but there are other queries that occur when aggregating. This process is parallelized via a thread pool and is further optimized by a calculated rollupscore to ensure that we only descend into necessary sub-directories.
 
 \subsection{querydb macro}
-querydb is the macro used to execute sqlite commands
+\texttt{querydb} is the macro used to execute sqlite commands
 
 
 \begin{figure} [h]
