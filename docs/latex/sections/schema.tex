@@ -57,42 +57,37 @@
 % CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 % IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 % OF SUCH DAMAGE.
-\section{Understanding Rollup.c}
-One of the predominant optimizations in GUFI is the rollup feature which functions like so: \\
-\begin{itemize}
-  \item Contents of the child's summary table are copied up with name column to include the parent directory
-  \item Pentries view/table is dropped and a pentries table is created with the data inside the pentries view/table
-  \item Copy child's pentries view into parent (regardless if view or table)
-  \item All children must be able to rollup
-\end{itemize}
 
 
-\begin{figure} [h]
-\centering
-\includegraphics[width=1.2\textwidth]{images/rollup.png}
-\caption{\label{fig:rollup}Rollup.c Workflow}
-\end{figure}
+\section{Database Schema}
+GUFI stores extracted metadata in SQLite 3 database files. Each
+database file contains a fixed set of tables and views designed to
+assist with efficient querying of metadata from GUFI.
 
-\clearpage
+\subsection{Tables and Views}
+\subsubection{\entries Table}
+The \entries table contains file and link metadata extracted from the
+source filesystem using \stat, \readlink, \listxattr, and
+\getxattr. There are also a few OS specific columns (\texttt{oss*})
+that are currently unused.
 
-\subsection{\texttt {ascend\_to\_top}}
-\texttt{ascend\_to\_top} is a versatile function that will perform a function as it ascends the tree.
-
-\begin{figure} [h]
-\centering
-\includegraphics[width=0.8\textwidth]{images/ascending.png}
-\caption{\label{fig:ascending_diagram} Ascending Diagram}
-\end{figure}
-
-In this case, we will be passing in the rollup function inside of \texttt{rollup.c}.
-\\
-\\
-This function performs the necessary checks to ensure a child can rollup into its parent including: comparing permissions of both the child and parent directory and whether it should based on performance metrics. Should this directory be able to rollup, it will NOT be added to the remaining count unless it is the root of the index. If a directory cannot rollup, it will be added to the remaining count.
+\subsubsection{Directory \summary Table}
+The directory \summary table contains the metadata of the current
+directory. Additionally, it contains columns that summarizes the
+\entries table located in the same database file, such as minimum and
+maximum file sizes, uids, and gids. These summary columns can be used
+to determine whether or not \query needs to query the \entries table
+at all.
 
 \begin{figure} [h]
 \centering
-\includegraphics[height=0.45\textheight]{images/rollup_function.png}
-\caption{\label{fig:rollup_function} Rollup Function Diagram}
+\includegraphics[width=1.0\textwidth]{images/Database_Schemas.png}
+\caption{\label{fig:Database Schema}Database schema}
 \end{figure}
 
-\clearpage
+\subsubsection{\pentries View}
+\pentries is a simple view that attaches the directory's inode to the
+\entries table as the \texttt{pinode} column. This view was created
+because each entry in the directory will have the same
+\texttt{pinode}. Storing repeated data here did not serve a purpose,
+and thus is obtained through a view instead of a table.

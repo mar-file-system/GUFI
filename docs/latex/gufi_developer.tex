@@ -57,22 +57,43 @@
 % CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 % IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 % OF SUCH DAMAGE.
+
+
+
 \documentclass{article}
-\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
 % Useful packages
 \usepackage{graphicx}
-\title{GUFI: Developer's Guide}
-\author{Gufi Dev Team}
+\usepackage{verbatim}
+\usepackage{xspace}
+
+\newcommand{\dirindex}{\texttt{gufi\_dir2index}\xspace}
+\newcommand{\dirtrace}{\texttt{gufi\_dir2index}\xspace}
+\newcommand{\entries}{\texttt{entries}\xspace}
+\newcommand{\pentries}{\texttt{pentries}\xspace}
+\newcommand{\query}{\texttt{gufi\_query}\xspace}
+\newcommand{\rollup}{\texttt{rollup}\xspace}
+\newcommand{\summary}{\texttt{summary}\xspace}
+\newcommand{\traceindex}{\texttt{gufi\_dir2index}\xspace}
+\newcommand{\stat}{\texttt{lstat(2)}\xspace}
+\newcommand{\readlink}{\texttt{readlink(2)}\xspace}
+\newcommand{\listxattr}{\texttt{llistxattr(2)}}
+\newcommand{\getxattr}{\texttt{lgetxattr(2)}}
+
+\title{GUFI Developer's Guide}
+\author{GUFI Developers}
+
 \begin{document}
+
 \maketitle
+
 \include{sections/license}
-\input{sections/introduction}
-\clearpage
+\include{sections/introduction}
 \include{sections/understanding_the_data}
-\input{sections/gufi_dir2index}
-\input{sections/understanding_rollup}
-\input{sections/gufi_dir2trace}
+\include{sections/gufi_dir2index}
+\include{sections/gufi_dir2trace}
+\include{sections/rollup}
 \include{sections/gufi_query}
-\input{sections/process_dir_query}
+\include{sections/process_dir_query}
 
 \end{document}

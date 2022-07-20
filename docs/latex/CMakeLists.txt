@@ -60,50 +60,44 @@
 
 
 
-
 cmake_minimum_required(VERSION 2.8)
-SET(LATEX_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build/docs/pdfs)
-
-
+SET(LATEX_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/pdfs)
 
 INCLUDE(UseLATEX)
 
 set(image_path "images")
 
+set(gufi_developer_inputs
+    sections/license.tex
+    sections/introduction.tex
+    sections/schema.tex
+    sections/gufi_query.tex
+    sections/process_dir_query.tex
+    sections/gufi_dir2index.tex
+    sections/rollup.tex
+    sections/gufi_dir2trace.tex
+    )
+
+set(gufi_administrator_inputs
+    sections/license.tex
+    sections/introduction.tex
+    sections/schema.tex
+    sections/gufi_query.tex
+    sections/gufi_dir2index.tex
+    sections/gufi_dir2trace.tex
+    )
+
 set(gufi_user_inputs
+    sections/license.tex
     sections/introduction.tex
     sections/gufi_find.tex
     sections/gufi_ls.tex
     sections/gufi_stats.tex
-    sections/license.tex
-)
-
-
-set(gufi_developer_inputs
-    sections/introduction.tex
-    sections/understanding_the_data.tex
-    sections/gufi_query.tex
-    sections/process_dir_query.tex
-    sections/gufi_dir2index.tex
-    sections/understanding_rollup.tex
-    sections/gufi_dir2trace.tex
-    sections/license.tex
-)
-
-
-set(gufi_administrator_inputs
-    sections/introduction.tex
-    sections/understanding_the_data.tex
-    sections/gufi_query.tex
-    sections/gufi_dir2index.tex
-    sections/gufi_dir2trace.tex
-    sections/license.tex
-)
-
+    )
 
 ADD_LATEX_DOCUMENT(
-    gufi_user.tex
-    INPUTS ${gufi_user_inputs}
+    gufi_developer.tex
+    INPUTS ${gufi_developer_inputs}
     IMAGE_DIRS ${image_path}
     )
 
@@ -114,7 +108,7 @@ ADD_LATEX_DOCUMENT(
     )
 
 ADD_LATEX_DOCUMENT(
-    gufi_developer.tex
-    INPUTS ${gufi_developer_inputs}
+    gufi_user.tex
+    INPUTS ${gufi_user_inputs}
     IMAGE_DIRS ${image_path}
     )
