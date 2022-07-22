@@ -61,13 +61,12 @@
 
 
 \section{Rollup}
-GUFI introduces the concept of rollups, an optimization that modifies
-existing indicies and improves query performance
-significantly. Rolling up can be viewed as flattening the contents of
-the index while taking into consideration the permissions of each
-directory. Rolling up results in the overall number of directories
-that are processed being reduced (usually) significantly while still
-obtaining the same results as an unmodifed index.
+One major optimization implemented in GUFI is rollups. Rolling up can
+be viewed as flattening the contents of the index while taking into
+consideration the permissions of each directory. Rolling up results in
+the overall number of directories that need to be processed being
+reduced (usually) significantly while still obtaining the same results
+as an unmodifed index.
 
 \subsection{Bottlenecks}
 During querying, every single directory runs a fixed set of
@@ -99,11 +98,12 @@ that satisfy any one of the following conditions with the parent.
   \item World readable and executable (o+rx)
   \item Matching user, group, and others permissions, with the same
     user and group
-  \item Matching user and group permissions, readable and executable (ug+rx)
-    with the same user and group, and not world readable and excutable
-    (o-rx)
+  \item Matching user and group permissions, readable and executable
+    (ug+rx) with the same user and group, and not world readable and
+    excutable (o-rx)
   \item Matching user permissions, readable and executable (u+rx) with
-    the same user and not group or world readable and executable (go-rx)
+    the same user and not group or world readable and executable
+    (go-rx)
 \end{itemize}
 
 Note that because leaf directories have no children with which to have
@@ -117,7 +117,8 @@ or not a directory should roll up.
 As data is rolled upwards in the index, databases towards the top will
 accumulate more and more data from its subtrees. If directories are
 allowed to roll up without limit, some databases will become
-significantly larger than others, causing large amounts of tail latency.
+significantly larger than others, causing large amounts of tail
+latency.
 
 The \rollup executable has the \texttt{-L} flag that limits the number
 of entries that may be found within a single directory.
@@ -133,13 +134,13 @@ being processed can and should roll up, the tables of each child are
 copied into the parent:
 
 \begin{enumerate}
-\item The contents of the child's summary table are copied up with
-  the name column updated to include the parent directory and the
+\item The contents of the child's summary table are copied up with the
+  name column updated to include the parent directory and the
   \texttt{isroot} column set to 0 in the parent
 \item The \pentries view is dropped
 \item The \pentries table is created
-\item The original contents of the \pentries view is
-  recreated in the \pentries table
+\item The original contents of the \pentries view is recreated in the
+  \pentries table
 \item The child's \pentries table/view is copied into parent
 \end{enumerate}
 
@@ -151,13 +152,11 @@ copied into the parent:
 
 \subsection{\texttt{rollup} executable}
 Below is a diagram showing the overall structure of the \rollup
-executable. The \rollup executable uses the BottomUp library
-(see sec:BottumUp) to recursively descend the original index and
-only perform the rollup operation once all children have been
-processed.
+executable. The \rollup executable uses the BottomUp library (see
+sec:BottumUp) to recursively descend the original index and only
+perform the rollup operation once all children have been processed.
 
 \begin{sidewaysfigure} [ht]
-  \centering
-  \includegraphics[width=\textwidth]{images/rollup.png}
+  \centering \includegraphics[width=\textwidth]{images/rollup.png}
   \caption{\rollup Workflow}
 \end{sidewaysfigure}
