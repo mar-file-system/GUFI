@@ -133,20 +133,20 @@ being processed can and should roll up, the tables of each child are
 copied into the parent:
 
 \begin{enumerate}
-  \item The contents of the child's summary table are copied up with
-    the name column updated to include the parent directory and the
-    \texttt{isroot} column set to 0 in the parent
-  \item The \pentries view is dropped
-  \item The \pentries table is created
-  \item The original contents of the \pentries view is
-    recreated in the \pentries table
-  \item The child's \pentries table/view is copied into parent
+\item The contents of the child's summary table are copied up with
+  the name column updated to include the parent directory and the
+  \texttt{isroot} column set to 0 in the parent
+\item The \pentries view is dropped
+\item The \pentries table is created
+\item The original contents of the \pentries view is
+  recreated in the \pentries table
+\item The child's \pentries table/view is copied into parent
 \end{enumerate}
 
-\begin{figure} [h]
-\centering
-\includegraphics[height=0.45\textheight]{images/rollup_function.png}
-\caption{Rollup Function Diagram}
+\begin{figure} [ht]
+  \centering
+  \includegraphics[width=\textwidth]{images/rollup_function.png}
+  \caption{Rollup Function Diagram}
 \end{figure}
 
 \subsection{\texttt{rollup} executable}
@@ -156,8 +156,8 @@ executable. The \rollup executable uses the BottomUp library
 only perform the rollup operation once all children have been
 processed.
 
-\begin{figure} [h]
-\centering
-\includegraphics[width=1.2\textwidth]{images/rollup.png}
-\caption{rollup Workflow}
-\end{figure}
+\begin{sidewaysfigure} [ht]
+  \centering
+  \includegraphics[width=\textwidth]{images/rollup.png}
+  \caption{\rollup Workflow}
+\end{sidewaysfigure}
