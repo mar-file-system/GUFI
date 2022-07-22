@@ -72,10 +72,11 @@ set(gufi_developer_inputs
     sections/license.tex
     sections/introduction.tex
     sections/schema.tex
-    sections/gufi_query.tex
     sections/gufi_dir2index.tex
-    sections/rollup.tex
     sections/gufi_dir2trace.tex
+    sections/gufi_trace2index.tex
+    sections/gufi_query.tex
+    sections/rollup.tex
     )
 
 set(gufi_administrator_inputs
@@ -83,9 +84,10 @@ set(gufi_administrator_inputs
     sections/license.tex
     sections/introduction.tex
     sections/schema.tex
-    sections/gufi_query.tex
     sections/gufi_dir2index.tex
     sections/gufi_dir2trace.tex
+    sections/gufi_trace2index.tex
+    sections/gufi_query.tex
     )
 
 set(gufi_user_inputs

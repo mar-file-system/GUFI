@@ -64,8 +64,17 @@
 
 % Useful packages
 \usepackage{graphicx}
+\usepackage{hyperref}
 \usepackage{verbatim}
 \usepackage{GUFIText}
+
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=blue
+}
 
 \title{GUFI Administrator's Guide}
 \author{GUFI Developers}
@@ -74,6 +83,7 @@
 
 \maketitle
 
+\tableofcontents
 \include{sections/license}
 \include{sections/introduction}
 \include{sections/understanding_the_data}

@@ -60,41 +60,17 @@
 
 
 
-\documentclass{article}
+\section{\gufitraceindex}
+\gufitraceindex is used to convert trace files into indicies. It is
+essentially the same as \gufidirindex except it gets its source from
+trace files instead of the filesystem being indexed.
 
-% Useful packages
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{verbatim}
-\usepackage{GUFIText}
+\subsection{\texttt{scout\_function}}
+One important design decision made to \gufitraceindex was the
+implementation of a thread to find the starting offsets of stanzas
+from the input trace file and {\it not} process the stanza. Instead,
+the starting offsets are enqueued in the thread pool and processed
+concurrently with the scouting thread.
 
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
-
-\title{GUFI Developer's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/understanding_the_data}
-\include{sections/gufi_dir2index}
-\include{sections/gufi_dir2trace}
-\include{sections/gufi_trace2index}
-\include{sections/rollup}
-\include{sections/gufi_query}
-\include{sections/process_dir_query}
-
-\end{document}
+\subsection{Usage}
+\gufitraceindex \texttt{[flags] [trace file] [index root]}

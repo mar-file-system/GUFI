@@ -60,59 +60,61 @@
 
 
 
-\section{gufi\_stats}
-\texttt{gufi\_stats} is used to analyze a tree and retrieve statistics the user requests for. An exhaustive list of available statistics that can be retrieved is listed below
+\section{\gufistats}
+\gufistats is used to analyze a tree and retrieve statistics the user
+requests. An exhaustive list of available statistics that can be
+retrieved is listed below
 
 \subsection{Stats list}
 \begin{table} [h]
-\centering
-\begin{tabular}{l}
-Stats\\\hline
-depth \\
-filesize \\
-filecount \\
-linkcount \\
-dircount \\
-leaf-dirs \\
-leaf-depth \\
-leaf-files \\
-leaf-links \\
-total-filesize \\
-total-filecount \\
-total-linkcount \\
-total-dircount \\
-total-leaf-files \\
-total-leaf-links \\
-files-per-level \\
-links-per-level \\
-dirs-per-level \\
-average-leaf-files \\
-average-leaf-links \\
-median-leaf-files \\
-duplicate-names
-\end{tabular}
-\caption{\label{fig:stat_options}List of available stats}
+  \centering
+  \begin{tabular}{l}
+    Stats\\\hline
+    depth \\
+    filesize \\
+    filecount \\
+    linkcount \\
+    dircount \\
+    leaf-dirs \\
+    leaf-depth \\
+    leaf-files \\
+    leaf-links \\
+    total-filesize \\
+    total-filecount \\
+    total-linkcount \\
+    total-dircount \\
+    total-leaf-files \\
+    total-leaf-links \\
+    files-per-level \\
+    links-per-level \\
+    dirs-per-level \\
+    average-leaf-files \\
+    average-leaf-links \\
+    median-leaf-files \\
+    duplicate-names
+  \end{tabular}
+  \caption{\label{fig:stat_options}List of available stats}
 \end{table}
 
 \begin{table} [h]
-\centering
-\begin{tabular}{l|r}
-Optional Flags & Functionality\\\hline
---help & displays help menu\\
---version, -v & display program's version number and exits \\
---recursive, -r & run command recursively \\
---cumulative -c & return cumulative values \\
---order \textless order\textgreater & sort output (if applicable)\\
---delim \textless c\textgreater & delimeter separating output columns\\
---num-results \textless n\textgreater & first n results \\
---uid \textless u\textgreater, --user \textless u\textgreater & restrict to user \\
---in-memory-name \textless name\textgreater & Name of in-memory database when -R is used
-\end{tabular}
-\caption{\label{fig:gufi_stats_flags}gufi\_stats Flags and Functionality}
+  \centering
+  \begin{tabular}{l|r}
+    Optional Flags & Functionality\\\hline
+    --help & displays help menu\\
+    --version, -v & display program's version number and exits \\
+    --recursive, -r & run command recursively \\
+    --cumulative -c & return cumulative values \\
+    --order \textless order\textgreater & sort output (if applicable)\\
+    --delim \textless c\textgreater & delimeter separating output columns\\
+    --num-results \textless n\textgreater & first n results \\
+    --uid \textless u\textgreater, --user \textless u\textgreater & restrict to user \\
+    --in-memory-name \textless name\textgreater & Name of in-memory database when -R is used
+  \end{tabular}
+  \caption{\label{fig:gufi_stats_flags} \gufistats Flags and Functionality}
 \end{table}
 
-\subsection{Structure and example call}
-Structure: \texttt{gufi\_stats [optional flags] [stat] }
-\\
-\\
-EX: \texttt{./gufi\_stats --delim + total-filecount}
+\subsection{Usage}
+\gufistats \texttt{[optional flags] [stat]}
+
+\subsection{Example Call}
+\gufistats \texttt{--delim + total-filecount}
