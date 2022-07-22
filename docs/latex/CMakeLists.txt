@@ -68,6 +68,7 @@ INCLUDE(UseLATEX)
 set(image_path "images")
 
 set(gufi_developer_inputs
+    GUFIText.sty
     sections/license.tex
     sections/introduction.tex
     sections/schema.tex
@@ -79,6 +80,7 @@ set(gufi_developer_inputs
     )
 
 set(gufi_administrator_inputs
+    GUFIText.sty
     sections/license.tex
     sections/introduction.tex
     sections/schema.tex
@@ -88,6 +90,7 @@ set(gufi_administrator_inputs
     )
 
 set(gufi_user_inputs
+    GUFIText.sty
     sections/license.tex
     sections/introduction.tex
     sections/gufi_find.tex
