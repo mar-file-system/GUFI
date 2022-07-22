@@ -73,7 +73,6 @@ set(gufi_developer_inputs
     sections/introduction.tex
     sections/schema.tex
     sections/gufi_query.tex
-    sections/process_dir_query.tex
     sections/gufi_dir2index.tex
     sections/rollup.tex
     sections/gufi_dir2trace.tex
