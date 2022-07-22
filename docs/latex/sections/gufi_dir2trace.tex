@@ -60,22 +60,46 @@
 
 
 
-\section{gufi\_dir2trace}
-\texttt{gufi\_dir2trace} is used to generate a trace of the files, their specific paths, and their attributes inside of a specified root directory. Depending on the size of the root directory, there can be multiple trace files, thus the user must provide a prefix for all of these trace files.
-\subsection{Flags}
+\section{\gufidirtrace}
+\gufidirtrace is used to generate trace files that can be used to
+build indexes. This tool was intended to allow for indicies to be
+easily transfered to different locations rather than requiring entire
+trees to be copied around.
 
+\subsection{Trace Files}
+Traces files are text files containing \lstat information pulled from
+source filesystems separated by delimiters.
+
+The default delimiter is the ASCII Record Separator character
+\texttt{\textbackslash x1E}, but can be changed to any 8-bit
+character. Characters that can appear in filesystems should not be
+used as the delimiter in order to not confuse \gufitraceindex.
+
+The metadata pulled from each directory is represented by a ``stanza''
+in a trace file. A stanza starts with a line of directory metadata
+followed by zero or more lines of regular file and symbolic link
+metadata. Note that the summary of each directory is not stored in
+trace files and are instead generated when the index is built.
+
+\gufidirtrace walks source trees in parallel and outputs one trace
+file per thread. Due to the parallelism, there are no guarantees as to
+which thread's trace file a stanza might be written to. Once indexing
+is completed, the trace files should be concatenated together to form
+one large trace file for ingest by \gufitraceindex.
+
+\subsection{Flags}
 \begin{table} [h]
-\centering
-\begin{tabular}{l|r}
-Flag & Functionality \\\hline
--h & help manual \\
--H & Show assigned input values \\
--n \textless num\_threads\textgreater  & define number of threads to use \\
--x & pull xattrs from source file-sys into GUFI \\
--z \textless max\_level\textgreater & maximum level to go down to
-\end{tabular}
-\caption{\label{fig:Flags_for_dir2trace}gufi\_dir2trace Flags and Arguments}
+  \centering
+  \begin{tabular}{l|r}
+    Flag & Functionality \\\hline
+    -h & help manual \\
+    -H & Show assigned input values \\
+    -n \textless num\_threads\textgreater  & define number of threads to use \\
+    -x & pull xattrs from source file-sys into GUFI \\
+    -z \textless max\_level\textgreater & maximum level to go down to
+  \end{tabular}
+  \caption{\label{fig:Flags_for_dir2trace} \gufidirtrace Flags and Arguments}
 \end{table}
 
 \subsection{Usage}
-\texttt{gufi\_dir2trace [flags] [directory to trace] [prefix of output files]}
+\gufidirtrace \texttt{[flags] [directory to trace] [prefix of output files]}
