@@ -139,8 +139,8 @@ only ``advanced'' users such as administrators and developers to use
 \subsection{Visualizing the Workflow}
 \begin{figure} [H]
   \centering
-  \includegraphics[width=\textwidth]{images/gufi_query.png}
-  \caption{\label{fig:gufi_query} Workflow of \gufiquery}
+  \includegraphics[width=\textwidth]{images/gufi_query_main.png}
+  \caption{Workflow of \gufiquery}
 \end{figure}
 
 \subsection{\processdir}
@@ -149,11 +149,17 @@ The core of \gufiquery is the \processdir function. This is where the
 function are run in parallel via the thread pool in order to quickly
 traverse and process an index.
 
+\begin{figure} [H]
+  \centering
+  \includegraphics[width=\textwidth]{images/gufi_query_processdir.png}
+  \caption{Workflow of \processdir}
+\end{figure}
+
 \subsection{\querydb macro}
 \querydb is the macro used to execute SQL statements and handle errors.
 
 \begin{figure} [H]
   \centering
   \includegraphics[width=\textwidth]{images/querydb_macro.png}
-  \caption{\label{fig:querydb} \querydb macro workflow}
+  \caption{\querydb macro workflow}
 \end{figure}
