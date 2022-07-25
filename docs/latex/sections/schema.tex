@@ -64,19 +64,18 @@ GUFI stores extracted metadata in SQLite 3 database files. Each
 database file contains a fixed set of tables and views designed to
 assist with efficient querying of metadata from GUFI.
 
-\subsection{Tables and Views}
-\subsubection{\entries Table}
+\subsection{\entries Table}
 The \entries table contains file and link metadata extracted from the
 source filesystem using \stat, \readlink, \listxattr, and
 \getxattr. There are also a few OS specific columns (\texttt{oss*})
 that are currently unused.
 
-\subsubsection{Directory \summary Table}
+\subsection{Directory \summary Table}
 The directory \summary table contains the metadata of the current
 directory. Additionally, it contains columns that summarizes the
 \entries table located in the same database file, such as minimum and
 maximum file sizes, uids, and gids. These summary columns can be used
-to determine whether or not \query needs to query the \entries table
+to determine whether or not \querydb needs to query the \entries table
 at all.
 
 \begin{figure} [h]
@@ -85,12 +84,18 @@ at all.
 \caption{\label{fig:Database Schema}Database schema}
 \end{figure}
 
-\subsubsection{\pentries View}
-\pentries is a simple view that attaches the directory's inode to the
-\entries table as the \texttt{pinode} column. This view was created
-because each entry in the directory will have the same
-\texttt{pinode}. Storing repeated data here did not serve a purpose,
-and thus is obtained through a view instead of a table.
+\subsection{\pentries View}
+The original \pentries view was \texttt{SELECT entries.*,
+  summary.inode FROM entries, summary}. It was defined so in order to
+not store the parent inode of each entry, which would be the same for
+every entry.
+
+With the addition of extended attributes, the \pentries table was
+modified to also union with the \pentriesrollup table, which is all
+child \pentries views copied into the current directory.
+
+In general, users should query the \pentries view over the \entries
+table in order to obtain complete sets of data to query on.
 
 \subsection{\treesummary Table}
 Similar to the directory \summary table, GUFI also provides
