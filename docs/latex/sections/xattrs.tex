@@ -1,0 +1,172 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\section{Extended Attributes}
+Indexing and querying user data is supported through extended
+attributes (xattrs).
+
+Reading standard filesystem permissions of files only requires read
+(and execute) access to the directory. However, because xattrs are
+user defined data, their permissions are checked at the file
+level. For more information on xattrs, see \texttt{xattr(7)},
+\listxattr, and \getxattr.
+
+\subsection{Indexing}
+Directories containing files from multiple users might have xattrs
+that are not readable by all who can view the \lstat data of the
+directory. As GUFI was originally designed to only use directory-level
+permission checks, a number of modifications were made to process
+xattrs without violating their permissions.
+
+\subsubsection{Rules for Storage}
+Xattrs that are readable by all who have access to the directory are
+stored in the \xattrspwd table in the main database. These xattrs are
+referred to as ``rolled in''.
+
+The rules that determine whether or not an xattr pair can roll in are
+as follows:
+
+\begin{itemize}
+\item File is 0+R
+\item File is UG+R doesnt matter on other, with file and parent same
+  usr and grp and parent has only UG+R with no other read
+\item File is U+R doesnt matter on grp and other, with file and parent
+  same usr and parent dir has only U+R, no grp and other read
+\item Directory has write for every read: drw*rw\_*rw* or
+  drw*rw*\_\_\_ or drw*\_\_\_\_\_\_ - if you can write the dir you can
+  chmod the files to see the xattrs
+\end{itemize}
+
+Xattrs that cannot be read by all who can read the directory are
+stored in external per-uid and per-gid databases set with
+\texttt{uid:nobdy} and \texttt{nobody:gid} owners respectively. This
+makes it so that non-admin users cannot access thse xattrs stored in
+the external databases that they do not have permissions to access.
+
+\subsubsection{Schema}
+The main database and all external databases contain the following
+tables and views:
+
+\begin{itemize}
+\item The \xattrspwd table contains all extended attributes of the
+  current direcotry that were rolled into the main database file.
+
+\item The \xattrsrollup table contains all extended attributes that
+  were rolled into the children directories that were subsequently
+  rolled up into the current directory.
+
+\item The \xattrsavail view is the union of all extended attributes
+  that were rolled in and rolled up into the main database file.
+\end{itemize}
+
+Additionally, each main database file has the following tables and
+views in order to keep track of which files were created by GUFI for
+the purposes of storing xattrs:
+
+\begin{itemize}
+\item The \xattrfilespwd table contains a listing of external database
+  filenames that contain extended attributes that were not rolled in.
+\item The \xattrfilesrollup table contains a listing of external
+  database filenames that contain extended attributes that were not
+  rolled in, but were brought in by rolling up.
+\item The \xattrfiles view combines the listings of database filenames
+  found in \xattrfilespwd and \xattrfilesrollup.
+\end{itemize}
+
+\subsubsection{Usage}
+Xattrs are not pulled from the filesystem by default. In order to pull
+them, pass \texttt{-x} to \gufidirindex or \gufidirtrace.
+
+Note that only xattr pairs whose name starts with the prefix ``user.''
+are extracted.
+
+\subsubsection{Rollup}
+Rolling up required some additional operations in order to copy xattrs
+associated with rolled up files upwards properly:
+
+\begin{itemize}
+\item The child's \xattrsavail view (without external database) is
+  copied into the parent's \xattrsrollup table.
+\item The child's \xattrfiles view (without external databases) is
+  copied into the parent's \xattrfilesrollup table.
+\item The child's external database files are copied into the
+  parent. If the parent already has an external database file with the
+  same uid and gid, the contents of the external database are copied
+  into the parent's external database's \xattrsrollup table instead.
+\end{itemize}
+
+\subsection{Querying}
+When querying for xattrs, pass \texttt{-x} to \gufiquery to have it
+build the \xattrs view for querying. This view is a SQL union of
+rolled in xattrs and any external databases that successfully
+attaches. Attaching the database files checks the permissions of the
+xattrs. \texttt{UNION} removes duplicate entries that showed up in
+multiple external databases, leaving a unique set of xattrs accessible
+by the caller.
+
+The \xentries, \xpentries, \xsummary views are convenience views
+generated so that users do not have to perform joins themselves. Like
+the \xattrs view, these views are also dropped at the end of directory
+processing.
+
+Note that entries with multiple extended attributes will return
+multiple times in this view.
