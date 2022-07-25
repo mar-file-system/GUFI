@@ -134,7 +134,7 @@ being processed can and should roll up, the tables of each child are
 copied into the parent:
 
 \begin{enumerate}
-\item The contents of the child's summary table are copied up with the
+\item The contents of the child's \summary table are copied up with the
   name column updated to include the parent directory and the
   \texttt{isroot} column set to 0 in the parent
 \item The \pentries view is dropped
@@ -143,6 +143,20 @@ copied into the parent:
   \pentries table
 \item The child's \pentries table/view is copied into parent
 \end{enumerate}
+
+Rolling up will cause the size of the index to grow significantly due
+to the amount of data being replicated. One obvious optimization would
+be to only roll up to the top-most level where a directory can roll up
+to (one extra copy of the subtree instead of repeated copies). This
+however, will only allow for queries to take advantage of rollups if
+they start above the top-most rollup directory. Starting a query below
+the top-most rollup level would result in the original subtree's query
+time whereas the implemented method of rolling up allows for queries
+starting at any point in the index to take advantage of rollups.
+
+The rollup operation can take some time, and so indicies are not
+rolled up automatically. The \rollup executable must be called
+manually.
 
 \begin{figure} [ht]
   \centering
