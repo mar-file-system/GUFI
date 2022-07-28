@@ -77,7 +77,7 @@ directory. As GUFI was originally designed to only use directory-level
 permission checks, a number of modifications were made to process
 xattrs without violating their permissions.
 
-\subsubsection{Rules for Storage}
+\subsubsection{Roll In Rules}
 Xattrs that are readable by all who have access to the directory are
 stored in the \xattrspwd table in the main database. These xattrs are
 referred to as ``rolled in''.
@@ -98,9 +98,9 @@ as follows:
 
 Xattrs that cannot be read by all who can read the directory are
 stored in external per-uid and per-gid databases set with
-\texttt{uid:nobdy} and \texttt{nobody:gid} owners respectively. This
-makes it so that non-admin users cannot access thse xattrs stored in
-the external databases that they do not have permissions to access.
+\texttt{uid:nobody} and \texttt{nobody:gid} owners respectively. This
+makes it so that non-admin users cannot access the xattrs stored in
+external databases that they do not have permissions to access.
 
 \subsubsection{Schema}
 The main database and all external databases contain the following
@@ -155,9 +155,9 @@ associated with rolled up files upwards properly:
 \end{itemize}
 
 \subsection{Querying}
-When querying for xattrs, pass \texttt{-x} to \gufiquery to have it
-build the \xattrs view for querying. This view is a SQL union of
-rolled in xattrs and any external databases that successfully
+When querying for xattrs, pass \texttt{-x} to \gufiquery to build the
+\xattrs view for querying. This view is a SQL union of rolled in
+xattrs and any external databases that successfully
 attaches. Attaching the database files checks the permissions of the
 xattrs. \texttt{UNION} removes duplicate entries that showed up in
 multiple external databases, leaving a unique set of xattrs accessible

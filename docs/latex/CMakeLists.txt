@@ -71,20 +71,29 @@ set(gufi_developer_inputs
     GUFIText.sty
     sections/license.tex
     sections/introduction.tex
+    sections/dependencies.tex
+    sections/build.tex
+    sections/install.tex
     sections/schema.tex
+    sections/indexing.tex
     sections/gufi_dir2index.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
     sections/rollup.tex
     sections/xattrs.tex
     sections/gufi_query.tex
+    sections/optimizations.tex
     )
 
 set(gufi_administrator_inputs
     GUFIText.sty
     sections/license.tex
     sections/introduction.tex
+    sections/dependencies.tex
+    sections/build.tex
+    sections/install.tex
     sections/schema.tex
+    sections/indexing.tex
     sections/gufi_dir2index.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex

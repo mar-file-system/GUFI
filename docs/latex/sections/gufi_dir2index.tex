@@ -60,17 +60,11 @@
 
 
 
-\section{gufi\_dir2index}
+\subsection{\gufidirindex}
 \gufidirindex is used in order to directly create an index based off
 of the contents of a provided directory.
 
-\subsection{Database Templates}
-One optimization made to \gufidirindex was the creation of a database
-template file. Instead of creating new databases via SQLite in every
-single directory, the template is copied into each directory as a
-bytestream. This avoids checks done by SQLite when setting up databases.
-
-\subsection{Flags}
+\subsubsection{Flags}
 
 \begin{table} [h]
   \centering
@@ -91,5 +85,5 @@ bytestream. This avoids checks done by SQLite when setting up databases.
   \caption{\label{fig:gufi_dir2index} \gufidirindex workflow}
 \end{figure}
 
-\subsection{Usage}
+\subsubsection{Usage}
 \gufidirindex \texttt{[flags] [directory to index] [location to place indexed directory]}

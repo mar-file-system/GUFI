@@ -61,6 +61,7 @@
 
 
 \section{Rollup}
+\label{sec:rollup}
 One major optimization implemented in GUFI is rollups. Rolling up can
 be viewed as flattening the contents of the index while taking into
 consideration the permissions of each directory. Rolling up results in
@@ -158,19 +159,29 @@ The rollup operation can take some time, and so indicies are not
 rolled up automatically. The \rollup executable must be called
 manually.
 
-\begin{figure} [ht]
+\begin{figure} [!h]
   \centering
   \includegraphics[width=\textwidth]{images/rollup_function.png}
   \caption{Rollup Function Diagram}
 \end{figure}
 
-\subsection{\texttt{rollup} executable}
-Below is a diagram showing the overall structure of the \rollup
+\subsection{\rollup executable}
+In order to apply rollup to an index, run the \rollup executable:
+\\\\
+\indent \rollup \texttt{[index root]}.
+\\\\
+Figure~\ref{fig:rollupworkflow} shows the overall structure of the \rollup
 executable. The \rollup executable uses the BottomUp library (see
-sec:BottumUp) to recursively descend the original index and only
+Section~\ref{sec:bottomup}) to recursively descend the original index and only
 perform the rollup operation once all children have been processed.
 
-\begin{sidewaysfigure} [ht]
+\begin{sidewaysfigure} [!h]
   \centering \includegraphics[width=\textwidth]{images/rollup.png}
   \caption{\rollup Workflow}
+  \label{fig:rollupworkflow}
 \end{sidewaysfigure}
+
+\subsection{Undoing a rollup}
+To remove rollup data from an index, run the \unrollup executable:
+\\\\
+\indent \unrollup \texttt{[index root]}.

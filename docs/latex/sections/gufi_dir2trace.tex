@@ -60,20 +60,20 @@
 
 
 
-\section{\gufidirtrace}
+\subsection{\gufidirtrace}
 \gufidirtrace is used to generate trace files that can be used to
 build indexes. This tool was intended to allow for indicies to be
 easily transfered to different locations rather than requiring entire
 trees to be copied around.
 
-\subsection{Trace Files}
+\subsubsection{Trace Files}
 Traces files are text files containing \lstat information pulled from
 source filesystems separated by delimiters.
 
 The default delimiter is the ASCII Record Separator character
 \texttt{\textbackslash x1E}, but can be changed to any 8-bit
 character. Characters that can appear in filesystems should not be
-used as the delimiter in order to not confuse \gufitraceindex.
+used as the delimiter in order to not confuse the ingester.
 
 The metadata pulled from each directory is represented by a ``stanza''
 in a trace file. A stanza starts with a line of directory metadata
@@ -85,9 +85,9 @@ trace files and are instead generated when the index is built.
 file per thread. Due to the parallelism, there are no guarantees as to
 which thread's trace file a stanza might be written to. Once indexing
 is completed, the trace files should be concatenated together to form
-one large trace file for ingest by \gufitraceindex.
+one large trace file for ingest.
 
-\subsection{Flags}
+\subsubsection{Flags}
 \begin{table} [h]
   \centering
   \begin{tabular}{l|r}
@@ -101,5 +101,5 @@ one large trace file for ingest by \gufitraceindex.
   \caption{\label{fig:Flags_for_dir2trace} \gufidirtrace Flags and Arguments}
 \end{table}
 
-\subsection{Usage}
+\subsubsection{Usage}
 \gufidirtrace \texttt{[flags] [directory to trace] [prefix of output files]}

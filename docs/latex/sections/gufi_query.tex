@@ -60,7 +60,7 @@
 
 
 
-\section{gufi\_query}
+\section{Querying}
 
 \gufiquery is the main tool used for accessing indicies. Arbitrary SQL
 statements are passed into \gufiquery to run on the individual
@@ -97,11 +97,11 @@ only ``advanced'' users such as administrators and developers to use
     \hline
     -j & print the information in terse form\\
     \hline
-    -o \textless out\_fname\textgreater & output file (one-per thread, with thread-id suffix) implies -e 1\\
+    -o \textless out\_fname\textgreater & output file (one-per thread, with thread-id suffix) \\
     \hline
     -d \textless delim\textgreater & one char delimiter \\
     \hline
-    -O \textless out\_DB\textgreater & output DB, implies -e 1 \\
+    -O \textless out\_DB\textgreater & output DB \\
     \hline
     -I \textless SQL\_init\textgreater & SQL init \\
     \hline
@@ -117,13 +117,13 @@ only ``advanced'' users such as administrators and developers to use
     \hline
     -G \textless SQL\_aggregate\textgreater & SQL for aggregated results (no default: recommend using "SELECT * FROM entries")\\
     \hline
-    -e \textless 0 or 1\textgreater & 0 for aggregate, 1 for print without aggregating (implied by -o and -O)\\
-    \hline
     -m & Keep mtime and atime same on the database files \\
     \hline
     -B \textless buffer size\textgreater & size of each thread's output buffer in bytes \\
     \hline
-    -w & open the database files in read-write mode instead of read only mode
+    -w & open the database files in read-write mode instead of read only mode \\
+    -x & enable xattr processing \\
+    -k & file containing directory names to skip \\
   \end{tabular*}
   \caption{\label{tab:widgets} \gufiquery Flags and Arguments}
 \end{table}
