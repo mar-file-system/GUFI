@@ -144,7 +144,7 @@ break;
       case 'j': printf("  -j                     print the information in terse form"); break;
       case 'X': printf("  -X                     Dry run"); break;
       case 'L': printf("  -L                     Highest number of files/links in a directory allowed to be rolled up"); break;
-      case 'k': printf("  -k                     file containing directory names to skip");
+      case 'k': printf("  -k                     file containing directory names to skip"); break;
 
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
@@ -239,7 +239,6 @@ int parse_cmd_line(int         argc,
    in->output_buffer_size = 4096;
    in->open_flags         = SQLITE_OPEN_READONLY;   // default to read-only opens
    in->max_in_dir         = (size_t) -1;
-   memset(in->skip, 0, MAXPATH);
 
    int show   = 0;
    int retval = 0;

@@ -741,7 +741,7 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
     trie_insert(*skip, "..", 2);
 
     /* add user defined directory names to skip */
-    if (strlen(filename)) {
+    if (filename && strlen(filename)) {
         FILE *skipfile = fopen(filename, "ro");
         if (!skipfile) {
             fprintf(stderr, "Error: Cannot open skip file %s\n", filename);

@@ -299,14 +299,14 @@ TEST(parse_cmd_line, positional) {
     EXPECT_EQ(in.infile,              0);
     EXPECT_EQ(in.min_level,           (size_t) 0);
     EXPECT_EQ(in.max_level,           (size_t) -1);
-    EXPECT_STREQ(in.sql.intermediate, "");
-    EXPECT_STREQ(in.sql.agg,          "");
+    EXPECT_STREQ(in.sql.intermediate, NULL);
+    EXPECT_STREQ(in.sql.agg,          NULL);
 }
 
 TEST(INSTALL_STR, good) {
     int retval = 0;
     const char SOURCE[] = "INSTALL_STR good test";
-    char dst[MAXPATH];
+    char *dst = NULL;
     INSTALL_STR(dst, SOURCE, MAXPATH, SOURCE);
     EXPECT_EQ(retval, 0);
     EXPECT_STREQ(SOURCE, dst);
@@ -315,7 +315,7 @@ TEST(INSTALL_STR, good) {
 TEST(INSTALL_STR, bad) {
     int retval = 0;
     const char SOURCE[] = "INSTALL_STR bad test";
-    char dst[MAXPATH] = {0};
+    char *dst = NULL;
     INSTALL_STR(dst, SOURCE, 1, SOURCE);
     EXPECT_EQ(retval, -1);
     EXPECT_STRNE(SOURCE, dst);

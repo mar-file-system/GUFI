@@ -139,9 +139,9 @@ typedef enum OutputMethod {
 } OutputMethod_t;
 
 struct input {
-   char name[MAXPATH];
+   char *name;
    size_t name_len;
-   char nameto[MAXPATH];
+   char *nameto;
    size_t nameto_len;
    struct {
         int enabled;
@@ -153,30 +153,30 @@ struct input {
 
    struct {
        /* set up per-thread intermidate tables */
-       char   init[MAXSQL];
+       char   *init;
        size_t init_len;
 
        /* set up final aggregation table */
-       char   init_agg[MAXSQL];
+       char   *init_agg;
        size_t init_agg_len;
 
-       char   tsum[MAXSQL];
+       char   *tsum;
        size_t tsum_len;
-       char   sum[MAXSQL];
+       char   *sum;
        size_t sum_len;
-       char   ent[MAXSQL];
+       char   *ent;
        size_t ent_len;
 
        /* if not aggregating, output results */
        /* if aggregating, insert into aggregate table */
-       char   intermediate[MAXSQL];
+       char   *intermediate;
        size_t intermediate_len;
 
        /* query table containing aggregated results */
-       char   agg[MAXSQL];
+       char   *agg;
        size_t agg_len;
 
-       char   fin[MAXSQL];
+       char   *fin;
        size_t fin_len;
    } sql;
 
@@ -197,7 +197,7 @@ struct input {
    int  buildinindir;             // added to notice when writing index dbs into the input dir
    int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
    int  suspectfl;                // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
-   char insuspect[MAXPATH];       // added for bfwreaddirplus2db input path for suspects file
+   char *insuspect;               // added for bfwreaddirplus2db input path for suspects file
    int  suspectfile;              // added for bfwreaddirplus2db flag for if we are processing suspects file
    int  suspectmethod;            // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
    int  stride;                   // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
@@ -207,7 +207,7 @@ struct input {
    size_t max_level;              // maximum level of recursion to run queries on
 
    OutputMethod_t output;
-   char outname[MAXPATH];
+   char *outname;
    size_t outname_len;
 
    int keep_matime;
@@ -220,14 +220,14 @@ struct input {
 
    /* only used by gufi_stat */
    int format_set;
-   char format[MAXPATH];
+   char *format;
 
    /* only used by rollup */
    int dry_run;
    size_t max_in_dir;
 
    /* filename containing strings to skip during tree traversal */
-   char skip[MAXPATH];
+   char *skip;
 };
 extern struct input in;
 
@@ -250,7 +250,7 @@ int parse_cmd_line(int         argc,
 /* NOTE: This assumes you have a variable <retval> in scope. */
 #define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                             \
    do {                                                                     \
-      const char *src = (SOURCE); /* might be "argv[idx++]" */              \
+      char *src = (char *) (SOURCE); /* might be "argv[idx++]" */           \
       const size_t src_len = strlen(src);                                   \
       if (src_len >= (MAX)) {                                               \
           fprintf(stderr, "argument '%s' exceeds max allowed (%zu): %zu\n", \
@@ -258,8 +258,7 @@ int parse_cmd_line(int         argc,
          retval = -1;                                                       \
       }                                                                     \
       else {                                                                \
-          strncpy((VAR), src, src_len);                                     \
-          (VAR)[src_len] = '\x00';                                          \
+          (VAR) = src;                                                      \
       }                                                                     \
    } while (0)
 
