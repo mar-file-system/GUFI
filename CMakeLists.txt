@@ -397,5 +397,5 @@ if (RPMBUILD)
 
   include(CPack)
 else()
-  message(STATUS "rpmbuild not found. Not 'make package' will not be available.")
+  message(STATUS "rpmbuild not found. 'make package' will not be available.")
 endif()
