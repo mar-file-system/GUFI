@@ -73,7 +73,9 @@ function(check_test_dependencies var exec)
       find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
     endif()
 
-    if (NOT ${var})
+    if (${var})
+      message(STATUS "Found alternative to ${exec}: ${${var}}")
+    else ()
       message(FATAL_ERROR "${var} not found. Cannot build tests.")
     endif()
   endif()
