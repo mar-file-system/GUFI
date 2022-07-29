@@ -85,9 +85,6 @@ processed before processing the current one
 #include "debug.h"
 #include "utils.h"
 
-
-extern int errno;
-
 /* define so that descend and ascend always have valid functions to call */
 static void noop(void *user_struct
                  timestamp_sig) { (void) user_struct; }
@@ -97,6 +94,7 @@ struct UserArgs {
     BU_f descend;
     BU_f ascend;
     int track_non_dirs;
+    trie_t *skip;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct OutputBuffers *timestamp_buffers;
@@ -105,7 +103,7 @@ struct UserArgs {
     #endif
 };
 
-int ascend_to_top(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int ascend_to_top(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(ascend);
 
@@ -190,7 +188,7 @@ static struct BottomUp *track(const char *name, const size_t name_len,
     return copy;
 }
 
-int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(descend);
 
@@ -231,11 +229,8 @@ int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *ar
         }
 
         const size_t name_len = strlen(entry->d_name);
-        if (name_len < 3) {
-            if ((strncmp(entry->d_name, ".",  1) == 0) ||
-                (strncmp(entry->d_name, "..", 2) == 0)) {
-                continue;
-            }
+        if (trie_search(ua->skip, entry->d_name, name_len) == 1) {
+            continue;
         }
 
         struct BottomUp new_work;
@@ -348,6 +343,11 @@ int parallel_bottomup(char **root_names, size_t root_count,
     ua.ascend = ascend?ascend:noop;
     ua.track_non_dirs = track_non_dirs;
 
+    /* only skip . and .. */
+    if (setup_directory_skip(NULL, &ua.skip)) {
+        return -1;
+    }
+
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     ua.timestamp_buffers = timestamp_buffers;
     #endif
@@ -409,6 +409,8 @@ int parallel_bottomup(char **root_names, size_t root_count,
     #endif
 
     QPTPool_destroy(pool);
+
+    trie_free(ua.skip);
 
     return 0;
 }

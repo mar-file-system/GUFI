@@ -590,7 +590,7 @@ int descend(struct QPTPool *ctx, const size_t id,
         while ((dir_child = readdir(dir))) {
             const size_t len = strlen(dir_child->d_name);
 
-            /* skip . and .. and *.db*/
+            /* skip . and .. and *.db */
             const int skip = (trie_search(skip_names, dir_child->d_name, len) ||
                               (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0));
             if (skip) {
@@ -697,7 +697,6 @@ char *modetostr(char *str, const size_t size, const mode_t mode)
 
     return str;
 }
-
 
 static int loop_matches(const char c, const char *match, const size_t match_count) {
     for(size_t i = 0; i < match_count; i++) {
