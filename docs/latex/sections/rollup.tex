@@ -128,21 +128,20 @@ of entries that may be found within a single directory.
 The processing of rolling up involves a number of steps that update
 the tables of the parent directory.
 
-First, the target directory is checked to ensure it can roll its
-children into itself using the rules listed in
-\ref{rolluprules}. Once it has been determined that the diretory
-being processed can and should roll up, the tables of each child are
-copied into the parent:
+First, the target directory is checked to ensure it can and should
+roll up its children into itself using the rules listed in
+\ref{rolluprules}. If rollup will proceed, the parent's \summary table
+is updated with a rollup score of 1.
+
+Then, the contents each child is copied into the parent:
 
 \begin{enumerate}
-\item The contents of the child's \summary table are copied up with the
-  name column updated to include the parent directory and the
-  \texttt{isroot} column set to 0 in the parent
-\item The \pentries view is dropped
-\item The \pentries table is created
-\item The original contents of the \pentries view is recreated in the
-  \pentries table
-\item The child's \pentries table/view is copied into parent
+\item The child's \pentries view is copied into the parent's
+  \pentriesrollup table. The parent's \pentries view is updated
+  automatically.
+\item The child's \summary table is copied into the parent's \summary
+  table with the names of each child directory prefixed with the parent's
+  name.
 \end{enumerate}
 
 Rolling up will cause the size of the index to grow significantly due
@@ -168,10 +167,10 @@ manually.
 \subsection{\rollup executable}
 In order to apply rollup to an index, run the \rollup executable:
 \\\\
-\indent \rollup \texttt{[index root]}.
+\indent \rollup \texttt{[index root]}
 \\\\
 Figure~\ref{fig:rollupworkflow} shows the overall structure of the \rollup
-executable. The \rollup executable uses the BottomUp library (see
+executable. The \rollup executable uses the BottomUp code (see
 Section~\ref{sec:bottomup}) to recursively descend the original index and only
 perform the rollup operation once all children have been processed.
 
@@ -184,4 +183,4 @@ perform the rollup operation once all children have been processed.
 \subsection{Undoing a rollup}
 To remove rollup data from an index, run the \unrollup executable:
 \\\\
-\indent \unrollup \texttt{[index root]}.
+\indent \unrollup \texttt{[index root]}

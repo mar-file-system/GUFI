@@ -60,11 +60,17 @@
 
 
 
-\section{Optimizations}
+\subsection{Optimizations}
 In order for GUFI to be performant, many optimizations were used and
 implemented.
 
-\subsection{Allocations}
+\subsubsection{Reducing Branching}
+In order to reduce the number of failed branch predictions experienced
+by GUFI, branching was removed where possible. The main way this was
+done was by intentionally skipping \texttt{NULL} pointer checks that
+are repeated or always expected to be valid.
+
+\subsubsection{Allocations}
 Dynamic allocations are more costly to make than static
 allocations. To reduce the amount of dynamic allocations, C-string are
 usually declared as fixed size arrays instead of pointers.
@@ -74,7 +80,7 @@ malloc. Instead, \texttt{jemalloc(3)} is used to override
 \texttt{malloc(3)}. See \href{https://jemalloc.net/}{jemalloc's
   website} for details.
 
-\subsection{Combining Strings with \memcpy}
+\subsubsection{Combining Strings with \memcpy}
 One method of combining C-strings is by concantenating them with
 \texttt{snprintf(3)} with format strings containing only \texttt{\%s}
 format specifiers. Instead of parsing the format string, the
@@ -84,53 +90,24 @@ and how long they are by finding NULL terminators. Instead, lengths are
 obtained as by-products of previous string manipulations and the
 values are reused.
 
-\subsection{QueuePerThreadPool}
-Thread pools are generally written with a single work thread (with a
-single lock) from which to threads pull from. This does not work past
-a handful of threads. GUFI can run on hundreds of threads, and thus
-required a more performant thread pool. The solution to this was the
-QueuePerThreadPool library. A work queue and lock are maintained for
-each thread in the thread pool. Work is added to threads in a round
-robin fashion in order to distribute work evenly and to attempt to
-prevent, or at least reduce the amount of, contention experienced by any
-one work queue. When work is popped off in preparation for processing,
-instead of popping off one work item, all work items currently
-enqueued are removed. This further reduces the contention the work
-queues would experience if each work item were popped off one at a
-time.
+\subsubsection{Database Templates}
+Every directory in an index contains at least one database file,
+called db.db, containing the \lstat data from the source
+filesystem. When creating indicies, a database file is created with
+the same schema as db.db and is left unfilled. When each directory in
+the index is processed, the database file created earlier is copied
+into the directory as a bytestream instead of having SQlite open new
+database files for each directory. This avoids the multitudes of
+checks done by SQLite when setting up databases and tables. The same
+is done for external xattr database files.
 
-\subsection{Printing to \stdout}
-Printing in parallel to a single target such as \stdout
-without locking results in a jumble of text. Additionally, printing
-incurs a base cost in addition to the amount of data being
-printed. The OutputBuffers library, in conjunction with the
-\texttt{print\_parallel} function found in the \gufiquery
-source allow for data to be buffered to known, customizable sizes
-before being written to \stdout.
-
-\subsection{Rollups}
-The most effective optimization made to GUFI was rollups. It allowed
-for the number of directories that needed to be processed to be
-reduced significantly. See Section~\ref{sec:rollup} for details.
-
-\subsection{Database Templates}
-Every directory in an index contains at least one database file called
-db.db containing the \lstat data from the source filesystem. When
-creating indicies, a database file is created with the same schema as
-db.db and is left unfilled. When each directory in the index is
-processed, the database file created earlier is copied into the
-directory as a bytestream instead of having SQlite open new database
-files for each directory. This avoids the multitudes of checks done by
-SQLite when setting up databases and tables. The same is done for
-external xattr database files.
-
-\subsection{SQLite}
+\subsubsection{SQLite}
 As SQLite is a major component in GUFI, attempts were made to optimize
 its usage. Some optimizations were made at compile time. See the
 \href{https://www.sqlite.org/compile.html}{SQLite Compile-time
   Options} page for details.
 
-\subsubsection{Locking}
+\paragraph{Locking}
 In order to prevent multiple threads from corrupting data, SQLite
 implements locking. In GUFI, each database is only ever accessed by
 one thread:
@@ -144,23 +121,21 @@ one thread:
 \end{itemize}
 
 Locking despite never modifying databases in parallel was not useful,
-and so was removed by setting \texttt{-DSQLITE\_THREADSAFE=0} in the
-compile flags to remove all mutexes and logic related to thread
-safety.
+and was removed by setting \texttt{-DSQLITE\_THREADSAFE=0} in the
+compile flags.
 
-\subsubsection{Memory Tracking}
-Memory tracking was disabled with \texttt{-DSQLITE\_DEFAULT\_MEMSTATUS=0}.
-
-\subsubsection{Temporary Files}
-Temporary files can be stored to disk or in memory. GUFI forces all
-temporary files to be stored in memory with
-\texttt{-DSQLITE\_TEMP\_STORE=3}.
-
-\subsubsection{VFS}
+\paragraph{VFS}
 In addition to not locking SQLite in-memory operations, locking at the
-filesystem level was also removed. Instead of opening SQLite database
+filesystem level was also disabled. Instead of opening SQLite database
 files with the default VFS, GUFI uses the \texttt{unix-none} VFS,
 which causes all file locking to become no-ops. See
 \href{https://www.sqlite.org/vfs.html}{The SQLite OS Interface or
-  ``VFS''} for
-details.
+  ``VFS''} for details.
+
+\paragraph{Memory Tracking}
+Memory tracking was disabled with \texttt{-DSQLITE\_DEFAULT\_MEMSTATUS=0}.
+
+\paragraph{Temporary Files}
+Temporary files can be stored to disk or in memory. GUFI forces all
+temporary files to be stored in memory with
+\texttt{-DSQLITE\_TEMP\_STORE=3}.
