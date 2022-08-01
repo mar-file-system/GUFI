@@ -1,0 +1,155 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\section{Deployment}
+\label{sec:deploy}
+GUFI functionality as described so far has been local. However, users
+are not expected to log into the machine with the indices with an
+interactive shell. Instead, they are expected to call wrapper scripts
+to forward commands to the server (installed with the client RPM).
+
+\subsection{RPMs}
+When client building is enabled and the rpms built (\texttt{make
+  package}), two rpms will be created. The server rpm will contain
+GUFI as described so far. The client rpm will contain executables that
+should be installed on the client node. The user executables on the
+client side simply forward commands to the server. A jailed shell
+should be set up on the server to prevent arbitrary command execution
+- see Section~\ref{sec:gufi_jail} for details.
+
+\subsection{SSH}
+Normal ssh, using passwords or user keys (\texttt{\textasciitilde
+  /.ssh/id\_rsa}), should be disabled on the server. Instead, ssh
+should be done using host based authentication
+(\texttt{/etc/ssh/ssh\_host\_rsa\_key}).
+
+\subsection{Runtime Configuration}
+\gufiquery provides the core GUFI functionality. However it is not
+expected to be used by users, as the syntax of \gufiquery is somewhat
+unwieldy, and users are not expected to understand how GUFI
+works. Wrappers were created in order to provide users (and
+administrators) with predetermined queries that are used often and
+extract useful information (see the user guide for more details). The
+server has the actual implementation of the wrappers while the clients
+have command forwarders.
+
+These wrappers require configuration files located at
+\guficonfigfile (with read permissions for all GUFI users)
+to function. These configuration files are simple text files
+containing lines of \texttt{<key>=<value>}. Duplicate configuration
+keys are overwritten by the bottom-most line. Empty lines and lines
+starting with \# are ignored. The server and client require different
+configuration values. Example configuration files can be found in the
+\texttt{config} directory of the GUFI source, as well as in the build
+directory. The corresponding examples will also be installed with
+GUFI.
+
+If a server and client exist on the same node, the server and client
+configuration file may be combined into one file.
+
+\subsubsection{Server}
+\begin{tabular}{| l | l | l |}
+  \hline
+  Key & Value Type & Purpose \\
+  \hline
+  Threads & Positive Integer & Number of threads to use \\
+  & & when running \texttt{gufi\_query}. \\
+  \hline
+  Executable & File Path & The absolute path of \texttt{gufi\_query}. \\
+  \hline
+  IndexRoot & Directory Path & The absolute path of the GUFI index \\
+  & & (or parent of multiple indices). \\
+  \hline
+  OutputBuffer & Non-negative Integer & The size of each per-thread
+  buffer \\
+  & & used to buffer writes to stdout. \\
+  & & Setting this too low will affect \\
+  & & performance. Setting this too high \\
+  & & will use too much resources. \\
+  \hline
+\end{tabular}
+
+\subsubsection{Client}
+\begin{tabular}{| l | l | l |}
+  \hline
+  Key Value & Type & Purpose \\
+  \hline
+  Server & URI & The URI of the server (IP address, URL, etc.) \\
+  \hline
+  Port & Non-negative integer & Port number \\
+  \hline
+  Paramiko & Directory Path & The absolute path to the paramiko \\
+  & & directory on the client side \\
+  \hline
+\end{tabular}
+
+\subsection{\gufijail}
+\label{sec:gufi_jail}
+\gufijail is a simple script that limits the commands users logging in
+with ssh are able to run to only a subset of GUFI
+commands. \texttt{/etc/ssh/sshd\_config} should be modified with the
+following lines:
+
+\begin{verbatim}
+    Match Group gufi
+        ForceCommand /path/to/gufi_jail
+\end{verbatim}

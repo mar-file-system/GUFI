@@ -102,6 +102,7 @@ set(gufi_administrator_inputs
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
     sections/gufi_query.tex
+    sections/deploy.tex
     )
 
 set(gufi_user_inputs
