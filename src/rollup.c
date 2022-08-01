@@ -487,11 +487,17 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
 }
 /* ************************************** */
 
-/* check if the current directory can be rolled up */
 /*
-@return   0 - cannot rollup
-        > 0 - rollup score
-*/
+ * Check if the current directory can be rolled up.
+ *
+ * Previously returned 1 - 5 to indicate which rollup rule was
+ * followed because all children had to follow the same rule (other
+ * than leaves). Now only returns 1 because rollup can occur so long
+ * as every child meets any of the rules.
+ *
+ * @return   0 - cannot rollup
+ *           1 - can rollup
+ */
 int can_rollup(struct RollUp *rollup,
                struct DirStats *ds,
                sqlite3 *dst
@@ -584,7 +590,7 @@ end_can_rollup:
 static const char rollup_subdir[] =
     "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
     "INSERT INTO " SUMMARY " SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
-    "INSERT INTO " XATTRS_ROLLUP      " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
+    "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
     "INSERT OR IGNORE INTO " XATTR_FILES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES ";"
     "SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES ";";
 
