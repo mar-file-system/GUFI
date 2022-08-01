@@ -60,57 +60,13 @@
 
 
 
-\section{\gufifind}
-\gufifind is a wrapper script for \gufiquery that attempts to recreate
-a large portion of GNU \find 's functionality.
+\section{Environment}
 
-One major difference between them is how arguments are parsed. In
-\find, expression order matters. In \gufifind, expression order does
-not matter.
+Users will interact with GUFI using \gufifind,
+\gufils, and \gufistats. These are wrapper scripts
+that access the actual implementations of these files.
 
-\subsection{Flags}
-
-The following \find test expression options are replicated. See \find
-for details.
-
-\begin{quote}
-\texttt{-amin},  \texttt{-atime},  \texttt{-cmin},  \texttt{-ctime},
-\texttt{-empty},  \texttt{-executable},  \texttt{-false},
-\texttt{-fprint},  \texttt{-gid},  \texttt{-group},  \texttt{-help},
-\texttt{-iname},  \texttt{-inum},  \texttt{-links},  \texttt{-lname},
-\texttt{-maxdepth},  \texttt{-mindepth},  \texttt{-mmin},
-\texttt{-mtime},  \texttt{-name},  \texttt{-newer},  \texttt{-path},
-\texttt{-printf},  \texttt{-readable},  \texttt{-samefile},
-\texttt{-size},  \texttt{-true},  \texttt{-type},  \texttt{-uid},
-\texttt{-user},  and \texttt{-writable}
-\end{quote}
-
-The action expressions \texttt{printf} and \texttt{fprint} are also
-available. \texttt{printf} writes to \texttt{stdout}, and
-\texttt{fprint} writes to per-thread output text files. All format
-specifiers other than \texttt{ACFTYZ} have been implemented.
-\\\\
-Additionally, a few GUFI extensions have been added:
-\\\\
-\begin{tabular}{| l | l |}
-\hline
-Option & Description \\
-\hline
--{}-size\% num num & Extends the \texttt{size} option to search for
-sizes in the range \\
-& [size + min\%, size + max\%]. \\
-& e.g. \\
-& \ \ \ \ \texttt{-size 100c --size\% \ 10 20} \textrightarrow \ \texttt{[110, 120]} \\
-& \ \ \ \ \texttt{-size 100c --size\% -10 20} \textrightarrow \  \texttt{[90, \ 120]} \\
-\hline
--{}-num-results num& Limit the number of results printed \\
-\hline
--{}-smallest & Output by size, ascending. \\
-\hline
--{}-largest & Output by size, descending. \\
-\hline
--{}-in-memory-name name & Change the name of the tables used to store
-intermediate \\
-& results when aggregating. Generally not used. \\
-\hline
-\end{tabular}
+There should be a file readable (but not necessarily modifiable) by
+all GUFI users called \texttt{/etc/GUFI/config}. This file specifies
+where the GUFI server is, as the actual GUFI indicies are not expected
+to be locally available.

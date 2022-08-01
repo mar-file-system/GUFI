@@ -61,60 +61,140 @@
 
 
 \section{\gufistats}
-\gufistats is used to analyze a tree and retrieve statistics the user
-requests. An exhaustive list of available statistics that can be
-retrieved is listed below
+\gufistats is used to analyze a tree and retrieve statistics from an
+index. \gufistat does not have an analogous standard utility.
 
-\subsection{Stats list}
-\begin{table} [h]
-  \centering
-  \begin{tabular}{l}
-    Stats\\\hline
-    depth \\
-    filesize \\
-    filecount \\
-    linkcount \\
-    dircount \\
-    leaf-dirs \\
-    leaf-depth \\
-    leaf-files \\
-    leaf-links \\
-    total-filesize \\
-    total-filecount \\
-    total-linkcount \\
-    total-dircount \\
-    total-leaf-files \\
-    total-leaf-links \\
-    files-per-level \\
-    links-per-level \\
-    dirs-per-level \\
-    average-leaf-files \\
-    average-leaf-links \\
-    median-leaf-files \\
-    duplicate-names
-  \end{tabular}
-  \caption{\label{fig:stat_options}List of available stats}
-\end{table}
+\subsection{Flags}
+\gufistats is called with at minimum one positional argument
+specifying the statistic desired. Each statistic has a default
+version, Most also have a more in-depth version that is specified by
+their category: recursive, cumulative, or other.
 
 \begin{table} [h]
   \centering
-  \begin{tabular}{l|r}
-    Optional Flags & Functionality\\\hline
-    --help & displays help menu\\
-    --version, -v & display program's version number and exits \\
-    --recursive, -r & run command recursively \\
-    --cumulative -c & return cumulative values \\
-    --order \textless order\textgreater & sort output (if applicable)\\
-    --delim \textless c\textgreater & delimeter separating output columns\\
-    --num-results \textless n\textgreater & first n results \\
-    --uid \textless u\textgreater, --user \textless u\textgreater & restrict to user \\
-    --in-memory-name \textless name\textgreater & Name of in-memory database when -R is used
+  \begin{tabular}{| l | r |}
+    \hline
+    Optional Flags & Functionality \\
+    \hline
+    -{}-help & displays help menu \\
+    \hline
+    -{}-version, -v & display program's version number and exits \\
+    \hline
+    -{}-recursive, -r & run command recursively \\
+    \hline
+    -{}-cumulative, -c & return cumulative values \\
+    \hline
+    -{}-order \textless order\textgreater & sort output (if applicable) \\
+    \hline
+    -{}-delim \textless c\textgreater & delimeter separating output
+    columns \\
+    \hline
+    -{}-num-results \textless n\textgreater & first n results \\
+    \hline
+    -{}-uid \textless u\textgreater, -{}-user \textless u\textgreater & restrict to user \\
+    \hline
+    -{}-in-memory-name \textless name\textgreater & Name of intermediate
+    database \\
+    \hline
+    -{}-aggregate-name \textless name\textgreater & Name of final
+    database \\
+    \hline
+    -{}-skip-file \textless filename\textgreater & Name of file containing
+    directory basenames to skip \\
+    \hline
   \end{tabular}
   \caption{\label{fig:gufi_stats_flags} \gufistats Flags and Functionality}
 \end{table}
 
-\subsection{Usage}
-\gufistats \texttt{[optional flags] [stat]}
+\subsubsection{Recursive}
+These statistics will run a computation on a single
+directory. Specifying \texttt{-r} or \texttt{-{}-recursive} will
+recursively descend the starting directory and return each
+subdirectory's statistic.
+\\\\
+\begin{tabular} {| l | l |}
+  \hline
+  Statistic & Description \\
+  \hline
+  depth & Get the depths of the provided directory relative to the root
+  directory \\
+  \hline
+  filesize & Get the size the files in the immediate directory \\
+  \hline
+  filecount & Get the number of files in the immediate directory \\
+  \hline
+  linkcount & Get the number of links in the immediate directory \\
+  \hline
+  dircount & Get the number of directories in the immediate directory \\
+  \hline
+  leaf-dirs & Get the leaf directories immediately under the current
+  directory \\
+  \hline
+  leaf-depth & Get the depth of the leaf directories immediately under
+  the current directory \\
+  \hline
+  leaf-files & Get number of files in the leaf directories immediately
+  under the current directory \\
+  \hline
+  leaf-links & Get number of links in the leaf directories immediately
+  under the current directory \\
+  \hline
+\end{tabular}
 
-\subsection{Example Call}
-\gufistats \texttt{--delim + total-filecount}
+\subsubsection{Cumulative}
+These statistics will run a computation on an entire subtree. By
+default, the results will be grouped together by UID. Specifying
+\texttt{-c} or \texttt{-{}-cumulative} will combine all of the results
+into a single sum.
+\\\\
+\begin{tabular} {| l | l |}
+  \hline
+  Statistic & Description \\
+  \hline
+  total-filesize & Get the total size taken up by the entire directory
+  \\
+  \hline
+  total-filecount & Get the total number of files under the directory \\
+  \hline
+  total-linkcount & Get the total number of links under the directory \\
+  \hline
+  total-dircount & Get the total number of directories under the
+  directory \\
+  \hline
+  total-leaf-files & Get total number of files in the leaf directories
+  under this directory \\
+  \hline
+  total-leaf-links & Get total number of links in the leaf directories
+  under this directory \\
+  \hline
+  files-per-level & Get counts of how many files are in each level of
+  the tree \\
+  \hline
+  links-per-level & Get counts of how many links are in each level of
+  the tree \\
+  \hline
+  dirs-per-level & Get counts of how many dirs are in each level of the
+  tree \\
+  \hline
+  average-leaf-files & Get average number of leaf files under the
+  provided directory \\
+  \hline
+  average-leaf-links & Get average number of leaf links under the
+  provided directory \\
+  \hline
+\end{tabular}
+
+\subsubsection{Other}
+Statistics under the ``other'' category do not have extra flags
+associated with them.
+\\\\
+\begin{tabular} {| l | l |}
+  \hline
+  Statistic & Description \\
+  \hline
+  median-leaf-files & Get median number of leaf files under the provided
+  directory \\
+  \hline
+  duplicate-names & Find files with matching names and sizes \\
+  \hline
+\end{tabular}

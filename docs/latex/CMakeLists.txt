@@ -108,9 +108,11 @@ set(gufi_user_inputs
     GUFIText.sty
     sections/license.tex
     sections/introduction.tex
+    sections/user_env.tex
     sections/gufi_find.tex
     sections/gufi_ls.tex
     sections/gufi_stats.tex
+    sections/gufi_stat.tex
     )
 
 ADD_LATEX_DOCUMENT(

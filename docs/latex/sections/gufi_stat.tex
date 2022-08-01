@@ -60,57 +60,22 @@
 
 
 
-\section{\gufifind}
-\gufifind is a wrapper script for \gufiquery that attempts to recreate
-a large portion of GNU \find 's functionality.
+\section{\gufistat}
+\gufistat is analogous to \stat in file status mode. \gufistat is not
+currently installed as part of the client rpm, but probably should be.
 
-One major difference between them is how arguments are parsed. In
-\find, expression order matters. In \gufifind, expression order does
-not matter.
+Note that \gufistat does not use the configuration file and thus needs
+the full search path passed into it.
 
-\subsection{Flags}
-
-The following \find test expression options are replicated. See \find
-for details.
-
-\begin{quote}
-\texttt{-amin},  \texttt{-atime},  \texttt{-cmin},  \texttt{-ctime},
-\texttt{-empty},  \texttt{-executable},  \texttt{-false},
-\texttt{-fprint},  \texttt{-gid},  \texttt{-group},  \texttt{-help},
-\texttt{-iname},  \texttt{-inum},  \texttt{-links},  \texttt{-lname},
-\texttt{-maxdepth},  \texttt{-mindepth},  \texttt{-mmin},
-\texttt{-mtime},  \texttt{-name},  \texttt{-newer},  \texttt{-path},
-\texttt{-printf},  \texttt{-readable},  \texttt{-samefile},
-\texttt{-size},  \texttt{-true},  \texttt{-type},  \texttt{-uid},
-\texttt{-user},  and \texttt{-writable}
-\end{quote}
-
-The action expressions \texttt{printf} and \texttt{fprint} are also
-available. \texttt{printf} writes to \texttt{stdout}, and
-\texttt{fprint} writes to per-thread output text files. All format
-specifiers other than \texttt{ACFTYZ} have been implemented.
-\\\\
-Additionally, a few GUFI extensions have been added:
-\\\\
 \begin{tabular}{| l | l |}
-\hline
-Option & Description \\
-\hline
--{}-size\% num num & Extends the \texttt{size} option to search for
-sizes in the range \\
-& [size + min\%, size + max\%]. \\
-& e.g. \\
-& \ \ \ \ \texttt{-size 100c --size\% \ 10 20} \textrightarrow \ \texttt{[110, 120]} \\
-& \ \ \ \ \texttt{-size 100c --size\% -10 20} \textrightarrow \  \texttt{[90, \ 120]} \\
-\hline
--{}-num-results num& Limit the number of results printed \\
-\hline
--{}-smallest & Output by size, ascending. \\
-\hline
--{}-largest & Output by size, descending. \\
-\hline
--{}-in-memory-name name & Change the name of the tables used to store
-intermediate \\
-& results when aggregating. Generally not used. \\
-\hline
+  \hline
+  Option & Description \\
+  \hline
+  \texttt{-f <FORMAT>} & use the specified FORMAT instead of the
+  default. \\
+  & A newline is outputted after each use of FORMAT. \\
+  \hline
+  \texttt{-j} & print the information in terse form; Same as \\
+  & \texttt{-t}/\texttt{--terse} in \texttt{stat(1)}. \\
+  \hline
 \end{tabular}

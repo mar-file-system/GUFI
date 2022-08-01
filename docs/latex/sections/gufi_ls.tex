@@ -60,38 +60,77 @@
 
 
 
-\section{gufi\_ls}
+\section{\gufils}
 \texttt{gufi\_ls} is the equivalent of the POSIX command ls applied to
 a GUFI tree. As with \gufifind, there are a multitude of options
 available listed below
 
-\subsection{Flags and Functionality}
+\subsection{Flags}
 \begin{table} [h]
   \centering
-  \begin{tabular}{l|r}
-    Flags & Functionality\\\hline
-    --help & displays help menu\\
-    -v, --version & show program's version number and exit \\
-    -a, --all & do not ignore entries ending with .\\
-    -A, --almost-all & do not list implied . and .. \\
-    --block-size \textless block\_size\textgreater & with -l, scale sizes by block\_size when printing them \\
-    -B, --ignore-backups & do not list implied entries ending with ~\\
-    -G, --no-group & in a long listing, don't print group names\\
-    -i, --inode & print the index number of each file\\
-    -l & used a long listing format\\
-    -r, --reverse & reverse order while sorting\\
-    -R, --recursive & list sub-directories recursively\\
-    -s, --size & print the allocated size of each file in blocks\\
+  \begin{tabular}{| l | r |}
+    \hline
+    Flags & Functionality \\
+    \hline
+    -{}-help & displays help menu \\
+    \hline
+    -v, -{}-version & show program's version number and exit \\
+    \hline
+    -a, -{}-all & do not ignore entries ending with . \\
+    \hline
+    -A, -{}-almost-all & do not list implied . and .. \\
+    \hline
+    -{}-block-size \textless block\_size\textgreater & with -l, scale sizes by block\_size when printing them \\
+    \hline
+    -B, -{}-ignore-backups & do not list implied entries ending with ~ \\
+    \hline
+    -G, -{}-no-group & in a long listing, don't print group names \\
+    \hline
+    -i, -{}-inode & print the index number of each file \\
+    \hline
+    -l & used a long listing format \\
+    \hline
+    -r, -{}-reverse & reverse order while sorting \\
+    \hline
+    -R, -{}-recursive & list sub-directories recursively \\
+    \hline
+    -s, -{}-size & print the allocated size of each file in blocks \\
+    \hline
     -S & sort by file size, largest first \\
-    --time-style \textless TIME\_STYLE\textgreater & time/date format with -l\\
-    -t & sort by modification time, newest first\\
-    -U & do not sort; list entries in directory order\\
-    --delim \textless c\textgreater & delimeter separating output columns\\
-    --in-memory-name \textless name\textgreater & Name of in-memory database when -R is used\\
-    --nlink-width \textless chars\textgreater & Width of nlink column\\
-    --size-width \textless chars\textgreater & Width of size column\\
-    --user-width \textless chars\textgreater & Width of user column\\
-    --group-width \textless chars\textgreater & width of group column
+    \hline
+    -{}-time-style \textless TIME\_STYLE\textgreater & time/date format with -l \\
+    \hline
+    -t & sort by modification time, newest first \\
+    \hline
+    -U & do not sort; list entries in directory order \\
+    \hline
   \end{tabular}
   \caption{\label{fig:gufi_ls flags}{gufi\_ls Flags and Functionality}}
 \end{table}
+
+Additionally, several GUFI extensions have been added:
+\\\\
+\begin{tabular} {| l | l |}
+  \hline
+  Option & Description \\
+  \hline
+  -{}-delim \textless c & delimiter separating output columns \\
+  \hline
+  -{}-in-memory-name \textless name\textgreater & Name of in-memory
+  database when -R is used \\
+  \hline
+  -{}-aggregate-name \textless name\textgreater & Name of final
+  database when -R is used \\
+  \hline
+  -{}-nlink-width \textless chars\textgreater & Width of nlink column \\
+  \hline
+  -{}-size-width \textless chars\textgreater & Width of size column \\
+  \hline
+  -{}-user-width \textless chars\textgreater & Width of user column \\
+  \hline
+  -{}-group-width \textless chars\textgreater & Width of group column \\
+  \hline
+  -{}-skip-file \textless filename\textgreater & Name of file containing
+  directory basenames to skip \\
+  \hline
+\end{tabular}
