@@ -139,3 +139,18 @@ Memory tracking was disabled with \texttt{-DSQLITE\_DEFAULT\_MEMSTATUS=0}.
 Temporary files can be stored to disk or in memory. GUFI forces all
 temporary files to be stored in memory with
 \texttt{-DSQLITE\_TEMP\_STORE=3}.
+
+\subsubsection{Caching Queries (Not Merged)}
+When queries are performed on indicies, they are processed from
+scratch by each thread for each directory. An obvious optimization
+would be to reduce the amount of string parsing and query planning by
+doing it once (or a small number of times such as once per thread) at
+the beginning of a run and saving the SQLite results for repeated
+use during the index traversal.
+
+An attempt at caching queries was made with
+\href{https://github.com/mar-file-system/GUFI/pull/95}{Pull Request
+  \#95}. Unfortunately, caching queries at best seemed to perform on
+par with the latest GUFI and at worst, slightly slower than the latest
+GUFI. This was true for both simple queries and complex queries with
+\texttt{JOIN}s.
