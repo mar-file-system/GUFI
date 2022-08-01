@@ -66,3 +66,20 @@ The first step to using GUFI is indexing a source filesystem.
 \input{sections/gufi_dir2index.tex}
 \input{sections/gufi_dir2trace.tex}
 \input{sections/gufi_trace2index.tex}
+
+\subsection{Location}
+GUFI is expected to be used to query the indices of many filesystems
+all at once. However, the source filesystems are not expected to be
+accessible from each other. In order for the indices from many
+disconnected systems to be queried at once, they should all be built
+under a common directory on a single machine.
+
+\subsubsection{Permissions}
+If a GUFI index is located on a different machine than the source
+tree, the users and groups are probably not available on the machine
+with the index on it. \texttt{/etc/passwd} should be populated with
+the entries from the source machine and modified so that they do not
+have a home directory, and are not allowed to log in
+(\texttt{/sbin/nologin}). Similarly, \texttt{/etc/group} should be
+updated with the source machine's groups and modified to remove any
+unnecessary information.
