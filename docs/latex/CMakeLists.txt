@@ -82,6 +82,7 @@ set(gufi_developer_inputs
     sections/rollup.tex
     sections/xattrs.tex
     sections/gufi_query.tex
+    sections/deploy.tex
     sections/implementation.tex
     sections/qptp.tex
     sections/bottomup.tex

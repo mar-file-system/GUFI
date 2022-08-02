@@ -62,20 +62,21 @@
 
 \subsection{\bottomup}
 \label{sec:bottomup}
-\bottomup is performs parallel downward directory traversal followed
-by parallel upward directory traversal only after every single child
-of a directory has been traversed. Users pass in functions to run when
+\bottomup performs parallel downward directory traversal followed by
+parallel upward directory traversal only after every single child of a
+directory has been traversed. Users pass in functions to run when
 descending and ascending and have access to \lstat data collected
 during the tree traversal.
 
 Note that \bottomup cannot be used for normal GUFI operations. GUFI
-expectes each directory to be independently processed - directories
-might be enqueued for processing before their children, but might be
-processed after their children. \bottomup does not enqueue children
-until the directory has been processed by the user provided descend
-function. Ascent only occurs after all children have been processed,
-allowing for the directory to see any changes that occurred under it
-when the user provided ascend runs.
+expects each directory to be independently processed - directories
+will always start processing before their children, but might not
+complete processing until after their children have completed (the
+thread might have been interrupted). \bottomup does not enqueue
+children until the directory has been processed by the user provided
+descend function. Ascent only occurs after all children have been
+processed, allowing for the directory to see any changes that occurred
+under it when the user provided ascend runs.
 
 \bottomup is used primarily for two executables: \rollup and
 \texttt{parallel\_rmr}. Both require child directories to be processed

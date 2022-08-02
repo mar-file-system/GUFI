@@ -67,3 +67,15 @@ base cost in addition to the amount of data being printed. The
 OutputBuffers code, in conjunction with the \texttt{print\_parallel}
 function found in the \gufiquery directory, allow for data to be
 buffered in known, customizable sizes before being written to \stdout.
+
+The \texttt{print\_parallel} function works as follows:
+
+\begin{enumerate}
+\item The size of the line to be printed, including the column
+  delimiters and newline, is calculated.
+\item If the line can fit into the provided buffer, write it into the
+  buffer.
+\item If the line cannot fit into the provided buffer, lock the print
+  mutex, flush the buffered data, and then print the line. This
+  maintains the ordering of the data outputted by the current thread.
+\end{enumerate}
