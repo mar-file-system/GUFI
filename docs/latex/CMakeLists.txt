@@ -71,9 +71,6 @@ set(gufi_developer_inputs
     GUFIText.sty
     sections/license.tex
     sections/introduction.tex
-    sections/dependencies.tex
-    sections/build.tex
-    sections/install.tex
     sections/schema.tex
     sections/indexing.tex
     sections/gufi_dir2index.tex
@@ -85,7 +82,6 @@ set(gufi_developer_inputs
     sections/gufi_query.tex
     sections/querydbs.tex
     sections/addqueryfuncs.tex
-    sections/deploy.tex
     sections/implementation.tex
     sections/qptp.tex
     sections/bottomup.tex
@@ -98,6 +94,7 @@ set(gufi_administrator_inputs
     sections/license.tex
     sections/introduction.tex
     sections/dependencies.tex
+    sections/download.tex
     sections/build.tex
     sections/install.tex
     sections/schema.tex
@@ -105,6 +102,8 @@ set(gufi_administrator_inputs
     sections/gufi_dir2index.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
+    sections/rollup.tex
+    sections/xattrs.tex
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex
