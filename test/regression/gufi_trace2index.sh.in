@@ -66,7 +66,7 @@ set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 function cleanup {
-    rm -rf ${TRACE}.*
+    rm -rf "${TRACE}.0" "${TRACE}.1"
 }
 
 function cleanup_exit {
@@ -90,10 +90,9 @@ run_no_sort "${GENERATETREE} ${SRCDIR}"
 
 # generate the trace
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
-cat ${TRACE}.* > "${TRACE}"
 
 # generate the index
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}.0\" \"${TRACE}.1\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)

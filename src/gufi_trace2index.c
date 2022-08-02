@@ -83,15 +83,31 @@ extern int errno;
 struct OutputBuffers debug_output_buffers;
 #endif
 
+struct ScoutArgs {
+    size_t id;      /* scout id, not thread id */
+    FILE ***traces; /* reference to array */
+
+    /* everything below is locked with print_mutex from debug.h */
+
+    size_t *remaining; /* number of scouts still running */
+
+    /* sum of counts from all trace files */
+    uint64_t *time;
+    size_t *files;
+    size_t *dirs;
+    size_t *empty;  /* number of directories without files/links
+                     * can still have child directories */
+};
+
 /* global to pool - passed around in "args" argument */
 struct PoolArgs {
-    FILE **traces;
     struct template_db db;
     struct template_db xattr;
 };
 
 /* Data stored during first pass of input file */
 struct row {
+    FILE **trace; /* use thread id to index into this array */
     size_t first_delim;
     char *line;
     size_t len;
@@ -99,9 +115,11 @@ struct row {
     size_t entries;
 };
 
-struct row *row_init(const size_t first_delim, char *line, const size_t len, const long offset) {
+static struct row *row_init(FILE **trace, const size_t first_delim, char *line,
+                            const size_t len, const long offset) {
     struct row *row = malloc(sizeof(struct row));
     if (row) {
+        row->trace = trace;
         row->first_delim = first_delim;
         row->line = line; /* takes ownership of line */
         row->len = len;
@@ -111,7 +129,7 @@ struct row *row_init(const size_t first_delim, char *line, const size_t len, con
     return row;
 }
 
-void row_destroy(struct row *row) {
+static void row_destroy(struct row *row) {
     if (row) {
         free(row->line);
         free(row);
@@ -149,7 +167,7 @@ size_t total_files              = 0;
 #endif
 
 /* process the work under one directory (no recursion) */
-int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     uint64_t thread_handle_args      = 0;
@@ -194,9 +212,8 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     (void) ctx;
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
-    FILE *trace = ((FILE **) pa->traces)[id];
-
     struct row *w = (struct row *) data;
+    FILE *trace = w->trace[id];
 
     timestamp_set_end(handle_args);
 
@@ -496,7 +513,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     return !db;
 }
 
-size_t parsefirst(char *line, const size_t len, const char delim) {
+static size_t parsefirst(char *line, const size_t len, const char delim) {
     size_t first_delim = 0;
     while ((first_delim < len) && (line[first_delim] != delim)) {
         first_delim++;
@@ -510,22 +527,17 @@ size_t parsefirst(char *line, const size_t len, const char delim) {
 }
 
 /* Read ahead to figure out where files under directories start */
-int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     struct start_end scouting;
     clock_gettime(CLOCK_MONOTONIC, &scouting.start);
 
     /* skip argument checking */
-    char *filename = (char *) data;
-    FILE *trace = fopen(filename, "rb");
+    struct ScoutArgs *sa = (struct ScoutArgs *) data;
+    FILE **traces = sa->traces[sa->id];
+    FILE *trace = traces[in.maxthreads];
 
     (void) id;
     (void) args;
-
-    /* the trace file must exist */
-    if (!trace) {
-        fprintf(stderr, "Could not open file %s\n", filename);
-        return 1;
-    }
 
     /* keep current directory while finding next directory */
     /* in order to find out whether or not the current */
@@ -535,6 +547,7 @@ int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args)
     if (getline(&line, &len, trace) == -1) {
         free(line);
         fclose(trace);
+        traces[in.maxthreads] = NULL;
         fprintf(stderr, "Could not get the first line of the trace\n");
         return 1;
     }
@@ -544,6 +557,7 @@ int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args)
     if (first_delim == (size_t) -1) {
         free(line);
         fclose(trace);
+        traces[in.maxthreads] = NULL;
         fprintf(stderr, "Could not find the specified delimiter\n");
         return 1;
     }
@@ -552,11 +566,12 @@ int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args)
     if (line[first_delim + 1] != 'd') {
         free(line);
         fclose(trace);
+        traces[in.maxthreads] = NULL;
         fprintf(stderr, "First line of trace is not a directory\n");
         return 1;
     }
 
-    struct row *work = row_init(first_delim, line, len, ftell(trace));
+    struct row *work = row_init(traces, first_delim, line, len, ftell(trace));
 
     size_t target_thread = 0;
 
@@ -592,7 +607,7 @@ int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args)
             target_thread = (target_thread + 1) % ctx->size;
 
             /* put the current line into a new work item */
-            work = row_init(first_delim, line, len, ftell(trace));
+            work = row_init(traces, first_delim, line, len, ftell(trace));
         }
         /* ignore non-directories */
         else {
@@ -615,45 +630,84 @@ int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args)
     QPTPool_enqueue(ctx, target_thread, processdir, work);
 
     fclose(trace);
+    traces[in.maxthreads] = NULL;
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
     pthread_mutex_lock(&print_mutex);
-    fprintf(stdout, "Scout finished in %.2Lf seconds\n", sec(nsec(&scouting)));
-    fprintf(stdout, "Files: %zu\n", file_count);
-    fprintf(stdout, "Dirs:  %zu (%zu empty)\n", dir_count, empty);
-    fprintf(stdout, "Total: %zu\n", file_count + dir_count);
+    *sa->time += nsec(&scouting);
+    *sa->files += file_count;
+    *sa->dirs += dir_count;
+    *sa->empty += empty;
+
+    (*sa->remaining)--;
+
+    /* print here to print as early as possible instead of after thread pool completes */
+    if (*sa->remaining == 0) {
+        fprintf(stdout, "Scouts took total of %.2Lf seconds\n", sec(*sa->time));
+        fprintf(stdout, "Files: %zu\n", *sa->files);
+        fprintf(stdout, "Dirs:  %zu (%zu empty)\n", *sa->dirs, *sa->empty);
+        fprintf(stdout, "Total: %zu\n", *sa->files + *sa->dirs);
+    }
     pthread_mutex_unlock(&print_mutex);
+
+    free(sa);
 
     return 0;
 }
 
-void sub_help() {
+static void sub_help() {
    printf("input_file        parse this trace file to produce the GUFI index\n");
    printf("output_dir        build GUFI index here\n");
    printf("\n");
 }
 
-void close_per_thread_traces(FILE **traces, const int count) {
+static void close_per_thread_traces(FILE ***traces, size_t trace_count, size_t thread_count) {
     if (traces) {
-        for(int i = 0; i < count; i++) {
-            fclose(traces[i]);
+        /* also close scount_function trace if it hasn't been closed yet */
+        thread_count++;
+
+        for(size_t i = 0; i < trace_count; i++) {
+            for(size_t j = 0; j < thread_count; j++) {
+                if (traces[i][j]) {
+                    fclose(traces[i][j]);
+                }
+            }
+            free(traces[i]);
         }
 
         free(traces);
     }
 }
 
-FILE **open_per_thread_traces(char *filename, const int count) {
-    FILE **traces = (FILE **) calloc(count, sizeof(FILE *));
-    if (traces) {
-        for(int i = 0; i < count; i++) {
-            if (!(traces[i] = fopen(filename, "rb"))) {
-                close_per_thread_traces(traces, i);
+/* open each trace file thread_count + 1 times */
+static FILE ***open_per_thread_traces(char **trace_names, size_t trace_count, size_t thread_count) {
+    FILE ***traces = (FILE ***) calloc(trace_count, sizeof(FILE **));
+    if (!traces) {
+        return NULL;
+    }
+
+    /* open one extra trace for the scout_function */
+    thread_count++;
+
+    for(size_t i = 0; i < trace_count; i++) {
+        traces[i] = (FILE **) calloc(thread_count, sizeof(FILE *));
+        if (!traces[i]) {
+            close_per_thread_traces(traces, trace_count, thread_count);
+            return NULL;
+        }
+
+        for(size_t j = 0; j < thread_count; j++) {
+            if (!(traces[i][j] = fopen(trace_names[i], "rb"))) {
+                 /* if the file exists, probably ran out of file descriptors */
+                const int err = errno;
+                fprintf(stderr, "Could not open %s: %s (%d)\n", trace_names[i], strerror(err), err);
+                close_per_thread_traces(traces, trace_count, thread_count);
                 return NULL;
             }
         }
     }
+
     return traces;
 }
 
@@ -663,7 +717,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &main_func.start);
     epoch = since_epoch(&main_func.start);
 
-    int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "input_file output_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "trace_file... output_dir", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -671,31 +725,28 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_file");
-        INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_dir");
+        INSTALL_STR(in.nameto, argv[argc - 1], MAXPATH, "output_dir");
 
         if (retval)
             return retval;
 
-        in.name_len = strlen(in.name);
         in.nameto_len = strlen(in.nameto);
     }
 
-    struct PoolArgs args;
-
     /* open trace files for threads to jump around in */
-    /* all have to be passed in at once because there's no way to send one to each thread */
-    /* the trace files have to be opened outside of the thread in order to not repeatedly open the files */
-    args.traces = open_per_thread_traces(in.name, in.maxthreads);
-    if (!args.traces) {
+    /* open the trace files here to not repeatedly open in threads */
+    const size_t trace_count = argc - idx - 1;
+    FILE ***traces = open_per_thread_traces(&argv[idx], trace_count, in.maxthreads);
+    if (!traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
         return -1;
     }
 
-
+    struct PoolArgs args;
     init_template_db(&args.db);
     if (create_dbdb_template(&args.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
+        close_per_thread_traces(traces, trace_count, in.maxthreads);
         return -1;
     }
 
@@ -703,7 +754,7 @@ int main(int argc, char *argv[]) {
     if (create_xattrs_template(&args.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
         close_template_db(&args.db);
-        close_per_thread_traces(args.traces, in.maxthreads);
+        close_per_thread_traces(traces, trace_count, in.maxthreads);
         return -1;
     }
 
@@ -720,7 +771,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         close_template_db(&args.xattr);
         close_template_db(&args.db);
-        close_per_thread_traces(args.traces, in.maxthreads);
+        close_per_thread_traces(traces, trace_count, in.maxthreads);
         return -1;
     }
 
@@ -728,12 +779,30 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Failed to start threads\n");
         close_template_db(&args.xattr);
         close_template_db(&args.db);
-        close_per_thread_traces(args.traces, in.maxthreads);
+        close_per_thread_traces(traces, trace_count, in.maxthreads);
         return -1;
     }
 
-    /* the scout thread pushes more work into the queue instead of processdir */
-    QPTPool_enqueue(pool, 0, scout_function, in.name);
+    /* parse the trace files */
+    size_t remaining = trace_count;
+    uint64_t scout_time = 0;
+    size_t files = 0;
+    size_t dirs = 0;
+    size_t empty = 0;
+    for(size_t i = 0; i < trace_count; i++) {
+        /* freed by scout_function */
+        struct ScoutArgs *sa = malloc(sizeof(struct ScoutArgs));
+        sa->id = i;
+        sa->traces = traces;
+        sa->remaining = &remaining;
+        sa->time = &scout_time;
+        sa->files = &files;
+        sa->dirs = &dirs;
+        sa->empty = &empty;
+
+        /* scout_function pushes more work into the queue */
+        QPTPool_enqueue(pool, 0, scout_function, sa);
+    }
 
     QPTPool_wait(pool);
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -743,7 +812,7 @@ int main(int argc, char *argv[]) {
 
     close_template_db(&args.xattr);
     close_template_db(&args.db);
-    close_per_thread_traces(args.traces, in.maxthreads);
+    close_per_thread_traces(traces, trace_count, in.maxthreads);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_flush_to_single(&debug_output_buffers, stderr);
