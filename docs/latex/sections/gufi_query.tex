@@ -60,7 +60,7 @@
 
 
 
-\section{Querying}
+\subsection{\gufiquery}
 
 \gufiquery is the main tool used for accessing indicies. Arbitrary SQL
 statements are passed into \gufiquery to run on the individual
@@ -75,7 +75,7 @@ only ``advanced'' users such as administrators and developers to use
 \gufiquery directly. Users who do not know how GUFI functions may call
 \gufiquery, but might not be able to use it properly.
 
-\subsection{Flags}
+\subsubsection{Flags}
 
 \begin{table} [H]
   \centering
@@ -87,7 +87,7 @@ only ``advanced'' users such as administrators and developers to use
     \hline
     -E \textless SQL ent\textgreater & SQL for entries table \\
     \hline
-    -S \textless SQL sum\textgreater (will be read first) & SQL for summary table\\
+    -S \textless SQL sum\textgreater & SQL for summary table\\
     \hline
     -T \textless SQL tsum\textgreater & SQL for tree-summary table\\
     \hline
@@ -113,7 +113,7 @@ only ``advanced'' users such as administrators and developers to use
     \hline
     -J \textless SQL\_interm\textgreater & SQL for intermediate results (no default: recommend using "SELECT * FROM entries") \\
     \hline
-    -K \textless create aggregate\textgreater & SQL to create the final aggregation table (if not specified, -I will be used)\\
+    -K \textless create aggregate\textgreater & SQL to create the final aggregation table\\
     \hline
     -G \textless SQL\_aggregate\textgreater & SQL for aggregated results (no default: recommend using "SELECT * FROM entries")\\
     \hline
@@ -131,22 +131,92 @@ only ``advanced'' users such as administrators and developers to use
   \caption{\label{tab:widgets} \gufiquery Flags and Arguments}
 \end{table}
 
-\subsection{Example Calls}
+\subsubsection{Short Circuiting}
+Although each table/view has a specific flag that they are associated
+with, there is no need to use them with the flag. Queries are
+free-form text, so there is no reliable way to limit their usage to a
+particular flag. The purpose of having separate flags was to allow for
+the short-circuiting of queries: if \texttt{-T} fails to return any
+results, processing is stopped before running the \texttt{-S}
+query. Similarly, if \texttt{-S} does not return any results, the
+\texttt{-E} query is not run. This allows for threads to end the
+processing of a directory early if it is determined early on that no
+rows would be obtained from a later query. For example, if a query is
+searching for files larger than 1MB, but the \texttt{-S} query found
+that the range of file sizes is 1KB to 5KB, there is no need to run
+the \texttt{-E} query to get rows, since no rows will match in any
+case.
 
+To turn off short circuiting and always run all queries for each
+directory, pass the \texttt{-a} flag to \gufiquery.
+
+\subsubsection{Aggregation}
+By default, \gufiquery runs in a simple parallel mode: each worker
+thread processes a single directory, outputting results in
+parallel. However, there are cases where independent per-thread
+results are not desirable such as when sorting or summing, where the
+results from querying the index must be aggregated for final
+processing.
+
+In order to handle these situations, the \texttt{-I} flag should be
+used to create per-thread intermediate tables that are written to by
+\texttt{-S} and \texttt{-E}. The intermediate table results will then
+be aggregated using \texttt{-J} into the final table created by
+\texttt{-K}. The rows stored in the final table are processed one last
+time as a whole, rather than as results from independent threads,
+using \texttt{-G}.
+
+\subsubsection{Per-Thread Output Files}
+The \texttt{-o} flag causes results to be outputted to text
+files. When outputting in parallel, per-thread output files are
+created with the thread id appended to the filename provided with the
+flag. When aggregating, the aggregate results are written to the
+filename specified by \texttt{-o} with no filename modifications.
+
+\subsubsection{Per-Thread Output Database Files}
+The \texttt{-O} flag allows for results to be written to SQLite
+database files instead of text files. The resulting filenames follow
+the same creation rules as \texttt{-o}. However, the queries passed
+into \gufiquery need modifications. When writing in parallel,
+\texttt{-I} is needed to create the table for each per-thread output
+database. \texttt{-S} and \texttt{-E} should be modified to write to
+the per-thread tables in the same way as writing to the intermediate
+tables when aggregating. When writing aggregate results, \texttt{-G}
+is not needed, as \texttt{-J} already wrote the results into the
+aggregate table. However, \texttt{-G} may still be provided to get
+results during the \gufiquery in addition to queries on the results
+database file later on.
+
+Output database files may be passed to the \querydbs executable for
+further processing.
+
+\subsubsection{Example Calls}
+
+\noindent Parallel Results:
+\\\\
 \noindent \gufiquery \texttt{-S "SELECT * FROM summary"
   ~/directory\_of\_root\_index}
-
+\\\\
 \noindent \gufiquery \texttt{-E "SELECT * FROM pentries"
   ~/directory\_of\_root\_index}
+\\\\
+\noindent Aggregate Results:
+\\\\
+\noindent \gufiquery \texttt{\textbackslash} \\
+\texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);" \textbackslash} \\
+\texttt{-E "INSERT INTO intermediate SELECT name, size FROM pentries;" \textbackslash} \\
+\texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);" \textbackslash} \\
+\texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;" \textbackslash} \\
+\texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
 
-\subsection{Visualizing the Workflow}
+\subsubsection{Visualizing the Workflow}
 \begin{figure} [H]
   \centering
   \includegraphics[width=\textwidth]{images/gufi_query_main.png}
   \caption{Workflow of \gufiquery}
 \end{figure}
 
-\subsection{\processdir}
+\subsubsection{\processdir}
 The core of \gufiquery is the \processdir function. This is where the
 -T, -S, and -E flags are processed. Multiple instances of this
 function are run in parallel via the thread pool in order to quickly
@@ -158,7 +228,7 @@ traverse and process an index.
   \caption{Workflow of \processdir}
 \end{figure}
 
-\subsection{\querydb macro}
+\subsubsection{\querydb macro}
 \querydb is the macro used to execute SQL statements and handle errors.
 
 \begin{figure} [H]

@@ -63,6 +63,20 @@
 \section{Indexing}
 The first step to using GUFI is indexing a source filesystem.
 
+An index created by GUFI retains the shape of the source filesystem:
+directories that exist in the source filesystem also exist in the
+index. If an administrator created the index, the directories will
+also have the same access permissions, uid, and gid.
+
+Indicies will not contain any of the files that the source filesystem
+contained. Instead, all metadata extracted from a single directory of
+the source filesystem will be placed into a single database file,
+called db.db, in the cooresponding directory in the index. Each
+database file will be created with a fixed schema that includes the
+tables listed in Sections \ref{sec:schema} and
+\ref{sec:xattr_schema}. Additional database files may be created if
+extended attributes are extracted (see Section~\ref{sec:xattrs}).
+
 \input{sections/gufi_dir2index.tex}
 \input{sections/gufi_dir2trace.tex}
 \input{sections/gufi_trace2index.tex}

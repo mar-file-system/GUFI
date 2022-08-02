@@ -60,44 +60,8 @@
 
 
 
-\documentclass{article}
+\section{Querying}
+Once an index has been created, it should be queried using GUFI tools.
 
-% Useful packages
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{verbatim}
-\usepackage{GUFIText}
-
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
-
-\title{GUFI Developer's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/dependencies}
-\include{sections/download}
-\include{sections/build}
-\include{sections/install}
-\include{sections/schema}
-\include{sections/indexing}
-\include{sections/rollup}
-\include{sections/xattrs}
-\include{sections/querying}
-\include{sections/deploy}
-\include{sections/implementation}
-\end{document}
+\input{sections/gufi_query.tex}
+\input{sections/querydbs.tex}

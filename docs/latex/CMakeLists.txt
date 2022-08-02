@@ -81,7 +81,9 @@ set(gufi_developer_inputs
     sections/gufi_trace2index.tex
     sections/rollup.tex
     sections/xattrs.tex
+    sections/querying.tex
     sections/gufi_query.tex
+    sections/querydbs.tex
     sections/deploy.tex
     sections/implementation.tex
     sections/qptp.tex
@@ -102,7 +104,9 @@ set(gufi_administrator_inputs
     sections/gufi_dir2index.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
+    sections/querying.tex
     sections/gufi_query.tex
+    sections/querydbs.tex
     sections/deploy.tex
     )
 

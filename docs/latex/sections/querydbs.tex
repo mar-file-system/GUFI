@@ -60,44 +60,12 @@
 
 
 
-\documentclass{article}
+\subsection{\querydbs}
+\querydbs attaches all database files it is given into a single view
+for querying. All tables in the provided database files should have
+the same name and schema. For tables called \texttt{table}, the view
+combining all tables will be named \texttt{vtable}.
 
-% Useful packages
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{verbatim}
-\usepackage{GUFIText}
-
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
-
-\title{GUFI Developer's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/dependencies}
-\include{sections/download}
-\include{sections/build}
-\include{sections/install}
-\include{sections/schema}
-\include{sections/indexing}
-\include{sections/rollup}
-\include{sections/xattrs}
-\include{sections/querying}
-\include{sections/deploy}
-\include{sections/implementation}
-\end{document}
+Note that there is
+a hard limit of 125 databases that can be queried by querydbs that is
+set by SQLite3.
