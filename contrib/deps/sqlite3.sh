@@ -3,6 +3,8 @@
 
 set -e
 
+PATCH_SQLITE3_OPEN="$1"
+
 # Assume all paths exist
 
 sqlite3_name="sqlite3"
@@ -16,7 +18,15 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
         fi
 
         tar -xf "${sqlite3_tarball}" -C "${BUILD_DIR}"
-        patch -p2 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3270200.patch"
+
+        echo "Patching SQLite3 Pathname Length"
+        patch -p1 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3270200.pathname.patch"
+
+        if [[ "${PATCH_SQLITE3_OPEN}" == "true" ]]
+        then
+            echo "Patching SQLite3 Open"
+            patch -p1 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3270200.open.patch"
+        fi
     fi
 
     cd "${sqlite3_build}"

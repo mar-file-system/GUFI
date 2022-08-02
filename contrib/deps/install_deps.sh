@@ -20,6 +20,7 @@ fi
 THREADS="1"
 BUILD_CXX="false"
 PARAMIKO="false"
+PATCH_SQLITE3_OPEN="false"
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -38,6 +39,9 @@ case $key in
         ;;
     --paramiko)
         PARAMIKO="true"
+        ;;
+    --patch-sqlite3-open)
+        PATCH_SQLITE3_OPEN="true"
         ;;
     *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
@@ -71,7 +75,7 @@ export CMAKE
 export THREADS
 
 echo "Installing SQLite3"
-. ${SCRIPT_PATH}/sqlite3.sh
+. ${SCRIPT_PATH}/sqlite3.sh "${PATCH_SQLITE3_OPEN}"
 
 echo "Installing SQLite3 PCRE"
 . ${SCRIPT_PATH}/sqlite3_pcre.sh
