@@ -145,9 +145,9 @@ temporary files to be stored in memory with
 When queries are performed on indicies, they are processed from
 scratch by each thread for each directory. An obvious optimization
 would be to reduce the amount of string parsing and query planning by
-doing it once (or a small number of times such as once per thread) at
-the beginning of a run and saving the SQLite results for repeated
-use during the index traversal.
+compiling each query once (or a small number of times such as once per
+thread) at the beginning of a run and saving the compiled queries for
+repeated use during the index traversal.
 
 An attempt at caching queries was made with
 \href{https://github.com/mar-file-system/GUFI/pull/95}{Pull Request
