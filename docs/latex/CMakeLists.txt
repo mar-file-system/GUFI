@@ -74,6 +74,7 @@ set(gufi_developer_inputs
     sections/schema.tex
     sections/indexing.tex
     sections/gufi_dir2index.tex
+    sections/tracefile.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
     sections/rollup.tex
@@ -100,6 +101,7 @@ set(gufi_administrator_inputs
     sections/schema.tex
     sections/indexing.tex
     sections/gufi_dir2index.tex
+    sections/tracefile.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
     sections/rollup.tex
