@@ -59,11 +59,51 @@
 % OF SUCH DAMAGE.
 
 
+\clearpage
+\subsection{SQLite Functions}
+Several convenience functions are added into each database instance
+opened for querying.
 
-\section{Querying}
-Once an index has been created, it should be queried using GUFI tools
-and SQL statements.
+\begin{table}[htb]
+  \centering
+  \begin{tabular}{| l | l |}
+    \hline
+    Function Name & Purpose \\
+    \hline
+    uidtouser & Converts a UID to a username \\
+    \hline
+    gidtogroup & Converts a GID to a username \\
+    \hline
+    modetotxt & Converts numerical permission bits to text \\
+    \hline
+    strftime & \texttt{strftime(3)} \\
+    \hline
+    blocksize & Converts a size to number of blocks \\
+    \hline
+    human\_readable\_size & Converts a size to a human readable value \\
+    \hline
+  \end{tabular}
+  \caption{SQLite functions that are always available.}
+\end{table}
 
-\input{sections/gufi_query.tex}
-\input{sections/querydbs.tex}
-\input{sections/addqueryfuncs.tex}
+\begin{table}[htb]
+  \centering
+  \begin{tabular}{| l | l |}
+    \hline
+    Function Name & Purpose \\
+    \hline
+    path & Relative path of current directory \\
+    \hline
+    fpath & Full path of current directory \\
+    \hline
+    epath & Current directory name \\
+    \hline
+    level & Depth of the current directory from the starting directory \\
+    \hline
+    starting\_point & Path of the starting directory \\
+    \hline
+  \end{tabular}
+  \caption{SQLite functions that require the context of an index (only
+    available in \gufiquery).}
+\end{table}
+\clearpage

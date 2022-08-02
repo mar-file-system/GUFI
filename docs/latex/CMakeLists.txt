@@ -84,6 +84,7 @@ set(gufi_developer_inputs
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex
+    sections/addqueryfuncs.tex
     sections/deploy.tex
     sections/implementation.tex
     sections/qptp.tex
@@ -107,6 +108,7 @@ set(gufi_administrator_inputs
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex
+    sections/addqueryfuncs.tex
     sections/deploy.tex
     )
 
