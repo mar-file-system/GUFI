@@ -303,6 +303,7 @@ struct work {
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;
+   size_t        basename_len; /* can usually get through readdir */
    char          type[2];
    char          linkname[MAXPATH];
    struct stat   statuso;

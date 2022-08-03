@@ -258,7 +258,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
       insertdbfin(res);
 
       // this i believe has to be after we close off the entries transaction
-      insertsumdb(db,passmywork,&summary);
+      insertsumdb(db, passmywork->name, passmywork, &summary);
       closedb(db);
 
       SNPRINTF(dbpath, MAXPATH, "%s/%s/DBNAME", in.nameto,passmywork->name);

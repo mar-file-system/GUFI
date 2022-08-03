@@ -610,12 +610,15 @@ int descend(struct QPTPool *ctx, const size_t id,
                 continue;
             }
 
+            child.basename_len = len;
+            child.level = next_level;
+            child.root = work->root;
+            child.root_len = work->root_len;
+            child.pinode = work->statuso.st_ino;
+
             /* push subdirectories onto the queue */
             if (S_ISDIR(child.statuso.st_mode)) {
                 child.type[0] = 'd';
-                child.level = next_level;
-                child.root = work->root;
-                child.pinode = work->statuso.st_ino;
 
                 /* make a copy here so that the data can be pushed into the queue */
                 /* this is more efficient than malloc+free for every single child */
@@ -708,19 +711,55 @@ static int loop_matches(const char c, const char *match, const size_t match_coun
     return 0;
 }
 
-int remove_trailing(char *str, size_t *size,
-                    const char *match, const size_t match_count) {
-    if (!str || !size) {
-        return -1;
+size_t trailing_match_index(const char *str, size_t len,
+                            const char *match, const size_t match_count) {
+    if (!str) {
+        return 0;
     }
 
-    while (*size && loop_matches(str[(*size) - 1], match, match_count)) {
-        (*size)--;
+    while (len && loop_matches(str[len - 1], match, match_count)) {
+        len--;
     }
 
-    str[*size] = '\x00';
+    return len;
+}
 
-    return 0;
+size_t trailing_non_match_index(const char *str, size_t len,
+                                const char *not_match, const size_t not_match_count) {
+    if (!str) {
+        return 0;
+    }
+
+    while (len && !loop_matches(str[len - 1], not_match, not_match_count)) {
+        len--;
+    }
+
+    return len;
+}
+
+/*
+ * find first slash before the basename a.k.a. get the dirname length
+ *
+ * /      -> /
+ * /a/b/c -> /a/b/
+ *
+ * This function is meant to be called during input processing to get
+ * the parent of each input directory. The input paths should not have
+ * trailing slashes.
+ *
+ * This function allows for the index to be created in a directory
+ * under the provided root, instead of directly in the provided
+ * root. If the source directory is the root directory, this still
+ * makes sense.
+ *
+ * toname = /home/search
+ * source = /a/b/c
+ * result = /home/search/c
+ * source = /
+ * result = /home/search/
+ */
+size_t dirname_len(const char *path, size_t len) {
+    return trailing_non_match_index(path, len, "/", 1);
 }
 
 /* create a trie of directory names to skip from a file */

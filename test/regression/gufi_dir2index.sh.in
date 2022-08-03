@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -67,17 +66,18 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_dir2index.out"
 
+(
 # index everything
 (
     # remove preexisting indicies
-    rm -rf "${INDEXROOT}"
+    rm -rf "${INDEXTARGET}"
 
     # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
+    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}"
 
     src=$(find "${SRCDIR}" | sort)
 
-    index=$(${GUFI_QUERY} -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sort)
+    index=$(${GUFI_QUERY} -d " " -S "SELECT path();" -E "SELECT path() || '/' || pentries.name FROM pentries, summary WHERE pentries.pinode == summary.inode;" "${INDEXROOT}" | sort)
 
     echo "Index Everything:"
     echo "    Source Directory:"
@@ -86,32 +86,29 @@ OUTPUT="gufi_dir2index.out"
     echo "    GUFI Index:"
     echo "${index}" | awk '{ printf "        " $0 "\n" }'
     echo
-) | @TEE@ "${OUTPUT}"
+)
 
-# index up to @DIFF@erent levels of the tree
+# index up to different levels of the tree
 for level in 0 1 2 3
 do
-    (
-        # remove preexisting indicies
-        rm -rf "${INDEXROOT}"
+    # remove preexisting indicies
+    rm -rf "${INDEXTARGET}"
 
-        # generate the index
-        ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXROOT}"
+    # generate the index
+    ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXTARGET}"
 
-        src=$(find "${SRCDIR}" -maxdepth ${level} | sort)
+    src=$(find "${SRCDIR}" -maxdepth ${level} | sort)
 
-        index=$(${GUFI_QUERY} -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "${INDEXROOT}" | sort)
+    index=$(${GUFI_QUERY} -d " " -S "SELECT path();" -E "SELECT path() || '/' || pentries.name FROM pentries, summary WHERE pentries.pinode == summary.inode;" "${INDEXROOT}" | sort)
 
-        echo "Index up to level ${level}:"
-        echo "    Source Directory:"
-        echo "${src}" | awk '{ printf "        " $0 "\n" }'
-        echo
-        echo "    GUFI Index:"
-        echo "${index}" | awk '{ printf "        " $0 "\n" }'
-        echo
-    ) | @TEE@ -a "${OUTPUT}"
+    echo "Index up to level ${level}:"
+    echo "    Source Directory:"
+    echo "${src}" | awk '{ printf "        " $0 "\n" }'
+    echo
+    echo "    GUFI Index:"
+    echo "${index}" | awk '{ printf "        " $0 "\n" }'
+    echo
 done
-
-sed -i "s/${INDEXROOT}/${SRCDIR}/g; s/[[:space:]]*$//g" "${OUTPUT}"
+) | replace | @TEE@ "${OUTPUT}"
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

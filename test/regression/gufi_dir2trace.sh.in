@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -65,19 +64,6 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-function cleanup() {
-    rm -rf ${TRACE}.*
-}
-
-function cleanup_exit {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
-cleanup
-
 # trace delimiter
 DELIM="|"
 
@@ -88,27 +74,25 @@ OUTPUT="gufi_dir2trace.out"
 @CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"
 
 # generate the trace
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # count output files
-expected=2
 found=$(find ${TRACE}.* | wc -l)
-echo "Expecting ${expected} trace files. Found ${found}."
+echo "Expecting ${THREADS} trace files. Found ${found}."
 
 # count lines
-cat ${TRACE}.* > "${TRACE}"
-trace_lines=$(cat "${TRACE}" | wc -l | awk '{print $1}')
+trace_lines=$(cat ${TRACES} | wc -l | awk '{print $1}')
 contents=$(find "${SRCDIR}")
 content_lines=$(echo "${contents}" | wc -l | awk '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
-columns=$(sed "s/[^${DELIM}]//g" "${TRACE}" | awk '{ print length }' | sort | uniq)
+columns=$(sed "s/[^${DELIM}]//g" ${TRACES} | awk '{ print length }' | sort | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
-src=$(find "${SRCDIR}/" | sed 's/\/\//\//g' | sort)
-lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print SRCDIR \"/\" \$1 }" "${TRACE}" | sed "s/\\/\\//\\//g" | sort)
+src=$(find "${SRCDIR}" | sort)
+lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" ${TRACES} | sed "s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"
 echo "${src}"   | awk '{ print "    " $1 }'

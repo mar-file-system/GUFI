@@ -723,19 +723,14 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     return 0;
 }
 
-int insertsumdb(sqlite3 *sdb, struct work *pwork, struct sum *su)
+int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct sum *su)
 {
     sqlite3_stmt *res = insertdbprep(sdb, SUMMARY_INSERT);
     if (!res) {
         return 1;
     }
 
-    /* get the basename */
-    char nameout[MAXPATH];
-    char shortname[MAXPATH];
-    shortpath(pwork->name, nameout, shortname);
-
-    char *zname     = sqlite3_mprintf("%q", shortname);
+    char *zname     = sqlite3_mprintf("%q", path);
     char *ztype     = sqlite3_mprintf("%q", pwork->type);
     char *zlinkname = sqlite3_mprintf("%q", pwork->linkname);
 

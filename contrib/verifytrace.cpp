@@ -69,9 +69,10 @@ OF SUCH DAMAGE.
 #include <map>
 #include <string>
 
+// directory -> <inode, parent inode>
 typedef std::map <std::string, std::pair<std::string, std::string> > Tree;
 
-bool verify_stanza(std::istream & stream, Tree & tree, const char delim = '\x1e', const char dir = 'd') {
+static bool verify_stanza(std::istream & stream, Tree & tree, const char delim = '\x1e', const char dir = 'd') {
     std::string line;
     if (!std::getline(stream, line)) {
         return false;
@@ -210,7 +211,7 @@ bool verify_stanza(std::istream & stream, Tree & tree, const char delim = '\x1e'
     return true;
 }
 
-static std::string basename(const std::string & path) {
+static std::string dirname(const std::string & path) {
     std::string::size_type len = path.size();
 
     // remove trailing slashes
@@ -218,7 +219,7 @@ static std::string basename(const std::string & path) {
         len--;
     }
 
-    // find parent
+    // find parent (remove basename)
     while (len && (path[len - 1] != '/')) {
         len--;
     }
@@ -231,27 +232,27 @@ static std::string basename(const std::string & path) {
     return path.substr(0, len);
 }
 
-std::size_t complete_tree(const Tree & tree) {
+static std::size_t complete_tree(const Tree & tree) {
     std::size_t bad = 0;
     for(std::pair <const std::string,
                    std::pair<std::string,
                              std::string> > const & dir : tree) {
-        const std::string parent_path = basename(dir.first);
+        const std::string parent_path = dirname(dir.first);
 
         // root
-        if (parent_path == dir.first) {
+        if ((parent_path == "") || (parent_path == dir.first)) {
             continue;
         }
 
         Tree::const_iterator parent = tree.find(parent_path);
         if (parent == tree.end()) {
-            std::cerr << "Parent path of " << dir.first << " missing." << std::endl;
+            std::cerr << "Parent path of \"" << dir.first << "\" missing." << std::endl;
             bad++;
             continue;
         }
 
         if (parent->second.first != dir.second.second) {
-            std::cerr << "Parent inode does not match directory's pinode: \"" <<  dir.first << "\"" << std::endl;
+            std::cerr << "Parent inode does not match directory's pinode: \"" << dir.first << "\"" << std::endl;
             bad++;
             continue;
         }
@@ -260,7 +261,7 @@ std::size_t complete_tree(const Tree & tree) {
     return bad;
 }
 
-bool verify_trace(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
+static bool verify_trace(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
     if (!stream) {
         std::cerr << "Bad stream" << std::endl;
         return false;

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -68,18 +67,21 @@ set -e
 
 if [[ "$#" -ne "1" ]]
 then
-    echo "Syntax: $0 <generate tree>" 1>&2
+    echo "Syntax: $0 <generate index>" 1>&2
     exit 1
 fi
 
 GENERATE_INDEX="$1"
 SRCDIR="prefix"
 TRACE="trace"
-INDEXROOT="${SRCDIR}.gufi"
+THREADS=2
+TRACES=$(eval echo ${TRACE}.{0..$((THREADS - 1))})
+INDEXTARGET="search"
+INDEXROOT="${INDEXTARGET}/$(basename ${SRCDIR})"
 
 # always clean up
 function setup_cleanup {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${INDEXROOT}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" ${TRACES} "${INDEXTARGET}"
 }
 
 trap setup_cleanup EXIT
@@ -135,29 +137,27 @@ function replace() {
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 
+    s/${INDEXTARGET//\//\\/}\\///g;
+    s/${INDEXTARGET//\//\\/}/${SRCDIR//\//\\/}/g;
+    s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
+
     s/[[:space:]]*$//g;
     "
 }
 
-function replace_output() {
-    @SED@  "
-    s/${INDEXROOT//\//\\/}\\///g;
-    s/${INDEXROOT//\//\\/}/./g;
-    s/${SRCDIR//\//\\/}\\///g;
-    s/${SRCDIR//\//\\/}/./g;
-    s/\\\"\./\\\"${SRCDIR//\//\\/}/g;
-    "
+function remove_root() {
+    @SED@ "s/${SRCDIR//\//\\/}\\///g;"
 }
 
 function run_sort() {
     echo "$ $@" |& replace
-    eval "$@"   |& replace | replace_output | sort
+    eval "$@"   |& replace | sort
     echo
 }
 
 function run_no_sort() {
-    echo "$ $@" | replace
-    eval "$@"   |& replace | replace_output
+    echo "$ $@" |& replace
+    eval "$@"   |& replace
     echo
 }
 
@@ -167,5 +167,5 @@ then
     ${GENERATETREE} "${SRCDIR}"
 
     # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXROOT}"
+    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}"
 fi

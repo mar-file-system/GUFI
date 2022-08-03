@@ -11,4 +11,4 @@
 'directory/subdirectory/repeat_name' 664 -rw-rw-r-- 81b4 regular file 1 - 0
 'leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 1 - 0
 'leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'prefix.gufi/old_file' 0 0
+'prefix/old_file' 0 0

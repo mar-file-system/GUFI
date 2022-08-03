@@ -278,7 +278,7 @@ int reprocessdir(void * passv, DIR *dir)
     insertdbfin(res);
 
     // this i believe has to be after we close off the entries transaction
-    insertsumdb(db,passmywork,&summary);
+    insertsumdb(db, passmywork->name, passmywork, &summary);
     xattrs_cleanup(&passmywork->xattrs);
     closedb(db);
 

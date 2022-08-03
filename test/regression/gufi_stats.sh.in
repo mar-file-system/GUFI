@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -126,7 +125,7 @@ then
 
     run "${GUFI_STATS}    median-leaf-files"
 fi
-) |& @TEE@ "${OUTPUT}"
+) |& remove_root | @TEE@ "${OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 COPY="${EXPECTED}.copy"

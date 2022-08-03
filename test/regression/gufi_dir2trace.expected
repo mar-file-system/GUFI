@@ -4,7 +4,7 @@ Expecting 2 trace files. Found 2.
 Expecting 19 lines. Got 19.
 Expecting 23 columns per row. Got 23.
 Source Directory:
-    prefix/
+    prefix
     prefix/.hidden
     prefix/1KB
     prefix/1MB
@@ -24,7 +24,7 @@ Source Directory:
     prefix/repeat_name
     prefix/unusual,
 Trace File:
-    prefix/
+    prefix
     prefix/.hidden
     prefix/1KB
     prefix/1MB

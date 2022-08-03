@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -65,38 +64,24 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-function cleanup {
-    rm -rf "${TRACE}.0" "${TRACE}.1"
-}
-
-function cleanup_exit {
-    cleanup
-    setup_cleanup
-}
-
-trap cleanup_exit EXIT
-
-cleanup
-
 # trace delimiter
 DELIM="|"
 
 OUTPUT="gufi_trace2index.out"
 
 (
-
 # generate the tree
 run_no_sort "${GENERATETREE} ${SRCDIR}"
 
 # generate the trace
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # generate the index
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}.0\" \"${TRACE}.1\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" ${TRACES} \"${INDEXTARGET}\" | tail -n 4 | head -n 3"
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$(${GUFI_QUERY} -d " " -S "SELECT path() FROM summary" -E "SELECT path() || '/' || name FROM pentries" "${INDEXROOT}" | sed "s/${INDEXROOT}/${SRCDIR}/g; s/^[[:space:]]*//g; s/[[:space:]]*$//g; s/\\/\\//\\//g" | sort)
+index_contents=$(${GUFI_QUERY} -d " " -S "SELECT path();" -E "SELECT path() || '/' || name FROM pentries;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'

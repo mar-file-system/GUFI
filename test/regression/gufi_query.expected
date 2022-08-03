@@ -1,12 +1,12 @@
 # Get only directories
-$ gufi_query -d " " -S "SELECT name FROM summary;" "prefix.gufi"
-.
+$ gufi_query -d " " -S "SELECT name FROM summary;" "prefix"
 directory
 leaf_directory
+prefix
 subdirectory
 
 # Get only non-directories
-$ gufi_query -d " " -E "SELECT name FROM pentries;" "prefix.gufi"
+$ gufi_query -d " " -E "SELECT name FROM pentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -24,8 +24,7 @@ unusual, name?#
 writable
 
 # Get all directory and non-directory names
-$ gufi_query -d " " -S "SELECT name FROM summary;" -E "SELECT name FROM pentries;" "prefix.gufi"
-.
+$ gufi_query -d " " -S "SELECT name FROM summary;" -E "SELECT name FROM pentries;" "prefix"
 .hidden
 1KB
 1MB
@@ -38,6 +37,7 @@ leaf_directory
 leaf_file1
 leaf_file2
 old_file
+prefix
 readonly
 repeat_name
 repeat_name
@@ -46,8 +46,8 @@ unusual, name?#
 writable
 
 # Get relative paths of all directories and non-directories ascending names
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name) FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix.gufi"
-.
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name) FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
+prefix
 .hidden
 1KB
 1MB
@@ -68,7 +68,7 @@ repeat_name
 unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name) FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix.gufi"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name) FROM summary;" -E "INSERT INTO out SELECT path() || '/' || name FROM pentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
 unusual, name?#
 repeat_name
 old_file
@@ -87,10 +87,10 @@ directory
 1MB
 1KB
 .hidden
-.
+prefix
 
 # Get relative paths of all directories and non-directories ascending sizes (files only)
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix.gufi"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
 empty_file
 .hidden
 directory/executable
@@ -106,7 +106,7 @@ unusual, name?#
 1MB
 
 # Get relative paths of all directories and non-directories descending sizes (files only)
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix.gufi"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 1MB
 1KB
 .hidden
@@ -125,42 +125,42 @@ empty_file
 # Invalid Inputs                    #
 #####################################
 # Missing -I (outdb)
-$ gufi_query -O outdb "prefix.gufi"
+$ gufi_query -O outdb "prefix"
 Error: Missing -I
 
 # Missing -I (aggregating, stdout)
-$ gufi_query -K "create;" "prefix.gufi"
+$ gufi_query -K "create;" "prefix"
 Error: Missing -I
 
 # Missing -I (aggregating, outfile)
-$ gufi_query -o outfile -K "create;" "prefix.gufi"
+$ gufi_query -o outfile -K "create;" "prefix"
 Error: Missing -I
 
 # Missing -I (aggregating, outdb)
-$ gufi_query -O outdb -K "create;" "prefix.gufi"
+$ gufi_query -O outdb -K "create;" "prefix"
 Error: Missing -I
 
 # Missing -T/-S/-E
-$ gufi_query "prefix.gufi"
+$ gufi_query "prefix"
 Error: Need at least one of -T, -S, or -E
 
 # Missing -J (aggregate, stdout)
-$ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix.gufi"
+$ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix"
 Error: Missing -J
 
 # Missing -J (aggregate, outfile)
-$ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix.gufi"
+$ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix"
 Error: Missing -J
 
 # Missing -J (aggregate, outdb)
-$ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;" -K "create;"                "prefix.gufi"
+$ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;" -K "create;"              "prefix"
 Error: Missing -J
 
 # Missing -G (aggregate, stdout)
-$ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix.gufi"
+$ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix"
 Error: Missing -G
 
 # Missing -G (aggregate, outfile)
-$ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix.gufi"
+$ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix"
 Error: Missing -G
 

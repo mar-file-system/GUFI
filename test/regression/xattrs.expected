@@ -1,81 +1,81 @@
-$ gufi_dir2index -x "prefix" "prefix.gufi"
+$ gufi_dir2index -x "prefix" "prefix"
 
-$ gufi_query -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;" "prefix.gufi"
-. d
-u+r d user.u+r 500
-u+r/go f user.go 066
-u+r/o f user.o 006
-u+r/u f user.u 600
-u+r/ug f user.ug 660
-u+r/ugo f user.ugo 666
-u+rw d user.u+rw 700
-u+rw/go f user.go 066
-u+rw/o f user.o 006
-u+rw/u f user.u 600
-u+rw/ug f user.ug 660
-u+rw/ugo f user.ugo 666
-ug+r d user.ug+r 550
-ug+r/go f user.go 066
-ug+r/o f user.o 006
-ug+r/u f user.u 600
-ug+r/ug f user.ug 660
-ug+r/ugo f user.ugo 666
-ug+rw d user.ug+rw 770
-ug+rw/go f user.go 066
-ug+rw/o f user.o 006
-ug+rw/u f user.u 600
-ug+rw/ug f user.ug 660
-ug+rw/ugo f user.ugo 666
-ugo+rw d user.ugo+rw 777
-ugo+rw/go f user.go 066
-ugo+rw/o f user.o 006
-ugo+rw/u f user.u 600
-ugo+rw/ug f user.ug 660
-ugo+rw/ugo f user.ugo 666
+$ gufi_query -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;" "prefix"
+prefix d
+prefix/u+r d user.u+r 500
+prefix/u+r/go f user.go 066
+prefix/u+r/o f user.o 006
+prefix/u+r/u f user.u 600
+prefix/u+r/ug f user.ug 660
+prefix/u+r/ugo f user.ugo 666
+prefix/u+rw d user.u+rw 700
+prefix/u+rw/go f user.go 066
+prefix/u+rw/o f user.o 006
+prefix/u+rw/u f user.u 600
+prefix/u+rw/ug f user.ug 660
+prefix/u+rw/ugo f user.ugo 666
+prefix/ug+r d user.ug+r 550
+prefix/ug+r/go f user.go 066
+prefix/ug+r/o f user.o 006
+prefix/ug+r/u f user.u 600
+prefix/ug+r/ug f user.ug 660
+prefix/ug+r/ugo f user.ugo 666
+prefix/ug+rw d user.ug+rw 770
+prefix/ug+rw/go f user.go 066
+prefix/ug+rw/o f user.o 006
+prefix/ug+rw/u f user.u 600
+prefix/ug+rw/ug f user.ug 660
+prefix/ug+rw/ugo f user.ugo 666
+prefix/ugo+rw d user.ugo+rw 777
+prefix/ugo+rw/go f user.go 066
+prefix/ugo+rw/o f user.o 006
+prefix/ugo+rw/u f user.u 600
+prefix/ugo+rw/ug f user.ug 660
+prefix/ugo+rw/ugo f user.ugo 666
 
 $ gufi_dir2trace -x "prefix" "trace"
 
-$ gufi_trace2index "trace.0" "prefix.gufi" | tail -n 4 | head -n 3
+$ gufi_trace2index "trace.0" "prefix" | tail -n 4 | head -n 3
 Files: 25
 Dirs:  6 (1 empty)
 Total: 31
 
-$ gufi_query -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;" "prefix.gufi"
-. d
-u+r d user.u+r 500
-u+r/go f user.go 066
-u+r/o f user.o 006
-u+r/u f user.u 600
-u+r/ug f user.ug 660
-u+r/ugo f user.ugo 666
-u+rw d user.u+rw 700
-u+rw/go f user.go 066
-u+rw/o f user.o 006
-u+rw/u f user.u 600
-u+rw/ug f user.ug 660
-u+rw/ugo f user.ugo 666
-ug+r d user.ug+r 550
-ug+r/go f user.go 066
-ug+r/o f user.o 006
-ug+r/u f user.u 600
-ug+r/ug f user.ug 660
-ug+r/ugo f user.ugo 666
-ug+rw d user.ug+rw 770
-ug+rw/go f user.go 066
-ug+rw/o f user.o 006
-ug+rw/u f user.u 600
-ug+rw/ug f user.ug 660
-ug+rw/ugo f user.ugo 666
-ugo+rw d user.ugo+rw 777
-ugo+rw/go f user.go 066
-ugo+rw/o f user.o 006
-ugo+rw/u f user.u 600
-ugo+rw/ug f user.ug 660
-ugo+rw/ugo f user.ugo 666
+$ gufi_query -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;" "prefix"
+prefix d
+prefix/u+r d user.u+r 500
+prefix/u+r/go f user.go 066
+prefix/u+r/o f user.o 006
+prefix/u+r/u f user.u 600
+prefix/u+r/ug f user.ug 660
+prefix/u+r/ugo f user.ugo 666
+prefix/u+rw d user.u+rw 700
+prefix/u+rw/go f user.go 066
+prefix/u+rw/o f user.o 006
+prefix/u+rw/u f user.u 600
+prefix/u+rw/ug f user.ug 660
+prefix/u+rw/ugo f user.ugo 666
+prefix/ug+r d user.ug+r 550
+prefix/ug+r/go f user.go 066
+prefix/ug+r/o f user.o 006
+prefix/ug+r/u f user.u 600
+prefix/ug+r/ug f user.ug 660
+prefix/ug+r/ugo f user.ugo 666
+prefix/ug+rw d user.ug+rw 770
+prefix/ug+rw/go f user.go 066
+prefix/ug+rw/o f user.o 006
+prefix/ug+rw/u f user.u 600
+prefix/ug+rw/ug f user.ug 660
+prefix/ug+rw/ugo f user.ugo 666
+prefix/ugo+rw d user.ugo+rw 777
+prefix/ugo+rw/go f user.go 066
+prefix/ugo+rw/o f user.o 006
+prefix/ugo+rw/u f user.u 600
+prefix/ugo+rw/ug f user.ug 660
+prefix/ugo+rw/ugo f user.ugo 666
 
-$ rollup prefix.gufi
+$ rollup prefix
 Roots:
-    .
+    prefix
 
 Thread Pool Size:            1
 Files/Links Limit:          -1
@@ -108,36 +108,36 @@ Directories:    6 (1 empty)
 Total:          31
 Remaining Dirs: 1 (16.67%)
 
-$ gufi_query -d " " -x -S "SELECT path() || name, type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || summary.name || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xpentries LEFT JOIN summary on xpentries.pinode == summary.inode;" "prefix.gufi"
-. d
-u+r d user.u+r 500
-u+r/go f user.go 066
-u+r/o f user.o 006
-u+r/u f user.u 600
-u+r/ug f user.ug 660
-u+r/ugo f user.ugo 666
-u+rw d user.u+rw 700
-u+rw/go f user.go 066
-u+rw/o f user.o 006
-u+rw/u f user.u 600
-u+rw/ug f user.ug 660
-u+rw/ugo f user.ugo 666
-ug+r d user.ug+r 550
-ug+r/go f user.go 066
-ug+r/o f user.o 006
-ug+r/u f user.u 600
-ug+r/ug f user.ug 660
-ug+r/ugo f user.ugo 666
-ug+rw d user.ug+rw 770
-ug+rw/go f user.go 066
-ug+rw/o f user.o 006
-ug+rw/u f user.u 600
-ug+rw/ug f user.ug 660
-ug+rw/ugo f user.ugo 666
-ugo+rw d user.ugo+rw 777
-ugo+rw/go f user.go 066
-ugo+rw/o f user.o 006
-ugo+rw/u f user.u 600
-ugo+rw/ug f user.ug 660
-ugo+rw/ugo f user.ugo 666
+$ gufi_query -d " " -x -S "SELECT name, type, xattr_name, xattr_value FROM xsummary;" -E "SELECT summary.name || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xpentries LEFT JOIN summary on xpentries.pinode == summary.inode;" "prefix"
+prefix d
+prefix/u+r d user.u+r 500
+prefix/u+r/go f user.go 066
+prefix/u+r/o f user.o 006
+prefix/u+r/u f user.u 600
+prefix/u+r/ug f user.ug 660
+prefix/u+r/ugo f user.ugo 666
+prefix/u+rw d user.u+rw 700
+prefix/u+rw/go f user.go 066
+prefix/u+rw/o f user.o 006
+prefix/u+rw/u f user.u 600
+prefix/u+rw/ug f user.ug 660
+prefix/u+rw/ugo f user.ugo 666
+prefix/ug+r d user.ug+r 550
+prefix/ug+r/go f user.go 066
+prefix/ug+r/o f user.o 006
+prefix/ug+r/u f user.u 600
+prefix/ug+r/ug f user.ug 660
+prefix/ug+r/ugo f user.ugo 666
+prefix/ug+rw d user.ug+rw 770
+prefix/ug+rw/go f user.go 066
+prefix/ug+rw/o f user.o 006
+prefix/ug+rw/u f user.u 600
+prefix/ug+rw/ug f user.ug 660
+prefix/ug+rw/ugo f user.ugo 666
+prefix/ugo+rw d user.ugo+rw 777
+prefix/ugo+rw/go f user.go 066
+prefix/ugo+rw/o f user.o 006
+prefix/ugo+rw/u f user.u 600
+prefix/ugo+rw/ug f user.ug 660
+prefix/ugo+rw/ugo f user.ugo 666
 

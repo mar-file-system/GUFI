@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -206,12 +205,12 @@ function do_tests() {
 }
 
 (
-do_tests #| @SED@ "s/${SRCDIR//\//\\/}\\///g;"
-echo "$ ${ROLLUP} \"${INDEXROOT}\"" | replace
+do_tests
+echo "$ ${ROLLUP} \"${INDEXROOT}\""
 ${ROLLUP} "${INDEXROOT}" 2> /dev/null
 echo
-do_tests #| @SED@ "s/${SRCDIR//\//\\/}\\///g;"
-) | @TEE@ "${OUTPUT}"
+do_tests
+) | replace | remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
 rm "${OUTPUT}"

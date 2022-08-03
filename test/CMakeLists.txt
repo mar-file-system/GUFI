@@ -105,7 +105,7 @@ endforeach()
 # create an empty directory and extract testdir.tar into it for runtests
 set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
 set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${TESTDIR}.gufi")
+set(TESTDST "${CMAKE_CURRENT_BINARY_DIR}/gary")
 
 add_test(NAME gary COMMAND runtests ${TESTTAR} ${TESTDIR} ${TESTDST} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(gary PROPERTIES LABELS manual)

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -88,7 +87,7 @@ run_sort    "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
 run_sort    "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
 run_no_sort "${GUFI_FIND} -type f --smallest"
 run_no_sort "${GUFI_FIND} -type f --largest"
-) | @TEE@ "${OUTPUT}"
+) | remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"

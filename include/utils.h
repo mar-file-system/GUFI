@@ -134,9 +134,20 @@ int descend(struct QPTPool *ctx, const size_t id,
 /* convert a mode to a human readable string */
 char *modetostr(char *str, const size_t size, const mode_t mode);
 
-/* remove trailing characters from paths */
-int remove_trailing(char *str, size_t *size,
-                    const char *match, const size_t match_count);
+/* find the index of the first match, walking backwards */
+size_t trailing_match_index(const char *str, size_t len,
+                            const char *match, const size_t match_count);
+
+/* find the index of the first non-match, walking backwards */
+size_t trailing_non_match_index(const char *str, size_t len,
+                                const char *not_match, const size_t not_match_count);
+
+/*
+ * convenience function to find first slash before the basename
+ *
+ * used for processing input paths that have been run through realpath
+ */
+size_t dirname_len(const char *path, size_t len);
 
 int setup_directory_skip(const char *filename, trie_t **skip);
 
