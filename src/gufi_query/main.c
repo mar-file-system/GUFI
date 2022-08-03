@@ -880,8 +880,7 @@ int main(int argc, char *argv[])
     /* enqueue all input paths */
     for(int i = idx; i < argc; i++) {
         /* remove trailing slashes */
-        size_t len = strlen(argv[i]);
-        remove_trailing(argv[i], &len, "/", 1);
+        size_t len = trailing_match_index(argv[i], strlen(argv[i]), "/", 1);
 
         /* root is special case */
         if (len == 0) {

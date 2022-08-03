@@ -629,40 +629,42 @@ TEST(modetostr, directories) {
     }
 }
 
-TEST(remove_trailing, paths) {
+TEST(trailing_match_index, paths) {
     char root[MAXPATH]    = "/";
     char dir[MAXPATH]     = "/a/b/c/";
     char nondir[MAXPATH]  = "/a/b/c";
     char slashes[MAXPATH] = "////";
     char nulls[MAXPATH]   = "";
 
-    const char match[] = "/";
+    const char match[] = "\b\t/";
     const size_t match_len = strlen(match);
 
-    size_t len = 0;
+    EXPECT_EQ(trailing_match_index(root,    strlen(root),    match, match_len), (size_t) 0);
+    EXPECT_EQ(trailing_match_index(dir,     strlen(dir),     match, match_len), (size_t) 6);
+    EXPECT_EQ(trailing_match_index(nondir,  strlen(nondir),  match, match_len), (size_t) 6);
+    EXPECT_EQ(trailing_match_index(slashes, strlen(slashes), match, match_len), (size_t) 0);
+    EXPECT_EQ(trailing_match_index(nulls,   strlen(nulls),   match, match_len), (size_t) 0);
 
-    len = strlen(root);
-    EXPECT_EQ(remove_trailing(root, &len, match, match_len), 0);
-    EXPECT_EQ(len, (size_t) 0);
-    EXPECT_STREQ(root, "");
+    EXPECT_EQ(trailing_match_index(nullptr, 10,              match, match_len), (size_t) 0);
+}
 
-    len = strlen(dir);
-    EXPECT_EQ(remove_trailing(dir, &len, match, match_len), 0);
-    EXPECT_EQ(len, (size_t) 6);
-    EXPECT_STREQ(dir, "/a/b/c");
+TEST(trailing_non_match_index, paths) {
+    char root[MAXPATH]     = "/";
+    char dir[MAXPATH]      = "/a/b/c/";
+    char nondir[MAXPATH]   = "/a/b/c";
+    char slashes[MAXPATH]  = "////";
+    char nulls[MAXPATH]    = "";
 
-    len = strlen(nondir);
-    EXPECT_EQ(remove_trailing(nondir, &len, match, match_len), 0);
-    EXPECT_EQ(len, (size_t) 6);
-    EXPECT_STREQ(nondir, "/a/b/c");
+    const char match[] = "\b\t/";
+    const size_t match_len = strlen(match);
 
-    len = strlen(slashes);
-    EXPECT_EQ(remove_trailing(slashes, &len, match, match_len), 0);
-    EXPECT_EQ(len, (size_t) 0);
+    EXPECT_EQ(trailing_non_match_index(root,    strlen(root),    match, match_len), (size_t) 1);
+    EXPECT_EQ(trailing_non_match_index(dir,     strlen(dir),     match, match_len), (size_t) 7);
+    EXPECT_EQ(trailing_non_match_index(nondir,  strlen(nondir),  match, match_len), (size_t) 5);
+    EXPECT_EQ(trailing_non_match_index(slashes, strlen(slashes), match, match_len), (size_t) 4);
+    EXPECT_EQ(trailing_non_match_index(nulls,   strlen(nulls),   match, match_len), (size_t) 0);
 
-    len = strlen(nulls);
-    EXPECT_EQ(remove_trailing(nulls, &len, match, match_len), 0);
-    EXPECT_EQ(len, (size_t) 0);
+    EXPECT_EQ(trailing_non_match_index(nullptr, 10,              match, match_len), (size_t) 0);
 }
 
 TEST(split, delims) {

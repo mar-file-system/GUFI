@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 TMP="tmp"
 OUTPUT="rollup.out"
 
-function cleanup() {
+function cleanup {
     rm -rf "${TMP}"
 }
 
@@ -81,7 +81,6 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-
 # Level 0                 prefix/
 #       Total 1 directory
 #
@@ -160,8 +159,8 @@ chmod 700 ${SRCDIR}/u
 
 rm -r ${TMP}
 
-${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXROOT}
-${ROLLUP} ${INDEXROOT}
+${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXTARGET}
+${ROLLUP} ${INDEXROOT} | replace
 
 run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary;\" \"${INDEXROOT}\" | wc -l"
 run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"

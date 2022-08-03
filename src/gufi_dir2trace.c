@@ -96,13 +96,13 @@ struct PoolArgs {
 };
 
 static int process_nondir(struct work *entry, void *args) {
-    worktofile((FILE *) args, in.delim, in.name_len, entry);
+    worktofile((FILE *) args, in.delim, entry->root_len, entry);
     return 0;
 }
 
 /* process the work under one directory (no recursion) */
 /* deletes work */
-int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
@@ -136,7 +136,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     }
 
     /* write start of stanza */
-    worktofile(pa->outfiles[id], in.delim, in.name_len, work);
+    worktofile(pa->outfiles[id], in.delim, work->root_len, work);
 
     if (in.xattrs.enabled) {
         xattrs_cleanup(&work->xattrs);
@@ -163,18 +163,43 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
     return 0;
 }
 
-struct work *validate_inputs() {
+static int check_prefix(const char *nameto, const size_t nameto_len, const size_t thread_count) {
+    /* check the output files, if a prefix was provided */
+    if (!nameto_len || !nameto_len) {
+        fprintf(stderr, "No output file name specified\n");
+        return -1;
+    }
+
+    /* check if the destination path already exists (not an error) */
+    for(int i = 0; i < thread_count; i++) {
+        char outname[MAXPATH];
+        SNPRINTF(outname, MAXPATH, "%s.%d", nameto, i);
+
+        struct stat dst_st;
+        if (lstat(outname, &dst_st) == 0) {
+            fprintf(stderr, "\"%s\" Already exists!\n", outname);
+
+            /* if the destination path is not a directory (error) */
+            if (S_ISDIR(dst_st.st_mode)) {
+                fprintf(stderr, "Destination path is a directory \"%s\"\n", outname);
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+static struct work *validate_source(char *path) {
     struct work *root = (struct work *) calloc(1, sizeof(struct work));
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
         return NULL;
     }
 
-    root->name_len = SNPRINTF(root->name, MAXPATH, "%s", in.name);
-
     /* get input path metadata */
-    if (lstat(root->name, &root->statuso) < 0) {
-        fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
+    if (lstat(path, &root->statuso) < 0) {
+        fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
         free(root);
         return NULL;
     }
@@ -184,55 +209,34 @@ struct work *validate_inputs() {
         root->type[0] = 'd';
     }
     else {
-        fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
+        fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
         free(root);
         return NULL;
     }
 
     /* check if the source directory can be accessed */
-    if (access(root->name, R_OK | X_OK) != 0) {
+    if (access(path, R_OK | X_OK) != 0) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 root->name, strerror(errno));
         free(root);
         return NULL;
     }
 
-    /* check the output files, if a prefix was provided */
-    if (!in.nameto_len) {
-        fprintf(stderr, "No output file name specified\n");
-        free(root);
-        return NULL;
-    }
-
-    /* check if the destination path already exists (not an error) */
-    for(int i = 0; i < in.maxthreads; i++) {
-        char outname[MAXPATH];
-        SNPRINTF(outname, MAXPATH, "%s.%d", in.nameto, i);
-
-        struct stat dst_st;
-        if (lstat(in.outname, &dst_st) == 0) {
-            fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
-
-            /* if the destination path is not a directory (error) */
-            if (S_ISDIR(dst_st.st_mode)) {
-                fprintf(stderr, "Destination path is a directory \"%s\"\n", in.nameto);
-                free(root);
-                return NULL;
-            }
-        }
-    }
+    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
+    root->root = path;
+    root->root_len = dirname_len(path, root->name_len);
 
     return root;
 }
 
-void sub_help() {
-    printf("input_dir            walk this tree to produce trace file\n");
+static void sub_help() {
+    printf("input_dir...         walk one or more trees to produce trace file\n");
     printf("output_prefix        prefix of output files (<prefix>.<tid>)\n");
     printf("\n");
 }
 
 int main(int argc, char *argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:", 2, "input_dir output_prefix", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:", 2, "input_dir... output_prefix", &in);
     struct PoolArgs args;
     if (in.helped)
         sub_help();
@@ -241,8 +245,7 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
-        INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_prefix");
+        INSTALL_STR(in.nameto, argv[argc - 1], MAXPATH, "output_prefix");
 
         if (retval)
             return retval;
@@ -251,32 +254,16 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-        in.name_len = strlen(in.name);
         in.nameto_len = strlen(in.nameto);
-
-        remove_trailing(in.name, &in.name_len, "/", 1);
-
-        /* root is special case */
-        if (in.name_len == 0) {
-            in.name[0] = '/';
-            in.name_len = 1;
-        }
-        else {
-            /* add 1 more for the separator that is placed between this string and the entry */
-            in.name_len++;
-        }
     }
 
-    /* get first work item by validating inputs */
-    struct work *root = validate_inputs();
-    if (!root) {
+    if (check_prefix(in.nameto, in.nameto_len, in.maxthreads) != 0) {
         trie_free(args.skip);
         return -1;
     }
 
     args.outfiles = outfiles_init(1, in.nameto, in.maxthreads);
     if (!args.outfiles) {
-        free(root);
         trie_free(args.skip);
         return -1;
     }
@@ -294,7 +281,6 @@ int main(int argc, char *argv[]) {
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         outfiles_fin(args.outfiles, in.maxthreads);
-        free(root);
         trie_free(args.skip);
         return -1;
     }
@@ -302,15 +288,32 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
         outfiles_fin(args.outfiles, in.maxthreads);
-        free(root);
         trie_free(args.skip);
         return -1;
     }
 
-    QPTPool_enqueue(pool, 0, processdir, root);
+    const size_t root_count = argc - idx - 1;
+    char **roots = calloc(root_count, sizeof(char *));
+    for(size_t i = 0; i < root_count; i++) {
+        /* force all input paths to be canonical */
+        roots[i] = realpath(argv[idx], NULL);
+
+        /* get first work item by validating source path */
+        struct work *root = validate_source(roots[i]);
+        if (!root) {
+            continue;
+        }
+
+        QPTPool_enqueue(pool, 0, processdir, root);
+        idx++;
+    }
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
+    for(size_t i = 0; i < root_count; i++) {
+        free(roots[i]);
+    }
+    free(roots);
     outfiles_fin(args.outfiles, in.maxthreads);
     trie_free(args.skip);
 

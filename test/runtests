@@ -75,7 +75,8 @@ fi
 
 TAR="$1"
 TREE="$2"
-INDEX="$3"
+TARGET="$3"
+INDEX="${TARGET}/$(basename ${TREE})"
 
 function cleanup {
     rm -rf "${TREE}" "${INDEX}"
@@ -90,7 +91,7 @@ mkdir ${TREE}
 tar -xf ${TAR} -C ${TREE}
 
 # run GUFI commands on it
-${TESTS}/runbfwi                ${TREE} ${INDEX}
+${TESTS}/runbfwi                ${TREE} ${TARGET}
 ${TESTS}/runbfti                        ${INDEX}
 ${TESTS}/runbfq                         ${INDEX}
 ${TESTS}/runquerydbs                    ${INDEX} 2

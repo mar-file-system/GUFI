@@ -1,8 +1,8 @@
-$ gufi_dir2index -x "prefix" "prefix.gufi"
+$ gufi_dir2index -x "prefix" "prefix"
 
-$ rollup "prefix.gufi"
+$ rollup "prefix"
 Roots:
-    prefix.gufi
+    prefix
 
 Thread Pool Size:            1
 Files/Links Limit:          -1
@@ -56,8 +56,8 @@ Total:          165
 Remaining Dirs: 17 (24.64%)
 
 # rolled up directories should have rows in pentries_rollup
-$ gufi_query -d " " -S "SELECT path(), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;" "prefix.gufi" | sort
-. 0 0
+$ gufi_query -d " " -S "SELECT path(), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;" "prefix" | sort
+prefix 0 0
 o+rx 0 0
 o+rx/o+rx 1 6
 o+rx/u 1 6
@@ -75,11 +75,11 @@ ug/ug 1 6
 ug/ugo 1 6
 ugo 1 24
 
-$ unrollup "prefix.gufi"
+$ unrollup "prefix"
 
 # level, COUNT(entries), COUNT(pentries_rollup), directory
-$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC" "prefix.gufi" | sort -k4
-0 0 0 .
+$ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC" "prefix" | sort -k4
+0 0 0 prefix
 1 0 0 o+rx
 2 0 0 o+rx/o+rx
 3 1 0 o+rx/o+rx/dir1

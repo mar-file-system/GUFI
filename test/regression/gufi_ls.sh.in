@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -75,7 +74,7 @@ run_no_sort "${GUFI_LS} -R"
 run_no_sort "${GUFI_LS} -r"
 run_no_sort "${GUFI_LS} -ar"
 run_no_sort "${GUFI_LS} -arR"
-) |& @TEE@ "${OUTPUT}"
+) |& remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"
 rm "${OUTPUT}"

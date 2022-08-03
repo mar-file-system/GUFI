@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -78,16 +77,16 @@ echo "# Get all directory and non-directory names"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM summary;\" -E \"SELECT name FROM pentries;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\"" | remove_root
 
 echo "# Get relative paths of all directories and non-directories descending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT path(name) FROM summary;\" -E \"INSERT INTO out SELECT path() || '/' || name FROM pentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\"" | remove_root
 
 echo "# Get relative paths of all directories and non-directories ascending sizes (files only)"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\"" | remove_root
 
 echo "# Get relative paths of all directories and non-directories descending sizes (files only)"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT path() || '/' || name, size FROM pentries WHERE type == 'f';\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\"" | remove_root
 
 echo "#####################################"
 echo "# Invalid Inputs                    #"
@@ -115,7 +114,7 @@ echo "# Missing -J (aggregate, outfile)"
 run_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
 
 echo "# Missing -J (aggregate, outdb)"
-run_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"                \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\"              \"${INDEXROOT}\""
 
 echo "# Missing -G (aggregate, stdout)"
 run_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""

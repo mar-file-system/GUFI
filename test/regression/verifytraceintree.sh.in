@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -73,7 +72,7 @@ BADTRACE="badtrace"
 DELIM="|"
 
 function cleanup {
-    rm -rf "${TRACE}".* "${BADTRACE}"
+    rm -rf "${BADTRACE}"
 }
 
 function cleanup_exit {
@@ -92,22 +91,22 @@ echo "# generate the tree"
 run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
 echo "# generate the trace"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 2 -x \"${SRCDIR}\" \"${TRACE}\""
-cat ${TRACE}.* > "${TRACE}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
+cat ${TRACES} > "${TRACE}"
 
 echo "# generate the index"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXROOT}\" | tail -n 4 | head -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\" | tail -n 4 | head -n 3"
 
-echo "# verify that all entries in the trace can be found in the GUFI tree"
-run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXROOT}\""
+echo "# verify that all entries in the trace can be found in the GUFI tree (Pass)"
+run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# replace a file name"
+echo "# replace a file name (Fail)"
 sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
-run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXROOT}\""
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# replace a directory name"
+echo "# replace a directory name (Fail)"
 sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
-run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXROOT}\""
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 ) |& @SED@ '/qptpool.*/d' |@TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"

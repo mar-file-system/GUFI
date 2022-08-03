@@ -132,7 +132,7 @@ static int process_nondir(struct work *entry, void *args) {
     /* get entry relative path (use extra buffer to prevent memcpy overlap) */
     char relpath[MAXPATH];
     const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1,
-                                          entry->name + in.name_len + 1, entry->name_len - in.name_len - 1);
+                                          entry->name + entry->root_len + 1, entry->name_len - entry->root_len - 1);
 
     /* overwrite full path with relative path */
     /* e.name_len = */ SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
@@ -176,11 +176,11 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
         return 1;
     }
 
-    /* offset by in.name_len to remove prefix */
+    /* offset by work->root_len to remove prefix */
     nda.topath_len = SNFORMAT_S(nda.topath, MAXPATH, 3,
                                 in.nameto, in.nameto_len,
                                 "/", (size_t) 1,
-                                nda.work->name + in.name_len, nda.work->name_len - in.name_len);
+                                nda.work->name + nda.work->root_len, nda.work->name_len - nda.work->root_len);
 
     /* don't need recursion because parent is guaranteed to exist */
     if (mkdir(nda.topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
@@ -261,7 +261,7 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
 
     /* insert this directory's summary data */
     /* the xattrs go into the xattrs_avail table in db.db */
-    insertsumdb(nda.db, nda.work, &nda.summary);
+    insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len, nda.work, &nda.summary);
     if (in.xattrs.enabled) {
         xattrs_cleanup(&nda.work->xattrs);
     }
@@ -286,31 +286,50 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
     return 0;
 }
 
-struct work *validate_inputs() {
-    char expathin[MAXPATH];
-    char expathout[MAXPATH];
-    char expathtst[MAXPATH];
+/*
+ * create the target directory
+ *
+ * note that the provided directories go into
+ * individual directories underneath this one
+ */
+static int setup_dst(char *nameto) {
+    /* check if the destination path already exists (not an error) */
+    struct stat dst_st;
+    if (lstat(nameto, &dst_st) == 0) {
+        fprintf(stderr, "\"%s\" Already exists!\n", nameto);
 
-    SNPRINTF(expathtst,MAXPATH,"%s/%s",in.nameto,in.name);
-    realpath(expathtst,expathout);
-    //printf("expathtst: %s expathout %s\n",expathtst,expathout);
-    realpath(in.name,expathin);
-    //printf("in.name: %s expathin %s\n",in.name,expathin);
-    if (!strcmp(expathin,expathout)) {
-        fprintf(stderr,"You are putting the index dbs in input directory\n");
+        /* if the destination path is not a directory (error) */
+        if (!S_ISDIR(dst_st.st_mode)) {
+            fprintf(stderr, "Destination path is not a directory \"%s\"\n", nameto);
+            return -1;
+        }
+
+        return 0;
     }
 
+    struct stat st;
+    st.st_mode = S_IRWXU | S_IRWXG | S_IRWXO;
+    st.st_uid = geteuid();
+    st.st_gid = getegid();
+
+    if (dupdir(nameto, &st)) {
+        fprintf(stderr, "Could not create %s\n", nameto);
+        return -1;
+    }
+
+    return 0;
+}
+
+struct work *validate_source(const char *path) {
     struct work *root = (struct work *) calloc(1, sizeof(struct work));
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
         return NULL;
     }
 
-    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, in.name, in.name_len);
-
     /* get input path metadata */
-    if (lstat(root->name, &root->statuso) < 0) {
-        fprintf(stderr, "Could not stat source directory \"%s\"\n", in.name);
+    if (lstat(path, &root->statuso) < 0) {
+        fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
         free(root);
         return NULL;
     }
@@ -320,60 +339,46 @@ struct work *validate_inputs() {
         root->type[0] = 'd';
     }
     else {
-        fprintf(stderr, "Source path is not a directory \"%s\"\n", in.name);
+        fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
         free(root);
         return NULL;
     }
 
     /* check if the source directory can be accessed */
-    if (access(root->name, R_OK | X_OK) != 0) {
+    if (access(path, R_OK | X_OK) != 0) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 root->name, strerror(errno));
         free(root);
         return NULL;
     }
 
-    if (!in.nameto_len) {
-        fprintf(stderr, "No output path specified\n");
-        free(root);
-        return NULL;
-    }
+    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
+    root->root = path;
+    root->root_len = dirname_len(path, root->name_len);
 
-    /* check if the destination path already exists (not an error) */
-    struct stat dst_st;
-    if (lstat(in.nameto, &dst_st) == 0) {
-        fprintf(stderr, "\"%s\" Already exists!\n", in.nameto);
+    char expathin[MAXPATH];
+    char expathout[MAXPATH];
+    char expathtst[MAXPATH];
 
-        /* if the destination path is not a directory (error) */
-        if (!S_ISDIR(dst_st.st_mode)) {
-            fprintf(stderr, "Destination path is not a directory \"%s\"\n", in.nameto);
-            free(root);
-            return NULL;
-        }
-    }
+    SNPRINTF(expathtst, MAXPATH,"%s/%s", in.nameto, root->root + root->root_len);
+    realpath(expathtst, expathout);
+    realpath(root->root, expathin);
 
-    /* create the source root under the destination directory using */
-    /* the source directory's permissions and owners */
-    /* this allows for the threads to not have to recursively create directories */
-    char dst_path[MAXPATH];
-    SNPRINTF(dst_path, MAXPATH, "%s/%s", in.nameto, in.name + in.name_len);
-    if (dupdir(dst_path, &root->statuso)) {
-        fprintf(stderr, "Could not create %s under %s\n", in.name, in.nameto);
-        free(root);
-        return NULL;
+    if (!strcmp(expathin, expathout)) {
+        fprintf(stderr,"You are putting the index dbs in input directory\n");
     }
 
     return root;
 }
 
 void sub_help() {
-   printf("input_dir         walk this tree to produce GUFI index\n");
+   printf("input_dir...      walk one or more trees to produce GUFI index\n");
    printf("output_dir        build GUFI index here\n");
    printf("\n");
 }
 
 int main(int argc, char *argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:", 2, "input_dir output_dir", &in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:", 2, "input_dir... output_dir", &in);
     struct ThreadArgs args;
     if (in.helped)
         sub_help();
@@ -382,37 +387,29 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
-        INSTALL_STR(in.nameto, argv[idx++], MAXPATH, "output_dir");
+
+        /* does not have to be canonicalized */
+        INSTALL_STR(in.nameto, argv[argc - 1], MAXPATH, "output_dir");
 
         if (retval)
             return retval;
 
         if (setup_directory_skip(in.skip, &args.skip) != 0) {
+            free(in.nameto);
             return -1;
         }
 
-        in.name_len = strlen(in.name);
         in.nameto_len = strlen(in.nameto);
-
-        remove_trailing(in.name, &in.name_len, "/", 1);
-
-        /* root is special case */
-        if (in.name_len == 0) {
-            in.name[0] = '/';
-        }
-    }
-
-    /* get first work item by validating inputs */
-    struct work *root = validate_inputs();
-    if (!root) {
-        trie_free(args.skip);
-        return -1;
     }
 
     #if BENCHMARK
-    fprintf(stderr, "Creating GUFI Index %s in %s with %d threads\n", in.name, in.nameto, in.maxthreads);
+    fprintf(stderr, "Creating GUFI Index %s with %d threads\n", in.nameto, in.maxthreads);
     #endif
+
+    if (setup_dst(in.nameto) != 0) {
+        trie_free(args.skip);
+        return -1;
+    }
 
     init_template_db(&args.db);
     if (create_dbdb_template(&args.db) != 0) {
@@ -455,10 +452,39 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    QPTPool_enqueue(pool, 0, processdir, root);
+    const size_t root_count = argc - idx - 1;
+    char **roots = calloc(root_count, sizeof(char *));
+    for(size_t i = 0; i < root_count; i++) {
+        /* force all input paths to be canonical */
+        roots[i] = realpath(argv[idx], NULL);
+
+        /* get first work item by validating source path */
+        struct work *root = validate_source(roots[i]);
+        if (!root) {
+            continue;
+        }
+
+        /*
+         * manually get basename of provided path since
+         * there is no source for the basenames
+         */
+        root->basename_len = 0;
+        while ((root->basename_len < root->name_len) &&
+               (root->name[root->name_len - root->basename_len - 1] != '/')) {
+            root->basename_len++;
+        }
+
+        QPTPool_enqueue(pool, 0, processdir, root);
+        idx++;
+    }
+
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
+    for(size_t i = 0; i < root_count; i++) {
+        free(roots[i]);
+    }
+    free(roots);
     close_template_db(&args.xattr);
     close_template_db(&args.db);
     trie_free(args.skip);

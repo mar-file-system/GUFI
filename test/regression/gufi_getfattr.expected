@@ -203,9 +203,9 @@ $ gufi_getfattr --only-values --dump --name user.name --match .*user.* 1MB
 $ gufi_getfattr --only-values --dump --name user.size --match .*name.* 1MB
 1MB
 
-$ rollup "prefix.gufi"
+$ rollup "prefix"
 Roots:
-    prefix.gufi
+    prefix
 
 Thread Pool Size:            1
 Files/Links Limit:          -1

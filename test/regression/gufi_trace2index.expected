@@ -2,7 +2,7 @@ $ generatetree prefix
 
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 
-$ gufi_trace2index -d "|" "trace.0" "trace.1" "prefix.gufi" | tail -n 4 | head -n 3
+$ gufi_trace2index -d "|" trace.0 trace.1 "prefix" | tail -n 4 | head -n 3
 Files: 15
 Dirs:  4 (0 empty)
 Total: 19

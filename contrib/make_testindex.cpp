@@ -588,7 +588,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
     work.ossint3 = rng(gen);
     work.ossint4 = rng(gen);
 
-    insertsumdb(on_disk, &work, &summary);
+    insertsumdb(on_disk, work.name, &work, &summary);
 
     sqlite3_close(on_disk);
 

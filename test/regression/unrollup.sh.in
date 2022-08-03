@@ -66,7 +66,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 TMP="tmp"
 
-function cleanup() {
+function cleanup {
     rm -rf "${TMP}"
 }
 
@@ -172,11 +172,11 @@ do
 done
 
 # generate the index
-run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""
 
 # roll up the index
 echo "$ ${ROLLUP} \"${INDEXROOT}\"" | replace
-${ROLLUP} "${INDEXROOT}" 2> /dev/null
+${ROLLUP} "${INDEXROOT}" | replace 2> /dev/null
 echo
 
 echo "# rolled up directories should have rows in pentries_rollup"
@@ -187,7 +187,7 @@ run_no_sort "${UNROLLUP} \"${INDEXROOT}\""
 
 echo "# level, COUNT(entries), COUNT(pentries_rollup), directory"
 run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\" | sort -k4"
-) | @TEE@ "${OUTPUT}"
+) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/unrollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -87,11 +86,11 @@ fixed_size=(
 
 for entry in "${fixed_size[@]}"
 do
-    ${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}" | replace | replace_output
+    ${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}" | replace | remove_root
 done
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file"
+${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file" | @SED@ "s/${INDEXTARGET//\//\\/}\\///g;"
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"

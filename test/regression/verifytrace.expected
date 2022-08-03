@@ -10,7 +10,7 @@ trace: Pass
 
 # wrong delimiter used
 $ verifytrace "?" trace
-trace: Error: Stanza missing first delimiter: |d|1|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+trace: Error: Stanza missing first delimiter: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
 # trace starts with a file
@@ -25,16 +25,16 @@ Fail
 
 # directory followed by file not in directory
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad child: /non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
+badtrace: Error: Bad child: prefix/non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
 # bad directory pinode
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad parent pinode: |d|1|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
+badtrace: Error: Bad parent pinode: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||bad_pinode|
 Fail
 
 # bad child pinode
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad child pinode: unusual, name?#|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
+badtrace: Error: Bad child pinode: prefix/unusual, name?#|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
 Fail
 
