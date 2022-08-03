@@ -62,12 +62,10 @@
 
 \section{Rollup}
 \label{sec:rollup}
-One major optimization implemented in GUFI is rollups. Rolling up can
-be viewed as flattening the contents of the index while taking into
-consideration the permissions of each directory. Rolling up results in
-the overall number of directories that need to be processed being
-reduced (usually) significantly while still obtaining the same results
-as an unmodifed index.
+After an index is created, the index may be rolled up. Rolling up is a
+major optimization that can reduce the number of directories that need
+to be opened when querying by significant amounts while still
+obtaining the same results as an unmodified index.
 
 \subsection{Bottlenecks}
 During querying, every single directory runs a fixed set of
@@ -143,6 +141,9 @@ Then, the contents each child is copied into the parent:
   table with the names of each child directory prefixed with the parent's
   name.
 \end{enumerate}
+
+Rolling up can be viewed as flattening the contents of the index while
+taking into consideration the permissions of each directory.
 
 Rolling up will cause the size of the index to grow significantly due
 to the amount of data being replicated. One obvious optimization would
