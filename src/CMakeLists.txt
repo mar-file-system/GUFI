@@ -84,24 +84,24 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # ##########################################
 
   # Cumulative times shown at end of run
-  option(CUMULATIVE_TIMES "Sum the durations of events across all threads and print them at the end" Off)
-  if (CUMULATIVE_TIMES)
+  option(PRINT_CUMULATIVE_TIMES "Sum the durations of events across all threads and print them at the end" Off)
+  if (PRINT_CUMULATIVE_TIMES)
     add_definitions(-DCUMULATIVE_TIMES=1)
   endif()
 
-  option(PER_THREAD_STATS "Print individual events of each thread" Off)
-  if (PER_THREAD_STATS)
+  option(PRINT_PER_THREAD_STATS "Print individual events of each thread" Off)
+  if (PRINT_PER_THREAD_STATS)
     add_definitions(-DPER_THREAD_STATS=1)
   endif()
 
   # print subdirectory counts
-  option(SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
-  if (SUBDIRECTORY_COUNTS)
+  option(PRINT_SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
+  if (PRINT_SUBDIRECTORY_COUNTS)
     add_definitions(-DSUBDIRECTORY_COUNTS=1)
   endif()
 
-  option(QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
-  if (QPTPOOL_QUEUE_SIZE)
+  option(PRINT_QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
+  if (PRINT_QPTPOOL_QUEUE_SIZE)
     add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
   endif()
 endif()
@@ -109,20 +109,20 @@ endif()
 # opendb can be turned off
 # addqueryfuncs fails silently if not turned off
 # sqlite3_exec fails with error message if not turned off
-option(OPENDB "Whether or not to enable opening databases" ON)
-if (OPENDB)
+option(RUN_OPENDB "Whether or not to enable opening databases" ON)
+if (RUN_OPENDB)
   add_definitions(-DOPENDB=1)
 endif()
 
 # addqueryfuncs can be turned off
-option(ADDQUERYFUNCS "Add custom functions to opened databases" ON)
-if (ADDQUERYFUNCS)
+option(RUN_ADDQUERYFUNCS "Add custom functions to opened databases" ON)
+if (RUN_ADDQUERYFUNCS)
   add_definitions(-DADDQUERYFUNCS=1)
 endif()
 
 # sqlite3_exec can be turned off
-option(SQL_EXEC "Call sqlite3_exec" ON)
-if (SQL_EXEC)
+option(RUN_SQL_EXEC "Call sqlite3_exec" ON)
+if (RUN_SQL_EXEC)
   add_definitions(-DSQL_EXEC=1)
 endif()
 # ##########################################

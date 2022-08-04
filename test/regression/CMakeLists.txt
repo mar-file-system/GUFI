@@ -147,18 +147,21 @@ endforeach()
 
 find_program(SUDO sudo)
 if (SUDO)
-  # .sh and .expected
-  set(NEED_SUDO
-    rollup
-    unrollup
-    xattrs
-    )
+  set(ENABLE_SUDO_TESTS Off CACHE BOOL "Whether or not to enable tests that need sudo")
+  if (ENABLE_SUDO_TESTS)
+    # .sh and .expected
+    set(NEED_SUDO
+      rollup
+      unrollup
+      xattrs
+      )
 
-  foreach(NAME ${NEED_SUDO})
-    configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-    configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
+    foreach(NAME ${NEED_SUDO})
+      configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
+      configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
-    add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh")
-    set_tests_properties("${NAME}" PROPERTIES LABELS sudo)
-  endforeach()
+      add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh")
+      set_tests_properties("${NAME}" PROPERTIES LABELS sudo)
+    endforeach()
+  endif()
 endif()
