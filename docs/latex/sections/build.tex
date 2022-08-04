@@ -60,9 +60,8 @@
 
 
 
-\section{Build}
+\section{Building with CMake}
 
-\subsection{CMake}
 From the root directory of the GUFI source, run:
 \begin{verbatim}
 mkdir build
@@ -77,105 +76,157 @@ The recommended options for deployment are
 GUFI is known to build on Ubuntu Xenial, OpenSuse~12.3, CentOS~7,
 CentOS~8, and OSX~10.13.
 
-\subsection{Options}
-The build can be configured with many options:
+\subsection{Environment Variables}
+\begin{table}[h]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
+  \hline
+  Setting & Description \\
+  \hline
+  \texttt{CXX=false} & Disable building of C++ code \\
+  \hline
+\end{tabularx}
+\end{table}
 
-\subsubsection{Environment}
-\begin{tabular} {| l | l |}
-  \hline
-  Setting & Explanation \\
-  \hline
-  CXX=false & Disable building of C++ code \\
-  \hline
-\end{tabular}
+\subsection{Flags}
 
-\subsubsection{CMake}
-\begin{tabular} {| l | l |}
+\subsubsection{General}
+\begin{table}[h!]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
-  \texttt{-D<VAR>=<VALUE>} & Explanation \\
+  \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{CMAKE\_INSTALL\_PREFIX=<PATH>} & Install to a custom directory
-  when running `make install` \\
+  \texttt{CMAKE\_INSTALL\_PREFIX=<PATH>}
+  & Install to a custom directory when running \texttt{make install} \\
   \hline
-  \texttt{CMAKE\_BUILD\_TYPE=Debug} & Build with warnings and debugging
-  symbols turned on \\
+  \texttt{CMAKE\_BUILD\_TYPE=Debug}
+  & Build with warnings and debugging symbols turned on \\
   \hline
-  \texttt{CLIENT=<On|Off>} & Whether or not to install paramiko and
-  gufi\_client \\
-  & when make install is called \\
+\end{tabularx}
+\end{table}
+
+\subsubsection{Dependencies}
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
-  \texttt{DEP\_DOWNLOAD\_PREFIX=<PATH>} & Location of downloaded
-  dependencies \\
-  & - If the expected files are
-  found, they will not be downloaded. \\
-  & - The default path points to
-  the bundled dependencies. \\
+  \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{DEP\_BUILD\_DIR\_PREFIX=<PATH>} & Location to build
-  dependencies. \\
-  & - Defaults to
-  \$\{CMAKE\_BINARY\_DIR\}/builds \\
+  \texttt{DEP\_DOWNLOAD\_PREFIX=<PATH>}
+  & Location of downloaded dependencies. If the expected files are
+  found, they will not be downloaded. The default path points to the
+  bundled dependencies. \\
   \hline
-  \texttt{DEP\_INSTALL\_PREFIX=<PATH>} &  Location to install the
-  dependencies.  \\
-  & - Defaults to
-  \$\{CMAKE\_BINARY\_DIR\}/deps\\
-  & - If the dependencies are not
-  installed in \$\{CMAKE\_BINARY\_DIR\}, \\
-  & \ \ they will not need to be
-  redownloaded/rebuilt/reinstalled \\
-  & \ \ everytime
-  \$\{CMAKE\_BINARY\_DIR\} is deleted. \\
+  \texttt{DEP\_BUILD\_DIR\_PREFIX=<PATH>}
+  & Location to build dependencies. Defaults to \\
+  & \$\{CMAKE\_BINARY\_DIR\}/builds \\
   \hline
-  \texttt{CUMULATIVE\_TIMES=<On|Off>} & Print cumulative statistics at
-  the end of some executables. \\
-  & Requires
-  \texttt{CMAKE\_BUILD\_TYPE=Debug}. \\
+  \texttt{DEP\_INSTALL\_PREFIX=<PATH>}
+  & Location to install the dependencies. Defaults to
+  \$\{CMAKE\_BINARY\_DIR\}/deps. If the dependencies are not
+  installed in \$\{CMAKE\_BINARY\_DIR\}, they will not need to be
+  redownloaded, rebuilt, or reinstalled everytime \$\{CMAKE\_BINARY\_DIR\}
+  is deleted. \\
   \hline
-  \texttt{PER\_THREAD\_STATS=<On|Off>} & Print \texttt{gufi\_query}
-  event timestamps.\\
-  & Requires
-  \texttt{CMAKE\_BUILD\_TYPE=Debug}. \\
+  \texttt{DEP\_PATCH\_SQLITE3\_OPEN=<On|Off>}
+  & Whether or not to patch SQLite3 open \\
   \hline
-  \texttt{QPTPOOL\_QUEUE\_SIZE=<On|Off>} & Print size of work queues
-  every time a work \\
-  & queue receives a new item or
-  pops items off.\\
-  & Requires
-  \texttt{CMAKE\_BUILD\_TYPE=Debug}. \\
+\end{tabularx}
+\end{table}
+
+\subsubsection{Debug}
+\texttt{CMAKE\_BUILD\_TYPE} must be set to \texttt{Debug} for these to
+have effect.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
-  \texttt{GPROF=<On|Off>} & Compile with the \texttt{-pg} flag.\\
-  & Requires
-  \texttt{CMAKE\_BUILD\_TYPE=Debug}. \\
+  \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{OPENDB=<On|Off>} & Compile \texttt{gufi\_query} without
-  calls to \texttt{opendb}.\\
+  \texttt{PRINT\_CUMULATIVE\_TIMES=<On|Off>}
+  & Print cumulative statistics at the end of
+  some executables. \\
   \hline
-  \texttt{ADDQUERYFUNCS=<On|Off>} & Compile \texttt{gufi\_query}
-  without calls to \texttt{addqueryfuncs}.\\
+  \texttt{PRINT\_PER\_THREAD\_STATS=<On|Off>}
+  & Print \texttt{gufi\_query} event timestamps. \\
   \hline
-  \texttt{SQL\_EXEC=<On|Off>} & Compile \texttt{gufi\_query} without
-  calls to \texttt{sqlite3\_exec}. \\
+  \texttt{PRINT\_QPTPOOL\_QUEUE\_SIZE=<On|Off>}
+  & Print size of work queues every time a work queue receives a new
+  item or pops items off. \\
   \hline
-  \texttt{BENCHMARK=On} & Build so that \texttt{gufi\_query} prints out
-  some benchmarks at the \\
-  & end of a run. Make target 'benchmark' is
-  created. This target \\
-  & generates a source tree, indexes the tree, and
-  queries the tree. At \\
-  & each step, benchmark values will be
-  printed. The tree is deleted \\
-  & after the benchmarks complete.\\
+  \texttt{PRINT\_SUBDIRECTORY\_COUNTS=<On|Off>}
+  & Print the number of subdirectories under each directory. \\
   \hline
-  \texttt{BENCHMARK\_ROOT=<PATH>} & Directory to place benchmark tree
-  and index under\\
+  \texttt{GPROF=<On|Off>}
+  & Compile with the \texttt{-pg} flag. \\
   \hline
-  \texttt{BENCHMARK\_DIRS=<COUNT>} &  Default: 4\\
+\end{tabularx}
+\end{table}
+
+\subsubsection{Client}
+\begin{table}[h!]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
-  \texttt{BENCHMARK\_DEPTH=<COUNT>} & Default: 10\\
+  \texttt{-D<VAR>=<VALUE>} & Description \\
   \hline
-  \texttt{BENCHMARK\_FILES=<COUNT>} & Default: 42\\
+  \texttt{CLIENT=<On|Off>}
+  & Whether or not to install paramiko and gufi\_client when \texttt{make install} is called \\
   \hline
-  \texttt{BENCHMARK\_THREADS=<COUNT>} & Default: \# of processors on the machine\\
+\end{tabularx}
+\end{table}
+
+\subsubsection{Testing}
+Do not turn these off unless you know what you are doing.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
-\end{tabular}
+  \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{RUN\_ADDQUERYFUNCS=<On|Off>}
+  & Compile \gufiquery without calls to \texttt{addqueryfuncs}. \\
+  \hline
+  \texttt{RUN\_OPENDB=<On|Off>}
+  & Compile \gufiquery without calls to \texttt{opendb}. \\
+  \hline
+  \texttt{RUN\_SQL\_EXEC=<On|Off>}
+  & Compile \gufiquery without calls to \texttt{sqlite3\_exec}. \\
+  \hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Benchmarking}
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
+  \hline
+  \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{BENCHMARK=<On|Off>}
+  & Build so that \gufiquery prints out some benchmarks at the end of
+  a run. Make target 'benchmark' is created. This target generates a
+  source tree, indexes the tree, and queries the tree. At each step,
+  benchmark values will be printed. The tree is deleted after the
+  benchmarks complete. \\
+  \hline
+  \texttt{BENCHMARK\_ROOT=<PATH>}
+  & Directory to place benchmark tree and index under \\
+  \hline
+  \texttt{BENCHMARK\_DIRS=<COUNT>}
+  & Default: 4 \\
+  \hline
+  \texttt{BENCHMARK\_DEPTH=<COUNT>}
+  & Default: 10 \\
+  \hline
+  \texttt{BENCHMARK\_FILES=<COUNT>}
+  & Default: 42 \\
+  \hline
+  \texttt{BENCHMARK\_THREADS=<COUNT>}
+  & Default: \# of processors on the machine \\
+  \hline
+\end{tabularx}
+\end{table}
