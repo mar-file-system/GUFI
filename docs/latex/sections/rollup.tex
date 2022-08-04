@@ -159,11 +159,12 @@ The rollup operation can take some time, and so indicies are not
 rolled up automatically. The \rollup executable must be called
 manually.
 
-\begin{figure} [!htb]
-  \centering
-  \includegraphics[width=\textwidth]{images/rollup_function.png}
-  \caption{Rollup Function Diagram}
-\end{figure}
+\subsection{Querying}
+Prior to rolling up, the \pentries view can be treated as an optional
+improvement to the \entries table. After rolling up, the \pentries view
+will have been updated extensively and should always be used when
+querying rolled up indicies. Querying the \entries table will return
+only the entries found in the directories that were processed.
 
 \subsection{\rollup executable}
 In order to apply rollup to an index, run the \rollup executable:
@@ -173,13 +174,21 @@ In order to apply rollup to an index, run the \rollup executable:
 Figure~\ref{fig:rollupworkflow} shows the overall structure of the \rollup
 executable. The \rollup executable uses the BottomUp code (see
 Section~\ref{sec:bottomup}) to recursively descend the original index and only
-perform the rollup operation once all children have been processed.
+perform the rollup operation once all children have been processed as
+shown in Figure~\ref{fig:rollupfunction}.
 
 \begin{sidewaysfigure} [!htb]
   \centering \includegraphics[width=\textwidth]{images/rollup.png}
   \caption{\rollup Workflow}
   \label{fig:rollupworkflow}
 \end{sidewaysfigure}
+
+\begin{figure} [!htb]
+  \centering
+  \includegraphics[width=\textwidth]{images/rollup_function.png}
+  \caption{Rollup Function Diagram}
+  \label{fig:rollupfunction}
+\end{figure}
 
 \subsection{Undoing a rollup}
 To remove rollup data from an index, run the \unrollup executable:
