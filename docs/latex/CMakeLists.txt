@@ -67,9 +67,14 @@ INCLUDE(UseLATEX)
 
 set(image_path "images")
 
+file(RELATIVE_PATH license ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/LICENSE.txt)
+set(common_inputs
+  GUFIText.sty
+  ${license}
+  sections/license.tex
+  )
+
 set(gufi_developer_inputs
-    GUFIText.sty
-    sections/license.tex
     sections/introduction.tex
     sections/requirements.tex
     sections/design.tex
@@ -93,8 +98,6 @@ set(gufi_developer_inputs
     )
 
 set(gufi_administrator_inputs
-    GUFIText.sty
-    sections/license.tex
     sections/introduction.tex
     sections/dependencies.tex
     sections/download.tex
@@ -116,8 +119,6 @@ set(gufi_administrator_inputs
     )
 
 set(gufi_user_inputs
-    GUFIText.sty
-    sections/license.tex
     sections/introduction.tex
     sections/user_env.tex
     sections/gufi_find.tex
@@ -128,18 +129,18 @@ set(gufi_user_inputs
 
 ADD_LATEX_DOCUMENT(
     gufi_developer.tex
-    INPUTS ${gufi_developer_inputs}
+    INPUTS ${common_inputs} ${gufi_developer_inputs}
     IMAGE_DIRS ${image_path}
     )
 
 ADD_LATEX_DOCUMENT(
     gufi_administrator.tex
-    INPUTS ${gufi_administrator_inputs}
+    INPUTS ${common_inputs} ${gufi_administrator_inputs}
     IMAGE_DIRS ${image_path}
     )
 
 ADD_LATEX_DOCUMENT(
     gufi_user.tex
-    INPUTS ${gufi_user_inputs}
+    INPUTS ${common_inputs} ${gufi_user_inputs}
     IMAGE_DIRS ${image_path}
     )
