@@ -29,8 +29,7 @@ Please see [INSTALL](/INSTALL).
 - [gufi_query](gufi_query)
 - [gufi_trace2index](gufi_trace2index)
 - [make_testindex](make_testindex)
-- [querydb](querydb)
-- [querydbn](querydbn)
+- [querydbs](querydbs)
 - [tsmepoch2time](tsmepoch2time)
 - [tsmtime2epoch](tsmtime2epoch)
 

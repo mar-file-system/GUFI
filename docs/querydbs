@@ -60,15 +60,24 @@ OF SUCH DAMAGE.
 
 
 
-querydb - run an SQL query against a table in a GUFI db - just point it at
-    the directory containing the db
+querydbs - run an SQL query against output dbs from gufi_query. Each
+    output db should have the same table name and schema. The tables
+    will be unioned together into a view, adding a v to the beginning
+    of your table name
 
-# Usage: querydb [options] [-s] DB_path SQL
+# usage: querydbs [options] attach_name table_name SQL DB_name [DB_name ...]
 # options:
-#   -h              help
-#   -H              show assigned input values (debugging)
-#   -N              print column-names (header) for DB results
-#   -V              print column-values (rows) for DB results
+#   -h                     help
+#   -H                     show assigned input values (debugging)
+#   -N                     print column-names (header) for DB results
+#   -V                     print column-values (rows) for DB results
+#   -p                     print file-names
+#
+# attach_name              name to use when attaching database files
+# table_name               name of view table = 'v<table_name>'
+# SQL                      arbitrary SQL on each DB (unified into single view)
 #
 # DB_path           path to dir containinng db.db.*
-# SQL               arbitrary SQL on DB
+# DB_count          number of DBs (should match thread-count used in 'bfq')
+# SQL               arbitrary SQL on each DB (unified into single view)
+# table_name        name of view table = 'v<table_name>'
