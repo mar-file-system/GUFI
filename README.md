@@ -33,7 +33,7 @@ mkdir build
 cd build
 cmake ..
 make
-make install
+sudo make install
 
 # create a GUFI Index
 gufi_dir2index <src_dir> <index_dir>
@@ -42,10 +42,13 @@ gufi_dir2trace <src_dir> <trace_file_prefix>
 cat <trace_file_prefix>.* > <trace_file>
 gufi_trace2index <trace_file> <index_dir>
 
+# use the index
+gufi_query/gufi_stat/bfti/bffuse/bfresultfuse/querydbs
+
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
-# use the index
-gufi_query/gufi_find/gufi_ls/gufi_stats/gufi_stat/bfti/bffuse/bfresultfuse/querydbs
+# use gufi_query wrapper scripts
+gufi_find/gufi_ls/gufi_stats/gufi_getfattr
 ```
 
 For the dependency list, detailed build and install instructions, and common issues, please see [INSTALL](INSTALL).
