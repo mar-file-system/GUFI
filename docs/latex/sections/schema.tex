@@ -62,8 +62,9 @@
 \section{Database Schema}
 \label{sec:schema}
 GUFI stores extracted metadata in SQLite 3 database files. Each
-database file contains a fixed set of tables and views designed to
-facilitate efficient querying of metadata.
+directory contains a database file name db.db that contains a fixed
+set of tables and views designed to facilitate efficient querying of
+metadata.
 
 \subsection{\entries}
 The \entries table contains file and link metadata extracted from the
@@ -140,3 +141,9 @@ easily populatable via a query)).
 The \vtsummarygroup view provides access to the tree directory summary
 for each group (if this summary has been populated (not by default but
 easily populatable via a query)).
+
+\subsection{\xattrs}
+With the addition of extended attributes support, several more tables
+and views were added into db.db. Additional database files with
+different schemas were also added. See Section~\ref{sec:xattr_schema}
+for details.
