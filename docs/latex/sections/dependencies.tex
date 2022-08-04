@@ -66,13 +66,16 @@ build GUFI. There are also many optional dependencies that can enable
 optional features.
 
 \subsection{System Tools}
-\begin{tabular} {| l | c | l | }
+\begin{tabularx}{\textwidth}{| l | c | X | }
   \hline
-  Executable & Required? & Comments \\
+  Package/Executable & Required? & Comments \\
+  \hline
+  autotools & Yes & Some bundled packages use autotools \\
   \hline
   C Compiler & Yes & C99 support \\
   \hline
-  C++ Compiler & No & C++11 support - g++ 4.9.3, clang++-3.9, or newer \\
+  C++ Compiler & No & C++11 support - g++ 4.9.3, clang++-3.9, or newer
+  \hfill \\
   \hline
   CMake & Yes & Version 3.0 or better \\
   \hline
@@ -86,7 +89,8 @@ optional features.
   \hline
   git & Yes & \\
   \hline
-  \LaTeX & No & Only needed if building \LaTeX Documentation \\
+  \LaTeX & No & Only needed if building \LaTeX \hfill \\
+  & & Documentation \hfill \\
   \hline
   pkg-config & Yes & \\
   \hline
@@ -100,10 +104,10 @@ optional features.
   \hline
   uname & No & Only needed if building RPMs \\
   \hline
-\end{tabular}
+\end{tabularx}
 
 \subsection{Libraries}
-\begin{tabular} {| l | c | l |}
+\begin{tabularx}{\textwidth}{| l | c | X |}
   \hline
   Name & Required? & Comments \\
   \hline
@@ -119,12 +123,12 @@ optional features.
   \hline
   gpfs & No & \\
   \hline
-\end{tabular}
+\end{tabularx}
 
 \subsection{Packages provided by GUFI}
 Several packages are provided/downloaded, built, and installed
 automatically:
-\begin{tabular} {| l | l |}
+\begin{tabularx}{\textwidth}{| l | X |}
   \hline
   Name & Comments \\
   \hline
@@ -143,4 +147,4 @@ automatically:
   sqlite3-pcre & \url{https://github.com/mar-file-system/sqlite3-pcre}
   \\
   \hline
-\end{tabular}
+\end{tabularx}
