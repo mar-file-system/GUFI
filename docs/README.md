@@ -5,6 +5,10 @@ how to build GUFI, and how to run GUFI.
 ## Full Documentation
 The full documentation can be found at [GUFI.docx](GUFI.docx).
 
+[User, administrator, and developer guides](latex) will be placed into
+`docs/latex/pdfs` if building them was enabled with the CMake
+configuration `-DBUILD_LATEX_DOCS=On`.
+
 ## Directory Structure
 - [contrib](/contrib)   - Contains support files (cmake package finders, Travis CI scripts, etc.)
 - [docs](/docs)         - The documentation (you are here)
