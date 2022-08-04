@@ -65,12 +65,12 @@ cmake_minimum_required(VERSION 3.0.0)
 # build man pages
 add_subdirectory(man)
 
-# build pdfs from latex files (default off to not require LaTeX)
-option(BUILD_LATEX_DOCS "Enable building of LaTeX documentation" Off)
-if (BUILD_LATEX_DOCS)
-  add_subdirectory(latex)
-endif()
-
 # CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
 # in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
+
+# build pdfs from latex files (default off to not require LaTeX)
+option(LATEX_BUILD "Enable building of LaTeX documentation" Off)
+if (LATEX_BUILD)
+  add_subdirectory(latex)
+endif()
