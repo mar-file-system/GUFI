@@ -1,0 +1,137 @@
+% This file is part of GUFI, which is part of MarFS, which is released
+% under the BSD license.
+%
+%
+% Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification,
+% are permitted provided that the following conditions are met:
+%
+% 1. Redistributions of source code must retain the above copyright notice, this
+% list of conditions and the following disclaimer.
+%
+% 2. Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation and/or
+% other materials provided with the distribution.
+%
+% 3. Neither the name of the copyright holder nor the names of its contributors
+% may be used to endorse or promote products derived from this software without
+% specific prior written permission.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+% IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+% ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+%
+%
+% From Los Alamos National Security, LLC:
+% LA-CC-15-039
+%
+% Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+% Copyright 2017. Los Alamos National Security, LLC. This software was produced
+% under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+% Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+% the U.S. Department of Energy. The U.S. Government has rights to use,
+% reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+% ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+% ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+% modified to produce derivative works, such modified software should be
+% clearly marked, so as not to confuse it with the version available from
+% LANL.
+%
+% THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+% "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+% ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+% OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+% OF SUCH DAMAGE.
+
+
+
+\section{Design Considerations}
+
+The following considerations were made to produce a GUFI capability:
+
+\begin{itemize}
+\item Why not just flatten the entire metadata entry space and shard
+  it and index some fields which enables extremely simple scaling for
+  queries?
+  \begin{itemize}
+  \item Events like rename (mv /top/b2 /top/b1) high in the source
+    tree causes potentially billions of records to be
+    updated/replaced.
+  \item We desire a single parallel index capability used by users and
+    admins which requires POSIX sharing security to be enforced which
+    is complicated by the inheritance that directory read/execute has
+    on the tree below which is one of the powerful concepts of POSIX.
+    This security capability is hard to implement in a flat space due
+    to the tree inheritance feature.
+  \item A single user can see only very little of the overall metadata
+    space, simple flat sharding requires looking at a lot of records
+    that a \\ tree/graph based approach would eliminate.
+  \item Sharding is however important to enable parallelism, just
+    simple flat sharding appears to be problematic.
+  \end{itemize}
+\item Leverage things that work very well, ways to reduce the number
+  of records needed to be looked at/updated, etc.
+  \begin{itemize}
+  \item Just buy product if it exists and if possible without lock in
+    etc. that does much of what we want.  We were unsuccessful in
+    finding the product to buy.
+  \item The POSIX tree walk (directories only (readdir+)) mechanism -
+    optimized to the extreme, speed, enables breadth parallel fan out,
+    and enforces shared security, enables renames at very low cost
+  \item Breadth first search parallelizes extremely well especially
+    for threading mechanisms and especially wide namespaces enable
+    rapid parallelization which is common in supercomputing sites like
+    ours
+  \item SQL is extremely powerful and very stable but monolithic
+    commercial SQL database systems are often expensive and require
+    special knowledge to run. However, user space/embedded SQL
+    databases work very well as long as individual database files are
+    not enormous (\textless TB) and the application doesn't require a lot of
+    joins.  SQLite3 is used heavily in the smart phone business so it
+    is becoming quite ubiquitous.  Embedded databases work in POSIX
+    file systems appearing as just files so can obey POSIX
+    security/access control trivially.  SQL is an amazingly powerful
+    way to express queries, more powerful than actually needed for
+    this application.  SQLite3 is open source, has enormous support,
+    is very fast for this use case, is extensible and allows for
+    connecting to other data sources and outputting about any type of
+    output.
+  \item Flash devices can sustain extremely high IOPs where IOPs are
+    in small numbers of kilobytes or larger.
+  \item Trees are a natural structure for rolling up representative
+    data, so you get indexing function almost for free.
+  \item If you consider just the directories (which provide the shape
+    of the tree) in most large deployed file/storage systems, there is
+    a natural collection of metadata entries (in a single directory)
+    of 20-1000s of entries (files/links) giving a nice way to shard
+    (by directory) which enables parallelism while still honoring
+    POSIX security. In many POSIX file systems, the more files in a
+    single directory the worse the performance, but with an embedded
+    file system file with few-to-no joins, the more entries in that
+    flat file the better as that represents a serial read.
+  \item Embedding database files into a POSIX tree allowed for
+    replicating the source file/storage system metadata entirely to
+    enable an isolated performance domain or placing the index into
+    the source storage/file system itself.  This approach also enables
+    lots of choices for the underlying file system to store the index
+    in and provides trivial ways to backup/copy/replicate the index.
+    This approach is trivial to understand and is completely
+    transparent.  It also enables the ability for query output to
+    appear as a POSIX file system pretty trivially as well.
+  \end{itemize}
+\end{itemize}

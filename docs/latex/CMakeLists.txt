@@ -71,6 +71,8 @@ set(gufi_developer_inputs
     GUFIText.sty
     sections/license.tex
     sections/introduction.tex
+    sections/requirements.tex
+    sections/design.tex
     sections/schema.tex
     sections/indexing.tex
     sections/gufi_dir2index.tex
