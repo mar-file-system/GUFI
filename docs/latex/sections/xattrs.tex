@@ -93,9 +93,10 @@ as follows:
   usr and grp and parent has only UG+R with no other read
 \item File is U+R doesnt matter on grp and other, with file and parent
   same usr and parent dir has only U+R, no grp and other read
-\item Directory has write for every read: drw*rw*rw* or drw*rw*\_\_\_
-  or drw*\_\_\_\_\_\_ - if you can write the dir you can chmod the
-  files to see the xattrs
+\item Directory has write for every read:
+    \texttt{drw*rw*rw*} or \texttt{drw*rw*\_\_\_} or
+    \texttt{drw*\_\_\_\_\_\_} - if you can write the dir you can
+    chmod the files to see the xattrs
 \end{itemize}
 
 Xattrs that cannot be read by all who can read the directory are
