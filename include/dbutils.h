@@ -160,8 +160,6 @@ int addqueryfuncs_common(sqlite3 *db);
 int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work);
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
-size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim);
-
 /* xattr db list item */
 struct xattr_db {
     char filename[MAXPATH];

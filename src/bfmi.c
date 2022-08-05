@@ -63,18 +63,12 @@ OF SUCH DAMAGE.
 
 
 #include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
-#include <pthread.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/xattr.h>
 #include <unistd.h>
-#include <utime.h>
 
 #include <pwd.h>
 #include <grp.h>
@@ -82,11 +76,9 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "utils.h"
-
-#include <pwd.h>
-#include <grp.h>
 #include "mysql.h"
+#include "outfiles.h"
+#include "utils.h"
 
 extern int errno;
 
@@ -95,7 +87,7 @@ struct mysqlinput {
    char  dbpasswd[50];
    char  dbhost[50];
    char  dbdb[50];
-   char  robinin[MAXPATH];
+   char  *robinin;
    MYSQL mysql[MAXPTHREAD];
 } msn;
 
@@ -104,13 +96,16 @@ int mysql_execute_sql(MYSQL *mysql,const char *create_definition)
    return mysql_real_query(mysql, create_definition, strlen(create_definition));
 }
 
-static int create_tables(const char * name, sqlite3 *db, void * args) {
-    if ((create_table_wrapper(name, db, "esql",        esql,        NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "ssql",        ssql,        NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqldir",    vssqldir,    NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqluser",   vssqluser,   NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup,  NULL, NULL) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vesql",       vesql,       NULL, NULL) != SQLITE_OK)) {
+static int create_tables(const char * name, sqlite3 *db, void * args)
+{
+    (void) args;
+
+    if ((create_table_wrapper(name, db, ENTRIES,       ENTRIES_CREATE)  != SQLITE_OK) ||
+        (create_table_wrapper(name, db, SUMMARY,       SUMMARY_CREATE)  != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqldir",    vssqldir)        != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqluser",   vssqluser)       != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vssqlgroup",  vssqlgroup)      != SQLITE_OK) ||
+        (create_table_wrapper(name, db, PENTRIES,      PENTRIES_CREATE) != SQLITE_OK)) {
         return -1;
     }
 
@@ -121,6 +116,8 @@ static int create_tables(const char * name, sqlite3 *db, void * args) {
 // instead of void*.
 int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 {
+    (void) args;
+
     struct work *passmywork = data;
     struct work qwork;
     sqlite3 *db;
@@ -136,8 +133,6 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
     struct passwd *lmypasswd;
     struct group *lmygrp;
     char myinsql[MAXSQL];
-
-    FILE **outfile = (FILE **) args;
 
     // get thread id so we can get access to thread state we need to keep until the thread ends
     //printf("id is %zu\n",id);
@@ -168,7 +163,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
                    , NULL, NULL
                    #endif
                    );
-       res=insertdbprep(db);
+       res = insertdbprep(db, ENTRIES_INSERT);
        //printf("inbfilistdir res %d\n",res);
        startdb(db);
     }
@@ -204,9 +199,8 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
         SNPRINTF(ltchar,128,"%s",lrow[12]); qwork.statuso.st_nlink = atol(ltchar);
         SNPRINTF(ltchar,128,"%s",lrow[13]); qwork.statuso.st_ino = atoll(ltchar);
         memset(qwork.linkname, 0, sizeof(qwork.linkname)); /* dont have linkname yet */
-        memset(qwork.xattrs, 0, sizeof(qwork.xattrs));
-        /* need to get xattre right here */
-        qwork.xattrs_len=0;
+        memset(&qwork.xattrs, 0, sizeof(qwork.xattrs));
+        /* need to get xattrs right here */
         qwork.pinode=passmywork->statuso.st_ino;
         if (!strncmp(qwork.type,"d",1)) {
             if (strcmp(qwork.name, ".") == 0 || strcmp(qwork.name, "..") == 0)
@@ -302,7 +296,7 @@ int processinit(struct QPTPool * ctx) {
      mywork->statuso.st_blksize= 4096;
      mywork->statuso.st_blocks= 1;
      mywork->pinode = 0;
-     memset(mywork->xattrs, 0, sizeof(mywork->xattrs));
+     memset(&mywork->xattrs, 0, sizeof(mywork->xattrs));
      memset(mywork->linkname, 0, sizeof(mywork->linkname));
      //printf("name %s pinodec %s\n",mywork->name,mywork->pinodec);
 
@@ -327,14 +321,9 @@ int processinit(struct QPTPool * ctx) {
      return 0;
 }
 
-int processfin(FILE **outfiles) {
-     // close output files
-     if (in.outfile > 0) {
-       outfiles_fin(outfiles, in.maxthreads);
-     }
-
+int processfin() {
      // close mysql connections
-     for(size_t i = 0; i < in.maxthreads; i++) {
+     for(int i = 0; i < in.maxthreads; i++) {
        mysql_close(&msn.mysql[i]);
      }
 
@@ -393,11 +382,6 @@ int main(int argc, char *argv[])
     if (validate_inputs())
         return -1;
 
-    FILE **outfiles = outfiles_init(!!in.outname.len, in.outname, in.maxthreads);
-    if (!outfiles) {
-        return -1;
-    }
-
     struct QPTPool * pool = QPTPool_init(in.maxthreads
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , NULL
@@ -405,13 +389,13 @@ int main(int argc, char *argv[])
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        processfin(outfiles);
+        processfin();
         return -1;
     }
 
-    if (QPTPool_start(pool, outfiles) != (size_t) in.maxthreads) {
+    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
         fprintf(stderr, "Failed to start threads\n");
-        processfin(outfiles);
+        processfin();
         return -1;
     }
 
@@ -421,7 +405,7 @@ int main(int argc, char *argv[])
 
     QPTPool_destroy(pool);
 
-    processfin(outfiles);
+    processfin();
 
     return 0;
 }

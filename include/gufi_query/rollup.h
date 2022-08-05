@@ -67,6 +67,6 @@ OF SUCH DAMAGE.
 
 #include <sqlite3.h>
 
-int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore);
+int get_rollupscore(sqlite3 *db, int *rollupscore);
 
 #endif

@@ -894,6 +894,8 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc; (void) argv;
+
     const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context);
     sqlite3_result_text(context, gps[id].gfpath, -1, SQLITE_TRANSIENT);
     return;
@@ -901,6 +903,8 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc; (void) argv;
+
     const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context);
     sqlite3_result_text(context, gps[id].gepath, -1, SQLITE_TRANSIENT);
     return;
@@ -908,6 +912,8 @@ static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc;
+
     const char *text = (char *) sqlite3_value_text(argv[0]);
     const size_t width = sqlite3_value_int64(argv[1]);
 
@@ -928,6 +934,8 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc;
+
     const char *text = (char *) sqlite3_value_text(argv[0]);
     const size_t width = sqlite3_value_int64(argv[1]);
 
@@ -959,7 +967,10 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     sqlite3_result_null(context);
 }
 
-static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    (void) argc;
+
     const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
     const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
 
@@ -975,6 +986,8 @@ static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
 /* Returns the number of blocks required to store a given size */
 /* Unfilled blocks count as one full block (round up)          */
 static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
     const size_t size  = sqlite3_value_int64(argv[0]);
     const char *unit  = (char *) sqlite3_value_text(argv[1]);
     const int    align = sqlite3_value_int(argv[2]);
@@ -1021,6 +1034,8 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
 /* Returns a string containg the size with as large of a unit as reasonable */
 static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
     const int align = sqlite3_value_int(argv[1]);
     char format[MAXPATH];
     char buf[MAXPATH];
@@ -1053,17 +1068,23 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
 }
 
 static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc; (void) argv;
+
     size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
     sqlite3_result_int64(context, level);
     return;
 }
 
 static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc; (void) argv;
+
     sqlite3_result_text(context, sqlite3_user_data(context), -1, SQLITE_TRANSIENT);
     return;
 }
 
 static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+
     char *path = (char *) sqlite3_value_text(argv[0]);
 
     if (!path) {
@@ -1140,72 +1161,6 @@ int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work) {
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
     return !((addqueryfuncs_common(db) == 0) &&
              (addqueryfuncs_with_context(db, id, work) == 0));
-}
-
-size_t print_results(sqlite3_stmt *res, FILE *out, const int printpath, const int printheader, const int printrows, const char *delim) {
-    size_t rec_count = 0;
-
-    // NOTE: if <sqlstmt> actually contained multiple statments, then this
-    //       loop only runs with the final statement.
-    int onetime=0;
-    while (sqlite3_step(res) == SQLITE_ROW) {
-        //printf("looping through rec_count %ds\n",rec_count);
-
-        // find the column whose name is "name"
-        int name_col = -1; // default to -1 if not found
-        int ncols=sqlite3_column_count(res);
-        for(int cnt = 0; cnt < ncols; cnt++) {
-            const char *col_name = sqlite3_column_name(res, cnt);
-            if ((strlen(col_name) == 4) &&
-                (strncmp(col_name, "name", 4) == 0)) {
-                name_col = cnt;
-                break;
-            }
-        }
-
-        // maybe print column-names as a header (once)
-        if (printheader) {
-            if (onetime == 0) {
-                int cnt=0;
-                while (ncols > 0) {
-                    if (cnt==0) {
-                        //if (printpath) fprintf(out,"path/%s",delim);
-                    }
-                    fprintf(out,"%s%s", sqlite3_column_name(res,cnt),delim);
-                    //fprintf(out,"%s%s", sqlite3_column_decltype(res,cnt),delim);
-                    ncols--;
-                    cnt++;
-                }
-                fprintf(out,"\n");
-                onetime++;
-            }
-        }
-
-        // maybe print result-row values
-        if (printrows) {
-            //if (printpath) printf("%s/", name);
-            int cnt=0;
-            while (ncols > 0) {
-                if (cnt==0) {
-                    //if (printpath) fprintf(out,"%s/%s",shortname,delim);
-                }
-                if (cnt == name_col) {
-                    fprintf(out,"%s%s", sqlite3_column_text(res,cnt),delim);
-                }
-                else {
-                    fprintf(out,"%s%s", sqlite3_column_text(res,cnt),delim);
-                }
-                ncols--;
-                cnt++;
-            }
-            fprintf(out,"\n");
-        }
-
-        // count of rows in query-result
-        rec_count++;
-    }
-
-    return rec_count;
 }
 
 struct xattr_db *create_xattr_db(struct template_db *tdb,
@@ -1437,6 +1392,8 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
 }
 
 static int detach_xattr_db(void *args, int count, char **data, char **columns) {
+    (void) count; (void) (columns);
+
     detachdb(NULL, (sqlite3 *) args, data[1], 0); /* don't check for errors */
     return 0;
 }

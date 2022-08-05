@@ -340,6 +340,8 @@ struct Permissions {
 };
 
 int get_permissions(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
     struct Permissions *perms = (struct Permissions *) args;
     perms->mode = atoi(data[0]);
     perms->uid  = atoi(data[1]);
@@ -360,6 +362,8 @@ int get_permissions_and_count(void *args, int count, char **data, char **columns
 }
 
 int add_entries_count(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
     size_t *total = (size_t *) args;
     size_t rows = 0;
     if (sscanf(data[0], "%zu", &rows) != 1) {
@@ -605,6 +609,8 @@ struct CallbackArgs {
 /* use this callback to create xattr db files and insert filenames */
 /* db.db doesn't need to be modified since the SQL statement already did it */
 static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
     struct CallbackArgs *ca     = (struct CallbackArgs *) args;
     const char  *uid_str        = data[0];
     const char  *gid_str        = data[1];

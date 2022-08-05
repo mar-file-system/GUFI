@@ -83,6 +83,8 @@ struct Unrollup {
 };
 
 int get_rolled_up(void *args, int count, char **data, char **columns) {
+    (void) columns;
+
     if ((count == 1) && (data[0][1] == '\0')) {
         int *rolledup = (int *) args;
         *rolledup = (data[0][0] == '1');
@@ -92,6 +94,8 @@ int get_rolled_up(void *args, int count, char **data, char **columns) {
 }
 
 int count_pwd(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
     size_t *xattr_count = (size_t *) args;
     sscanf(data[0], "%zu", xattr_count); /* skip check */
     return 0;
@@ -99,6 +103,8 @@ int count_pwd(void *args, int count, char **data, char **columns) {
 
 /* Delete all entries in each file found in the XATTR_FILES_ROLLUP table */
 int process_xattrs(void *args, int count, char **data, char **columns) {
+    (void) columns;
+
     char *dir = (char *) args;
     char *relpath = data[0];
     char fullpath[MAXPATH];
@@ -145,6 +151,8 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
 }
 
 int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+    (void) args;
+
     struct Unrollup *work = (struct Unrollup *) data;
     char *err = NULL;
     int rc = 0;

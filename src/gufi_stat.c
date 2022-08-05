@@ -107,6 +107,8 @@ struct callback_args {
 };
 
 int print_callback(void * args, int count, char **data, char **columns) {
+    (void) columns;
+
     if (count != 14) {
         fprintf(stderr, "Returned wrong number of columns: %d\n", count);
         return 1;

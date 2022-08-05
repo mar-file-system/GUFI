@@ -491,7 +491,7 @@ int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
         timestamp_set_start(get_rollupscore_call);
         int rollupscore = 0;
         if (db) {
-            get_rollupscore(work->name, db, &rollupscore);
+            get_rollupscore(db, &rollupscore);
             increment_query_count(ta);
         }
         timestamp_set_end(get_rollupscore_call);
@@ -974,7 +974,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* clear out buffered data */
-    for(size_t i = 0; i < in.maxthreads; i++) {
+    for(int i = 0; i < in.maxthreads; i++) {
         ThreadArgs_t *ta = &(pa.ta[i]);
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);
 

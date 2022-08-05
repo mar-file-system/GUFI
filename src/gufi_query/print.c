@@ -68,6 +68,8 @@ OF SUCH DAMAGE.
 #include "gufi_query/print.h"
 
 int print_parallel(void *args, int count, char **data, char **columns) {
+    (void) columns;
+
     /* if (!stmt || !ca) { */
     /*     return 1; */
     /* } */

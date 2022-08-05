@@ -171,7 +171,7 @@ static int check_prefix(const char *nameto, const size_t nameto_len, const size_
     }
 
     /* check if the destination path already exists (not an error) */
-    for(int i = 0; i < thread_count; i++) {
+    for(size_t i = 0; i < thread_count; i++) {
         char outname[MAXPATH];
         SNPRINTF(outname, MAXPATH, "%s.%d", nameto, i);
 

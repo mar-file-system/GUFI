@@ -131,6 +131,8 @@ int searchmyll(long long int lull, int lutype) {
 }
 
 static int create_tables(const char * name, sqlite3 * db, void * args) {
+    (void) args;
+
     if ((create_table_wrapper(name, db, ENTRIES,         ENTRIES_CREATE)         != SQLITE_OK) ||
         (create_table_wrapper(name, db, SUMMARY,         SUMMARY_CREATE)         != SQLITE_OK) ||
         (create_table_wrapper(name, db, PENTRIES_ROLLUP, PENTRIES_ROLLUP_CREATE) != SQLITE_OK) ||
@@ -145,7 +147,9 @@ static int create_tables(const char * name, sqlite3 * db, void * args) {
 }
 
 static int create_readdirplus_tables(const char * name, sqlite3 * db, void * args) {
-    if (create_table_wrapper(name, db, READDIRPLUS,    READDIRPLUS_CREATE)  != SQLITE_OK) {
+    (void) args;
+
+    if (create_table_wrapper(name,  db, READDIRPLUS,     READDIRPLUS_CREATE)     != SQLITE_OK) {
         return -1;
     }
 

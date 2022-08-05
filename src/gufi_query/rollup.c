@@ -67,12 +67,14 @@ OF SUCH DAMAGE.
 #include "gufi_query/rollup.h"
 
 static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
     int *rollupscore = (int *) args;
     *rollupscore = atoi(data[0]);
     return 0;
 }
 
-int get_rollupscore(const char *name, sqlite3 *db, int *rollupscore) {
+int get_rollupscore(sqlite3 *db, int *rollupscore) {
     char *err = NULL;
     if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
                      get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {

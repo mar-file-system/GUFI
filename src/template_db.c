@@ -108,6 +108,8 @@ int init_template_db(struct template_db *tdb) {
 
 /* each db.db, per-user db, and per-group db will have these tables */
 static int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
+    (void) args;
+
     if ((create_table_wrapper(name, db, XATTRS_PWD,         XATTRS_PWD_CREATE)         != SQLITE_OK) ||
         (create_table_wrapper(name, db, XATTRS_ROLLUP,      XATTRS_ROLLUP_CREATE)      != SQLITE_OK) ||
         (create_table_wrapper(name, db, XATTRS_AVAIL,       XATTRS_AVAIL_CREATE)       != SQLITE_OK)) {

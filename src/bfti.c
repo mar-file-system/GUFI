@@ -89,6 +89,8 @@ OF SUCH DAMAGE.
 extern int errno;
 
 static int create_tables(const char *name, sqlite3 *db, void * args) {
+    (void) args;
+
      printf("writetsum %d\n", in.writetsum);
     if ((create_table_wrapper(name, db, "tsql",        tsql)        != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)   != SQLITE_OK) ||
