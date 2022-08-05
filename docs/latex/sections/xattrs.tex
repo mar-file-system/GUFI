@@ -60,7 +60,7 @@
 
 
 
-\section{Extended Attributes}
+\subsection{Extended Attributes}
 \label{sec:xattrs}
 GUFI supports the indexing and querying of user data through extended
 attributes (xattrs).
@@ -72,17 +72,16 @@ their permissions are checked at the file level, requiring changes to
 how GUFI stores data. For more information on xattrs, see
 \texttt{xattr(7)}, \listxattr, and \getxattr.
 
-\subsection{Indexing}
 Directories containing files from multiple users might have xattrs
 that are not readable by all who can view the \lstat data of the
 directory. As GUFI was originally designed to only use directory-level
 permission checks, a number of modifications were made to process
 xattrs without violating their permissions.
 
-\subsubsection{Roll In Rules}
-Xattrs that are readable by all who have access to the directory are
-stored in the \xattrspwd table in the main database. These xattrs are
-referred to as ``rolled in''.
+\subsubsection{Roll In}
+Extended attributes that are readable by all who have access to the
+directory are stored in the \xattrspwd table in the main
+database. These xattrs are referred to as ``rolled in''.
 
 The rules that determine whether or not an xattr pair can roll in are
 as follows:
@@ -99,11 +98,12 @@ as follows:
     chmod the files to see the xattrs
 \end{itemize}
 
-Xattrs that cannot be read by all who can read the directory are
-stored in external per-uid and per-gid databases set with
-\texttt{uid:nobody} and \texttt{nobody:gid} owners respectively. This
-makes it so that non-admin users cannot access the xattrs stored in
-external databases that they do not have permissions to access.
+Extended attributes that cannot be read by all who can read the
+directory are stored in external per-uid and per-gid databases set
+with \texttt{uid:nobody} and \texttt{nobody:gid} owners
+respectively. This makes it so that non-admin users cannot access the
+xattrs stored in external databases that they do not have permissions
+to access.
 
 \subsubsection{Schema}
 \label{sec:xattr_schema}
@@ -143,35 +143,3 @@ order to pull them, pass \texttt{-x} to \gufidirindex or
 
 Note that only xattr pairs in the user namespace (\texttt{user.*}) are
 extracted.
-
-\subsubsection{Rollup}
-Additional steps were added to rollups in order to copy rolled up
-xattrs upwards properly:
-
-\begin{itemize}
-\item The child's \xattrsavail view (without external database data)
-  is copied into the parent's \xattrsrollup table.
-\item The child's \xattrfiles view (without external databases data)
-  is copied into the parent's \xattrfilesrollup table.
-\item The child's external database files are copied into the
-  parent. If the parent already has an external database file with the
-  same uid or gid, the contents of the external database are copied
-  into the parent's external database's \xattrsrollup table instead.
-\end{itemize}
-
-\subsection{Querying}
-When querying for xattrs, pass \texttt{-x} to \gufiquery to build the
-\xattrs view for querying. This view is a SQL union of rolled in
-xattrs and any external databases that successfully
-attaches. Attaching the database files checks the permissions of the
-xattrs. \texttt{UNION} removes duplicate entries that showed up in
-multiple external databases, leaving a unique set of xattrs accessible
-by the caller.
-
-The \xentries, \xpentries, \xsummary views are convenience views
-generated so that users do not have to perform joins themselves. Like
-the \xattrs view, these views are also dropped at the end of directory
-processing.
-
-Note that entries with multiple extended attributes will return
-multiple times in this view.

@@ -60,43 +60,19 @@
 
 
 
-\documentclass{article}
+\subsection{Generate \treesummary Tables}
+As mentioned in Section~\ref{sec:schema_treesummary}, the \treesummary
+table is an optional table in db.db. Generating \treesummary tables
+can take a long time, so they are not created or filled in
+automatically. Querying first checks for the existence of the
+\treesummary table in the directory being processed before performing
+the query.
 
-% Useful packages
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{verbatim}
-\usepackage{GUFIText}
+\treesummary tables should be manually generated at optimal
+points within the index. For example, if the index is on a home
+directory, it may be useful to generate \treesummary tables at each
+user's home directory.
 
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
-
-\title{GUFI Administrator's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/dependencies}
-\include{sections/download}
-\include{sections/build}
-\include{sections/install}
-\include{sections/schema}
-\include{sections/indexing}
-\include{sections/postindexing}
-\include{sections/querying}
-\include{sections/deploy}
-
-\end{document}
+The \bfti executable is used to generate \treesummary tables:
+\\\\
+\indent \bfti \texttt{index\_root}

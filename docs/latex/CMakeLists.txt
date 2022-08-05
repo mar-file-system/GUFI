@@ -84,7 +84,9 @@ set(gufi_developer_inputs
     sections/tracefile.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
+    sections/postindexing.tex
     sections/rollup.tex
+    sections/bfti.tex
     sections/xattrs.tex
     sections/querying.tex
     sections/gufi_query.tex
@@ -109,7 +111,9 @@ set(gufi_administrator_inputs
     sections/tracefile.tex
     sections/gufi_dir2trace.tex
     sections/gufi_trace2index.tex
+    sections/postindexing.tex
     sections/rollup.tex
+    sections/bfti.tex
     sections/xattrs.tex
     sections/querying.tex
     sections/gufi_query.tex

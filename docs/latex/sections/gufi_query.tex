@@ -151,6 +151,23 @@ case.
 To turn off short circuiting and always run all queries for each
 directory, pass the \texttt{-a} flag to \gufiquery.
 
+\subsubsection{Extended Attributes}
+When querying for xattrs, pass \texttt{-x} to \gufiquery to build the
+\xattrs view for querying. This view is a SQL union of rolled in
+xattrs and any external databases that successfully
+attaches. Attaching the database files checks the permissions of the
+xattrs. \texttt{UNION} removes duplicate entries that showed up in
+multiple external databases, leaving a unique set of xattrs accessible
+by the caller.
+
+The \xentries, \xpentries, \xsummary views are convenience views
+generated so that users do not have to perform joins themselves. Like
+the \xattrs view, these views are also dropped at the end of directory
+processing.
+
+Note that entries with multiple extended attributes will return
+multiple times in this view.
+
 \subsubsection{Aggregation}
 By default, \gufiquery runs in a simple parallel mode: each worker
 thread processes a single directory, outputting results in
@@ -195,20 +212,20 @@ further processing.
 
 \noindent Parallel Results:
 \\\\
-\noindent \gufiquery \texttt{-S "SELECT * FROM summary"
+\indent \gufiquery \texttt{-S "SELECT * FROM summary"
   ~/directory\_of\_root\_index}
 \\\\
-\noindent \gufiquery \texttt{-E "SELECT * FROM pentries"
+\indent \gufiquery \texttt{-E "SELECT * FROM pentries"
   ~/directory\_of\_root\_index}
 \\\\
 \noindent Aggregate Results:
 \\\\
-\noindent \gufiquery \texttt{\textbackslash} \\
-\texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);" \textbackslash} \\
-\texttt{-E "INSERT INTO intermediate SELECT name, size FROM pentries;" \textbackslash} \\
-\texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);" \textbackslash} \\
-\texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;" \textbackslash} \\
-\texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
+\indent \gufiquery \texttt{\textbackslash} \\
+\indent \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);" \textbackslash} \\
+\indent \texttt{-E "INSERT INTO intermediate SELECT name, size FROM pentries;" \textbackslash} \\
+\indent \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);" \textbackslash} \\
+\indent \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;" \textbackslash} \\
+\indent \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
 
 \subsubsection{Visualizing the Workflow}
 \begin{figure} [H]

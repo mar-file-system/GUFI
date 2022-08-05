@@ -60,43 +60,9 @@
 
 
 
-\documentclass{article}
+\section{Post-Indexing}
+After indexing, additional operations can be performed on the index in
+order to increase query performance.
 
-% Useful packages
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{rotating}
-\usepackage{tabularx}
-\usepackage{verbatim}
-\usepackage{GUFIText}
-
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=blue
-}
-
-\title{GUFI Administrator's Guide}
-\author{GUFI Developers}
-
-\begin{document}
-
-\maketitle
-
-\tableofcontents
-\include{sections/license}
-\include{sections/introduction}
-\include{sections/dependencies}
-\include{sections/download}
-\include{sections/build}
-\include{sections/install}
-\include{sections/schema}
-\include{sections/indexing}
-\include{sections/postindexing}
-\include{sections/querying}
-\include{sections/deploy}
-
-\end{document}
+\input{sections/rollup.tex}
+\input{sections/bfti.tex}

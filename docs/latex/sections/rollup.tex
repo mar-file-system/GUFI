@@ -60,14 +60,13 @@
 
 
 
-\section{Rollup}
+\subsection{Rollup}
 \label{sec:rollup}
-After an index is created, the index may be rolled up. Rolling up is a
-major optimization that can reduce the number of directories that need
-to be opened when querying by significant amounts while still
-obtaining the same results as an unmodified index.
+Rolling up is a major optimization that can reduce the number of
+directories that need to be opened when querying by significant
+amounts while still obtaining the same results as an unmodified index.
 
-\subsection{Bottlenecks}
+\subsubsection{Bottlenecks}
 During querying, every single directory runs a fixed set of
 operations:
 
@@ -85,9 +84,9 @@ fixed and some depend on the shape and contents of the index. Reducing
 the number of directories processed allows for fixed costs to be
 amortized.
 
-\subsection{Rules}
-\label{rolluprules}
-\subsubsection{Whether or not a directory {\it CAN} roll up}
+\subsubsection{Rules}
+\label{sec:rolluprules}
+\paragraph{Whether or not a directory {\it CAN} roll up} ~\\
 In order for a child directory to be allowed to roll up into its
 parent directory, it must follow two rules. First, all of its children
 must be rolled up. Second, all of its children must have permissions
@@ -108,7 +107,7 @@ that satisfy any one of the following conditions with the parent.
 Note that because leaf directories have no children with which to have
 conflicting permission with, they are considered rolled up.
 
-\subsubsection{Whether or not a directory {\it SHOULD} roll up}
+\paragraph{Whether or not a directory {\it SHOULD} roll up} ~\\
 In addition to the permission-based rules that determine whether or
 not a directory can roll up, we also have a small check to say whether
 or not a directory should roll up.
@@ -122,13 +121,13 @@ latency.
 The \rollup executable has the \texttt{-L} flag that limits the number
 of entries that may be found within a single directory.
 
-\subsection{Steps}
+\subsubsection{Steps}
 The processing of rolling up involves a number of steps that update
 the tables of the parent directory.
 
 First, the target directory is checked to ensure it can and should
 roll up its children into itself using the rules listed in
-\ref{rolluprules}. If rollup will proceed, the parent's \summary table
+\ref{sec:rolluprules}. If rollup will proceed, the parent's \summary table
 is updated with a rollup score of 1.
 
 Then, the contents each child is copied into the parent:
@@ -159,21 +158,35 @@ The rollup operation can take some time, and so indicies are not
 rolled up automatically. The \rollup executable must be called
 manually.
 
-\subsection{Querying}
+\subsubsection{Extended Attributes}
+Additional steps are needed to rollup xattrs:
+
+\begin{itemize}
+\item The child's \xattrsavail view (without external database data)
+  is copied into the parent's \xattrsrollup table.
+\item The child's \xattrfiles view (without external databases data)
+  is copied into the parent's \xattrfilesrollup table.
+\item The child's external database files are copied into the
+  parent. If the parent already has an external database file with the
+  same uid or gid, the contents of the external database are copied
+  into the parent's external database's \xattrsrollup table instead.
+\end{itemize}
+
+\subsubsection{Schema Usage}
 Prior to rolling up, the \pentries view can be treated as an optional
 improvement to the \entries table. After rolling up, the \pentries view
 will have been updated extensively and should always be used when
 querying rolled up indicies. Querying the \entries table will return
 only the entries found in the directories that were processed.
 
-\subsection{\rollup executable}
+\subsubsection{\rollup executable}
 In order to apply rollup to an index, run the \rollup executable:
 \\\\
-\indent \rollup \texttt{[index root]}
+\indent \rollup \texttt{[index\_root]}
 \\\\
 Figure~\ref{fig:rollupworkflow} shows the overall structure of the \rollup
 executable. The \rollup executable uses the BottomUp code (see
-Section~\ref{sec:bottomup}) to recursively descend the original index and only
+Subsection~\ref{sec:bottomup}) to recursively descend the original index and only
 perform the rollup operation once all children have been processed as
 shown in Figure~\ref{fig:rollupfunction}.
 
@@ -190,7 +203,7 @@ shown in Figure~\ref{fig:rollupfunction}.
   \label{fig:rollupfunction}
 \end{figure}
 
-\subsection{Undoing a rollup}
+\subsubsection{Undoing a rollup}
 To remove rollup data from an index, run the \unrollup executable:
 \\\\
-\indent \unrollup \texttt{[index root]}
+\indent \unrollup \texttt{[index\_root]}
