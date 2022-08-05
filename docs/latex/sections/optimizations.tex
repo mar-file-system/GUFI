@@ -80,6 +80,35 @@ malloc. Instead, \texttt{jemalloc(3)} is used to override
 \texttt{malloc(3)}. See \href{https://jemalloc.net/}{jemalloc's
   website} for details.
 
+\subsubsection{Not Calling \lstat During Tree Walk}
+\texttt{struct dirent}s are returned when reading a directory with
+\readdir. glibc's implementation of \texttt{struct dirent}
+provides extra fields not required by POSIX.1. GUFI takes advantage of
+the nonstandard \texttt{d\_type} field to not call \lstat when
+determining whether or not the entry is a directory. This also
+prevents memory allocations of work items that end up not being
+enqueued for processing.
+
+\subsubsection{Enqueuing Work Before Processing}
+In order to reduce the amount of time the thread pool spends waiting
+for work, work is enqueued before doing the main processing for a
+directory. When walking a tree, such as with \gufidirindex,
+\gufidirtrace, and \gufiquery, subdirectories are enqueued before
+processing source filesystem information and running
+queries. \gufitraceindex reads each trace file using a single
+thread. However, each stanza is not processed as it is
+encountered. Instead, each stanza's file offset is enqueued in the
+thread pool, allowing for the directories of the index to be generated
+in parallel.
+
+\subsubsection{String Manipulations}
+Where possible, strings are not copied, and are instead referenced.
+Additionally, calls to \texttt{strlen(3)} are avoided in order to not
+walk memory one byte at a time. Some string lengths, such as those for
+input arguments are obtained with \texttt{strlen(3)}. Afterwards,
+string manipulations are done by using or modifying lengths to offset
+into or cut short strings.
+
 \subsubsection{Combining Strings with \memcpy}
 One method of combining C-strings is by concantenating them with
 \texttt{snprintf(3)} with format strings containing only \texttt{\%s}
@@ -120,7 +149,7 @@ one thread:
   performing the final aggregating serially.
 \end{itemize}
 
-Locking despite never modifying databases in parallel was not useful,
+Locking despite never modifying databases in parallel is not useful,
 and was removed by setting \texttt{-DSQLITE\_THREADSAFE=0} in the
 compile flags.
 
