@@ -1030,9 +1030,9 @@ int main(int argc, char *argv[]) {
     }
 
     // start up thread pool
-    struct QPTPool * pool = QPTPool_init(settings.threads
+    struct QPTPool * pool = QPTPool_init(settings.threads, nullptr, nullptr
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , NULL
+                                         , nullptr
                                          #endif
         );
     if (!pool) {

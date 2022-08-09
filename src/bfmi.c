@@ -382,7 +382,7 @@ int main(int argc, char *argv[])
     if (validate_inputs())
         return -1;
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads
+    struct QPTPool * pool = QPTPool_init(in.maxthreads, NULL, NULL
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , NULL
                                          #endif

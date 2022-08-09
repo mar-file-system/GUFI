@@ -218,7 +218,15 @@ static void *worker_function(void *args) {
     return NULL;
 }
 
-struct QPTPool *QPTPool_init(const size_t threads
+static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size_t threads,
+                                  void *data, void *args) {
+    (void) data; (void) args;
+    return (prev + 1) % threads;
+}
+
+struct QPTPool *QPTPool_init(const size_t threads,
+                             QPTPoolNextFunc_t next,
+                             void *next_args
                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
                              , struct OutputBuffers *buffers
                              #endif
@@ -238,6 +246,14 @@ struct QPTPool *QPTPool_init(const size_t threads
     }
 
     ctx->size = threads;
+    if (next) {
+        ctx->next = next;
+        ctx->next_args = next_args;
+    }
+    else {
+        ctx->next = QPTPool_round_robin;
+        ctx->next_args = NULL;
+    }
     pthread_mutex_init(&ctx->mutex, NULL);
     ctx->running = 1;
     ctx->incomplete = 0;
@@ -298,7 +314,8 @@ void QPTPool_enqueue(struct QPTPool *ctx, const size_t id, QPTPoolFunc_t func, v
 
         pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
 
-        ctx->data[id].next_queue = (ctx->data[id].next_queue + 1) % ctx->size;
+        ctx->data[id].next_queue = ctx->next(id, ctx->data[id].next_queue, ctx->size,
+                                             new_work, ctx->next_args);
     /* } */
 }
 

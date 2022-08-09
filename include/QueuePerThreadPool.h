@@ -75,11 +75,28 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/*
+ * User defined function to select the thread to pass new work to.
+ * If NULL is passed into QPTPool_init, round robin is used.
+ *
+ * @param id       the id of this thread
+ * @param prev     the previous thread id that this thread pushed work to
+ * @param threads  the total number of threads in this pool
+ * @param data     the data the function is operating on
+ * @param args     next_args from QPTPool_init
+ * @return work queue to push to next in the range [0, threads)
+ */
+typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const size_t threads,
+                                    void *data, void *args);
+
 /* The Queue Per Thread Pool context */
 struct QPTPoolData;
 struct QPTPool {
     struct QPTPoolData *data;
     size_t size;
+
+    QPTPoolNextFunc_t next;
+    void *next_args;
 
     pthread_mutex_t mutex;
     int running;
@@ -104,7 +121,9 @@ typedef int (*QPTPoolFunc_t)(struct QPTPool *ctx, const size_t id, void *data, v
 /* main functions for operating a QPTPool */
 
 /* initialize a QPTPool context without starting the threads */
-struct QPTPool *QPTPool_init(const size_t threads
+struct QPTPool *QPTPool_init(const size_t threads,
+                             QPTPoolNextFunc_t next,
+                             void *next_args
                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
                              , struct OutputBuffers *buffers
                              #endif

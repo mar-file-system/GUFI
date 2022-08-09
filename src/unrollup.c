@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
     timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
     #endif
 
-    struct QPTPool *pool = QPTPool_init(in.maxthreads
+    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , timestamp_buffers
                                         #endif

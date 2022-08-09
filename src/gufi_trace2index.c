@@ -771,7 +771,7 @@ int main(int argc, char *argv[]) {
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
 
-    struct QPTPool *pool = QPTPool_init(in.maxthreads
+    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
                                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                          , &debug_output_buffers
                                          #endif

@@ -68,13 +68,13 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPoolPrivate.h"
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-#define INIT_QPTPOOL struct QPTPool *pool = QPTPool_init(threads, NULL)
+#define INIT_QPTPOOL struct QPTPool *pool = QPTPool_init(threads, NULL, NULL, NULL)
 #else
-#define INIT_QPTPOOL struct QPTPool *pool = QPTPool_init(threads)
+#define INIT_QPTPOOL struct QPTPool *pool = QPTPool_init(threads, NULL, NULL)
 #endif
 
 TEST(QueuePerThreadPool, init_destroy) {
-    EXPECT_EQ(QPTPool_init(0
+    EXPECT_EQ(QPTPool_init(0, NULL, NULL
                            #if defined(DEBUG) && defined(PER_THREAD_STATS)
                            , NULL
                            #endif

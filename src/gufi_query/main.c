@@ -857,7 +857,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    struct QPTPool *pool = QPTPool_init(in.maxthreads
+    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , timestamp_buffers
                                         #endif

@@ -407,7 +407,7 @@ int main(int argc, char * argv[]) {
 
     std::atomic_bool correct(false);
 
-    struct QPTPool * ctx = QPTPool_init(threads
+    struct QPTPool * ctx = QPTPool_init(threads, nullptr, nullptr
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , nullptr
                                         #endif
