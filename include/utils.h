@@ -125,9 +125,8 @@ int processdirs(DirFunc dir_fn);
  * and process non directories using a user provided function
  */
 int descend(struct QPTPool *ctx, const size_t id,
-            struct work *work, DIR *dir,
-            trie_t *skip,
-            QPTPoolFunc_t processdir,
+            struct work *work, DIR *dir, trie_t *skip,
+            const int stat_entries,  QPTPoolFunc_t processdir,
             int (*process_nondir)(struct work *nondir, void *args), void *args,
             size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed);
 

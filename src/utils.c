@@ -555,11 +555,17 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
 
 /*
  * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
+ * and process non directories using a user provided function.
+ *
+ * work->statuso should be filled before calling descend.
+ *
+ * If stat_entries is set to 0, the processing thread should stat
+ * the path. Nothing in work->statuso will be filled except the
+ * entry type. Links will not be read.
  */
 int descend(struct QPTPool *ctx, const size_t id,
             struct work *work, DIR *dir, trie_t *skip_names,
-            QPTPoolFunc_t processdir,
+            const int stat_entries, QPTPoolFunc_t processdir,
             int (*process_nondir)(struct work *nondir, void *args), void *args,
             size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed) {
     if (!work) {
@@ -604,17 +610,32 @@ int descend(struct QPTPool *ctx, const size_t id,
                                         work->name, work->name_len,
                                         "/", (size_t) 1,
                                         dir_child->d_name, len);
-
-            /* get the child's metadata */
-            if (lstat(child.name, &child.statuso) < 0) {
-                continue;
-            }
-
             child.basename_len = len;
             child.level = next_level;
             child.root = work->root;
             child.root_len = work->root_len;
             child.pinode = work->statuso.st_ino;
+
+            if (stat_entries) {
+                /* get the child's metadata */
+                if (lstat(child.name, &child.statuso) < 0) {
+                    continue;
+                }
+            }
+            else {
+                /* only get the child's type - processing thread should stat */
+                switch (dir_child->d_type) {
+                    case DT_DIR:
+                        child.statuso.st_mode = S_IFDIR;
+                        break;
+                    case DT_LNK:
+                        child.statuso.st_mode = S_IFLNK;
+                        break;
+                    case DT_REG:
+                        child.statuso.st_mode = S_IFREG;
+                        break;
+                }
+            }
 
             /* push subdirectories onto the queue */
             if (S_ISDIR(child.statuso.st_mode)) {
@@ -634,7 +655,9 @@ int descend(struct QPTPool *ctx, const size_t id,
             /* non directories */
             else if (S_ISLNK(child.statuso.st_mode)) {
                 child.type[0] = 'l';
-                readlink(child.name, child.linkname, MAXPATH);
+                if (stat_entries) {
+                    readlink(child.name, child.linkname, MAXPATH);
+                }
             }
             else if (S_ISREG(child.statuso.st_mode)) {
                 child.type[0] = 'f';

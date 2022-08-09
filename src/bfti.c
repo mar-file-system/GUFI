@@ -138,7 +138,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(ctx, id, passmywork, dir, skip, processdir,
+         descend(ctx, id, passmywork, dir, skip, 1, processdir,
                    NULL, NULL, NULL, NULL, NULL);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {

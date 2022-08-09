@@ -235,7 +235,7 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
 
     startdb(nda.db);
     size_t nondirs_processed = 0;
-    descend(ctx, id, nda.work, dir, ta->skip,
+    descend(ctx, id, nda.work, dir, ta->skip, 1,
             processdir, process_nondir, &nda,
             NULL, NULL, &nondirs_processed);
     stopdb(nda.db);
