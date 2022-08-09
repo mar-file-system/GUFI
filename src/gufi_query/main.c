@@ -709,7 +709,7 @@ int validate_inputs(struct input *in) {
      *                          |                         | -I CREATE [TEMP] TABLE <name>
      *                          |
      *                          |                         | if aggregating, create an aggregate table
-     *                          |                         | -K CREATE [TEMP] <name>
+     *                          |                         | -K CREATE [TEMP] TABLE <aggregate name>
      *                          |
      *   -----------------------------------------------  | start walk
      *                          |
@@ -724,7 +724,7 @@ int validate_inputs(struct input *in) {
      *          |
      *   -----------------------------------------------  | after walking index
      *          |
-     *          |                                         | move results into aggregate table
+     *          |                                         | move intermediate results into aggregate table
      *    aggregate db - outdb                            | -J INSERT INTO <aggregate name>
      *    |          |
      * outfile     stdout                                 | Get final results
