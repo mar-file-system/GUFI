@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.1.0)
 
 configure_file(gufi_config.py.in gufi_config.py @ONLY)
 add_test(NAME gufi_config COMMAND gufi_config.py -v)

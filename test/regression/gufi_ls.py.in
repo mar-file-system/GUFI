@@ -61,13 +61,11 @@
 
 
 
-import imp
-import os
 import sys
 
 import common
-
-gufi_ls = imp.load_source('gufi_ls', os.path.join(common.root, 'scripts', 'gufi_ls'))
+import version_control as vc
 
 if __name__=='__main__':
+    gufi_ls = vc.version_check('gufi_ls')
     sys.exit(gufi_ls.run(sys.argv, common.config_path))

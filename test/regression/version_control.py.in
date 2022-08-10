@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,31 +61,33 @@
 
 
 
-set -e
+import os
+import sys
+import common
 
-mkdir -p build
-cd build
 
-export CC="${C_COMPILER}"
-export CXX="${CXX_COMPILER}"
-export GTEST_COLOR=1
-export DEP_PATH="/tmp"
-export PATH="${DEP_PATH}/sqlite3/bin:${PATH}"
 
-cmake ${CMAKE_FLAGS} -DDEP_INSTALL_PREFIX="${DEP_PATH}" ..
+def version_check(gufi_tool):
+    if sys.version_info[0] < 3:
+        import imp
+        
+        gufi_script = imp.load_source(gufi_tool, os.path.join(common.root, 'scripts', gufi_tool))
+        return gufi_script
 
-# use files from the generated tar
-if  [[ "${BUILD}" = "make" ]]; then
-    make gary
-    mkdir tarball
-    tar -xvf gufi.tar.gz -C tarball
-    cd tarball
-fi
+    # https://csatlas.com/python-import-file-module/
+    if sys.version_info[0] >= 3:
+        import importlib.machinery
+        import importlib.util
+        from pathlib import Path
 
-make
+        # Get path to mymodule
+        script_dir = Path( __file__ ).parent
+        mymodule_path = str( script_dir.joinpath( '..', '..', 'scripts', gufi_tool) )
 
-if [[ "${BUILD}" = "cmake" ]]; then
-    ctest --output-on-failure
-elif [[ "${BUILD}" = "make" ]]; then
-    make test
-fi
+        # Import mymodule
+        loader = importlib.machinery.SourceFileLoader( gufi_tool, mymodule_path )
+        spec = importlib.util.spec_from_loader( gufi_tool, loader )
+        gufi_script = importlib.util.module_from_spec( spec )
+        loader.exec_module( gufi_script )
+        return gufi_script
+        

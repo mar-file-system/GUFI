@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1.0)
 SET(LATEX_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/pdfs)
 
 INCLUDE(UseLATEX)

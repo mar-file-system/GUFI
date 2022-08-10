@@ -63,9 +63,21 @@
 
 set -e
 
-# start at repository root
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-cd ${SCRIPT_PATH}/../..
+# install rpmbuild
+yum install -y rpm-build
+cd build
 
-# build and test GUFI
-${SCRIPT_PATH}/build_and_test.sh
+# reconfigure CMake
+cmake ..
+
+# make the rpm
+make package
+
+# install the RPM
+yum install -y gufi-*.rpm
+
+# compare the configuration files
+diff server.example /etc/GUFI/config.example
+
+# remove the configuration file
+rm -r /etc/GUFI

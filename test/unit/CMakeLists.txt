@@ -60,7 +60,9 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.1.0)
 
-add_subdirectory(googletest)
+if (NOT ("${CMAKE_VERSION}" LESS "3.5.0") )
+    add_subdirectory(googletest)
+endif()
 add_subdirectory(python)

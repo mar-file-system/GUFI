@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.1.0)
 
 # list this first so that make install will overwrite these files
 if (CLIENT)
