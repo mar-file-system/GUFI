@@ -1,6 +1,6 @@
 # Grand Unified File-Index (GUFI)
 
-[![Build Status](https://travis-ci.com/mar-file-system/GUFI.svg?branch=master)](https://travis-ci.com/mar-file-system/GUFI)
+[![GitHub Actions](https://github.com/mar-file-system/GUFI/actions/workflows/cmake.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/cmake.yml)
 [![Latest Release](https://img.shields.io/github/release/mar-file-system/GUFI.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/mar-file-system/GUFI/latest/total.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
 
