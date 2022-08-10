@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.1.0)
 
 function(check_test_dependencies var exec)
   find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
@@ -81,8 +81,17 @@ function(check_test_dependencies var exec)
   endif()
 endfunction()
 
-check_test_dependencies(SETFATTR setfattr)
-check_test_dependencies(GETFATTR getfattr)
+message(STATUS "THE OS IS ${CMAKE_SYSTEM_NAME}")
+
+if(NOT APPLE)
+  check_test_dependencies(SETFATTR setfattr)
+  check_test_dependencies(GETFATTR getfattr)
+endif()
+
+if (APPLE)
+  check_test_dependencies(XATTR xattr)
+endif()
+
 check_test_dependencies(SED      sed)
 check_test_dependencies(DIFF     colordiff diff)
 check_test_dependencies(TEE      tee)
@@ -92,6 +101,7 @@ set(CORE
   generatetree.sh
   setup.sh
   common.py
+  version_control.py
 )
 
 # .sh and .expected

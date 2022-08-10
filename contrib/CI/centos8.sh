@@ -63,66 +63,18 @@
 
 set -e
 
-# start at repository root
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
-cd ${SCRIPT_PATH}/../..
+# Point to appropriate repos, current is no longer supported
+sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* 
+sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* 
+yum -y update 
 
-# if this commit is the latest
-set +e
-git diff --quiet --cached "origin/${TRAVIS_BRANCH}"
-IS_HEAD=$?
-set -e
-if [[ "${IS_HEAD}" -ne 0 ]]; then
-    echo "No need to deploy"
-    exit 0
-fi
 
-# get a newer version of libsqlite3-dev than the one provided by xenial (must be at least version 3.13)
-# this ppa is not allowed through addons, so it has to be added manually
-sudo add-apt-repository ppa:jonathonf/backports -y
-sudo apt-get update
-sudo apt-get install libsqlite3-dev -y
+# install Extra Tools for Enterprise Linux (EPEL)
+yum -y install epel-release
 
-# make the tarball
-mkdir build
-cd build
-cmake ..
-make gary
-cd ..
+# install libraries
+yum -y install fuse-devel libattr pcre-devel
 
-TARBALL=gufi.tar.gz
+# install extra tools
+yum -y install attr autoconf clang cmake3 diffutils fuse make patch pkgconfig python3-pip 
 
-# https://gist.github.com/willprice/e07efd73fb7f13f917ea
-
-# Create a Travis CI git user
-git config --global user.name  "Travis CI Builder"
-git config --global user.email "travis@travis-ci.com"
-
-# update the origin to include the personal access token
-git remote rm origin
-git remote add origin https://${GH_TOKEN}@github.com/mar-file-system/GUFI.git
-
-# https://stackoverflow.com/a/27393574
-# update refs
-git remote set-branches origin '*'
-git fetch -v
-
-# move to the tarball branch
-git checkout tarball
-
-# move the tarball into the target branch
-mv "build/${TARBALL}" "${TARBALL}"
-
-# Add the tarball and commit
-DATE="$(date)"
-git add "${TARBALL}"
-git commit --message "Travis CI Tarball Upload (${TRAVIS_EVENT_TYPE}) ${DATE}" --message "${TRAVIS_BRANCH} ${TRAVIS_COMMIT}" --message "[ci skip]"
-
-# Upload the tarball
-git push origin tarball
-
-# copy the email script from the original branch since the tarball branch does not have it
-git checkout "${TRAVIS_BRANCH}" -- ${SCRIPT_PATH}/email.sh
-
-# email everyone about the update
-${SCRIPT_PATH}/email.sh "${DATE}" "gufi-lanl@lanl.gov"

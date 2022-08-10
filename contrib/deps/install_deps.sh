@@ -83,9 +83,15 @@ echo "Installing SQLite3 PCRE"
 echo "Installing jemalloc"
 . ${SCRIPT_PATH}/jemalloc.sh
 
-if [[ "${BUILD_CXX}" == "true" ]]; then
-    echo "Installing GoogleTest"
-    . ${SCRIPT_PATH}/googletest.sh
+CMAKE_VERSION=$(cmake --version | grep -Po '(?<=version )[^;]+')
+ACCEPTABLE_VERSION=3.5
+HIGHEST_VERSION=$((echo ${CMAKE_VERSION}; echo "${ACCEPTABLE_VERSION}") | sort -rV | head -1)
+
+if [[ "${CMAKE_VERSION}" == "${HIGHEST_VERSION}" ]]; then
+    if [[ "${BUILD_CXX}" == "true" ]]; then
+        echo "Installing GoogleTest"
+        . ${SCRIPT_PATH}/googletest.sh
+    fi
 fi
 
 if [[ "${PARAMIKO}" == "true" ]]; then

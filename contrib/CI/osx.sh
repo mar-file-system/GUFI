@@ -63,13 +63,20 @@
 
 set -e
 
-cd /GUFI/build
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-# install GUFI
-make install
+# Install GNU grep
+brew install grep
+brew --prefix grep
+echo 'export PATH="$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"' >> ~/.bash_profile
 
-# compare the configuration files
-diff server.example /etc/GUFI/config.example
+# install required packages
+brew install coreutils cmake mysql pcre python3 
 
-# remove the configuration file
-rm -r /etc/GUFI
+# get osxfuse from homebrew/cask
+brew tap homebrew/cask
+brew install --cask osxfuse
+
+
+

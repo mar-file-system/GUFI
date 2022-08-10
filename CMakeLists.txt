@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.1.0)
 
 # Don't allow in-source build
 get_filename_component(CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR} REALPATH)
@@ -172,9 +172,11 @@ if ("${CMAKE_VERSION}" VERSION_GREATER "3.12.0")
 else()
   find_program(Python python REQUIRED)
   execute_process(COMMAND ${Python} --version
-    OUTPUT_VARIABLE Python_VERSION_STR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE "^Python " "" Python_VERSION "${Python_VERSION_STR}")
+    OUTPUT_VARIABLE Python_VERSION_STDOUT
+    ERROR_VARIABLE Python_VERSION_STDERR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE "^Python " "" Python_VERSION "${Python_VERSION_STDOUT}${Python_VERSION_STDERR}")
   string(REPLACE "." ";" Python_VERSION_LIST ${Python_VERSION})
   list(GET Python_VERSION_LIST 0 Python_VERSION_MAJOR)
   message(STATUS "Found Python: ${Python} (found version \"${Python_VERSION}\") found components: Interpreter")

@@ -60,7 +60,7 @@
 
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.1.0)
 
 # build the simple source tree generator
 add_executable(gendir gendir.c)

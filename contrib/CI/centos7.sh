@@ -60,16 +60,32 @@
 # OF SUCH DAMAGE.
 
 
+set -e
 
-# Source this file to set up fake environment variables
-# when running Travis CI scripts locally.
+CMAKE_VERSION="$1"
 
-export C_COMPILER=gcc-8
-export CXX_COMPILER=g++-8
-export TRAVIS_JOB_NUMBER=${RANDOM}
-export BUILD=cmake
-export DOCKER_IMAGE=centos:7
+# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
+yum -y install epel-release centos-release-scl
 
-# cleanup old container with the same name
-docker container stop "${TRAVIS_JOB_NUMBER}" || true
-docker container rm   "${TRAVIS_JOB_NUMBER}" || true
+# install libraries
+yum -y install fuse-devel libattr1 pcre-devel
+
+# install extra packages
+yum -y install attr autoconf fuse make patch pkgconfig python3-pip 
+
+#Specify which cmake version to install
+if [ "${CMAKE_VERSION}" == "cmake3" ]; then
+    yum -y install cmake3 
+    ln -sf /usr/bin/cmake3 /usr/bin/cmake
+    ln -sf /usr/bin/ctest3 /usr/bin/ctest
+else
+    yum install -y wget
+    wget https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz
+    tar xf cmake-3.1.0-Linux-x86_64.tar.gz
+    echo "$(pwd)/cmake-3.1.0-Linux-x86_64/bin" >> "${GITHUB_PATH}" 
+fi
+
+#Used to install Clang
+yum -y install llvm-toolset-7
+echo "/opt/rh/llvm-toolset-7/root/bin" >> "${GITHUB_PATH}"
+

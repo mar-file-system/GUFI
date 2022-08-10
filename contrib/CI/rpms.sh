@@ -66,7 +66,7 @@ set -e
 # install rpmbuild
 yum install -y rpm-build
 
-cd /GUFI/build
+cd ./build
 
 # reconfigure CMake
 cmake ..

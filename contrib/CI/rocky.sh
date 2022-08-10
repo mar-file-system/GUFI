@@ -61,66 +61,17 @@
 
 
 
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
 
 set -e
 
 # install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
-yum -y install epel-release centos-release-scl
+yum -y install epel-release #centos thingy
 
 # install libraries
-yum -y install fuse-devel libattr1 pcre-devel
+yum -y install fuse-devel pcre-devel libattr-devel
 
 # install extra packages
-yum -y install autoconf cmake3 fuse make patch pkgconfig python3-pip
+yum -y install attr autoconf cmake3 fuse make patch pkgconfig python3-pip sqlite findutils
 
-# create symlinks
-ln -sf /usr/bin/cmake3 /usr/bin/cmake
-ln -sf /usr/bin/ctest3 /usr/bin/ctest
-
-if [[ "${C_COMPILER}" = gcc-* ]]; then
-    VERSION="${C_COMPILER##*-}"
-    C_PACKAGE="devtoolset-${VERSION}"
-    CENTOS_C_COMPILER="/usr/bin/gcc-${VERSION}"
-    update-alternatives --install ${CENTOS_C_COMPILER} gcc-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/gcc 10
-elif [[ "${C_COMPILER}" = clang ]]; then
-    # llvm-toolset-7 installs clang-5.0
-    C_PACKAGE="llvm-toolset-7"
-    CENTOS_C_COMPILER="/usr/bin/clang-5.0"
-    update-alternatives --install ${CENTOS_C_COMPILER} clang-5.0 /opt/rh/llvm-toolset-7/root/usr/bin/clang-5.0 10
-else
-    echo "Unknown C compiler: ${C_COMPILER}"
-    exit 1
-fi
-
-if [[ "${CXX_COMPILER}" = g++-* ]]; then
-    VERSION="${CXX_COMPILER##*-}"
-    CXX_PACKAGE="devtoolset-${VERSION}-gcc-c++"
-    CENTOS_CXX_COMPILER="/usr/bin/g++-${VERSION}"
-    update-alternatives --install ${CENTOS_CXX_COMPILER} g++-${VERSION} /opt/rh/devtoolset-${VERSION}/root/usr/bin/g++ 10
-elif [[ "${CXX_COMPILER}" = clang++ ]]; then
-    # llvm-toolset-7 installs clang-5.0
-    CXX_PACKAGE="llvm-toolset-7"
-    CENTOS_CXX_COMPILER="/usr/bin/clang++"
-    update-alternatives --install ${CENTOS_CXX_COMPILER} clang++ /opt/rh/llvm-toolset-7/root/usr/bin/clang++ 10
-else
-    echo "Unknown C++ compiler: ${CXX_COMPILER}"
-    exit 1
-fi
-
-# install the compilers
-yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
-
-# install xattr
-yum -y install python3-devel python3-cffi
-ln -sf ${CENTOS_C_COMPILER} /usr/bin/gcc
-yes | pip3 install --user xattr
-
-export C_COMPILER=${CENTOS_C_COMPILER}
-export CXX_COMPILER=${CENTOS_CXX_COMPILER}
-export LD_LIBRARY_PATH="/opt/rh/httpd24/root/usr/lib64/:${LD_LIBRARY_PATH}"
-export PKG_CONFIG_PATH="/tmp/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
-export PATH="${HOME}/.local/bin:${PATH}"
-
-# build and test GUFI
-${SCRIPT_PATH}/build_and_test.sh
+# install clang compiler
+yum -y install clang

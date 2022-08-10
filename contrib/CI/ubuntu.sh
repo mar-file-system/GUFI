@@ -61,55 +61,23 @@
 
 
 
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
+# Set Timezone to skip an interactive prompt when running apt-get update
+TZ=Europe/Kiev 
+ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-set -e
+# Log in as root
+su
 
-# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
-yum -y install epel-release
+# Install dependencies
+apt-get -y update
+apt-get -y install \
+    attr \
+    autoconf \
+    build-essential \
+    clang \
+    cmake \
+    libattr1-dev \
+    libfuse-dev \
+    libpcre3-dev \
+    pkg-config 
 
-# install libraries
-yum -y install fuse-devel libattr pcre-devel
-
-# install extra packages
-yum -y install autoconf cmake3 diffutils fuse make patch pkgconfig python3-pip
-
-if [[ "${C_COMPILER}" = gcc-* ]]; then
-    VERSION="${C_COMPILER##*-}"
-    C_PACKAGE="gcc-toolset-${VERSION}"
-    CENTOS_C_COMPILER="/usr/bin/gcc"
-elif [[ "${C_COMPILER}" = clang ]]; then
-    C_PACKAGE="clang"
-    CENTOS_C_COMPILER="/usr/bin/clang"
-else
-    echo "Unknown C compiler: ${C_COMPILER}"
-    exit 1
-fi
-
-if [[ "${CXX_COMPILER}" = g++-* ]]; then
-    VERSION="${CXX_COMPILER##*-}"
-    CXX_PACKAGE="gcc-toolset-${VERSION}-gcc-c++"
-    CENTOS_CXX_COMPILER="/usr/bin/g++"
-elif [[ "${CXX_COMPILER}" = clang++ ]]; then
-    CXX_PACKAGE="clang"
-    CENTOS_CXX_COMPILER="/usr/bin/clang++"
-else
-    echo "Unknown C++ compiler: ${CXX_COMPILER}"
-    exit 1
-fi
-
-# install the compilers
-yum -y install ${C_PACKAGE} ${CXX_PACKAGE}
-
-# install xattr
-yum -y install python3-devel
-yes | pip3 install --user xattr
-
-export C_COMPILER=${CENTOS_C_COMPILER}
-export CXX_COMPILER=${CENTOS_CXX_COMPILER}
-export LD_LIBRARY_PATH="/opt/rh/httpd24/root/usr/lib64/:${LD_LIBRARY_PATH}"
-export PKG_CONFIG_PATH="/tmp/sqlite3/lib/pkgconfig:${PKG_CONFIG_PATH}"
-export PATH="${HOME}/.local/bin:${PATH}"
-
-# build and test GUFI
-${SCRIPT_PATH}/build_and_test.sh
