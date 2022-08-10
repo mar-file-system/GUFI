@@ -64,14 +64,11 @@
 
 set -e
 
-# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
-yum -y install epel-release #centos thingy
+# install Extra Packages for Enterprise Linux (EPEL)
+yum -y install epel-release
 
 # install libraries
-yum -y install fuse-devel pcre-devel libattr-devel
+yum -y install fuse-devel libattr-devel pcre-devel
 
-# install extra packages
-yum -y install attr autoconf cmake3 fuse make patch pkgconfig python3-pip sqlite findutils
-
-# install clang compiler
-yum -y install clang
+# install required packages
+yum -y install attr autoconf clang cmake3 findutils fuse make patch pkgconfig python3

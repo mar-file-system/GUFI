@@ -65,6 +65,7 @@ set -e
 
 # install rpmbuild
 yum install -y rpm-build
+
 cd build
 
 # reconfigure CMake

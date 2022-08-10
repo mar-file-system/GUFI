@@ -62,22 +62,22 @@
 
 
 # Set Timezone to skip an interactive prompt when running apt-get update
-TZ=Europe/Kiev 
+TZ=Europe/Kiev
 ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Log in as root
-su
+apt update
 
-# Install dependencies
-apt-get -y update
-apt-get -y install \
-    attr \
-    autoconf \
-    build-essential \
-    clang \
-    cmake \
+# install libraries
+apt -y install \
     libattr1-dev \
     libfuse-dev \
-    libpcre3-dev \
-    pkg-config 
+    libpcre3-dev
 
+# install required packages
+apt -y install \
+    attr \
+    autoconf \
+    clang \
+    cmake \
+    patch \
+    pkg-config

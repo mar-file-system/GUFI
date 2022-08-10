@@ -60,6 +60,7 @@
 # OF SUCH DAMAGE.
 
 
+
 set -e
 
 CMAKE_VERSION="$1"
@@ -70,22 +71,21 @@ yum -y install epel-release centos-release-scl
 # install libraries
 yum -y install fuse-devel libattr1 pcre-devel
 
-# install extra packages
-yum -y install attr autoconf fuse make patch pkgconfig python3-pip 
+# install required packages
+yum -y install attr autoconf fuse make patch pkgconfig
 
-#Specify which cmake version to install
+# specify which CMake version to install
 if [ "${CMAKE_VERSION}" == "cmake3" ]; then
-    yum -y install cmake3 
+    yum -y install cmake3
     ln -sf /usr/bin/cmake3 /usr/bin/cmake
     ln -sf /usr/bin/ctest3 /usr/bin/ctest
 else
     yum install -y wget
     wget https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz
     tar xf cmake-3.1.0-Linux-x86_64.tar.gz
-    echo "$(pwd)/cmake-3.1.0-Linux-x86_64/bin" >> "${GITHUB_PATH}" 
+    echo "$(pwd)/cmake-3.1.0-Linux-x86_64/bin" >> "${GITHUB_PATH}"
 fi
 
-#Used to install Clang
+# install Clang
 yum -y install llvm-toolset-7
 echo "/opt/rh/llvm-toolset-7/root/bin" >> "${GITHUB_PATH}"
-

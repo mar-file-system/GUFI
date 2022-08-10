@@ -60,22 +60,21 @@
 
 
 
-name: CMake
+name: GitHub Actions
 
 on: [push]
 
 env:
-  BUILD_TYPE: Release
   CC: clang
   CXX: clang++
 
 jobs:
-  MacOS:
+  macOS:
     runs-on: macos-11
     steps:
     - uses: actions/checkout@v3
 
-    - name: MacOS-11 Prerequisites
+    - name: macOS 11 Prerequisites
       run:  contrib/CI/osx.sh
 
     - name: Configure CMake
@@ -92,48 +91,43 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: ctest --output-on-failure
 
-  LinuxOS:
+  Linux:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04"]
+        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}
     steps:
     - uses: actions/checkout@v3
 
-    - name: Centos7 Prerequisite Script
-      if: matrix.img == 'centos:7'
-      run:  contrib/CI/centos7.sh cmake3
+    - name: CentOS 7 Prerequisites
+      if:  matrix.img == 'centos:7'
+      run: contrib/CI/centos7.sh cmake3
 
-    - name: Centos8 Prerequisites
-      if: matrix.img == 'centos:8'
-      run:  contrib/CI/centos8.sh cmake 3
+    - name: CentOS 8 Prerequisites
+      if:  matrix.img == 'centos:8'
+      run: contrib/CI/centos8.sh
 
-    - name: Rocky Prerequisites
-      if: matrix.img == 'rockylinux:8'
-      run:  contrib/CI/rocky.sh cmake3
+    - name: Rocky Linux Prerequisites
+      if:  matrix.img == 'rockylinux:8'
+      run: contrib/CI/rocky.sh
 
-    - name: Ubuntu:20.04 Prerequisites
-      if: matrix.img == 'ubuntu:20.04'
-      run:  contrib/CI/ubuntu.sh
+    - name: Ubuntu 20.04 Prerequisites
+      if:  matrix.img == 'ubuntu:20.04'
+      run: contrib/CI/ubuntu.sh
 
-    - name: Configure CMake Clang
-      run: |
-           mkdir -p build
-           cd build
-           cmake ..
+    - name: Configure CMake
+      run:  cmake -B ${{github.workspace}}/build
 
     - name: Build
-      run: |
-           cd build
-           make -j
+      run:  cmake --build ${{github.workspace}}/build -j
 
     - name: Test
-      run: |
-           cd build
-           ctest --output-on-failure
+      run:  |
+            cd ${{github.workspace}}/build
+            ctest --output-on-failure
 
   RPM:
     runs-on: ubuntu-20.04
@@ -142,18 +136,17 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Centos7 Prerequisite Script
+    - name: Centos7 Prerequisites
       run:  contrib/CI/centos7.sh cmake3
 
-    - name: Configure CMake Clang
-      run: |
-           mkdir -p build
-           cd build
-           cmake ..
+    - name: Configure CMake
+      run:  |
+            mkdir -p build
+            cd build
+            cmake ..
 
     - name: RPM
-      run: |
-           contrib/CI/generic_rpm.sh
+      run:  contrib/CI/generic_rpm.sh
 
   Older_CMake:
     runs-on: ubuntu-20.04
@@ -162,10 +155,10 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Centos7 (CMake3.1.0) Setup
+    - name: CMake 3.1.0
       run:  contrib/CI/centos7.sh cmake
 
-    - name: Configure CMake Clang
+    - name: Configure CMake
       run: |
            mkdir -p build
            cd build
@@ -183,23 +176,17 @@ jobs:
 
   Documentation:
     runs-on: ubuntu-20.04
-    container:
-      image: "ubuntu:20.04"
     steps:
     - uses: actions/checkout@v3
 
     - name: Ubuntu:20.04 Prerequisites
-      run: |
-           contrib/CI/ubuntu.sh
-           apt-get -y install texlive-latex-extra imagemagick
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Install LaTeX
+      run:  sudo apt -y install texlive-latex-extra imagemagick
 
     - name: Configure CMake
-      run: |
-          mkdir -p build
-          cd build
-          cmake -DLATEX_BUILD=On ..
+      run:  cmake -B ${{github.workspace}}/build -DLATEX_BUILD=On
 
-    - name: Build
-      run: |
-          cd build
-          make gufi_user gufi_administrator gufi_developer
+    - name: Build PDFs
+      run:  cmake --build ${{github.workspace}}/build --target gufi_user gufi_administrator gufi_developer
