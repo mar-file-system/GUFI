@@ -80,4 +80,5 @@ apt -y install \
     clang \
     cmake \
     patch \
-    pkg-config
+    pkg-config \
+    sudo

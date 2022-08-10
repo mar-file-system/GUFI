@@ -72,7 +72,7 @@ yum -y install epel-release centos-release-scl
 yum -y install fuse-devel libattr1 pcre-devel
 
 # install required packages
-yum -y install attr autoconf fuse make patch pkgconfig
+yum -y install attr autoconf fuse make patch pkgconfig sudo
 
 # specify which CMake version to install
 if [ "${CMAKE_VERSION}" == "cmake3" ]; then
