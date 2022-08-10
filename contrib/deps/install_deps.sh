@@ -21,6 +21,7 @@ THREADS="1"
 BUILD_CXX="false"
 PARAMIKO="false"
 PATCH_SQLITE3_OPEN="false"
+JEMALLOC="false"
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -42,6 +43,9 @@ case $key in
         ;;
     --patch-sqlite3-open)
         PATCH_SQLITE3_OPEN="true"
+        ;;
+    --jemalloc)
+        JEMALLOC="true"
         ;;
     *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
@@ -80,8 +84,10 @@ echo "Installing SQLite3"
 echo "Installing SQLite3 PCRE"
 . ${SCRIPT_PATH}/sqlite3_pcre.sh
 
-echo "Installing jemalloc"
-. ${SCRIPT_PATH}/jemalloc.sh
+if [[ "${JEMALLOC}" == "true" ]]; then
+    echo "Installing jemalloc"
+    . ${SCRIPT_PATH}/jemalloc.sh
+fi
 
 CMAKE_VERSION=$(cmake --version | grep -Po '(?<=version )[^;]+')
 ACCEPTABLE_VERSION=3.5

@@ -233,6 +233,7 @@ set(DEP_BUILD_THREADS      "1"                                CACHE STRING "Numb
 set(DEP_INSTALL_PREFIX     "${CMAKE_BINARY_DIR}/deps"         CACHE PATH   "Location of dependency binaries")
 set(CLIENT                 OFF                                CACHE BOOL   "Whether or not to build and install client")
 set(DEP_PATCH_SQLITE3_OPEN OFF                                CACHE BOOL   "Whether or not to patch SQLite3 open")
+set(DEP_USE_JEMALLOC       ON                                 CACHE BOOL   "Whether or not to build and link with jemalloc")
 set(DEP_OPTIONS --threads "${DEP_BUILD_THREADS}")
 if (CMAKE_CXX_COMPILER)
   set(DEP_OPTIONS ${DEP_OPTIONS} --cxx)
@@ -242,6 +243,9 @@ if (CLIENT)
 endif()
 if (DEP_PATCH_SQLITE3_OPEN)
   set(DEP_OPTIONS ${DEP_OPTIONS} --patch-sqlite3-open)
+endif()
+if (DEP_USE_JEMALLOC)
+  set(DEP_OPTIONS ${DEP_OPTIONS} --jemalloc)
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
@@ -321,10 +325,15 @@ set(COMMON_LIBRARIES
   ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
   pcre
   Threads::Threads
-  ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
   m
   dl
 )
+
+if (DEP_USE_JEMALLOC)
+  list(APPEND COMMON_LIBRARIES
+    ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
+  )
+endif()
 
 # enable "make test"
 enable_testing()
