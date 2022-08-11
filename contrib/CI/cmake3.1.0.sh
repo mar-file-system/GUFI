@@ -61,20 +61,8 @@
 
 
 
-set -e
-
-# install Extra Packages for Enterprise Linux (EPEL) and The Software Collections (SCL) Repository
-yum -y install epel-release centos-release-scl
-
-# install libraries
-yum -y install fuse-devel libattr1 pcre-devel
-
-# install required packages
-yum -y install attr autoconf cmake3 fuse llvm-toolset-7 make patch pkgconfig sudo
-
-# make sure 'cmake' and 'ctest' are valid commands
-ln -sf /usr/bin/cmake3 /usr/bin/cmake
-ln -sf /usr/bin/ctest3 /usr/bin/ctest
-
-# llvm-toolset-7 places binaries in a different location
-echo "/opt/rh/llvm-toolset-7/root/bin" >> "${GITHUB_PATH}"
+yum autoremove -y cmake*
+yum install -y wget
+wget https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz
+tar xf cmake-3.1.0-Linux-x86_64.tar.gz
+echo "$(pwd)/cmake-3.1.0-Linux-x86_64/bin" >> "${GITHUB_PATH}"
