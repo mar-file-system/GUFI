@@ -144,3 +144,5 @@ add_subdirectory(make)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_subdirectory(debug)
 endif()
+
+add_subdirectory(CI)

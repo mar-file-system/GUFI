@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,30 +60,7 @@
 
 
 
-set -e
+cmake_minimum_required(VERSION 3.1.0)
 
-# install rpmbuild
-yum install -y rpm-build
-
-cd ./build
-
-# reconfigure CMake
-cmake ..
-
-# make the rpm
-make package
-
-# install the RPM
-yum install -y gufi-server-*.rpm
-
-# compare the configuration files
-diff server.example /etc/GUFI/config.example
-
-# uninstall GUFI-Server
-yum autoremove -y GUFI-Server
-
-# install the client RPM
-yum install -y gufi-client-*.rpm
-
-# compare the configuration files
-diff client.example /etc/GUFI/config.example
+configure_file(generic_rpm.sh.in generic_rpm.sh @ONLY)
+configure_file(rpms.sh.in        rpms.sh        @ONLY)

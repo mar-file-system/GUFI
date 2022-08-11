@@ -140,7 +140,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Centos7 Prerequisites
+    - name: CentOS 7 Prerequisites
       run:  contrib/CI/centos7.sh cmake3
 
     - name: Configure CMake
@@ -149,8 +149,27 @@ jobs:
             cd build
             cmake .. -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off
 
-    - name: RPM
-      run:  contrib/CI/generic_rpm.sh
+    - name: Test
+      run:  build/contrib/CI/generic_rpm.sh
+
+  Client:
+    runs-on: ubuntu-20.04
+    container:
+      image: centos:7
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: CentOS 7 Prerequisites
+      run:  contrib/CI/centos7.sh cmake3
+
+    - name: Configure CMake
+      run: |
+           mkdir -p build
+           cd build
+           cmake .. -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DCLIENT=On
+
+    - name: Test
+      run:  build/contrib/CI/rpms.sh
 
   Documentation:
     runs-on: ubuntu-20.04
