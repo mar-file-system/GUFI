@@ -110,5 +110,6 @@ do
     echo
 done
 ) | replace | @TEE@ "${OUTPUT}"
+
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"
