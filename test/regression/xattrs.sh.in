@@ -63,6 +63,7 @@
 
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
 
 OUTPUT="xattrs.out"
 
@@ -84,30 +85,32 @@ function create() {
     (
         name="$1"
         perms="$2"
+
+        # assign xattrs to directory
         mkdir -m "${perms}" "${name}"
-        setfattr -n "user.${name}" -v "${perms}" "${name}"
+        os_setfattr "user.${name}" "${perms}" "${name}"
         cd "${name}"
 
         # good
         touch ugo
-        setfattr -n "user.ugo" -v "666" ugo
+        os_setfattr "user.ugo" "666" ugo
         chmod 666 ugo
 
         touch ug
-        setfattr -n "user.ug"  -v "660" ug
+        os_setfattr "user.ug"  "660" ug
         chmod 660 ug
 
         touch u
-        setfattr -n "user.u"   -v "600" u
+        os_setfattr "user.u"   "600" u
         chmod 600 u
 
         # bad
         touch o
-        setfattr -n "user.o"   -v "006" o
+        os_setfattr "user.o"   "006" o
         chmod 006 o
 
         touch go
-        setfattr -n "user.go"  -v "066" go
+        os_setfattr "user.go"  "066" go
         chmod 066 go
     )
 }

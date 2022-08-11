@@ -81,25 +81,22 @@ function(check_test_dependencies var exec)
   endif()
 endfunction()
 
-message(STATUS "THE OS IS ${CMAKE_SYSTEM_NAME}")
+check_test_dependencies(SED  sed)
+check_test_dependencies(DIFF colordiff diff)
+check_test_dependencies(TEE  tee)
 
-if(NOT APPLE)
-  check_test_dependencies(SETFATTR setfattr)
-  check_test_dependencies(GETFATTR getfattr)
-endif()
-
-if (APPLE)
+if(APPLE)
   check_test_dependencies(XATTR xattr)
+else()
+  check_test_dependencies(SETFATTR setfattr)
 endif()
-
-check_test_dependencies(SED      sed)
-check_test_dependencies(DIFF     colordiff diff)
-check_test_dependencies(TEE      tee)
 
 # regression test specific files
 set(CORE
   generatetree.sh
+  os_setfattr.sh
   setup.sh
+
   common.py
   version_control.py
 )

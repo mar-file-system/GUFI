@@ -61,98 +61,15 @@
 
 
 
-#
-# This script generates a fixed tree with the following structure:
-#
-# ${DIR}/
-# |---- 1KB
-# |---- 1MB                        (user.type=file)
-# |---- directory/
-#       |---- executable
-#       |---- readonly
-#       |---- writable
-#       |---- subdirectory/        (user.type=dir, user.name=sub)
-#             |---- directory_symlink -> subdirectory
-#             |---- repeat_name
-# |---- empty_file
-# |---- file_symlink -> 1KB
-# |---- .hidden
-# |---- leaf_directory/            (user.type=dir, user.name=leaf)
-#       |---- leaf_file1           (user.name1=value1, user.name2=value2, user.name3=value3)
-#       |---- leaf_file2           (user.name4=value4, user.name5=value5, user.name6=value6)
-# |---- old_file
-# |---- repeat_name
-# |---- unusual, name?#
-#
-
-set -e
-
-if [[ "$#" -lt 1 ]]
+# source this file instead of using it as a command to only check OS once
+if [[ "@CMAKE_SYSTEM_NAME@" == "Linux" ]]
 then
-    echo "Syntax: $0 directory"
-    return 1
+    function os_setfattr() {
+        @SETFATTR@ -n "$1" -v "$2" "$3"
+    }
+elif [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]]
+then
+    function os_setfattr() {
+        @XATTR@ -w "$1" "$2" "$3"
+    }
 fi
-
-DIR="$1"
-
-source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
-
-rm -rf "${DIR}"
-mkdir -p "${DIR}"
-
-# generate tree
-cd "${DIR}"
-
-truncate -s 1024 1KB
-
-truncate -s 1048576 1MB
-os_setfattr "user.size" "1MB" 1MB
-
-mkdir directory
-(
-    cd directory
-    truncate -s 1 readonly
-    chmod 444 readonly
-    truncate -s 1 writable
-    chmod 666 writable
-    truncate -s 1 executable
-    chmod 777 executable
-    mkdir subdirectory
-    os_setfattr "user.type" "dir" subdirectory
-    os_setfattr "user.name" "sub" subdirectory
-    (
-        cd subdirectory
-        ln -f -s $(realpath .) directory_symlink
-        truncate -s 1 repeat_name
-    )
-)
-
-touch empty_file
-
-ln -f -s $(realpath 1KB) file_symlink
-
-truncate -s 1 .hidden
-
-mkdir leaf_directory
-os_setfattr "user.type" "dir"  leaf_directory
-os_setfattr "user.name" "leaf" leaf_directory
-(
-    cd leaf_directory
-
-    truncate -s 1 leaf_file1
-    os_setfattr "user.name1" "value1" leaf_file1
-    os_setfattr "user.name2" "value2" leaf_file1
-    os_setfattr "user.name3" "value3" leaf_file1
-
-    truncate -s 1 leaf_file2
-    os_setfattr "user.name4" "value4" leaf_file2
-    os_setfattr "user.name5" "value5" leaf_file2
-    os_setfattr "user.name6" "value6" leaf_file2
-)
-
-truncate -s 1 old_file
-TZ=UTC touch -amt 197001010000 old_file
-
-truncate -s 1 repeat_name
-
-truncate -s 1 "unusual, name?#"

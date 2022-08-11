@@ -63,6 +63,7 @@
 
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
 
 TMP="tmp"
 
@@ -167,7 +168,7 @@ do
     count=$(echo "${f}" | grep -o "[0-9]*$")
     for i in $(seq "${count}" )
     do
-        setfattr -n "user.$(basename ${f})-${i}" -v "$(basename ${f})-${i}" "${f}"
+        os_setfattr "user.$(basename ${f})-${i}" "$(basename ${f})-${i}" "${f}"
     done
 done
 
