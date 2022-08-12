@@ -68,11 +68,11 @@ OUTDB="outdb"
 TABLE="out"
 THREADS="2"
 
-function cleanup {
+cleanup() {
     rm -f ${OUTDB} ${OUTDB}.*
 }
 
-function cleanup_exit {
+cleanup_exit() {
     cleanup
     setup_cleanup
 }

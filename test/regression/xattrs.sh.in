@@ -67,11 +67,11 @@ source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
 
 OUTPUT="xattrs.out"
 
-function cleanup() {
+cleanup() {
     rm -rf ${TRACE}.*
 }
 
-function cleanup_exit {
+cleanup_exit() {
     cleanup
     setup_cleanup
 }
@@ -80,7 +80,7 @@ trap cleanup_exit EXIT
 
 cleanup
 
-function create() {
+create() {
     # run in subshell
     (
         name="$1"

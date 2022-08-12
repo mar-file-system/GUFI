@@ -71,11 +71,11 @@ BADTRACE="badtrace"
 # trace delimiter
 DELIM="|"
 
-function cleanup {
+cleanup() {
     rm -rf "${BADTRACE}"
 }
 
-function cleanup_exit {
+cleanup_exit() {
     cleanup
     setup_cleanup
 }

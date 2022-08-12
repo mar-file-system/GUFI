@@ -80,7 +80,7 @@ INDEXTARGET="search"
 INDEXROOT="${INDEXTARGET}/$(basename ${SRCDIR})"
 
 # always clean up
-function setup_cleanup {
+setup_cleanup() {
     rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" ${TRACES} "${INDEXTARGET}"
 }
 
@@ -119,7 +119,7 @@ VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 # only replaces executables and whitespace
-function replace() {
+replace() {
     @SED@ "
     s/${GENERATETREE//\//\\/}/generatetree/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
@@ -145,17 +145,17 @@ function replace() {
     "
 }
 
-function remove_root() {
+remove_root() {
     @SED@ "s/${SRCDIR//\//\\/}\\///g;"
 }
 
-function run_sort() {
+run_sort() {
     echo "$ $@" |& replace
     eval "$@"   |& replace | sort
     echo
 }
 
-function run_no_sort() {
+run_no_sort() {
     echo "$ $@" |& replace
     eval "$@"   |& replace
     echo

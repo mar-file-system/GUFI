@@ -64,7 +64,7 @@
 
 TESTS="$(dirname ${BASH_SOURCE[0]})" # Must be at the top
 set -x
-function usage() {
+usage() {
     echo "Usage: $0 tar dir GUFI_tree"
 }
 
@@ -78,7 +78,7 @@ TREE="$2"
 TARGET="$3"
 INDEX="${TARGET}/$(basename ${TREE})"
 
-function cleanup {
+cleanup() {
     rm -rf "${TREE}" "${INDEX}"
 }
 

@@ -67,11 +67,11 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 TMP="tmp"
 OUTPUT="rollup.out"
 
-function cleanup {
+cleanup() {
     rm -rf "${TMP}"
 }
 
-function cleanup_exit {
+cleanup_exit() {
     cleanup
     setup_cleanup
 }
@@ -107,7 +107,7 @@ cleanup
 # Remaining = 1 + 3 + 12      = 16 directories
 #
 
-function setup() {
+setup() {
     parent="$1"
     perms="$2"
     count="$3"

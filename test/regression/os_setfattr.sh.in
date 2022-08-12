@@ -64,12 +64,12 @@
 # source this file instead of using it as a command to only check OS once
 if [[ "@CMAKE_SYSTEM_NAME@" == "Linux" ]]
 then
-    function os_setfattr() {
+    os_setfattr() {
         @SETFATTR@ -n "$1" -v "$2" "$3"
     }
 elif [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]]
 then
-    function os_setfattr() {
+    os_setfattr() {
         @XATTR@ -w "$1" "$2" "$3"
     }
 fi
