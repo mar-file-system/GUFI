@@ -80,9 +80,11 @@ function(check_test_dependencies var exec)
 
     if (${var})
       message(STATUS "Found alternative to ${exec}: ${${var}}")
-    else ()
-      message(FATAL_ERROR "${var} not found. Cannot build tests.")
     endif()
+  endif()
+
+  if (NOT ${var})
+    message(FATAL_ERROR "${var} not found. Cannot build tests.")
   endif()
 endfunction()
 
