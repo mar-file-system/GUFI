@@ -62,6 +62,11 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
+# require find_program to return executables with -r+x permissions
+if (POLICY CMP0109)
+  cmake_policy(SET CMP0109 NEW)
+endif()
+
 function(check_test_dependencies var exec)
   find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
   if (${var})
@@ -154,6 +159,10 @@ endforeach()
 
 find_program(SUDO sudo)
 if (SUDO)
+  if (APPLE)
+    set(SUDO sudo)
+  endif()
+
   set(ENABLE_SUDO_TESTS Off CACHE BOOL "Whether or not to enable tests that need sudo")
   if (ENABLE_SUDO_TESTS)
     # .sh and .expected
