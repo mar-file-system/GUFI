@@ -67,6 +67,8 @@ on: [push]
 env:
   CC: clang
   CXX: clang++
+  DEP_INSTALL_PREFIX: ~/.local
+  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On
 
 jobs:
   Linux:
@@ -79,6 +81,11 @@ jobs:
       image: ${{ matrix.img }}
     steps:
     - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-${{ matrix.img }}
 
     - name: CentOS 7 Prerequisites
       if:  matrix.img == 'centos:7'
@@ -97,14 +104,14 @@ jobs:
       run: contrib/CI/ubuntu.sh
 
     - name: Configure CMake
-      run:  cmake -B ${{github.workspace}}/build -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DENABLE_SUDO_TESTS=On
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
 
     - name: Build
-      run:  cmake --build ${{github.workspace}}/build -j
+      run:  cmake --build ${{ github.workspace }}/build -j
 
     - name: Test
       run:  |
-            cd ${{github.workspace}}/build
+            cd ${{ github.workspace }}/build
             ctest --output-on-failure
 
   Older_CMake:
@@ -113,6 +120,11 @@ jobs:
       image: centos:7
     steps:
     - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-cmake-3.1.0
 
     - name: CentOS 7 Prerequisites
       run:  contrib/CI/centos7.sh
@@ -127,7 +139,7 @@ jobs:
       run: |
            mkdir -p build
            cd build
-           cmake .. -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DENABLE_SUDO_TESTS=On
+           cmake .. ${{ env.COMMON_CONFIG }}
 
     - name: Build
       run: |
@@ -146,6 +158,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-rpm
+
     - name: CentOS 7 Prerequisites
       run:  contrib/CI/centos7.sh
 
@@ -153,7 +170,7 @@ jobs:
       run:  |
             mkdir -p build
             cd build
-            cmake .. -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off
+            cmake .. ${{ env.COMMON_CONFIG }}
 
     - name: Test
       run:  build/contrib/CI/generic_rpm.sh
@@ -165,6 +182,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-client
+
     - name: CentOS 7 Prerequisites
       run:  contrib/CI/centos7.sh
 
@@ -172,7 +194,7 @@ jobs:
       run: |
            mkdir -p build
            cd build
-           cmake .. -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DCLIENT=On
+           cmake .. ${{ env.COMMON_CONFIG }} -DCLIENT=On
 
     - name: Test
       run:  build/contrib/CI/rpms.sh
@@ -189,15 +211,20 @@ jobs:
       run:  sudo apt -y install texlive-latex-extra imagemagick
 
     - name: Configure CMake
-      run:  cmake -B ${{github.workspace}}/build -DLATEX_BUILD=On
+      run:  cmake -B ${{ github.workspace }}/build -DLATEX_BUILD=On
 
     - name: Build PDFs
-      run:  cmake --build ${{github.workspace}}/build --target gufi_user gufi_administrator gufi_developer
+      run:  cmake --build ${{ github.workspace }}/build --target gufi_user gufi_administrator gufi_developer
 
   macOS:
     runs-on: macos-11
     steps:
     - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}
 
     - name: macOS 11 Prerequisites
       run:  contrib/CI/osx.sh
@@ -205,13 +232,13 @@ jobs:
     - name: Configure CMake
       run: |
            source ~/.bash_profile
-           cmake -B ${{github.workspace}}/build -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DENABLE_SUDO_TESTS=On
+           cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
 
     - name: Build
       run: |
            source ~/.bash_profile
-           cmake --build ${{github.workspace}}/build -j
+           cmake --build ${{ github.workspace }}/build -j
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
+      working-directory: ${{ github.workspace }}/build
       run: ctest --output-on-failure
