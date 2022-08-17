@@ -1034,7 +1034,7 @@ int main(int argc, char *argv[])
     print_stats("            set:                            %.2Lfs", "%Lf", sec(total_set_time));
     print_stats("            clone:                          %.2Lfs", "%Lf", sec(total_clone_time));
     print_stats("            pushdir:                        %.2Lfs", "%Lf", sec(total_pushdir_time));
-    print_stats("    check if treesummary table exists       %.2Lfs", "%Lf", sec(total_sqltsumcheck_time));
+    print_stats("    check if treesummary table exists:      %.2Lfs", "%Lf", sec(total_sqltsumcheck_time));
     print_stats("    sqltsum:                                %.2Lfs", "%Lf", sec(total_sqltsum_time));
     print_stats("    sqlsum:                                 %.2Lfs", "%Lf", sec(total_sqlsum_time));
     print_stats("    sqlent:                                 %.2Lfs", "%Lf", sec(total_sqlent_time));
