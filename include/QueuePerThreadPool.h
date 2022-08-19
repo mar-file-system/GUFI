@@ -111,8 +111,8 @@ struct QPTPool {
 /* User defined function to pass into QPTPool_start
  *
  * @param ctx      the pool context the function is running in
- * @param id       the id of this thread
- * @param data     the data the function is operating on
+ * @param id       the id of the thread enqueuing work
+ * @param data     the new data that is being enqueued
  * @param args     any extra data to make accessible to all functions that this thread pool runs
  * @return 0 if successful, non-zero if not
  */
