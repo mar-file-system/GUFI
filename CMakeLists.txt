@@ -335,6 +335,35 @@ if (DEP_USE_JEMALLOC)
   )
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # ##########################################
+  # Debug prints
+  # Should not be used with BENCHMARK
+  # ##########################################
+
+  # Cumulative times shown at end of run
+  option(PRINT_CUMULATIVE_TIMES "Sum the durations of events across all threads and print them at the end" Off)
+  if (PRINT_CUMULATIVE_TIMES)
+    add_definitions(-DCUMULATIVE_TIMES=1)
+  endif()
+
+  option(PRINT_PER_THREAD_STATS "Print individual events of each thread" Off)
+  if (PRINT_PER_THREAD_STATS)
+    add_definitions(-DPER_THREAD_STATS=1)
+  endif()
+
+  # print subdirectory counts
+  option(PRINT_SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
+  if (PRINT_SUBDIRECTORY_COUNTS)
+    add_definitions(-DSUBDIRECTORY_COUNTS=1)
+  endif()
+
+  option(PRINT_QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
+  if (PRINT_QPTPOOL_QUEUE_SIZE)
+    add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
+  endif()
+endif()
+
 # enable "make test"
 enable_testing()
 
