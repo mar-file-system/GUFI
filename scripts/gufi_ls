@@ -230,14 +230,12 @@ def run(argv, config_path):
     parser.add_argument('paths',                                                         type=str, action='append' , nargs='*')
 
     # GUFI specific arguments
-    parser.add_argument('--delim',          metavar='c',          dest='delim',          type=gufi_common.get_char,         default=' ',   help='delimiter separating output columns')
-    parser.add_argument('--in-memory-name', metavar='name',       dest='inmemory_name',  type=str,                          default='out', help='Name of in-memory database when -R is used')
-    parser.add_argument('--aggregate-name', metavar='name',       dest='aggregate_name', type=str, default='aggregate',                    help='Name of final database when -R is used')
     parser.add_argument('--nlink-width',    metavar='chars',      dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
     parser.add_argument('--size-width',     metavar='chars',      dest='size_width',     type=gufi_common.get_non_negative, default=10,    help='Width of size column')
     parser.add_argument('--user-width',     metavar='chars',      dest='user_width',     type=gufi_common.get_non_negative, default=5,     help='Width of user column')
     parser.add_argument('--group-width',    metavar='chars',      dest='group_width',    type=gufi_common.get_non_negative, default=5,     help='Width of group column')
-    parser.add_argument('--skip-file',      metavar='filename',   dest='skip',           type=str,                          default=None,  help='Name of file containing directory basenames to skip')
+
+    gufi_common.add_common_args(parser)
 
     args = parser.parse_args(argv[1:]);
 

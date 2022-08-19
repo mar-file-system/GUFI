@@ -979,14 +979,12 @@ def run(argv, config_path):
     parser.add_argument('--recursive', '-r',                  dest='recursive',      action='store_true',                                   help='run command recursively ({})'.format(', '.join(RECURSIVE.keys())))
     parser.add_argument('--cumulative', '-c',                 dest='cumulative',     action='store_true',                                   help='return cumulative values ({})'.format(', '.join(CUMULATIVE.keys())))
     parser.add_argument('--order',           metavar='order', dest='order',          choices=ORDER.keys(),         default=ASCENDING,       help='sort output (if applicable)')
-    parser.add_argument('--delim',           metavar='c',     dest='delim',          type=gufi_common.get_char,          default=' ',       help='delimiter separating output columns')
     parser.add_argument('--num-results',     metavar='n',     dest='num_results',    type=gufi_common.get_non_negative,                     help='first n results')
     parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',            type=gufi_common.get_uid,                              help='restrict to user')
-    parser.add_argument('--in-memory-name',  metavar='name',  dest='inmemory_name',  type=str, default='out',                               help='Name of intermediate database')
-    parser.add_argument('--aggregate-name',  metavar='name',  dest='aggregate_name', type=str, default='aggregate',                         help='Name of final database')
-    parser.add_argument('--skip-file',       metavar='filename', dest='skip',        type=str, default=None,                                help='Name of file containing directory basenames to skip')
     parser.add_argument('stat',                                                      choices=STATS.keys(),                                  help='statistic to get')
     parser.add_argument('path',                                                      type=str, nargs='?',                default='')
+
+    gufi_common.add_common_args(parser)
 
     args = parser.parse_args(argv[1:]);
 

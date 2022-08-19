@@ -512,14 +512,11 @@ def build_expression_parser():
     parser.add_argument('-printf',             metavar='format',     dest='printf',                type=str,                                           help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
-    parser.add_argument('--delim',             metavar='c',          dest='delim',                 type=gufi_common.get_char, default=' ',             help='delimiter separating output columns')
     parser.add_argument('--num-results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
     parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
     parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
-    parser.add_argument('--output-buffer',     metavar='bytes',      dest='output_buffer',         type=gufi_common.get_positive, default=4096,        help='Size of each thread\'s output buffer')
-    parser.add_argument('--in-memory-name',    metavar='name',       dest='inmemory_name',         type=str,                     default='out',        help='Name of in-memory database when aggregation is performed')
-    parser.add_argument('--aggregate-name',    metavar='name',       dest='aggregate_name',        type=str,                     default='aggregate',  help='Name of final database when aggregation is performed')
-    parser.add_argument('--skip-file',         metavar='filename',   dest='skip',                  type=str,                     default=None,         help='Name of file containing directory basenames to skip')
+
+    gufi_common.add_common_args(parser)
 
     return parser
 
@@ -587,6 +584,7 @@ def run(argv, config_path):
     # create the query command
     query_cmd = [config.executable(),
                  '-n', str(config.threads()),
+                 '-B', str(config.outputbuffer()),
                  '-a',
                  '-d', ' ']
 
@@ -684,9 +682,6 @@ def run(argv, config_path):
 
     if args.fprint:
         query_cmd += ['-o', args.fprint]
-
-    if args.output_buffer:
-        query_cmd += ['-B', str(args.output_buffer)]
 
     if args.skip:
         query_cmd += ['-k', args.skip]

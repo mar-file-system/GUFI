@@ -240,3 +240,20 @@ def cpus():
         return multiprocessing.cpu_count()
     except:
         return 1;
+
+def add_common_args(parser):
+    parser.add_argument('--delim',          metavar='c',          dest='delim',
+                        type=get_char,      default=' ',
+                        help='delimiter separating output columns')
+
+    parser.add_argument('--in-memory-name', metavar='name',       dest='inmemory_name',
+                        type=str,           default='out',
+                        help='Name of in-memory database when aggregation is performed')
+
+    parser.add_argument('--aggregate-name', metavar='name',       dest='aggregate_name',
+                        type=str,           default='aggregate',
+                        help='Name of final database when aggregation is performed')
+
+    parser.add_argument('--skip-file',      metavar='filename',   dest='skip',
+                        type=str,           default=None,
+                        help='Name of file containing directory basenames to skip')
