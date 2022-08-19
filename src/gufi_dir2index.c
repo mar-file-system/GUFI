@@ -80,18 +80,16 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
-#if BENCHMARK
-#include <time.h>
-
-pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
-size_t total_dirs = 0;
-size_t total_files = 0;
-#endif
-
 struct ThreadArgs {
     trie_t *skip;
     struct template_db db;
     struct template_db xattr;
+
+    #if BENCHMARK
+    /* locked by print_mutex in debug.h */
+    size_t total_dirs;
+    size_t total_files;
+    #endif
 };
 
 struct nondir_args {
@@ -147,12 +145,6 @@ static int process_nondir(struct work *entry, void *args) {
 }
 
 static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
-    #if BENCHMARK
-    pthread_mutex_lock(&global_mutex);
-    total_dirs++;
-    pthread_mutex_unlock(&global_mutex);
-    #endif
-
     /* skip argument checking */
     /* if (!data) { */
     /*     return 1; */
@@ -164,6 +156,11 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
     /* } */
 
     struct ThreadArgs *ta = (struct ThreadArgs *) args;
+    #if BENCHMARK
+    pthread_mutex_lock(&print_mutex);
+    ta->total_dirs++;
+    pthread_mutex_unlock(&print_mutex);
+    #endif
 
     struct nondir_args nda;
     nda.temp_db    = &ta->db;
@@ -278,9 +275,9 @@ static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *ar
     free(nda.work);
 
     #if BENCHMARK
-    pthread_mutex_lock(&global_mutex);
-    total_files += nondirs_processed;
-    pthread_mutex_unlock(&global_mutex);
+    pthread_mutex_lock(&print_mutex);
+    ta->total_files += nondirs_processed;
+    pthread_mutex_unlock(&print_mutex);
     #endif
 
     return 0;
@@ -429,6 +426,9 @@ int main(int argc, char *argv[]) {
     #if BENCHMARK
     struct start_end benchmark;
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
+
+    args.total_dirs = 0;
+    args.total_files = 0;
     #endif
 
     struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
@@ -493,11 +493,11 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
     const long double processtime = sec(nsec(&benchmark));
 
-    fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
-    fprintf(stderr, "Total Files:           %zu\n",    total_files);
+    fprintf(stderr, "Total Dirs:            %zu\n",    args.total_dirs);
+    fprintf(stderr, "Total Files:           %zu\n",    args.total_files);
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs / processtime);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  args.total_dirs / processtime);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  args.total_files / processtime);
     #endif
 
     return 0;

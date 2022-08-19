@@ -95,9 +95,8 @@ configure_file(output-on-failure output-on-failure @ONLY)
 #    delete the benchmark directory
 set(BENCHMARK Off CACHE BOOL "Whether or not to enable the benchmark target")
 if (BENCHMARK)
-  if (NOT DEFINED BENCHMARK_ROOT)
-    message(FATAL_ERROR "BENCHMARK_ROOT is not set")
-  endif()
+  message(WARNING "Make sure IndexRoot in the GUFI config also points to BENCHMARK_ROOT")
+  set(BENCHMARK_ROOT "/tmp/gufi-benchmark" CACHE PATH "Where to place benchmark trees.")
 
   function(check_int VAR)
     string(REGEX MATCH "^[0-9]+$" PARSED "${${VAR}}")
@@ -125,16 +124,17 @@ if (BENCHMARK)
 
   set(BENCHMARK_TREE "${BENCHMARK_ROOT}/tree")
   set(BENCHMARK_GUFI_TREE "${BENCHMARK_ROOT}/gufi_tree")
-  add_custom_target(benchmark_init COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
-                                   COMMAND ${CMAKE_COMMAND} -E make_directory "${BENCHMARK_ROOT}")
+  add_custom_target(benchmark_init COMMAND $<TARGET_FILE:parallel_rmr> -n "${BENCHMARK_THREADS}" "${BENCHMARK_ROOT}"
+                                   COMMAND ${CMAKE_COMMAND} -E make_directory "${BENCHMARK_ROOT}"
+                    DEPENDS parallel_rmr )
   add_custom_target(benchmark_generate_dir COMMAND $<TARGET_FILE:gendir> "${BENCHMARK_TREE}" "${BENCHMARK_DIRS}" "${BENCHMARK_FILES}" "${BENCHMARK_DEPTH}" "${BENCHMARK_THREADS}"
                     DEPENDS benchmark_init gendir)
   add_custom_target(benchmark_dir2index COMMAND $<TARGET_FILE:gufi_dir2index> -n "${BENCHMARK_THREADS}" "${BENCHMARK_TREE}" "${BENCHMARK_GUFI_TREE}"
                     DEPENDS benchmark_generate_dir gufi_dir2index)
   add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find > /dev/null
                     DEPENDS benchmark_dir2index gufi_query ${CMAKE_BINARY_DIR}/scripts/gufi_find)
-  add_custom_target(benchmark_fin COMMAND ${CMAKE_COMMAND} -E remove_directory "${BENCHMARK_ROOT}"
-                    DEPENDS benchmark_query)
+  add_custom_target(benchmark_fin COMMAND $<TARGET_FILE:parallel_rmr> -n "${BENCHMARK_THREADS}" "${BENCHMARK_ROOT}"
+                    DEPENDS benchmark_query parallel_rmr)
   add_custom_target(benchmark DEPENDS benchmark_fin)
 endif()
 
