@@ -78,7 +78,7 @@ followed by zero or more lines of regular file and symbolic link
 metadata. Note that the summary of each directory is not stored in
 trace files and are instead generated when the index is built.
 
-Stanzas can appear in any order within a trace file.  Source
-filesystems are generally walked in parallel and can place stanzas in
-any of the per thread trace files that are generated. Traces files can
-be concatenated together if doing so is necessary or more convenient.
+Due to the parallelism of indexing, stanzas can appear in any order
+within a trace file and can be placed in any of the per thread trace
+files that are generated. Traces files can be concatenated together if
+doing so is necessary or more convenient.

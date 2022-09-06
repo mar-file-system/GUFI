@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     int rc = 0;
 
     const char* pos_args = "attach_name table_name SQL DB_name [DB_name ...]";
-    int idx = parse_cmd_line(argc, argv, "hHNVp", 4, pos_args, &in);
+    int idx = parse_cmd_line(argc, argv, "hHNVpd:", 4, pos_args, &in);
     if (in.helped)
         sub_help();
     if (idx < 0)

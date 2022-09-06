@@ -88,7 +88,7 @@ echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replac
 run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path() || '/' || pentries.name, pentries.size FROM pentries WHERE pentries.type=='f';\" \"${INDEXROOT}\""
 
 echo "# Query all per-thread result databse files at once"
-run_no_sort "${QUERYDBS} -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
 ) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"

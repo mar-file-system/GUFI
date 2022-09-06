@@ -225,7 +225,7 @@ int parse_cmd_line(int         argc,
                    struct input *in) {
    memset(in, 0, sizeof(*in));
    in->maxthreads         = 1;                      // don't default to zero threads
-   SNPRINTF(in->delim, sizeof(in->delim), "|");
+   SNPRINTF(in->delim, sizeof(in->delim), fielddelim);
    in->max_level          = -1;                     // default to all the way down
    in->xattrs.nobody.uid  = 65534;
    in->xattrs.nobody.gid  = 65534;

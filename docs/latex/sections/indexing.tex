@@ -77,6 +77,9 @@ tables listed in Sections \ref{sec:schema} and
 \ref{sec:xattr_schema}. Additional database files may be created if
 extended attributes are extracted (see Section~\ref{sec:xattrs}).
 
+Index creation occurs on a per-directory basis, and thus is highly
+parallelizable.
+
 \subsection{Directly Indexing a Filesystem}
 \input{sections/gufi_dir2index.tex}
 \subsection{Indirectly Indexing a Filesystem}

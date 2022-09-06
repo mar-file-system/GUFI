@@ -85,7 +85,15 @@ returns to the work queue to find more work.
 \subsubsection{Usage}
 \begin{enumerate}
 \item Create a thread pool: \\ \texttt{struct QPTPool *pool =
-  QPTPool\_init(nthreads);}
+  QPTPool\_init(nthreads, next, next\_args);} \\ The \texttt{next}
+  argument is a function that selects the thread id of the work queue
+  to place the new work item into. \texttt{next\_args} allows for
+  extra arguments to be passed into \texttt{next}. If \texttt{next} is
+  \texttt{NULL}, the thread pool will default to round robin starting
+  at the current thread id. The \texttt{next} and \texttt{next\_args}
+  arguments are set here instead of at \texttt{QPTPool\_enqueue} in
+  order to not require a branch to figure out whether or not the
+  provided function pointer is valid.
 \item Start the threads: \\ \texttt{QPTPool\_start(pool, args);}
   \\ The \texttt{args} argument will be accessible by all threads that
   are run.

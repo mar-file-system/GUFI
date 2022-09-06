@@ -289,7 +289,7 @@ TEST(parse_cmd_line, positional) {
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, "", 0, "", &in), 1);
 
     EXPECT_EQ(in.maxthreads,          1);
-    EXPECT_EQ(in.delim[0],            '|');
+    EXPECT_EQ(in.delim[0],            fielddelim[0]);
     EXPECT_EQ(in.dontdescend,         0);
     EXPECT_EQ(in.buildinindir,        0);
     EXPECT_EQ(in.suspectd,            0);
