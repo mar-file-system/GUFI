@@ -410,7 +410,7 @@ def build_output(args, table):
 
     path = 'path'
     if not need_aggregation(args):
-        path += '({}.name)'.format(SUMMARY)
+        path += '({0}.name, {0}.rollupscore)'.format(SUMMARY)
 
     if args.printf is not None:
         i = 0
@@ -607,7 +607,7 @@ def run(argv, config_path):
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({}.name)'.format(SUMMARY)] + ['{}.{}'.format(SUMMARY, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore)'.format(SUMMARY)] + ['{}.{}'.format(SUMMARY, column) for column in columns],
                                     [SUMMARY],
                                     build_where(args, SUMMARY),
                                     build_group_by(args, SUMMARY),
@@ -616,7 +616,7 @@ def run(argv, config_path):
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({}.name) || "/" || {}.name'.format(SUMMARY, PENTRIES)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
                                     [SUMMARY, PENTRIES],
                                     build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),

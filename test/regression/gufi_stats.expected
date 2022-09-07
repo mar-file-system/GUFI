@@ -1,8 +1,9 @@
+
 $ gufi_stats    depth
 0
 
 $ gufi_stats -r depth
-. 0
+prefix 0
 directory 1
 directory/subdirectory 2
 leaf_directory 1
@@ -11,7 +12,7 @@ $ gufi_stats    filesize
 1049604
 
 $ gufi_stats -r filesize
-. 1049604
+prefix 1049604
 directory 3
 directory/subdirectory 1
 leaf_directory 2
@@ -20,7 +21,7 @@ $ gufi_stats    filecount
 7
 
 $ gufi_stats -r filecount
-. 7
+prefix 7
 directory 3
 directory/subdirectory 1
 leaf_directory 2
@@ -29,7 +30,7 @@ $ gufi_stats    linkcount
 1
 
 $ gufi_stats -r linkcount
-. 1
+prefix 1
 directory 0
 directory/subdirectory 1
 leaf_directory 0
@@ -56,7 +57,7 @@ $ gufi_stats    dircount
 2
 
 $ gufi_stats -r dircount
-. 2
+prefix 2
 directory 1
 directory/subdirectory 0
 leaf_directory 0
@@ -128,4 +129,3 @@ $ gufi_stats -c total-leaf-files
 
 $ gufi_stats    median-leaf-files
 1.5
-

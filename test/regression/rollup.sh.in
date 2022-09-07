@@ -162,9 +162,9 @@ rm -r ${TMP}
 ${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXTARGET}
 ${ROLLUP} ${INDEXROOT} | replace
 
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary;\" \"${INDEXROOT}\" | wc -l"
-run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name) from summary\" -E \"SELECT path(summary.name) || '/' || pentries.name from summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
+run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary;\" \"${INDEXROOT}\" | wc -l"
+run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
+run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary\" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
 
 run_no_sort "${GUFI_FIND} -type d | wc -l"
 run_no_sort "${GUFI_FIND} -type f | wc -l"
@@ -195,20 +195,20 @@ run_no_sort "${GUFI_LS} u/u"
 echo "# 1 less because gufi_ls does not list the input dir"
 run_no_sort "${GUFI_LS} -R | wc -l"
 
-run_no_sort "${GUFI_STATS}    depth"
-run_no_sort "${GUFI_STATS} -r depth"
+run_sort "${GUFI_STATS}    depth"
+run_sort "${GUFI_STATS} -r depth"
 
-run_no_sort "${GUFI_STATS}    filecount"
-run_no_sort "${GUFI_STATS} -r filecount"
+run_sort "${GUFI_STATS}    filecount"
+run_sort "${GUFI_STATS} -r filecount"
 
-run_no_sort "${GUFI_STATS}    total-filecount"
-run_no_sort "${GUFI_STATS} -c total-filecount"
+run_sort "${GUFI_STATS}    total-filecount"
+run_sort "${GUFI_STATS} -c total-filecount"
 
-run_no_sort "${GUFI_STATS}    dircount"
-run_no_sort "${GUFI_STATS} -r dircount"
+run_sort "${GUFI_STATS}    dircount"
+run_sort "${GUFI_STATS} -r dircount"
 
-run_no_sort "${GUFI_STATS}    total-dircount"
-run_no_sort "${GUFI_STATS} -c total-dircount"
+run_sort "${GUFI_STATS}    total-dircount"
+run_sort "${GUFI_STATS} -c total-dircount"
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/rollup.expected "${OUTPUT}"

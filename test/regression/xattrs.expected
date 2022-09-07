@@ -1,6 +1,6 @@
 $ gufi_dir2index -x "prefix" "prefix"
 
-$ gufi_query -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;" "prefix"
+$ gufi_query -d " " -x -S "SELECT path(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
@@ -40,7 +40,7 @@ Files: 25
 Dirs:  6 (1 empty)
 Total: 31
 
-$ gufi_query -d " " -x -S "SELECT path(), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path() || '/' || name, type, xattr_name, xattr_value FROM xpentries;" "prefix"
+$ gufi_query -d " " -x -S "SELECT path(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066

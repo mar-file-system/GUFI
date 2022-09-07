@@ -838,55 +838,61 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 }
 
 /*
- * path(name (optional), remove root (optional))
+ * path(summary.name, summary.rollupscore)
  *
- * 0 args - get current directory: work->name (real path of index)
- * 1 arg  - dirname(work->name) + "/" + input arg
- * 2 args - int: if set to non-zero, remove work->root
+ * path = work->name - work->root (prefix)
+ * // rolled up
+ * if summary.rollupscore != 0
+ *     path += summary.name - common path (prefix)
+ * return path
  */
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     /* work->name contains the current directory being operated on */
     struct work *work = (struct work *) sqlite3_user_data(context);
+    const int rollupscore = sqlite3_value_int(argv[1]);
 
-    /* no args - return current directory */
-    if (argc == 0) {
-        sqlite3_result_text(context, work->name, -1, SQLITE_STATIC);
+    char *dirname = work->name;
+    size_t dirname_len = work->name_len;
+
+    /* remove parent from current directory name */
+    dirname += work->root_len;
+    dirname_len -= work->root_len;
+    while (dirname_len && (dirname[0] == '/')) {
+        dirname++;
+        dirname_len--;
     }
-    /* use first arg - combine with pwd to get full path */
+
+    if (rollupscore == 0) {
+        sqlite3_result_text(context, dirname, dirname_len, SQLITE_STATIC);
+    }
     else {
-        const char *name = (char *) sqlite3_value_text(argv[0]);
-        int remove_root = 0;
-        if (argc > 1) {
-            remove_root = sqlite3_value_int(argv[1]);
-        }
-
-        char *path = work->name;
-        size_t path_len = work->name_len;
-
-        if (remove_root) {
-            path += work->root_len;
-            path_len -= work->root_len;
-        }
-
-        /* remove trailing '/' */
-        while (path_len && (path[path_len - 1] == '/')) {
-            path_len--;
-        }
-
-        /* basename(work->name) will be the same as the first part of the input path, so remove it */
-        while (path_len && (path[path_len - 1] != '/')) {
-            path_len--;
-        }
-
         char fullpath[MAXPATH];
+        size_t fullpath_len = SNFORMAT_S(fullpath, MAXPATH, 1,
+            dirname, dirname_len);
 
-        /* do not strip trailing '/' or explicitly add an '/' */
-        const size_t len = SNFORMAT_S(fullpath, MAXPATH, 2,
-                                      path, path_len,
-                                      name, strlen(name));
+        const char *input = (char *) sqlite3_value_text(argv[0]);
+        const size_t input_len = strlen(input);
+        size_t input_offset = 0;
 
-        sqlite3_result_text(context, fullpath, len, SQLITE_STATIC);
+        /* remove first path segment, including / */
+        while ((input_offset < input_len) &&
+               (input[input_offset] != '/')) {
+            input_offset++;
+        }
+
+        while ((input_offset < input_len) &&
+               (input[input_offset] == '/')) {
+            input_offset++;
+        }
+
+        const size_t input_remaining = input_len - input_offset;
+        if (input_remaining) {
+            fullpath_len += SNFORMAT_S(fullpath + fullpath_len, MAXPATH, 2,
+                "/", 1, input + input_offset, input_remaining);
+        }
+
+        sqlite3_result_text(context, fullpath, fullpath_len, SQLITE_TRANSIENT);
     }
 
     return;
@@ -1141,7 +1147,7 @@ int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work) {
     if (work) {
         void *lvl = (void *) (uintptr_t) work->level;
         void *id_ptr = (void *) (uintptr_t) id;
-        if (!((sqlite3_create_function(db,  "path",                -1, SQLITE_UTF8,
+        if (!((sqlite3_create_function(db,  "path",                2, SQLITE_UTF8,
                                        work,                       &path,               NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "fpath",               0,  SQLITE_UTF8,
                                        id_ptr,                     &fpath,              NULL, NULL) == SQLITE_OK) &&

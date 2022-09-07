@@ -81,7 +81,7 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" ${TRACES} \"${INDEXTARGET}\" | 
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$(${GUFI_QUERY} -d " " -S "SELECT path();" -E "SELECT path() || '/' || name FROM pentries;" "${INDEXROOT}" | replace | sort)
+index_contents=$(${GUFI_QUERY} -d " " -S "SELECT path(name, rollupscore) FROM summary;" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'

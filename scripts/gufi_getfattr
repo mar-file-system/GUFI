@@ -82,8 +82,8 @@ def getfattr(args, config, dirname, nondirname):
         E_cols = ['xattr_value']
     else:
         # default to getting path and xattr name
-        S_cols = ['path(name, 1)', 'xattr_name']
-        E_cols = ['path({}.name, 1) || \'/\' || {}.name'.format(SUMMARY, XPENTRIES), 'xattr_name']
+        S_cols = ['path(name, rollupscore)', 'xattr_name']
+        E_cols = ['path({0}.name, {0}.rollupscore) || \'/\' || {1}.name'.format(SUMMARY, XPENTRIES), 'xattr_name']
 
         # also get xattr value
         if args.dump:

@@ -181,13 +181,13 @@ ${ROLLUP} "${INDEXROOT}" | replace 2> /dev/null
 echo
 
 echo "# rolled up directories should have rows in pentries_rollup"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;\" \"${INDEXROOT}\" | sort"
+run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore), rollupscore, (SELECT COUNT(*) FROM pentries_rollup) FROM summary WHERE isroot == 1;\" \"${INDEXROOT}\" | sort"
 
 # unroll up the index
 run_no_sort "${UNROLLUP} \"${INDEXROOT}\""
 
 echo "# level, COUNT(entries), COUNT(pentries_rollup), directory"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path() AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\" | sort -k4"
+run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), path(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\" | sort -k4"
 ) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/unrollup.expected "${OUTPUT}"

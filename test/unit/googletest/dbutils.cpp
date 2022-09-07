@@ -87,64 +87,31 @@ int str_output(void *args, int, char **data, char **) {
 
 TEST(addqueryfuncs, path) {
     // currently at this path
-    const char pwd[MAXPATH] = "index_root";
+    const char root[MAXPATH] = "index_root";
+    const size_t root_len = strlen(root);
+
+    const char dirname[MAXPATH] = "dirname";
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = (char *) pwd;
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s", pwd);
+    work.root = (char *) root;
+    work.root_len = root_len;
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
     ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
 
-    // 0 args - get work->name back
-    {
+    for(int rollupscore : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT path()");
+        SNPRINTF(query, MAXSQL, "SELECT path(\"%s\", %d);", dirname, rollupscore);
 
-        // the path returned by the query is the index prefix with the original basename
+        // the path returned by the query is the path without the index prefix
         char output[MAXPATH] = {};
         EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
 
-        EXPECT_STREQ(output, pwd);
-    }
-
-    // empty string arg - get dirname(work->name) back
-    {
-        char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT path('')");
-
-        // the path returned by the query is the index prefix with the original basename
-        char output[MAXPATH] = {};
-        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
-
-        EXPECT_STREQ(output, "");
-    }
-
-    // path without rollup
-    {
-        char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT path('index_root')");
-
-        // the path returned by the query is the index prefix with the original basename
-        char output[MAXPATH] = {};
-        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
-
-        EXPECT_STREQ(output, pwd);
-    }
-
-    // rolled up path
-    {
-        char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT path('index_root/dir0/dir1')");
-
-        // the path returned by the query is the index prefix with the original basename
-        char output[MAXPATH] = {};
-        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
-
-        EXPECT_STREQ(output, "index_root/dir0/dir1");
+        EXPECT_STREQ(output, dirname);
     }
 
     sqlite3_close(db);

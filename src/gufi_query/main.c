@@ -900,8 +900,12 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        /* parent of input path */
         mywork->root = argv[i];
         mywork->root_len = mywork->name_len;
+        while (mywork->root_len && (mywork->root[mywork->root_len - 1] != '/')) {
+            mywork->root_len--;
+        }
 
         /* push the path onto the queue */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
