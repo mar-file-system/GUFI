@@ -271,10 +271,10 @@ static size_t descend2(struct QPTPool *ctx,
     if (level_check) {
         buffered_end(level_branch);
 
-        /* go ahead and send the subdirs to the queue since we need to look */
-        /* further down the tree.  loop over dirents, if link push it on the */
-        /* queue, if file or link print it, fill up qwork structure for */
-        /* each */
+        /* Send subdirs to queue */
+        /* loop over dirents*/
+        /* skip db.db and any filename listed in the trie struct*/
+        /* fill qwork struct for each dirent*/
         buffered_start(while_branch);
         while (1) {
             buffered_start(readdir_call);
@@ -293,7 +293,7 @@ static size_t descend2(struct QPTPool *ctx,
             buffered_start(strncmp_call);
             const size_t len = strlen(entry->d_name);
             const int skip = (trie_search(skip_names, entry->d_name, len) ||
-                              (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
+                             (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
             buffered_end(strncmp_call);
 
             buffered_start(strncmp_branch);
