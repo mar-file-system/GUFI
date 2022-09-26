@@ -563,7 +563,7 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  * the path. Nothing in work->statuso will be filled except the
  * entry type. Links will not be read.
  */
-int descend(struct QPTPool *ctx, const size_t id,
+int descend(QPTPool_t *ctx, const size_t id,
             struct work *work, DIR *dir, trie_t *skip_names,
             const int stat_entries, QPTPoolFunc_t processdir,
             int (*process_nondir)(struct work *nondir, void *args), void *args,

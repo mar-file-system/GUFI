@@ -102,7 +102,7 @@ static int process_nondir(struct work *entry, void *args) {
 
 /* process the work under one directory (no recursion) */
 /* deletes work */
-static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
     total_dirs++;
@@ -273,20 +273,13 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                        , NULL
-                                        #endif
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &args, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , NULL
+                                   #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        outfiles_fin(args.outfiles, in.maxthreads);
-        trie_free(args.skip);
-        return -1;
-    }
-
-    if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start threads\n");
         outfiles_fin(args.outfiles, in.maxthreads);
         trie_free(args.skip);
         return -1;

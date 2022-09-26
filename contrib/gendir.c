@@ -124,7 +124,7 @@ struct dir {
     size_t current_level;
 };
 
-int generate_level(struct QPTPool * ctx, const size_t id, void * data, void * args) {
+int generate_level(QPTPool_t * ctx, const size_t id, void * data, void * args) {
     struct settings * settings = (struct settings *) args;
     struct dir * dir = (struct dir *) data;
 
@@ -243,19 +243,14 @@ int main(int argc, char * argv[]) {
     }
 
     // start up threads and push root into the queue for processing
-    struct QPTPool * pool = QPTPool_init(threads, NULL, NULL
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , NULL
-                                         #endif
+    QPTPool_t * pool = QPTPool_init(threads, &settings, NULL, NULL
+                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                    , NULL
+                                    #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
         free(root);
-        return -1;
-    }
-
-    if (QPTPool_start(pool, &settings) != threads) {
-        fprintf(stderr, "Failed to start threads\n");
         return -1;
     }
 

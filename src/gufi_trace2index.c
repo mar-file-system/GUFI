@@ -166,7 +166,7 @@ size_t total_files              = 0;
 #endif
 
 /* process the work under one directory (no recursion) */
-static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #ifdef DEBUG
     #ifdef CUMULATIVE_TIMES
     uint64_t thread_handle_args      = 0;
@@ -534,7 +534,7 @@ static size_t parsefirst(char *line, const size_t len, const char delim) {
 }
 
 /* Read ahead to figure out where files under directories start */
-static int scout_function(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct start_end scouting;
     clock_gettime(CLOCK_MONOTONIC, &scouting.start);
 
@@ -611,7 +611,7 @@ static int scout_function(struct QPTPool *ctx, const size_t id, void *data, void
 
             /* put the previous work on the queue */
             QPTPool_enqueue(ctx, target_thread, processdir, work);
-            target_thread = (target_thread + 1) % ctx->size;
+            target_thread = (target_thread + 1) % ctx->nthreads;
 
             /* put the current line into a new work item */
             work = row_init(traces, first_delim, line, len, ftell(trace));
@@ -771,21 +771,13 @@ int main(int argc, char *argv[]) {
     OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
 
-    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , &debug_output_buffers
-                                         #endif
-                                         );
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &args, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , &debug_output_buffers
+                                   #endif
+        );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        close_template_db(&args.xattr);
-        close_template_db(&args.db);
-        close_per_thread_traces(traces, trace_count, in.maxthreads);
-        return -1;
-    }
-
-    if (!QPTPool_start(pool, &args)) {
-        fprintf(stderr, "Failed to start threads\n");
         close_template_db(&args.xattr);
         close_template_db(&args.db);
         close_per_thread_traces(traces, trace_count, in.maxthreads);

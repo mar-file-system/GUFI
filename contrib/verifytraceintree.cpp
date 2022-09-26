@@ -124,7 +124,7 @@ struct CheckStanzaArgs {
     std::vector <std::istream *> traces;
 };
 
-int check_stanza(struct QPTPool *, const size_t id, void * data, void * args) {
+int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
     struct CheckStanzaArgs * csa = static_cast <struct CheckStanzaArgs *> (args);
     std::istream & trace = *(csa->traces[id]);
 
@@ -298,7 +298,7 @@ std::string::size_type parsefirst(const char delim, struct StanzaStart * work) {
     return (work->first_delim = work->line.find(delim));
 }
 
-int scout_function(struct QPTPool *ctx, const size_t id, void * data, void * args) {
+int scout_function(QPTPool_t *ctx, const size_t id, void * data, void * args) {
     struct CheckStanzaArgs * csa = static_cast <struct CheckStanzaArgs *> (args);
     csa->correct = false;
 
@@ -406,16 +406,13 @@ int main(int argc, char * argv[]) {
     }
 
     std::atomic_bool correct(false);
-
-    struct QPTPool * ctx = QPTPool_init(threads, nullptr, nullptr
-                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                        , nullptr
-                                        #endif
-        );
-
-    // start threads with partially initialized args
     struct CheckStanzaArgs csa(threads, correct, delim, GUFI_tree);
-    QPTPool_start(ctx, &csa);
+
+    QPTPool_t * ctx = QPTPool_init(threads, &csa, nullptr, nullptr
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , nullptr
+                                   #endif
+        );
 
     // start scouting function to push work onto queues
     QPTPool_enqueue(ctx, 0, scout_function, trace);

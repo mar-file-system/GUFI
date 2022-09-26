@@ -150,7 +150,7 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
     return rc;
 }
 
-int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     (void) args;
 
     struct Unrollup *work = (struct Unrollup *) data;
@@ -283,19 +283,14 @@ int main(int argc, char *argv[]) {
     timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
     #endif
 
-    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                        , timestamp_buffers
-                                        #endif
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , timestamp_buffers
+                                   #endif
         );
 
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        return -1;
-    }
-
-    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start threads\n");
         return -1;
     }
 

@@ -114,7 +114,7 @@ static int create_tables(const char * name, sqlite3 *db, void * args)
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
-int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
+int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
 {
     (void) args;
 
@@ -269,7 +269,7 @@ int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
 }
 
 
-int processinit(struct QPTPool * ctx) {
+int processinit(QPTPool_t * ctx) {
      struct work * mywork = malloc(sizeof(struct work));
      int i;
      FILE *robinfd;
@@ -382,19 +382,13 @@ int main(int argc, char *argv[])
     if (validate_inputs())
         return -1;
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , NULL
-                                         #endif
+    QPTPool_t * pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL
+                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                    , NULL
+                                    #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        processfin();
-        return -1;
-    }
-
-    if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start threads\n");
         processfin();
         return -1;
     }

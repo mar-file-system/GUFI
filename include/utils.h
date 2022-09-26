@@ -124,7 +124,7 @@ int processdirs(DirFunc dir_fn);
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function
  */
-int descend(struct QPTPool *ctx, const size_t id,
+int descend(QPTPool_t *ctx, const size_t id,
             struct work *work, DIR *dir, trie_t *skip,
             const int stat_entries,  QPTPoolFunc_t processdir,
             int (*process_nondir)(struct work *nondir, void *args), void *args,

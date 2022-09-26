@@ -234,7 +234,7 @@ static const char ATTACH_NAME[] = "tree";
 pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Push the subdirectories in the current directory onto the queue */
-static size_t descend2(struct QPTPool *ctx,
+static size_t descend2(QPTPool_t *ctx,
                        const size_t id,
                        struct work *passmywork,
                        DIR *dir,
@@ -369,7 +369,7 @@ static size_t descend2(struct QPTPool *ctx,
     return pushed;
 }
 
-int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
@@ -857,21 +857,14 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                        , timestamp_buffers
-                                        #endif
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &pa, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , timestamp_buffers
+                                   #endif
         );
 
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        aggregate_fin(&aggregate, &in);
-        PoolArgs_fin(&pa, in.maxthreads);
-        return -1;
-    }
-
-    if (QPTPool_start(pool, &pa) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start threads\n");
         aggregate_fin(&aggregate, &in);
         PoolArgs_fin(&pa, in.maxthreads);
         return -1;

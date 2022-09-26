@@ -103,7 +103,7 @@ struct UserArgs {
     #endif
 };
 
-static int ascend_to_top(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(ascend);
 
@@ -188,7 +188,7 @@ static struct BottomUp *track(const char *name, const size_t name_len,
     return copy;
 }
 
-static int descend_to_bottom(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(descend);
 
@@ -352,20 +352,14 @@ int parallel_bottomup(char **root_names, size_t root_count,
     ua.timestamp_buffers = timestamp_buffers;
     #endif
 
-    struct QPTPool *pool = QPTPool_init(thread_count, NULL, NULL
-                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                        , timestamp_buffers
-                                        #endif
-    );
+    QPTPool_t *pool = QPTPool_init(thread_count, &ua, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , timestamp_buffers
+                                   #endif
+        );
 
     if (!pool) {
         fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        return -1;
-    }
-
-    if (QPTPool_start(pool, &ua) != (size_t) thread_count) {
-        fprintf(stderr, "Error: Failed to start threads\n");
-        QPTPool_destroy(pool);
         return -1;
     }
 

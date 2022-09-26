@@ -296,7 +296,7 @@ int reprocessdir(void * passv, DIR *dir)
 
 // This becomes an argument to thpool_add_work(), so it must return void,
 // instead of void*.
-static int processdir(struct QPTPool * ctx, const size_t id, void * data, void * args)
+static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
 {
     struct work *passmywork = data;
     struct work qwork;
@@ -547,7 +547,7 @@ static int processdir(struct QPTPool * ctx, const size_t id, void * data, void *
     return 0;
 }
 
-int processinit(struct QPTPool * ctx) {
+int processinit(QPTPool_t * ctx) {
 
      struct work * mywork = malloc(sizeof(struct work));
      int i;
@@ -777,18 +777,13 @@ int main(int argc, char *argv[])
 
      if (in.buildinindir == 1) gltodirmode=1;
 
-    struct QPTPool * pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                         , NULL
-                                         #endif
-        );
+     QPTPool_t * pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL
+                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                     , NULL
+                                     #endif
+         );
      if (!pool) {
          fprintf(stderr, "Failed to initialize thread pool\n");
-         return -1;
-     }
-
-     if (QPTPool_start(pool, NULL) != (size_t) in.maxthreads) {
-         fprintf(stderr, "Failed to start threads\n");
          return -1;
      }
 

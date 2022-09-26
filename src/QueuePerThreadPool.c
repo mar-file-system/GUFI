@@ -69,13 +69,23 @@ OF SUCH DAMAGE.
 
 #include "debug.h"
 #include "QueuePerThreadPool.h"
-#include "QueuePerThreadPoolPrivate.h"
+#include "SinglyLinkedList.h"
+
+/* The context for a single thread in QPTPool */
+struct QPTPoolThreadData {
+    struct sll queue;
+    pthread_mutex_t mutex;
+    pthread_cond_t cv;
+    size_t next_queue;
+    pthread_t thread;
+    size_t threads_started;
+    size_t threads_successful;
+};
 
 /* struct to pass into pthread_create */
 struct worker_function_args {
-    struct QPTPool *ctx;
+    QPTPool_t *ctx;
     size_t id;
-    void *args;
 };
 
 /* struct that is created when something is enqueued */
@@ -89,7 +99,7 @@ static void *worker_function(void *args) {
     timestamp_start(wf);
 
     struct worker_function_args *wf_args = (struct worker_function_args *) args;
-    struct QPTPool *ctx = wf_args->ctx;
+    QPTPool_t *ctx = wf_args->ctx;
 
     if (!args) {
         timestamp_end(ctx->buffers, wf_args->id, "wf", wf);
@@ -102,7 +112,7 @@ static void *worker_function(void *args) {
         return NULL;
     }
 
-    struct QPTPoolData *tw = &wf_args->ctx->data[wf_args->id];
+    QPTPoolThreadData_t *tw = &ctx->data[wf_args->id];
 
     while (1) {
         timestamp_start(wf_sll_init);
@@ -149,9 +159,9 @@ static void *worker_function(void *args) {
         fprintf(stderr, "qptpool_size %" PRIu64 " ", since_epoch(&now) - epoch);
 
         size_t sum = 0;
-        for(size_t i = 0; i < wf_args->ctx->size; i++) {
-            fprintf(stderr, "%zu ", wf_args->ctx->data[i].queue.size);
-            sum += wf_args->ctx->data[i].queue.size;
+        for(size_t i = 0; i < ctx->nthreads; i++) {
+            fprintf(stderr, "%zu ", ctx->data[i].queue.size);
+            sum += ctx->data[i].queue.size;
         }
         fprintf(stderr, "%zu\n", sum);
         tw->queue.size = 0;
@@ -173,7 +183,7 @@ static void *worker_function(void *args) {
             timestamp_start(wf_process_work);
             struct queue_item *qi = sll_node_data(w);
 
-            tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, wf_args->args);
+            tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, ctx->args);
             timestamp_end(ctx->buffers, wf_args->id, "wf_process_work", wf_process_work);
 
             timestamp_start(wf_next_work);
@@ -206,7 +216,7 @@ static void *worker_function(void *args) {
     }
 
     timestamp_start(wf_broadcast);
-    for(size_t i = 0; i < ctx->size; i++) {
+    for(size_t i = 0; i < ctx->nthreads; i++) {
         pthread_cond_broadcast(&ctx->data[i].cv);
     }
     timestamp_end(ctx->buffers, wf_args->id, "wf_broadcast", wf_broadcast);
@@ -224,28 +234,32 @@ static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size
     return (prev + 1) % threads;
 }
 
-struct QPTPool *QPTPool_init(const size_t threads,
-                             QPTPoolNextFunc_t next,
-                             void *next_args
-                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                             , struct OutputBuffers *buffers
-                             #endif
+QPTPool_t *QPTPool_init(const size_t nthreads,
+                        void *args,
+                        QPTPoolNextFunc_t next,
+                        void *next_args
+                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                        , struct OutputBuffers *buffers
+                        #endif
     ) {
-    if (!threads) {
+    if (!nthreads) {
         return NULL;
     }
 
-    struct QPTPool *ctx = calloc(1, sizeof(struct QPTPool));
+    QPTPool_t *ctx = calloc(1, sizeof(QPTPool_t));
     if (!ctx) {
         return NULL;
     }
 
-    if (!(ctx->data = calloc(threads, sizeof(struct QPTPoolData)))) {
+    if (!(ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t)))) {
         free(ctx);
         return NULL;
     }
 
-    ctx->size = threads;
+    ctx->nthreads = nthreads;
+
+    ctx->args = args;
+
     if (next) {
         ctx->next = next;
         ctx->next_args = next_args;
@@ -262,64 +276,58 @@ struct QPTPool *QPTPool_init(const size_t threads,
     ctx->buffers = buffers;
     #endif
 
-    for(size_t i = 0; i < threads; i++) {
-        sll_init(&ctx->data[i].queue);
-        pthread_mutex_init(&ctx->data[i].mutex, NULL);
-        pthread_cond_init(&ctx->data[i].cv, NULL);
-        ctx->data[i].next_queue = i;
-        ctx->data[i].thread = 0;
-        ctx->data[i].threads_started = 0;
-        ctx->data[i].threads_successful = 0;
+    size_t started = 0;
+    for(size_t i = 0; i < nthreads; i++) {
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        sll_init(&data->queue);
+        pthread_mutex_init(&data->mutex, NULL);
+        pthread_cond_init(&data->cv, NULL);
+        data->next_queue = i;
+        data->thread = 0;
+        data->threads_started = 0;
+        data->threads_successful = 0;
+
+        struct worker_function_args *wf_args = calloc(1, sizeof(struct worker_function_args));
+        wf_args->ctx = ctx;
+        wf_args->id = i;
+        started += !pthread_create(&data->thread, NULL, worker_function, wf_args);
+    }
+
+    if (started != ctx->nthreads) {
+        QPTPool_wait(ctx);
+        QPTPool_destroy(ctx);
+        ctx = NULL;
     }
 
     return ctx;
 }
 
-size_t QPTPool_start(struct QPTPool *ctx, void *args) {
-    if (!ctx) {
-        return 0;
-    }
-
-    size_t started = 0;
-    for(size_t i = 0; i < ctx->size; i++) {
-        struct worker_function_args *wf_args = calloc(1, sizeof(struct worker_function_args));
-        wf_args->ctx = ctx;
-        wf_args->id = i;
-        wf_args->args = args;
-        started += !pthread_create(&ctx->data[i].thread, NULL, worker_function, wf_args);
-    }
-
-    if (started != ctx->size) {
-        QPTPool_wait(ctx);
-    }
-
-    return started;
-}
-
 /* id selects the next_queue variable to use, not where the work will be placed */
-void QPTPool_enqueue(struct QPTPool *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
+void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
     /* skip argument checking */
-    /* if (ctx) { */
-        struct queue_item *qi = malloc(sizeof(struct queue_item));
-        qi->func = func; /* if no function is provided, the thread will segfault when it processes this item*/
-        qi->work = new_work;
-
-        pthread_mutex_lock(&ctx->data[ctx->data[id].next_queue].mutex);
-        sll_push(&ctx->data[ctx->data[id].next_queue].queue, qi);
-        pthread_mutex_unlock(&ctx->data[ctx->data[id].next_queue].mutex);
-
-        pthread_mutex_lock(&ctx->mutex);
-        ctx->incomplete++;
-        pthread_mutex_unlock(&ctx->mutex);
-
-        pthread_cond_broadcast(&ctx->data[ctx->data[id].next_queue].cv);
-
-        ctx->data[id].next_queue = ctx->next(id, ctx->data[id].next_queue, ctx->size,
-                                             new_work, ctx->next_args);
+    /* if (!ctx) { */
+    /*     return; */
     /* } */
+    struct queue_item *qi = malloc(sizeof(struct queue_item));
+    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item*/
+    qi->work = new_work;
+
+    QPTPoolThreadData_t *data = &ctx->data[id];
+    pthread_mutex_lock(&ctx->data[data->next_queue].mutex);
+    sll_push(&ctx->data[data->next_queue].queue, qi);
+    pthread_mutex_unlock(&ctx->data[data->next_queue].mutex);
+
+    pthread_mutex_lock(&ctx->mutex);
+    ctx->incomplete++;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    pthread_cond_broadcast(&ctx->data[data->next_queue].cv);
+
+    data->next_queue = ctx->next(id, data->next_queue, ctx->nthreads,
+                                 new_work, ctx->next_args);
 }
 
-void QPTPool_wait(struct QPTPool *ctx) {
+void QPTPool_wait(QPTPool_t *ctx) {
     if (!ctx) {
         return;
     }
@@ -327,66 +335,56 @@ void QPTPool_wait(struct QPTPool *ctx) {
     pthread_mutex_lock(&ctx->mutex);
     ctx->running = 0;
     pthread_mutex_unlock(&ctx->mutex);
-    for(size_t i = 0; i < ctx->size; i++) {
-        pthread_mutex_lock(&ctx->data[i].mutex);
-        pthread_cond_broadcast(&ctx->data[i].cv);
-        pthread_mutex_unlock(&ctx->data[i].mutex);
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        pthread_mutex_lock(&data->mutex);
+        pthread_cond_broadcast(&data->cv);
+        pthread_mutex_unlock(&data->mutex);
     }
 
-    for(size_t i = 0; i < ctx->size; i++) {
+    for(size_t i = 0; i < ctx->nthreads; i++) {
         pthread_join(ctx->data[i].thread, NULL);
     }
 }
 
-void QPTPool_destroy(struct QPTPool *ctx) {
-    if (ctx) {
-        for(size_t i = 0; i < ctx->size; i++) {
-            ctx->data[i].threads_successful = 0;
-            ctx->data[i].threads_started = 0;
-            ctx->data[i].thread = 0;
-            pthread_cond_destroy(&ctx->data[i].cv);
-            pthread_mutex_destroy(&ctx->data[i].mutex);
-            sll_destroy(&ctx->data[i].queue, NULL);
-        }
-
-        free(ctx->data);
-        free(ctx);
+void QPTPool_destroy(QPTPool_t *ctx) {
+    if (!ctx) {
+        return;
     }
+
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        data->threads_successful = 0;
+        data->threads_started = 0;
+        data->thread = 0;
+        pthread_cond_destroy(&data->cv);
+        pthread_mutex_destroy(&data->mutex);
+        sll_destroy(&data->queue, NULL);
+    }
+
+    free(ctx->data);
+    free(ctx);
 }
 
-/* utility functions */
-size_t QPTPool_get_index(struct QPTPool *ctx, const pthread_t id) {
-    /* skip argument checking */
-    /* if (!ctx) { */
-    /*     return (size_t) -1; */
-    /* } */
-    for(size_t i = 0; i < ctx->size; i++) {
-        if (id == ctx->data[i].thread) {
-            return i;
-        }
-    }
-    return (size_t) -1;
-}
-
-size_t QPTPool_threads_started(struct QPTPool *ctx) {
+size_t QPTPool_threads_started(QPTPool_t *ctx) {
     /* skip argument checking */
     /* if (!ctx) { */
     /*     return (size_t) -1; */
     /* } */
     size_t sum = 0;
-    for(size_t i = 0; i < ctx->size; i++) {
+    for(size_t i = 0; i < ctx->nthreads; i++) {
         sum += ctx->data[i].threads_started;
     }
     return sum;
 }
 
-size_t QPTPool_threads_completed(struct QPTPool *ctx) {
+size_t QPTPool_threads_completed(QPTPool_t *ctx) {
     /* skip argument checking */
     /* if (!ctx) { */
     /*     return (size_t) -1; */
     /* } */
     size_t sum = 0;
-    for(size_t i = 0; i < ctx->size; i++) {
+    for(size_t i = 0; i < ctx->nthreads; i++) {
         sum += ctx->data[i].threads_successful;
     }
     return sum;

@@ -65,7 +65,7 @@ OF SUCH DAMAGE.
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "QueuePerThreadPoolPrivate.h"
+#include "SinglyLinkedList.h"
 }
 
 TEST(SinglyLinkedList, init_destroy) {

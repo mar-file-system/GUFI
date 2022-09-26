@@ -144,7 +144,7 @@ static int process_nondir(struct work *entry, void *args) {
     return 0;
 }
 
-static int processdir(struct QPTPool *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* skip argument checking */
     /* if (!data) { */
     /*     return 1; */
@@ -431,21 +431,13 @@ int main(int argc, char *argv[]) {
     args.total_files = 0;
     #endif
 
-    struct QPTPool *pool = QPTPool_init(in.maxthreads, NULL, NULL
-                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                        , NULL
-                                        #endif
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &args, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , NULL
+                                   #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        close_template_db(&args.xattr);
-        close_template_db(&args.db);
-        trie_free(args.skip);
-        return -1;
-    }
-
-    if (QPTPool_start(pool, &args) != (size_t) in.maxthreads) {
-        fprintf(stderr, "Failed to start threads\n");
         close_template_db(&args.xattr);
         close_template_db(&args.db);
         trie_free(args.skip);
