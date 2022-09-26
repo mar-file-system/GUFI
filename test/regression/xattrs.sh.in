@@ -81,7 +81,7 @@ trap cleanup_exit EXIT
 cleanup
 
 create() {
-    # run in subshell
+    # run in subshell to return to calling directory
     (
         name="$1"
         perms="$2"
@@ -149,7 +149,7 @@ run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT path(name, rollupscore), type, x
 
 run_no_sort "${ROLLUP} ${INDEXROOT}" 2>&1 | @SED@ '/Ran /d' | @SED@ '/Took /d'
 
-run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT name, type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT summary.name || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xpentries LEFT JOIN summary on xpentries.pinode == summary.inode;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT path(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT path(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries WHERE xsummary.inode == xpentries.pinode;\" \"${INDEXROOT}\""
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${OUTPUT}"

@@ -171,8 +171,10 @@ multiple external databases, leaving a unique set of xattrs accessible
 by the caller.
 
 The \xentries, \xpentries, \xsummary views are convenience views
-generated so that users do not have to perform joins themselves. Like
-the \xattrs view, these views are also dropped at the end of directory
+generated so that users do not have to perform joins themselves. They
+are \entries, \pentries, and \summary enhanced with the
+\texttt{xattr\_name} and \texttt{xattr\_value} columns. Like the
+\xattrs view, these views are also dropped at the end of directory
 processing.
 
 Note that entries with multiple extended attributes will return

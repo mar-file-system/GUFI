@@ -108,7 +108,7 @@ Directories:    6 (1 empty)
 Total:          31
 Remaining Dirs: 1 (16.67%)
 
-$ gufi_query -d " " -x -S "SELECT name, type, xattr_name, xattr_value FROM xsummary;" -E "SELECT summary.name || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xpentries LEFT JOIN summary on xpentries.pinode == summary.inode;" "prefix"
+$ gufi_query -d " " -x -S "SELECT path(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;" -E "SELECT path(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries WHERE xsummary.inode == xpentries.pinode;" "prefix"
 prefix d
 prefix/u+r d user.u+r 500
 prefix/u+r/go f user.go 066
