@@ -198,7 +198,8 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
         where += ['{}.nlink {} {}'.format(table, links[0], links[1]) for links in args.links]
 
     if args.lname is not None:
-        where += ['{}.type == \'f\'', '{}.linkname REGEXP \'(?i){}\'"'.format(table, args.lname)]
+        where += ['{}.type == \'l\''.format(table),
+                  '{}.linkname REGEXP \'{}\''.format(table, args.lname)]
 
     if args.mmin is not None:
         where += ['({} - {}.mtime) / 60 {} {}'.format(now, table, mmin[0], mmin[1]) for mmin in args.mmin]
