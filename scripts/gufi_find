@@ -182,7 +182,7 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     # if args.ilname is not None:
 
     if args.iname is not None:
-        where += ['{}.name REGEXP \'(?i){}\'"'.format(table, args.iname)]
+        where += ['{}.name REGEXP \'(?i){}\''.format(table, args.iname)]
 
     if args.inum is not None:
         where += ['{}.inode {} {}'.format(table, inum[0], inum[1]) for inum in args.inum]
