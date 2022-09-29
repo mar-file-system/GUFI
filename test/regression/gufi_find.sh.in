@@ -66,6 +66,23 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_find.out"
 
+reference="not_as_old_file"
+
+cleanup() {
+    rm -rf "${reference}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+TZ=UTC touch -amt 197001010001 "${reference}"
+
 (
 run_sort    "${GUFI_FIND}"
 run_sort    "${GUFI_FIND} -empty"
@@ -87,6 +104,13 @@ run_sort    "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
 run_sort    "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
 run_no_sort "${GUFI_FIND} -type f --smallest"
 run_no_sort "${GUFI_FIND} -type f --largest"
+run_sort    "${GUFI_FIND} -iname 'LEAF'"
+run_sort    "${GUFI_FIND} -lname 'file.*'"
+run_sort    "${GUFI_FIND} -lname 'directory.*'"
+echo "# missing old_file"
+run_sort    "${GUFI_FIND} -newer '${reference}'"
+run_sort    "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory/repeat_name'"
+run_sort    "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory'"
 ) | remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"

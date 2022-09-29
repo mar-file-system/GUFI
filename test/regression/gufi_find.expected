@@ -171,3 +171,41 @@ repeat_name
 unusual, name?#
 empty_file
 
+$ gufi_find -iname 'LEAF'
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+
+$ gufi_find -lname 'file.*'
+file_symlink
+
+$ gufi_find -lname 'directory.*'
+directory/subdirectory/directory_symlink
+
+# missing old_file
+$ gufi_find -newer 'not_as_old_file'
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+repeat_name
+unusual, name?#
+
+$ gufi_find -samefile 'directory/subdirectory/repeat_name'
+directory/subdirectory/repeat_name
+
+$ gufi_find -samefile 'directory/subdirectory'
+directory/subdirectory
+
