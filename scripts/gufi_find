@@ -229,7 +229,7 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     # if args.regex is not None:
 
     if args.samefile is not None:
-        where += ['{}.inode == {}'.format(name, args.samefile.st_ino)]
+        where += ['{}.inode == {}'.format(table, args.samefile.st_ino)]
 
     if args.size is not None:
         where += ['{}.size {} {}'.format(table, size[0], size[1]) for size in args.size]
