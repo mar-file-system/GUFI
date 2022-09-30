@@ -307,7 +307,7 @@ static size_t descend2(QPTPool_t *ctx,
 
             buffered_start(snprintf_call);
             struct work qwork;
-            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, strlen(passmywork->name), "/", (size_t) 1, entry->d_name, len);
+            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, passmywork->name_len, "/", (size_t) 1, entry->d_name, len);
             buffered_end(snprintf_call);
 
             /* buffered_end(lstat_call); */
