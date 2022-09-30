@@ -439,6 +439,11 @@ def build_output(args, table):
 def help(parser):
     # generate list of expressions
     expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
+
+    # don't show these
+    expr.remove('inmemory_name')
+    expr.remove('aggregate_name')
+
     expr = [expr[i:i+5] for i in range(0, len(expr), 5)]
 
     print('Usage: gufi_find [-P] [path...] [expression]\n' +
