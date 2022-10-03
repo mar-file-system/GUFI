@@ -82,7 +82,8 @@
 #       |---- leaf_file2           (user.name4=value4, user.name5=value5, user.name6=value6)
 # |---- old_file
 # |---- repeat_name
-# |---- unusual, name?#
+# |---- unusual#? directory ,
+#       |---- unusual, name?#
 #
 
 set -e
@@ -155,4 +156,8 @@ TZ=UTC touch -amt 197001010000 old_file
 
 truncate -s 4 repeat_name
 
-truncate -s 9 "unusual, name?#"
+mkdir "unusual#? directory ,"
+(
+    cd "unusual#? directory ,"
+    truncate -s 9 "unusual, name?#"
+)

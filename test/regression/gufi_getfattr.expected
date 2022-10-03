@@ -212,31 +212,31 @@ Files/Links Limit:          -1
 
 Not Processed:               0
 Cannot Roll Up:              0
-Can Roll Up:                 4
+Can Roll Up:                 5
     Subdirectories:
         min:                 0
-        max:                 2
-        median:           0.50
-        sum:                 3
-        average:          0.75
+        max:                 3
+        median:           0.00
+        sum:                 4
+        average:          0.80
     Files/Links:
-        min:                 2
-        max:                 8
-        median:           2.50
+        min:                 1
+        max:                 7
+        median:           2.00
         sum:                15
-        average:          3.75
+        average:          3.00
     Level:
         min:                 0
         max:                 2
         median:           1.00
-        sum:                 4
+        sum:                 5
         average:          1.00
     Successful:              4
-    Failed:                  0
+    Failed:                  1
 Files/Links:    15
-Directories:    4 (0 empty)
-Total:          19
-Remaining Dirs: 1 (25.00%)
+Directories:    5 (0 empty)
+Total:          20
+Remaining Dirs: 1 (20.00%)
 
 # 0 xattrs
 $ gufi_getfattr .

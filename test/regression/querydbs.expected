@@ -14,7 +14,7 @@ repeat_name|4|
 leaf_directory/leaf_file1|6|
 leaf_directory/leaf_file2|7|
 old_file|8|
-unusual, name?#|9|
+unusual#? directory ,/unusual, name?#|9|
 1KB|1024|
 1MB|1048576|
 query returned 13 records

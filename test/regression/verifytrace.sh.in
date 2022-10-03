@@ -97,7 +97,7 @@ echo "# wrong delimiter used"
 run_no_sort "${VERIFYTRACE} \"${BADDELIM}\" ${TRACE}"
 
 # get a file line, without the name
-file_line=$(grep "${DELIM}f${DELIM}" "${TRACE}" | sort | tail -n 1)
+file_line=$(grep "${DELIM}f${DELIM}" "${TRACE}" | sort | head -n 1)
 without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
 
 echo "# trace starts with a file"

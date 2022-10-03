@@ -11,6 +11,7 @@ leaf_file2
 old_file
 readonly
 repeat_name
+unusual#? directory ,
 unusual, name?#
 writable
 
@@ -28,6 +29,7 @@ leaf_file2
 old_file
 readonly
 repeat_name
+unusual#? directory ,
 unusual, name?#
 writable
 
@@ -44,6 +46,7 @@ leaf_file2
 old_file
 readonly
 repeat_name
+unusual#? directory ,
 unusual, name?#
 writable
 
@@ -64,11 +67,13 @@ leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual, name?#
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
 
 $ gufi_ls -r
 writable
 unusual, name?#
+unusual#? directory ,
 repeat_name
 readonly
 old_file
@@ -85,6 +90,7 @@ directory
 $ gufi_ls -ar
 writable
 unusual, name?#
+unusual#? directory ,
 repeat_name
 readonly
 old_file
@@ -100,7 +106,8 @@ directory
 .hidden
 
 $ gufi_ls -arR
-unusual, name?#
+unusual#? directory ,/unusual, name?#
+unusual#? directory ,
 repeat_name
 old_file
 leaf_directory/leaf_file2
