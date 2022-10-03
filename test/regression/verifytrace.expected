@@ -35,6 +35,6 @@ Fail
 
 # bad child pinode
 $ verifytrace "|" "badtrace"
-badtrace: Error: Bad child pinode: prefix/unusual, name?#|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
+badtrace: Error: Bad child pinode: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
 Fail
 

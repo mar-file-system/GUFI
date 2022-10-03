@@ -1,7 +1,7 @@
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 
 Expecting 2 trace files. Found 2.
-Expecting 19 lines. Got 19.
+Expecting 20 lines. Got 20.
 Expecting 23 columns per row. Got 23.
 Source Directory:
     prefix
@@ -22,7 +22,8 @@ Source Directory:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual,
+    prefix/unusual#?
+    prefix/unusual#?
 Trace File:
     prefix
     prefix/.hidden
@@ -42,4 +43,5 @@ Trace File:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual,
+    prefix/unusual#?
+    prefix/unusual#?

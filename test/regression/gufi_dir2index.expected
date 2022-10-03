@@ -18,7 +18,8 @@ Index Everything:
         prefix/leaf_directory/leaf_file2
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#
 
     GUFI Index:
         prefix
@@ -39,7 +40,8 @@ Index Everything:
         prefix/leaf_directory/leaf_file2
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#
 
 Index up to level 0:
     Source Directory:
@@ -60,7 +62,7 @@ Index up to level 1:
         prefix/leaf_directory
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
 
     GUFI Index:
         prefix
@@ -73,7 +75,7 @@ Index up to level 1:
         prefix/leaf_directory
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
 
 Index up to level 2:
     Source Directory:
@@ -93,7 +95,8 @@ Index up to level 2:
         prefix/leaf_directory/leaf_file2
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#
 
     GUFI Index:
         prefix
@@ -112,7 +115,8 @@ Index up to level 2:
         prefix/leaf_directory/leaf_file2
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#
 
 Index up to level 3:
     Source Directory:
@@ -134,7 +138,8 @@ Index up to level 3:
         prefix/leaf_directory/leaf_file2
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#
 
     GUFI Index:
         prefix
@@ -155,5 +160,6 @@ Index up to level 3:
         prefix/leaf_directory/leaf_file2
         prefix/old_file
         prefix/repeat_name
-        prefix/unusual, name?#
+        prefix/unusual#? directory ,
+        prefix/unusual#? directory ,/unusual, name?#
 

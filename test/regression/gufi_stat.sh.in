@@ -81,7 +81,7 @@ fixed_size=(
     "leaf_directory/leaf_file1"
     "leaf_directory/leaf_file2"
     "old_file"
-    "unusual, name?#"
+    "unusual#? directory ,/unusual, name?#"
 )
 
 for entry in "${fixed_size[@]}"

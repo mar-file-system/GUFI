@@ -4,8 +4,8 @@ $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 
 $ gufi_trace2index -d "|" trace.0 trace.1 "prefix" | tail -n 4 | head -n 3
 Files: 15
-Dirs:  4 (0 empty)
-Total: 19
+Dirs:  5 (0 empty)
+Total: 20
 
 Source Directory:
     prefix
@@ -26,7 +26,8 @@ Source Directory:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual, name?#
+    prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#
 
 GUFI Index:
     prefix
@@ -47,5 +48,6 @@ GUFI Index:
     prefix/leaf_directory/leaf_file2
     prefix/old_file
     prefix/repeat_name
-    prefix/unusual, name?#
+    prefix/unusual#? directory ,
+    prefix/unusual#? directory ,/unusual, name?#
 

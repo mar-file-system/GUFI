@@ -10,5 +10,5 @@
 'leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 6 - 0
 'leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 7 - 0
 'old_file' 664 -rw-rw-r-- 81b4 regular file 8 - 0
-'unusual, name?#' 664 -rw-rw-r-- 81b4 regular file 9 - 0
+'unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- 81b4 regular file 9 - 0
 'prefix/old_file' 0 0

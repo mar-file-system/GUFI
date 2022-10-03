@@ -4,6 +4,7 @@ directory
 leaf_directory
 prefix
 subdirectory
+unusual#? directory ,
 
 # Get only non-directories
 $ gufi_query -d " " -E "SELECT name FROM pentries;" "prefix"
@@ -42,6 +43,7 @@ readonly
 repeat_name
 repeat_name
 subdirectory
+unusual#? directory ,
 unusual, name?#
 writable
 
@@ -65,11 +67,13 @@ leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
-unusual, name?#
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name, rollupscore) FROM summary;" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
-unusual, name?#
+unusual#? directory ,/unusual, name?#
+unusual#? directory ,
 repeat_name
 old_file
 leaf_directory/leaf_file2
@@ -101,7 +105,7 @@ repeat_name
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
-unusual, name?#
+unusual#? directory ,/unusual, name?#
 1KB
 1MB
 
@@ -109,7 +113,7 @@ unusual, name?#
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 1MB
 1KB
-unusual, name?#
+unusual#? directory ,/unusual, name?#
 old_file
 leaf_directory/leaf_file2
 leaf_directory/leaf_file1
