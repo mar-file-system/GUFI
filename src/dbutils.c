@@ -77,8 +77,6 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
-static const char GUFI_SQLITE_VFS[] = "unix-none";
-
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
 #define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
 
@@ -136,7 +134,7 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
 {
   char attach[MAXSQL];
   if (flags & SQLITE_OPEN_READONLY) {
-      if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro' AS %Q", name, dbn)) {
+      if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro&vfs=" GUFI_SQLITE_VFS "' AS %Q", name, dbn)) {
           if (print_err) {
               fprintf(stderr, "Cannot create ATTACH command\n");
           }
