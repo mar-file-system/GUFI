@@ -74,6 +74,8 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
+#define GUFI_SQLITE_VFS "unix-none"
+
 #define READDIRPLUS       "readdirplus"
 extern const char READDIRPLUS_CREATE[];
 extern const char READDIRPLUS_INSERT[];
