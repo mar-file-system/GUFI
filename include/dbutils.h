@@ -198,4 +198,8 @@ void xattrdone(sqlite3 *db
                #endif
     );
 
+/* convert characters in sqlite URI paths */
+size_t sqlite_uri_path(char *dst, size_t dst_size,
+                       const char *src, size_t *src_len);
+
 #endif

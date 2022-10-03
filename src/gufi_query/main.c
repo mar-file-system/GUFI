@@ -291,7 +291,7 @@ static size_t descend2(QPTPool_t *ctx,
             }
 
             buffered_start(strncmp_call);
-            const size_t len = strlen(entry->d_name);
+            size_t len = strlen(entry->d_name);
             const int skip = (trie_search(skip_names, entry->d_name, len) ||
                              (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
             buffered_end(strncmp_call);
@@ -307,7 +307,14 @@ static size_t descend2(QPTPool_t *ctx,
 
             buffered_start(snprintf_call);
             struct work qwork;
+
+            /* append entry name to directory */
             qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, passmywork->name_len, "/", (size_t) 1, entry->d_name, len);
+
+            /* append convertd entry name to convertd directory */
+            qwork.sqlite3_name_len = SNFORMAT_S(qwork.sqlite3_name, MAXPATH, 2, passmywork->sqlite3_name, passmywork->sqlite3_name_len, "/", (size_t) 1);
+            size_t convertd_len = sqlite_uri_path(qwork.sqlite3_name + qwork.sqlite3_name_len, MAXPATH - qwork.sqlite3_name_len, entry->d_name, &len);
+            qwork.sqlite3_name_len += convertd_len;
             buffered_end(snprintf_call);
 
             /* buffered_end(lstat_call); */
@@ -392,7 +399,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work *work = (struct work *) data;
 
     char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2, work->name, work->name_len, "/" DBNAME, DBNAME_LEN + 1);
+    SNFORMAT_S(dbname, MAXPATH, 2, work->sqlite3_name, work->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     timestamp_create_zero(opendir_call,         pa->start_time);
     timestamp_create_zero(attachdb_call,        pa->start_time);
@@ -885,6 +892,7 @@ int main(int argc, char *argv[])
 
         /* copy argv[i] into the work item */
         mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
+        mywork->sqlite3_name_len = sqlite_uri_path(mywork->sqlite3_name, MAXPATH, argv[i], &len);
 
         lstat(mywork->name,&mywork->statuso);
         if (!S_ISDIR(mywork->statuso.st_mode) ) {

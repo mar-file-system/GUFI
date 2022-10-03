@@ -1422,3 +1422,53 @@ void xattrdone(sqlite3 *db
     (*query_count)++;
     #endif
 }
+
+/*
+ * some characters cannot be used directly
+ * in sqlite and need to be converted
+ *
+ * this function does not take in an sqlite
+ * instance, but is here because it is only
+ * applicable to sqlite
+ */
+size_t sqlite_uri_path(char *dst, size_t dst_size,
+                       const char *src, size_t *src_len) {
+    struct convert {
+        char src;
+        char *dst;
+        size_t dst_len;
+    };
+
+    /* https://www.sqlite.org/uri.html */
+    static const struct convert need_convert[] = {
+        {'#', "%23", 3},
+        {'?', "%3f", 3},
+    };
+
+    static const size_t need_convert_count = sizeof(need_convert) / sizeof(need_convert[0]);
+
+    size_t d = 0;
+    size_t s = 0;
+    while ((d < dst_size) && (s < *src_len)) {
+        int converted = 0;
+        for(size_t i = 0; (d < dst_size) && (i < need_convert_count); i++) {
+            const struct convert *ep = &need_convert[i];
+            if (src[s] == ep->src) {
+                for(size_t j = 0; (d < dst_size) && (j < ep->dst_len); j++) {
+                    dst[d++] = ep->dst[j];
+                }
+                converted = 1;
+                break;
+            }
+        }
+
+        if (!converted) {
+            dst[d++] = src[s];
+        }
+
+        s++;
+    }
+
+    *src_len = s;
+    return d;
+}
