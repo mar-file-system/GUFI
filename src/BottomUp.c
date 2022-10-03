@@ -173,7 +173,7 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
 }
 
 static struct BottomUp *track(const char *name, const size_t name_len,
-                              const size_t user_struct_size, struct sll *sll,
+                              const size_t user_struct_size, sll_t *sll,
                               const size_t level) {
     struct BottomUp *copy = malloc(user_struct_size);
 

@@ -94,7 +94,7 @@ OF SUCH DAMAGE.
 extern int errno;
 
 #ifdef DEBUG
-struct start_end *buffer_create(struct sll *timers) {
+struct start_end *buffer_create(sll_t *timers) {
     struct start_end *timer = malloc(sizeof(struct start_end));
     sll_push(timers, timer);
     return timer;
@@ -123,8 +123,8 @@ enum {
     dt_max
 };
 
-struct sll *descend_timers_init() {
-    struct sll *dt = malloc(dt_max * sizeof(struct sll));
+sll_t *descend_timers_init() {
+    sll_t *dt = malloc(dt_max * sizeof(sll_t));
     for(int i = 0; i < dt_max; i++) {
         sll_init(&dt[i]);
     }
@@ -132,7 +132,7 @@ struct sll *descend_timers_init() {
     return dt;
 }
 
-void descend_timers_destroy(struct sll *dt) {
+void descend_timers_destroy(sll_t *dt) {
     for(int i = 0; i < dt_max; i++) {
         sll_destroy(&dt[i], free);
     }
@@ -193,7 +193,7 @@ uint64_t total_utime_time             = 0;
 uint64_t total_free_work_time         = 0;
 uint64_t total_output_timestamps_time = 0;
 
-uint64_t buffer_sum(struct sll *timers) {
+uint64_t buffer_sum(sll_t *timers) {
     uint64_t sum = 0;
     sll_loop(timers, node) {
         struct start_end *timer = (struct start_end *) sll_node_data(node);
@@ -213,8 +213,8 @@ uint64_t buffer_sum(struct sll *timers) {
 
 #endif
 #else
-struct sll *descend_timers_init() { return NULL; }
-void descend_timers_destroy(struct sll *dt) { (void) dt; }
+sll_t *descend_timers_init() { return NULL; }
+void descend_timers_destroy(sll_t *dt) { (void) dt; }
 #define buffered_start(name)
 #define buffered_end(name)
 #endif
@@ -242,7 +242,7 @@ static size_t descend2(QPTPool_t *ctx,
                        QPTPoolFunc_t func,
                        const size_t max_level
                        #ifdef DEBUG
-                       , struct sll *timers
+                       , sll_t *timers
                        #endif
     ) {
     buffered_start(within_descend);
@@ -400,7 +400,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_zero(xattrprep_call,       pa->start_time);
     timestamp_create_zero(get_rollupscore_call, pa->start_time);
     timestamp_create_zero(descend_call,         pa->start_time);
-    struct sll *descend_timers = descend_timers_init();
+    sll_t *descend_timers = descend_timers_init();
     timestamp_create_zero(sqltsumcheck,         pa->start_time);
     timestamp_create_zero(sqltsum,              pa->start_time);
     timestamp_create_zero(sqlsum,               pa->start_time);

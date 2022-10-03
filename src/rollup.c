@@ -82,7 +82,7 @@ extern int errno;
 #define SUBDIR_ATTACH_NAME "subdir"
 
 /* statistics stored when processing each directory */
-/* this is the type stored in the RollUpStats struct sll variables */
+/* this is the type stored in the RollUpStats sll_t variables */
 struct DirStats {
     char path[MAXPATH];
 
@@ -99,9 +99,9 @@ struct DirStats {
 
 /* per thread stats */
 struct RollUpStats {
-    struct sll not_processed;
-    struct sll not_rolled_up;
-    struct sll rolled_up;
+    sll_t not_processed;
+    sll_t not_rolled_up;
+    sll_t rolled_up;
 
     size_t remaining;       /* children that remain after rolling up */
 
@@ -218,7 +218,7 @@ do {                                                                     \
     free(array);                                                         \
 } while (0)
 
-void print_stanza(const char *name, struct sll *stats) {
+void print_stanza(const char *name, sll_t *stats) {
     fprintf(stdout, "%s %*zu\n", name, (int) (29 - strlen(name)), sll_get_size(stats));
     sll_dir_stats("Subdirectories", stats, subdir_count,    10);
     sll_dir_stats("Files/Links",    stats, subnondir_count, 10);
@@ -237,13 +237,13 @@ void print_stats(char **paths, const int path_count, struct RollUpStats *stats, 
     fprintf(stdout, "\n");
 
     /* per-thread stats together */
-    struct sll not_processed;
+    sll_t not_processed;
     sll_init(&not_processed);
 
-    struct sll not_rolled_up;
+    sll_t not_rolled_up;
     sll_init(&not_rolled_up);
 
-    struct sll rolled_up;
+    sll_t rolled_up;
     sll_init(&rolled_up);
 
     size_t remaining = 0;

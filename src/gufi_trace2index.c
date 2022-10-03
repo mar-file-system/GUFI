@@ -282,7 +282,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         zeroit(&summary);
         timestamp_set_end(zero_summary);
 
-        struct sll xattr_db_list;
+        sll_t xattr_db_list;
         sll_init(&xattr_db_list);
 
         /* INSERT statement bindings into db.db */

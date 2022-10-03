@@ -107,8 +107,8 @@ struct BottomUp {
     } refs;
     size_t subdir_count;
     size_t subnondir_count;
-    struct sll subdirs;
-    struct sll subnondirs;
+    sll_t subdirs;
+    sll_t subnondirs;
     struct BottomUp *parent;
 
     /* extra arguments available at all times */

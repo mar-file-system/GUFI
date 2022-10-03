@@ -73,7 +73,7 @@ OF SUCH DAMAGE.
 
 /* The context for a single thread in QPTPool */
 struct QPTPoolThreadData {
-    struct sll queue;
+    sll_t queue;
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     size_t next_queue;
@@ -116,7 +116,7 @@ static void *worker_function(void *args) {
 
     while (1) {
         timestamp_start(wf_sll_init);
-        struct sll work; /* don't bother initializing */
+        sll_t work; /* don't bother initializing */
         timestamp_set_end(wf_sll_init);
 
         timestamp_start(wf_tw_mutex_lock);
@@ -176,7 +176,7 @@ static void *worker_function(void *args) {
         size_t work_count = 0;
 
         timestamp_start(wf_get_queue_head);
-        struct node *w = sll_head_node(&work);
+        sll_node_t *w = sll_head_node(&work);
         timestamp_end(ctx->buffers, wf_args->id, "wf_get_queue_head", wf_get_queue_head);
 
         while (w) {

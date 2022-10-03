@@ -67,35 +67,34 @@ OF SUCH DAMAGE.
 
 #include <stddef.h>
 
-struct node {
-    void *data;
-    struct node *next;
-};
+typedef struct SinglyLinkedListNode sll_node_t;
 
 /* Singly linked list that is used like a queue */
-struct sll {
-    struct node *head;
-    struct node *tail;
+struct SinglyLinkedList {
+    sll_node_t *head;
+    sll_node_t *tail;
     size_t size;
 };
 
-struct sll *sll_init(struct sll *sll);
-struct sll *sll_push(struct sll *sll, void *data);
-struct sll *sll_move(struct sll *dst, struct sll *src);
-struct sll *sll_move_append(struct sll *dst, struct sll *src);
-size_t sll_get_size(struct sll *sll);
+typedef struct SinglyLinkedList sll_t;
+
+sll_t *sll_init(sll_t *sll);
+sll_t *sll_push(sll_t *sll, void *data);
+sll_t *sll_move(sll_t *dst, sll_t *src);
+sll_t *sll_move_append(sll_t *dst, sll_t *src);
+size_t sll_get_size(sll_t *sll);
 
 /* functions for looping over a sll */
-struct node *sll_head_node(struct sll *sll);
-struct node *sll_next_node(struct node *node);
-void *sll_node_data(struct node *node);
+sll_node_t *sll_head_node(sll_t *sll);
+sll_node_t *sll_next_node(sll_node_t *node);
+void *sll_node_data(sll_node_t *node);
 
 /* convenience macro */
 #define sll_loop(sll, name)                         \
-    for(struct node *(name) = sll_head_node((sll)); \
+    for(sll_node_t *(name) = sll_head_node((sll)); \
         (name);                                     \
         (name) = sll_next_node((name)))             \
 
-void sll_destroy(struct sll *sll, void (*destroy)(void *));
+void sll_destroy(sll_t *sll, void (*destroy)(void *));
 
 #endif

@@ -114,7 +114,7 @@ struct nondir_args {
     sqlite3_stmt *xattr_files_res;
 
     /* list of xattr dbs */
-    struct sll xattr_db_list;
+    sll_t xattr_db_list;
 };
 
 static int process_nondir(struct work *entry, void *args) {
