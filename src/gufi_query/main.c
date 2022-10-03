@@ -162,8 +162,8 @@ void descend_timers_destroy(struct sll *dt) {
 #ifdef CUMULATIVE_TIMES
 uint64_t total_opendir_time           = 0;
 uint64_t total_attachdb_time          = 0;
-uint64_t total_xattrprep_time         = 0;
 uint64_t total_addqueryfuncs_time     = 0;
+uint64_t total_xattrprep_time         = 0;
 uint64_t total_get_rollupscore_time   = 0;
 uint64_t total_descend_time           = 0;
 uint64_t total_check_args_time        = 0;
