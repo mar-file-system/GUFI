@@ -437,3 +437,72 @@ TEST(addqueryfuncs, basename) {
 
     sqlite3_close(db);
 }
+
+TEST(sqlite_uri_path, 23) {
+    const char src[] = "prefix/#/basename";
+    size_t src_len = strlen(src);
+    char dst[1024] = {0};
+    const char expected[] = "prefix/%23/basename";
+
+    const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+    EXPECT_EQ(src_len, strlen(src));
+    EXPECT_EQ(dst_len, strlen(expected));
+    EXPECT_STREQ(dst, expected);
+}
+
+TEST(sqlite_uri_path, 3f) {
+    const char src[] = "prefix/?/basename";
+    size_t src_len = strlen(src);
+    char dst[1024] = {0};
+    const char expected[] = "prefix/%3f/basename";
+
+    const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+    EXPECT_EQ(src_len, strlen(src));
+    EXPECT_EQ(dst_len, strlen(expected));
+    EXPECT_STREQ(dst, expected);
+}
+
+TEST(sqlite_uri_path, not_enough_space) {
+    const char src[] = "prefix/#/basename";
+
+    // does not hit conversion
+    {
+        size_t src_len = strlen(src);
+        char dst[7] = {0};
+        const char expected[] = "prefix/";
+
+        const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+        EXPECT_EQ(src_len, (size_t) 7); // prefix/
+        EXPECT_EQ(dst_len, strlen(expected));
+        EXPECT_EQ(memcmp(expected, dst, dst_len), 0);
+    }
+
+    // # -> %
+    {
+        size_t src_len = strlen(src);
+        char dst[8] = {0};
+        const char expected[] = "prefix/%";
+
+        const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+        EXPECT_EQ(src_len, (size_t) 8); // prefix/#
+        EXPECT_EQ(dst_len, strlen(expected));
+        EXPECT_EQ(memcmp(expected, dst, dst_len), 0);
+    }
+
+    // # -> %2
+    {
+        size_t src_len = strlen(src);
+        char dst[9] = {0};
+        const char expected[] = "prefix/%2";
+
+        const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+        EXPECT_EQ(src_len, (size_t) 8); // prefix/#
+        EXPECT_EQ(dst_len, strlen(expected));
+        EXPECT_EQ(memcmp(expected, dst, dst_len), 0);
+    }
+}
