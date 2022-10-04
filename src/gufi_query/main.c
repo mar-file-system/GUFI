@@ -900,6 +900,8 @@ int main(int argc, char *argv[])
             mywork->root_len--;
         }
 
+        mywork->root[mywork->root_len] = '\0';
+
         /* push the path onto the queue */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
     }

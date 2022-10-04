@@ -136,7 +136,7 @@ def parse_size(size):
     return comp, int(math.ceil(float(actual_size))) * filesize[unit]
 
 def need_aggregation(args):
-    return args.num_results or args.smallest or args.largest
+    return bool(args.numresults or args.smallest or args.largest)
 
 def build_where(args, table, root_uid = 0, root_gid = 0):
     '''Build the WHERE clause'''
@@ -238,7 +238,8 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
         where += ['1']
 
     if args.type is not None:
-        where += ['({}.type == "{}")'.format(table, args.type)]
+        # multiple types uses OR instead of AND
+        where += [' OR '.join(['({}.type == "{}")'.format(table, t) for t in args.type])]
 
     if args.uid is not None:
         where += ['({}.uid {} {})'.format(table, uid[0], uid[1]) for uid in args.uid]
@@ -305,15 +306,14 @@ def parse_escape(fmt, i):
     elif ret == '\\':
         ret = '\\'
     elif ret.isdigit():
-        chars = 1 + fmt[i + 1].isdigit() + fmt[i + 2].isdigit()
-        ret = chr(int(fmt[i:chars + 1], 8))
-        i += chars - 1
+        ret = chr(int(fmt[i:i + 3], 8))
+        i += 3
     else:
         pass
 
     return '"' + ret + '"', i + 1
 
-def parse_directives(fmt, fmt_len, i, path):
+def parse_directives(table, fmt, fmt_len, i, path):
     # unterminated directive prints ""; behavior is undefined in GNU find
     if i >= fmt_len:
         return '""', i
@@ -339,59 +339,59 @@ def parse_directives(fmt, fmt_len, i, path):
     ret = fmt[i]
 
     if   ret == '%':
-        ret = '%'
+        ret = '\'%\''
     elif ret == 'a':
-        ret = 'printf("%{}d", atime)'
+        ret = 'printf("%{}d", ' + '{}.atime)'.format(table)
     # elif ret == 'A':
     elif ret == 'b':
-        ret = 'printf("%{}f", (blocks * blksize) / 512)'
+        ret = 'printf("%{}d", ' + '({0}.blocks * {0}.blksize) / 512)'.format(table)
     elif ret == 'c':
-        ret = 'printf("%{}d", ctime)'
+        ret = 'printf("%{}d", ' + '{}.ctime)'.format(table)
     # elif ret == 'C':
     elif ret == 'd':
-        ret = 'printf("%{}u", level())'
+        ret = 'printf("%{}u", level() + ' + '(CASE {}.type WHEN "d" THEN 0 ELSE 1 END))'.format(table)
     elif ret == 'D':
         ret = 'printf("%{}s", "-")'
     elif ret == 'f':
-        ret = 'printf("%{}s", name)'
+        ret = 'printf("%{}s", ' + '{}.name)'.format(table)
     # elif ret == 'F':
     elif ret == 'g':
-        ret = 'gidtogroup(gid, {})'
+        ret = 'gidtogroup({}.gid'.format(table) + ', {})'
     elif ret == 'G':
-        ret = 'printf("%{}d", gid)'
+        ret = 'printf("%{}d", ' + '{}.gid)'.format(table)
     elif ret == 'h':
         ret = 'printf("%{}s", ' + path + ')'
     elif ret == 'H':
         ret = 'printf("%{}s", starting_point())'
     elif ret == 'i':
-        ret = 'printf("%{}d", inode)'
+        ret = 'printf("%{}d", ' + '{}.inode)'.format(table)
     elif ret == 'k':
-        ret = 'printf("%{}f", (blocks * blksize) / 1024)'
+        ret = 'printf("%{}d", ' + '({0}.blocks * {0}.blksize) / 1024)'.format(table)
     elif ret == 'l':
-        ret = 'printf("%{}s", linkname)'
+        ret = 'printf("%{}s", ' + '{}.linkname)'.format(table)
     elif ret == 'm':
-        ret = 'printf("%{}o", mode & 0777)'
+        ret = 'printf("%{}o", ' + '{}.mode & 511)'.format(table) # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
     elif ret == 'M':
-        ret = 'printf("%{}s", modetotxt(mode))'
+        ret = 'printf("%{}s", ' + 'modetotxt({}.mode))'.format(table)
     elif ret == 'n':
-        ret = 'printf("%{}d", nlink)'
+        ret = 'printf("%{}d", ' + '{}.nlink)'.format(table)
     elif ret == 'p':
-        ret = path + ' || (case type WHEN "d" THEN "" ELSE  "/" || name END)'
+        ret = path + ' || ' + '(CASE {0}.type WHEN "d" THEN "" ELSE "/" || {0}.name END)'.format(table)
     elif ret == 'P':
-        ret = 'printf("%{}s", substr(' + path + ' || "/" || name, length(starting_point()) + 2))'
+        ret = 'printf("%{}s", ' + 'substr(' + path + ' || "/" || {}.name, length(starting_point()) + 1))'.format(table)
     elif ret == 's':
-        ret = 'printf("%{}u", size)'
+        ret = 'printf("%{}u", ' + '{}.size)'.format(table)
     elif ret == 'S':
-        ret = 'printf("%{}f", (blocksize * blocks) / size)'
+        ret = 'printf("%{}d", ' + '({0}.blksize * {0}.blocks) / {0}.size)'.format(table)
     elif ret == 't':
-        ret = 'printf("%{}d", mtime)'
+        ret = 'printf("%{}d", ' + '{}.mtime)'.format(table)
     # elif ret == 'T':
     elif ret == 'u':
-        ret = 'uidtouser(uid, {})'
+        ret = 'uidtouser({}.uid'.format(table) + ', {})'
     elif ret == 'U':
-        ret = 'printf("%{}d", uid)'
+        ret = 'printf("%{}d", ' + '{}.uid)'.format(table)
     elif ret == 'y':
-        ret = 'printf("%{}s", type)'
+        ret = 'printf("%{}s", ' + '{}.type)'.format(table)
     # elif ret == 'Y':
     # elif ret == 'Z':
     else:
@@ -406,31 +406,27 @@ def parse_directives(fmt, fmt_len, i, path):
 
 def build_output(args, table):
     '''Build the output columns SELECT clause'''
-
     output = ''
 
-    path = 'path'
-    if not need_aggregation(args):
-        path += '({0}.name, {0}.rollupscore)'.format(SUMMARY)
+    path = 'path({0}.name, {0}.rollupscore)'.format(SUMMARY)
 
-    if args.printf is not None:
+    if args.printf:
         i = 0
         fmt = args.printf
         fmt_len = len(args.printf)
 
-        output = '""'
-
+        cols = []
         while i < fmt_len:
-            output += ' || '
             if fmt[i] == '\\':
                 column, i = parse_escape(fmt, i + 1)
-                output += column
+                cols += [column]
             elif fmt[i] == '%':
-                column, i = parse_directives(fmt, fmt_len, i + 1, path)
-                output += column
+                column, i = parse_directives(table, fmt, fmt_len, i + 1, path)
+                cols += [column]
             else:
-                output += '"' + fmt[i] + '"'
+                cols += ['"' + fmt[i] + '"']
                 i += 1;
+        output = ' || '.join(cols)
     else:
         output = path + ' || (CASE {0}.type WHEN "d" THEN "" ELSE "/" || {0}.name END)'.format(table)
 
@@ -441,17 +437,26 @@ def help(parser):
     expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
 
     # don't show these
-    expr.remove('inmemory_name')
     expr.remove('aggregate_name')
+    expr.remove('delim')
+    expr.remove('inmemory_name')
+    expr.remove('skip')
+
+    # print these separately
+    gufi_specific = ['numresults', 'largest', 'smallest']
+    for flag in gufi_specific:
+        expr.remove(flag)
 
     expr = [expr[i:i+5] for i in range(0, len(expr), 5)]
 
     print('Usage: gufi_find [-P] [path...] [expression]\n' +
           '\n' +
-          'default path is the current directory;\n' +
+          'default path is the index root directory specified in the configuration file\n' +
           'expression may consist of:\n' +
           '\n' +
           '\n'.join(['    ' + ' '.join(row) for row in expr]) + '\n' +
+          '\nGUFI Specific Flags (--):\n' +
+          '\n    ' + ' '.join(gufi_specific) + '\n' +
           '\n' +
           'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
           'page at https://github.com/mar-file-system/GUFI/issues\n')
@@ -504,10 +509,10 @@ def build_expression_parser():
     parser.add_argument('-samefile',           metavar='name',       dest='samefile',              type=os.lstat,                                      help='File refers to the same inode as name.')
     parser.add_argument('-size',               metavar='n',          dest='size',                  type=parse_size, action='append',                   help='')
     parser.add_argument('-true',                                     dest='true',                  action='store_true',                                help='Always true')
-    parser.add_argument('-type',               metavar='c',          dest='type',                  type=gufi_common.get_char,                          help='File is of type c')
+    parser.add_argument('-type',               metavar='c',          dest='type',                  action='append', type=gufi_common.get_char,         help='File is of type c')
     parser.add_argument('-uid',                metavar='n',          dest='uid',                   type=numeric_arg,  action='append',                 help='File\'s numeric user ID is n.')
     # parser.add_argument('-used',               metavar='n',          dest='used',                  type=numeric_arg, action='append',                  help='File was last accessed n days after its status was last changed.')
-    parser.add_argument('-user',               metavar='uname',      dest='user',                  type=gufi_common.get_user,                          help='File is owned by user uname (numeric user ID allowed).')
+    parser.add_argument('-user',               metavar='uname',      dest='user',                  type=gufi_common.get_user, help='File is owned by user uname (numeric user ID allowed).')
     # parser.add_argument('-wholename',          metavar='pattern',    dest='wholename',             type=str, action='append', default=[],              help='See -path. This alternative is less portable than -path.')
     parser.add_argument('-writable',                                 dest='writable',              action='store_true',                                help='Matches files which are writable.')
     # parser.add_argument('-xtype',              metavar='c',          dest='xtype',                 type=gufi_common.get_char,                          help='The same as -type unless the file is a symbolic link.')
@@ -518,9 +523,9 @@ def build_expression_parser():
     parser.add_argument('-printf',             metavar='format',     dest='printf',                type=str,                                           help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
-    parser.add_argument('--num-results',       metavar='n',          dest='num_results',           type=gufi_common.get_non_negative,                  help='first n results')
-    parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='top n smallest files')
-    parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='top n largest files')
+    parser.add_argument('--numresults',        metavar='n',          dest='numresults',            type=gufi_common.get_non_negative,                  help='first n results')
+    parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='smallest results')
+    parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='largest results')
 
     gufi_common.add_common_args(parser)
 
@@ -602,60 +607,60 @@ def run(argv, config_path):
         I = 'CREATE TABLE {0} ({1})'.format(
             args.inmemory_name,
             ', '.join(['id INTEGER PRIMARY KEY',
-                       'name TEXT', 'type TEXT',
-                       'inode INT64',   'mode INT64',
-                       'nlink INT64',   'uid INT64',
-                       'gid INT64',     'size INT64',
-                       'blksize INT64', 'blocks INT64',
-                       'atime INT64',   'mtime INT64',
-                       'ctime INT64',   'linkname TEXT',
-                       'xattr_names TEXT']))
+                       'name TEXT',        'type TEXT',
+                       'inode INT64',      'mode INT64',
+                       'nlink INT64',      'uid INT64',
+                       'gid INT64',        'size INT64',
+                       'blksize INT64',    'blocks INT64',
+                       'atime INT64',      'mtime INT64',
+                       'ctime INT64',      'linkname TEXT',
+                       'xattr_names TEXT', 'output TEXT']))
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore)'.format(SUMMARY)] + ['{}.{}'.format(SUMMARY, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore)'.format(SUMMARY)] + ['{}.{}'.format(SUMMARY, column) for column in columns] + build_output(args, SUMMARY),
                                     [SUMMARY],
                                     build_where(args, SUMMARY),
                                     build_group_by(args, SUMMARY),
                                     build_order_by(args, SUMMARY),
-                                    args.num_results))
+                                    args.numresults))
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] + ['{}.{}'.format(PENTRIES, column) for column in columns],
+            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] + ['{}.{}'.format(PENTRIES, column) for column in columns] + build_output(args, PENTRIES),
                                     [SUMMARY, PENTRIES],
                                     build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),
                                     build_order_by(args, PENTRIES),
-                                    args.num_results))
+                                    args.numresults))
 
         K = 'CREATE TABLE {0} ({1})'.format(
             args.aggregate_name,
             ', '.join(['id INTEGER PRIMARY KEY',
-                       'name TEXT',     'type TEXT',
-                       'inode INT64',   'mode INT64',
-                       'nlink INT64',   'uid INT64',
-                       'gid INT64',     'size INT64',
-                       'blksize INT64', 'blocks INT64',
-                       'atime INT64',   'mtime INT64',
-                       'ctime INT64',   'linkname TEXT',
-                       'xattr_names TEXT']))
+                       'name TEXT',        'type TEXT',
+                       'inode INT64',      'mode INT64',
+                       'nlink INT64',      'uid INT64',
+                       'gid INT64',        'size INT64',
+                       'blksize INT64',    'blocks INT64',
+                       'atime INT64',      'mtime INT64',
+                       'ctime INT64',      'linkname TEXT',
+                       'xattr_names TEXT', 'output TEXT']))
 
         J = "INSERT INTO {0} {1}".format(
             args.aggregate_name,
-            gufi_common.build_query(['NULL', 'name'] + columns,
+            gufi_common.build_query(['NULL', 'name'] + columns + ['output'],
                                     [args.inmemory_name],
                                     build_where(args, args.inmemory_name),
                                     build_group_by(args, args.inmemory_name),
                                     build_order_by(args, args.inmemory_name),
-                                    args.num_results))
+                                    args.numresults))
 
-        G = gufi_common.build_query(['name'],
+        G = gufi_common.build_query(['output' if args.printf else 'name'],
                                     [args.aggregate_name],
                                     build_where(args, args.aggregate_name),
                                     build_group_by(args, args.aggregate_name),
                                     build_order_by(args, args.aggregate_name),
-                                    args.num_results)
+                                    args.numresults)
 
         query_cmd += ['-I', I,
                       '-S', S,
@@ -669,14 +674,14 @@ def run(argv, config_path):
                                     build_where(args, SUMMARY),
                                     build_group_by(args, SUMMARY),
                                     build_order_by(args, SUMMARY),
-                                    args.num_results)
+                                    args.numresults)
 
         E = gufi_common.build_query(build_output(args, PENTRIES),
                                     [SUMMARY, PENTRIES],
                                     build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),
                                     build_order_by(args, PENTRIES),
-                                    args.num_results)
+                                    args.numresults)
         query_cmd += ['-S', S,
                       '-E', E]
 

@@ -1,14 +1,14 @@
-'empty_file' 664 -rw-rw-r-- 81b4 regular file 0 - 0
 '1KB' 664 -rw-rw-r-- 81b4 regular file 1024 - 0
 '1MB' 664 -rw-rw-r-- 81b4 regular file 1048576 - 0
-'unusual, name?#' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'.hidden' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'repeat_name' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'old_file' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'directory/readonly' 444 -r--r--r-- 8124 regular file 1 - 0
-'directory/writable' 666 -rw-rw-rw- 81b6 regular file 1 - 0
+'empty_file' 664 -rw-rw-r-- 81b4 regular file 0 - 0
 'directory/executable' 777 -rwxrwxrwx 81ff regular file 1 - 0
-'directory/subdirectory/repeat_name' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 1 - 0
-'leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 1 - 0
+'directory/readonly' 444 -r--r--r-- 8124 regular file 2 - 0
+'directory/writable' 666 -rw-rw-rw- 81b6 regular file 3 - 0
+'directory/subdirectory/repeat_name' 664 -rw-rw-r-- 81b4 regular file 4 - 0
+'repeat_name' 664 -rw-rw-r-- 81b4 regular file 4 - 0
+'.hidden' 664 -rw-rw-r-- 81b4 regular file 5 - 0
+'leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 6 - 0
+'leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 7 - 0
+'old_file' 664 -rw-rw-r-- 81b4 regular file 8 - 0
+'unusual, name?#' 664 -rw-rw-r-- 81b4 regular file 9 - 0
 'prefix/old_file' 0 0

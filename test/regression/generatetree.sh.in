@@ -111,19 +111,19 @@ os_setfattr "user.size" "1MB" 1MB
 mkdir directory
 (
     cd directory
-    truncate -s 1 readonly
-    chmod 444 readonly
-    truncate -s 1 writable
-    chmod 666 writable
     truncate -s 1 executable
     chmod 777 executable
+    truncate -s 2 readonly
+    chmod 444 readonly
+    truncate -s 3 writable
+    chmod 666 writable
     mkdir subdirectory
     os_setfattr "user.type" "dir" subdirectory
     os_setfattr "user.name" "sub" subdirectory
     (
         cd subdirectory
         ln -f -s $(realpath .) directory_symlink
-        truncate -s 1 repeat_name
+        truncate -s 4 repeat_name
     )
 )
 
@@ -131,7 +131,7 @@ touch empty_file
 
 ln -f -s $(realpath 1KB) file_symlink
 
-truncate -s 1 .hidden
+truncate -s 5 .hidden
 
 mkdir leaf_directory
 os_setfattr "user.type" "dir"  leaf_directory
@@ -139,20 +139,20 @@ os_setfattr "user.name" "leaf" leaf_directory
 (
     cd leaf_directory
 
-    truncate -s 1 leaf_file1
+    truncate -s 6 leaf_file1
     os_setfattr "user.name1" "value1" leaf_file1
     os_setfattr "user.name2" "value2" leaf_file1
     os_setfattr "user.name3" "value3" leaf_file1
 
-    truncate -s 1 leaf_file2
+    truncate -s 7 leaf_file2
     os_setfattr "user.name4" "value4" leaf_file2
     os_setfattr "user.name5" "value5" leaf_file2
     os_setfattr "user.name6" "value6" leaf_file2
 )
 
-truncate -s 1 old_file
+truncate -s 8 old_file
 TZ=UTC touch -amt 197001010000 old_file
 
-truncate -s 1 repeat_name
+truncate -s 4 repeat_name
 
-truncate -s 1 "unusual, name?#"
+truncate -s 9 "unusual, name?#"

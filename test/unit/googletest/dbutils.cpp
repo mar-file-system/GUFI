@@ -390,7 +390,7 @@ TEST(addqueryfuncs, starting_point) {
     const char root[] = "/index_root";
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = root;
+    work.root = (char *) root;
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);

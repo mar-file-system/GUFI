@@ -92,15 +92,15 @@ prefix
 # Get relative paths of all directories and non-directories ascending sizes (files only)
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
 empty_file
-.hidden
 directory/executable
 directory/readonly
-directory/subdirectory/repeat_name
 directory/writable
+directory/subdirectory/repeat_name
+repeat_name
+.hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
-repeat_name
 unusual, name?#
 1KB
 1MB
@@ -109,16 +109,16 @@ unusual, name?#
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 1MB
 1KB
-.hidden
-directory/executable
-directory/readonly
-directory/subdirectory/repeat_name
-directory/writable
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-old_file
-repeat_name
 unusual, name?#
+old_file
+leaf_directory/leaf_file2
+leaf_directory/leaf_file1
+.hidden
+directory/subdirectory/repeat_name
+repeat_name
+directory/writable
+directory/readonly
+directory/executable
 empty_file
 
 #####################################

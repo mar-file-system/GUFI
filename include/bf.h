@@ -298,7 +298,7 @@ typedef enum {
 } CleanUpTasks;
 
 struct work {
-   const char*   root;         /* parent of the the top level directory */
+   char*         root;         /* parent of the the top level directory */
    size_t        root_len;
    size_t        level;
    char          name[MAXPATH];

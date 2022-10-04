@@ -317,7 +317,7 @@ static int setup_dst(char *nameto) {
     return 0;
 }
 
-struct work *validate_source(const char *path) {
+struct work *validate_source(char *path) {
     struct work *root = (struct work *) calloc(1, sizeof(struct work));
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");

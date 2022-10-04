@@ -146,7 +146,7 @@ def get_gid(grp_str):
     Attempts to convert the input string to a gid.
 
     Args:
-        group_str: A number stored as a string
+        grp_str: A number stored as a string
 
     Returns:
         An int that is a gid
@@ -154,25 +154,25 @@ def get_gid(grp_str):
 
     gid = int(grp_str)
     try:
-        return grp.getgruid(int(grp_str)).gr_gid
+        return grp.getgruid(gid).gr_gid
     except:
         return gid
 
-def get_group(grp):
+def get_group(group):
     '''
     Attempts to convert the input string to a gid.
 
     Args:
-        group_str: A string gid or group name
+        group: A string gid or group name
 
     Returns:
         An int that is a gid
     '''
 
     try:
-        return grp.getgrnam(grp).gr_gid
+        return grp.getgrnam(group).gr_gid
     except:
-        return get_gid(grp)
+        return get_gid(group)
 # ###############################################
 
 # add this to summary queries to handle rollups
