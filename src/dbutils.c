@@ -1255,10 +1255,11 @@ void destroy_xattr_db(void *ptr) {
     closedb(xdb->db);
 
     /* add this xattr db to the list of dbs to open when creating view */
-    sqlite3_bind_int64(xdb->file_list, 1, xdb->st.st_uid);
-    sqlite3_bind_int64(xdb->file_list, 2, xdb->st.st_gid);
-    sqlite3_bind_text( xdb->file_list, 3, xdb->filename, xdb->filename_len, SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 4, xdb->attach, xdb->attach_len, SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 1, xdb->filename, xdb->filename_len, SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 2, xdb->attach, xdb->attach_len, SQLITE_STATIC);
+    sqlite3_bind_int64(xdb->file_list, 3, xdb->st.st_mode);
+    sqlite3_bind_int64(xdb->file_list, 4, xdb->st.st_uid);
+    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_gid);
 
     sqlite3_step(xdb->file_list);
     sqlite3_reset(xdb->file_list);
@@ -1266,95 +1267,12 @@ void destroy_xattr_db(void *ptr) {
     free(xdb);
 }
 
-static const char XATTR_GET_DB_LIST[] = "SELECT filename, attachname FROM " XATTR_FILES ";";
-
-/*
- * Attach the files listed in the xattr_files table to db.db and
- * create the xattrs view of all xattrs accessible by the caller.
- *
- * Then, create the xentries, xpentries, and xsummary views by doing
- * a LEFT JOIN with the xattrs view. These views contain all rows,
- * whether or not they have xattrs.
- */
-int xattrprep(const char *path, const size_t path_len, sqlite3 *db
-              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-              , size_t *query_count
-              #endif
-    )
-{
-    static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
-    static const size_t XATTR_COLS_LEN = sizeof(XATTR_COLS) - 1;
-    static const size_t XATTRS_AVAIL_LEN = sizeof(XATTRS_AVAIL) - 1;
-
-    int           rec_count = 0;
-    sqlite3_stmt *res = NULL;
-    /* not checking if the view exists - if it does, it's an error and will error */
-    char          unioncmd[MAXSQL] = "CREATE TEMP VIEW " XATTRS " AS";
-    char         *unioncmdp = unioncmd + strlen(unioncmd);
-
-    /* step through each xattr db file */
-    int error = sqlite3_prepare_v2(db, XATTR_GET_DB_LIST, MAXSQL, &res, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (error != SQLITE_OK) {
-        fprintf(stderr, "xattrprep Error: %s: Could not get filenames from table %s: %d err %s\n",
-               path, XATTR_FILES, error, sqlite3_errmsg(db));
-        return -1;
-    }
-
-    while (sqlite3_step(res) == SQLITE_ROW) {
-        /* const int ncols = sqlite3_column_count(res); */
-        /* if (ncols != 2) { */
-        /*     fprintf(stderr, "Error: Searching xattr file list returned bad column count: %d (expected 2)\n", ncols); */
-        /*     continue; */
-        /* } */
-
-        const char *filename   = (const char *) sqlite3_column_text(res, 0);
-        const char *attachname = (const char *) sqlite3_column_text(res, 1);
-        const size_t attachname_len = strlen(attachname);
-
-        /* ATTACH <path>/<per-user/group db> AS <attach name> */
-        char attcmd[MAXSQL];
-        SNFORMAT_S(attcmd, sizeof(attcmd), 6,
-                   "ATTACH \'", (size_t) 8,
-                   path, path_len,
-                   "/", (size_t) 1,
-                   filename, strlen(filename),
-                   "\' AS ", (size_t) 5,
-                   attachname, attachname_len);
-
-        /* if attach fails, you don't have access to the xattrs - just continue */
-        if (sqlite3_exec(db, attcmd, NULL, NULL, NULL) == SQLITE_OK) {
-            rec_count++;
-            /* SELECT inode, name, value FROM <attach name>.xattrs_avail UNION */
-            unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 5,
-                                    XATTR_COLS, XATTR_COLS_LEN,
-                                    attachname, attachname_len,
-                                    ".", (size_t) 1,
-                                    XATTRS_AVAIL, XATTRS_AVAIL_LEN,
-                                    " UNION", (size_t) 6);
-        }
-    }
-    sqlite3_finalize(res);
-
-    SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 2,
-               XATTR_COLS, XATTR_COLS_LEN,
-               XATTRS_AVAIL, XATTRS_AVAIL_LEN);
-
-    /* create xattrs view */
-    int rc = sqlite3_exec(db, unioncmd, NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create xattrs view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
+int xattr_create_views(sqlite3 *db
+                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                       , size_t *query_count
+                       #endif
+    ) {
+    int rc;
 
     /* create LEFT JOIN views (all rows, with and without xattrs) */
     /* these should run once, and be no-ops afterwards since the backing data of the views get swapped out */
@@ -1392,33 +1310,7 @@ int xattrprep(const char *path, const size_t path_len, sqlite3 *db
         return -1;
     }
 
-    return rec_count;
-}
-
-static int detach_xattr_db(void *args, int count, char **data, char **columns) {
-    (void) count; (void) (columns);
-
-    detachdb(NULL, (sqlite3 *) args, data[1], 0); /* don't check for errors */
     return 0;
-}
-
-void xattrdone(sqlite3 *db
-               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-               , size_t *query_count
-               #endif
-    )
-{
-    /* no need to drop xentries, xpentries, and xsummary */
-
-    sqlite3_exec(db, "DROP VIEW IF EXISTS " XATTRS ";", NULL, NULL, NULL);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    sqlite3_exec(db, XATTR_GET_DB_LIST, detach_xattr_db, db, NULL);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
 }
 
 /*

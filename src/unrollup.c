@@ -242,8 +242,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                          "DELETE FROM " SUMMARY " WHERE isroot <> 1;"
                          "UPDATE " SUMMARY " SET rollupscore = 0 WHERE isroot == 1;"
                          "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT filename FROM " XATTR_FILES_ROLLUP ";"
-                         "DELETE FROM " XATTR_FILES_ROLLUP ";"
+                         "SELECT filename FROM " EXTERNAL_DBS_ROLLUP ";"
+                         "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
                          "END TRANSACTION;"
                          "VACUUM;",
                          process_xattrs,

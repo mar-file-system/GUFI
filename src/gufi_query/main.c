@@ -77,6 +77,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "debug.h"
 #include "dbutils.h"
+#include "external.h"
 #include "outdbs.h"
 #include "outfiles.h"
 #include "OutputBuffers.h"
@@ -232,6 +233,16 @@ static const char ATTACH_NAME[] = "tree";
 
 /* mutex doing global things */
 pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* prepend the current direcoty to the database filenamee */
+size_t xattr_modify_filename(char *dst, const size_t dst_size,
+                             const char *src, const size_t src_len,
+                             struct work *work) {
+    return SNFORMAT_S(dst, dst_size, 3,
+                      work->name, work->name_len,
+                      "/", (size_t) 1,
+                      src, strlen(src) + 1); /* NULL terminate */
+}
 
 /* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(QPTPool_t *ctx,
@@ -447,14 +458,25 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_set_end(addqueryfuncs_call);
     #endif
 
-    /* set up XATTRS_VIEW_NAME so that it can be used by -T, -S, and -E */
+    /* set up XATTRS so that it can be used by -T, -S, and -E */
     if (db && in.xattrs.enabled) {
+        static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
+
         timestamp_set_start(xattrprep_call);
-        xattrprep(work->name, work->name_len, db
-                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                  ,&ta->queries
-                  #endif
-                  );
+        external_loop(work, db,
+                      XATTRS, sizeof(XATTRS) - 1,
+                      XATTR_COLS, sizeof(XATTR_COLS) - 1,
+                      XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
+                      xattr_modify_filename
+                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                      , &ta->queries
+                      #endif
+            );
+        xattr_create_views(db
+                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                           , &ta->queries
+                           #endif
+            );
         timestamp_set_end(xattrprep_call);
     }
 
@@ -573,10 +595,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* detach xattr dbs */
     timestamp_set_start(xattrdone_call);
     if (db && in.xattrs.enabled) {
-        xattrdone(db
-                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                  , &ta->queries
-                  #endif
+        external_done(db, "DROP VIEW " XATTRS ";"
+                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                      , &ta->queries
+                      #endif
         );
     }
     timestamp_set_end(xattrdone_call);

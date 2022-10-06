@@ -118,21 +118,6 @@ extern const char XATTRS_AVAIL_CREATE[];
 /* the view of all xattrs available to the caller */
 #define XATTRS              "xattrs"
 
-/* table containing list of per-user and per-group xattr dbs */
-#define XATTR_FILES_PWD     "xattr_files_pwd"
-extern const char XATTR_FILES_PWD_CREATE[];
-extern const char XATTR_FILES_PWD_INSERT[];
-
-/* table containing list of per-user and per-group xattr dbs */
-/* this table will be empty before rollups */
-#define XATTR_FILES_ROLLUP  "xattr_files_rollup"
-extern const char XATTR_FILES_ROLLUP_CREATE[];
-extern const char XATTR_FILES_ROLLUP_INSERT[];
-
-/* view containing list of per-user and per-group xattr dbs */
-#define XATTR_FILES         "xattr_files"
-extern const char XATTR_FILES_CREATE[];
-
 /* format to pass into snprintf */
 extern const char XATTR_UID_FILENAME_FORMAT[];
 extern const char XATTR_UID_ATTACH_FORMAT[];

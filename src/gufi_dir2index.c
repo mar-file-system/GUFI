@@ -224,7 +224,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (in.xattrs.enabled) {
         nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
-        nda.xattr_files_res = insertdbprep(nda.db, XATTR_FILES_PWD_INSERT);
+        nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
 
         /* external per-user and per-group dbs */
         sll_init(&nda.xattr_db_list);
@@ -232,7 +232,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     startdb(nda.db);
     size_t nondirs_processed = 0;
-    descend(ctx, id, nda.work, dir, ta->skip, 1,
+    descend(ctx, id, nda.work, dir, ta->skip, 0, 1,
             processdir, process_nondir, &nda,
             NULL, NULL, &nondirs_processed);
     stopdb(nda.db);

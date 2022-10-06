@@ -595,8 +595,8 @@ static const char rollup_subdir[] =
     "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
     "INSERT INTO " SUMMARY " SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
     "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
-    "INSERT OR IGNORE INTO " XATTR_FILES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES ";"
-    "SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTR_FILES ";";
+    "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
+    "SELECT filename, attachname, uid, gid FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";";
 
 struct CallbackArgs {
     struct template_db *xattr;
@@ -612,11 +612,11 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     (void) count; (void) columns;
 
     struct CallbackArgs *ca     = (struct CallbackArgs *) args;
-    const char  *uid_str        = data[0];
-    const char  *gid_str        = data[1];
-    const char  *filename       = data[2];
+    const char  *filename       = data[0];
     const size_t filename_len   = strlen(filename);
-    const char  *attachname     = data[3];
+    const char  *attachname     = data[1];
+    const char  *uid_str        = data[2];
+    const char  *gid_str        = data[3];
     uid_t uid;
     gid_t gid;
 

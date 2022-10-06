@@ -104,6 +104,7 @@ set(GUFI_SOURCES
   BottomUp.c
   dbutils.c
   debug.c
+  external.c
   outfiles.c
   outdbs.c
   OutputBuffers.c

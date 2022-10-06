@@ -289,7 +289,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         timestamp_start(insertdbprep);
         sqlite3_stmt *entries_res     = insertdbprep(db, ENTRIES_INSERT);           /* entries */
         sqlite3_stmt *xattrs_res      = insertdbprep(db, XATTRS_PWD_INSERT);        /* xattrs within db.db */
-        sqlite3_stmt *xattr_files_res = insertdbprep(db, XATTR_FILES_PWD_INSERT);   /* per-user and per-group db file names*/
+        sqlite3_stmt *xattr_files_res = insertdbprep(db, EXTERNAL_DBS_PWD_INSERT);  /* per-user and per-group db file names*/
         timestamp_set_end(insertdbprep);
 
         timestamp_start(startdb);

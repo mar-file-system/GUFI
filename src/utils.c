@@ -564,7 +564,7 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  * entry type. Links will not be read.
  */
 int descend(QPTPool_t *ctx, const size_t id,
-            struct work *work, DIR *dir, trie_t *skip_names,
+            struct work *work, DIR *dir, trie_t *skip_names, const int skip_db,
             const int stat_entries, QPTPoolFunc_t processdir,
             int (*process_nondir)(struct work *nondir, void *args), void *args,
             size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed) {
@@ -598,7 +598,7 @@ int descend(QPTPool_t *ctx, const size_t id,
 
             /* skip . and .. and *.db */
             const int skip = (trie_search(skip_names, dir_child->d_name, len) ||
-                              (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0));
+                              (skip_db && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0)));
             if (skip) {
                 continue;
             }

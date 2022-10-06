@@ -62,95 +62,77 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef UTILS_H
-#define UTILS_H
-
-#include <dirent.h>
-#include <stdio.h>
-#include <sys/types.h>
+#ifndef EXTERNAL_H
+#define EXTERNAL_H
 
 #include <sqlite3.h>
+#include <stdlib.h>
 
-#include "QueuePerThreadPool.h"
 #include "bf.h"
-#include "config.h"
-#include "trie.h"
-#include "xattrs.h"
-
-/* Wrapper around snprintf to catch issues and print them to stderr */
-int SNPRINTF(char *str, size_t size, const char *format, ...);
-
-/* Equivalent to snprintf printing only strings. Variadic arguments
-   should be pairs of strings and their lengths (to try to prevent
-   unnecessary calls to strlen). Make sure to typecast the lengths
-   to size_t or weird bugs may occur */
-size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
-
-// global variable to hold per thread state goes here
-struct globalthreadstate {
-   FILE*    outfd[MAXPTHREAD];
-   sqlite3* outdbd[MAXPTHREAD];
-};
-extern struct globalthreadstate gts;
-
-extern struct sum sumout;
-
-int printits(struct work *pwork,int ptid);
-
-int zeroit(struct sum *summary);
-
-int sumit(struct sum *summary, struct work *pwork);
-
-int tsumit (struct sum *sumin,struct sum *smout);
-
-// given a possibly-multi-level path of directories (final component is
-// also a dir), create the parent dirs all the way down.
-//
-int mkpath(char*path, mode_t mode, uid_t uid, gid_t gid);
-
-int dupdir(char*path, struct stat *stat);
-
-int shortpath(const char *name, char *nameout, char *endname);
-
-int printit(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, int printing, long long pinode);
-
-// NOTE: returns void, not void*, because threadpool threads
-//       do not return values outside the API.
-typedef void(DirFunc)(void*);
-
-int processdirs(DirFunc dir_fn);
 
 /*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
- */
-int descend(QPTPool_t *ctx, const size_t id,
-            struct work *work, DIR *dir, trie_t *skip, const int skip_db,
-            const int stat_entries,  QPTPoolFunc_t processdir,
-            int (*process_nondir)(struct work *nondir, void *args), void *args,
-            size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed);
-
-/* convert a mode to a human readable string */
-char *modetostr(char *str, const size_t size, const mode_t mode);
-
-/* find the index of the first match, walking backwards */
-size_t trailing_match_index(const char *str, size_t len,
-                            const char *match, const size_t match_count);
-
-/* find the index of the first non-match, walking backwards */
-size_t trailing_non_match_index(const char *str, size_t len,
-                                const char *not_match, const size_t not_match_count);
-
-/*
- * convenience function to find first slash before the basename
  *
- * used for processing input paths that have been run through realpath
+ * these tables/views only exist in db.db and list
+ * external databases to attach to db.db
+ *
+ * these tables/views are always named the same no
+ * matter the usage of the external databases
  */
-size_t dirname_len(const char *path, size_t len);
 
-int setup_directory_skip(const char *filename, trie_t **skip);
+#define EXTERNAL_DBS_PWD      "external_dbs_pwd"    /* *.db files found during indexing */
+extern const char EXTERNAL_DBS_PWD_CREATE[];
+extern const char EXTERNAL_DBS_PWD_INSERT[];
 
-/* strstr/strtok replacement */
-char *split(char *src, const char *delim, const char *end);
+#define EXTERNAL_DBS_ROLLUP   "external_dbs_rollup" /* *.db files brought up during rollup */
+extern const char EXTERNAL_DBS_ROLLUP_CREATE[];
+extern const char EXTERNAL_DBS_ROLLUP_INSERT[];
 
+#define EXTERNAL_DBS          "external_dbs"
+extern const char EXTERNAL_DBS_CREATE[];
+
+/*
+ * external_loop
+ *
+ * Attach the databases listed in the external databases table to
+ * db.db and create a temporary view of all data accessible by the
+ * caller.
+ *
+ * @in work               the current work context
+ * @in db                 handle to the main db
+ * @in view_name          the name of the view to create
+ * @in view_name_len      length of view_name
+ * @in select             string containing "SELECT <columns> FROM "
+ * @in select_len         length of select
+ * @in table_name         the table to extract from each external database
+ * @in table_name_len     length of table_name
+ * @in modify_filename    if provided, modify the filename to attach into db.db
+ *                        returns the length of the new filename
+ * @return the number of external databases attached
+ */
+int external_loop(struct work *work, sqlite3 *db,
+                  const char *view_name, const size_t view_name_len,
+                  const char *select, const size_t select_len,
+                  const char *table_name, const size_t table_name_len,
+                  size_t (*modify_filename)(char *dst, const size_t dst_size,
+                                            const char *src, const size_t src_len,
+                                            struct work *work)
+                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                  , size_t *query_count
+                  #endif
+    );
+
+/*
+ * drop view and detach external databases
+ *
+ * @in db           the current working context
+ * @in drop_view    SQL statement of the format "DROP VIEW <view name>;"
+ *                  This string is not validated. This is done to avoid
+ *                  memcpys that would be done if the query were
+ 8                  generated instead of provided.
+ */
+void external_done(sqlite3 *db, const char *drop_view
+                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                   , size_t *query_count
+                   #endif
+    );
 #endif

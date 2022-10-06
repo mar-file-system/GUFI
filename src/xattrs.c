@@ -91,26 +91,6 @@ const char XATTR_GID_W_READ_ATTACH_FORMAT[]    = "gidr%llu";
 const char XATTR_GID_WO_READ_FILENAME_FORMAT[] = "gid-r.%llu.db";
 const char XATTR_GID_WO_READ_ATTACH_FORMAT[]   = "gid%llu";
 
-/* file name should be relative to the current directory, not an absolute path */
-const char XATTR_FILES_PWD_CREATE[] =
-    "DROP TABLE IF EXISTS " XATTR_FILES_PWD ";"
-    "CREATE TABLE " XATTR_FILES_PWD "(uid INT64, gid INT64, filename TEXT, attachname TEXT, PRIMARY KEY(filename, attachname));";
-
-const char XATTR_FILES_PWD_INSERT[] =
-    "INSERT INTO " XATTR_FILES_PWD " VALUES (@uid, @gid, @filename, @attachname);";
-
-/* file name should be relative to the current directory, not an absolute path */
-const char XATTR_FILES_ROLLUP_CREATE[] =
-    "DROP TABLE IF EXISTS " XATTR_FILES_ROLLUP ";"
-    "CREATE TABLE " XATTR_FILES_ROLLUP "(uid INT64, gid INT64, filename TEXT, attachname TEXT, PRIMARY KEY(filename, attachname));";
-
-const char XATTR_FILES_ROLLUP_INSERT[] =
-    "INSERT INTO " XATTR_FILES_ROLLUP " VALUES (@uid, @gid, @filename, @attachname);";
-
-const char XATTR_FILES_CREATE[] =
-    "DROP VIEW IF EXISTS " XATTR_FILES ";"
-    "CREATE VIEW " XATTR_FILES " AS SELECT * FROM " XATTR_FILES_PWD " UNION SELECT * FROM " XATTR_FILES_ROLLUP ";";
-
 int xattr_can_rollin(struct stat *parent, struct stat *entry) {
     /* Rule 1: File is 0+R (doesn’t matter what the parent dir perms or ownership is) */
     static const mode_t UGO_MASK = 0444;
@@ -187,8 +167,8 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
     const ssize_t name_list_len = LISTXATTR(path, name_list, sizeof(name_list));
     if (name_list_len < 0) {
         const int err = errno;
-        char buf[1000];
-        getcwd(buf, 1000);
+        char buf[MAXXATTR];
+        getcwd(buf, sizeof(buf));
         fprintf(stderr, "Error: Could not list xattrs for %s: %s (%d) %s\n", path, strerror(err), err, buf);
         return -1;
     }

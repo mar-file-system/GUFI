@@ -147,7 +147,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size_t nondirs_processed_benchmark = 0;
     nondirs_processed = &nondirs_processed_benchmark;
     #endif
-    descend(ctx, id, work, dir, pa->skip, 1,
+    descend(ctx, id, work, dir, pa->skip, 0, 1,
             processdir, process_nondir, pa->outfiles[id],
             NULL, NULL, nondirs_processed);
 

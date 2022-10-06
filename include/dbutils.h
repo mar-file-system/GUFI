@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 
 #include "SinglyLinkedList.h"
 #include "debug.h"
+#include "external.h"
 #include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -186,18 +187,11 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
 
-/* create view of all accessible xattrs when querying */
-int xattrprep(const char *path, const size_t path_len, sqlite3 *db
-              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-              , size_t *query_count
-              #endif
-    );
-
-/* detach xattr dbs */
-void xattrdone(sqlite3 *db
-               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-               , size_t *query_count
-               #endif
+/* create convenience views: xentries, xpentries, and xsummary */
+int xattr_create_views(sqlite3 *db
+                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        , size_t *query_count
+                       #endif
     );
 
 /* convert characters in sqlite URI paths */
