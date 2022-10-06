@@ -670,14 +670,14 @@ int descend(QPTPool_t *ctx, const size_t id,
             nondirs++;
 
             if (process_nondir) {
-                if (in.xattrs.enabled) {
+                if (in.external_enabled) {
                     xattrs_setup(&child.xattrs);
                     xattrs_get(child.name, &child.xattrs);
                 }
 
                 processed += !process_nondir(&child, args);
 
-                if (in.xattrs.enabled) {
+                if (in.external_enabled) {
                     xattrs_cleanup(&child.xattrs);
                 }
             }

@@ -459,7 +459,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
 
     /* set up XATTRS so that it can be used by -T, -S, and -E */
-    if (db && in.xattrs.enabled) {
+    if (db && in.external_enabled) {
         static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
 
         timestamp_set_start(xattrprep_call);
@@ -594,7 +594,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* detach xattr dbs */
     timestamp_set_start(xattrdone_call);
-    if (db && in.xattrs.enabled) {
+    if (db && in.external_enabled) {
         external_done(db, "DROP VIEW " XATTRS ";"
                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                       , &ta->queries

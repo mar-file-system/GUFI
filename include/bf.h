@@ -143,8 +143,8 @@ struct input {
    size_t name_len;
    char *nameto;
    size_t nameto_len;
+   int external_enabled;
    struct {
-        int enabled;
         struct {
             uid_t uid;
             gid_t gid;

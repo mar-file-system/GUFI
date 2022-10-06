@@ -130,7 +130,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* get source directory xattrs */
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
         xattrs_setup(&work->xattrs);
         xattrs_get(work->name, &work->xattrs);
     }
@@ -138,7 +138,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* write start of stanza */
     worktofile(pa->outfiles[id], in.delim, work->root_len, work);
 
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
         xattrs_cleanup(&work->xattrs);
     }
 

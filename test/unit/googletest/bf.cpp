@@ -113,7 +113,7 @@ TEST(parse_cmd_line, flags) {
 
     struct input in;
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-    EXPECT_EQ(in.xattrs.enabled, 1);
+    EXPECT_EQ(in.external_enabled, 1);
     EXPECT_EQ(in.printing,       1);
     EXPECT_EQ(in.printdir,       1);
     EXPECT_EQ(in.printheader,    1);

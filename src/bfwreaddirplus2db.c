@@ -180,7 +180,7 @@ int reprocessdir(void * passv, DIR *dir)
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
     SNPRINTF(passmywork->type,2,"d");
     xattrs_setup(&passmywork->xattrs);
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
       xattrs_get(passmywork->name, &passmywork->xattrs);
     }
 
@@ -239,7 +239,7 @@ int reprocessdir(void * passv, DIR *dir)
         lstat(qwork.name, &qwork.statuso);
         /* qwork.xattrs_len = 0; */
         xattrs_setup(&qwork.xattrs);
-        if (in.xattrs.enabled) {
+        if (in.external_enabled) {
           xattrs_get(qwork.name, &qwork.xattrs);
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {

@@ -120,7 +120,7 @@ struct nondir_args {
 static int process_nondir(struct work *entry, void *args) {
     struct nondir_args *nda = (struct nondir_args *) args;
 
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
         insertdbgo_xattrs(&nda->work->statuso, entry,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
@@ -222,7 +222,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.xattrs_res = NULL;
     nda.xattr_files_res = NULL;
 
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
         nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
         nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
 
@@ -239,7 +239,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* entries and xattrs have been inserted */
 
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
         /* write out per-user and per-group xattrs */
         sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
@@ -259,7 +259,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* insert this directory's summary data */
     /* the xattrs go into the xattrs_avail table in db.db */
     insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len, nda.work, &nda.summary);
-    if (in.xattrs.enabled) {
+    if (in.external_enabled) {
         xattrs_cleanup(&nda.work->xattrs);
     }
 

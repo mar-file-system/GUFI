@@ -102,7 +102,7 @@ void print_help(const char* prog_name,
       case ':': continue;
       case 'h': printf("  -h                     help"); break;
       case 'H': printf("  -H                     show assigned input values (debugging)"); break;
-      case 'x': printf("  -x                     enable xattr processing"); break;
+      case 'x': printf("  -x                     enable external database processing"); break;
       case 'p': printf("  -p                     print file-names"); break;
       case 'P': printf("  -P                     print directories as they are encountered"); break;
       case 'N': printf("  -N                     print column-names (header) for DB results"); break;
@@ -168,7 +168,7 @@ void show_input(struct input* in, int retval) {
    printf("in.name_len           = '%zu'\n", in->name_len);
    printf("in.nameto             = '%s'\n",  in->nameto);
    printf("in.andor              = %d\n",    in->andor);
-   printf("in.xattr.enabled      = %d\n",    in->xattrs.enabled);
+   printf("in.external_enabled   = %d\n",    in->external_enabled);
    printf("in.xattr.nobody.uid   = %d\n",    (int) in->xattrs.nobody.uid);
    printf("in.xattr.nobody.gid   = %d\n",    (int) in->xattrs.nobody.gid);
    printf("in.sql.init           = '%s'\n",  in->sql.init);
@@ -259,7 +259,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'x':               // xattrs
-         in->xattrs.enabled = 1;
+         in->external_enabled = 1;
          break;
 
       case 'p':               // print file name/path?
