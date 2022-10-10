@@ -64,8 +64,6 @@ OF SUCH DAMAGE.
 
 #include <dirent.h>
 #include <errno.h>
-#include <pthread.h>
-#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,22 +72,21 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <utime.h>
 
+#include "OutputBuffers.h"
+#include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
-#include "debug.h"
 #include "dbutils.h"
+#include "debug.h"
 #include "external.h"
 #include "outdbs.h"
 #include "outfiles.h"
-#include "OutputBuffers.h"
 #include "pcre.h"
-#include "QueuePerThreadPool.h"
-#include "SinglyLinkedList.h"
 #include "trie.h"
 #include "utils.h"
 
 #include "gufi_query/aggregate.h"
 #include "gufi_query/rollup.h"
-#include "gufi_query/print.h"
 #include "gufi_query/query.h"
 
 extern int errno;

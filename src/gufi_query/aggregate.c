@@ -64,7 +64,6 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "gufi_query/aggregate.h"
-#include "gufi_query/print.h"
 
 /* must have shared cache */
 static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared&vfs=" GUFI_SQLITE_VFS;
@@ -172,7 +171,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
         pa.rows = 0;
 
         char *err = NULL;
-        if (sqlite3_exec(aggregate->db, in->sql.agg, print_serial, &pa, &err) != SQLITE_OK) {
+        if (sqlite3_exec(aggregate->db, in->sql.agg, print_parallel, &pa, &err) != SQLITE_OK) {
             fprintf(stderr, "Final aggregation error: \"%s\": %s\n", in->sql.agg, err);
             rc = -1;
         }

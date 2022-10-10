@@ -100,21 +100,23 @@ endif()
 
 # create the GUFI library, which contains all of the common source files
 set(GUFI_SOURCES
-  bf.c
   BottomUp.c
-  dbutils.c
-  debug.c
-  external.c
-  outfiles.c
-  outdbs.c
   OutputBuffers.c
   QueuePerThreadPool.c
   SinglyLinkedList.c
+  bf.c
+  dbutils.c
+  debug.c
+  external.c
+  outdbs.c
+  outfiles.c
+  print.c
   template_db.c
   trace.c
   trie.c
   utils.c
-  xattrs.c)
+  xattrs.c
+)
 add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 
@@ -184,7 +186,6 @@ build_and_install_one(${BIN} TRUE gufi_query
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
   gufi_query/main.c
-  gufi_query/print.c
   gufi_query/query.c
   gufi_query/rollup.c
 )

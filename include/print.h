@@ -62,13 +62,26 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_QUERY_H
-#define GUFI_QUERY_QUERY_H
+#ifndef GUFI_QUERY_PRINT_H
+#define GUFI_QUERY_PRINT_H
 
-#include "dbutils.h"
-#include "gufi_query/PoolArgs.h"
+#include <pthread.h>
+#include <sqlite3.h>
+#include <stddef.h>
+#include <stdio.h>
 
-void querydb(const char *dbname, sqlite3 *db, const char *query,
-             PoolArgs_t *pa, int id, int *rc);
+#include "OutputBuffers.h"
+
+/* sqlite3_exec callback argument data */
+typedef struct PrintArgs {
+    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
+    char delim;
+    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
+    FILE *outfile;
+    size_t rows;                          /* number of rows returned by the query */
+    /* size_t printed;                    /\* number of records printed by the callback *\/ */
+} PrintArgs_t;
+
+int print_parallel(void *args, int count, char **data, char **columns);
 
 #endif

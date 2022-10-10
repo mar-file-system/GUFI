@@ -62,27 +62,89 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_PRINT_H
-#define GUFI_QUERY_PRINT_H
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 
-#include <pthread.h>
-#include <sqlite3.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <gtest/gtest.h>
 
-#include "OutputBuffers.h"
+extern "C" {
 
-/* sqlite3_exec callback argument data */
-typedef struct PrintArgs {
-    struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
-    char delim;
-    pthread_mutex_t *mutex;               /* mutex for printing to stdout */
-    FILE *outfile;
-    size_t rows;                          /* number of rows returned by the query */
-    /* size_t printed;                    /\* number of records printed by the callback *\/ */
-} PrintArgs_t;
+#include "print.h"
 
-int print_parallel(void *args, int count, char **data, char **columns);
-int print_serial(void *args, int count, char **data, char **columns);
+}
 
-#endif
+static const char A[]        = "A";
+static const char BC[]       = "BC";
+static const char D[]        = "D";
+static const char SEP[]      = "|\n";
+
+static const char *DATA[] = {
+    A,
+    BC,
+    D
+};
+
+static const char   ABC[]    = "A|\nBC|\n";
+static const size_t ABC_LEN  = strlen(ABC);
+static const char   ABCD[]   = "A|\nBC|\nD|\n";
+static const size_t ABCD_LEN = strlen(ABCD);
+
+static const size_t OUTPUTBUFFER_CAP = sizeof(A) + 1; // (string + delimiter) + newline
+
+TEST(print, parallel) {
+    struct OutputBuffer ob;
+    EXPECT_EQ(OutputBuffer_init(&ob, OUTPUTBUFFER_CAP), &ob);
+
+    char buf[sizeof(ABCD)] = {0};
+    FILE *file = fmemopen(buf, sizeof(buf), "w+b");
+    ASSERT_NE(file, nullptr);
+
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    PrintArgs pa;
+    pa.output_buffer = &ob;
+    pa.delim = SEP[0];
+    pa.mutex = &mutex;
+    pa.outfile = file;
+    pa.rows = 0;
+
+    // A is buffered in OutputBuffer
+    {
+        EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA, nullptr), 0);
+        EXPECT_EQ(fflush(file), 0);
+
+        EXPECT_EQ(strlen(buf), (size_t) 0);
+    }
+
+    // BC is too large, so A gets flushed, followed by BC
+    {
+        EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 1, nullptr), 0);
+        EXPECT_EQ(fflush(file), 0);
+
+        EXPECT_EQ(strlen(buf), ABC_LEN);
+        EXPECT_EQ(memcmp(buf, ABC, ABC_LEN), 0);
+    }
+
+    // D is buffered in OutputBuffer
+    {
+        EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 2, nullptr), 0);
+        EXPECT_EQ(fflush(file), 0);
+
+        EXPECT_EQ(strlen(buf), ABC_LEN);
+        EXPECT_EQ(memcmp(buf, ABC, ABC_LEN), 0);
+    }
+
+    // force the OutputBuffer to flush to get D
+    {
+        const size_t expected_flush_len = snprintf(nullptr, 0, "%s%s", D, SEP);
+        EXPECT_EQ(OutputBuffer_flush(&ob, file), expected_flush_len);
+        EXPECT_EQ(fflush(file), 0);
+
+        EXPECT_EQ(strlen(buf), ABCD_LEN);
+        EXPECT_EQ(memcmp(buf, ABCD, ABCD_LEN), 0);
+    }
+
+    fclose(file);
+    OutputBuffer_destroy(&ob);
+}

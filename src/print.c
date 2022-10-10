@@ -65,7 +65,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "gufi_query/print.h"
+#include "print.h"
 
 int print_parallel(void *args, int count, char **data, char **columns) {
     (void) columns;
@@ -141,22 +141,6 @@ int print_parallel(void *args, int count, char **data, char **columns) {
 
     free(lens);
 
-    print->rows++;
-
-    return 0;
-}
-
-int print_serial(void *args, int count, char **data, char **columns) {
-    (void) columns;
-
-    PrintArgs_t *print = (PrintArgs_t *) args;
-    for(int i = 0; i < count; i++) {
-        if (data[i]) {
-            fwrite(data[i], sizeof(char), strlen(data[i]), print->outfile);
-        }
-        fwrite(&print->delim, sizeof(char), 1, print->outfile);
-    }
-    fwrite("\n", sizeof(char), 1, print->outfile);
     print->rows++;
 
     return 0;

@@ -73,6 +73,7 @@ if (CMAKE_CXX_COMPILER)
     SinglyLinkedList.cpp
     bf.cpp
     dbutils.cpp
+    print.cpp
     trace.cpp
     trie.cpp
     utils.cpp
