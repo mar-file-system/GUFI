@@ -182,12 +182,16 @@ set(C_SOURCES
 build_and_install(${BIN} TRUE ${C_SOURCES})
 
 # gufi_query is split up into multiple files
-build_and_install_one(${BIN} TRUE gufi_query
+add_library(gufi_query_lib OBJECT
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
-  gufi_query/main.c
   gufi_query/query.c
   gufi_query/rollup.c
+)
+
+build_and_install_one(${BIN} TRUE gufi_query
+  gufi_query/main.c
+  $<TARGET_OBJECTS:gufi_query_lib>
 )
 
 # build binaries that do not need to link with GUFI

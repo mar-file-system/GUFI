@@ -77,6 +77,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     pa->in = in;
 
     if (setup_directory_skip(in->skip, &pa->skip)) {
+        fprintf(stderr, "Error: Bad input skip list\n");
         return 1;
     }
 
@@ -151,6 +152,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
 
         if (!OutputBuffer_init(&ta->output_buffer, in->output_buffer_size)) {
+            fprintf(stderr, "Error: Failed to initialize output buffer with size %zu\n", in->output_buffer_size);
             break;
         }
     }
@@ -172,7 +174,7 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);
         OutputBuffer_destroy(&ta->output_buffer);
 
-        if (pa->in->output == OUTFILE) {
+        if (ta->outfile != stdout) {
             fclose(ta->outfile);
         }
     }

@@ -71,6 +71,7 @@ if (CMAKE_CXX_COMPILER)
     OutputBuffers.cpp
     QueuePerThreadPool.cpp
     SinglyLinkedList.cpp
+    aggregate.cpp
     bf.cpp
     dbutils.cpp
     print.cpp
@@ -79,7 +80,7 @@ if (CMAKE_CXX_COMPILER)
     utils.cpp
     xattrs.cpp
   )
-  add_executable(unit_tests ${TEST_SRC})
+  add_executable(unit_tests ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
   target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 
   add_test(NAME unit_tests COMMAND unit_tests)

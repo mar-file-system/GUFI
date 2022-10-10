@@ -193,7 +193,7 @@ void aggregate_fin(Aggregate_t *aggregate, struct input *in) {
 
     if ((in->output == STDOUT) || (in->output == OUTFILE)) {
         OutputBuffer_destroy(&aggregate->ob);
-        if (in->output == OUTFILE) {
+        if (aggregate->outfile != stdout) {
             fclose(aggregate->outfile);
         }
     }
