@@ -123,7 +123,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         #ifdef ADDQUERYFUNCS
         if (addqueryfuncs_common(ta->outdb) != 0) {
-            fprintf(stderr, "Could not add functions to sqlite\n");
+            fprintf(stderr, "Warning: Could not add functions to sqlite\n");
         }
         #endif
 

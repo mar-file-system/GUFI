@@ -62,18 +62,16 @@ OF SUCH DAMAGE.
 
 
 
-#include "pcre.h"
 #include <errno.h>
 #include <grp.h>
-#include <libgen.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
+#include "pcre.h"
+
 #include "dbutils.h"
-#include "template_db.h"
 
 extern int errno;
 
@@ -620,12 +618,10 @@ int insertdbgo_xattrs_avail(struct work *pwork, sqlite3_stmt *res)
     return error;
 }
 
-int insertdbgo_xattrs(struct stat *dir, struct work *entry,
-                      sll_t *xattr_db_list,
-                      struct template_db *xattr_template,
+int insertdbgo_xattrs(struct input *in, struct stat *dir, struct work *entry,
+                      sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
-                      sqlite3_stmt *xattrs_res,
-                      sqlite3_stmt *xattr_files_res) {
+                      sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res) {
     /* insert into the xattrs_avail table inside db.db */
     const int rollin_score = xattr_can_rollin(dir, &entry->statuso);
     if (rollin_score) {
@@ -661,8 +657,9 @@ int insertdbgo_xattrs(struct stat *dir, struct work *entry,
         if (!xattr_uid_db) {
             xattr_uid_db = create_xattr_db(xattr_template,
                                            topath, topath_len,
+                                           in,
                                            entry->statuso.st_uid,
-                                           in.xattrs.nobody.gid,
+                                           in->nobody.gid,
                                            entry->statuso.st_mode,
                                            xattr_files_res);
             if (!xattr_uid_db) {
@@ -675,7 +672,8 @@ int insertdbgo_xattrs(struct stat *dir, struct work *entry,
         if (!xattr_gid_db) {
             xattr_gid_db = create_xattr_db(xattr_template,
                                            topath, topath_len,
-                                           in.xattrs.nobody.uid,
+                                           in,
+                                           in->nobody.uid,
                                            entry->statuso.st_gid,
                                            entry->statuso.st_mode,
                                            xattr_files_res);
@@ -1169,10 +1167,11 @@ int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
 
 struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  const char *path, const size_t path_len,
+                                 struct input *in,
                                  uid_t uid, gid_t gid, mode_t mode,
                                  sqlite3_stmt *file_list) {
     /* /\* make sure only one of uid or gid is set *\/ */
-    /* if (!((uid == in.xattrs.nobody.uid) ^ (gid == in.xattrs.nobody.gid)))) { */
+    /* if (!((uid == in->nobody.uid) ^ (gid == in->nobody.gid)))) { */
     /*     return NULL; */
     /* } */
 
@@ -1180,14 +1179,14 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     mode_t xattr_db_mode = 0;
 
     /* set the relative path in xdb */
-    if (uid != in.xattrs.nobody.uid) {
+    if (uid != in->nobody.uid) {
         xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
                                      XATTR_UID_FILENAME_FORMAT, uid);
         xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
                                      XATTR_UID_ATTACH_FORMAT, uid);
         xattr_db_mode = 0600;
     }
-    else if (gid != in.xattrs.nobody.gid) {
+    else if (gid != in->nobody.gid) {
         /* g+r */
         if ((mode & 0040) == 0040) {
             xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,

@@ -62,14 +62,13 @@ OF SUCH DAMAGE.
 
 
 
-#include "bf.h"
-#include "dbutils.h"
-#include "outdbs.h"
-#include "utils.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "bf.h"
+#include "dbutils.h"
+#include "outdbs.h"
 
 /* the array of db handles should already be allocated */
 sqlite3 **outdbs_init(const int opendbs, char *prefix, const size_t count, const char *sqlinit, const size_t sqlinit_len) {

@@ -62,10 +62,10 @@ OF SUCH DAMAGE.
 
 
 
-#include "SinglyLinkedList.h"
-
 #include <stdlib.h>
 #include <string.h>
+
+#include "SinglyLinkedList.h"
 
 struct SinglyLinkedListNode {
     void *data;

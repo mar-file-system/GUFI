@@ -121,7 +121,7 @@ static int process_nondir(struct work *entry, void *args) {
     struct nondir_args *nda = (struct nondir_args *) args;
 
     if (in.external_enabled) {
-        insertdbgo_xattrs(&nda->work->statuso, entry,
+        insertdbgo_xattrs(&in, &nda->work->statuso, entry,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);

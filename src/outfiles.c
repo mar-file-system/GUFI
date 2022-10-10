@@ -62,12 +62,12 @@ OF SUCH DAMAGE.
 
 
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "bf.h"
 #include "outfiles.h"
 #include "utils.h"
-
-#include <stdio.h>
-#include <stdlib.h>
 
 // allocate the array of FILE * and open file
 FILE **outfiles_init(const int openfiles, char *prefix, const size_t count) {

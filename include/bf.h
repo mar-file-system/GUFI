@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 #define BF_H
 
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include "xattrs.h"
 
@@ -145,11 +144,9 @@ struct input {
    size_t nameto_len;
    int external_enabled;
    struct {
-        struct {
-            uid_t uid;
-            gid_t gid;
-        } nobody;
-   } xattrs;
+       uid_t uid;
+       gid_t gid;
+   } nobody;
 
    struct {
        /* set up per-thread intermidate tables */

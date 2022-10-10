@@ -67,9 +67,9 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#include "debug.h"
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
+#include "debug.h"
 
 /* The context for a single thread in QPTPool */
 struct QPTPoolThreadData {

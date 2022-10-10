@@ -62,10 +62,10 @@ OF SUCH DAMAGE.
 
 
 
-#include "OutputBuffers.h"
-
 #include <stdlib.h>
 #include <string.h>
+
+#include "OutputBuffers.h"
 
 struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t capacity) {
     if (obuf) {

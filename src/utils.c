@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "utils.h"
 
@@ -570,18 +571,6 @@ int descend(QPTPool_t *ctx, const size_t id,
             size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed) {
     if (!work) {
         return 1;
-    }
-
-    if (dir_count) {
-        *dir_count = 0;
-    }
-
-    if (nondir_count) {
-        *nondir_count = 0;
-    }
-
-    if (nondirs_processed) {
-        *nondirs_processed = 0;
     }
 
     size_t dirs = 0;

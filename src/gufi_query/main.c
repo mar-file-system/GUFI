@@ -241,7 +241,7 @@ size_t xattr_modify_filename(char *dst, const size_t dst_size,
     return SNFORMAT_S(dst, dst_size, 3,
                       work->name, work->name_len,
                       "/", (size_t) 1,
-                      src, strlen(src) + 1); /* NULL terminate */
+                      src, src_len + 1); /* NULL terminate */
 }
 
 /* Push the subdirectories in the current directory onto the queue */

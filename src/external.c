@@ -62,6 +62,8 @@ OF SUCH DAMAGE.
 
 
 
+#include <string.h>
+
 #include "dbutils.h"
 #include "external.h"
 #include "utils.h"
@@ -83,7 +85,7 @@ const char EXTERNAL_DBS_CREATE[] =
     "DROP VIEW IF EXISTS " EXTERNAL_DBS ";"
     "CREATE VIEW " EXTERNAL_DBS " AS SELECT * FROM " EXTERNAL_DBS_PWD " UNION SELECT * FROM " EXTERNAL_DBS_ROLLUP ";";
 
-static const char EXTERNAL_DBS_GET[] = "SELECT filename, attachname, mode, uid, gid FROM " EXTERNAL_DBS ";";
+static const char EXTERNAL_DBS_GET[] = "SELECT filename, attachname FROM " EXTERNAL_DBS ";";
 
 int external_loop(struct work *work, sqlite3 *db,
                   const char *viewname, const size_t viewname_len,
@@ -181,11 +183,11 @@ void external_done(sqlite3 *db, const char *drop_view
 {
     sqlite3_exec(db, drop_view, NULL, NULL, NULL);
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count);
+    (*query_count)++;
     #endif
 
     sqlite3_exec(db, EXTERNAL_DBS_GET, external_detach, db, NULL);
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count);
+    (*query_count)++;
     #endif
 }

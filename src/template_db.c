@@ -64,7 +64,6 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <fcntl.h>
-#include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>

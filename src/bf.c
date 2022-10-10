@@ -62,16 +62,15 @@ OF SUCH DAMAGE.
 
 
 
-#include "bf.h"
-#include "utils.h"
-
-#include <pthread.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "bf.h"
+#include "utils.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -169,8 +168,8 @@ void show_input(struct input* in, int retval) {
    printf("in.nameto             = '%s'\n",  in->nameto);
    printf("in.andor              = %d\n",    in->andor);
    printf("in.external_enabled   = %d\n",    in->external_enabled);
-   printf("in.xattr.nobody.uid   = %d\n",    (int) in->xattrs.nobody.uid);
-   printf("in.xattr.nobody.gid   = %d\n",    (int) in->xattrs.nobody.gid);
+   printf("in.nobody.uid         = %d\n",    (int) in->nobody.uid);
+   printf("in.nobody.gid         = %d\n",    (int) in->nobody.gid);
    printf("in.sql.init           = '%s'\n",  in->sql.init);
    printf("in.sql.tsum           = '%s'\n",  in->sql.tsum);
    printf("in.sql.sum            = '%s'\n",  in->sql.sum);
@@ -227,14 +226,13 @@ int parse_cmd_line(int         argc,
    in->maxthreads         = 1;                      // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), fielddelim);
    in->max_level          = -1;                     // default to all the way down
-   in->xattrs.nobody.uid  = 65534;
-   in->xattrs.nobody.gid  = 65534;
+   in->nobody.uid  = 65534;
+   in->nobody.gid  = 65534;
    struct passwd *passwd = getpwnam("nobody");
    if (passwd) {
-       in->xattrs.nobody.uid = passwd->pw_uid;
-       in->xattrs.nobody.gid = passwd->pw_gid;
+       in->nobody.uid = passwd->pw_uid;
+       in->nobody.gid = passwd->pw_gid;
    }
-
    in->output             = STDOUT;
    in->output_buffer_size = 4096;
    in->open_flags         = SQLITE_OPEN_READONLY;   // default to read-only opens
@@ -258,7 +256,7 @@ int parse_cmd_line(int         argc,
          retval = -1;
          break;
 
-      case 'x':               // xattrs
+      case 'x':               // enable external database processing
          in->external_enabled = 1;
          break;
 

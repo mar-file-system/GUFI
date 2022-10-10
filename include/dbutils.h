@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #define DBUTILS_H
 
 #include <sys/stat.h>
+
 #include <sqlite3.h>
 
 #include "SinglyLinkedList.h"
@@ -75,7 +76,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-#define GUFI_SQLITE_VFS "unix-none"
+#define GUFI_SQLITE_VFS   "unix-none"
 
 #define READDIRPLUS       "readdirplus"
 extern const char READDIRPLUS_CREATE[];
@@ -121,12 +122,12 @@ int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, co
 int set_db_pragmas(sqlite3 *db);
 
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
-                 int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
-                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                 , struct start_end *sqlite3_open,   struct start_end *set_pragmas
-                 , struct start_end *load_extension, struct start_end *modify_db
-                 #endif
-                 );
+                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
+                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                , struct start_end *sqlite3_open,   struct start_end *set_pragmas
+                , struct start_end *load_extension, struct start_end *modify_db
+                #endif
+    );
 
 int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
                int printpath, int printheader, int printing, int ptid);
@@ -148,16 +149,15 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
 /* insert directly into xattrs_avail in the associated db */
 int insertdbgo_xattrs_avail(struct work *entry, sqlite3_stmt *res);
 /* figure out where the xattr should go and insert it there */
-int insertdbgo_xattrs(struct stat *dir, struct work *entry,
+int insertdbgo_xattrs(struct input *in, struct stat *dir, struct work *entry,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
-                      sqlite3_stmt *xattrs_res,
-                      sqlite3_stmt *xattr_files_res);
+                      sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);
 int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
 
 int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct sum *su);
 
-int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid);
+int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su, int rectype, int uid, int gid);
 
 int addqueryfuncs_common(sqlite3 *db);
 int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work);
@@ -183,6 +183,7 @@ struct xattr_db {
 
 struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  const char *path, const size_t path_len,
+                                 struct input *in,
                                  uid_t uid, gid_t gid, mode_t mode,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
