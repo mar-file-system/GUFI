@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <climits>
 #include <cstring>
+#include <fstream>
 #include <random>
 
 #include <gtest/gtest.h>
@@ -662,6 +663,38 @@ TEST(trailing_non_match_index, paths) {
     EXPECT_EQ(trailing_non_match_index(nulls,   strlen(nulls),   match, match_len), (size_t) 0);
 
     EXPECT_EQ(trailing_non_match_index(nullptr, 10,              match, match_len), (size_t) 0);
+}
+
+TEST(setup_directory_skip, file) {
+    const std::string skip_dirs[] = {
+        "skip0",
+        "skip1",
+    };
+
+    char skip_name[] = "XXXXXX";
+    const int skip_fd = mkstemp(skip_name);
+    ASSERT_NE(skip_fd, -1);
+    EXPECT_EQ(close(skip_fd), 0);
+
+    {
+        std::ofstream skip_stream(skip_name);
+        EXPECT_TRUE(skip_stream);
+
+        for(std::string const & skip_dir : skip_dirs) {
+            skip_stream << skip_dir << std::endl;
+        }
+    }
+
+    trie_t *skip = NULL;
+    EXPECT_EQ(setup_directory_skip(skip_name, &skip), 0);
+    EXPECT_EQ(trie_search(skip, ".",  1), 1);
+    EXPECT_EQ(trie_search(skip, "..", 2), 1);
+    for(std::string const & skip_dir : skip_dirs) {
+        EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size()), 1);
+    }
+    trie_free(skip);
+
+    EXPECT_EQ(remove(skip_name), 0);
 }
 
 TEST(setup_directory_skip, no_file) {
