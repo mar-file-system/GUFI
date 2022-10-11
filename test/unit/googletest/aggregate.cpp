@@ -64,8 +64,8 @@ OF SUCH DAMAGE.
 
 #include <chrono>
 #include <cinttypes>
-#include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <limits>
 #include <random>
 

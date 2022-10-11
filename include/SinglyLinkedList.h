@@ -67,6 +67,10 @@ OF SUCH DAMAGE.
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct SinglyLinkedListNode sll_node_t;
 
 /* Singly linked list that is used like a queue */
@@ -96,5 +100,9 @@ void *sll_node_data(sll_node_t *node);
         (name) = sll_next_node((name)))             \
 
 void sll_destroy(sll_t *sll, void (*destroy)(void *));
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

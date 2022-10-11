@@ -63,11 +63,8 @@ OF SUCH DAMAGE.
 
 
 #include <climits>
-#include <cstdlib>
 #include <cstring>
 #include <random>
-#include <sys/types.h>
-#include <sys/xattr.h>
 
 #include <gtest/gtest.h>
 

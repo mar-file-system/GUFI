@@ -62,14 +62,13 @@ OF SUCH DAMAGE.
 
 
 
-#include <gtest/gtest.h>
-
 #include <ctime>
 #include <grp.h>
 #include <pwd.h>
-#include <sqlite3.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <gtest/gtest.h>
 
 extern "C" {
 

@@ -67,7 +67,7 @@ OF SUCH DAMAGE.
 extern "C" {
 
 #include "bf.h"
-#include "utils.h"
+#include "utils.h" /* SNPRINTF */
 
 }
 

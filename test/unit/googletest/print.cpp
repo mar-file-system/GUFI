@@ -62,17 +62,12 @@ OF SUCH DAMAGE.
 
 
 
-#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 
 #include <gtest/gtest.h>
 
-extern "C" {
-
 #include "print.h"
-
-}
 
 static const char A[]        = "A";
 static const char BC[]       = "BC";

@@ -64,7 +64,6 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
-
 #include "OutputBuffers.h"
 
 const char STR[] = "string";

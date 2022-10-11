@@ -71,8 +71,10 @@ OF SUCH DAMAGE.
 #include <cstdio>
 
 extern "C" {
+
 #include "config.h"
 #include "trace.h"
+
 }
 
 static const char delim[] = "\x1e";
@@ -96,7 +98,7 @@ static struct xattrs EXPECTED_XATTRS = {
 };
 
 static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
-                                 "xattr.key1\x1fxattr.val1\x1f";
+                                          "xattr.key1\x1fxattr.val1\x1f";
 static const size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
 static struct work *get_work() {

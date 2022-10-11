@@ -65,10 +65,6 @@ OF SUCH DAMAGE.
 #ifndef GUFI_XATTR_H
 #define GUFI_XATTR_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -80,6 +76,10 @@ extern "C" {
 #include <attr/xattr.h>
 #else
 #include <sys/xattr.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /* Alias xattr functions to standard subset of GNU and BSD */

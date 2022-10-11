@@ -64,9 +64,7 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
-extern "C" {
 #include "SinglyLinkedList.h"
-}
 
 TEST(SinglyLinkedList, init_destroy) {
     sll_t sll;

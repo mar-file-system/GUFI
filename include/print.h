@@ -72,6 +72,10 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* sqlite3_exec callback argument data */
 typedef struct PrintArgs {
     struct OutputBuffer *output_buffer;   /* buffer for printing into before writing to file */
@@ -83,5 +87,9 @@ typedef struct PrintArgs {
 } PrintArgs_t;
 
 int print_parallel(void *args, int count, char **data, char **columns);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
