@@ -120,6 +120,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg")
   endif()
 
+  option(GCOV "Enable Code Coverage" Off)
+  if (GCOV)
+    set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   --coverage")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+  endif()
+
   # Timestamps showing what each thread is doing
   if (PER_THREAD_STATS)
     add_definitions(-DPER_THREAD_STATS=1)
