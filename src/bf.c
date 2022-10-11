@@ -142,8 +142,8 @@ break;
       case 'f': printf("  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
       case 'j': printf("  -j                     print the information in terse form"); break;
       case 'X': printf("  -X                     Dry run"); break;
-      case 'L': printf("  -L                     Highest number of files/links in a directory allowed to be rolled up"); break;
-      case 'k': printf("  -k                     file containing directory names to skip"); break;
+      case 'L': printf("  -L <count>             Highest number of files/links in a directory allowed to be rolled up"); break;
+      case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
 
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
@@ -284,12 +284,12 @@ int parse_cmd_line(int         argc,
          in->buildindex = 1;
          break;
 
-      case 'n':
-         INSTALL_INT(in->maxthreads, optarg, 1, MAXPTHREAD, "-n");
+      case 'a':               // and/or
+         in->andor = 1;
          break;
 
-      case 'g':
-         INSTALL_INT(in->stride, optarg, 1, MAXSTRIDE, "-g");
+      case 'n':
+         INSTALL_INT(in->maxthreads, optarg, 1, MAXPTHREAD, "-n");
          break;
 
       case 'd':
@@ -303,6 +303,16 @@ int parse_cmd_line(int         argc,
          }
          break;
 
+      case 't':
+         INSTALL_STR(in->nameto, optarg, MAXPATH, "-t");
+         in->nameto_len = strlen(in->nameto);
+         break;
+
+      case 'i':
+         INSTALL_STR(in->name, optarg, MAXPATH, "-i");
+         in->name_len = strlen(in->name);
+         break;
+
       case 'o':
          in->output = OUTFILE;
          INSTALL_STR(in->outname, optarg, MAXPATH, "-o");
@@ -313,16 +323,6 @@ int parse_cmd_line(int         argc,
          in->output = OUTDB;
          INSTALL_STR(in->outname, optarg, MAXPATH, "-O");
          in->outname_len = strlen(in->outname);
-         break;
-
-      case 't':
-         INSTALL_STR(in->nameto, optarg, MAXPATH, "-t");
-         in->nameto_len = strlen(in->nameto);
-         break;
-
-      case 'i':
-         INSTALL_STR(in->name, optarg, MAXPATH, "-i");
-         in->name_len = strlen(in->name);
          break;
 
       case 'I':               // SQL initializations
@@ -348,10 +348,6 @@ int parse_cmd_line(int         argc,
       case 'F':               // SQL clean-up
          INSTALL_STR(in->sql.fin, optarg, MAXSQL, "-F");
          in->sql.fin_len = strlen(in->sql.fin);
-         break;
-
-      case 'a':               // and/or
-         in->andor = 1;
          break;
 
       case 'r':               // insert files and links into db for bfwreaddirplus2db
@@ -383,8 +379,16 @@ int parse_cmd_line(int         argc,
          INSTALL_INT(in->suspectmethod, optarg, 1, 4, "-A");
          break;
 
+      case 'g':
+         INSTALL_INT(in->stride, optarg, 1, MAXSTRIDE, "-g");
+         break;
+
       case 'c':
          INSTALL_INT(in->suspecttime, optarg, 1, 2147483646, "-c");
+         break;
+
+      case 'u':
+         in->infile = 1;
          break;
 
       case 'y':
@@ -393,10 +397,6 @@ int parse_cmd_line(int         argc,
 
       case 'z':
          INSTALL_UINT(in->max_level, optarg, (size_t) 0, (size_t) -1, "-z");
-         break;
-
-      case 'u':
-         in->infile = 1;
          break;
 
       case 'J':
