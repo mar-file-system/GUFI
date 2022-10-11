@@ -64,35 +64,33 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 #include <gtest/gtest.h>
 
 #include "print.h"
 
-static const char A[]        = "A";
-static const char BC[]       = "BC";
-static const char D[]        = "D";
-static const char SEP[]      = "|\n";
-
-static const char *DATA[] = {
-    A,
-    BC,
-    D
-};
-
-static const char   ABC[]    = "A|\nBC|\n";
-static const size_t ABC_LEN  = strlen(ABC);
-static const char   ABCD[]   = "A|\nBC|\nD|\n";
-static const size_t ABCD_LEN = strlen(ABCD);
-
-static const size_t OUTPUTBUFFER_CAP = sizeof(A) + 1; // (string + delimiter) + newline
-
 TEST(print, parallel) {
+    const std::string A   = "A";
+    const std::string BC  = "BC";
+    const std::string D   = "D";
+    const std::string SEP = "|\n";
+
+    const char *DATA[] = {
+        A.c_str(),
+        BC.c_str(),
+        D.c_str(),
+    };
+
+    const std::string ABC  = A + SEP + BC + SEP;
+    const std::string ABCD = ABC + D + SEP;
+    const std::size_t OUTPUTBUFFER_CAP = A.size() + SEP.size(); // string + (delimiter + newline)
+
     struct OutputBuffer ob;
     EXPECT_EQ(OutputBuffer_init(&ob, OUTPUTBUFFER_CAP), &ob);
 
-    char buf[sizeof(ABCD)] = {0};
-    FILE *file = fmemopen(buf, sizeof(buf), "w+b");
+    char *buf = new char[ABCD.size() + 1]();
+    FILE *file = fmemopen(buf, ABCD.size() + 1, "w+b");
     ASSERT_NE(file, nullptr);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -104,42 +102,46 @@ TEST(print, parallel) {
     pa.outfile = file;
     pa.rows = 0;
 
-    // A is buffered in OutputBuffer
+    // A is buffered in OutputBuffer and takes up all available space
     {
         EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA, nullptr), 0);
+        EXPECT_EQ(ob.filled, ob.capacity);
+        EXPECT_EQ(pa.rows, (std::size_t) 1);
         EXPECT_EQ(fflush(file), 0);
 
-        EXPECT_EQ(strlen(buf), (size_t) 0);
+        EXPECT_EQ(strlen(buf), (std::size_t) 0);
     }
 
-    // BC is too large, so A gets flushed, followed by BC
+    // BC is too large, so A and BC both get flushed
     {
         EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 1, nullptr), 0);
+        EXPECT_EQ(ob.filled, (std::size_t) 0);
         EXPECT_EQ(fflush(file), 0);
-
-        EXPECT_EQ(strlen(buf), ABC_LEN);
-        EXPECT_EQ(memcmp(buf, ABC, ABC_LEN), 0);
+        EXPECT_EQ(pa.rows, (std::size_t) 2);
+        EXPECT_EQ(strlen(buf), ABC.size());
+        EXPECT_STREQ(buf, ABC.c_str());
     }
 
     // D is buffered in OutputBuffer
     {
         EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 2, nullptr), 0);
+        EXPECT_EQ(ob.filled, ob.capacity);
         EXPECT_EQ(fflush(file), 0);
-
-        EXPECT_EQ(strlen(buf), ABC_LEN);
-        EXPECT_EQ(memcmp(buf, ABC, ABC_LEN), 0);
+        EXPECT_EQ(pa.rows, (std::size_t) 3);
+        EXPECT_EQ(strlen(buf), ABC.size());
+        EXPECT_STREQ(buf, ABC.c_str());
     }
 
     // force the OutputBuffer to flush to get D
     {
-        const size_t expected_flush_len = snprintf(nullptr, 0, "%s%s", D, SEP);
-        EXPECT_EQ(OutputBuffer_flush(&ob, file), expected_flush_len);
+        EXPECT_EQ(OutputBuffer_flush(&ob, file), D.size() + SEP.size());
         EXPECT_EQ(fflush(file), 0);
-
-        EXPECT_EQ(strlen(buf), ABCD_LEN);
-        EXPECT_EQ(memcmp(buf, ABCD, ABCD_LEN), 0);
+        EXPECT_EQ(pa.rows, (std::size_t) 3);
+        EXPECT_EQ(strlen(buf), ABCD.size());
+        EXPECT_STREQ(buf, ABCD.c_str());
     }
 
     fclose(file);
     OutputBuffer_destroy(&ob);
+    delete [] buf;
 }

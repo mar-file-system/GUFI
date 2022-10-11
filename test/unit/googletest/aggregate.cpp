@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include <cstring>
 #include <limits>
 #include <random>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -78,15 +79,15 @@ extern "C" {
 }
 
 TEST(gufi_query, aggregate) {
-    const char CREATE_SOURCE[] = "CREATE TABLE source(value INTEGER);";
-    const char INSERT_SOURCE[] = "INSERT INTO  source VALUES (%" PRIu32 ");";
+    const std::string CREATE_SOURCE = "CREATE TABLE source(value INTEGER);";
+    const std::string INSERT_SOURCE = "INSERT INTO  source VALUES (%" PRIu32 ");";
 
     // input arguments
-    const char I[] = "CREATE TABLE intermediate(tot INTEGER);";
-    const char E[] = "INSERT INTO  intermediate SELECT SUM(value) FROM source;";
-    const char K[] = "CREATE TABLE aggregate(partial INTEGER);";
-    const char J[] = "INSERT INTO  aggregate(partial) SELECT tot from intermediate;";
-    const char G[] = "SELECT SUM(partial) FROM aggregate";
+    const std::string I = "CREATE TABLE intermediate(tot INTEGER);";
+    const std::string E = "INSERT INTO  intermediate SELECT SUM(value) FROM source;";
+    const std::string K = "CREATE TABLE aggregate(partial INTEGER);";
+    const std::string J = "INSERT INTO  aggregate(partial) SELECT tot from intermediate;";
+    const std::string G = "SELECT SUM(partial) FROM aggregate";
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -97,11 +98,11 @@ TEST(gufi_query, aggregate) {
     in.output             = STDOUT;
     in.maxthreads         = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
     in.delim[0]           = ' ';
-    in.sql.init           = (char *) I; in.sql.init_len = strlen(in.sql.init);
-    in.sql.ent            = (char *) E; in.sql.ent_len = strlen(in.sql.ent);
-    in.sql.init_agg       = (char *) K; in.sql.init_agg_len = strlen(in.sql.init_agg);
-    in.sql.intermediate   = (char *) J; in.sql.intermediate_len = strlen(in.sql.intermediate);
-    in.sql.agg            = (char *) G; in.sql.agg_len = strlen(in.sql.agg);
+    in.sql.init           = I.c_str(); in.sql.init_len = strlen(in.sql.init);
+    in.sql.ent            = E.c_str(); in.sql.ent_len = strlen(in.sql.ent);
+    in.sql.init_agg       = K.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);
+    in.sql.intermediate   = J.c_str(); in.sql.intermediate_len = strlen(in.sql.intermediate);
+    in.sql.agg            = G.c_str(); in.sql.agg_len = strlen(in.sql.agg);
     in.output_buffer_size = 0;
     in.skip               = nullptr;
 
@@ -115,14 +116,14 @@ TEST(gufi_query, aggregate) {
         ThreadArgs_t *ta = &(pa.ta[i]);
 
         // create source tables
-        EXPECT_EQ(sqlite3_exec(ta->outdb, CREATE_SOURCE, nullptr, nullptr, nullptr), SQLITE_OK);
+        EXPECT_EQ(sqlite3_exec(ta->outdb, CREATE_SOURCE.c_str(), nullptr, nullptr, nullptr), SQLITE_OK);
 
         // add data to the source tables
         for(size_t j = 0; j < row_count; j++) {
             const uint32_t value = dist(gen);
 
             char sql[MAXSQL];
-            snprintf(sql, sizeof(sql), INSERT_SOURCE, value);
+            snprintf(sql, sizeof(sql), INSERT_SOURCE.c_str(), value);
             EXPECT_EQ(sqlite3_exec(ta->outdb, sql, nullptr, nullptr, nullptr), SQLITE_OK);
 
             // in-memory result

@@ -81,11 +81,10 @@ extern "C" {
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // not const
 static const char DBNAME_FORMAT[] = "file:memory%zu?mode=memory&cache=shared&vfs=" GUFI_SQLITE_VFS;
 static const size_t OB_SIZE = 4096;
-#define TABLE_NAME "test_table"
-static const size_t TABLE_NAME_LEN = sizeof(TABLE_NAME) - 1;
+static const std::string TABLE_NAME = "test_table";
 
 void setup_input(struct input *in, OutputMethod om, bool aggregate) {
-    static const char I[] = "CREATE TABLE " TABLE_NAME " (str TEXT, val INTEGER);";
+    static const std::string I = "CREATE TABLE " + TABLE_NAME + " (str TEXT, val INTEGER);";
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -93,7 +92,7 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
 
     memset(in, 0, sizeof(*in));
     in->maxthreads = dist(gen);
-    in->sql.init = I; in->sql.init_len = strlen(in->sql.init);
+    in->sql.init = I.c_str(); in->sql.init_len = strlen(in->sql.init);
     in->sql.init_agg_len = aggregate;
     in->output = om;
     in->output_buffer_size = OB_SIZE;
@@ -127,18 +126,17 @@ void test_common(PoolArgs *pa) {
         print.outfile = file;
         print.rows = 0;
 
-        // no need for WHERE - there should only be 1 table
-        static const char GET_TABLE[] = "SELECT name FROM sqlite_master;";
-
         // read from the database being processed
-        EXPECT_EQ(sqlite3_exec(ta->outdb, GET_TABLE, print_parallel, &print, nullptr), SQLITE_OK);
-        EXPECT_EQ(OutputBuffer_flush(ob, file), TABLE_NAME_LEN + 2);
+        // no need for WHERE - there should only be 1 table
+        EXPECT_EQ(sqlite3_exec(ta->outdb, "SELECT name FROM sqlite_master;",
+                               print_parallel, &print, nullptr), SQLITE_OK);
+        EXPECT_EQ(OutputBuffer_flush(ob, file), TABLE_NAME.size() + 2);
         EXPECT_EQ(fflush(file), 0);
         EXPECT_EQ(fclose(file), 0);
 
         EXPECT_EQ(print.rows, (size_t) 1);
-        EXPECT_EQ(strlen(file_buf), TABLE_NAME_LEN + 2);
-        EXPECT_EQ(memcmp(file_buf, TABLE_NAME, TABLE_NAME_LEN), 0);
+        EXPECT_EQ(strlen(file_buf), TABLE_NAME.size() + 2);
+        EXPECT_EQ(memcmp(file_buf, TABLE_NAME.c_str(), TABLE_NAME.size()), 0);
     }
 }
 
