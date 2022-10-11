@@ -667,12 +667,16 @@ TEST(trailing_non_match_index, paths) {
     EXPECT_EQ(trailing_non_match_index(nullptr, 10,              match, match_len), (size_t) 0);
 }
 
-TEST(setup_directory_skip, default) {
+TEST(setup_directory_skip, no_file) {
     trie_t *skip = NULL;
     EXPECT_EQ(setup_directory_skip(NULL, &skip), 0);
     EXPECT_EQ(trie_search(skip, ".",  1), 1);
     EXPECT_EQ(trie_search(skip, "..", 2), 1);
     trie_free(skip);
+}
+
+TEST(setup_directory_skip, no_trie) {
+    EXPECT_EQ(setup_directory_skip("", NULL), -1);
 }
 
 TEST(split, delims) {
