@@ -81,16 +81,10 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         return 1;
     }
 
-    pthread_mutex_t *stdout_mutex = NULL;
-
     /* only STDOUT writes to the same destination */
+    /* aggregate does not need mutex since aggregation is done serially */
     if (in->output == STDOUT) {
-        stdout_mutex = global_mutex;
-    }
-
-    /* STDOUT and OUTFILE need the print mutex */
-    if (in->output != OUTDB) {
-        pa->stdout_mutex = stdout_mutex;
+        pa->stdout_mutex = global_mutex;
     }
 
     pa->ta = calloc(in->maxthreads, sizeof(ThreadArgs_t));
@@ -100,7 +94,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
     size_t i = 0;
     for(; i < (size_t) in->maxthreads; i++) {
-        ThreadArgs_t *ta = &(pa->ta[i]);
+        ThreadArgs_t *ta = &pa->ta[i];
 
         /* only create per-thread db files when not aggregating and outputting to OUTDB */
         if (!in->sql.init_agg_len && (in->output == OUTDB)) {
@@ -167,7 +161,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
 void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     for(size_t i = 0; i < allocated; i++) {
-        ThreadArgs_t *ta = &(pa->ta[i]);
+        ThreadArgs_t *ta = &pa->ta[i];
 
         closedb(ta->outdb);
 

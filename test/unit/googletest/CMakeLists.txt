@@ -69,6 +69,7 @@ if (CMAKE_CXX_COMPILER)
   include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
   set(TEST_SRC
     OutputBuffers.cpp
+    PoolArgs.cpp
     QueuePerThreadPool.cpp
     SinglyLinkedList.cpp
     aggregate.cpp

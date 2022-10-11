@@ -743,9 +743,9 @@ int validate_inputs(struct input *in) {
      *                          |
      *          -------------------------------
      *          |               |             |
-     *          |               |       stdout/outfile    | -T/-S/-E SELECT FROM <index table>
+     *          |               |       stdout/outfile.*  | -T/-S/-E SELECT FROM <index table>
      *          |               |
-     *   intermediate db      outdb                       | -T/-S/-E INSERT into <name> SELECT FROM <index table>
+     *   intermediate db      outdb.*                     | -T/-S/-E INSERT into <name> SELECT FROM <index table>
      *          |
      *          |
      *   -----------------------------------------------  | after walking index

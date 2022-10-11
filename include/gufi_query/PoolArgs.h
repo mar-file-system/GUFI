@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 #include "bf.h"
+#include "dbutils.h"
 #include "debug.h"
 #include "trie.h"
 
