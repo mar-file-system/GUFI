@@ -717,7 +717,8 @@ int validate_inputs() {
    if (in.buildindex) {
      fprintf(stderr,"You are putting the index dbs in input directory\n");
      in.buildinindir = 1;
-     SNPRINTF(in.nameto,MAXPATH,"%s",in.name);
+     in.nameto = in.name;
+     in.nameto_len = in.name_len;
    }
    return 0;
 

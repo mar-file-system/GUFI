@@ -397,22 +397,29 @@ int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
   return mkdir(path,mode);
 }
 
-int dupdir(char *path, struct stat *stat)
+int dupdir(const char *path, struct stat *stat)
 {
+    /* if dupdir is called, doing a memory copy will not be relatively heavyweight */
+    const size_t path_len = strlen(path);
+    char copy[MAXPATH];
+    SNFORMAT_S(copy, sizeof(copy), 1,
+               path, path_len);
+    copy[path_len] = '\0';
+
     //printf("mkdir %s\n",path);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     //rc = mkdir(path,pwork->statuso.st_mode | S_IWRITE);
-    if (mkdir(path,stat->st_mode) != 0) {
+    if (mkdir(copy, stat->st_mode) != 0) {
       //perror("mkdir");
       if (errno == ENOENT) {
         //printf("calling mkpath on %s\n",path);
-        mkpath(path, stat->st_mode, stat->st_uid, stat->st_gid);
+        mkpath(copy, stat->st_mode, stat->st_uid, stat->st_gid);
       } else if (errno != EEXIST) {
         return 1;
       }
     }
-    chmod(path, stat->st_mode);
-    chown(path, stat->st_uid, stat->st_gid);
+    chmod(copy, stat->st_mode);
+    chown(copy, stat->st_uid, stat->st_gid);
     // we dont need to set xattrs/time on the gufi directory those are in the db
     // the gufi directory structure is there only to walk, not to provide
     // information, the information is in the db

@@ -108,7 +108,7 @@ int tsumit (struct sum *sumin,struct sum *smout);
 //
 int mkpath(char*path, mode_t mode, uid_t uid, gid_t gid);
 
-int dupdir(char*path, struct stat *stat);
+int dupdir(const char *path, struct stat *stat);
 
 int shortpath(const char *name, char *nameout, char *endname);
 

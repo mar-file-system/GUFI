@@ -138,9 +138,9 @@ typedef enum OutputMethod {
 } OutputMethod_t;
 
 struct input {
-   char *name;
-   size_t name_len;
-   char *nameto;
+   const char *name;
+   size_t      name_len;
+   const char *nameto;
    size_t nameto_len;
    int external_enabled;
    struct {
@@ -150,30 +150,30 @@ struct input {
 
    struct {
        /* set up per-thread intermidate tables */
-       char   *init;
+       const char *init;
        size_t init_len;
 
        /* set up final aggregation table */
-       char   *init_agg;
+       const char *init_agg;
        size_t init_agg_len;
 
-       char   *tsum;
+       const char *tsum;
        size_t tsum_len;
-       char   *sum;
+       const char *sum;
        size_t sum_len;
-       char   *ent;
+       const char *ent;
        size_t ent_len;
 
        /* if not aggregating, output results */
        /* if aggregating, insert into aggregate table */
-       char   *intermediate;
+       const char *intermediate;
        size_t intermediate_len;
 
        /* query table containing aggregated results */
-       char   *agg;
+       const char *agg;
        size_t agg_len;
 
-       char   *fin;
+       const char *fin;
        size_t fin_len;
    } sql;
 
@@ -194,7 +194,7 @@ struct input {
    int  buildinindir;             // added to notice when writing index dbs into the input dir
    int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
    int  suspectfl;                // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
-   char *insuspect;               // added for bfwreaddirplus2db input path for suspects file
+   const char *insuspect;         // added for bfwreaddirplus2db input path for suspects file
    int  suspectfile;              // added for bfwreaddirplus2db flag for if we are processing suspects file
    int  suspectmethod;            // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
    int  stride;                   // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
@@ -204,7 +204,7 @@ struct input {
    size_t max_level;              // maximum level of recursion to run queries on
 
    OutputMethod_t output;
-   char *outname;
+   const char *outname;
    size_t outname_len;
 
    int keep_matime;
@@ -217,14 +217,14 @@ struct input {
 
    /* only used by gufi_stat */
    int format_set;
-   char *format;
+   const char *format;
 
    /* only used by rollup */
    int dry_run;
    size_t max_in_dir;
 
    /* filename containing strings to skip during tree traversal */
-   char *skip;
+   const char *skip;
 };
 extern struct input in;
 

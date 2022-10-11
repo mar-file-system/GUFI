@@ -70,7 +70,7 @@ static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cac
 /* users should never use this name */
 static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate";
 
-static sqlite3 *aggregate_setup(char *dbname, char *init_agg) {
+static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                 , NULL, NULL

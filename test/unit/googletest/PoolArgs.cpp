@@ -93,7 +93,7 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
 
     memset(in, 0, sizeof(*in));
     in->maxthreads = dist(gen);
-    in->sql.init = (char *) I; in->sql.init_len = strlen(in->sql.init);
+    in->sql.init = I; in->sql.init_len = strlen(in->sql.init);
     in->sql.init_agg_len = aggregate;
     in->output = om;
     in->output_buffer_size = OB_SIZE;
@@ -182,7 +182,7 @@ TEST(PoolArgs, OUTFILE) {
     char outname[MAXPATH];
     in.outname = outname;
     in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
-    const int fd = mkstemp(in.outname);
+    const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(in.outname), 0);
@@ -223,7 +223,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
     char outname[MAXPATH];
     in.outname = outname;
     in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
-    const int fd = mkstemp(in.outname);
+    const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(in.outname), 0);
@@ -266,7 +266,7 @@ TEST(PoolArgs, OUTDB) {
     char outname[MAXPATH];
     in.outname = outname;
     in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
-    const int fd = mkstemp(in.outname);
+    const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(in.outname), 0);
@@ -303,7 +303,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
     char outname[MAXPATH];
     in.outname = outname;
     in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
-    const int fd = mkstemp(in.outname);
+    const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(in.outname), 0);

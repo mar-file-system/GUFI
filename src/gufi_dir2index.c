@@ -289,7 +289,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
  * note that the provided directories go into
  * individual directories underneath this one
  */
-static int setup_dst(char *nameto) {
+static int setup_dst(const char *nameto) {
     /* check if the destination path already exists (not an error) */
     struct stat dst_st;
     if (lstat(nameto, &dst_st) == 0) {
@@ -392,7 +392,6 @@ int main(int argc, char *argv[]) {
             return retval;
 
         if (setup_directory_skip(in.skip, &args.skip) != 0) {
-            free(in.nameto);
             return -1;
         }
 
