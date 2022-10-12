@@ -135,7 +135,6 @@ void print_help(const char* prog_name,
       case 'J': printf("  -J <SQL_interm>        SQL for intermediate results"); break;
       case 'K': printf("  -K <create aggregate>  SQL to create the final aggregation table"); break;
       case 'G': printf("  -G <SQL_aggregate>     SQL for aggregated results"); break;
-break;
       case 'm': printf("  -m                     Keep mtime and atime same on the database files"); break;
       case 'B': printf("  -B <buffer size>       size of each thread's output buffer in bytes"); break;
       case 'w': printf("  -w                     open the database files in read-write mode instead of read only mode"); break;
