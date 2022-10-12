@@ -99,18 +99,17 @@ static void *worker_function(void *args) {
     timestamp_start(wf);
 
     struct worker_function_args *wf_args = (struct worker_function_args *) args;
+    /* if (!wf_args) { */
+    /*     timestamp_end(ctx->buffers, 0, "wf", wf); */
+    /*     return NULL; */
+    /* } */
+
     QPTPool_t *ctx = wf_args->ctx;
-
-    if (!args) {
-        timestamp_end(ctx->buffers, wf_args->id, "wf", wf);
-        return NULL;
-    }
-
-    if (!ctx) {
-        free(args);
-        timestamp_end(ctx->buffers, wf_args->id, "wf", wf);
-        return NULL;
-    }
+    /* if (!ctx) { */
+    /*     free(args); */
+    /*     timestamp_end(ctx->buffers, wf_args->id, "wf", wf); */
+    /*     return NULL; */
+    /* } */
 
     QPTPoolThreadData_t *tw = &ctx->data[wf_args->id];
 
@@ -223,7 +222,9 @@ static void *worker_function(void *args) {
 
     free(args);
 
-    timestamp_end(ctx->buffers, wf_args->id, "wf", wf);
+    timestamp_end(ctx->buffers,
+                  wf_args->id, "wf",
+                  wf);
 
     return NULL;
 }
@@ -247,26 +248,23 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
     }
 
     QPTPool_t *ctx = calloc(1, sizeof(QPTPool_t));
-    if (!ctx) {
-        return NULL;
-    }
+    /* if (!ctx) { */
+    /*     return NULL; */
+    /* } */
 
-    if (!(ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t)))) {
-        free(ctx);
-        return NULL;
-    }
+    ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
+    /* if (!ctx->data) { */
+    /*     free(ctx); */
+    /*     return NULL; */
+    /* } */
 
     ctx->nthreads = nthreads;
-
     ctx->args = args;
-
+    ctx->next = QPTPool_round_robin;
+    ctx->next_args = NULL;
     if (next) {
         ctx->next = next;
         ctx->next_args = next_args;
-    }
-    else {
-        ctx->next = QPTPool_round_robin;
-        ctx->next_args = NULL;
     }
     pthread_mutex_init(&ctx->mutex, NULL);
     ctx->running = 1;
@@ -328,9 +326,9 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
 }
 
 void QPTPool_wait(QPTPool_t *ctx) {
-    if (!ctx) {
-        return;
-    }
+    /* if (!ctx) { */
+    /*     return; */
+    /* } */
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->running = 0;
@@ -348,9 +346,9 @@ void QPTPool_wait(QPTPool_t *ctx) {
 }
 
 void QPTPool_destroy(QPTPool_t *ctx) {
-    if (!ctx) {
-        return;
-    }
+    /* if (!ctx) { */
+    /*     return; */
+    /* } */
 
     for(size_t i = 0; i < ctx->nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];

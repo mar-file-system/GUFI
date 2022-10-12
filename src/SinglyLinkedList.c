@@ -73,7 +73,10 @@ struct SinglyLinkedListNode {
 };
 
 static sll_t *sll_clear(sll_t *sll) {
-    return sll?memset(sll, 0, sizeof(sll_t)):NULL;
+    /* if (!sll) { */
+    /*     return NULL; */
+    /* } */
+    return memset(sll, 0, sizeof(sll_t));
 }
 
 sll_t *sll_init(sll_t *sll) {
@@ -81,9 +84,9 @@ sll_t *sll_init(sll_t *sll) {
 };
 
 sll_t *sll_push(sll_t *sll, void *data) {
-    if (!sll) {
-        return NULL;
-    }
+    /* if (!sll) { */
+    /*     return NULL; */
+    /* } */
 
     sll_node_t *node = calloc(1, sizeof(sll_node_t));
     node->data = data;
@@ -104,9 +107,9 @@ sll_t *sll_push(sll_t *sll, void *data) {
 }
 
 sll_t *sll_move(sll_t *dst, sll_t *src) {
-    if (!dst || !src) {
-        return NULL;
-    }
+    /* if (!dst || !src) { */
+    /*     return NULL; */
+    /* } */
 
     /* dst is overwritten, not destroyed */
     *dst = *src;
@@ -115,9 +118,9 @@ sll_t *sll_move(sll_t *dst, sll_t *src) {
 }
 
 sll_t *sll_move_append(sll_t *dst, sll_t *src) {
-    if (!dst || !src) {
-        return NULL;
-    }
+    /* if (!dst || !src) { */
+    /*     return NULL; */
+    /* } */
 
     /* src is appended to dst and then cleared */
     if (!dst->head) {
