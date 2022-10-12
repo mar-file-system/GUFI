@@ -62,51 +62,49 @@ OF SUCH DAMAGE.
 
 
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "bf.h"
+#include <gtest/gtest.h>
+
+extern "C" {
+
 #include "outfiles.h"
-#include "utils.h"
 
-// allocate the array of FILE * and open file
-FILE **outfiles_init(const int openfiles, const char *prefix, const size_t count) {
-    FILE **files = calloc(count, sizeof(FILE *));
-    /* if (!files) { */
-    /*     return NULL; */
-    /* } */
-
-    if (openfiles) {
-        for(size_t i = 0; i < count; i++) {
-            char buf[MAXPATH];
-            SNPRINTF(buf, MAXPATH, "%s.%zu", prefix, i);
-            if (!(files[i] = fopen(buf, "w"))) {
-                outfiles_fin(files, i);
-                fprintf(stderr, "Could not open output file %s\n", buf);
-                return NULL;
-            }
-        }
-    }
-    else {
-        // default to stdout
-        for(size_t i = 0; i < count; i++) {
-            files[i] = stdout;
-        }
-    }
-
-    return files;
 }
 
-// close all output files
-int outfiles_fin(FILE **files, const size_t end) {
-    if (files) {
-        for(size_t i = 0; i < end; i++) {
-            fflush(files[i]);
-            if (files[i] != stdout) {
-                fclose(files[i]);
-            }
-        }
-        free(files);
+static const std::size_t count = 5;
+
+TEST(outfiles, path) {
+    const char prefix[] = "outfile";
+
+    FILE **outfiles = outfiles_init(true, prefix, count);
+    ASSERT_NE(outfiles, nullptr);
+
+    for(size_t i = 0; i < count; i++) {
+        EXPECT_NE(outfiles[i], stdout);
+
+        char filename[1024];
+        snprintf(filename, sizeof(filename), "%s.%zu", prefix, i);
+
+        struct stat st;
+        EXPECT_EQ(stat(filename, &st), 0);
+        EXPECT_EQ(S_ISREG(st.st_mode), 1);
+
+        // let close remove the last reference to the file
+        EXPECT_EQ(remove(filename),    0);
     }
-    return 0;
+
+    EXPECT_EQ(outfiles_fin(outfiles, count), 0);
+}
+
+TEST(outfiles, stdout)  {
+    FILE **outfiles = outfiles_init(false, nullptr, count);
+    ASSERT_NE(outfiles, nullptr);
+
+    for(size_t i = 0; i < count; i++) {
+        EXPECT_EQ(outfiles[i], stdout);
+    }
+
+    EXPECT_EQ(outfiles_fin(outfiles, count), 0);
 }

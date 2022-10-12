@@ -75,6 +75,7 @@ if (CMAKE_CXX_COMPILER)
     aggregate.cpp
     bf.cpp
     dbutils.cpp
+    outfiles.cpp
     print.cpp
     trace.cpp
     trie.cpp
