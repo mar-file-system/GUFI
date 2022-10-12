@@ -1266,52 +1266,6 @@ void destroy_xattr_db(void *ptr) {
     free(xdb);
 }
 
-int xattr_create_views(sqlite3 *db
-                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                       , size_t *query_count
-                       #endif
-    ) {
-    int rc;
-
-    /* create LEFT JOIN views (all rows, with and without xattrs) */
-    /* these should run once, and be no-ops afterwards since the backing data of the views get swapped out */
-
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XENTRIES " AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create xentries view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XPENTRIES " AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN " XATTRS " ON " PENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create xpentries view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: create xsummary view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    return 0;
-}
-
 /*
  * some characters cannot be used directly
  * in sqlite and need to be converted
