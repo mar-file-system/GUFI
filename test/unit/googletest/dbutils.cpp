@@ -100,7 +100,7 @@ TEST(addqueryfuncs, path) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     for(int rollupscore : {0, 1}) {
         char query[MAXSQL] = {};
@@ -127,7 +127,7 @@ TEST(addqueryfuncs, fpath) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT fpath()", str_output, output, NULL), SQLITE_OK);
@@ -148,7 +148,7 @@ TEST(addqueryfuncs, epath) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT epath()", str_output, output, NULL), SQLITE_OK);
@@ -371,7 +371,7 @@ TEST(addqueryfuncs, level) {
     ASSERT_NE(db, nullptr);
 
     for(work.level = 0; work.level < 10; work.level++) {
-        ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
+        ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
         char output[MAXPATH] = {};
         ASSERT_EQ(sqlite3_exec(db, "SELECT level()", str_output, output, NULL), SQLITE_OK);
@@ -395,7 +395,7 @@ TEST(addqueryfuncs, starting_point) {
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
 
-    ASSERT_EQ(addqueryfuncs_with_context(db, 0, &work), 0);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, NULL), SQLITE_OK);
