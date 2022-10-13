@@ -417,3 +417,523 @@ root 5
 $ gufi_stats -c total-dircount
 69
 
+Roots:
+    prefix
+
+Thread Pool Size:            1
+Files/Links Limit:           3
+
+Not Processed:               0
+Cannot Roll Up:             21
+    Subdirectories:
+        min:                 3
+        max:                 4
+        median:           3.00
+        sum:                68
+        average:          3.24
+    Files/Links:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Level:
+        min:                 0
+        max:                 2
+        median:           2.00
+        sum:                36
+        average:          1.71
+    Too Many Before:         0
+    Too Many After:         16
+        min:                 6
+        max:                 6
+        median:           6.00
+        sum:                96
+        average:          6.00
+Can Roll Up:                48
+    Subdirectories:
+        min:                 0
+        max:                 0
+        median:           0.00
+        sum:                 0
+        average:          0.00
+    Files/Links:
+        min:                 1
+        max:                 3
+        median:           2.00
+        sum:                96
+        average:          2.00
+    Level:
+        min:                 3
+        max:                 3
+        median:           3.00
+        sum:               144
+        average:          3.00
+    Successful:             48
+    Failed:                  0
+Files/Links:    96
+Directories:    69 (21 empty)
+Total:          165
+Remaining Dirs: 69 (100.00%)
+$ gufi_query -d " " -S "SELECT path(name, rollupscore) FROM summary;" "prefix" | wc -l
+69
+
+$ gufi_query -d " " -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "prefix" | wc -l
+96
+
+$ gufi_query -d " " -S "SELECT path(name, rollupscore) FROM summary" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "prefix" | wc -l
+165
+
+$ gufi_find -type d | wc -l
+69
+
+$ gufi_find -type f | wc -l
+96
+
+$ gufi_find | wc -l
+165
+
+$ gufi_ls
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls o+rx
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls o+rx/o+rx
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls o+rx/ugo
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls o+rx/ug
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls o+rx/u
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ugo
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls ugo/o+rx
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ugo/ugo
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ugo/ug
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ugo/u
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ug
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls ug/o+rx
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ug/ugo
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ug/ug
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls ug/u
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls u
+o+rx
+u
+ug
+ugo
+
+$ gufi_ls u/o+rx
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls u/ugo
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls u/ug
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+$ gufi_ls u/u
+dir1
+dir2
+dir3
+file1
+file1
+file1
+file2
+file2
+file3
+
+# 1 less because gufi_ls does not list the input dir
+$ gufi_ls -R | wc -l
+164
+
+$ gufi_stats    depth
+0
+
+$ gufi_stats -r depth
+prefix 0
+prefix/o+rx 1
+prefix/o+rx/o+rx 2
+prefix/o+rx/o+rx/dir1 3
+prefix/o+rx/o+rx/dir2 3
+prefix/o+rx/o+rx/dir3 3
+prefix/o+rx/u 2
+prefix/o+rx/u/dir1 3
+prefix/o+rx/u/dir2 3
+prefix/o+rx/u/dir3 3
+prefix/o+rx/ug 2
+prefix/o+rx/ug/dir1 3
+prefix/o+rx/ug/dir2 3
+prefix/o+rx/ug/dir3 3
+prefix/o+rx/ugo 2
+prefix/o+rx/ugo/dir1 3
+prefix/o+rx/ugo/dir2 3
+prefix/o+rx/ugo/dir3 3
+prefix/u 1
+prefix/u/o+rx 2
+prefix/u/o+rx/dir1 3
+prefix/u/o+rx/dir2 3
+prefix/u/o+rx/dir3 3
+prefix/u/u 2
+prefix/u/u/dir1 3
+prefix/u/u/dir2 3
+prefix/u/u/dir3 3
+prefix/u/ug 2
+prefix/u/ug/dir1 3
+prefix/u/ug/dir2 3
+prefix/u/ug/dir3 3
+prefix/u/ugo 2
+prefix/u/ugo/dir1 3
+prefix/u/ugo/dir2 3
+prefix/u/ugo/dir3 3
+prefix/ug 1
+prefix/ug/o+rx 2
+prefix/ug/o+rx/dir1 3
+prefix/ug/o+rx/dir2 3
+prefix/ug/o+rx/dir3 3
+prefix/ug/u 2
+prefix/ug/u/dir1 3
+prefix/ug/u/dir2 3
+prefix/ug/u/dir3 3
+prefix/ug/ug 2
+prefix/ug/ug/dir1 3
+prefix/ug/ug/dir2 3
+prefix/ug/ug/dir3 3
+prefix/ug/ugo 2
+prefix/ug/ugo/dir1 3
+prefix/ug/ugo/dir2 3
+prefix/ug/ugo/dir3 3
+prefix/ugo 1
+prefix/ugo/o+rx 2
+prefix/ugo/o+rx/dir1 3
+prefix/ugo/o+rx/dir2 3
+prefix/ugo/o+rx/dir3 3
+prefix/ugo/u 2
+prefix/ugo/u/dir1 3
+prefix/ugo/u/dir2 3
+prefix/ugo/u/dir3 3
+prefix/ugo/ug 2
+prefix/ugo/ug/dir1 3
+prefix/ugo/ug/dir2 3
+prefix/ugo/ug/dir3 3
+prefix/ugo/ugo 2
+prefix/ugo/ugo/dir1 3
+prefix/ugo/ugo/dir2 3
+prefix/ugo/ugo/dir3 3
+
+$ gufi_stats    filecount
+0
+
+$ gufi_stats -r filecount
+prefix 0
+prefix/o+rx 0
+prefix/o+rx/o+rx 0
+prefix/o+rx/o+rx/dir1 1
+prefix/o+rx/o+rx/dir2 2
+prefix/o+rx/o+rx/dir3 3
+prefix/o+rx/u 0
+prefix/o+rx/u/dir1 1
+prefix/o+rx/u/dir2 2
+prefix/o+rx/u/dir3 3
+prefix/o+rx/ug 0
+prefix/o+rx/ug/dir1 1
+prefix/o+rx/ug/dir2 2
+prefix/o+rx/ug/dir3 3
+prefix/o+rx/ugo 0
+prefix/o+rx/ugo/dir1 1
+prefix/o+rx/ugo/dir2 2
+prefix/o+rx/ugo/dir3 3
+prefix/u 0
+prefix/u/o+rx 0
+prefix/u/o+rx/dir1 1
+prefix/u/o+rx/dir2 2
+prefix/u/o+rx/dir3 3
+prefix/u/u 0
+prefix/u/u/dir1 1
+prefix/u/u/dir2 2
+prefix/u/u/dir3 3
+prefix/u/ug 0
+prefix/u/ug/dir1 1
+prefix/u/ug/dir2 2
+prefix/u/ug/dir3 3
+prefix/u/ugo 0
+prefix/u/ugo/dir1 1
+prefix/u/ugo/dir2 2
+prefix/u/ugo/dir3 3
+prefix/ug 0
+prefix/ug/o+rx 0
+prefix/ug/o+rx/dir1 1
+prefix/ug/o+rx/dir2 2
+prefix/ug/o+rx/dir3 3
+prefix/ug/u 0
+prefix/ug/u/dir1 1
+prefix/ug/u/dir2 2
+prefix/ug/u/dir3 3
+prefix/ug/ug 0
+prefix/ug/ug/dir1 1
+prefix/ug/ug/dir2 2
+prefix/ug/ug/dir3 3
+prefix/ug/ugo 0
+prefix/ug/ugo/dir1 1
+prefix/ug/ugo/dir2 2
+prefix/ug/ugo/dir3 3
+prefix/ugo 0
+prefix/ugo/o+rx 0
+prefix/ugo/o+rx/dir1 1
+prefix/ugo/o+rx/dir2 2
+prefix/ugo/o+rx/dir3 3
+prefix/ugo/u 0
+prefix/ugo/u/dir1 1
+prefix/ugo/u/dir2 2
+prefix/ugo/u/dir3 3
+prefix/ugo/ug 0
+prefix/ugo/ug/dir1 1
+prefix/ugo/ug/dir2 2
+prefix/ugo/ug/dir3 3
+prefix/ugo/ugo 0
+prefix/ugo/ugo/dir1 1
+prefix/ugo/ugo/dir2 2
+prefix/ugo/ugo/dir3 3
+
+$ gufi_stats    total-filecount
+root 96
+
+$ gufi_stats -c total-filecount
+96
+
+$ gufi_stats    dircount
+4
+
+$ gufi_stats -r dircount
+prefix 4
+prefix/o+rx 4
+prefix/o+rx/o+rx 3
+prefix/o+rx/o+rx/dir1 0
+prefix/o+rx/o+rx/dir2 0
+prefix/o+rx/o+rx/dir3 0
+prefix/o+rx/u 3
+prefix/o+rx/u/dir1 0
+prefix/o+rx/u/dir2 0
+prefix/o+rx/u/dir3 0
+prefix/o+rx/ug 3
+prefix/o+rx/ug/dir1 0
+prefix/o+rx/ug/dir2 0
+prefix/o+rx/ug/dir3 0
+prefix/o+rx/ugo 3
+prefix/o+rx/ugo/dir1 0
+prefix/o+rx/ugo/dir2 0
+prefix/o+rx/ugo/dir3 0
+prefix/u 4
+prefix/u/o+rx 3
+prefix/u/o+rx/dir1 0
+prefix/u/o+rx/dir2 0
+prefix/u/o+rx/dir3 0
+prefix/u/u 3
+prefix/u/u/dir1 0
+prefix/u/u/dir2 0
+prefix/u/u/dir3 0
+prefix/u/ug 3
+prefix/u/ug/dir1 0
+prefix/u/ug/dir2 0
+prefix/u/ug/dir3 0
+prefix/u/ugo 3
+prefix/u/ugo/dir1 0
+prefix/u/ugo/dir2 0
+prefix/u/ugo/dir3 0
+prefix/ug 4
+prefix/ug/o+rx 3
+prefix/ug/o+rx/dir1 0
+prefix/ug/o+rx/dir2 0
+prefix/ug/o+rx/dir3 0
+prefix/ug/u 3
+prefix/ug/u/dir1 0
+prefix/ug/u/dir2 0
+prefix/ug/u/dir3 0
+prefix/ug/ug 3
+prefix/ug/ug/dir1 0
+prefix/ug/ug/dir2 0
+prefix/ug/ug/dir3 0
+prefix/ug/ugo 3
+prefix/ug/ugo/dir1 0
+prefix/ug/ugo/dir2 0
+prefix/ug/ugo/dir3 0
+prefix/ugo 4
+prefix/ugo/o+rx 3
+prefix/ugo/o+rx/dir1 0
+prefix/ugo/o+rx/dir2 0
+prefix/ugo/o+rx/dir3 0
+prefix/ugo/u 3
+prefix/ugo/u/dir1 0
+prefix/ugo/u/dir2 0
+prefix/ugo/u/dir3 0
+prefix/ugo/ug 3
+prefix/ugo/ug/dir1 0
+prefix/ugo/ug/dir2 0
+prefix/ugo/ug/dir3 0
+prefix/ugo/ugo 3
+prefix/ugo/ugo/dir1 0
+prefix/ugo/ugo/dir2 0
+prefix/ugo/ugo/dir3 0
+
+$ gufi_stats    total-dircount
+root 5
+
+$ gufi_stats -c total-dircount
+69
+

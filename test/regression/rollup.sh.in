@@ -159,56 +159,66 @@ chmod 700 ${SRCDIR}/u
 
 rm -r ${TMP}
 
+do_tests() {
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary\" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
+
+    run_no_sort "${GUFI_FIND} -type d | wc -l"
+    run_no_sort "${GUFI_FIND} -type f | wc -l"
+    run_no_sort "${GUFI_FIND} | wc -l"
+
+    run_no_sort "${GUFI_LS}"
+    run_no_sort "${GUFI_LS} o+rx"
+    run_no_sort "${GUFI_LS} o+rx/o+rx"
+    run_no_sort "${GUFI_LS} o+rx/ugo"
+    run_no_sort "${GUFI_LS} o+rx/ug"
+    run_no_sort "${GUFI_LS} o+rx/u"
+    run_no_sort "${GUFI_LS} ugo"
+    run_no_sort "${GUFI_LS} ugo/o+rx"
+    run_no_sort "${GUFI_LS} ugo/ugo"
+    run_no_sort "${GUFI_LS} ugo/ug"
+    run_no_sort "${GUFI_LS} ugo/u"
+    run_no_sort "${GUFI_LS} ug"
+    run_no_sort "${GUFI_LS} ug/o+rx"
+    run_no_sort "${GUFI_LS} ug/ugo"
+    run_no_sort "${GUFI_LS} ug/ug"
+    run_no_sort "${GUFI_LS} ug/u"
+    run_no_sort "${GUFI_LS} u"
+    run_no_sort "${GUFI_LS} u/o+rx"
+    run_no_sort "${GUFI_LS} u/ugo"
+    run_no_sort "${GUFI_LS} u/ug"
+    run_no_sort "${GUFI_LS} u/u"
+
+    echo "# 1 less because gufi_ls does not list the input dir"
+    run_no_sort "${GUFI_LS} -R | wc -l"
+
+    run_sort "${GUFI_STATS}    depth"
+    run_sort "${GUFI_STATS} -r depth"
+
+    run_sort "${GUFI_STATS}    filecount"
+    run_sort "${GUFI_STATS} -r filecount"
+
+    run_sort "${GUFI_STATS}    total-filecount"
+    run_sort "${GUFI_STATS} -c total-filecount"
+
+    run_sort "${GUFI_STATS}    dircount"
+    run_sort "${GUFI_STATS} -r dircount"
+
+    run_sort "${GUFI_STATS}    total-dircount"
+    run_sort "${GUFI_STATS} -c total-dircount"
+}
+
 ${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXTARGET}
 ${ROLLUP} ${INDEXROOT} | replace
+do_tests
 
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary;\" \"${INDEXROOT}\" | wc -l"
-run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
-run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary\" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
+rm -r ${INDEXTARGET}
 
-run_no_sort "${GUFI_FIND} -type d | wc -l"
-run_no_sort "${GUFI_FIND} -type f | wc -l"
-run_no_sort "${GUFI_FIND} | wc -l"
+${GUFI_DIR2INDEX} ${SRCDIR} ${INDEXTARGET}
+${ROLLUP} -L 3 ${INDEXROOT} | replace
+do_tests
 
-run_no_sort "${GUFI_LS}"
-run_no_sort "${GUFI_LS} o+rx"
-run_no_sort "${GUFI_LS} o+rx/o+rx"
-run_no_sort "${GUFI_LS} o+rx/ugo"
-run_no_sort "${GUFI_LS} o+rx/ug"
-run_no_sort "${GUFI_LS} o+rx/u"
-run_no_sort "${GUFI_LS} ugo"
-run_no_sort "${GUFI_LS} ugo/o+rx"
-run_no_sort "${GUFI_LS} ugo/ugo"
-run_no_sort "${GUFI_LS} ugo/ug"
-run_no_sort "${GUFI_LS} ugo/u"
-run_no_sort "${GUFI_LS} ug"
-run_no_sort "${GUFI_LS} ug/o+rx"
-run_no_sort "${GUFI_LS} ug/ugo"
-run_no_sort "${GUFI_LS} ug/ug"
-run_no_sort "${GUFI_LS} ug/u"
-run_no_sort "${GUFI_LS} u"
-run_no_sort "${GUFI_LS} u/o+rx"
-run_no_sort "${GUFI_LS} u/ugo"
-run_no_sort "${GUFI_LS} u/ug"
-run_no_sort "${GUFI_LS} u/u"
-
-echo "# 1 less because gufi_ls does not list the input dir"
-run_no_sort "${GUFI_LS} -R | wc -l"
-
-run_sort "${GUFI_STATS}    depth"
-run_sort "${GUFI_STATS} -r depth"
-
-run_sort "${GUFI_STATS}    filecount"
-run_sort "${GUFI_STATS} -r filecount"
-
-run_sort "${GUFI_STATS}    total-filecount"
-run_sort "${GUFI_STATS} -c total-filecount"
-
-run_sort "${GUFI_STATS}    dircount"
-run_sort "${GUFI_STATS} -r dircount"
-
-run_sort "${GUFI_STATS}    total-dircount"
-run_sort "${GUFI_STATS} -c total-dircount"
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/rollup.expected "${OUTPUT}"
