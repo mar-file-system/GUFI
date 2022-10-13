@@ -80,13 +80,13 @@ OF SUCH DAMAGE.
 extern int errno;
 
 /* query to extract data fom databases - this determines the indexing in the print callback */
-const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names FROM %s %s";
+static const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names FROM";
 
 /* user/group name */
-const char unknown[] = "UNKNOWN";
+static const char unknown[] = "UNKNOWN";
 
 /* default format used by GNU stat */
-const char default_format[] = "  File: %N\n"
+static const char default_format[] = "  File: %N\n"
                               "  Size: %-15s Blocks: %-10b IO Block: %-6o %F\n"
                               "Device: %-4Dh/%-5dd    Inode: %-11i Links: %h\n"
                               "Access: (0%a/%A)  Uid: (%5u/%8U)   Gid: (%5g/%8G)\n"
@@ -97,7 +97,7 @@ const char default_format[] = "  File: %N\n"
                               " Birth: %w\n";
 
 /* terse format used by GNU stat -t/--terse when selinux is available */
-const char terse_format[] = "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C\n";
+static const char terse_format[] = "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C\n";
 
 struct callback_args {
     size_t found;
@@ -141,7 +141,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
         if (*f != '%') {
             /* handle escape sequences */
             if (*f == '\\') {
-                char escape = '\0';
+                char escape = *f;
                 switch (*++f) {
                     case 'a':
                         escape = '\x07';
@@ -191,9 +191,9 @@ int print_callback(void * args, int count, char **data, char **columns) {
                             escape = *f - 'A' + 10;
                         }
                         else {
-                            fprintf(stderr, "gufi_stat: warning: unrecognized escape '\\escape'\n");
-                            f++;
-                            continue;
+                            fprintf(stderr, "gufi_stat: missing hex digit for \\x\n");
+                            f--;
+                            break;
                         }
 
                         f++;
@@ -201,28 +201,33 @@ int print_callback(void * args, int count, char **data, char **columns) {
                             escape = (escape << 4) | (*f - '0');
                         }
                         else if (('a' <= *f) && (*f <= 'f')) {
-                            escape = (escape << 4) | ((*f - 'a') + 10);
+                            escape = (escape << 4) | (*f - 'a' + 10);
                         }
                         else if (('A' <= *f) && (*f <= 'F')) {
-                            escape = (escape << 4) | ((*f - 'A') + 10);
+                            escape = (escape << 4) | (*f - 'A' + 10);
                         }
+                        else {
+                            f--;
+                        }
+
                         break;
                     case '0': case '1':
                     case '2': case '3':
                     case '4': case '5':
                     case '6': case '7':
                     case '8': case '9':
-                        escape = *f++;
-                        for(int i = 0; i < 2; i++) {
+                        for(int i = 0; i < 3; i++) {
                             if (!(('0' <= *f) && (*f <= '9'))) {
                                 break;
                             }
-                            escape = (escape << 3) | *f++;
+                            escape = (escape << 3) | (*f - '0');
+                            f++;
                         }
+                        f--;
                         break;
                     default:
-                        fprintf(stderr, "gufi_stat: warning: unrecognized escape '\\%c'\n", *f++);
-                        continue;
+                        fwrite("\\", sizeof(char), 1, out);
+                        escape = *f;
                         break;
                 }
                 fwrite(&escape, sizeof(char), 1, out);
@@ -416,13 +421,16 @@ int print_callback(void * args, int count, char **data, char **columns) {
 
 int process_path(const char *path, FILE *out, const char *format) {
     char dbname[MAXPATH];
+    char table[MAXSQL];
+    char where[MAXSQL];
     char query[MAXSQL];
     struct stat st;
 
     /* path is directory */
     if ((lstat(path, &st) == 0) && S_ISDIR(st.st_mode)) {
         SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, path);
-        SNPRINTF(query, sizeof(query), query_prefix, "summary");
+        SNPRINTF(table, sizeof(table), "summary");
+        SNPRINTF(where, sizeof(where), "WHERE isroot == 1");
     }
     /*
      * path does exist:    path is in the filesystem the index is on,
@@ -440,13 +448,11 @@ int process_path(const char *path, FILE *out, const char *format) {
         shortpath(path, parent, name);
 
         SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, parent);
-
-        /* search for basename(path) in the entries table */
-        char where[MAXSQL];
+        SNPRINTF(table, sizeof(table), "entries");
         SNPRINTF(where, sizeof(where), "WHERE name == '%s'", name);
-
-        SNPRINTF(query, sizeof(query), query_prefix, "entries", where);
     }
+
+    SNPRINTF(query, sizeof(query), "%s %s %s;", query_prefix, table, where);
 
     struct callback_args ca;
     ca.found = 0;

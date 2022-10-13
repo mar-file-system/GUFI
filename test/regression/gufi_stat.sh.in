@@ -69,29 +69,100 @@ OUTPUT="gufi_stat.out"
 (
 # entries in the index with a fixed size
 fixed_size=(
+    ".hidden"
     "1KB"
     "1MB"
-    "empty_file"
     "directory/executable"
     "directory/readonly"
-    "directory/writable"
     "directory/subdirectory/repeat_name"
-    "repeat_name"
-    ".hidden"
+    "directory/writable"
+    "empty_file"
     "leaf_directory/leaf_file1"
     "leaf_directory/leaf_file2"
     "old_file"
+    "repeat_name"
     "unusual#? directory ,/unusual, name?#"
 )
 
+variable_size=(
+    "directory"
+    "directory/subdirectory"
+    # "directory/subdirectory/directory_symlink"
+    # "file_symlink"
+    "leaf_directory"
+)
+
+echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
-    ${GUFI_STAT} -f '%N %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}" | replace | remove_root
+    ${GUFI_STAT} "${INDEXROOT}/${entry}" | head -n 1
 done
+echo
+
+echo "# first two columns of terse format"
+for entry in "${fixed_size[@]}" "${variable_size[@]}"
+do
+    ${GUFI_STAT} -j "${INDEXROOT}/${entry}" | awk '{ print $1 $2 }'
+done | sort
+echo
+
+echo "# custom print format"
+(
+    for entry in "${fixed_size[@]}"
+    do
+        ${GUFI_STAT} -f '%-60N %60n %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}"
+    done
+
+    for entry in "${variable_size[@]}"
+    do
+        ${GUFI_STAT} -f '%-60N %60n %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}"
+    done
+) | sort
+echo
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-${GUFI_STAT} -f '%N %X %Y\n' "${INDEXROOT}/old_file" | @SED@ "s/${INDEXTARGET//\//\\/}\\///g;"
-) | @TEE@ "${OUTPUT}"
+TZ=UTC ${GUFI_STAT} -f '%-60N %60n %x %X %y %Y\n' "${INDEXROOT}/old_file"
+echo
+
+echo "# escape character parsing"
+nonprintable=('a' 'b' 'e' 'f' 'n' 'r' 't' 'v')
+
+for c in "${nonprintable[@]}"
+do
+    echo -n "\\${c} -> "
+    ${GUFI_STAT} -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | awk '{ print $2 }'
+done
+
+# do this separately to not deal with "\\${c}\n" -> "\\\\n"
+echo -n "\\\\ -> "
+${GUFI_STAT} -f "\\\\\n" "${INDEXROOT}/old_file"
+
+printable=(
+    # special characters
+    "'" '"' '?'
+
+    # hex
+    'x41' 'x61' 'x41A' 'x61a'
+
+    # bad hex
+    'x?'
+
+    # octal
+    '101' '141'
+
+    # bad octal
+    '60a'
+
+    # unrecognized
+    'yabcd'
+)
+
+for c in "${printable[@]}"
+do
+    echo -n "\\${c} -> "
+    ${GUFI_STAT} -f "\\${c}\n" "${INDEXROOT}/old_file"
+done
+) | replace | remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"
 rm "${OUTPUT}"

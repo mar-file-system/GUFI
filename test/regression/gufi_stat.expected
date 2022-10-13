@@ -1,14 +1,72 @@
-'1KB' 664 -rw-rw-r-- 81b4 regular file 1024 - 0
-'1MB' 664 -rw-rw-r-- 81b4 regular file 1048576 - 0
-'empty_file' 664 -rw-rw-r-- 81b4 regular file 0 - 0
-'directory/executable' 777 -rwxrwxrwx 81ff regular file 1 - 0
-'directory/readonly' 444 -r--r--r-- 8124 regular file 2 - 0
-'directory/writable' 666 -rw-rw-rw- 81b6 regular file 3 - 0
-'directory/subdirectory/repeat_name' 664 -rw-rw-r-- 81b4 regular file 4 - 0
-'repeat_name' 664 -rw-rw-r-- 81b4 regular file 4 - 0
-'.hidden' 664 -rw-rw-r-- 81b4 regular file 5 - 0
-'leaf_directory/leaf_file1' 664 -rw-rw-r-- 81b4 regular file 6 - 0
-'leaf_directory/leaf_file2' 664 -rw-rw-r-- 81b4 regular file 7 - 0
-'old_file' 664 -rw-rw-r-- 81b4 regular file 8 - 0
-'unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- 81b4 regular file 9 - 0
-'prefix/old_file' 0 0
+# first line of default print
+  File: '.hidden'
+  File: '1KB'
+  File: '1MB'
+  File: 'directory/executable'
+  File: 'directory/readonly'
+  File: 'directory/subdirectory/repeat_name'
+  File: 'directory/writable'
+  File: 'empty_file'
+  File: 'leaf_directory/leaf_file1'
+  File: 'leaf_directory/leaf_file2'
+  File: 'old_file'
+  File: 'repeat_name'
+  File: 'unusual#? directory ,/unusual, name?#'
+
+# first two columns of terse format
+.hidden5
+1KB1024
+1MB1048576
+directory/executable1
+directory/readonly2
+directory/subdirectory/repeat_name4
+directory/writable3
+empty_file0
+leaf_directory/leaf_file16
+leaf_directory/leaf_file27
+old_file8
+repeat_name4
+unusual#?directory
+
+# custom print format
+'.hidden'                                                                             .hidden 664 -rw-rw-r-- 81b4 regular file 5 - 0
+'1KB'                                                                                     1KB 664 -rw-rw-r-- 81b4 regular file 1024 - 0
+'1MB'                                                                                     1MB 664 -rw-rw-r-- 81b4 regular file 1048576 - 0
+'directory'                                                                         directory 775 drwxrwxr-x 41fd directory - 0
+'directory/executable'                                                   directory/executable 777 -rwxrwxrwx 81ff regular file 1 - 0
+'directory/readonly'                                                       directory/readonly 444 -r--r--r-- 8124 regular file 2 - 0
+'directory/subdirectory'                                               directory/subdirectory 775 drwxrwxr-x 41fd directory - 0
+'directory/subdirectory/repeat_name'                       directory/subdirectory/repeat_name 664 -rw-rw-r-- 81b4 regular file 4 - 0
+'directory/writable'                                                       directory/writable 666 -rw-rw-rw- 81b6 regular file 3 - 0
+'empty_file'                                                                       empty_file 664 -rw-rw-r-- 81b4 regular file 0 - 0
+'leaf_directory'                                                               leaf_directory 775 drwxrwxr-x 41fd directory - 0
+'leaf_directory/leaf_file1'                                         leaf_directory/leaf_file1 664 -rw-rw-r-- 81b4 regular file 6 - 0
+'leaf_directory/leaf_file2'                                         leaf_directory/leaf_file2 664 -rw-rw-r-- 81b4 regular file 7 - 0
+'old_file'                                                                           old_file 664 -rw-rw-r-- 81b4 regular file 8 - 0
+'repeat_name'                                                                     repeat_name 664 -rw-rw-r-- 81b4 regular file 4 - 0
+'unusual#? directory ,/unusual, name?#'                 unusual#? directory ,/unusual, name?# 664 -rw-rw-r-- 81b4 regular file 9 - 0
+
+'old_file'                                                                           old_file 1970-01-01 00:00:00 +0000 0 1970-01-01 00:00:00 +0000 0
+
+# escape character parsing
+\a -> 07
+\b -> 08
+\e -> 1b
+\f -> 0c
+\n -> 0a
+\r -> 0d
+\t -> 09
+\v -> 0b
+\\ -> \
+\' -> '
+\" -> "
+\? -> ?
+\x41 -> A
+\x61 -> a
+\x41A -> AA
+\x61a -> aa
+\x? -> \?
+\101 -> A
+\141 -> a
+\60a -> 0a
+\yabcd -> \yabcd
