@@ -69,6 +69,10 @@ import sys
 import gufi_common
 import gufi_config
 
+# table names
+SUMMARY  = 'summary'
+PENTRIES = 'pentries'
+
 #        1024  1000  1024
 SIZES = ['K',  'KB', 'KiB',
          'M',  'MB', 'MiB',
@@ -133,11 +137,19 @@ def build_select(args):
 
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
-        select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + ['(case when (type == "l") then ({0} || " -> " || linkname) else {0} end) as display_name'.format(display_name)]
-
+        select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + [
+                      '''(
+                          CASE
+                              WHEN (type == "l") THEN
+                                  ({0} || " -> " || linkname)
+                              ELSE
+                                  {0}
+                          END
+                         ) AS display_name'''.format(display_name)
+        ]
     else:
         # at minimum, print the file name
-        select += [display_name + ' as display_name']
+        select += [display_name + ' AS display_name']
 
     return select
 
@@ -226,7 +238,6 @@ def run(argv, config_path):
     parser.add_argument('-t',                                     dest='mtime',          action='store_true',                              help='sort by modification time, newest first')
     parser.add_argument('-U',                                     dest='no_sort',        action='store_true',                              help='do not sort; list entries in directory order')
 
-    # for now, only 1 path is allowed
     parser.add_argument('paths',                                                         type=str, action='append' , nargs='*')
 
     # GUFI specific arguments
@@ -267,33 +278,34 @@ def run(argv, config_path):
         query_cmd += []
 
         # columns without fullpath or name
-        columns = ['type', 'inode', 'nlink', 'size',
-                   'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
-                   'atime', 'ctime', 'linkname', 'xattr_names', 'pinode']
+        columns = ['type', 'inode', 'nlink', 'size', 'mode', 'uid',
+                   'gid', 'blksize', 'blocks', 'mtime', 'atime',
+                   'ctime', 'linkname', 'xattr_names', 'pinode']
 
         I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);'.format(args.inmemory_name)
 
-        S_where = build_where(args, None,       match_name)
-        E_where = build_where(args, 'pentries', match_name) + ['summary.inode == pentries.pinode']
+        S_where = build_where(args, None,     match_name)
+        E_where = build_where(args, PENTRIES, match_name) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)]
 
         if not args.recursive:
             S_where += [gufi_common.ROLLUP_SUMMARY_WHERE]
             # only get the pentries that were originally in this directory
-            E_where += ['summary.isroot == 1']
+            E_where += ['{}.isroot == 1'.format(SUMMARY)]
         else:
             S_where += ['level() > 0']
 
         S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(summary.name, summary.rollupscore)', 'basename(name)'] + columns,
-                                                                 ['summary'],
+                                         gufi_common.build_query(['path({0}.name, {0}.rollupscore)'.format(SUMMARY), 'basename(name)'] + columns,
+                                                                 [SUMMARY],
                                                                  S_where,
                                                                  None,
                                                                  None,
                                                                  None))
 
         E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(summary.name, summary.rollupscore) || "/" || pentries.name'] + ['pentries.' + column for column in ['name'] + columns],
-                                                                 ['summary', 'pentries'],
+                                         gufi_common.build_query(['path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] +
+                                                                 [PENTRIES + '.' + column for column in ['name'] + columns],
+                                                                 [SUMMARY, PENTRIES],
                                                                  E_where,
                                                                  None,
                                                                  None,
