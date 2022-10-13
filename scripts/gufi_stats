@@ -428,7 +428,7 @@ def dircount(config, args, where):
     if not args.recursive:
         queries += [
             '-y', '0',
-            '-z', '1']
+            '-z', '2']
 
     return queries
 
@@ -523,7 +523,7 @@ def leaf_dirs(config, args, where):
 
     if not args.recursive:
         queries += ['-y', '1',
-                    '-z', '1']
+                    '-z', '2']
 
     return queries
 
@@ -574,7 +574,7 @@ def leaf_depth(config, args, where):
 
     if not args.recursive:
         queries += ['-y', '1',
-                    '-z', '1']
+                    '-z', '2']
 
     return queries
 
@@ -623,7 +623,7 @@ def leaf(config, args, where, type):
 
     if not args.recursive:
         queries += ['-y', '1',
-                    '-z', '1']
+                    '-z', '2']
 
     return queries
 

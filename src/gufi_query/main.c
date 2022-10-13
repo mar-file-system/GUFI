@@ -271,7 +271,7 @@ static size_t descend2(QPTPool_t *ctx,
     buffered_start(level_cmp);
     size_t pushed = 0;
     const size_t next_level = passmywork->level + 1;
-    const int level_check = (next_level <= max_level);
+    const int level_check = (next_level < max_level);
     buffered_end(level_cmp);
 
     buffered_start(level_branch);

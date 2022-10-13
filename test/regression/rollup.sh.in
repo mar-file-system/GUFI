@@ -169,26 +169,18 @@ do_tests() {
     run_no_sort "${GUFI_FIND} | wc -l"
 
     run_no_sort "${GUFI_LS}"
-    run_no_sort "${GUFI_LS} o+rx"
-    run_no_sort "${GUFI_LS} o+rx/o+rx"
-    run_no_sort "${GUFI_LS} o+rx/ugo"
-    run_no_sort "${GUFI_LS} o+rx/ug"
-    run_no_sort "${GUFI_LS} o+rx/u"
-    run_no_sort "${GUFI_LS} ugo"
-    run_no_sort "${GUFI_LS} ugo/o+rx"
-    run_no_sort "${GUFI_LS} ugo/ugo"
-    run_no_sort "${GUFI_LS} ugo/ug"
-    run_no_sort "${GUFI_LS} ugo/u"
-    run_no_sort "${GUFI_LS} ug"
-    run_no_sort "${GUFI_LS} ug/o+rx"
-    run_no_sort "${GUFI_LS} ug/ugo"
-    run_no_sort "${GUFI_LS} ug/ug"
-    run_no_sort "${GUFI_LS} ug/u"
-    run_no_sort "${GUFI_LS} u"
-    run_no_sort "${GUFI_LS} u/o+rx"
-    run_no_sort "${GUFI_LS} u/ugo"
-    run_no_sort "${GUFI_LS} u/ug"
-    run_no_sort "${GUFI_LS} u/u"
+    for level1 in "o+rx" "ugo" "ug" "u"
+    do
+        run_no_sort "${GUFI_LS} ${level1}"
+        for level2 in "o+rx" "ugo" "ug" "u"
+        do
+            run_no_sort "${GUFI_LS} ${level1}/${level2}"
+            for level3 in "dir1" "dir2" "dir3"
+            do
+                run_no_sort "${GUFI_LS} ${level1}/${level2}/${level3}"
+            done
+        done
+    done
 
     echo "# 1 less because gufi_ls does not list the input dir"
     run_no_sort "${GUFI_LS} -R | wc -l"

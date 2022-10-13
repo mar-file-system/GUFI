@@ -78,7 +78,7 @@ __gufi() {
     fi
 
     root=$(readlink -m $(grep "IndexRoot=" "${CONFIG}"  | sed "s/^.*=//"))
-    bfq=$(readlink -m $(grep "Executable=" ${CONFIG} | sed "s/^.*=//"))
+    gufi_query=$(readlink -m $(grep "Executable=" ${CONFIG} | sed "s/^.*=//"))
     curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
     path="${root}/${curr}"
     name=${path##*/} # basename without expanding
@@ -90,9 +90,9 @@ __gufi() {
         GUFI_PWD="${path}"
 
         # return all entries in the directory and directory names in subdirectories
-        matches=$(${bfq} \
+        matches=$(${gufi_query} \
             -a \
-            -z 1 \
+            -z 2 \
             -d $' ' \
             -I "CREATE TABLE out(name TEXT, type TEXT);" \
             -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (level() == 1);" \
@@ -117,9 +117,9 @@ __gufi() {
         fi
 
         # search the index for matches on the name
-        matches=$(${bfq} \
+        matches=$(${gufi_query} \
             -a \
-            -z 1 \
+            -z 2 \
             -d " " \
             -I "CREATE TABLE out(name TEXT, type TEXT);" \
             -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (name REGEXP \"^${name}\") AND (level() == 1);" \

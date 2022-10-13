@@ -86,20 +86,68 @@ dir1
 dir2
 dir3
 
+$ gufi_ls o+rx/o+rx/dir1
+file1
+
+$ gufi_ls o+rx/o+rx/dir2
+file1
+file2
+
+$ gufi_ls o+rx/o+rx/dir3
+file1
+file2
+file3
+
 $ gufi_ls o+rx/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls o+rx/ugo/dir1
+file1
+
+$ gufi_ls o+rx/ugo/dir2
+file1
+file2
+
+$ gufi_ls o+rx/ugo/dir3
+file1
+file2
+file3
 
 $ gufi_ls o+rx/ug
 dir1
 dir2
 dir3
 
+$ gufi_ls o+rx/ug/dir1
+file1
+
+$ gufi_ls o+rx/ug/dir2
+file1
+file2
+
+$ gufi_ls o+rx/ug/dir3
+file1
+file2
+file3
+
 $ gufi_ls o+rx/u
 dir1
 dir2
 dir3
+
+$ gufi_ls o+rx/u/dir1
+file1
+
+$ gufi_ls o+rx/u/dir2
+file1
+file2
+
+$ gufi_ls o+rx/u/dir3
+file1
+file2
+file3
 
 $ gufi_ls ugo
 o+rx
@@ -112,20 +160,68 @@ dir1
 dir2
 dir3
 
+$ gufi_ls ugo/o+rx/dir1
+file1
+
+$ gufi_ls ugo/o+rx/dir2
+file1
+file2
+
+$ gufi_ls ugo/o+rx/dir3
+file1
+file2
+file3
+
 $ gufi_ls ugo/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls ugo/ugo/dir1
+file1
+
+$ gufi_ls ugo/ugo/dir2
+file1
+file2
+
+$ gufi_ls ugo/ugo/dir3
+file1
+file2
+file3
 
 $ gufi_ls ugo/ug
 dir1
 dir2
 dir3
 
+$ gufi_ls ugo/ug/dir1
+file1
+
+$ gufi_ls ugo/ug/dir2
+file1
+file2
+
+$ gufi_ls ugo/ug/dir3
+file1
+file2
+file3
+
 $ gufi_ls ugo/u
 dir1
 dir2
 dir3
+
+$ gufi_ls ugo/u/dir1
+file1
+
+$ gufi_ls ugo/u/dir2
+file1
+file2
+
+$ gufi_ls ugo/u/dir3
+file1
+file2
+file3
 
 $ gufi_ls ug
 o+rx
@@ -138,20 +234,68 @@ dir1
 dir2
 dir3
 
+$ gufi_ls ug/o+rx/dir1
+file1
+
+$ gufi_ls ug/o+rx/dir2
+file1
+file2
+
+$ gufi_ls ug/o+rx/dir3
+file1
+file2
+file3
+
 $ gufi_ls ug/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls ug/ugo/dir1
+file1
+
+$ gufi_ls ug/ugo/dir2
+file1
+file2
+
+$ gufi_ls ug/ugo/dir3
+file1
+file2
+file3
 
 $ gufi_ls ug/ug
 dir1
 dir2
 dir3
 
+$ gufi_ls ug/ug/dir1
+file1
+
+$ gufi_ls ug/ug/dir2
+file1
+file2
+
+$ gufi_ls ug/ug/dir3
+file1
+file2
+file3
+
 $ gufi_ls ug/u
 dir1
 dir2
 dir3
+
+$ gufi_ls ug/u/dir1
+file1
+
+$ gufi_ls ug/u/dir2
+file1
+file2
+
+$ gufi_ls ug/u/dir3
+file1
+file2
+file3
 
 $ gufi_ls u
 o+rx
@@ -164,20 +308,68 @@ dir1
 dir2
 dir3
 
+$ gufi_ls u/o+rx/dir1
+file1
+
+$ gufi_ls u/o+rx/dir2
+file1
+file2
+
+$ gufi_ls u/o+rx/dir3
+file1
+file2
+file3
+
 $ gufi_ls u/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls u/ugo/dir1
+file1
+
+$ gufi_ls u/ugo/dir2
+file1
+file2
+
+$ gufi_ls u/ugo/dir3
+file1
+file2
+file3
 
 $ gufi_ls u/ug
 dir1
 dir2
 dir3
 
+$ gufi_ls u/ug/dir1
+file1
+
+$ gufi_ls u/ug/dir2
+file1
+file2
+
+$ gufi_ls u/ug/dir3
+file1
+file2
+file3
+
 $ gufi_ls u/u
 dir1
 dir2
 dir3
+
+$ gufi_ls u/u/dir1
+file1
+
+$ gufi_ls u/u/dir2
+file1
+file2
+
+$ gufi_ls u/u/dir3
+file1
+file2
+file3
 
 # 1 less because gufi_ls does not list the input dir
 $ gufi_ls -R | wc -l
@@ -509,10 +701,16 @@ $ gufi_ls o+rx/o+rx
 dir1
 dir2
 dir3
+
+$ gufi_ls o+rx/o+rx/dir1
 file1
-file1
+
+$ gufi_ls o+rx/o+rx/dir2
 file1
 file2
+
+$ gufi_ls o+rx/o+rx/dir3
+file1
 file2
 file3
 
@@ -520,10 +718,16 @@ $ gufi_ls o+rx/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls o+rx/ugo/dir1
 file1
-file1
+
+$ gufi_ls o+rx/ugo/dir2
 file1
 file2
+
+$ gufi_ls o+rx/ugo/dir3
+file1
 file2
 file3
 
@@ -531,10 +735,16 @@ $ gufi_ls o+rx/ug
 dir1
 dir2
 dir3
+
+$ gufi_ls o+rx/ug/dir1
 file1
-file1
+
+$ gufi_ls o+rx/ug/dir2
 file1
 file2
+
+$ gufi_ls o+rx/ug/dir3
+file1
 file2
 file3
 
@@ -542,10 +752,16 @@ $ gufi_ls o+rx/u
 dir1
 dir2
 dir3
+
+$ gufi_ls o+rx/u/dir1
 file1
-file1
+
+$ gufi_ls o+rx/u/dir2
 file1
 file2
+
+$ gufi_ls o+rx/u/dir3
+file1
 file2
 file3
 
@@ -559,10 +775,16 @@ $ gufi_ls ugo/o+rx
 dir1
 dir2
 dir3
+
+$ gufi_ls ugo/o+rx/dir1
 file1
-file1
+
+$ gufi_ls ugo/o+rx/dir2
 file1
 file2
+
+$ gufi_ls ugo/o+rx/dir3
+file1
 file2
 file3
 
@@ -570,10 +792,16 @@ $ gufi_ls ugo/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls ugo/ugo/dir1
 file1
-file1
+
+$ gufi_ls ugo/ugo/dir2
 file1
 file2
+
+$ gufi_ls ugo/ugo/dir3
+file1
 file2
 file3
 
@@ -581,10 +809,16 @@ $ gufi_ls ugo/ug
 dir1
 dir2
 dir3
+
+$ gufi_ls ugo/ug/dir1
 file1
-file1
+
+$ gufi_ls ugo/ug/dir2
 file1
 file2
+
+$ gufi_ls ugo/ug/dir3
+file1
 file2
 file3
 
@@ -592,10 +826,16 @@ $ gufi_ls ugo/u
 dir1
 dir2
 dir3
+
+$ gufi_ls ugo/u/dir1
 file1
-file1
+
+$ gufi_ls ugo/u/dir2
 file1
 file2
+
+$ gufi_ls ugo/u/dir3
+file1
 file2
 file3
 
@@ -609,10 +849,16 @@ $ gufi_ls ug/o+rx
 dir1
 dir2
 dir3
+
+$ gufi_ls ug/o+rx/dir1
 file1
-file1
+
+$ gufi_ls ug/o+rx/dir2
 file1
 file2
+
+$ gufi_ls ug/o+rx/dir3
+file1
 file2
 file3
 
@@ -620,10 +866,16 @@ $ gufi_ls ug/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls ug/ugo/dir1
 file1
-file1
+
+$ gufi_ls ug/ugo/dir2
 file1
 file2
+
+$ gufi_ls ug/ugo/dir3
+file1
 file2
 file3
 
@@ -631,10 +883,16 @@ $ gufi_ls ug/ug
 dir1
 dir2
 dir3
+
+$ gufi_ls ug/ug/dir1
 file1
-file1
+
+$ gufi_ls ug/ug/dir2
 file1
 file2
+
+$ gufi_ls ug/ug/dir3
+file1
 file2
 file3
 
@@ -642,10 +900,16 @@ $ gufi_ls ug/u
 dir1
 dir2
 dir3
+
+$ gufi_ls ug/u/dir1
 file1
-file1
+
+$ gufi_ls ug/u/dir2
 file1
 file2
+
+$ gufi_ls ug/u/dir3
+file1
 file2
 file3
 
@@ -659,10 +923,16 @@ $ gufi_ls u/o+rx
 dir1
 dir2
 dir3
+
+$ gufi_ls u/o+rx/dir1
 file1
-file1
+
+$ gufi_ls u/o+rx/dir2
 file1
 file2
+
+$ gufi_ls u/o+rx/dir3
+file1
 file2
 file3
 
@@ -670,10 +940,16 @@ $ gufi_ls u/ugo
 dir1
 dir2
 dir3
+
+$ gufi_ls u/ugo/dir1
 file1
-file1
+
+$ gufi_ls u/ugo/dir2
 file1
 file2
+
+$ gufi_ls u/ugo/dir3
+file1
 file2
 file3
 
@@ -681,10 +957,16 @@ $ gufi_ls u/ug
 dir1
 dir2
 dir3
+
+$ gufi_ls u/ug/dir1
 file1
-file1
+
+$ gufi_ls u/ug/dir2
 file1
 file2
+
+$ gufi_ls u/ug/dir3
+file1
 file2
 file3
 
@@ -692,10 +974,16 @@ $ gufi_ls u/u
 dir1
 dir2
 dir3
+
+$ gufi_ls u/u/dir1
 file1
-file1
+
+$ gufi_ls u/u/dir2
 file1
 file2
+
+$ gufi_ls u/u/dir3
+file1
 file2
 file3
 
