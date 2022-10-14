@@ -251,6 +251,17 @@ jobs:
             cd ${{ github.workspace }}/build
             valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
 
+  ShellCheck:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install ShellCheck
+      run:  sudo apt -y install shellcheck
+
+    - name: Test
+      run:  shellcheck -s bash -e SC1090,SC1091 $(find \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*")
+
   Documentation:
     runs-on: ubuntu-20.04
     steps:

@@ -75,13 +75,17 @@ GENERATE_INDEX="$1"
 SRCDIR="prefix"
 TRACE="trace"
 THREADS=2
-TRACES=$(eval echo ${TRACE}.{0..$((THREADS - 1))})
+TRACES=()
+for (( i = 0; i < THREADS; i++ ));
+do
+    TRACES+=("${TRACE}.${i}")
+done
 INDEXTARGET="search"
 INDEXROOT="${INDEXTARGET}/$(basename ${SRCDIR})"
 
 # always clean up
 setup_cleanup() {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" ${TRACES} "${INDEXTARGET}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${INDEXTARGET}"
 }
 
 trap setup_cleanup EXIT
@@ -95,10 +99,12 @@ export PYTHONPATH=@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test/regression:
 
 # generate a fake config file
 CONFIG="@CMAKE_CURRENT_BINARY_DIR@/config.test"
-echo "Threads=1" > ${CONFIG}
-echo "Executable=@CMAKE_BINARY_DIR@/src/gufi_query" >> ${CONFIG}
-echo "IndexRoot=${INDEXROOT}" >> ${CONFIG}
-echo "OutputBuffer=4096" >> ${CONFIG}
+(
+    echo "Threads=1"
+    echo "Executable=@CMAKE_BINARY_DIR@/src/gufi_query"
+    echo "IndexRoot=${INDEXROOT}"
+    echo "OutputBuffer=4096"
+) > ${CONFIG}
 chmod 666 ${CONFIG}
 
 # paths of all executables
@@ -150,22 +156,22 @@ remove_root() {
 }
 
 run_sort() {
-    echo "$ $@" |& replace
-    eval "$@"   |& replace | sort
+    echo "$" "$@" |& replace
+    eval "$@"     |& replace | sort
     echo
 }
 
 run_no_sort() {
-    echo "$ $@" |& replace
-    eval "$@"   |& replace
+    echo "$" "$@" |& replace
+    eval "$@"     |& replace
     echo
 }
 
 if [[ "${GENERATE_INDEX}" == "1" ]]
 then
     # generate the tree
-    ${GENERATETREE} "${SRCDIR}"
+    "${GENERATETREE}" "${SRCDIR}"
 
     # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}"
+    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${INDEXTARGET}"
 fi

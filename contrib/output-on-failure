@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-output=$($@ 2>&1)
+output=$("$@" 2>&1)
 rc="$?"
 
 if [[ "${rc}" != "0" ]]

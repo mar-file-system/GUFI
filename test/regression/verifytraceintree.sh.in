@@ -92,7 +92,7 @@ run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
 echo "# generate the trace"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
-cat ${TRACES} > "${TRACE}"
+cat "${TRACES[@]}" > "${TRACE}"
 
 echo "# generate the index"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\" | tail -n 4 | head -n 3"

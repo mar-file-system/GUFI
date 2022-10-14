@@ -77,11 +77,11 @@ run_no_sort "${GENERATETREE} ${SRCDIR}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # generate the index
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" ${TRACES} \"${INDEXTARGET}\" | tail -n 4 | head -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${TRACES[@]}" "\"${INDEXTARGET}\" | tail -n 4 | head -n 3"
 
 # compare contents
 src_contents=$(find "${SRCDIR}" | sort)
-index_contents=$(${GUFI_QUERY} -d " " -S "SELECT path(name, rollupscore) FROM summary;" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "${INDEXROOT}" | replace | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT path(name, rollupscore) FROM summary;" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'

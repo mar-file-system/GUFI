@@ -95,14 +95,14 @@ variable_size=(
 echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
-    ${GUFI_STAT} "${INDEXROOT}/${entry}" | head -n 1
+    "${GUFI_STAT}" "${INDEXROOT}/${entry}" | head -n 1
 done
 echo
 
 echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}" "${variable_size[@]}"
 do
-    ${GUFI_STAT} -j "${INDEXROOT}/${entry}" | awk '{ print $1 $2 }'
+    "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | awk '{ print $1 $2 }'
 done | sort
 echo
 
@@ -110,18 +110,18 @@ echo "# custom print format"
 (
     for entry in "${fixed_size[@]}"
     do
-        ${GUFI_STAT} -f '%-60N %60n %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT}" -f '%-60N %60n %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}"
     done
 
     for entry in "${variable_size[@]}"
     do
-        ${GUFI_STAT} -f '%-60N %60n %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT}" -f '%-60N %60n %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}"
     done
 ) | sort
 echo
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-TZ=UTC ${GUFI_STAT} -f '%-60N %60n %x %X %y %Y\n' "${INDEXROOT}/old_file"
+TZ=UTC "${GUFI_STAT}" -f '%-60N %60n %x %X %y %Y\n' "${INDEXROOT}/old_file"
 echo
 
 echo "# escape character parsing"
@@ -130,12 +130,12 @@ nonprintable=('a' 'b' 'e' 'f' 'n' 'r' 't' 'v')
 for c in "${nonprintable[@]}"
 do
     echo -n "\\${c} -> "
-    ${GUFI_STAT} -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | awk '{ print $2 }'
+    "${GUFI_STAT}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | awk '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"
 echo -n "\\\\ -> "
-${GUFI_STAT} -f "\\\\\n" "${INDEXROOT}/old_file"
+"${GUFI_STAT}" -f "\\\\\n" "${INDEXROOT}/old_file"
 
 printable=(
     # special characters
@@ -160,7 +160,7 @@ printable=(
 for c in "${printable[@]}"
 do
     echo -n "\\${c} -> "
-    ${GUFI_STAT} -f "\\${c}\n" "${INDEXROOT}/old_file"
+    "${GUFI_STAT}" -f "\\${c}\n" "${INDEXROOT}/old_file"
 done
 ) | replace | remove_root | @TEE@ "${OUTPUT}"
 

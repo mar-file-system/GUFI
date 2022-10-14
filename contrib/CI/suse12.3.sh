@@ -61,7 +61,7 @@
 
 
 
-SCRIPT_PATH="$(dirname ${BASH_SOURCE[0]})"
+SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
 
 set -e
 
@@ -105,13 +105,13 @@ fi
 
 # install the compilers
 # gcc must be installed even if compiling with clang
-zypper --non-interactive install gcc ${C_PACKAGE} ${CXX_PACKAGE}
+zypper --non-interactive install gcc "${C_PACKAGE}" "${CXX_PACKAGE}"
 
 # install xattr
 yes | pip2 install --user xattr
 
-export C_COMPILER=${SUSE_C_COMPILER}
-export CXX_COMPILER=${SUSE_CXX_COMPILER}
+export C_COMPILER="${SUSE_C_COMPILER}"
+export CXX_COMPILER="${SUSE_CXX_COMPILER}"
 
 # build and test GUFI
-${SCRIPT_PATH}/build_and_test.sh
+"${SCRIPT_PATH}/build_and_test.sh"

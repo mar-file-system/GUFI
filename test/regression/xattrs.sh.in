@@ -68,7 +68,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
 OUTPUT="xattrs.out"
 
 cleanup() {
-    rm -rf ${TRACE}.*
+    rm -rf "${TRACES[@]}"
 }
 
 cleanup_exit() {
@@ -116,6 +116,7 @@ create() {
 }
 
 (
+    # shellcheck disable=SC2174
     mkdir -p -m 555 "${SRCDIR}"
     cd "${SRCDIR}"
 

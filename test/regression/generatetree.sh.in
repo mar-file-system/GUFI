@@ -123,14 +123,14 @@ mkdir directory
     os_setfattr "user.name" "sub" subdirectory
     (
         cd subdirectory
-        ln -f -s $(realpath .) directory_symlink
+        ln -f -s "$(realpath .)" "directory_symlink"
         truncate -s 4 repeat_name
     )
 )
 
 touch empty_file
 
-ln -f -s $(realpath 1KB) file_symlink
+ln -f -s "$(realpath 1KB)" file_symlink
 
 truncate -s 5 .hidden
 

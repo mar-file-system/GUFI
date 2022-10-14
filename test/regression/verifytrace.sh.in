@@ -79,7 +79,7 @@ run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
 echo "# generate the trace"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${TRACE}\""
-cat ${TRACES} > "${TRACE}"
+cat "${TRACES[@]}" > "${TRACE}"
 
 # replace the numeric fields in the trace with 0s
 sed -i 's/[[:digit:]]\+/0/g' "${TRACE}"
@@ -111,7 +111,7 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 echo "# directory followed by file not in directory"
 dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
 dir_name=$(echo "${dir_line}" | awk -F "${DELIM}" '{print $1}')
-bad_name=$(echo "${dir_name}/non-existant_dir/file${DELIM}${without_name}")
+bad_name="${dir_name}/non-existant_dir/file${DELIM}${without_name}"
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 

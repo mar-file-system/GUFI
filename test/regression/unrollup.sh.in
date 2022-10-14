@@ -118,59 +118,63 @@ setup() {
     dir="${parent}/dir${count}"
 
     mkdir -m "${perms}" "${dir}"
-    for i in $(seq "${count}")
+    for (( i = 1; i <= count; i++ ))
     do
         touch "${dir}/file${i}"
     done
 }
 
-mkdir ${TMP}                    # Level 1
+mkdir "${TMP}"                    # Level 1
 
-mkdir -m 007 ${TMP}/o+rx        # Level 2 007
-setup ${TMP}/o+rx 777 1         # Level 3 777 - 1 file
-setup ${TMP}/o+rx 077 2         # Level 3 077 - 2 files
-setup ${TMP}/o+rx 007 3         # Level 3 007 - 3 files
+mkdir -m 007 "${TMP}/o+rx"        # Level 2 007
+setup "${TMP}/o+rx" 777 1         # Level 3 777 - 1 file
+setup "${TMP}/o+rx" 077 2         # Level 3 077 - 2 files
+setup "${TMP}/o+rx" 007 3         # Level 3 007 - 3 files
 
-mkdir -m 777 ${TMP}/ugo         # Level 2 777
-setup ${TMP}/ugo 577 1          # Level 3 577 - 1 file
-setup ${TMP}/ugo 757 2          # Level 3 757 - 2 files
-setup ${TMP}/ugo 775 3          # Level 3 775 - 3 files
+mkdir -m 777 "${TMP}/ugo"         # Level 2 777
+setup "${TMP}/ugo" 577 1          # Level 3 577 - 1 file
+setup "${TMP}/ugo" 757 2          # Level 3 757 - 2 files
+setup "${TMP}/ugo" 775 3          # Level 3 775 - 3 files
 
-mkdir -m 770 ${TMP}/ug          # Level 2 770
-setup ${TMP}/ug 777 1           # Level 3 577 - 1 file
-setup ${TMP}/ug 770 2           # Level 3 757 - 2 files
-setup ${TMP}/ug 750 3           # Level 3 775 - 3 files
+mkdir -m 770 "${TMP}/ug"          # Level 2 770
+setup "${TMP}/ug" 777 1           # Level 3 577 - 1 file
+setup "${TMP}/ug" 770 2           # Level 3 757 - 2 files
+setup "${TMP}/ug" 750 3           # Level 3 775 - 3 files
 
-mkdir -m 700 ${TMP}/u           # Level 2 700
-setup ${TMP}/u 777 1            # Level 3 777 - 1 file
-setup ${TMP}/u 700 2            # Level 3 700 - 2 files
-setup ${TMP}/u 500 3            # Level 3 500 - 3 files
+mkdir -m 700 "${TMP}/u"           # Level 2 700
+setup "${TMP}/u" 777 1            # Level 3 777 - 1 file
+setup "${TMP}/u" 700 2            # Level 3 700 - 2 files
+setup "${TMP}/u" 500 3            # Level 3 500 - 3 files
 
-mkdir -m 777 ${SRCDIR}          # Level 0
+mkdir -m 777 "${SRCDIR}"          # Level 0
 
-cp -R ${TMP} ${SRCDIR}/o+rx     # Level 1
-chmod 007 ${SRCDIR}/o+rx
+cp -R "${TMP}" "${SRCDIR}/o+rx"     # Level 1
+chmod 007 "${SRCDIR}/o+rx"
 
-cp -R ${TMP} ${SRCDIR}/ugo      # Level 1
-chmod 777 ${SRCDIR}/ugo
+cp -R "${TMP}" "${SRCDIR}/ugo"      # Level 1
+chmod 777 "${SRCDIR}/ugo"
 
-cp -R ${TMP} ${SRCDIR}/ug       # Level 1
-chmod 770 ${SRCDIR}/ug
+cp -R "${TMP}" "${SRCDIR}/ug"       # Level 1
+chmod 770 "${SRCDIR}/ug"
 
-cp -R ${TMP} ${SRCDIR}/u        # Level 1
-chmod 700 ${SRCDIR}/u
+cp -R "${TMP}" "${SRCDIR}/u"        # Level 1
+chmod 700 "${SRCDIR}/u"
 
-rm -r ${TMP}
+rm -r "${TMP}"
 
 # add some xattrs
-for f in $(find ${SRCDIR} -type f)
-do
+add_xattrs() {
+    f="$1"
     count=$(echo "${f}" | grep -o "[0-9]*$")
-    for i in $(seq "${count}" )
+    for (( i = 1; i <= count; i++ ))
     do
-        os_setfattr "user.$(basename ${f})-${i}" "$(basename ${f})-${i}" "${f}"
+        # shellcheck disable=SC2086
+        os_setfattr user."$(basename ${f})-${i}" "$(basename ${f})-${i}" "${f}"
     done
-done
+}
+export -f add_xattrs
+
+find "${SRCDIR}" -type f -exec "${SHELL}" -c "add_xattrs $0" {} \;
 
 # generate the index
 run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""

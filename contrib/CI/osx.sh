@@ -69,14 +69,12 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 # Install GNU grep
 brew install grep
 brew --prefix grep
+# shellcheck disable=SC2016
 echo 'export PATH="$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"' >> ~/.bash_profile
 
 # install required packages
-brew install coreutils cmake mysql pcre python3 
+brew install coreutils cmake mysql pcre python3
 
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew install --cask osxfuse
-
-
-

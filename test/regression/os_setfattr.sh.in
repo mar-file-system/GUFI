@@ -62,6 +62,7 @@
 
 
 # source this file instead of using it as a command to only check OS once
+# shellcheck disable=SC2050
 if [[ "@CMAKE_SYSTEM_NAME@" == "Linux" ]]
 then
     os_setfattr() {
@@ -73,3 +74,5 @@ then
         @XATTR@ -w "$1" "$2" "$3"
     }
 fi
+
+export -f os_setfattr
