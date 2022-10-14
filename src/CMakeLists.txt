@@ -189,6 +189,8 @@ add_library(gufi_query_lib OBJECT
   gufi_query/xattrs.c
 )
 
+add_dependencies(gufi_query_lib GUFI)
+
 build_and_install_one(${BIN} TRUE gufi_query
   gufi_query/main.c
   $<TARGET_OBJECTS:gufi_query_lib>
