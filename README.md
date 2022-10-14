@@ -1,6 +1,10 @@
 # Grand Unified File-Index (GUFI)
 
-[![GitHub Actions](https://github.com/mar-file-system/GUFI/actions/workflows/cmake.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/cmake.yml)
+[![Core Tests](https://github.com/mar-file-system/GUFI/actions/workflows/test.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/test.yml)
+[![Auxiliary Checks](https://github.com/mar-file-system/GUFI/actions/workflows/check.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/check.yml)
+[![Documentation](https://github.com/mar-file-system/GUFI/actions/workflows/docs.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/docs.yml)
+[![RPMs](https://github.com/mar-file-system/GUFI/actions/workflows/rpm.yml/badge.svg)](https://github.com/mar-file-system/GUFI/actions/workflows/rpm.yml)
+
 [![Latest Release](https://img.shields.io/github/release/mar-file-system/GUFI.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/mar-file-system/GUFI/latest/total.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
 
