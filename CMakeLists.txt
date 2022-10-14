@@ -189,6 +189,7 @@ else()
 endif()
 
 set(PYTHON_INTERPRETER "python${Python_VERSION_MAJOR}" CACHE STRING "Python Interpreter")
+message(STATUS "Using Python Interpreter: ${PYTHON_INTERPRETER}")
 
 # Need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)

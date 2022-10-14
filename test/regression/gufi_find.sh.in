@@ -123,6 +123,8 @@ run_sort "${GUFI_FIND} -false"
 ) | @SED@ "
     s/ $(id -u)/ ${TEST_ID}/g;
     s/ $(id -un)/ ${TEST_NAME}/g;
+    s/ $(id -g)/ ${TEST_ID}/g;
+    s/ $(id -gn)/ ${TEST_NAME}/g;
     "
 
 # don't print sizes for directories and links
