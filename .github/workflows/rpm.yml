@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,31 +60,47 @@
 
 
 
-set -e
+name: RPMs
 
-# install rpmbuild
-yum install -y rpm-build
+on: [push, pull_request]
 
-# reconfigure CMake
-cmake @CMAKE_SOURCE_DIR@
+env:
+  CC: clang
+  CXX: clang++
+  DEP_INSTALL_PREFIX: ~/.local
+  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2
 
-# make the rpm
-make package
+jobs:
+  RPMs:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        client: [ Off, On ]
+    container:
+      image: centos:7
+    steps:
+    - uses: actions/checkout@v3
 
-# install the RPM
-yum install -y gufi-server-*.rpm
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-Client-${{ matrix.type }}
 
-# compare the configuration files
-@DIFF@ server.example /etc/GUFI/config.example
+    - name: CentOS 7 Prerequisites
+      run:  contrib/CI/centos7.sh
 
-# uninstall GUFI-Server
-yum autoremove -y GUFI-Server
+    - name: Configure CMake
+      run:  |
+            mkdir build
+            cd build
+            cmake .. ${{ env.COMMON_CONFIG }} -DCLIENT="${{ matrix.client }}"
 
-# upgrade pip to get the latest Python dependencies
-pip@Python_VERSION_MAJOR@ install --upgrade pip
+    - name: Test Generic RPM
+      if:   matrix.client == 'Off'
+      working-directory: build
+      run:  contrib/CI/generic_rpm.sh
 
-# install the client RPM
-yum install -y gufi-client-*.rpm
-
-# compare the configuration files
-@DIFF@ client.example /etc/GUFI/config.example
+    - name: Test Server amd Client RPMs
+      if:   matrix.client == 'On'
+      working-directory: build
+      run:  contrib/CI/rpms.sh

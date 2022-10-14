@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,31 +60,83 @@
 
 
 
-set -e
+name: Core Tests
 
-# install rpmbuild
-yum install -y rpm-build
+on: [push, pull_request]
 
-# reconfigure CMake
-cmake @CMAKE_SOURCE_DIR@
+env:
+  CC: clang
+  CXX: clang++
+  DEP_INSTALL_PREFIX: ~/.local
+  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On
 
-# make the rpm
-make package
+jobs:
+  Linux:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04" ]
+      fail-fast: true
+    container:
+      image: ${{ matrix.img }}
+    steps:
+    - uses: actions/checkout@v3
 
-# install the RPM
-yum install -y gufi-server-*.rpm
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-${{ matrix.img }}
 
-# compare the configuration files
-@DIFF@ server.example /etc/GUFI/config.example
+    - name: CentOS 7 Prerequisites
+      if:  matrix.img == 'centos:7'
+      run: contrib/CI/centos7.sh
 
-# uninstall GUFI-Server
-yum autoremove -y GUFI-Server
+    - name: CentOS 8 Prerequisites
+      if:  matrix.img == 'centos:8'
+      run: contrib/CI/centos8.sh
 
-# upgrade pip to get the latest Python dependencies
-pip@Python_VERSION_MAJOR@ install --upgrade pip
+    - name: Rocky Linux Prerequisites
+      if:  matrix.img == 'rockylinux:8'
+      run: contrib/CI/rocky.sh
 
-# install the client RPM
-yum install -y gufi-client-*.rpm
+    - name: Ubuntu 20.04 Prerequisites
+      if:  matrix.img == 'ubuntu:20.04'
+      run: contrib/CI/ubuntu.sh
 
-# compare the configuration files
-@DIFF@ client.example /etc/GUFI/config.example
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      run:  |
+            cd ${{ github.workspace }}/build
+            ctest --output-on-failure
+
+  macOS:
+    runs-on: macos-11
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}
+
+    - name: macOS 11 Prerequisites
+      run:  contrib/CI/osx.sh
+
+    - name: Configure CMake
+      run: |
+           source ~/.bash_profile
+           cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+
+    - name: Build
+      run: |
+           source ~/.bash_profile
+           cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run: ctest --output-on-failure

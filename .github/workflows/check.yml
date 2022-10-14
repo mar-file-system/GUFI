@@ -60,7 +60,7 @@
 
 
 
-name: GitHub Actions
+name: Auxiliary Checks
 
 on: [push, pull_request]
 
@@ -71,49 +71,6 @@ env:
   COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On
 
 jobs:
-  Linux:
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04" ]
-      fail-fast: true
-    container:
-      image: ${{ matrix.img }}
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-${{ matrix.img }}
-
-    - name: CentOS 7 Prerequisites
-      if:  matrix.img == 'centos:7'
-      run: contrib/CI/centos7.sh
-
-    - name: CentOS 8 Prerequisites
-      if:  matrix.img == 'centos:8'
-      run: contrib/CI/centos8.sh
-
-    - name: Rocky Linux Prerequisites
-      if:  matrix.img == 'rockylinux:8'
-      run: contrib/CI/rocky.sh
-
-    - name: Ubuntu 20.04 Prerequisites
-      if:  matrix.img == 'ubuntu:20.04'
-      run: contrib/CI/ubuntu.sh
-
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
-
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
-
-    - name: Test
-      run:  |
-            cd ${{ github.workspace }}/build
-            ctest --output-on-failure
-
   Older_CMake:
     runs-on: ubuntu-20.04
     container:
@@ -151,54 +108,6 @@ jobs:
            cd build
            ctest --output-on-failure
 
-  RPM:
-    runs-on: ubuntu-20.04
-    container:
-      image: centos:7
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-rpm
-
-    - name: CentOS 7 Prerequisites
-      run:  contrib/CI/centos7.sh
-
-    - name: Configure CMake
-      run:  |
-            mkdir -p build
-            cd build
-            cmake .. ${{ env.COMMON_CONFIG }}
-
-    - name: Test
-      run:  build/contrib/CI/generic_rpm.sh
-
-  Client:
-    runs-on: ubuntu-20.04
-    container:
-      image: centos:7
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-client
-
-    - name: CentOS 7 Prerequisites
-      run:  contrib/CI/centos7.sh
-
-    - name: Configure CMake
-      run: |
-           mkdir -p build
-           cd build
-           cmake .. ${{ env.COMMON_CONFIG }} -DCLIENT=On
-
-    - name: Test
-      run:  build/contrib/CI/rpms.sh
-
   DebugPrints:
     runs-on: ubuntu-20.04
     steps:
@@ -219,9 +128,8 @@ jobs:
       run:  cmake --build ${{ github.workspace }}/build -j
 
     - name: Test
-      run:  |
-            cd ${{ github.workspace }}/build
-            ctest --output-on-failure -L unit
+      working-directory: ${{ github.workspace }}/build
+      run:  ctest --output-on-failure -L unit
 
   Memcheck:
     runs-on: ubuntu-20.04
@@ -247,9 +155,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  |
-            cd ${{ github.workspace }}/build
-            valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
+      run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
 
   ShellCheck:
     runs-on: ubuntu-20.04
@@ -261,47 +167,3 @@ jobs:
 
     - name: Test
       run:  shellcheck -s bash -e SC1090,SC1091 $(find \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*")
-
-  Documentation:
-    runs-on: ubuntu-20.04
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Ubuntu:20.04 Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
-
-    - name: Install LaTeX
-      run:  sudo apt -y install texlive-latex-extra imagemagick
-
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build -DLATEX_BUILD=On
-
-    - name: Build PDFs
-      run:  cmake --build ${{ github.workspace }}/build --target gufi_user gufi_administrator gufi_developer
-
-  macOS:
-    runs-on: macos-11
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}
-
-    - name: macOS 11 Prerequisites
-      run:  contrib/CI/osx.sh
-
-    - name: Configure CMake
-      run: |
-           source ~/.bash_profile
-           cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
-
-    - name: Build
-      run: |
-           source ~/.bash_profile
-           cmake --build ${{ github.workspace }}/build -j
-
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run: ctest --output-on-failure

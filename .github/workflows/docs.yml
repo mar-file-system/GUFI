@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,31 +60,24 @@
 
 
 
-set -e
+name: Documentation
 
-# install rpmbuild
-yum install -y rpm-build
+on: [push, pull_request]
 
-# reconfigure CMake
-cmake @CMAKE_SOURCE_DIR@
+jobs:
+  Documentation:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
 
-# make the rpm
-make package
+    - name: Ubuntu:20.04 Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
 
-# install the RPM
-yum install -y gufi-server-*.rpm
+    - name: Install LaTeX
+      run:  sudo apt -y install texlive-latex-extra imagemagick
 
-# compare the configuration files
-@DIFF@ server.example /etc/GUFI/config.example
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build -DLATEX_BUILD=On
 
-# uninstall GUFI-Server
-yum autoremove -y GUFI-Server
-
-# upgrade pip to get the latest Python dependencies
-pip@Python_VERSION_MAJOR@ install --upgrade pip
-
-# install the client RPM
-yum install -y gufi-client-*.rpm
-
-# compare the configuration files
-@DIFF@ client.example /etc/GUFI/config.example
+    - name: Build PDFs
+      run:  cmake --build ${{ github.workspace }}/build --target gufi_user gufi_administrator gufi_developer

@@ -66,10 +66,8 @@ set -e
 # install rpmbuild
 yum install -y rpm-build
 
-cd build
-
 # reconfigure CMake
-cmake ..
+cmake @CMAKE_SOURCE_DIR@
 
 # make the rpm
 make package
