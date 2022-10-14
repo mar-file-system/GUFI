@@ -138,14 +138,14 @@ def build_select(args):
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
         select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + [
-                      '''(
-                          CASE
-                              WHEN (type == "l") THEN
-                                  ({0} || " -> " || linkname)
-                              ELSE
-                                  {0}
-                          END
-                         ) AS display_name'''.format(display_name)
+            '''(
+                CASE
+                    WHEN (type == "l") THEN
+                        ({0} || " -> " || linkname)
+                    ELSE
+                        {0}
+                    END
+               ) AS display_name'''.format(display_name)
         ]
     else:
         # at minimum, print the file name
@@ -179,7 +179,7 @@ def build_where(args, table, name = None):
                 where += ['{}name REGEXP "^(?![\.]).*$"'.format(table)]
 
         # -B: ignore files that end with ~
-        if args.ignore_backups == True:
+        if args.ignore_backups is True:
             where += ['{}name REGEXP "^.*(?<![\~])$"'.format(table)]
 
     return where
@@ -210,6 +210,7 @@ def run(argv, config_path):
     class FullTimeAction(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             super(FullTimeAction, self).__init__(option_strings, dest, 0, **kwargs)
+
         def __call__(self, parser, namespace, values, option_string=None):
             # --full-time
             #        like -l --time-style=full-iso
@@ -238,7 +239,7 @@ def run(argv, config_path):
     parser.add_argument('-t',                                     dest='mtime',          action='store_true',                              help='sort by modification time, newest first')
     parser.add_argument('-U',                                     dest='no_sort',        action='store_true',                              help='do not sort; list entries in directory order')
 
-    parser.add_argument('paths',                                                         type=str, action='append' , nargs='*')
+    parser.add_argument('paths',                                                         type=str, action='append', nargs='*')
 
     # GUFI specific arguments
     parser.add_argument('--nlink-width',    metavar='chars',      dest='nlink_width',    type=gufi_common.get_non_negative, default=2,     help='Width of nlink column')
@@ -248,7 +249,7 @@ def run(argv, config_path):
 
     gufi_common.add_common_args(parser)
 
-    args = parser.parse_args(argv[1:]);
+    args = parser.parse_args(argv[1:])
 
     # return code
     rc = 0
@@ -349,5 +350,5 @@ def run(argv, config_path):
 
     return rc
 
-if __name__=='__main__':
+if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

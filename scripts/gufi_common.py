@@ -64,11 +64,8 @@
 import argparse
 import grp
 import multiprocessing
-import os
 import pwd
 import re
-import subprocess
-import sys
 
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
@@ -78,14 +75,14 @@ def get_positive(value):
     '''Make sure the value is a positive integer.'''
     ivalue = int(value)
     if ivalue <= 0:
-         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
     return ivalue
 
 def get_non_negative(value):
     '''Make sure the value is a non-negative integer.'''
     ivalue = int(value)
     if ivalue < 0:
-         raise argparse.ArgumentTypeError("%s is an invalid non-negative int value" % value)
+        raise argparse.ArgumentTypeError("%s is an invalid non-negative int value" % value)
     return ivalue
 
 def get_char(value):
@@ -239,7 +236,7 @@ def cpus():
     try:
         return multiprocessing.cpu_count()
     except:
-        return 1;
+        return 1
 
 def add_common_args(parser):
     parser.add_argument('--delim',          metavar='c',          dest='delim',

@@ -61,9 +61,6 @@
 
 
 
-import os
-import sys
-
 # get root directory of GUFI
 root = "@CMAKE_BINARY_DIR@"
 

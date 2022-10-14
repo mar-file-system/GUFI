@@ -65,12 +65,10 @@ import os
 import sys
 import common
 
-
-
 def version_check(gufi_tool):
     if sys.version_info[0] < 3:
         import imp
-        
+
         gufi_script = imp.load_source(gufi_tool, os.path.join(common.root, 'scripts', gufi_tool))
         return gufi_script
 
@@ -81,13 +79,12 @@ def version_check(gufi_tool):
         from pathlib import Path
 
         # Get path to mymodule
-        script_dir = Path( __file__ ).parent
-        mymodule_path = str( script_dir.joinpath( '..', '..', 'scripts', gufi_tool) )
+        script_dir = Path(__file__).parent
+        mymodule_path = str(script_dir.joinpath('@CMAKE_BINARY_DIR@', 'scripts', gufi_tool))
 
         # Import mymodule
-        loader = importlib.machinery.SourceFileLoader( gufi_tool, mymodule_path )
-        spec = importlib.util.spec_from_loader( gufi_tool, loader )
-        gufi_script = importlib.util.module_from_spec( spec )
-        loader.exec_module( gufi_script )
+        loader = importlib.machinery.SourceFileLoader(gufi_tool, mymodule_path)
+        spec = importlib.util.spec_from_loader(gufi_tool, loader)
+        gufi_script = importlib.util.module_from_spec(spec)
+        loader.exec_module(gufi_script)
         return gufi_script
-        

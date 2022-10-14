@@ -61,12 +61,9 @@
 
 
 
-import argparse
 import getpass
-import os
 import sys
 
-import gufi_common
 import gufi_config
 
 def talk_to_server(config, args):
@@ -81,7 +78,7 @@ def talk_to_server(config, args):
 
         # connect to the server
         ssh.connect(hostname=config.server(),
-                    port=config.port()],
+                    port=config.port(),
                     username=getpass.getuser(),
                     hostkey=paramiko.opensshkey.load_pubkey_from_file('/etc/ssh/ssh_host_rsa_key.pub'))
 

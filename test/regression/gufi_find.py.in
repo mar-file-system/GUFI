@@ -66,6 +66,6 @@ import sys
 import common
 import version_control as vc
 
-if __name__=='__main__':
+if __name__ == '__main__':
     gufi_find = vc.version_check('gufi_find')
     sys.exit(gufi_find.run(sys.argv, common.config_path))

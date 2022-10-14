@@ -164,13 +164,13 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     if args.ctime is not None:
         where += ['({} - {}.ctime) / {} {} {} '.format(now, table, SECONDS_PER_DAY, ctime[0], ctime[1]) for ctime in args.ctime]
 
-    if args.empty == True:
+    if args.empty is True:
         where += ['{}.size == 0'.format(table), '({}.type == \'f\') OR ({}.type == \'d\')'.format(table, table)]
 
-    if args.executable == True:
+    if args.executable is True:
         where += ['({}.mode & 64) == 64'.format(table)] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
-    if args.false == True:
+    if args.false is True:
         where += ['0']
 
     if args.gid is not None:
@@ -215,14 +215,14 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
 
     # if args.newerXY is not None:
 
-    # if args.nouser == True:
+    # if args.nouser is True:
 
     # # not handled here
     # if args.path is not None:
 
     # if args.perm is not None:
 
-    if args.readable == True:
+    if args.readable is True:
         where += ['({}.mode & 256) == 256'.format(table)] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # # not handled here
@@ -234,7 +234,7 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     if args.size is not None:
         where += ['{}.size {} {}'.format(table, size[0], size[1]) for size in args.size]
 
-    if args.true == True:
+    if args.true is True:
         where += ['1']
 
     if args.type is not None:
@@ -251,7 +251,7 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
 
     # if args.wholename is not None:
 
-    if args.writable == True:
+    if args.writable is True:
         where += ['({}.mode & 128) == 128'.format(table)] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # if args.xtype is not None:
@@ -284,7 +284,7 @@ def build_order_by(args, table):
 def parse_escape(fmt, i):
     ret = fmt[i]
 
-    if   ret == 'a':
+    if ret == 'a':
         ret = '\a'
     elif ret == 'b':
         ret = '\b'
@@ -338,7 +338,7 @@ def parse_directives(table, fmt, fmt_len, i, path):
 
     ret = fmt[i]
 
-    if   ret == '%':
+    if ret == '%':
         ret = '\'%\''
     elif ret == 'a':
         ret = 'printf("%{}d", ' + '{}.atime)'.format(table)
@@ -425,7 +425,7 @@ def build_output(args, table):
                 cols += [column]
             else:
                 cols += ['"' + fmt[i] + '"']
-                i += 1;
+                i += 1
         output = ' || '.join(cols)
     else:
         output = path + ' || (CASE {0}.type WHEN "d" THEN "" ELSE "/" || {0}.name END)'.format(table)
@@ -447,7 +447,7 @@ def help(parser):
     for flag in gufi_specific:
         expr.remove(flag)
 
-    expr = [expr[i:i+5] for i in range(0, len(expr), 5)]
+    expr = [expr[i:i + 5] for i in range(0, len(expr), 5)]
 
     print('Usage: gufi_find [-P] [path...] [expression]\n' +
           '\n' +
@@ -495,7 +495,7 @@ def build_expression_parser():
     # parser.add_argument('-iregex',             metavar='pattern',    dest='iregex',                type=str,                                           help='Like -regex, but the match is case insensitive.')
     # parser.add_argument('-iwholename',         metavar='pattern',    dest='iwholename',            type=str,                                           help='Like -wholename, but the match is case insensitive.')
     parser.add_argument('-links',              metavar='n',          dest='links',                 type=numeric_arg, action='append',                  help='File has n links.')
-    parser.add_argument('-lname',              metavar='pattern',    dest='lname' ,                type=str,                                           help='File is a symbolic link whose contents match shell pattern pattern.')
+    parser.add_argument('-lname',              metavar='pattern',    dest='lname',                 type=str,                                           help='File is a symbolic link whose contents match shell pattern pattern.')
     parser.add_argument('-mmin',               metavar='n',          dest='mmin',                  type=numeric_arg, action='append',                  help='File\'s data was last modified n minutes ago.')
     parser.add_argument('-mtime',              metavar='n',          dest='mtime',                 type=numeric_arg, action='append',                  help='File\'s data was last modified n*24 hours ago.')
     parser.add_argument('-name',               metavar='pattern',    dest='name',                  type=str, action='append',                          help='Base of file name (the path with the leading directories removed) matches shell pattern pattern.')
@@ -702,5 +702,5 @@ def run(argv, config_path):
 
     return query.returncode
 
-if __name__=='__main__':
+if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

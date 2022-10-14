@@ -62,7 +62,6 @@
 
 
 import argparse
-import sys
 
 def generate_level_r(out, parent, dir_count, file_count, current_level, max_level, rs = chr(0x1e)):
     # generate all files first
@@ -150,7 +149,7 @@ def generate_level(out, root, dir_count, file_count, max_level, rs = chr(0x1e)):
               rs + '\n')
     generate_level_r(args.output, root, args.directories, args.files, 1, args.depth, args.separator)
 
-if __name__=='__main__':
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trace Generator')
     parser.add_argument('output',      type=argparse.FileType('w+b'), help='output file')
     parser.add_argument('directories', type=int,                      help='number of directories per directory')

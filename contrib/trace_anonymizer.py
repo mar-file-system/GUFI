@@ -145,7 +145,7 @@ def limit_int(args, column, used, lower, higher):
         # the same source column, so use the value
         if used[anon] == column:
             found = True
-            break;
+            break
 
         # this value has been previously assigned to a
         # different source column, so try another value
@@ -164,7 +164,7 @@ def char(c):
         raise argparse.ArgumentTypeError("Expected 1 character. Got {}.".format(len(c)))
     return c
 
-if __name__=='__main__':
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Column Anonymizer: Read from stdin. Output to stdout.')
     parser.add_argument('hash',              nargs='?',        default="BuiltInHash", choices=Hashes.keys(), help='Hash function name')
     parser.add_argument('-i', '--in-delim',  dest='in_delim',  default="\x1e",        type=char,             help='Input Column Delimiter')

@@ -201,7 +201,7 @@ def run(argv, config_path):
 
     parser.add_argument('path',                                                     type=str, nargs='+')
 
-    args = parser.parse_args(argv[1:]);
+    args = parser.parse_args(argv[1:])
 
     rc = 0
 
@@ -230,5 +230,5 @@ def run(argv, config_path):
 
     return rc
 
-if __name__=='__main__':
+if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

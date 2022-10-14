@@ -61,14 +61,17 @@
 
 
 
-import argparse
-import imp
 import os
+import sys
 
 import gufi_common
 
+if sys.version_info[0] == 2:
+    import exceptions
+    TypeError = exceptions.TypeError
+
 # default configuration file location
-DEFAULT_PATH='/etc/GUFI/config'
+DEFAULT_PATH = '/etc/GUFI/config'
 
 def _read_file(settings, f):
     out = {}
@@ -129,7 +132,7 @@ class Server:
         elif _check_iterable(file_reference):
             self.config = _read_file(Server.SETTINGS, file_reference)
         else:
-            raise exception.TypeError('Cannot convert {} to a Server config'.format(type(file_reference)))
+            raise TypeError('Cannot convert {} to a Server config'.format(type(file_reference)))
 
     def threads(self):
         return self.config[Server.THREADS]
@@ -160,7 +163,7 @@ class Client:
         elif _check_iterable(file_reference):
             self.config = _read_file(Client.SETTINGS, file_reference)
         else:
-            raise exception.TypeError('Cannot convert {} to a Client config'.format(type(file_reference)))
+            raise TypeError('Cannot convert {} to a Client config'.format(type(file_reference)))
 
     def server(self):
         return self.config[Client.SERVER]

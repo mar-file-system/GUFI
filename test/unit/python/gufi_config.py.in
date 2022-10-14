@@ -175,5 +175,5 @@ class gufi_config_client_combined(client, unittest.TestCase):
         self.pairs[gufi_config.Server.INDEXROOT]    = root,
         self.pairs[gufi_config.Server.OUTPUTBUFFER] = '1024'
 
-if __name__=='__main__':
+if __name__ == '__main__':
     unittest.main()

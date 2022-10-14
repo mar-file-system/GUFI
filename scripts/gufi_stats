@@ -62,7 +62,6 @@
 
 
 import argparse
-import itertools
 import os
 import subprocess
 import sys
@@ -102,9 +101,6 @@ def depth(config, args, where):
 
     using --recursive/-r here will search for all directories under the provided directory as well
     '''
-
-    root_slash_count = config.indexroot().count('/')
-    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT']),
@@ -152,8 +148,6 @@ def filesize(config, args, where):
     using --recursive here will get the size taken up by all of files in all subdirectories, without adding them
     '''
 
-    root_len = len(config.indexroot())
-
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
 
@@ -200,8 +194,6 @@ def entries_count(config, args, where, type):
     using --recursive here will get the number of <type> in all subdirectories, without adding them
     '''
 
-    root_len = len(config.indexroot())
-
     subquery = gufi_common.build_query(['COUNT(pentries.inode)'],
                                        ['pentries'],
                                        ['summary.inode == pentries.pinode',
@@ -238,8 +230,6 @@ def total_filesize(config, args, where):
 
     --cumulative collects all values and sums them instead of reporting by uid
     '''
-
-    root_len = len(config.indexroot())
 
     queries = []
     if args.cumulative:
@@ -392,8 +382,6 @@ def dircount(config, args, where):
     ############################################
     '''
 
-    root_len = len(config.indexroot())
-
     queries = [
         '-I', build_create(args.inmemory_name,
                            ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
@@ -485,8 +473,6 @@ def leaf_dirs(config, args, where):
     using --recursive/-r here will search for leaf directories under the provided directory as well
     '''
 
-    root_len = len(config.indexroot())
-
     queries = [
         '-I', build_create(args.inmemory_name,
                            ['name TEXT']),
@@ -535,7 +521,6 @@ def leaf_depth(config, args, where):
     '''
 
     root_slash_count = config.indexroot().count('/')
-    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name,
@@ -584,8 +569,6 @@ def leaf(config, args, where, type):
 
     using --recursive/-r here will search for leaf directories under the provided directory as well
     '''
-
-    root_len = len(config.indexroot())
 
     queries = [
         '-I', build_create(args.inmemory_name,
@@ -679,10 +662,10 @@ def total_leaf(config, args, where, type):
     return queries
 
 def total_leaf_files(config, args, where):
-    return total_leaf(config, args, where, 'f');
+    return total_leaf(config, args, where, 'f')
 
 def total_leaf_links(config, args, where):
-    return total_leaf(config, args, where, 'l');
+    return total_leaf(config, args, where, 'l')
 
 def median_leaf_files(config, args, where):
     '''
@@ -746,10 +729,7 @@ def average_leaf(config, args, where, type):
                            ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL',
-                                                                  'uid',
-                                                                  '({}) AS count'.format(count)
-                                                              ],
+                                         gufi_common.build_query(['NULL', 'uid', '({}) AS count'.format(count)],
                                                                  ['summary'],
                                                                  where + ['nlink == 2'],
                                                                  None,
@@ -859,9 +839,6 @@ def dirs_per_level(config, args, where):
 def duplicate_names(config, args, where):
     columns = ['name', 'type', 'inode', 'mode', 'size']
 
-    root = os.path.normpath(config.indexroot())
-    root_len = len(root)
-
     queries = [
         '-I', build_create(args.inmemory_name,
                            ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT',
@@ -970,7 +947,7 @@ def run(argv, config_path):
 
     gufi_common.add_common_args(parser)
 
-    args = parser.parse_args(argv[1:]);
+    args = parser.parse_args(argv[1:])
 
     # check args
     if args.recursive and (args.stat in CUMULATIVE):
@@ -997,5 +974,5 @@ def run(argv, config_path):
 
     return query.returncode
 
-if __name__=='__main__':
+if __name__ == '__main__':
     sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))
