@@ -223,6 +223,34 @@ jobs:
             cd ${{ github.workspace }}/build
             ctest --output-on-failure -L unit
 
+  Memcheck:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-memcheck
+
+    - name: Ubuntu 20.04 Prerequisites
+      run: sudo contrib/CI/ubuntu.sh
+
+    - name: Install Valgrind
+      run: sudo apt -y install valgrind
+
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DPRINT_PER_THREAD_STATS=On -DPRINT_QPTPOOL_QUEUE_SIZE=On -DPRINT_SUBDIRECTORY_COUNTS=On
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run:  |
+            cd ${{ github.workspace }}/build
+            valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
+
   Documentation:
     runs-on: ubuntu-20.04
     steps:
