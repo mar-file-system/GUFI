@@ -111,7 +111,9 @@ static void *worker_function(void *args) {
     /*     return NULL; */
     /* } */
 
-    QPTPoolThreadData_t *tw = &ctx->data[wf_args->id];
+    const size_t id = wf_args->id;
+
+    QPTPoolThreadData_t *tw = &ctx->data[id];
 
     while (1) {
         timestamp_start(wf_sll_init);
@@ -176,18 +178,18 @@ static void *worker_function(void *args) {
 
         timestamp_start(wf_get_queue_head);
         sll_node_t *w = sll_head_node(&work);
-        timestamp_end(ctx->buffers, wf_args->id, "wf_get_queue_head", wf_get_queue_head);
+        timestamp_end(ctx->buffers, id, "wf_get_queue_head", wf_get_queue_head);
 
         while (w) {
             timestamp_start(wf_process_work);
             struct queue_item *qi = sll_node_data(w);
 
-            tw->threads_successful += !qi->func(ctx, wf_args->id, qi->work, ctx->args);
-            timestamp_end(ctx->buffers, wf_args->id, "wf_process_work", wf_process_work);
+            tw->threads_successful += !qi->func(ctx, id, qi->work, ctx->args);
+            timestamp_end(ctx->buffers, id, "wf_process_work", wf_process_work);
 
             timestamp_start(wf_next_work);
             w = sll_next_node(w);
-            timestamp_end(ctx->buffers, wf_args->id, "wf_next_work", wf_next_work);
+            timestamp_end(ctx->buffers, id, "wf_next_work", wf_next_work);
 
             work_count++;
         }
@@ -204,13 +206,13 @@ static void *worker_function(void *args) {
         timestamp_set_end(wf_cleanup);
 
         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-        timestamp_print(ctx->buffers, wf_args->id, "wf_sll_init",       wf_sll_init);
-        timestamp_print(ctx->buffers, wf_args->id, "wf_tw_mutex_lock",  wf_tw_mutex_lock);
-        timestamp_print(ctx->buffers, wf_args->id, "wf_ctx_mutex_lock", wf_ctx_mutex_lock);
-        timestamp_print(ctx->buffers, wf_args->id, "wf_wait",           wf_wait);
-        timestamp_print(ctx->buffers, wf_args->id, "wf_move",           wf_move_queue);
-        timestamp_print(ctx->buffers, wf_args->id, "wf_process_queue",  wf_process_queue);
-        timestamp_print(ctx->buffers, wf_args->id, "wf_cleanup",        wf_cleanup);
+        timestamp_print(ctx->buffers, id, "wf_sll_init",       wf_sll_init);
+        timestamp_print(ctx->buffers, id, "wf_tw_mutex_lock",  wf_tw_mutex_lock);
+        timestamp_print(ctx->buffers, id, "wf_ctx_mutex_lock", wf_ctx_mutex_lock);
+        timestamp_print(ctx->buffers, id, "wf_wait",           wf_wait);
+        timestamp_print(ctx->buffers, id, "wf_move",           wf_move_queue);
+        timestamp_print(ctx->buffers, id, "wf_process_queue",  wf_process_queue);
+        timestamp_print(ctx->buffers, id, "wf_cleanup",        wf_cleanup);
         #endif
     }
 
@@ -218,13 +220,11 @@ static void *worker_function(void *args) {
     for(size_t i = 0; i < ctx->nthreads; i++) {
         pthread_cond_broadcast(&ctx->data[i].cv);
     }
-    timestamp_end(ctx->buffers, wf_args->id, "wf_broadcast", wf_broadcast);
+    timestamp_end(ctx->buffers, id, "wf_broadcast", wf_broadcast);
 
-    free(args);
+    free(wf_args);
 
-    timestamp_end(ctx->buffers,
-                  wf_args->id, "wf",
-                  wf);
+    timestamp_end(ctx->buffers, id, "wf", wf);
 
     return NULL;
 }
