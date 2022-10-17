@@ -1,7 +1,7 @@
 # generate the tree
 $ generatetree "prefix"
 
-# generate the trace
+# generate the trace (multiple threads)
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 
 # generate the index
@@ -10,6 +10,22 @@ Files: 15
 Dirs:  5 (0 empty)
 Total: 20
 
+# generate the trace (single thread)
+$ gufi_dir2trace -d "|" -n 1 -x "prefix" "trace"
+
+# missing trace (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Could not open file badtrace
+badtrace Fail
+
+# too few input arguments (Fail)
+$ verifytraceintree
+Syntax: verifytraceintree trace delim GUFI_tree [threads]
+
+# bad thread count (Fail)
+$ verifytraceintree "badtrace" "|" "prefix" threads
+Error: Bad thread count: threads
+
 # verify that all entries in the trace can be found in the GUFI tree (Pass)
 $ verifytraceintree "trace" "|" "prefix"
 Files: 15
@@ -17,20 +33,134 @@ Dirs:  5 (0 empty)
 Total: 20
 trace Pass
 
-# replace a file name (Fail)
+# first line bad delimiter (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 15
-Dirs:  5 (0 empty)
-Total: 20
-Did not find expected entry "an_empty_file" in prefix/db.db
-Did not get 7 entries.
+Could not find delimiter of first line
 badtrace Fail
 
-# replace a directory name (Fail)
+# second line bad delimiter (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Could not find delimiter of next line
+Files: 0
+Dirs:  1 (0 empty)
+Total: 1
+badtrace Fail
+
+# first line is not a directory (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+First line of trace is not a directory
+badtrace Fail
+
+# directory add trailing slashes (Pass)
+$ verifytraceintree "trace.copy" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+trace.copy Pass
+
+# directory does not exist (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Files: 15
 Dirs:  5 (0 empty)
 Total: 20
-Parent doesn't exist: prefix/directory/subdir
+Source path listed in trace doesn't exist: prefix/directory/subdir
 badtrace Fail
+
+# path exists, but is not directory (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Files: 14
+Dirs:  5 (0 empty)
+Total: 19
+Source path listed in trace is not a directory: prefix/.hidden
+badtrace Fail
+
+# directory permission mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+Permission mismatch on directory: prefix
+badtrace Fail
+
+# directory uid mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+UID mismatch on directory: prefix
+badtrace Fail
+
+# directory gid mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+GID mismatch on directory: prefix
+badtrace Fail
+
+# missing db.db (Fail)
+$ verifytraceintree "trace" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+Could not open database file: prefix/db.db
+trace Fail
+
+# file name mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Did not find entry with name "an_empty_file" in prefix/db.db
+Did not get 7 matching entries.
+Dirs:  5 (0 empty)
+Files: 15
+Total: 20
+badtrace Fail
+
+# file permissions mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+Permission mismatch on entry ".hidden" in prefix/db.db
+Permission mismatch on entry "1KB" in prefix/db.db
+Permission mismatch on entry "1MB" in prefix/db.db
+Permission mismatch on entry "empty_file" in prefix/db.db
+Permission mismatch on entry "old_file" in prefix/db.db
+Permission mismatch on entry "repeat_name" in prefix/db.db
+Did not get 7 matching entries.
+badtrace Fail
+
+# file uid mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Did not get 7 matching entries.
+Dirs:  5 (0 empty)
+Files: 15
+Total: 20
+UID mismatch on entry ".hidden" in prefix/db.db
+UID mismatch on entry "1KB" in prefix/db.db
+UID mismatch on entry "1MB" in prefix/db.db
+UID mismatch on entry "empty_file" in prefix/db.db
+UID mismatch on entry "old_file" in prefix/db.db
+UID mismatch on entry "repeat_name" in prefix/db.db
+badtrace Fail
+
+# file gid mismatch (Fail)
+$ verifytraceintree "badtrace" "|" "prefix"
+Did not get 7 matching entries.
+Dirs:  5 (0 empty)
+Files: 15
+GID mismatch on entry ".hidden" in prefix/db.db
+GID mismatch on entry "1KB" in prefix/db.db
+GID mismatch on entry "1MB" in prefix/db.db
+GID mismatch on entry "empty_file" in prefix/db.db
+GID mismatch on entry "old_file" in prefix/db.db
+GID mismatch on entry "repeat_name" in prefix/db.db
+Total: 20
+badtrace Fail
+
+# empty line (Pass)
+$ verifytraceintree "trace.copy" "|" "prefix"
+Files: 15
+Dirs:  5 (0 empty)
+Total: 20
+trace.copy Pass
 

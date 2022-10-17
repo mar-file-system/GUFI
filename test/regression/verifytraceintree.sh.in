@@ -65,14 +65,24 @@ set -e
 
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# output directories
+# column indicies for awk (1 based)
+AWK_TYPE=2
+AWK_MODE=4
+AWK_UID=6
+AWK_GID=7
+
+NEXT_UID=$((UID + 1))
+NEXT_GID=$((GID + 1))
+
+COPY="${TRACE}.copy"
 BADTRACE="badtrace"
 
 # trace delimiter
 DELIM="|"
+BADDELIM="\x1E"
 
 cleanup() {
-    rm -rf "${BADTRACE}"
+    rm -rf "${COPY}" "${BADTRACE}"
 }
 
 cleanup_exit() {
@@ -90,23 +100,114 @@ OUTPUT="verifytraceintree.out"
 echo "# generate the tree"
 run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
-echo "# generate the trace"
+echo "# generate the trace (multiple threads)"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 cat "${TRACES[@]}" > "${TRACE}"
 
 echo "# generate the index"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\" | tail -n 4 | head -n 3"
 
+echo "# generate the trace (single thread)"
+rm -rf "${TRACES[@]}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 1 -x \"${SRCDIR}\" \"${TRACE}\""
+# force order of trace file
+{
+    grep "^${SRCDIR}${DELIM}"              "${TRACE}.0"
+    grep "^${SRCDIR}/.hidden${DELIM}"      "${TRACE}.0"
+    grep "^${SRCDIR}/1KB${DELIM}"          "${TRACE}.0"
+    grep "^${SRCDIR}/1MB${DELIM}"          "${TRACE}.0"
+    grep "^${SRCDIR}/empty_file${DELIM}"   "${TRACE}.0"
+    grep "^${SRCDIR}/file_symlink${DELIM}" "${TRACE}.0"
+    grep "^${SRCDIR}/old_file${DELIM}"     "${TRACE}.0"
+    grep "^${SRCDIR}/repeat_name${DELIM}"  "${TRACE}.0"
+    grep "^${SRCDIR}/directory.*${DELIM}" "${TRACE}.0"
+    grep "^${SRCDIR}/leaf.*${DELIM}" "${TRACE}.0"
+    grep "^${SRCDIR}/unusual.*${DELIM}"    "${TRACE}.0"
+} > "${TRACE}"
+
+echo "# missing trace (Fail)"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# too few input arguments (Fail)"
+run_no_sort "${VERIFYTRACEINTREE}"
+
+echo "# bad thread count (Fail)"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\" threads"
+
 echo "# verify that all entries in the trace can be found in the GUFI tree (Pass)"
 run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# replace a file name (Fail)"
-sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
+echo "# first line bad delimiter (Fail)"
+awk -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "d" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# replace a directory name (Fail)"
+echo "# second line bad delimiter (Fail)"
+awk -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "f" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# first line is not a directory (Fail)"
+tail -n +2 "${TRACE}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# directory add trailing slashes (Pass)"
+sed "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
+run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# directory does not exist (Fail)"
 sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# path exists, but is not directory (Fail)"
+(
+    # remove the first line and convert the second line into a directory
+    head -n 2 "${TRACE}" | tail -n 1 | sed "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
+    tail -n +3 "${TRACE}"
+) > "${BADTRACE}"
+filename=$(echo -n "${INDEXTARGET}/"; head -n 1 "${BADTRACE}" | awk -F "${DELIM}" '{ printf $1 }')
+touch "${filename}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+rm "${filename}"
+
+echo "# directory permission mismatch (Fail)"
+awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "d" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# directory uid mismatch (Fail)"
+awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# directory gid mismatch (Fail)"
+awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# missing db.db (Fail)"
+mv "${INDEXROOT}/db.db" "${INDEXROOT}/db.db.bak"
+run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
+
+echo "# file name mismatch (Fail)"
+sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
+run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# file permissions mismatch (Fail)"
+awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "f" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# file uid mismatch (Fail)"
+awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# file gid mismatch (Fail)"
+awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
+
+echo "# empty line (Pass)"
+(
+    echo
+    cat "${TRACE}"
+    echo
+) > "${COPY}"
+run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${INDEXTARGET}\""
 ) |& @SED@ '/qptpool.*/d' |@TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"

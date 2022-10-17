@@ -93,16 +93,35 @@ struct StanzaStart {
     std::size_t entries;
 };
 
-int count_callback(void * arg, int, char **, char **) {
-    int * count = (int *) arg;
-    (void) (*count)++;
+struct CallbackArgs {
+    CallbackArgs()
+        : count(0),
+          st()
+        {}
+    std::size_t count;
+    struct stat st;
+};
+
+int callback(void *arg, int, char **data, char **) {
+    static const int mode_col = 0;
+    static const int uid_col  = 1;
+    static const int gid_col  = 2;
+
+    CallbackArgs *ca = (CallbackArgs *) arg;
+    ca->count++;
+
+    // assume no errors
+    sscanf(data[mode_col], "%d", &ca->st.st_mode);
+    sscanf(data[uid_col],  "%d", &ca->st.st_uid);
+    sscanf(data[gid_col],  "%d", &ca->st.st_gid);
+
     return 0;
 }
 
 struct CheckStanzaArgs {
     CheckStanzaArgs(const std::size_t threads,
                     std::atomic_bool & correct,
-                    char * delim,
+                    char *delim,
                     const std::string & tree)
         : threads(threads),
           correct(correct),
@@ -112,23 +131,23 @@ struct CheckStanzaArgs {
     {}
 
     ~CheckStanzaArgs() {
-        for(std::istream * trace : traces) {
+        for(std::istream *trace : traces) {
             delete trace;
         }
     }
 
     const std::size_t threads;
     std::atomic_bool & correct;
-    char * delim;
+    char *delim;
     const std::string & tree;
     std::vector <std::istream *> traces;
 };
 
-int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
-    struct CheckStanzaArgs * csa = static_cast <struct CheckStanzaArgs *> (args);
+int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
+    struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (args);
     std::istream & trace = *(csa->traces[id]);
 
-    struct StanzaStart * sa = static_cast <struct StanzaStart *> (data);
+    struct StanzaStart *sa = static_cast <struct StanzaStart *> (data);
 
     // stop early
     if (!csa->correct) {
@@ -140,16 +159,18 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
     std::string parent = csa->tree + "/" + sa->line.substr(0, sa->first_delim);
 
     // remove trailing /
-    if (parent[parent.size() - 1] == '/') {
-        parent.resize(parent.size() - 1);
+    std::size_t parent_len = parent.size();
+    while (parent_len && (parent[parent_len - 1] == '/')) {
+        parent_len--;
     }
+    parent.resize(parent_len);
 
     // check the parent directory's properties
     {
         // make sure the path exists
         struct stat st;
         if (stat(parent.c_str(), &st) != 0) {
-            std::cerr << "Parent doesn't exist: " << parent << std::endl;
+            std::cerr << "Source path listed in trace doesn't exist: " << parent << std::endl;
             csa->correct = false;
             delete sa;
             return 1;
@@ -157,7 +178,7 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
 
         // make sure the path is a directory
         if (!S_ISDIR(st.st_mode)) {
-            std::cerr << "Parent is not a directory: " << parent << std::endl;
+            std::cerr << "Source path listed in trace is not a directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
             return 1;
@@ -172,7 +193,7 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
 
         // make sure the permissions are correct
         if (st.st_mode != work.statuso.st_mode) {
-            std::cerr << "Parent permission is incorrect:" << parent << std::endl;
+            std::cerr << "Permission mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
             return 1;
@@ -180,7 +201,7 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
 
         // make sure the uid is correct
         if (st.st_uid != work.statuso.st_uid) {
-            std::cerr << "Parent uid incorrect: " << parent << std::endl;
+            std::cerr << "UID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
             return 1;
@@ -188,7 +209,7 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
 
         // make sure the gid is correct
         if (st.st_gid != work.statuso.st_gid) {
-            std::cerr << "Parent gid incorrect: " << parent << std::endl;
+            std::cerr << "GID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
             return 1;
@@ -204,7 +225,7 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
     }
 
     // open the database file
-    sqlite3 * db = nullptr;
+    sqlite3 *db = nullptr;
     if (sqlite3_open_v2(db_name.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
         std::cerr << "Could not open database file: " << db_name << std::endl;
         csa->correct = false;
@@ -227,12 +248,12 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
             break;
         }
 
-        const std::string::size_type first_delim = line.find(csa->delim[0]);
-        if (sa->first_delim == std::string::npos) {
-            std::cerr << "Missing delimiter: " << line << std::endl;
-            rc = 1;
-            break;
+        if (!line.size()) {
+            continue;
         }
+
+        // can't get npos here
+        const std::string::size_type first_delim = line.find(csa->delim[0]);
 
         // stop when a directory is encountered (new stanza)
         if (line[first_delim + 1] == 'd') {
@@ -251,24 +272,41 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
         xattrs_cleanup(&work.xattrs);
 
         // extract the basename from the entry name
-        char * bufbase = basename(work.name);
+        char *bufbase = basename(work.name);
 
         // query the database for the current entry
         char sql[MAXSQL];
-        snprintf(sql, MAXSQL, "SELECT * FROM entries WHERE (name == '%s') AND (uid == %d) AND (gid == %d);", bufbase, work.statuso.st_uid, work.statuso.st_gid);
-        int results = 0;
-        char * err = nullptr;
-        if (sqlite3_exec(db, sql, count_callback, &results, &err) != SQLITE_OK) {
+        snprintf(sql, MAXSQL, "SELECT mode, uid, gid FROM entries WHERE name == '%s';", bufbase);
+        CallbackArgs ca;
+        char *err = nullptr;
+        if (sqlite3_exec(db, sql, callback, &ca, &err) != SQLITE_OK) {
             std::cerr << "SQLite error: " << err << ": " << sql << std::endl;
             sqlite3_free(err);
-            rc = 1;
-            break;
+            continue;
         }
 
-        if (results != 1) {
-            std::cerr << "Did not find expected entry \"" << bufbase << "\" in " <<  db_name << std::endl;
-            rc = 1;
-            break;
+        if (ca.count != 1) {
+            std::cerr << "Did not find entry with name \"" << bufbase << "\""
+                      << " in " << db_name << std::endl;
+            continue;
+        }
+
+        if (ca.st.st_mode != work.statuso.st_mode) {
+            std::cerr << "Permission mismatch on entry \"" << bufbase << "\""
+                      << " in " << db_name << std::endl;
+            continue;
+        }
+
+        if (ca.st.st_uid != work.statuso.st_uid) {
+            std::cerr << "UID mismatch on entry \"" << bufbase << "\""
+                      << " in " << db_name << std::endl;
+            continue;
+        }
+
+        if (ca.st.st_gid != work.statuso.st_gid) {
+            std::cerr << "GID mismatch on entry \"" << bufbase << "\""
+                      << " in " << db_name << std::endl;
+            continue;
         }
 
         entries++;
@@ -279,7 +317,7 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
     // previously counted entries should be the
     // same as the number encountered here
     if (sa->entries != entries) {
-        std::cerr << "Did not get " << sa->entries << " entries." << std::endl;
+        std::cerr << "Did not get " << sa->entries << " matching entries." << std::endl;
         rc = 1;
     }
 
@@ -292,17 +330,16 @@ int check_stanza(QPTPool_t *, const size_t id, void * data, void * args) {
     return rc;
 }
 
-
 // find first occurance of the delimiter
-std::string::size_type parsefirst(const char delim, struct StanzaStart * work) {
+std::string::size_type parsefirst(const char delim, struct StanzaStart *work) {
     return (work->first_delim = work->line.find(delim));
 }
 
-int scout_function(QPTPool_t *ctx, const size_t id, void * data, void * args) {
-    struct CheckStanzaArgs * csa = static_cast <struct CheckStanzaArgs *> (args);
+int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+    struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (args);
     csa->correct = false;
 
-    char * filename = static_cast <char *> (data);
+    char *filename = static_cast <char *> (data);
 
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
@@ -320,13 +357,22 @@ int scout_function(QPTPool_t *ctx, const size_t id, void * data, void * args) {
         }
     }
 
-    struct StanzaStart * curr = new struct StanzaStart();
-    if (!std::getline(file, curr->line)) {
+    struct StanzaStart *curr = new struct StanzaStart();
+    while (!curr->line.size()) {
+        if (!std::getline(file, curr->line)) {
+            delete curr;
+            return 1;
+        }
+    }
+
+    if (parsefirst(csa->delim[0], curr) == std::string::npos) {
+        std::cerr << "Could not find delimiter of first line" << std::endl;
         delete curr;
         return 1;
     }
 
-    if (parsefirst(csa->delim[0], curr) == std::string::npos) {
+    if (curr->line[curr->first_delim + 1] != 'd') {
+        std::cerr << "First line of trace is not a directory" << std::endl;
         delete curr;
         return 1;
     }
@@ -344,10 +390,11 @@ int scout_function(QPTPool_t *ctx, const size_t id, void * data, void * args) {
             continue;
         }
 
-        struct StanzaStart * next = new struct StanzaStart();
+        struct StanzaStart *next = new struct StanzaStart();
         next->line = std::move(line);
 
         if (parsefirst(csa->delim[0], next) == std::string::npos) {
+            std::cerr << "Could not find delimiter of next line" << std::endl;
             delete curr;
             delete next;
             csa->correct = false;
@@ -384,22 +431,19 @@ int scout_function(QPTPool_t *ctx, const size_t id, void * data, void * args) {
     return 0;
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     if (argc < 4) {
         std::cerr << "Syntax: " << argv[0] << " trace delim GUFI_tree [threads]" << std::endl;
         return 0;
     }
 
-    char * trace = argv[1];
-    char * delim = argv[2];
+    char *trace = argv[1];
+    char *delim = argv[2];
     const std::string GUFI_tree = argv[3];
 
     std::size_t threads = 1;
     if (argc > 4) {
-        std::stringstream s;
-        s << argv[4];
-
-        if (!(s >> threads)) {
+        if (!(std::stringstream(argv[4]) >> threads)) {
             std::cerr << "Error: Bad thread count: " << argv[4] << std::endl;
             return 1;
         }
@@ -408,7 +452,7 @@ int main(int argc, char * argv[]) {
     std::atomic_bool correct(false);
     struct CheckStanzaArgs csa(threads, correct, delim, GUFI_tree);
 
-    QPTPool_t * ctx = QPTPool_init(threads, &csa, nullptr, nullptr
+    QPTPool_t *ctx = QPTPool_init(threads, &csa, nullptr, nullptr
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , nullptr
                                    #endif
