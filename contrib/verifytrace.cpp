@@ -74,13 +74,12 @@ typedef std::map <std::string, std::pair<std::string, std::string> > Tree;
 
 static bool verify_stanza(std::istream & stream, Tree & tree, const char delim = '\x1e', const char dir = 'd') {
     std::string line;
-    if (!std::getline(stream, line)) {
-        return false;
-    }
 
     // empty lines are not errors
-    if (!line.size()) {
-        return true;
+    while (!line.size()) {
+        if (!std::getline(stream, line)) {
+            return false; // break calling loop
+        }
     }
 
     // there should be at least one delimiter
@@ -91,10 +90,13 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
     }
 
     // need at least 23 columns
-    const int columns = std::count(line.begin(), line.end(), delim);
+    const std::size_t columns = std::count(line.begin(), line.end(), delim);
     if (columns < 23) {
         std::cerr << "Error: Not enough columns: " << line << std::endl;
         return false;
+    }
+    else if (columns > 23) {
+        std::cerr << "Warning: Too many columns: " << line << std::endl;
     }
 
     // expect to start at a directory
@@ -103,9 +105,9 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         return false;
     }
 
-    std::string::size_type len = first_delim;
     // remove trailing slashes
-    while (len && (line[len] == '/')) {
+    std::string::size_type len = first_delim;
+    while (len && (line[len - 1] == '/')) {
         len--;
     }
 
@@ -117,18 +119,14 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
     const std::string inode = line.substr(second_delim + 1, third_delim - second_delim - 1);
 
     // find the pinode
-    const std::string::size_type last_delim = line.find_last_of(delim);
-    if (last_delim != (line.size() - 1)) {
-        std::cerr << "Warning: Trailing characters present" << std::endl;
+    static const std::size_t pinode_col = 22;
+    std::string::size_type pinode_pos = third_delim + 1;
+    for(size_t i = 3; (i < pinode_col) && (pinode_pos < std::string::npos); i++) {
+        pinode_pos = line.find(delim, pinode_pos + 1);
     }
+    pinode_pos++;
 
-    const std::string::size_type pinode_delim = line.find_last_of(delim, last_delim - 1);
-    if (pinode_delim <= (first_delim + 2)) {
-        std::cerr << "Error: Could not find parent pinode: " << line << std::endl;
-        return false;
-    }
-
-    const std::string pinode = line.substr(pinode_delim + 1, last_delim - pinode_delim - 1);
+    const std::string pinode = line.substr(pinode_pos, line.find(delim, pinode_pos + 1) - pinode_pos);
     if (!std::all_of(pinode.begin(), pinode.end(), ::isdigit)) { // don't use std::isdigit since it takes an int, but *it is a char
         std::cerr << "Error: Bad parent pinode: " << line << std::endl;
         return false;
@@ -145,13 +143,12 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
     while (true) {
         const std::streampos pos = stream.tellg();
 
-        if (!std::getline(stream, line)) {
-            break;
-        }
-
         // empty lines are not errors
-        if (!line.size()) {
-            continue;
+        line = "";
+        while (!line.size()) {
+            if (!std::getline(stream, line)) {
+                return false; // break calling loop
+            }
         }
 
         // there should be at least one delimiter
@@ -166,6 +163,9 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         if (columns < 23) {
             std::cerr << "Error: Not enough columns: " << line << std::endl;
             return false;
+        }
+        else if (columns > 23) {
+            std::cerr << "Warning: Too many columns: " << line << std::endl;
         }
 
         // stop when a directory is encountered (new stanza)
@@ -189,19 +189,14 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
             return false;
         }
 
-        const std::string::size_type last_delim = line.find_last_of(delim);
-        if (last_delim != (line.size() - 1)) {
-            std::cerr << "Warning: Trailing characters present" << std::endl;
+        std::string::size_type pinode_pos = 0;
+        for(size_t i = 0; (i < pinode_col) && (pinode_pos < std::string::npos); i++) {
+            pinode_pos = line.find(delim, pinode_pos + 1);
         }
-
-        const std::string::size_type pinode_delim = line.find_last_of(delim, last_delim - 1);
-        if (pinode_delim <= (first_delim + 2)) {
-            std::cerr << "Error: Could not find child pinode: " << line << std::endl;
-            return false;
-        }
+        pinode_pos++;
 
         // make sure the child pinode is 0
-        const std::string pinode = line.substr(pinode_delim + 1, last_delim - pinode_delim - 1);
+        const std::string pinode = line.substr(pinode_pos, line.find(delim, pinode_pos + 1) - pinode_pos);
         if (pinode != "0") {
             std::cerr << "Error: Bad child pinode: " << line << std::endl;
             return false;
@@ -214,10 +209,10 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
 static std::string dirname(const std::string & path) {
     std::string::size_type len = path.size();
 
-    // remove trailing slashes
-    while (len && (path[len - 1] == '/')) {
-        len--;
-    }
+    // // remove trailing slashes
+    // while (len && (path[len - 1] == '/')) {
+    //     len--;
+    // }
 
     // find parent (remove basename)
     while (len && (path[len - 1] != '/')) {
@@ -262,10 +257,10 @@ static std::size_t complete_tree(const Tree & tree) {
 }
 
 static bool verify_trace(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
-    if (!stream) {
-        std::cerr << "Bad stream" << std::endl;
-        return false;
-    }
+    // if (!stream) {
+    //     std::cerr << "Bad stream" << std::endl;
+    //     return false;
+    // }
 
     Tree tree;
 

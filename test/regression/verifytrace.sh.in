@@ -64,12 +64,25 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# output directories
+COPY="${TRACE}.copy"
 BADTRACE="badtrace"
 
 # trace delimiter
 DELIM="|"
 BADDELIM="?"
+
+cleanup() {
+    rm -rf "${COPY}" "${BADTRACE}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
 
 OUTPUT="verifytrace.out"
 
@@ -90,23 +103,94 @@ sed -i "s/^leaf_directory${DELIM}d${DELIM}.*\$/leaf_directory${DELIM}d${DELIM}4$
 sed -i "s/^directory${DELIM}d${DELIM}.*\$/directory${DELIM}d${DELIM}2${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}1${DELIM}/g" "${TRACE}"
 sed -i "s/^directory\\/subdirectory${DELIM}d${DELIM}.*\$/directory\\/subdirectory${DELIM}d${DELIM}3${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}0${DELIM}${DELIM}${DELIM}2${DELIM}/g" "${TRACE}"
 
+echo "# not enough argumnets "
+run_no_sort "${VERIFYTRACE}"
+
 echo "# valid trace"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${TRACE}\""
 
-echo "# wrong delimiter used"
+echo "# missing trace"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
+
+echo "# directory empty lines before"
+(
+    echo
+    echo
+    cat "${TRACE}"
+) > "${COPY}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${COPY}"
+
+echo "# directory can't find delimiter"
 run_no_sort "${VERIFYTRACE} \"${BADDELIM}\" ${TRACE}"
 
 # get a file line, without the name
 file_line=$(grep "${DELIM}f${DELIM}" "${TRACE}" | sort | head -n 1)
 without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
 
+echo "# directory too few columns"
+echo "${without_name}" > "${BADTRACE}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
+
+echo "# directory too many columns"
+(
+    head -n 1 "${TRACE}" | head -c -1
+    echo "${DELIM}"
+) > "${COPY}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${COPY}\""
+
 echo "# trace starts with a file"
 echo "file${DELIM}${without_name}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
-echo "# too few columns"
-echo "${without_name}" > "${BADTRACE}"
+echo "# directory extra slashes after name"
+(
+    head -n 1 "${TRACE}" | head -c -1 | awk -F "${DELIM}" -v OFS="${DELIM}" '{ printf $1 }'
+    echo -n "////"
+    head -n 1 "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" }; 1'
+) > "${COPY}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${COPY}"
+
+echo "# directory bad pinode"
+head -n 1 "${TRACE}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{$23="bad_pinode"; print}' > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
+
+echo "# directory duplicate path"
+(
+    head -n 1 "${TRACE}"
+    head -n 1 "${TRACE}"
+) > "${BADTRACE}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
+
+echo "# files empty lines after"
+(
+    cat "${TRACE}"
+    echo
+    echo
+) > "${COPY}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${COPY}"
+
+echo "# file can't find delimiter"
+(
+    head -n 1 "${TRACE}"
+    head -n 2 "${TRACE}" | tail -n 1 | awk -F "${DELIM}" -v OFS="${BADDELIM}" '{ $1=$1 } 1'
+) > "${BADTRACE}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
+
+echo "# file too few columns"
+(
+    head -n 1 "${TRACE}"
+    head -n 2 "${TRACE}" | tail -n 1 | head -c -2
+    echo
+) > "${BADTRACE}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
+
+echo "# file too many columns"
+(
+    head -n 1 "${TRACE}"
+    head -n 2 "${TRACE}" | tail -n 1 | head -c -1
+    echo "${DELIM}"
+) > "${BADTRACE}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
 echo "# directory followed by file not in directory"
 dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
@@ -115,13 +199,31 @@ bad_name="${dir_name}/non-existant_dir/file${DELIM}${without_name}"
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-echo "# bad directory pinode"
-head -n 1 "${TRACE}" | awk -F "${DELIM}" '{$23="bad_pinode"; print}' OFS="${DELIM}" > "${BADTRACE}"
+echo "# file bad pinode"
+(
+    head -n 1 "${TRACE}"
+    echo "${file_line}"| awk -F "${DELIM}" -v OFS="${DELIM}" '{$23="1234"; print}'
+) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-echo "# bad child pinode"
-head -n 1 "${TRACE}" > "${BADTRACE}"
-echo "${file_line}"| awk -F "${DELIM}" '{$23="1234"; print}' OFS="${DELIM}" >> "${BADTRACE}"
+echo "# missing parent"
+(
+    first=$(head -n 1 "${TRACE}" | head -c -1)
+    echo "${first}"
+    echo -n "${first}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ printf $1 }'
+    echo -n "/non-existant_dir/non-existant_subdir"
+    echo "${first}" | awk -F "${DELIM}" -v OFS="${DELIM}" '{ $1="" } 1'
+) > "${BADTRACE}"
+run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
+
+echo "# bad parent pinode"
+(
+    dirs=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort -t "${DELIM}" -k 1,1 | head -n 2)
+    echo "${dirs}" | head -n 1
+    echo "${dirs}" | tail -n 1 | awk -F "${DELIM}" -v OFS="${DELIM}" '{$23="1234"; print}'
+) > "${BADTRACE}"
+
+cat "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 ) |& @TEE@ "${OUTPUT}"
 
