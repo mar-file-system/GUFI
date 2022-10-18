@@ -1,8 +1,11 @@
 # generate the tree
 $ generatetree "prefix"
 
-# generate the trace
+# generate the trace (multiple threads)
 $ gufi_dir2trace -d "|" -n 2 "prefix" "trace"
+
+# generate the trace (single thread)
+$ gufi_dir2trace -d "|" -n 1 "prefix" "trace"
 
 # not enough argumnets 
 $ verifytrace
@@ -60,17 +63,17 @@ trace.copy: Pass
 
 # non-directory can't find delimiter
 $ verifytrace "|" badtrace
-badtrace: Error: Entry missing delimiter: prefix/0KB?f?0?0?0?0?0?0?0?0?0?0?0???0?0?0?0?0???0?
+badtrace: Error: Entry missing delimiter: prefix/.hidden?f?0?0?0?0?0?0?0?0?0?0?0???0?0?0?0?0???0?
 Fail
 
 # non-directory too few columns
 $ verifytrace "|" badtrace
-badtrace: Error: Not enough columns: prefix/0KB|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0
+badtrace: Error: Not enough columns: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0
 Fail
 
 # non-directory too many columns
 $ verifytrace "|" badtrace
-badtrace: Warning: Too many columns: prefix/0KB|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0||
+badtrace: Warning: Too many columns: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0||
 Pass
 
 # directory followed by non-directory not in directory

@@ -90,9 +90,13 @@ OUTPUT="verifytrace.out"
 echo "# generate the tree"
 run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
-echo "# generate the trace"
+echo "# generate the trace (multiple threads)"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${TRACE}\""
-cat "${TRACES[@]}" > "${TRACE}"
+
+echo "# generate the trace (single thread)"
+rm "${TRACES[@]}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 1 \"${SRCDIR}\" \"${TRACE}\""
+order_tracefile "${TRACE}.0" > "${TRACE}"
 
 # replace the numeric fields in the trace with 0s
 sed -i 's/[[:digit:]]\+/0/g' "${TRACE}"
