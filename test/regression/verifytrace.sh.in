@@ -138,7 +138,7 @@ echo "# directory too many columns"
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${COPY}\""
 
-echo "# trace starts with a file"
+echo "# trace starts with a non-directory"
 echo "file${DELIM}${without_name}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
@@ -161,7 +161,7 @@ echo "# directory duplicate path"
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-echo "# files empty lines after"
+echo "# non-directorys empty lines after"
 (
     cat "${TRACE}"
     echo
@@ -169,14 +169,14 @@ echo "# files empty lines after"
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${COPY}"
 
-echo "# file can't find delimiter"
+echo "# non-directory can't find delimiter"
 (
     head -n 1 "${TRACE}"
     head -n 2 "${TRACE}" | tail -n 1 | awk -F "${DELIM}" -v OFS="${BADDELIM}" '{ $1=$1 } 1'
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
-echo "# file too few columns"
+echo "# non-directory too few columns"
 (
     head -n 1 "${TRACE}"
     head -n 2 "${TRACE}" | tail -n 1 | head -c -2
@@ -184,7 +184,7 @@ echo "# file too few columns"
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
-echo "# file too many columns"
+echo "# non-directory too many columns"
 (
     head -n 1 "${TRACE}"
     head -n 2 "${TRACE}" | tail -n 1 | head -c -1
@@ -192,14 +192,14 @@ echo "# file too many columns"
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
-echo "# directory followed by file not in directory"
+echo "# directory followed by non-directory not in directory"
 dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
 dir_name=$(echo "${dir_line}" | awk -F "${DELIM}" '{print $1}')
 bad_name="${dir_name}/non-existant_dir/file${DELIM}${without_name}"
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
-echo "# file bad pinode"
+echo "# non-directory bad pinode"
 (
     head -n 1 "${TRACE}"
     echo "${file_line}"| awk -F "${DELIM}" -v OFS="${DELIM}" '{$23="1234"; print}'

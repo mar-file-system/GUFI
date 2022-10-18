@@ -185,19 +185,19 @@ mv "${INDEXROOT}/db.db" "${INDEXROOT}/db.db.bak"
 run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
 
-echo "# file name mismatch (Fail)"
+echo "# non-directory name mismatch (Fail)"
 sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# file permissions mismatch (Fail)"
+echo "# non-directory permissions mismatch (Fail)"
 awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "f" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# file uid mismatch (Fail)"
+echo "# non-directory uid mismatch (Fail)"
 awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
-echo "# file gid mismatch (Fail)"
+echo "# non-directory gid mismatch (Fail)"
 awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 

@@ -35,7 +35,7 @@ $ verifytrace "|" "trace.copy"
 trace.copy: Warning: Too many columns: prefix|d|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0||
 Pass
 
-# trace starts with a file
+# trace starts with a non-directory
 $ verifytrace "|" badtrace
 badtrace: Error: Expected a directory: file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
@@ -54,31 +54,31 @@ $ verifytrace "|" "badtrace"
 badtrace: Error: Path reappears in trace: prefix
 Fail
 
-# files empty lines after
+# non-directorys empty lines after
 $ verifytrace "|" trace.copy
 trace.copy: Pass
 
-# file can't find delimiter
+# non-directory can't find delimiter
 $ verifytrace "|" badtrace
 badtrace: Error: Entry missing delimiter: prefix/0KB?f?0?0?0?0?0?0?0?0?0?0?0???0?0?0?0?0???0?
 Fail
 
-# file too few columns
+# non-directory too few columns
 $ verifytrace "|" badtrace
 badtrace: Error: Not enough columns: prefix/0KB|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0
 Fail
 
-# file too many columns
+# non-directory too many columns
 $ verifytrace "|" badtrace
 badtrace: Warning: Too many columns: prefix/0KB|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0||
 Pass
 
-# directory followed by file not in directory
+# directory followed by non-directory not in directory
 $ verifytrace "|" "badtrace"
 badtrace: Error: Bad child: prefix/non-existant_dir/file|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||0|
 Fail
 
-# file bad pinode
+# non-directory bad pinode
 $ verifytrace "|" "badtrace"
 badtrace: Error: Bad child pinode: prefix/.hidden|f|0|0|0|0|0|0|0|0|0|0|0|||0|0|0|0|0|||1234|
 Fail

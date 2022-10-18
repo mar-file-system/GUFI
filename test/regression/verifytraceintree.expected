@@ -106,7 +106,7 @@ Total: 20
 Could not open database file: prefix/db.db
 trace Fail
 
-# file name mismatch (Fail)
+# non-directory name mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Did not find entry with name "an_empty_file" in prefix/db.db
 Did not get 7 matching entries.
@@ -115,7 +115,7 @@ Files: 15
 Total: 20
 badtrace Fail
 
-# file permissions mismatch (Fail)
+# non-directory permissions mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Files: 15
 Dirs:  5 (0 empty)
@@ -129,7 +129,7 @@ Permission mismatch on entry "repeat_name" in prefix/db.db
 Did not get 7 matching entries.
 badtrace Fail
 
-# file uid mismatch (Fail)
+# non-directory uid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Did not get 7 matching entries.
 Dirs:  5 (0 empty)
@@ -143,7 +143,7 @@ UID mismatch on entry "old_file" in prefix/db.db
 UID mismatch on entry "repeat_name" in prefix/db.db
 badtrace Fail
 
-# file gid mismatch (Fail)
+# non-directory gid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Did not get 7 matching entries.
 Dirs:  5 (0 empty)
