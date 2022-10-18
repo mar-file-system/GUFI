@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_stats.out"
 
 run() {
-    run_no_sort "$@" | @SED@ "s/$(id -un)/1001/g" | sort
+    run_no_sort "$@" | @SED@ "s/$(id -un)/1001/g" | @SORT@
 }
 
 (

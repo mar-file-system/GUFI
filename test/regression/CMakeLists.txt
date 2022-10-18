@@ -67,35 +67,15 @@ if (POLICY CMP0109)
   cmake_policy(SET CMP0109 NEW)
 endif()
 
-function(check_test_dependencies var exec)
-  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
-  if (${var})
-    message(STATUS "Found ${exec}: ${${var}}")
-  else ()
-    # try alternative
-    if (${ARGC} GREATER 2)
-      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
-      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
-    endif()
-
-    if (${var})
-      message(STATUS "Found alternative to ${exec}: ${${var}}")
-    endif()
-  endif()
-
-  if (NOT ${var})
-    message(FATAL_ERROR "${var} not found. Cannot build tests.")
-  endif()
-endfunction()
-
-check_test_dependencies(SED  sed)
-check_test_dependencies(DIFF colordiff diff)
-check_test_dependencies(TEE  tee)
+find_exec_dependency(DIFF colordiff diff)
+find_exec_dependency(SED  sed)
+find_exec_dependency(SORT sort)
+find_exec_dependency(TEE  tee)
 
 if(APPLE)
-  check_test_dependencies(XATTR xattr)
+  find_exec_dependency(XATTR xattr)
 else()
-  check_test_dependencies(SETFATTR setfattr)
+  find_exec_dependency(SETFATTR setfattr)
 endif()
 
 # regression test specific files

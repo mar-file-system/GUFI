@@ -157,7 +157,7 @@ remove_root() {
 
 run_sort() {
     echo "$" "$@" |& replace
-    eval "$@"     |& replace | sort
+    eval "$@"     |& replace | @SORT@
     echo
 }
 

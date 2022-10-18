@@ -124,7 +124,7 @@ echo "# directory can't find delimiter"
 run_no_sort "${VERIFYTRACE} \"${BADDELIM}\" ${TRACE}"
 
 # get a file line, without the name
-file_line=$(grep "${DELIM}f${DELIM}" "${TRACE}" | sort | head -n 1)
+file_line=$(@GREP@ "${DELIM}f${DELIM}" "${TRACE}" | @SORT@ | head -n 1)
 without_name=$(echo "${file_line}" | cut -f2- -d "${DELIM}")
 
 echo "# directory too few columns"
@@ -193,7 +193,7 @@ echo "# non-directory too many columns"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 
 echo "# directory followed by non-directory not in directory"
-dir_line=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort | tail -n 1)
+dir_line=$(@GREP@ "${DELIM}d${DELIM}" "${TRACE}" | @SORT@ | tail -n 1)
 dir_name=$(echo "${dir_line}" | awk -F "${DELIM}" '{print $1}')
 bad_name="${dir_name}/non-existant_dir/file${DELIM}${without_name}"
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
@@ -218,7 +218,7 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
 echo "# bad parent pinode"
 (
-    dirs=$(grep "${DELIM}d${DELIM}" "${TRACE}" | sort -t "${DELIM}" -k 1,1 | head -n 2)
+    dirs=$(@GREP@ "${DELIM}d${DELIM}" "${TRACE}" | @SORT@ -t "${DELIM}" -k 1,1 | head -n 2)
     echo "${dirs}" | head -n 1
     echo "${dirs}" | tail -n 1 | awk -F "${DELIM}" -v OFS="${DELIM}" '{$23="1234"; print}'
 ) > "${BADTRACE}"

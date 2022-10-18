@@ -103,7 +103,7 @@ echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}" "${variable_size[@]}"
 do
     "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | awk '{ print $1 $2 }'
-done | sort
+done | @SORT@
 echo
 
 echo "# custom print format"
@@ -117,7 +117,7 @@ echo "# custom print format"
     do
         "${GUFI_STAT}" -f '%-60N %60n %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}"
     done
-) | sort
+) | @SORT@
 echo
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
