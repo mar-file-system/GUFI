@@ -150,17 +150,17 @@ tail -n +2 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# directory add trailing slashes (Pass)"
-sed "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
+@SED@ "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# directory does not exist (Fail)"
-sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
+@SED@ "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# path exists, but is not directory (Fail)"
 (
     # remove the first line and convert the second line into a directory
-    head -n 2 "${TRACE}" | tail -n 1 | sed "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
+    head -n 2 "${TRACE}" | tail -n 1 | @SED@ "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
     tail -n +3 "${TRACE}"
 ) > "${BADTRACE}"
 filename=$(echo -n "${INDEXTARGET}/"; head -n 1 "${BADTRACE}" | awk -F "${DELIM}" '{ printf $1 }')
@@ -186,7 +186,7 @@ run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
 
 echo "# non-directory name mismatch (Fail)"
-sed "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
+@SED@ "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# non-directory permissions mismatch (Fail)"

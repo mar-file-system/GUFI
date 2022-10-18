@@ -68,7 +68,7 @@ source @CMAKE_BINARY_DIR@/scripts/completions "${CONFIG}"
 
 get_function_name() {
     echo "$@" "completion function:"
-    complete -p "$@" | sed "s/.*-F \\([^ ]*\\) .*/\\1/"
+    complete -p "$@" | @SED@ "s/.*-F \\([^ ]*\\) .*/\\1/"
     echo
 }
 

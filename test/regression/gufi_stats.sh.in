@@ -132,7 +132,8 @@ COPY="${EXPECTED}.copy"
 
 if [[ "$(uname)" == "Darwin" ]]
 then
-    sed '/leaf-/,$d' "${EXPECTED}" > "${COPY}"
+    # shellcheck disable=SC2016
+    @SED@ '/leaf-/,$d' "${EXPECTED}" > "${COPY}"
 else
     cp "${EXPECTED}" "${COPY}"
 fi
