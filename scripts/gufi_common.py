@@ -212,22 +212,24 @@ def build_query(select, tables, where = None, group_by = None, order_by = None, 
     if not select or not len(select) or not tables or not len(tables):
         return ""
 
-    query = 'SELECT {} FROM {}'.format(', '.join(select), ', '.join(tables))
+    query = 'SELECT {0} FROM {1}'.format(', '.join(select), ', '.join(tables))
 
     if where and len(where):
-        query += ' WHERE ({})'.format(') AND ('.join(where))
+        query += ' WHERE ({0})'.format(') AND ('.join(where))
 
     if group_by and len(group_by):
-        query += ' GROUP BY {}'.format(', '.join(group_by))
+        query += ' GROUP BY {0}'.format(', '.join(group_by))
 
     if order_by and len(order_by):
-        query += ' ORDER BY {}'.format(', '.join(order_by))
+        query += ' ORDER BY {0}'.format(', '.join(order_by))
 
     if num_results:
-        query += ' LIMIT {}'.format(num_results)
+        query += ' LIMIT {0}'.format(num_results)
 
     if extra:
-        query += ' ' + ' '.join(extra)
+        # want leading space, or would have used str.join
+        for sql in extra:
+            query += ' {0}'.format(sql)
 
     return query
 

@@ -152,7 +152,8 @@ replace() {
 }
 
 remove_root() {
-    @SED@ "s/${SRCDIR//\//\\/}\\///g;"
+    REALSRCDIR="$(realpath ${SRCDIR})"
+    @SED@ "s/${REALSRCDIR//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
 }
 
 run_sort() {

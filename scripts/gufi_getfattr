@@ -73,6 +73,8 @@ SUMMARY   = 'summary'
 XSUMMARY  = 'xsummary'
 XPENTRIES = 'xpentries'
 
+PATH = os.path.realpath(__file__)
+
 def getfattr(args, config, dirname, nondirname):
     S_cols = []
     E_cols = []
@@ -95,30 +97,30 @@ def getfattr(args, config, dirname, nondirname):
 
     if not args.recursive:
         # make sure name matches
-        S_where += [' OR '.join(['({}.name REGEXP \'^{}$\')'.format(XSUMMARY, os.path.basename(dirname))])]
+        S_where += [' OR '.join(['({0}.name REGEXP \'^{1}$\')'.format(XSUMMARY, os.path.basename(dirname))])]
 
         # only get the original summary
-        S_where += ['{}.isroot == 1'.format(XSUMMARY)]
+        S_where += ['{0}.isroot == 1'.format(XSUMMARY)]
 
         if nondirname:
-            E_where += [' OR '.join(['({}.name REGEXP \'^{}$\')'.format(XPENTRIES, nondirname)])]
+            E_where += [' OR '.join(['({0}.name REGEXP \'^{1}$\')'.format(XPENTRIES, nondirname)])]
 
     if args.name:
         # name uses exact match
-        S_where += ['CAST({}.xattr_name AS TEXT) == CAST(\'{}\' AS TEXT)'.format(XSUMMARY,  args.name)]
-        E_where += ['CAST({}.xattr_name AS TEXT) == CAST(\'{}\' AS TEXT)'.format(XPENTRIES, args.name)]
+        S_where += ['CAST({0}.xattr_name AS TEXT) == CAST(\'{1}\' AS TEXT)'.format(XSUMMARY,  args.name)]
+        E_where += ['CAST({0}.xattr_name AS TEXT) == CAST(\'{1}\' AS TEXT)'.format(XPENTRIES, args.name)]
     else:
-        S_where += ['{}.xattr_name REGEXP \'{}\''.format(XSUMMARY,  args.pattern)]
-        E_where += ['{}.xattr_name REGEXP \'{}\''.format(XPENTRIES, args.pattern)]
+        S_where += ['{0}.xattr_name REGEXP \'{1}\''.format(XSUMMARY,  args.pattern)]
+        E_where += ['{0}.xattr_name REGEXP \'{1}\''.format(XPENTRIES, args.pattern)]
 
     query_args = ['-x', '-a']
 
-    E_where += ['{}.pinode == {}.inode'.format(XPENTRIES, SUMMARY)]
+    E_where += ['{0}.pinode == {1}.inode'.format(XPENTRIES, SUMMARY)]
 
     if args.recursive:
         # if input directory is not a directory, filter xattrs to those in the current directory
         if nondirname:
-            E_where += ['{}.isroot == 1'.format(SUMMARY)]
+            E_where += ['{0}.isroot == 1'.format(SUMMARY)]
 
         # if input path is a directory, get directory xattrs as well
         else:
@@ -141,7 +143,7 @@ def getfattr(args, config, dirname, nondirname):
     else:
         # only get non directory xattrs
         if nondirname:
-            E_where += ['{}.isroot == 1'.format(SUMMARY)]
+            E_where += ['{0}.isroot == 1'.format(SUMMARY)]
 
             query_args += ['-E', gufi_common.build_query(E_cols,
                                                          [XPENTRIES, SUMMARY],
@@ -176,7 +178,7 @@ def run(argv, config_path):
     parser.add_argument('--help',                                                     action='help',
                         help='show this help message and exit')
     parser.add_argument('--version', '-v',                                            action='version',
-                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+                        version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)))
 
     parser.add_argument('--name', '-n',                        dest='name',           type=str,
                         help='Dump the values of the named extended attribute')

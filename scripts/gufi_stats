@@ -87,11 +87,10 @@ def build_where(args, root_uid = 0, root_gid = 0):
     where = []
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-    #     where  += ['(uid == {})'.format(os.getuid())]
-    #     # where  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
+    #     where  += ['(uid == {0})'.format(os.getuid())]
 
     if args.uid:
-        where += ['uid == "{}"'.format(args.uid)]
+        where += ['uid == "{0}"'.format(args.uid)]
 
     return where
 
@@ -105,23 +104,23 @@ def depth(config, args, where):
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT']),
 
-        '-S', 'INSERT INTO {} {} '.format(args.inmemory_name,
-                                          gufi_common.build_query(['path(name, rollupscore)'],
-                                                                  ['summary'],
-                                                                  where,
-                                                                  None,
-                                                                  None,
-                                                                  args.num_results,
-                                                                  None)),
+        '-S', 'INSERT INTO {0} {1} '.format(args.inmemory_name,
+                                            gufi_common.build_query(['path(name, rollupscore)'],
+                                                                    ['summary'],
+                                                                    where,
+                                                                    None,
+                                                                    None,
+                                                                    args.num_results,
+                                                                    None)),
 
-        '-J', 'INSERT INTO {} {} '.format(args.aggregate_name,
-                                          gufi_common.build_query(['*'],
-                                                                  [args.inmemory_name],
-                                                                  None,
-                                                                  None,
-                                                                  None,
-                                                                  None,
-                                                                  None)),
+        '-J', 'INSERT INTO {0} {1} '.format(args.aggregate_name,
+                                            gufi_common.build_query(['*'],
+                                                                    [args.inmemory_name],
+                                                                    None,
+                                                                    None,
+                                                                    None,
+                                                                    None,
+                                                                    None)),
 
         '-K', build_create(args.aggregate_name, ['name TEXT']),
 
@@ -151,23 +150,23 @@ def filesize(config, args, where):
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
 
-        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(summary.name, summary.rollupscore)', 'CAST(TOTAL(pentries.size) as INT64)'],
-                                                                 ['summary', 'pentries'],
-                                                                 where + ['summary.inode == pentries.pinode', 'pentries.type == "f"'],
-                                                                 None,
-                                                                 None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['path(summary.name, summary.rollupscore)', 'CAST(TOTAL(pentries.size) as INT64)'],
+                                                                   ['summary', 'pentries'],
+                                                                   where + ['summary.inode == pentries.pinode', 'pentries.type == "f"'],
+                                                                   None,
+                                                                   None,
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['name', 'size'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 ['name ' + ORDER[args.order]] if args.order else None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['name', 'size'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   ['name ' + ORDER[args.order]] if args.order else None,
+                                                                   args.num_results,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name, ['name TEXT', 'size INT64']),
 
@@ -197,7 +196,7 @@ def entries_count(config, args, where, type):
     subquery = gufi_common.build_query(['COUNT(pentries.inode)'],
                                        ['pentries'],
                                        ['summary.inode == pentries.pinode',
-                                        'pentries.type == "{}"'.format(type)],
+                                        'pentries.type == "{0}"'.format(type)],
                                        None,
                                        None,
                                        None)
@@ -238,23 +237,23 @@ def total_filesize(config, args, where):
                                ['id INTEGER PRIMARY KEY',
                                 'size INT64']),
 
-            '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                             gufi_common.build_query(['NULL', 'totsize'],
-                                                                     ['summary'],
-                                                                     where,
-                                                                     None,
-                                                                     None,
-                                                                     None,
-                                                                     None)),
+            '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                               gufi_common.build_query(['NULL', 'totsize'],
+                                                                       ['summary'],
+                                                                       where,
+                                                                       None,
+                                                                       None,
+                                                                       None,
+                                                                       None)),
 
-            '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                             gufi_common.build_query(['NULL', 'size'],
-                                                                     [args.inmemory_name],
-                                                                     None,
-                                                                     None,
-                                                                     None,
-                                                                     None,
-                                                                     None)),
+            '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                               gufi_common.build_query(['NULL', 'size'],
+                                                                       [args.inmemory_name],
+                                                                       None,
+                                                                       None,
+                                                                       None,
+                                                                       None,
+                                                                       None)),
 
             '-K', build_create(args.aggregate_name, ['id INTEGER PRIMARY KEY', 'size INT64']),
 
@@ -269,8 +268,8 @@ def total_filesize(config, args, where):
 
     else:
         group_by = ['uid']
-        order_by = ['uid {}' .format(ORDER[args.order]),
-                    'size {}'.format(ORDER[args.order])]
+        order_by = ['uid {0}' .format(ORDER[args.order]),
+                    'size {0}'.format(ORDER[args.order])]
 
         queries = [
             '-I', build_create(args.inmemory_name,
@@ -278,23 +277,23 @@ def total_filesize(config, args, where):
                                 'uid INT64',
                                 'size INT64']),
 
-            '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                             gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
-                                                                     ['pentries'],
-                                                                     where + ['type == "f"'],
-                                                                     group_by,
-                                                                     order_by,
-                                                                     args.num_results,
-                                                                     None)),
+            '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                               gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
+                                                                       ['pentries'],
+                                                                       where + ['type == "f"'],
+                                                                       group_by,
+                                                                       order_by,
+                                                                       args.num_results,
+                                                                       None)),
 
-            '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                             gufi_common.build_query(['NULL', 'uid', 'size'],
-                                                                     [args.inmemory_name],
-                                                                     None,
-                                                                     None,
-                                                                     order_by,
-                                                                     args.num_results,
-                                                                     None)),
+            '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                               gufi_common.build_query(['NULL', 'uid', 'size'],
+                                                                       [args.inmemory_name],
+                                                                       None,
+                                                                       None,
+                                                                       order_by,
+                                                                       args.num_results,
+                                                                       None)),
 
             '-K', build_create(args.aggregate_name,
                                ['id INTEGER PRIMARY KEY',
@@ -330,23 +329,26 @@ def total_entries_count(config, args, where, type):
                            ['id INTEGER PRIMARY KEY', 'uid INT64',
                             'pinode INT64', 'count INT64']),
 
-        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'uid', 'pinode', 'COUNT(inode) AS count'],
-                                                                 ['pentries'],
-                                                                 where + ['type == "{}"'.format(type)],
-                                                                 E_group_by,
-                                                                 ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['NULL', 'uid', 'pinode',
+                                                                    'COUNT(inode) AS count'],
+                                                                   ['pentries'],
+                                                                   where + ['type == "{0}"'.format(type)],
+                                                                   E_group_by,
+                                                                   ['count {0}'.format(ORDER[args.order]),
+                                                                    'uid {0}'.format(ORDER[args.order])],
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['NULL', 'uid', 'pinode', 'count'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['NULL', 'uid', 'pinode', 'count'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   ['count {0}'.format(ORDER[args.order]),
+                                                                    'uid {0}'.format(ORDER[args.order])],
+                                                                   args.num_results,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['id INTEGER PRIMARY KEY', 'uid INT64',
@@ -356,7 +358,8 @@ def total_entries_count(config, args, where, type):
                                       [args.aggregate_name],
                                       None,
                                       group_by,
-                                      ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                      ['count {0}'.format(ORDER[args.order]),
+                                       'uid {0}'.format(ORDER[args.order])],
                                       args.num_results,
                                       None),
     ]
@@ -386,26 +389,27 @@ def dircount(config, args, where):
         '-I', build_create(args.inmemory_name,
                            ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(name, rollupscore)', 'inode', 'pinode', 'level()'],
-                                                                 ['summary'],
-                                                                 ([] if args.recursive else ['isroot == 1']) + where,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['path(name, rollupscore)', 'inode', 'pinode', 'level()'],
+                                                                   ['summary'],
+                                                                   ([] if args.recursive else ['isroot == 1']) + where,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['path', 'inode', 'pinode', 'level'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['path', 'inode', 'pinode', 'level'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
 
-        '-G', gufi_common.build_query((['CASE length(path) WHEN 0 THEN "." ELSE path END as print_path'] if args.recursive else []) + ['(SELECT COUNT(*) FROM {0} AS nested WHERE nested.pinode == {0}.inode)'.format(args.aggregate_name)],
+        '-G', gufi_common.build_query((['CASE length(path) WHEN 0 THEN "." ELSE path END as print_path'] if args.recursive else []) +
+                                      ['(SELECT COUNT(*) FROM {0} AS nested WHERE nested.pinode == {0}.inode)'.format(args.aggregate_name)],
                                       [args.aggregate_name],
                                       None if args.recursive else ['level == 0'],
                                       None,
@@ -433,33 +437,37 @@ def total_dircount(config, args, where):
         '-I', build_create(args.inmemory_name,
                            ['id INTEGER PRIMARY KEY', 'name TEXT', 'uid INT64', 'count INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'name', 'uid', '1 as count'],
-                                                                 ['summary'],
-                                                                 where +
-                                                                 [] if args.cumulative else [gufi_common.ROLLUP_SUMMARY_WHERE],
-                                                                 group_by,
-                                                                 ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['NULL', 'name', 'uid', '1 as count'],
+                                                                   ['summary'],
+                                                                   where +
+                                                                   [] if args.cumulative else [gufi_common.ROLLUP_SUMMARY_WHERE],
+                                                                   group_by,
+                                                                   ['count {0}'.format(ORDER[args.order]),
+                                                                    'uid {0}'.format(ORDER[args.order])],
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['NULL', 'name',  'uid', 'count'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['NULL', 'name',  'uid', 'count'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   ['count {0}'.format(ORDER[args.order]),
+                                                                    'uid {0}'.format(ORDER[args.order])],
+                                                                   args.num_results,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['id INTEGER PRIMARY KEY', 'name TEXT', 'uid INT64', 'count INT64']),
 
-        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['SUM(count) ' + ('' if args.cumulative else '+ 1') + ' AS count'],
+        '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) +
+                                      ['SUM(count) ' + ('' if args.cumulative else '+ 1') + ' AS count'],
                                       [args.aggregate_name],
                                       None,
                                       group_by,
-                                      ['count {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])],
+                                      ['count {0}'.format(ORDER[args.order]),
+                                       'uid {0}'.format(ORDER[args.order])],
                                       args.num_results,
                                       None),
     ]
@@ -477,23 +485,23 @@ def leaf_dirs(config, args, where):
         '-I', build_create(args.inmemory_name,
                            ['name TEXT']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(name, rollupscore)'],
-                                                                 ['summary'],
-                                                                 where + ['nlink == 2'],
-                                                                 None,
-                                                                 None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['path(name, rollupscore)'],
+                                                                   ['summary'],
+                                                                   where + ['nlink == 2'],
+                                                                   None,
+                                                                   None,
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['name'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['name'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['name TEXT']),
@@ -526,24 +534,24 @@ def leaf_depth(config, args, where):
         '-I', build_create(args.inmemory_name,
                            ['name TEXT', 'level INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(name, rollupscore)', '0'],
-                                                                 ['summary'],
-                                                                 where + ['nlink == 2'],
-                                                                 None,
-                                                                 None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['path(name, rollupscore)', '0'],
+                                                                   ['summary'],
+                                                                   where + ['nlink == 2'],
+                                                                   None,
+                                                                   None,
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['name',
-                                                                  '(length(name) - length(replace(name, "/", ""))) - {} + 1'.format(root_slash_count)],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['name',
+                                                                    '(length(name) - length(replace(name, "/", ""))) - {0} + 1'.format(root_slash_count)],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['name TEXT', 'level INT64']),
@@ -574,23 +582,23 @@ def leaf(config, args, where, type):
         '-I', build_create(args.inmemory_name,
                            ['name TEXT', 'count INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path(name, rollupscore)', '(SELECT COUNT(*) FROM entries WHERE type=="{}")'.format(type)],
-                                                                 ['summary'],
-                                                                 where + ['nlink == 2'],
-                                                                 None,
-                                                                 None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['path(name, rollupscore)', '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)],
+                                                                   ['summary'],
+                                                                   where + ['nlink == 2'],
+                                                                   None,
+                                                                   None,
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['name', 'count'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['name', 'count'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['name TEXT', 'count INT64']),
@@ -629,23 +637,25 @@ def total_leaf(config, args, where, type):
         '-I', build_create(args.inmemory_name,
                            ['uid INT64', 'count INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type=="{}") AS count'.format(type)],
-                                                                 ['summary'],
-                                                                 where + ['nlink == 2'],
-                                                                 group_by,
-                                                                 ['uid {}'.format(ORDER[args.order]), 'count {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type== "{0}") AS count'.format(type)],
+                                                                   ['summary'],
+                                                                   where + ['nlink == 2'],
+                                                                   group_by,
+                                                                   ['uid {0}'.format(ORDER[args.order]),
+                                                                    'count {0}'.format(ORDER[args.order])],
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['uid', 'SUM(count) AS count'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 group_by,
-                                                                 ['uid {}'.format(ORDER[args.order]), 'count {}'.format(ORDER[args.order])],
-                                                                 args.num_results,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['uid', 'SUM(count) AS count'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   group_by,
+                                                                   ['uid {0}'.format(ORDER[args.order]),
+                                                                    'count {0}'.format(ORDER[args.order])],
+                                                                   args.num_results,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['uid INT64', 'count INT64']),
@@ -654,7 +664,8 @@ def total_leaf(config, args, where, type):
                                       [args.aggregate_name],
                                       None,
                                       group_by,
-                                      ['uid {}'.format(ORDER[args.order]), 'count {}'.format(ORDER[args.order])],
+                                      ['uid {0}'.format(ORDER[args.order]),
+                                       'count {0}'.format(ORDER[args.order])],
                                       args.num_results,
                                       None),
     ]
@@ -676,22 +687,23 @@ def median_leaf_files(config, args, where):
         '-I', build_create(args.inmemory_name,
                            ['uid INT64', 'count INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type=="f") AS count'],
-                                                                 ['summary'],
-                                                                 where + ['nlink == 2'],
-                                                                 None,
-                                                                 None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['uid',
+                                                                    '(SELECT COUNT(*) FROM entries WHERE type == "f") AS count'],
+                                                                   ['summary'],
+                                                                   where + ['nlink == 2'],
+                                                                   None,
+                                                                   None,
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['uid', 'count'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['uid', 'count'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['uid INT64', 'count INT64']),
@@ -719,7 +731,7 @@ def average_leaf(config, args, where, type):
 
     count = gufi_common.build_query(['COUNT(*)'],
                                     ['entries'],
-                                    ['type == "{}"'.format(type)],
+                                    ['type == "{0}"'.format(type)],
                                     group_by,
                                     None,
                                     None)
@@ -728,22 +740,22 @@ def average_leaf(config, args, where, type):
         '-I', build_create(args.inmemory_name,
                            ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'uid', '({}) AS count'.format(count)],
-                                                                 ['summary'],
-                                                                 where + ['nlink == 2'],
-                                                                 None,
-                                                                 None,
-                                                                 args.num_results,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['NULL', 'uid', '({0}) AS count'.format(count)],
+                                                                   ['summary'],
+                                                                   where + ['nlink == 2'],
+                                                                   None,
+                                                                   None,
+                                                                   args.num_results,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['NULL', 'uid', 'count'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['NULL', 'uid', 'count'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
@@ -783,36 +795,37 @@ def per_level(config, args, where, type):
         starting_depth = path[root_len - path_len:].count('/')
 
     group_by = ['level'] + ([] if args.cumulative else ['uid'])
-    order_by = None if args.cumulative else ['level {}'.format(ORDER[args.order]), 'uid {}'.format(ORDER[args.order])]
+    order_by = None if args.cumulative else ['level {0}'.format(ORDER[args.order]), 'uid {0}'.format(ORDER[args.order])]
 
     uid = [] if args.cumulative else ['uid']
-    count = '1' if type == 'd' else '(SELECT COUNT(*) FROM entries WHERE type == "{}")'.format(type)
+    count = '1' if type == 'd' else '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)
 
     queries = [
         '-I', build_create(args.inmemory_name,
                            ['id INT PRIMARY KEY'] + ([] if args.cumulative else ['uid INT64']) +
                            ['level INT64', 'count INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL'] + uid + ['level() + {}'.format(starting_depth), count],
-                                                                 ['summary'],
-                                                                 where,
-                                                                 ['uid'],
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['NULL'] + uid + ['level() + {0}'.format(starting_depth), count],
+                                                                   ['summary'],
+                                                                   where,
+                                                                   ['uid'],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 group_by,
-                                                                 order_by,
-                                                                 None,
-                                                                 None)),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['NULL'] + uid + ['level', 'SUM(count)'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   group_by,
+                                                                   order_by,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
-                           ['id INT PRIMARY KEY'] + ([] if args.cumulative else ['uid INT64']) +
+                           ['id INT PRIMARY KEY'] +
+                           ([] if args.cumulative else ['uid INT64']) +
                            ['level INT64', 'count INT64']),
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid, 0)']) + ['level', 'SUM(count)'],
@@ -844,7 +857,7 @@ def duplicate_names(config, args, where):
                            ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT',
                             'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
 
-        '-S', 'INSERT INTO {} {}'.format(args.inmemory_name,
+        '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                          gufi_common.build_query(['NULL', 'path(name, rollupscore)'] +
                                                                  columns,
                                                                  ['summary'],
@@ -854,17 +867,17 @@ def duplicate_names(config, args, where):
                                                                  None,
                                                                  None)),
 
-        '-E', 'INSERT INTO {} {}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'path(summary.name, summary.rollupscore)'] +
-                                                                 ['pentries.' + col for col in columns],
-                                                                 ['summary', 'pentries'],
-                                                                 where + ['summary.inode == pentries.pinode'],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['NULL', 'path(summary.name, summary.rollupscore)'] +
+                                                                   ['pentries.' + col for col in columns],
+                                                                   ['summary', 'pentries'],
+                                                                   where + ['summary.inode == pentries.pinode'],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
-        '-J', 'INSERT INTO {} {}'.format(args.aggregate_name,
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
                                          gufi_common.build_query(['NULL', 'path'] +
                                                                  columns,
                                                                  [args.inmemory_name],
@@ -878,7 +891,7 @@ def duplicate_names(config, args, where):
                            ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT',
                             'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
 
-        '-G', 'SELECT lhs.name, lhs.path FROM {} as lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {} GROUP BY name, type, size HAVING COUNT(*) > 1) as rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(args.aggregate_name, args.aggregate_name) + ('LIMIT {}'.format if args.num_results else '')
+        '-G', 'SELECT lhs.name, lhs.path FROM {0} as lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {1} GROUP BY name, type, size HAVING COUNT(*) > 1) as rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(args.aggregate_name, args.aggregate_name) + ('LIMIT {0}'.format(args.num_results) if args.num_results else '')
 
     ]
 
@@ -937,8 +950,8 @@ def run(argv, config_path):
     # override help to not use -h
     parser.add_argument('--help',                                                    action='help',                                         help='show this help message and exit')
     parser.add_argument('--version', '-v',                                           action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--recursive', '-r',                  dest='recursive',      action='store_true',                                   help='run command recursively ({})'.format(', '.join(RECURSIVE.keys())))
-    parser.add_argument('--cumulative', '-c',                 dest='cumulative',     action='store_true',                                   help='return cumulative values ({})'.format(', '.join(CUMULATIVE.keys())))
+    parser.add_argument('--recursive', '-r',                  dest='recursive',      action='store_true',                                   help='run command recursively ({0})'.format(', '.join(RECURSIVE.keys())))
+    parser.add_argument('--cumulative', '-c',                 dest='cumulative',     action='store_true',                                   help='return cumulative values ({0})'.format(', '.join(CUMULATIVE.keys())))
     parser.add_argument('--order',           metavar='order', dest='order',          choices=ORDER.keys(),         default=ASCENDING,       help='sort output (if applicable)')
     parser.add_argument('--num-results',     metavar='n',     dest='num_results',    type=gufi_common.get_non_negative,                     help='first n results')
     parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',            type=gufi_common.get_uid,                              help='restrict to user')
@@ -951,11 +964,11 @@ def run(argv, config_path):
 
     # check args
     if args.recursive and (args.stat in CUMULATIVE):
-        sys.stderr.write('--recursive/-r has no effect on "{}" statistic\n'.format(args.stat))
+        sys.stderr.write('--recursive/-r has no effect on "{0}" statistic\n'.format(args.stat))
     if args.cumulative and (args.stat in RECURSIVE):
-        sys.stderr.write('--cumulative/-c has no effect on "{}" statistic\n'.format(args.stat))
+        sys.stderr.write('--cumulative/-c has no effect on "{0}" statistic\n'.format(args.stat))
     if (args.recursive or args.cumulative) and (args.stat in OTHERS):
-        sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{}" statistic\n'.format(args.stat))
+        sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
 
     # prepend the provided paths with the GUFI root path
     args.path = os.path.normpath(os.path.sep.join([config.indexroot(), args.path]))

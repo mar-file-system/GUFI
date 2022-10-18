@@ -87,11 +87,11 @@ def select_size(args, name):
     # in GNU ls, order of arguments determines which one has precedence
     # here, --human-readable has precedence
     if args.human_readable:
-        column = 'human_readable_size({}, ' + str(args.size_width) + ')'
+        column = 'human_readable_size({{0}}, {0})'.format(args.size_width)
     elif args.blocksize:
-        column = 'blocksize({}, "' + args.blocksize + '", ' + str(args.size_width) + ')'
+        column = 'blocksize({{0}}, "{0}", {1})'.format(args.blocksize, args.size_width)
     else:
-        column = 'printf("%' + str(args.size_width) + 'd", {})'
+        column = 'printf("%{0}d", {{0}})'.format(args.size_width)
 
     return [column.format(name)]
 
@@ -107,9 +107,9 @@ def select_time(style, name):
         style = 'locale'
 
     try:
-        column = 'strftime("' + TIME_STYLES[style] + '", {})'
+        column = 'strftime("{0}", {{0}})'.format(TIME_STYLES[style])
     except:
-        raise ValueError('gufi_ls: invalid argument \'{}\' for \'time style\''.format(style))
+        raise ValueError('gufi_ls: invalid argument \'{0}\' for \'time style\''.format(style))
 
     return [column.format(name)]
 
@@ -131,9 +131,11 @@ def build_select(args):
         display_name = 'name'
 
     if args.long_listing:
-        select += ['modetotxt(mode)', 'printf("%' + str(args.nlink_width) + 'd", nlink)', 'uidtouser(uid, ' + str(args.user_width) + ')']
+        select += ['modetotxt(mode)',
+                   'printf("%{0}d", nlink)'.format(args.nlink_width),
+                   'uidtouser(uid, {0})'.format(args.user_width)]
         if not args.no_group:
-            select += ['gidtogroup(gid, ' + str(args.group_width) + ')']
+            select += ['gidtogroup(gid, {0})'.format(args.group_width)]
 
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
@@ -164,7 +166,7 @@ def build_where(args, table, name = None):
         table += '.'
 
     if name:
-        where = ['{}name REGEXP "^{}$"'.format(table, name)]
+        where = ['{0}name REGEXP "^{1}$"'.format(table, name)]
     else:
         # -a: if show all, override -A
         if args.all:
@@ -172,15 +174,15 @@ def build_where(args, table, name = None):
         else:
             # -A: ignore . and ..
             if args.almost_all:
-                where += ['{}name <> "." AND {}name <> ".."'.format(table)]
+                where += ['{0}name <> "." AND {1}name <> ".."'.format(table)]
 
             # everything that's not hidden
             else:
-                where += ['{}name REGEXP "^(?![\.]).*$"'.format(table)]
+                where += ['{0}name REGEXP "^(?![\.]).*$"'.format(table)]
 
         # -B: ignore files that end with ~
         if args.ignore_backups is True:
-            where += ['{}name REGEXP "^.*(?<![\~])$"'.format(table)]
+            where += ['{0}name REGEXP "^.*(?<![\~])$"'.format(table)]
 
     return where
 
@@ -189,13 +191,13 @@ def build_order_by(args):
     order_by = []
 
     if args.sort_largest:
-        order_by += ['size ' + ('ASC' if args.reverse else 'DESC')]
+        order_by += ['size {0}'.format('ASC' if args.reverse else 'DESC')]
 
     if args.mtime:
-        order_by += ['mtime ' + ('ASC' if args.reverse else 'DESC')]
+        order_by += ['mtime {0}'.format('ASC' if args.reverse else 'DESC')]
 
     if len(order_by) == 0:
-        order_by += ['display_name COLLATE NOCASE ' + ('DESC' if args.reverse else 'ASC')]
+        order_by += ['display_name COLLATE NOCASE {0}'.format('DESC' if args.reverse else 'ASC')]
 
     if args.no_sort:
         order_by = []
@@ -276,25 +278,36 @@ def run(argv, config_path):
             query_cmd += ['-y', '0',
                           '-z', '2']
 
-        # columns without fullpath or name
-        columns = ['type', 'inode', 'nlink', 'size', 'mode', 'uid',
-                   'gid', 'blksize', 'blocks', 'mtime', 'atime',
-                   'ctime', 'linkname', 'xattr_names', 'pinode']
+        columns = ['fullpath', 'name', 'type', 'inode', 'nlink',
+                   'size', 'mode', 'uid', 'gid', 'blksize', 'blocks',
+                   'mtime', 'atime', 'ctime', 'linkname',
+                   'xattr_names', 'pinode']
 
-        I = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);'.format(args.inmemory_name)
+        create_table_cols = ', '.join(
+            [
+                '{0} {1}'.format(column, type)
+                for column, type in zip(columns,
+                                        ['TEXT', 'TEXT', 'TEXT', 'INT64', 'INT64',
+                                         'INT64', 'INT64', 'INT64', 'INT64', 'INT64', 'INT64',
+                                         'INT64', 'INT64', 'INT64', 'TEXT',
+                                         'TEXT', 'INT64'])
+            ]
+        )
+
+        I = 'CREATE TABLE {0} ({1});'.format(args.inmemory_name, create_table_cols)
 
         S_where = build_where(args, None,     match_name)
-        E_where = build_where(args, PENTRIES, match_name) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)]
+        E_where = build_where(args, PENTRIES, match_name) + ['{0}.inode == {1}.pinode'.format(SUMMARY, PENTRIES)]
 
         if args.recursive:
             S_where += ['level() > 0']
         else:
             S_where += [gufi_common.ROLLUP_SUMMARY_WHERE]
             # only get the pentries that were originally in this directory
-            E_where += ['{}.isroot == 1'.format(SUMMARY), 'level() == 0']
+            E_where += ['{0}.isroot == 1'.format(SUMMARY), 'level() == 0']
 
         S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['path({0}.name, {0}.rollupscore)'.format(SUMMARY), 'basename(name)'] + columns,
+                                         gufi_common.build_query(['path({0}.name, {0}.rollupscore)'.format(SUMMARY), 'basename(name)'] + columns[2:],
                                                                  [SUMMARY],
                                                                  S_where,
                                                                  None,
@@ -303,7 +316,7 @@ def run(argv, config_path):
 
         E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                          gufi_common.build_query(['path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] +
-                                                                 [PENTRIES + '.' + column for column in ['name'] + columns],
+                                                                 ['{0}.{1}'.format(PENTRIES, column) for column in ['name'] + columns[2:]],
                                                                  [SUMMARY, PENTRIES],
                                                                  E_where,
                                                                  None,
@@ -318,7 +331,7 @@ def run(argv, config_path):
                                                                  None,
                                                                  None))
 
-        K = 'CREATE TABLE {0} (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);'.format(args.aggregate_name)
+        K = 'CREATE TABLE {0} ({1});'.format(args.aggregate_name, create_table_cols)
 
         G = gufi_common.build_query(build_select(args),
                                     [args.aggregate_name],

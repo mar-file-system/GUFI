@@ -98,7 +98,7 @@ def _read_file(settings, f):
 
     for key in settings:
         if key not in out:
-            raise Exception('Missing ' + key)
+            raise Exception('Missing {0}'.format(key))
 
     return out
 

@@ -78,7 +78,7 @@ PENTRIES = 'pentries'
 # location of this file
 PATH = os.path.realpath(__file__)
 
-SECONDS_PER_DAY = str(24 * 60 * 60)
+SECONDS_PER_DAY = str(24 * 60 * 60) # do string conversion once
 
 '''file size units specified in GNU find.'''
 filesize = {'b' : 512,
@@ -145,47 +145,46 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     now = time.time()
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-    #     where  += ['(uid == {})'.format(os.getuid())]
-    #     # where  += ['(uid == {}) OR (gid in {})'.format(os.getuid(), '(' + str(os.getgroups())[1:-1] + ')')]
+    #     where  += ['(uid == {0})'.format(os.getuid())]
 
     if args.amin is not None:
-        where += ['({} - {}.atime) / 60 {} {}'.format(now, table, amin[0], amin[1]) for amin in args.amin]
+        where += ['({0} - {1}.atime) / 60 {2} {3}'.format(now, table, amin[0], amin[1]) for amin in args.amin]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        where += ['({} - {}.atime) / {} {} {} '.format(now, table, SECONDS_PER_DAY, atime[0], atime[1]) for atime in args.atime]
+        where += ['({0} - {1}.atime) / {2} {3} {4} '.format(now, table, SECONDS_PER_DAY, atime[0], atime[1]) for atime in args.atime]
 
     if args.cmin is not None:
-        where += ['({} - {}.ctime) / 60 {} {}'.format(now, table, cmin[0], cmin[1]) for cmin in args.cmin]
+        where += ['({0} - {1}.ctime) / 60 {2} {3}'.format(now, table, cmin[0], cmin[1]) for cmin in args.cmin]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        where += ['({} - {}.ctime) / {} {} {} '.format(now, table, SECONDS_PER_DAY, ctime[0], ctime[1]) for ctime in args.ctime]
+        where += ['({0} - {1}.ctime) / {2} {3} {4} '.format(now, table, SECONDS_PER_DAY, ctime[0], ctime[1]) for ctime in args.ctime]
 
     if args.empty is True:
-        where += ['{}.size == 0'.format(table), '({}.type == \'f\') OR ({}.type == \'d\')'.format(table, table)]
+        where += ['{0}.size == 0'.format(table), '({0}.type == \'f\') OR ({0}.type == \'d\')'.format(table)]
 
     if args.executable is True:
-        where += ['({}.mode & 64) == 64'.format(table)] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['({0}.mode & 64) == 64'.format(table)] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     if args.false is True:
         where += ['0']
 
     if args.gid is not None:
-        where += ['{}.gid {} {}'.format(table, gid[0], gid[1]) for gid in args.gid]
+        where += ['{0}.gid {1} {2}'.format(table, gid[0], gid[1]) for gid in args.gid]
 
     if args.group is not None:
-        where += ['{}.gid == {}'.format(table, args.group)]
+        where += ['{0}.gid == {1}'.format(table, args.group)]
 
     # if args.ilname is not None:
 
     if args.iname is not None:
-        where += ['{}.name REGEXP \'(?i){}\''.format(table, args.iname)]
+        where += ['{0}.name REGEXP \'(?i){1}\''.format(table, args.iname)]
 
     if args.inum is not None:
-        where += ['{}.inode {} {}'.format(table, inum[0], inum[1]) for inum in args.inum]
+        where += ['{0}.inode {1} {2}'.format(table, inum[0], inum[1]) for inum in args.inum]
 
     # Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.
     # if args.ipath is not None:
@@ -195,23 +194,23 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     # if args.iwholename is not None:
 
     if args.links is not None:
-        where += ['{}.nlink {} {}'.format(table, links[0], links[1]) for links in args.links]
+        where += ['{0}.nlink {1} {2}'.format(table, links[0], links[1]) for links in args.links]
 
     if args.lname is not None:
-        where += ['{}.type == \'l\''.format(table),
-                  '{}.name REGEXP \'{}\''.format(table, args.lname)]
+        where += ['{0}.type == \'l\''.format(table),
+                  '{0}.name REGEXP \'{1}\''.format(table, args.lname)]
 
     if args.mmin is not None:
-        where += ['({} - {}.mtime) / 60 {} {}'.format(now, table, mmin[0], mmin[1]) for mmin in args.mmin]
+        where += ['({0} - {1}.mtime) / 60 {2} {3}'.format(now, table, mmin[0], mmin[1]) for mmin in args.mmin]
 
     if args.mtime is not None:
-        where += ['({} - mtime) / {} {} {}'.format(now, SECONDS_PER_DAY, mtime[0], mtime[1]) for mtime in args.mtime]
+        where += ['({0} - {1}.mtime) / {2} {3} {4}'.format(now, table, SECONDS_PER_DAY, mtime[0], mtime[1]) for mtime in args.mtime]
 
     if args.name is not None:
-        where += [' OR '.join(['({}.name REGEXP \'{}\')'.format(table, name) for name in args.name])]
+        where += [' OR '.join(['({0}.name REGEXP \'{1}\')'.format(table, name) for name in args.name])]
 
     if args.newer is not None:
-        where += ['{}.mtime > {}'.format(table, args.newer.st_mtime)]
+        where += ['{0}.mtime > {1}'.format(table, args.newer.st_mtime)]
 
     # if args.newerXY is not None:
 
@@ -223,36 +222,36 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     # if args.perm is not None:
 
     if args.readable is True:
-        where += ['({}.mode & 256) == 256'.format(table)] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['({0}.mode & 256) == 256'.format(table)] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # # not handled here
     # if args.regex is not None:
 
     if args.samefile is not None:
-        where += ['{}.inode == {}'.format(table, args.samefile.st_ino)]
+        where += ['{0}.inode == {1}'.format(table, args.samefile.st_ino)]
 
     if args.size is not None:
-        where += ['{}.size {} {}'.format(table, size[0], size[1]) for size in args.size]
+        where += ['{0}.size {1} {2}'.format(table, size[0], size[1]) for size in args.size]
 
     if args.true is True:
         where += ['1']
 
     if args.type is not None:
         # multiple types uses OR instead of AND
-        where += [' OR '.join(['({}.type == "{}")'.format(table, t) for t in args.type])]
+        where += [' OR '.join(['({0}.type == "{1}")'.format(table, t) for t in args.type])]
 
     if args.uid is not None:
-        where += ['({}.uid {} {})'.format(table, uid[0], uid[1]) for uid in args.uid]
+        where += ['{0}.uid {1} {2}'.format(table, uid[0], uid[1]) for uid in args.uid]
 
     # if args.used is not None:
 
     if args.user is not None:
-        where += ['{}.uid == {}'.format(table, args.user)]
+        where += ['{0}.uid == {1}'.format(table, args.user)]
 
     # if args.wholename is not None:
 
     if args.writable is True:
-        where += ['({}.mode & 128) == 128'.format(table)] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['({0}.mode & 128) == 128'.format(table)] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # if args.xtype is not None:
 
@@ -271,13 +270,13 @@ def build_order_by(args, table):
     order_by = []
 
     if args.smallest:
-        order_by += ['{}.size ASC'.format(table)]
+        order_by += ['{0}.size ASC'.format(table)]
 
     if args.largest:
-        order_by += ['{}.size DESC'.format(table)]
+        order_by += ['{0}.size DESC'.format(table)]
 
     # order by name last so it doesnt break user requested ordering
-    order_by += ['{}.name ASC'.format(table)]
+    order_by += ['{0}.name ASC'.format(table)]
 
     return order_by
 
@@ -311,7 +310,7 @@ def parse_escape(fmt, i):
     else:
         pass
 
-    return '"' + ret + '"', i + 1
+    return '"{0}"'.format(ret), i + 1
 
 def parse_directives(table, fmt, fmt_len, i, path):
     # unterminated directive prints ""; behavior is undefined in GNU find
@@ -341,57 +340,57 @@ def parse_directives(table, fmt, fmt_len, i, path):
     if ret == '%':
         ret = '\'%\''
     elif ret == 'a':
-        ret = 'printf("%{}d", ' + '{}.atime)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.atime)'.format(table)
     # elif ret == 'A':
     elif ret == 'b':
-        ret = 'printf("%{}d", ' + '({0}.blocks * {0}.blksize) / 512)'.format(table)
+        ret = 'printf("%{{0}}d", ({0}.blocks * {0}.blksize) / 512)'.format(table)
     elif ret == 'c':
-        ret = 'printf("%{}d", ' + '{}.ctime)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.ctime)'.format(table)
     # elif ret == 'C':
     elif ret == 'd':
-        ret = 'printf("%{}u", level() + ' + '(CASE {}.type WHEN "d" THEN 0 ELSE 1 END))'.format(table)
+        ret = 'printf("%{{0}}u", level() + (CASE {0}.type WHEN "d" THEN 0 ELSE 1 END))'.format(table)
     elif ret == 'D':
-        ret = 'printf("%{}s", "-")'
+        ret = 'printf("%{0}s", "-")'
     elif ret == 'f':
-        ret = 'printf("%{}s", ' + '{}.name)'.format(table)
+        ret = 'printf("%{{0}}s", {0}.name)'.format(table)
     # elif ret == 'F':
     elif ret == 'g':
-        ret = 'gidtogroup({}.gid'.format(table) + ', {})'
+        ret = 'gidtogroup({0}.gid, {{0}})'.format(table)
     elif ret == 'G':
-        ret = 'printf("%{}d", ' + '{}.gid)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.gid)'.format(table)
     elif ret == 'h':
-        ret = 'printf("%{}s", ' + path + ')'
+        ret = 'printf("%{{0}}s", {0})'.format(path)
     elif ret == 'H':
-        ret = 'printf("%{}s", starting_point())'
+        ret = 'printf("%(0}s", starting_point())'
     elif ret == 'i':
-        ret = 'printf("%{}d", ' + '{}.inode)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.inode)'.format(table)
     elif ret == 'k':
-        ret = 'printf("%{}d", ' + '({0}.blocks * {0}.blksize) / 1024)'.format(table)
+        ret = 'printf("%{{0}}d", ({0}.blocks * {0}.blksize) / 1024)'.format(table)
     elif ret == 'l':
-        ret = 'printf("%{}s", ' + '{}.linkname)'.format(table)
+        ret = 'printf("%{{0}}s", {0}.linkname)'.format(table)
     elif ret == 'm':
-        ret = 'printf("%{}o", ' + '{}.mode & 511)'.format(table) # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        ret = 'printf("%{{0}}o", {0}.mode & 511)'.format(table) # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
     elif ret == 'M':
-        ret = 'printf("%{}s", ' + 'modetotxt({}.mode))'.format(table)
+        ret = 'printf("%{{0}}s", modetotxt({0}.mode))'.format(table)
     elif ret == 'n':
-        ret = 'printf("%{}d", ' + '{}.nlink)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.nlink)'.format(table)
     elif ret == 'p':
-        ret = path + ' || ' + '(CASE {0}.type WHEN "d" THEN "" ELSE "/" || {0}.name END)'.format(table)
+        ret = '{0} || (CASE {1}.type WHEN "d" THEN "" ELSE "/" || {1}.name END)'.format(path, table)
     elif ret == 'P':
-        ret = 'printf("%{}s", ' + 'substr(' + path + ' || "/" || {}.name, length(starting_point()) + 1))'.format(table)
+        ret = 'printf("%{{0}}s", substr({0} || "/" || {1}.name, length(starting_point()) + 1))'.format(path, table)
     elif ret == 's':
-        ret = 'printf("%{}u", ' + '{}.size)'.format(table)
+        ret = 'printf("%{{0}}u", {0}.size)'.format(table)
     elif ret == 'S':
-        ret = 'printf("%{}d", ' + '({0}.blksize * {0}.blocks) / {0}.size)'.format(table)
+        ret = 'printf("%{{0}}d", ({0}.blksize * {0}.blocks) / {0}.size)'.format(table)
     elif ret == 't':
-        ret = 'printf("%{}d", ' + '{}.mtime)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.mtime)'.format(table)
     # elif ret == 'T':
     elif ret == 'u':
-        ret = 'uidtouser({}.uid'.format(table) + ', {})'
+        ret = 'uidtouser({0}.uid, {{0}})'.format(table)
     elif ret == 'U':
-        ret = 'printf("%{}d", ' + '{}.uid)'.format(table)
+        ret = 'printf("%{{0}}d", {0}.uid)'.format(table)
     elif ret == 'y':
-        ret = 'printf("%{}s", ' + '{}.type)'.format(table)
+        ret = 'printf("%{{0}}s", {0}.type)'.format(table)
     # elif ret == 'Y':
     # elif ret == 'Z':
     else:
@@ -399,7 +398,7 @@ def parse_directives(table, fmt, fmt_len, i, path):
         while (i < fmt_len) and (fmt[i] != '%') and (fmt[i] != '\\'):
             ret += fmt[i]
             i += 1
-        ret = '"' + ret + '"'
+        ret = '"{0}"'.format(ret)
         i -= 1
 
     return ret.format(width), i + 1
@@ -424,11 +423,11 @@ def build_output(args, table):
                 column, i = parse_directives(table, fmt, fmt_len, i + 1, path)
                 cols += [column]
             else:
-                cols += ['"' + fmt[i] + '"']
+                cols += ['"{0}"'.format(fmt[i])]
                 i += 1
         output = ' || '.join(cols)
     else:
-        output = path + ' || (CASE {0}.type WHEN "d" THEN "" ELSE "/" || {0}.name END)'.format(table)
+        output = '{0} || (CASE {1}.type WHEN "d" THEN "" ELSE "/" || {1}.name END)'.format(path, table)
 
     return [output]
 
@@ -454,9 +453,9 @@ def help(parser):
           'default path is the index root directory specified in the configuration file\n' +
           'expression may consist of:\n' +
           '\n' +
-          '\n'.join(['    ' + ' '.join(row) for row in expr]) + '\n' +
+          '{}\n'.format('\n'.join(['    ' + ' '.join(row) for row in expr])) +
           '\nGUFI Specific Flags (--):\n' +
-          '\n    ' + ' '.join(gufi_specific) + '\n' +
+          '\n    {0}\n'.format(' '.join(gufi_specific)) +
           '\n' +
           'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
           'page at https://github.com/mar-file-system/GUFI/issues\n')
@@ -473,7 +472,7 @@ def build_expression_parser():
     # GNU find global options
     parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',              type=gufi_common.get_non_negative,                  help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
     parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',              type=gufi_common.get_non_negative,                  help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
-    parser.add_argument('--version', '-v',                                                         action='version',                                   version=os.path.basename(PATH) + ' @GUFI_VERSION@')
+    parser.add_argument('--version', '-v',                                                         action='version',                                   version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)))
 
     # GNU find test expressions
     parser.add_argument('-amin',               metavar='n',          dest='amin',                  type=numeric_arg, action='append',                  help='File was last accessed n minutes ago.')
@@ -561,14 +560,14 @@ def run(argv, config_path):
             break
 
         if argv[i][1:] in ['H', 'L']:
-            sys.stderr.write('Found flag {}. Ignoring.\n'.format(argv[i][1:]))
+            sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[i][1:]))
         else:
             real[argv[i][1:]] = True
 
         i += 1
 
     if at_expressions and (sys.argv[i][0] != '-'):
-        raise RuntimeError('gufi_find: paths must preceed expression: {}'.format(sys.argv[i - 1]))
+        raise RuntimeError('gufi_find: paths must preceed expression: {0}'.format(sys.argv[i - 1]))
 
     # parse paths
     paths = []
@@ -588,7 +587,7 @@ def run(argv, config_path):
         help(expression_parser)
 
     if len(unknown):
-        raise RuntimeError('gufi_find: unknown predicate `{}\''.format(unknown[0]))
+        raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
 
     validate_args(args)
 
@@ -618,7 +617,10 @@ def run(argv, config_path):
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore)'.format(SUMMARY)] + ['{}.{}'.format(SUMMARY, column) for column in columns] + build_output(args, SUMMARY),
+            gufi_common.build_query(['NULL',
+                                     'path({0}.name, {0}.rollupscore)'.format(SUMMARY)] +
+                                    ['{0}.{1}'.format(SUMMARY, column) for column in columns] +
+                                    build_output(args, SUMMARY),
                                     [SUMMARY],
                                     build_where(args, SUMMARY),
                                     build_group_by(args, SUMMARY),
@@ -627,9 +629,13 @@ def run(argv, config_path):
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
-            gufi_common.build_query(['NULL', 'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] + ['{}.{}'.format(PENTRIES, column) for column in columns] + build_output(args, PENTRIES),
+            gufi_common.build_query(['NULL',
+                                     'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] +
+                                    ['{0}.{1}'.format(PENTRIES, column) for column in columns] +
+                                    build_output(args, PENTRIES),
                                     [SUMMARY, PENTRIES],
-                                    build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
+                                    build_where(args, PENTRIES) +
+                                    ['{0}.inode == {1}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),
                                     build_order_by(args, PENTRIES),
                                     args.numresults))
@@ -678,7 +684,8 @@ def run(argv, config_path):
 
         E = gufi_common.build_query(build_output(args, PENTRIES),
                                     [SUMMARY, PENTRIES],
-                                    build_where(args, PENTRIES) + ['{}.inode == {}.pinode'.format(SUMMARY, PENTRIES)],
+                                    build_where(args, PENTRIES) +
+                                    ['{0}.inode == {1}.pinode'.format(SUMMARY, PENTRIES)],
                                     build_group_by(args, PENTRIES),
                                     build_order_by(args, PENTRIES),
                                     args.numresults)
