@@ -14,19 +14,19 @@
   File: 'unusual#? directory ,/unusual, name?#'
 
 # first two columns of terse format
-.hidden5
-1KB1024
-1MB1048576
-directory/executable1
-directory/readonly2
-directory/subdirectory/repeat_name4
-directory/writable3
-empty_file0
-leaf_directory/leaf_file16
-leaf_directory/leaf_file27
-old_file8
-repeat_name4
-unusual#?directory
+.hidden 5
+1KB 1024
+1MB 1048576
+directory/executable 1
+directory/readonly 2
+directory/subdirectory/repeat_name 4
+directory/writable 3
+empty_file 0
+leaf_directory/leaf_file1 6
+leaf_directory/leaf_file2 7
+old_file 8
+repeat_name 4
+unusual#? directory
 
 # custom print format
 '.hidden'                                                                             .hidden 664 -rw-rw-r-- 81b4 regular file 5 - 0
@@ -65,7 +65,8 @@ unusual#?directory
 \x61 -> a
 \x41A -> AA
 \x61a -> aa
-\x? -> \?
+\x? -> gufi_stat: missing hex digit for \x
+\x?
 \101 -> A
 \141 -> a
 \60a -> 0a

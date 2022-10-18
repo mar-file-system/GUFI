@@ -96,14 +96,14 @@ echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
     "${GUFI_STAT}" "${INDEXROOT}/${entry}" | head -n 1
-done
+done | remove_root
 echo
 
 echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}" "${variable_size[@]}"
 do
-    "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | awk '{ print $1 $2 }'
-done | @SORT@
+    "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | awk '{ print $1 " " $2 }'
+done | remove_root | @SORT@
 echo
 
 echo "# custom print format"
@@ -117,11 +117,11 @@ echo "# custom print format"
     do
         "${GUFI_STAT}" -f '%-60N %60n %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}"
     done
-) | @SORT@
+) | remove_root | @SORT@
 echo
 
 # the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-TZ=UTC "${GUFI_STAT}" -f '%-60N %60n %x %X %y %Y\n' "${INDEXROOT}/old_file"
+TZ=UTC "${GUFI_STAT}" -f '%-60N %60n %x %X %y %Y\n' "${INDEXROOT}/old_file" | remove_root
 echo
 
 echo "# escape character parsing"
@@ -160,9 +160,9 @@ printable=(
 for c in "${printable[@]}"
 do
     echo -n "\\${c} -> "
-    "${GUFI_STAT}" -f "\\${c}\n" "${INDEXROOT}/old_file"
+    "${GUFI_STAT}" -f "\\${c}\n" "${INDEXROOT}/old_file" 2>&1
 done
-) | replace | remove_root | @TEE@ "${OUTPUT}"
+) | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"
 rm "${OUTPUT}"

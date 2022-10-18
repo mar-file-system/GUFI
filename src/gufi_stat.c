@@ -192,7 +192,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                         }
                         else {
                             fprintf(stderr, "gufi_stat: missing hex digit for \\x\n");
-                            f--;
+                            f -= 2;
                             break;
                         }
 
