@@ -105,11 +105,14 @@ run_sort "${GUFI_FIND} -type f -size +1c"
 run_sort "${GUFI_FIND} -type f -size +1024c"
 run_sort "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
 run_sort "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
-run_sort "${GUFI_FIND} -iname 'LEAF'"
-run_sort "${GUFI_FIND} -lname 'file.*'"
-run_sort "${GUFI_FIND} -lname 'directory.*'"
+run_sort "${GUFI_FIND} -iname 'LEAF'"             # regex on file name (should be glob, but glob is case sensitive)
+run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
+run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file name
+run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on file name
 echo "# missing old_file"
 run_sort "${GUFI_FIND} -newer '${reference}'"
+run_sort "${GUFI_FIND} -regex '.*/file.*'"        # regex on whole path
+run_sort "${GUFI_FIND} -regex '.*/directory.*'"   # regex on whole path
 run_sort "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory/repeat_name'"
 run_sort "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory'"
 run_sort "${GUFI_FIND} -true"

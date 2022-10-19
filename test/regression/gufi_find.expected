@@ -150,10 +150,15 @@ leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 
-$ gufi_find -lname 'file.*'
+$ gufi_find -iregex 'LEAF'
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+
+$ gufi_find -lname 'file*'
 file_symlink
 
-$ gufi_find -lname 'directory.*'
+$ gufi_find -lname 'directory*'
 directory/subdirectory/directory_symlink
 
 # missing old_file
@@ -177,6 +182,18 @@ leaf_directory/leaf_file2
 repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
+
+$ gufi_find -regex '.*/file.*'
+file_symlink
+
+$ gufi_find -regex '.*/directory.*'
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
 
 $ gufi_find -samefile 'directory/subdirectory/repeat_name'
 directory/subdirectory/repeat_name
