@@ -168,7 +168,7 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);
         OutputBuffer_destroy(&ta->output_buffer);
 
-        if (ta->outfile != stdout) {
+       if (ta->outfile && (ta->outfile != stdout)) {
             fclose(ta->outfile);
         }
     }
