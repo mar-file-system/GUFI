@@ -154,6 +154,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /*     free(data); */
     /*     return 1; */
     /* } */
+    int rc = 0;
 
     struct ThreadArgs *ta = (struct ThreadArgs *) args;
     #if BENCHMARK
@@ -170,7 +171,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     DIR *dir = opendir(nda.work->name);
     if (!dir) {
         fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
-        return 1;
+        rc = 1;
+        goto cleanup;
     }
 
     /* offset by work->root_len to remove prefix */
@@ -184,8 +186,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         const int err = errno;
         if (err != EEXIST) {
             fprintf(stderr, "mkdir %s failure: %d %s\n", nda.topath, err, strerror(err));
-            closedir(dir);
-            return 1;
+            rc = 1;
+            goto cleanup;
         }
     }
 
@@ -198,8 +200,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* copy the template file */
     if (copy_template(nda.temp_db, dbname, nda.work->statuso.st_uid, nda.work->statuso.st_gid)) {
-        closedir(dir);
-        return 1;
+        rc = 1;
+        goto cleanup;
     }
 
     nda.db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
@@ -210,8 +212,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     #endif
         );
     if (!nda.db) {
-        closedir(dir);
-        return 1;
+        rc = 1;
+        goto cleanup;
     }
 
     /* prepare to insert into the database */
@@ -270,6 +272,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     chmod(nda.topath, nda.work->statuso.st_mode);
     chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
+  cleanup:
     closedir(dir);
 
     free(nda.work);
@@ -280,7 +283,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     pthread_mutex_unlock(&print_mutex);
     #endif
 
-    return 0;
+    return rc;
 }
 
 /*
