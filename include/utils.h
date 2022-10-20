@@ -112,8 +112,6 @@ int dupdir(const char *path, struct stat *stat);
 
 int shortpath(const char *name, char *nameout, char *endname);
 
-int printit(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, int printing, long long pinode);
-
 // NOTE: returns void, not void*, because threadpool threads
 //       do not return values outside the API.
 typedef void(DirFunc)(void*);

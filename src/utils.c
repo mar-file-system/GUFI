@@ -141,7 +141,6 @@ int printits(struct work *pwork, int ptid) {
   return 0;
 }
 
-
 int zeroit(struct sum *summary)
 {
   summary->totfiles=0;
@@ -457,65 +456,6 @@ int shortpath(const char *name, char *nameout, char *endname) {
      } else
         sprintf(nameout,"%s",prefix);
      return 0;
-}
-
-int printit(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, int printing, long long pinode) {
-  if (!printing) return 0;
-  printf("%c ", type[0]);
-
-  printf("%s ", name);
-  if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
-
-  printf("%"STAT_ino" ",    status->st_ino);
-  printf("%lld ",           pinode);
-  printf("%d ",             status->st_mode);
-  printf("%"STAT_nlink" ",  status->st_nlink);
-  printf("%d ",             status->st_uid);
-  printf("%d ",             status->st_gid);
-  printf("%"STAT_size" ",   status->st_size);
-  printf("%"STAT_bsize" ",  status->st_blksize);
-  printf("%"STAT_blocks" ", status->st_blocks);
-  printf("%ld ",            status->st_atime);
-  printf("%ld ",            status->st_mtime);
-  printf("%ld ",            status->st_ctime);
-
-  if (xattrs->count) {
-    printf("xattr:");
-    for(size_t i = 0; i < xattrs->count; i++) {
-      printf("%s\\0", xattrs->pairs[i].name);
-    }
-  }
-  printf("\n");
-  return 0;
-}
-
-int printload(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, long long pinode, char *sortf, FILE *of) {
-  fprintf(of,"%s%s",             name,in.delim);
-  fprintf(of,"%c%s",             type[0],in.delim);
-  fprintf(of,"%"STAT_ino"%s",    status->st_ino,in.delim);
-  //fprintf(of,"%lld%s", pinode,in.delim);
-  fprintf(of,"%d%s",             status->st_mode,in.delim);
-  fprintf(of,"%"STAT_nlink"%s",  status->st_nlink,in.delim);
-  fprintf(of,"%d%s",             status->st_uid,in.delim);
-  fprintf(of,"%d%s",             status->st_gid,in.delim);
-  fprintf(of,"%"STAT_size"%s",   status->st_size,in.delim);
-  fprintf(of,"%"STAT_bsize"%s",  status->st_blksize,in.delim);
-  fprintf(of,"%"STAT_blocks"%s", status->st_blocks,in.delim);
-  fprintf(of,"%ld%s",            status->st_atime,in.delim);
-  fprintf(of,"%ld%s",            status->st_mtime,in.delim);
-  fprintf(of,"%ld%s",            status->st_ctime,in.delim);
-  fprintf(of,"%s%s",             linkname,in.delim);
-  for(size_t i = 0; i < xattrs->count; i++) {
-      fprintf(of, "%s\\0", xattrs->pairs[i].name);
-  }
-  fprintf(of,"%s",in.delim);
-  /* this one is for create time which posix doenst have */
-  fprintf(of,"%s",in.delim);
-  /* sort field at the end not required */
-  if (strlen(sortf) > 0) fprintf(of,"%s",sortf);
-
-  fprintf(of,"\n");
-  return(0);
 }
 
 int SNPRINTF(char *str, size_t size, const char *format, ...) {
