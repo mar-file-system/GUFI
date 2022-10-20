@@ -63,6 +63,8 @@ OF SUCH DAMAGE.
 
 
 #include "debug.h"
+#include "print.h"
+#include "utils.h"
 
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -98,32 +100,16 @@ int print_timer(struct OutputBuffers * obufs, const size_t id, char * str, const
         return -1;
     }
 
-    const size_t len = snprintf(str, size, "%zu %s %" PRIu64 " %" PRIu64 "\n", id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
-    const size_t capacity = obufs->buffers[id].capacity;
+    SNPRINTF(str, size, "%zu %s %" PRIu64 " %" PRIu64,
+             id, name, since_epoch(&se->start) - epoch, since_epoch(&se->end) - epoch);
 
-    /* if the row can fit within an empty buffer, try to add the new row to the buffer */
-    if (len <= capacity) {
-        /* if there's not enough space in the buffer to fit the new row, flush it first */
-        if ((obufs->buffers[id].filled + len) > capacity) {
-            pthread_mutex_lock(obufs->mutex);
-            OutputBuffer_flush(&obufs->buffers[id], stderr);
-            pthread_mutex_unlock(obufs->mutex);
-        }
+    PrintArgs_t pa = {
+        .output_buffer = &obufs->buffers[id],
+        .delim = ' ',
+        .mutex = obufs->mutex,
+        .outfile = stderr,
+        .rows = 0,
+    };
 
-        char * buf = obufs->buffers[id].buf;
-        size_t filled = obufs->buffers[id].filled;
-
-        memcpy(&buf[filled], str, len);
-        filled += len;
-
-        obufs->buffers[id].filled = filled;
-        obufs->buffers[id].count++;
-    }
-    else {
-        /* if the row does not fit the buffer, output immediately */
-        /* instead of buffering since order shouldn't matter      */
-        fwrite(str, sizeof(char), len, stderr);
-    }
-
-    return 0;
+    return print_parallel(&pa, 1, &str, NULL);
 }
