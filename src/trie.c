@@ -145,7 +145,7 @@ int trie_have_children(trie_t *curr)
 }
 
 // Recursive function to delete a string in Trie.
-int trie_delete_recursive(trie_t **curr, const char *str, const size_t i, const size_t len)
+static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i, const size_t len)
 {
     // return if Trie is empty
     if (*curr == NULL)
@@ -178,20 +178,20 @@ int trie_delete_recursive(trie_t **curr, const char *str, const size_t i, const 
     // if we have reached the end of the string
     if ((i == len) && (*curr)->isLeaf)
     {
-        // if current node is a leaf node and don't have any children
-        if (!trie_have_children(*curr))
-        {
-            free(*curr); // delete current node
-            (*curr) = NULL;
-            return 1; // delete non-leaf parent nodes
-        }
-
         // if current node is a leaf node and have children
-        else
+        if (trie_have_children(*curr))
         {
             // mark current node as non-leaf node (DON'T DELETE IT)
             (*curr)->isLeaf = 0;
             return 0;       // don't delete its parent nodes
+        }
+
+        // if current node is a leaf node and don't have any children
+        else
+        {
+            free(*curr); // delete current node
+            (*curr) = NULL;
+            return 1; // delete non-leaf parent nodes
         }
     }
 

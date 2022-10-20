@@ -130,7 +130,7 @@ TEST(trie, have_children) {
     trie_free(root);
 }
 
-TEST(trie, del) {
+TEST(trie, delete) {
     char sub[MAXPATH] = "01";
     size_t sub_len = strlen(sub);
     char str[MAXPATH] = "0123";
@@ -139,30 +139,39 @@ TEST(trie, del) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    /* entire chain is deleted */
-    trie_insert(root, str, str_len);
+    {
+        /* insert long string and sub string */
+        trie_insert(root, str, str_len);
+        trie_insert(root, sub, sub_len);
+        EXPECT_EQ(trie_search(root, str, str_len), 1);
+        EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+
+        /* longer string is deleted, but the shorter string remains */
+        EXPECT_EQ(trie_delete(root, str, str_len), 0);
+        EXPECT_NE(root, nullptr);
+        EXPECT_EQ(trie_search(root, str, str_len), 0);
+        EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+    }
+
+    {
+        /* insert long string and sub string */
+        trie_insert(root, str, str_len);
+        trie_insert(root, sub, sub_len);
+        EXPECT_EQ(trie_search(root, str, str_len), 1);
+        EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+
+        /* shorter string is deleted, but the longer string remains */
+        EXPECT_EQ(trie_delete(root, sub, sub_len), 0);
+        EXPECT_NE(root, nullptr);
+        EXPECT_EQ(trie_search(root, str, str_len), 1);
+        EXPECT_EQ(trie_search(root, sub, sub_len), 0);
+    }
+
+    /* deleteing the remaining long string deletes the entire chain */
     EXPECT_EQ(trie_search(root, str, str_len), 1);
     EXPECT_EQ(trie_delete(root, str, str_len), 1);
     EXPECT_NE(root, nullptr);
     EXPECT_EQ(trie_search(root, str, str_len), 0);
-
-    /* insert long string and sub string */
-    trie_insert(root, str, str_len);
-    trie_insert(root, sub, sub_len);
-    EXPECT_EQ(trie_search(root, str, str_len), 1);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 1);
-
-    /* not all of longer string is deleted */
-    EXPECT_EQ(trie_delete(root, str, str_len), 0);
-    EXPECT_NE(root, nullptr);
-    EXPECT_EQ(trie_search(root, str, str_len), 0);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 1);
-
-    /* entire sub string is deleted */
-    EXPECT_EQ(trie_delete(root, sub, sub_len), 1);
-    EXPECT_NE(root, nullptr);
-    EXPECT_EQ(trie_search(root, str, str_len), 0);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 0);
 
     trie_free(root);
 }
