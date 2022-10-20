@@ -236,7 +236,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (dupdir(topath, &dir.statuso)) {
         const int err = errno;
-        fprintf(stderr, "Dupdir failure: %d %s\n", err, strerror(err));
+        fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
+                topath, strerror(err), err);
         row_destroy(w);
         return 1;
     }
@@ -710,7 +711,7 @@ static FILE ***open_per_thread_traces(char **trace_names, size_t trace_count, si
             if (!(traces[i][j] = fopen(trace_names[i], "rb"))) {
                  /* if the file exists, probably ran out of file descriptors */
                 const int err = errno;
-                fprintf(stderr, "Could not open %s: %s (%d)\n", trace_names[i], strerror(err), err);
+                fprintf(stderr, "Could not open \"%s\": %s (%d)\n", trace_names[i], strerror(err), err);
                 close_per_thread_traces(traces, i + 1, thread_count - 1); /* pass in original thread_count */
                 return NULL;
             }

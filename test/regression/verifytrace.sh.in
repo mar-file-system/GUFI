@@ -65,14 +65,9 @@ set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 COPY="${TRACE}.copy"
-BADTRACE="badtrace"
-
-# trace delimiter
-DELIM="|"
-BADDELIM="?"
 
 cleanup() {
-    rm -rf "${COPY}" "${BADTRACE}"
+    rm -rf "${COPY}"
 }
 
 cleanup_exit() {

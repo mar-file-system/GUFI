@@ -287,9 +287,15 @@ int main(int argc, char *argv[]) {
 
     const size_t root_count = argc - idx - 1;
     char **roots = calloc(root_count, sizeof(char *));
-    for(size_t i = 0; i < root_count; i++) {
+    for(size_t i = 0; idx < (argc - 1);) {
         /* force all input paths to be canonical */
-        roots[i] = realpath(argv[idx], NULL);
+        roots[i] = realpath(argv[idx++], NULL);
+        if (!roots[i]) {
+            const int err = errno;
+            fprintf(stderr, "Could not resolve path \"%s\": %s (%d)\n",
+                    argv[idx - 1], strerror(err), err);
+            continue;
+        }
 
         /* get first work item by validating source path */
         struct work *root = validate_source(roots[i]);
@@ -298,7 +304,7 @@ int main(int argc, char *argv[]) {
         }
 
         QPTPool_enqueue(pool, 0, processdir, root);
-        idx++;
+        i++;
     }
     QPTPool_wait(pool);
     QPTPool_destroy(pool);

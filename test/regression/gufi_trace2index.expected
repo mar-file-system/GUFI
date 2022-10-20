@@ -51,3 +51,28 @@ GUFI Index:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
+# bad trace path
+$ gufi_trace2index -d "|" -n "2" "" "prefix"
+Could not open "": No such file or directory (2)
+Failed to open trace file for each thread
+
+# bad index path
+$ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB"
+Dirs:  5 (0 empty)
+Dupdir failure: "prefix/1KB/prefix": Not a directory (20)
+Dupdir failure: "prefix/1KB/prefix/directory": Not a directory (20)
+Dupdir failure: "prefix/1KB/prefix/directory/subdirectory": Not a directory (20)
+Dupdir failure: "prefix/1KB/prefix/leaf_directory": Not a directory (20)
+
+# empty trace
+$ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
+Could not get the first line of the trace
+
+# cannot find delimiter of first line
+$ gufi_trace2index -d "?" -n "2" "trace" "prefix"
+Could not find the specified delimiter
+
+# first line does not start with a directory
+$ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
+First line of trace is not a directory
+

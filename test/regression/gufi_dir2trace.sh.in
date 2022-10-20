@@ -98,6 +98,24 @@ echo "Source Directory:"
 echo "${src}"   | awk '{ print "    " $1 }'
 echo "Trace File:"
 echo "${lines}" | awk '{ print "    " $1 }'
+echo
+
+run_no_sort "mkdir \"${SRCDIR}.0\""
+echo "# target is directory"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}\""
+run_no_sort "rm -r \"${SRCDIR}.0\""
+
+echo "# source path is file"
+# shellcheck disable=SC2046,SC2086
+FULLTRACEPATH="$(dirname $(realpath ${TRACE}))"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\"" | @SED@ "s/${FULLTRACEPATH//\//\\/}\\///g;"
+
+echo "# empty source path"
+rm "${TRACES[@]}"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${TRACE}\""
+
+echo "# bad skip file"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}\" \"${TRACE}\" -k \"${TRACE}\""
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"

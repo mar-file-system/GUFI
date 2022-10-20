@@ -64,9 +64,6 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-# trace delimiter
-DELIM="|"
-
 OUTPUT="gufi_trace2index.out"
 
 (
@@ -88,6 +85,29 @@ echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'
 echo
 echo "GUFI Index:"
 echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
+echo
+
+cat "${TRACES[@]}" > "${TRACE}"
+
+echo "# bad trace path"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"\" \"${INDEXTARGET}\""
+
+echo "# bad index path"
+run_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SRCDIR}/1KB\"" | head -n 6
+echo
+
+echo "# empty trace"
+true > "${BADTRACE}"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${INDEXTARGET}\"" | head -n 2
+echo
+
+echo "# cannot find delimiter of first line"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${INDEXTARGET}\"" | head -n 2
+echo
+
+echo "# first line does not start with a directory"
+tail -n -1 "${TRACE}" > "${BADTRACE}"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${INDEXTARGET}\"" | head -n 2
 echo
 ) | @TEE@ "${OUTPUT}"
 

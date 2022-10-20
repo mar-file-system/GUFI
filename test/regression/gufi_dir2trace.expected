@@ -45,3 +45,27 @@ Trace File:
     prefix/repeat_name
     prefix/unusual#?
     prefix/unusual#?
+
+$ mkdir "prefix.0"
+
+# target is directory
+$ gufi_dir2trace -d "|" -n 2 "prefix" "prefix"
+"prefix.0" Already exists!
+Destination path is a directory "prefix.0"
+
+$ rm -r "prefix.0"
+
+# source path is file
+$ gufi_dir2trace -d "|" -n 2 "prefix/1KB" "trace"
+"trace.0" Already exists!
+"trace.1" Already exists!
+Source path is not a directory "prefix/1KB"
+
+# empty source path
+$ gufi_dir2trace -d "|" -n 2 "" "trace"
+Could not resolve path "": No such file or directory (2)
+
+# bad skip file
+$ gufi_dir2trace -d "|" -n 2 "prefix" "trace" -k "trace"
+Error: Cannot open skip file "trace"
+

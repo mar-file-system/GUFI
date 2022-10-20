@@ -72,20 +72,27 @@ then
 fi
 
 GENERATE_INDEX="$1"
+
 SRCDIR="prefix"
-TRACE="trace"
 THREADS=2
+
+TRACE="trace"
+BADTRACE="badtrace"
 TRACES=()
 for (( i = 0; i < THREADS; i++ ));
 do
     TRACES+=("${TRACE}.${i}")
 done
+DELIM="|"
+# shellcheck disable=SC2034
+BADDELIM="?"
+
 INDEXTARGET="search"
 INDEXROOT="${INDEXTARGET}/$(basename ${SRCDIR})"
 
 # always clean up
 setup_cleanup() {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${INDEXTARGET}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${INDEXTARGET}"
 }
 
 trap setup_cleanup EXIT
@@ -124,7 +131,7 @@ UNROLLUP="@CMAKE_BINARY_DIR@/src/unrollup"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
-# only replaces executables and whitespace
+# common strings that need replacing
 replace() {
     @SED@ "
     s/${GENERATETREE//\//\\/}/generatetree/g;

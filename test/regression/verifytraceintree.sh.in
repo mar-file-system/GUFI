@@ -75,14 +75,9 @@ NEXT_UID=$((UID + 1))
 NEXT_GID=$((GID + 1))
 
 COPY="${TRACE}.copy"
-BADTRACE="badtrace"
-
-# trace delimiter
-DELIM="|"
-BADDELIM="\x1E"
 
 cleanup() {
-    rm -rf "${COPY}" "${BADTRACE}"
+    rm -rf "${COPY}"
 }
 
 cleanup_exit() {

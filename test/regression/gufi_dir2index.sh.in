@@ -109,6 +109,23 @@ do
     echo "${index}" | awk '{ printf "        " $0 "\n" }'
     echo
 done
+echo
+
+rm -r "${INDEXTARGET}"
+
+echo "# target is file"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}/1KB\""
+
+echo "# source path is file"
+# shellcheck disable=SC2046,SC2086
+PARENT="$(dirname $(realpath ${SRCDIR}))"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${INDEXTARGET}\"" | @SED@ "s/${PARENT//\//\\/}\\///g;"
+
+echo "# empty source path"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
+
+echo "# bad skip file"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${INDEXTARGET}\" -k \"${TRACE}\""
 ) | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
