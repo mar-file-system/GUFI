@@ -139,13 +139,13 @@ int main(int argc, char *argv[])
    const int start = idx;
    const int numdbs = argc - idx;
 
-   /* check if number of databases provided can be attached */
-   const int attach_limit = sqlite3_limit(db, SQLITE_LIMIT_ATTACHED, -1);
-   if (attach_limit < numdbs) {
-       fprintf(stderr, "Error: Cannot attach %d database files (max %d)\n", numdbs, attach_limit);
-       rc = 1;
-       goto done;
-   }
+   /* /\* check if number of databases provided can be attached *\/ */
+   /* const int attach_limit = sqlite3_limit(db, SQLITE_LIMIT_ATTACHED, -1); */
+   /* if (attach_limit < numdbs) { */
+   /*     fprintf(stderr, "Error: Cannot attach %d database files (max %d)\n", numdbs, attach_limit); */
+   /*     rc = 1; */
+   /*     goto done; */
+   /* } */
 
    /* just zero out the global path so path() for this query is useless */
    memset(gps[0].gpath, 0, sizeof(gps[0].gpath));
@@ -165,8 +165,8 @@ int main(int argc, char *argv[])
                              (numdbs * single_db_len) +
                              1;                             /* NULL terminator */
 
-   char * create_view = malloc(create_len);                 /* buffer for CREATE TEMP VIEW string */
-   char * dbn = malloc(strlen(dbname) + 3 + 1);             /* buffer for database attach name    */
+   char *create_view = malloc(create_len);                  /* buffer for CREATE TEMP VIEW string */
+   char *dbn = malloc(strlen(dbname) + 1 + 3);              /* buffer for database attach name (<name>.ddd) */
 
    char *curr = create_view;
    curr += SNPRINTF(curr, create_len, "CREATE TEMP VIEW v%s AS", tablename);
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
    free(dbn);
    free(create_view);
 
-  done:
+  /* done: */
 
    closedb(db);
 

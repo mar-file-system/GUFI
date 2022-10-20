@@ -89,6 +89,14 @@ run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TAB
 
 echo "# Query all per-thread result databse files at once"
 run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+
+echo "# Attach too many database files"
+too_many=""
+for (( i = 0; i < 126 / THREADS; i++))
+do
+    too_many+="outdb.* "
+done
+run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${too_many}"
 ) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
