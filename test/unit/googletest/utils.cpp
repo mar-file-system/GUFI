@@ -685,7 +685,7 @@ TEST(setup_directory_skip, file) {
         }
     }
 
-    trie_t *skip = NULL;
+    trie_t *skip = nullptr;
     EXPECT_EQ(setup_directory_skip(skip_name, &skip), 0);
     EXPECT_EQ(trie_search(skip, ".",  1), 1);
     EXPECT_EQ(trie_search(skip, "..", 2), 1);
@@ -697,16 +697,28 @@ TEST(setup_directory_skip, file) {
     EXPECT_EQ(remove(skip_name), 0);
 }
 
+TEST(setup_directory_skip, bad_file) {
+    char name[] = "XXXXXX";
+    const int fd = mkstemp(name);
+    ASSERT_GT(fd, -1);
+    EXPECT_EQ(close(fd), 0);
+    EXPECT_EQ(remove(name), 0);
+
+    trie_t *skip = nullptr;
+    EXPECT_EQ(setup_directory_skip(name, &skip), -1);
+    EXPECT_EQ(skip, nullptr);
+}
+
 TEST(setup_directory_skip, no_file) {
-    trie_t *skip = NULL;
-    EXPECT_EQ(setup_directory_skip(NULL, &skip), 0);
+    trie_t *skip = nullptr;
+    EXPECT_EQ(setup_directory_skip(nullptr, &skip), 0);
     EXPECT_EQ(trie_search(skip, ".",  1), 1);
     EXPECT_EQ(trie_search(skip, "..", 2), 1);
     trie_free(skip);
 }
 
 TEST(setup_directory_skip, no_trie) {
-    EXPECT_EQ(setup_directory_skip("", NULL), -1);
+    EXPECT_EQ(setup_directory_skip("", nullptr), -1);
 }
 
 TEST(split, delims) {
