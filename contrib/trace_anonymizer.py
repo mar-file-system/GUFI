@@ -64,9 +64,12 @@
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from binascii import hexlify, unhexlify
 import argparse
-import hashlib
 import os
 import sys
+
+sys.path += ['@CMAKE_CURRENT_BINARY_DIR@']
+
+import hashes
 
 # trace file format
 PATH_IDX = 0
@@ -80,32 +83,9 @@ UID_MAX = 1 << 32
 GID_MIN = 1000
 GID_MAX = 1 << 32
 
-# wrapper for the built-in hash function to act as a hashlib hash class
-# update() and hexdigest() are not provided
-class BuiltInHash:
-    def __init__(self, string):
-        self.hashed = hex(abs(__builtins__.hash(string)))[2:]
-        if len(self.hashed) & 1:
-            self.hashed = '0' + self.hashed
-        self.hashed = unhexlify(self.hashed)
-
-    def digest(self):
-        return self.hashed
-
-# Known hashes
-Hashes = {
-    'BuiltInHash' : BuiltInHash,
-    'md5'         : hashlib.md5,
-    'sha1'        : hashlib.sha1,
-    'sha224'      : hashlib.sha224,
-    'sha256'      : hashlib.sha256,
-    'sha384'      : hashlib.sha384,
-    'sha512'      : hashlib.sha512,
-}
-
 def anonymize(string,                                # the data to hash
               sep = os.sep,                          # character that separates paths
-              hash = BuiltInHash,                    # an object that has a 'digest' function
+              hash = hashes.BuiltInHash,             # an object that has a 'digest' function
               salt = lambda string, extra_args : "", # a function to salt the each piece of the data, if necessary
               args = None):                          # extra arguments to pass into the salt function
     '''
@@ -166,9 +146,12 @@ def char(c):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Column Anonymizer: Read from stdin. Output to stdout.')
-    parser.add_argument('hash',              nargs='?',        default="BuiltInHash", choices=Hashes.keys(), help='Hash function name')
-    parser.add_argument('-i', '--in-delim',  dest='in_delim',  default="\x1e",        type=char,             help='Input Column Delimiter')
-    parser.add_argument('-o', '--out-delim', dest='out_delim', default="\x1e",        type=char,             help='Output Column Delimiter (Do not use space)')
+    parser.add_argument('hash',              nargs='?',        default="BuiltInHash", choices=hashes.Hashes.keys(),
+                        help='Hash function name')
+    parser.add_argument('-i', '--in-delim',  dest='in_delim',  default="\x1e",        type=char,
+                        help='Input Column Delimiter')
+    parser.add_argument('-o', '--out-delim', dest='out_delim', default="\x1e",        type=char,
+                        help='Output Column Delimiter (Do not use space)')
     args = parser.parse_args()
 
     # mapping of anonymized ints to original ints

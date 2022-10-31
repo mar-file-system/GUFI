@@ -63,17 +63,18 @@
 
 import argparse
 import os
+import sys
 
 import gufi_common
 
 # default configuration file location
 DEFAULT_PATH = '/etc/GUFI/config'
 
-class Config(object):
+class Config(object): # pylint: disable=too-few-public-methods,useless-object-inheritance
     def __init__(self, settings, config_reference=DEFAULT_PATH):
         # path string
         if isinstance(config_reference, str):
-            with open(config_reference, 'r') as config_file:
+            with open(config_reference, 'r') as config_file: # pylint: disable=unspecified-encoding
                 self.config = self._read_lines(settings, config_file)
         # iterable object containing lines
         elif self._check_iterable(config_reference):
@@ -111,6 +112,7 @@ class Config(object):
                 else:
                     out[key] = value
 
+
         for key in settings:
             if key not in out:
                 raise Exception('Missing Setting {0}'.format(key))
@@ -132,18 +134,24 @@ class Server(Config):
     }
 
     def __init__(self, file_reference):
+        # pylint: disable=super-with-arguments
         super(Server, self).__init__(Server.SETTINGS, file_reference)
 
+
     def threads(self):
+        '''return number of threads to use'''
         return self.config[Server.THREADS]
 
     def executable(self):
+        '''return absolute path of gufi_query'''
         return self.config[Server.EXECUTABLE]
 
     def indexroot(self):
+        '''return absolute path of root directory for GUFI to traverse'''
         return self.config[Server.INDEXROOT]
 
     def outputbuffer(self):
+        '''return size of per-thread buffers used to buffer prints'''
         return self.config[Server.OUTPUTBUFFER]
 
 class Client(Config):
@@ -159,27 +167,36 @@ class Client(Config):
     }
 
     def __init__(self, file_reference):
+        # pylint: disable=super-with-arguments
         super(Client, self).__init__(Client.SETTINGS, file_reference)
 
     def server(self):
+        '''return hostname of server'''
         return self.config[Client.SERVER]
 
     def port(self):
+        '''return ssh port'''
         return self.config[Client.PORT]
 
     def paramiko(self):
+        '''return location of paramiko installation'''
         return self.config[Client.PARAMIKO]
 
-if __name__ == '__main__':
+def run(args):
     # simple config validator
     parser = argparse.ArgumentParser(description='GUFI Configuration Tester')
     parser.add_argument('type', choices=['server', 'client'])
     parser.add_argument('path')
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
-    with open(args.path, 'r') as config:
+    with open(args.path, 'r') as config: # pylint: disable=unspecified-encoding
         if args.type == 'server':
             Server(config)
         elif args.type == 'client':
             Client(config)
-        print('Valid Config') # won't print on error
+
+        # won't print on error
+        print('Valid Config') # pylint: disable=superfluous-parens
+
+if __name__ == '__main__':
+    run(sys.argv[1:])

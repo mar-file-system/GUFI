@@ -1,4 +1,3 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,11 +60,31 @@
 
 
 
-import sys
+cmake_minimum_required(VERSION 3.1.0)
 
-import common
+set(SCRIPTS
+  # call in this order
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+  # set up
+  setup_hashdb.py      # set up db for all benchmark configs
+  machine_hash.py      # generate machine config hash and add it to the hash db
+  gufi_hash.py         # generate gufi command hash and add it to the hash db
+  raw_data_hash.py     # generate benchmark config using machine config and gufi command hashes and add it to the hash db
+  setup_raw_data_db.py # generate the database for storing raw numbers using the gufi command and its known performance metrics
+
+  # extract
+  extract.py           # parse debug output and insert them into the raw data db
+
+  # graph
+  graph_performance.py # calculate stats on stored data and plot them onto a graph
+
+  example.sh           # example using scripts listed above
+  )
+
+foreach(SCRIPT ${SCRIPTS})
+  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+endforeach()
+
+add_subdirectory(configs)
+add_subdirectory(performance_pkg)
+add_subdirectory(tests)

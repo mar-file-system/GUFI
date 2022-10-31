@@ -61,11 +61,26 @@
 
 
 
-import sys
+# table schema
+TABLE_NAME = 'machine_config'
 
-import common
+# arg attr, sql column name, column type
+COLS_REQUIRED = [
+    ['hash',     None, str],
+]
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+COLS_HASHED = [
+    # these column names match the argument names
+    ['hash_alg', None, str],
+    ['name',     None, str],
+    ['cpu',      None, str],
+    ['cores',    None, int],
+    ['ram',      None, str],
+    ['storage',  None, str],
+]
+
+COLS_NOT_HASHED = [
+    ['extra',    None, str],
+]
+
+COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED

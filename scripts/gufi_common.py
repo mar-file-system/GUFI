@@ -105,6 +105,9 @@ def get_size(value):
 
 def get_port(port):
     '''Make sure the value is an integer between 0 and 65536'''
+
+    # pylint: disable=invalid-name
+
     p = int(port)
     if (p < 0) or (p > 65535):
         raise argparse.ArgumentTypeError("Bad port: {0}".format(p))
@@ -124,7 +127,7 @@ def get_uid(uid_str):
     uid = int(uid_str)
     try:
         return pwd.getpwuid(int(uid_str)).pw_uid
-    except:
+    except: # pylint: disable=bare-except
         return uid
 
 def get_user(user):
@@ -141,7 +144,7 @@ def get_user(user):
     try:
         # use the string as a username
         return pwd.getpwnam(user).pw_uid
-    except:
+    except: # pylint: disable=bare-except
         return get_uid(user)
 
 def get_gid(grp_str):
@@ -158,7 +161,7 @@ def get_gid(grp_str):
     gid = int(grp_str)
     try:
         return grp.getgrgid(gid).gr_gid
-    except:
+    except: # pylint: disable=bare-except
         return gid
 
 def get_group(group):
@@ -174,7 +177,7 @@ def get_group(group):
 
     try:
         return grp.getgrnam(group).gr_gid
-    except:
+    except: # pylint: disable=bare-except
         return get_gid(group)
 # ###############################################
 
@@ -216,7 +219,9 @@ def build_query(select, tables, where=None, group_by=None,
             LIMIT num_results   (optional)
     '''
 
-    if not select or not len(select) or not tables or not len(tables):
+    # pylint: disable=too-many-arguments
+
+    if not select or len(select) == 0 or not tables or len(tables) == 0:
         return ""
 
     query = 'SELECT {0} FROM {1}'.format(', '.join(select), ', '.join(tables))
@@ -244,7 +249,7 @@ def cpus():
     '''Try to get the number of hardware threads'''
     try:
         return multiprocessing.cpu_count()
-    except:
+    except: # pylint: disable=bare-except
         return 1
 
 def add_common_flags(parser):

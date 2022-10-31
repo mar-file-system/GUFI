@@ -120,7 +120,7 @@ add_test(
   NAME gary
   COMMAND "${CMAKE_COMMAND}" -E env "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}" "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
   WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-set_tests_properties(gary PROPERTIES LABELS manual)
+set_tests_properties(gary PROPERTIES LABELS "manual")
 
 # add_test(NAME gufitest COMMAND gufitest.py all)
 # set_tests_properties(gufitest PROPERTIES LABELS manual)

@@ -1,4 +1,3 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,11 +60,13 @@
 
 
 
-import sys
+cmake_minimum_required(VERSION 3.1.0)
 
-import common
+set(GUFI_QUERY
+  __init__.py # needed for python2
+  cumulative_times.py
+)
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+foreach(SCRIPT ${GUFI_QUERY})
+  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+endforeach()

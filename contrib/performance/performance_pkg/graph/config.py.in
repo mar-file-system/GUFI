@@ -1,0 +1,244 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+from configparser import ConfigParser, ExtendedInterpolation
+from matplotlib import pyplot as plt # should be able to get rid of this
+
+from performance_pkg import common
+
+# config sections and keys
+RAW_DATA = 'raw_data'                   # section
+RAW_DATA_COMMITS = 'commits'            # string list
+RAW_DATA_COLUMNS = 'columns'            # string list
+
+OUTPUT = 'output'                       # section
+OUTPUT_PATH = 'path'                    # string
+OUTPUT_GRAPH_TITLE = 'graph_title'      # string
+OUTPUT_DIMENSIONS = 'graph_dimensions'  # integer pair
+
+LINES = 'lines'                         # section
+LINES_COLORS = 'colors'                 # string list
+LINES_TYPES = 'types'                   # string list
+LINES_MARKERS = 'markers'               # string list
+
+AXES = 'axes'                           # section
+AXES_HASH_LEN = 'hash_len'              # non-zero integer
+AXES_Y_LABEL = 'y_label'                # string
+AXES_Y_MIN = 'y_min'                    # number
+AXES_Y_MAX = 'y_max'                    # number
+
+ANNOTATIONS = 'annotations'             # section
+ANNOTATIONS_SHOW = 'show'               # bool
+ANNOTATIONS_PRECISION = 'precision'     # positive integer
+ANNOTATIONS_X_OFFSET = 'x_offset'       # number
+ANNOTATIONS_Y_OFFSET = 'y_offset'       # number
+ANNOTATIONS_TEXT_COLORS = 'text_colors' # string list
+
+ERROR_BAR = 'error_bar'                 # section
+ERROR_BAR_SHOW = 'show'                 # bool
+ERROR_BAR_PRECISION = 'precision'       # positive integer
+ERROR_BAR_MIN_MAX = 'min_max'           # bool
+ERROR_BAR_TEXT_COLORS = 'text_colors'   # string list
+ERROR_BAR_CAP_SIZE = 'cap_size'         # positive integer
+
+def to_list(value, convert=str):
+    return [convert(item.strip()) for item in value.split(',')]
+
+def str_list(value):
+    return to_list(value)
+
+def int_list(value):
+    return to_list(value, int)
+
+def pos_int_list(value):
+    values = to_list(value, int)
+    for val in values:
+        if val < 1:
+            raise ValueError('Positive integer list got a non-positive number: {0}'.format(val))
+    return values
+
+def read_value(parser, section, key,
+               convert, default=None):
+    try:
+        value = convert(parser.get(section, key))
+    except: # pylint: disable=bare-except
+        value = default
+    return value
+
+def read_bool(parser, section, key, default=None):
+    try:
+        value = parser.getboolean(section, key)
+    except: # pylint: disable=bare-except
+        value = default
+    return value
+
+def expand_git_identifiers(identifiers):
+    commits = []
+    for ish in identifiers:
+        # try expanding identifier using git
+        if '..' in ish:
+            expanded = common.run_get_stdout(['git', 'rev-list', ish])
+        else:
+            expanded = common.run_get_stdout(['git', 'rev-parse', ish])
+
+        # failure to expand still returns the original ish as output
+        commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list
+
+    return commits
+
+def process(filename):
+    parser = ConfigParser(interpolation=ExtendedInterpolation())
+    parser.read(filename)
+
+    # raw_data
+    raw_data = {}
+    user_git_identifiers = read_value(parser,
+                                      RAW_DATA, RAW_DATA_COMMITS,
+                                      str_list, [])
+    raw_data[RAW_DATA_COMMITS] = expand_git_identifiers(user_git_identifiers)
+    raw_data[RAW_DATA_COLUMNS] = read_value(parser,
+                                            RAW_DATA, RAW_DATA_COLUMNS,
+                                            str_list, [])
+
+    # how many columns to pull/lines to plot
+    column_count = len(raw_data[RAW_DATA_COLUMNS])
+
+    # output
+    output = {}
+    output[OUTPUT_PATH] = read_value(parser,
+                                     OUTPUT, OUTPUT_PATH,
+                                     str, '')
+    output[OUTPUT_GRAPH_TITLE] = read_value(parser,
+                                            OUTPUT, OUTPUT_GRAPH_TITLE,
+                                            str, '')
+    dimensions = read_value(parser,
+                            OUTPUT, OUTPUT_DIMENSIONS,
+                            int_list, [0, 0])[:2]
+    output[OUTPUT_DIMENSIONS] = tuple(dimensions)
+
+    # lines
+    lines = {}
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    lines[LINES_COLORS] = read_value(parser,
+                                     LINES, LINES_COLORS,
+                                     str_list, []) + list(colors * column_count)
+    lines[LINES_TYPES] = read_value(parser,
+                                    LINES, LINES_TYPES,
+                                    str_list, []) + (["solid"] * column_count)
+    lines[LINES_MARKERS] = read_value(parser,
+                                      LINES, LINES_MARKERS,
+                                      str_list, []) + (["o"] * column_count)
+
+    # axes
+    axes = {}
+    axes[AXES_HASH_LEN] = read_value(parser,
+                                     AXES, AXES_HASH_LEN,
+                                     int, 6)
+    axes[AXES_Y_LABEL] = read_value(parser,
+                                    AXES, AXES_Y_LABEL,
+                                    str, 'Y Axis')
+
+    axes[AXES_Y_MIN] = read_value(parser,
+                                  AXES, AXES_Y_MIN,
+                                  float, None)
+    axes[AXES_Y_MAX] = read_value(parser,
+                                  AXES, AXES_Y_MAX,
+                                  float, None)
+    # annotations
+    annotations = {}
+    annotations[ANNOTATIONS_SHOW] = read_bool(parser,
+                                              ANNOTATIONS, ANNOTATIONS_SHOW,
+                                              False)
+
+    annotations[ANNOTATIONS_PRECISION] = read_value(parser,
+                                                    ANNOTATIONS, ANNOTATIONS_PRECISION,
+                                                    int, 3)
+    annotations[ANNOTATIONS_X_OFFSET] = read_value(parser,
+                                                   ANNOTATIONS, ANNOTATIONS_X_OFFSET,
+                                                   int, 5)
+    annotations[ANNOTATIONS_Y_OFFSET] = read_value(parser,
+                                                   ANNOTATIONS, ANNOTATIONS_Y_OFFSET,
+                                                   int, 5)
+    annotations[ANNOTATIONS_TEXT_COLORS] = read_value(parser,
+                                                      ANNOTATIONS, ANNOTATIONS_TEXT_COLORS,
+                                                      str_list, []) + (["black"] * column_count)
+
+    # error bar
+    error_bar = {}
+    error_bar[ERROR_BAR_SHOW] = read_bool(parser,
+                                          ERROR_BAR, ERROR_BAR_SHOW,
+                                          True)
+    error_bar[ERROR_BAR_MIN_MAX] = read_bool(parser,
+                                             ERROR_BAR, ERROR_BAR_MIN_MAX,
+                                             True)
+    error_bar[ERROR_BAR_PRECISION] = read_value(parser,
+                                                ERROR_BAR, ERROR_BAR_PRECISION,
+                                                int, 3)
+    error_bar[ERROR_BAR_TEXT_COLORS] = read_value(parser,
+                                                  ERROR_BAR, ERROR_BAR_TEXT_COLORS,
+                                                  str_list, []) + (['green'] * column_count)
+
+    error_bar[ERROR_BAR_CAP_SIZE] = read_value(parser,
+                                               ERROR_BAR, ERROR_BAR_CAP_SIZE,
+                                               int, 10)
+    return raw_data, output, lines, axes, annotations, error_bar

@@ -122,7 +122,7 @@ void print_help(const char* prog_name,
       case 'F': printf("  -F <SQL_fin>           SQL cleanup"); break;
       case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db"); break;
       case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db"); break;
-      case 'D': printf("  -D                     dont descend the tree"); break;
+      case 'D': printf("  -D                     don't descend the tree"); break;
       case 'Y': printf("  -Y                     default to all directories suspect"); break;
       case 'Z': printf("  -Z                     default to all files/links suspect"); break;
       case 'W': printf("  -W <INSUSPECT>         suspect input file"); break;

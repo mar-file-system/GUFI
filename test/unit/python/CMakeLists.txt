@@ -65,4 +65,4 @@ cmake_minimum_required(VERSION 3.1.0)
 configure_file(gufi_config.py.in gufi_config.py @ONLY)
 add_test(NAME gufi_config COMMAND "${CMAKE_CURRENT_BINARY_DIR}/gufi_config.py" -v
   WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-set_tests_properties(gufi_config PROPERTIES LABELS unit)
+set_tests_properties(gufi_config PROPERTIES LABELS "unit;python")

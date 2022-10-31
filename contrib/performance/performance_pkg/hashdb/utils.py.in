@@ -61,11 +61,88 @@
 
 
 
+import sqlite3
 import sys
 
-import common
+from performance_pkg import common
+from performance_pkg.hashdb import machine, gufi, raw_data
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+# set up tables
+def create_tables(con):
+    machine_col_str = ', '.join('{0} {1}'.format(
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in machine.COLS)
+    gufi_col_str = ', '.join('{0} {1}'.format(
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in gufi.COLS)
+    raw_data_col_str = ', '.join('{0} {1}'.format(
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in raw_data.COLS)
+
+    con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
+        machine.TABLE_NAME, machine_col_str))
+    con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
+        gufi.TABLE_NAME, gufi_col_str))
+    con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
+        raw_data.TABLE_NAME, raw_data_col_str))
+
+# extract gufi command and debug name using provided hash
+def get_config(hashdb_name, user_raw_data_hash):
+    gufi_cmd = None
+    debug_name = None
+
+    # verify that the hash db exists and contains the configuration
+    common.check_exists(hashdb_name)
+    try:
+        hashdb = sqlite3.connect(hashdb_name)
+
+        # figure out what configurations this hash points to
+        hashes_cur = hashdb.execute('SELECT hash, machine_hash, gufi_hash ' +
+                                    'FROM {0} WHERE hash GLOB "*{1}*";'.format(
+                                        raw_data.TABLE_NAME, user_raw_data_hash))
+        records = hashes_cur.fetchall()
+
+        # can happen if partial hash is provided
+        if len(records) > 1:
+            for raw_data_hash, machine_hash, gufi_hash in records:
+                sys.stderr.write('{0} -> {1} {2}\n', raw_data_hash, machine_hash, gufi_hash)
+            raise ValueError('{0} matched more than 1 hash:\n'.format(user_raw_data_hash))
+
+        # guaranteed only 1 record can be found at this point
+        _, _, gufi_hash = records[0]
+
+        # figure out which gufi command and set of debug numbers this hash is associated with
+        info_cur = hashdb.execute('SELECT {0}, {1} FROM {2};'.format(
+            gufi.COL_CMD, gufi.COL_DEBUG_NAME, gufi.TABLE_NAME))
+        gufi_cmd, debug_name = info_cur.fetchall()[0]
+    finally:
+        hashdb.close()
+
+    return gufi_cmd, debug_name
+
+def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_hashed):
+    '''
+    only insert args/columns that are present rather than insert
+    filler values into the database - let sqlite set the defaults
+
+    args should contains members with the same names as the columns
+    '''
+
+    # pylint: disable=redefined-builtin,too-many-arguments
+
+    cols = ['hash']
+    vals = ['"{0}"'.format(hash)]
+
+    # first column of cols_required should aways be hash
+    for col, name, type in cols_required[1:] + cols_hashed + cols_not_hashed:
+        val = getattr(args, col)
+        if val is not None:
+            cols += [name if name else col]
+
+            if type == str:
+                vals += ['"{0}"'.format(val)]
+            else:
+                vals += [str(val)]
+
+    # leave as separate variable for debug
+    sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
+        table_name, ', '.join(cols), ', '.join(vals))
+
+    con.execute(sql)

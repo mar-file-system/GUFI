@@ -65,25 +65,26 @@ import os
 import sys
 
 # get root build directory of GUFI
-root = '@CMAKE_BINARY_DIR@'
+ROOT = '@CMAKE_BINARY_DIR@'
 
-scripts = os.path.join(root, 'scripts')
+SCRIPTS = os.path.join(ROOT, 'scripts')
 
 # test config file name
-config_path = os.path.join('@CMAKE_CURRENT_BINARY_DIR@', 'config.test')
+CONFIG_PATH = os.path.join('@CMAKE_CURRENT_BINARY_DIR@', 'config.test')
 
 # import a tool by path (default: the scripts directory)
 # needed for duplicate filenames or files without the .py extension
-def import_tool(tool, filename=None, path=scripts):
+def import_tool(tool, filename=None, path=SCRIPTS):
     if filename is None:
         filename = tool
 
-    if sys.version_info[0] < 3:
-        import imp
+    if sys.version_info.major < 3: # pylint: disable=no-else-return
+        import imp                 # pylint: disable=deprecated-module,import-outside-toplevel
 
         return imp.load_source(tool, os.path.join(path, filename))
     # https://csatlas.com/python-import-file-module/
-    elif sys.version_info[0] >= 3:
+    elif sys.version_info.major >= 3:
+        # pylint: disable=import-outside-toplevel
         import importlib.machinery
         import importlib.util
         from pathlib import Path
@@ -98,3 +99,5 @@ def import_tool(tool, filename=None, path=scripts):
         script = importlib.util.module_from_spec(spec)
         loader.exec_module(script)
         return script
+
+    return None

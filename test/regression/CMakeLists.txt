@@ -126,7 +126,7 @@ foreach(NAME ${SH_AND_EXPECTED})
 
   add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  set_tests_properties("${NAME}" PROPERTIES LABELS regression)
+  set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
 endforeach()
 
 foreach(NAME ${SH_PY_AND_EXPECTED})
@@ -136,7 +136,7 @@ foreach(NAME ${SH_PY_AND_EXPECTED})
 
   add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  set_tests_properties("${NAME}" PROPERTIES LABELS regression)
+  set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
   set_tests_properties("${NAME}" PROPERTIES ENVIRONMENT PYTHONPATH="${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_BINARY_DIR}/scripts:$ENV{PYTHONPATH}")
 endforeach()
 
@@ -161,7 +161,7 @@ if (SUDO)
 
       add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
         WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-      set_tests_properties("${NAME}" PROPERTIES LABELS sudo)
+      set_tests_properties("${NAME}" PROPERTIES LABELS "sudo")
     endforeach()
   endif()
 else()

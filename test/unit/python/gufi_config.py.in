@@ -75,26 +75,27 @@ sys.path += [
 ]
 
 import common
-gufi_config = common.import_tool('gufi_config', 'gufi_config.py')
+gufi_config = common.import_tool('gufi_config', 'gufi_config.py') # pylint: disable=invalid-name
 
 def build_config(pairs, remove=None):
     return ['{0}={1}\n'.format(key, value) for key, value in pairs.items() if remove != key]
 
-class server(object):
+# not inheriting
+class TestServerConfig(unittest.TestCase):
     default = {
         gufi_config.Server.THREADS      : '5',
-        gufi_config.Server.EXECUTABLE   : os.path.join(common.root, 'src', 'gufi_query'),
-        gufi_config.Server.INDEXROOT    : common.root,
+        gufi_config.Server.EXECUTABLE   : os.path.join(common.ROOT, 'src', 'gufi_query'),
+        gufi_config.Server.INDEXROOT    : common.ROOT,
         gufi_config.Server.OUTPUTBUFFER : '1024',
     }
 
-    def setUp(self):
-        self.pairs = copy.deepcopy(server.default)
+    def setUp(self): # pylint: disable=invalid-name
+        self.pairs = copy.deepcopy(TestServerConfig.default)
 
     def test_ok(self):
         try:
             gufi_config.Server(build_config(self.pairs))
-        except Exception as err:
+        except Exception as err: # pylint: disable=broad-except
             self.fail("Reading good server configuration raised: {0}".format(err))
 
     def test_missing_threads(self):
@@ -128,7 +129,7 @@ class server(object):
     def test_bad_outputbuffer(self):
         self.bad_int(gufi_config.Server.OUTPUTBUFFER, ['-1', '', 'abc'])
 
-class client(object):
+class TestClientConfig(unittest.TestCase):
     default = {
         gufi_config.Client.SERVER   : 'hostname',
         gufi_config.Client.PORT     : '22',
@@ -136,12 +137,12 @@ class client(object):
     }
 
     def setUp(self):
-        self.pairs = copy.deepcopy(client.default)
+        self.pairs = copy.deepcopy(TestClientConfig.default)
 
     def test_ok(self):
         try:
             gufi_config.Client(build_config(self.pairs))
-        except Exception as err:
+        except Exception as err: # pylint: disable=broad-except
             self.fail("Reading good client configuration raised: {0}".format(err))
 
     def test_missing_server(self):
@@ -168,27 +169,21 @@ class client(object):
     def test_bad_port(self):
         self.bad_int(gufi_config.Client.PORT, ['-1', '65536', '', 'abc'])
 
-class gufi_config_server(server, unittest.TestCase):
+class TestServerConfigCombined(TestServerConfig):
     def setUp(self):
-        super(gufi_config_server, self).setUp()
-
-class gufi_config_server_combined(server, unittest.TestCase):
-    def setUp(self):
-        super(gufi_config_server_combined, self).setUp()
+        # pylint: disable=super-with-arguments
+        super(TestServerConfigCombined, self).setUp()
 
         # add client configuration
-        self.pairs.update(client.default)
+        self.pairs.update(TestClientConfig.default)
 
-class gufi_config_client(client, unittest.TestCase):
+class TestClientConfigCombined(TestClientConfig):
     def setUp(self):
-        super(gufi_config_client, self).setUp()
-
-class gufi_config_client_combined(client, unittest.TestCase):
-    def setUp(self):
-        super(gufi_config_client_combined, self).setUp()
+        # pylint: disable=super-with-arguments
+        super(TestClientConfigCombined, self).setUp()
 
         # add server configuration
-        self.pairs.update(server.default)
+        self.pairs.update(TestServerConfig.default)
 
 if __name__ == '__main__':
     unittest.main()

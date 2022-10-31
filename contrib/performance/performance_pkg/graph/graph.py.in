@@ -61,48 +61,83 @@
 
 
 
-import getpass
-import sys
+from matplotlib import pyplot as plt
 
-import gufi_config
+from performance_pkg.graph import config
 
-def talk_to_server(config, args):
+def add_annotations(x_vals, y_vals,
+                    precision,
+                    color,
+                    x_offset, y_offset):
+    # pylint: disable=too-many-arguments
+    for x_val, y_val in zip(x_vals, y_vals):
+        plt.annotate('{0:.{1}f}'.format(y_val, precision),
+                     (x_val, y_val),
+                     color=color,
+                     textcoords="offset points",
+                     xytext=(x_offset, y_offset))
+
+def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-arguments
+             y_mins, y_maxs):
     '''
-    Send all arguments to gufi_@TOOL@
+    y_vals, line_names, y_mins, and y_maxs should all
+    be lists of lists with the same dimensions
     '''
-    try:
-        # import paramiko from provided path
-        sys.path.append(config.paramiko())
-        import paramiko # pylint: disable=import-error,import-outside-toplevel
 
-        ssh = paramiko.client.SSHClient()
+    # pylint: disable=too-many-locals
 
-        # load known server host keys
-        ssh.load_system_host_keys('/etc/ssh/ssh_known_hosts')
+    # unpack the config
+    _, output, lines, axes, annotations, error_bar = conf
 
-        # connect to the server
-        ssh.connect(hostname=config.server(),
-                    port=config.port(),
-                    username=getpass.getuser(),
-                    hostkey=paramiko.opensshkey.load_pubkey_from_file('/etc/ssh/ssh_host_rsa_key.pub'))
+    # plot data
+    plt.figure(figsize=output[config.OUTPUT_DIMENSIONS])
+    plt.title(output[config.OUTPUT_GRAPH_TITLE])
+    plt.xlabel('Commit') # fixed
+    plt.ylabel(axes[config.AXES_Y_LABEL])
+    if axes[config.AXES_Y_MIN] is not None and axes[config.AXES_Y_MAX] is not None:
+        plt.ylim(axes[config.AXES_Y_MIN], axes[config.AXES_Y_MAX])
 
-        # run the command
-        # assumes that gufi_@TOOL@ can be found in PATH on the other side
-        # args needs to be sanitized
-        cmd = 'gufi_@TOOL@ ' + ' '.join(args)
+    line_configs = zip(y_vals, line_names,
+                       y_mins, y_maxs,
+                       lines[config.LINES_COLORS],
+                       lines[config.LINES_TYPES],
+                       lines[config.LINES_MARKERS],
+                       annotations[config.ANNOTATIONS_TEXT_COLORS],
+                       error_bar[config.ERROR_BAR_TEXT_COLORS])
 
-        try:
-            _, stdout, stderr = ssh.exec_command(cmd)
-            sys.stdout.write(stdout.read())
-            sys.stderr.write(stderr.read())
-        except Exception as e: # pylint: disable=broad-except,invalid-name
-            sys.stderr.write(e)
-    finally:
-        ssh.close()
+    for y_curr, label, y_min, y_max, color, style, marker, acolor, ecolor in line_configs:
+        yerr = None
+        if annotations[config.ANNOTATIONS_SHOW]:
+            add_annotations(const_x, y_curr,
+                            annotations[config.ANNOTATIONS_PRECISION],
+                            acolor,
+                            annotations[config.ANNOTATIONS_X_OFFSET],
+                            annotations[config.ANNOTATIONS_Y_OFFSET])
 
-def run(args):
-    config = gufi_config.Client(gufi_config.DEFAULT_PATH)
-    talk_to_server(config, args)
+        if error_bar[config.ERROR_BAR_SHOW]:
+            yerr = (y_min, y_max)
 
-if __name__  == '__main__':
-    run(sys.argv[1:])
+            if annotations[config.ANNOTATIONS_SHOW] and error_bar[config.ERROR_BAR_MIN_MAX]:
+                add_annotations(const_x, y_min,
+                                error_bar[config.ERROR_BAR_PRECISION],
+                                acolor,
+                                annotations[config.ANNOTATIONS_X_OFFSET],
+                                annotations[config.ANNOTATIONS_Y_OFFSET])
+                add_annotations(const_x, y_max,
+                                error_bar[config.ERROR_BAR_PRECISION],
+                                acolor,
+                                annotations[config.ANNOTATIONS_X_OFFSET],
+                                annotations[config.ANNOTATIONS_Y_OFFSET])
+
+        plotline, _, _ = plt.errorbar(const_x, y_curr, label=label,
+                                      yerr=yerr,
+                                      ecolor=ecolor,
+                                      capsize=error_bar[config.ERROR_BAR_CAP_SIZE])
+
+        plotline.set_color(color)
+        plotline.set_linestyle(style)
+        plotline.set_marker(marker)
+
+    plt.legend()
+    plt.savefig(output[config.OUTPUT_PATH],
+                bbox_inches='tight') # remove extra whitespace around border

@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,11 +61,20 @@
 
 
 
-import sys
+set -e
 
-import common
+BUILD="$(realpath $1)"
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+# shellcheck disable=SC2155
+export PYTHONPATH="$(realpath ${BUILD}/contrib):$(realpath ${BUILD}/contrib/performance):$(realpath ${BUILD}/scripts):$(realpath ${BUILD}/test):${PYTHONPATH}"
+
+# not scanning ${BUILD}/contrib
+# shellcheck disable=SC2044
+for file in $(find "${BUILD}/contrib/performance" "${BUILD}/scripts" "${BUILD}/test" -type f)
+do
+    if [[ "$(head -n 1 ${file} | strings)" =~ ^#!/usr/bin/env\ python(2|3).*$ ]]
+    then
+        echo "${file}"
+        pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string -- "${file}"
+    fi
+done
