@@ -71,6 +71,10 @@ def talk_to_server(config, args):
     Send all arguments to gufi_@TOOL@
     '''
     try:
+        # import paramiko from provided path
+        sys.path.append(config.paramiko())
+        import paramiko # pylint: disable=import-error,import-outside-toplevel
+
         ssh = paramiko.client.SSHClient()
 
         # load known server host keys
@@ -91,16 +95,14 @@ def talk_to_server(config, args):
             _, stdout, stderr = ssh.exec_command(cmd)
             sys.stdout.write(stdout.read())
             sys.stderr.write(stderr.read())
-        except Exception as e:
+        except Exception as e: # pylint: disable=broad-except,invalid-name
             sys.stderr.write(e)
     finally:
         ssh.close()
 
-if __name__  == '__main__':
+def run(args):
     config = gufi_config.Client(gufi_config.DEFAULT_PATH)
+    talk_to_server(config, args)
 
-    # import paramiko from provided path
-    sys.path.append(config.paramiko())
-    import paramiko
-
-    talk_to_server(config, sys.argv[1:])
+if __name__  == '__main__':
+    run(sys.argv[1:])

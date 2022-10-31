@@ -61,11 +61,73 @@
 
 
 
-import sys
+import unittest
 
-import common
+# the binaries in contrib/performance
+import gufi_hash
+import machine_hash
+import raw_data_hash
 
-# do not call this file directly - script will set up environment
+OVERRIDE = 'override'
+
+class TestHashing(unittest.TestCase):
+    def template(self, parse_args, argv,
+                 compute_hash, expected_hash):
+        args = parse_args(argv)
+        self.assertEqual(expected_hash, compute_hash(args))
+
+        # extra notes don't affect the hash
+        args = parse_args(argv + ['--extra', ''])
+        self.assertEqual(expected_hash, compute_hash(args))
+
+        # input changes change the hash
+        modified_args = argv[:]
+        modified_args[-1] += ' '
+        args = parse_args(modified_args)
+        modified_hash = compute_hash(args)
+        self.assertNotEqual(expected_hash, modified_hash)
+
+        # extra notes don't affect the hash
+        args = parse_args(modified_args + ['--extra', ''])
+        self.assertEqual(modified_hash, compute_hash(args))
+
+        # hash override
+        args = parse_args(argv + ['--override', OVERRIDE])
+        self.assertEqual(OVERRIDE, compute_hash(args))
+
+    def test_machine_hash(self):
+        input_args = ['--hash_alg', 'md5',
+                      '--name', '',
+                      '--cpu', '',
+                      '--cores', '0',
+                      '--ram', '0',
+                      '--storage', '']
+        expected_hash = '58b63f5433e2fa2f054c132e363beaaa'
+
+        self.template(machine_hash.parse_args, input_args,
+                      machine_hash.compute_hash, expected_hash)
+
+    def test_gufi_hash(self):
+        input_args = ['--hash_alg', 'md5',
+                      '-n', '1',
+                      '-S', '',
+                      '-E', '',
+                      'gufi_query',
+                      'cumulative-times',
+                      'tree']
+        expected_hash = 'b21cc57f0628f8a76c0068c73933c140'
+
+        self.template(gufi_hash.parse_args, input_args,
+                      gufi_hash.compute_hash, expected_hash)
+
+    def test_raw_data_hash(self):
+        input_args = ['--hash_alg', 'md5',
+                      'machine_hash',
+                      'gufi_hash']
+        expected_hash = '7d0d8a99bf419f1f5d68ddc026edb517'
+
+        self.template(raw_data_hash.parse_args, input_args,
+                      raw_data_hash.compute_hash, expected_hash)
+
 if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+    unittest.main()

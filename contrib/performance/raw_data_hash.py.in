@@ -61,11 +61,70 @@
 
 
 
+import argparse
+import sqlite3
 import sys
 
-import common
+from performance_pkg import common
+from performance_pkg.hashdb import raw_data, utils as hashdb
 
-# do not call this file directly - script will set up environment
+def compute_hash(args):
+    if args.override:
+        return args.override
+
+    return common.hash_config(args.hash_alg,
+                              '{0} {1}'.format(args.machine_hash, args.gufi_hash))
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--hash_alg',
+                        default='md5',
+                        choices=common.Hashes.keys(),
+                        help='Hashing method to use')
+    parser.add_argument('--override',
+                        type=str,
+                        help='Use this value for the hash instead of the calculated value')
+    parser.add_argument('--delete',
+                        action='store_true',
+                        help='Remove record from hash database')
+    parser.add_argument('--extra',
+                        type=str,
+                        help='Additional notes (not hashed)')
+    parser.add_argument('--database',
+                        type=str,
+                        help='Hash database to write to (must already exist)')
+    parser.add_argument('machine_hash',
+                        help='Hash of machine configuration')
+    parser.add_argument('gufi_hash',
+                        help='Hash of GUFI command')
+    return parser.parse_args(argv)
+
+
+def run(argv):
+    args = parse_args(argv)
+
+    # hash(machine_hash + gufi_hash)
+    raw_data_hash = compute_hash(args)
+    print('{0}'.format(raw_data_hash)) # pylint: disable=superfluous-parens
+
+    # only inserts into hash db - run raw_data_db to create the actual db
+    if args.database:
+        try:
+            con = sqlite3.connect(args.database)
+
+            if args.delete:
+                con.execute('DELETE FROM {0} WHERE hash == "{1}";'.format(
+                    raw_data.TABLE_NAME, raw_data_hash))
+            else:
+                hashdb.insert(con, args, raw_data_hash,
+                              raw_data.TABLE_NAME,
+                              raw_data.COLS_REQUIRED,
+                              raw_data.COLS_HASHED,
+                              raw_data.COLS_NOT_HASHED)
+
+            con.commit()
+        finally:
+            con.close()
+
 if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+    run(sys.argv[1:])

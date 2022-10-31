@@ -1,0 +1,141 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+from matplotlib import pyplot as plt
+
+from performance_pkg.graph import config
+
+def add_annotations(x_vals, y_vals,
+                    precision,
+                    text_colors,
+                    x_offset, y_offset):
+    # pylint: disable=too-many-arguments
+    for x_val, y_val, color in zip(x_vals, y_vals, text_colors):
+        plt.annotate('{0:.{1}f}'.format(y_val, precision),
+                     (x_val, y_val),
+                     color=color,
+                     textcoords="offset points",
+                     xytext=(x_offset, y_offset))
+
+def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-arguments
+             y_mins, y_maxs):
+    '''
+    y_vals, line_names, y_mins, and y_maxs should all
+    be lists of lists with the same dimensions
+    '''
+
+    # pylint: disable=too-many-locals
+
+    # unpack the config
+    _, output, lines, axes, annotations, error_bar = conf
+
+    # plot data
+    plt.figure(figsize=output[config.OUTPUT_DIMENSIONS])
+    plt.title(output[config.OUTPUT_GRAPH_TITLE])
+    plt.xlabel('Commit') # fixed
+    plt.ylabel(axes[config.AXES_Y_LABEL])
+    if axes[config.AXES_Y_MIN] != None and axes[config.AXES_Y_MAX] != None:
+        plt.ylim(axes[config.AXES_Y_MIN], axes[config.AXES_Y_MAX])
+
+    # pylint: disable=line-too-long
+
+    for y_curr, label, y_min, y_max, ecolor, color, style, marker in zip(y_vals, line_names,
+                                                                         y_mins, y_maxs,
+                                                                         error_bar[config.ERROR_BAR_TEXT_COLORS],
+                                                                         lines[config.LINES_COLORS],
+                                                                         lines[config.LINES_TYPES],
+                                                                         lines[config.LINES_MARKERS]):
+        yerr = None
+        if annotations[config.ANNOTATIONS_SHOW]:
+            add_annotations(const_x, y_curr,
+                            annotations[config.ANNOTATIONS_PRECISION],
+                            annotations[config.ANNOTATIONS_TEXT_COLORS],
+                            annotations[config.ANNOTATIONS_X_OFFSET],
+                            annotations[config.ANNOTATIONS_Y_OFFSET])
+        if error_bar[config.ERROR_BAR_SHOW]:
+            yerr = (y_min, y_max)
+
+            if error_bar[config.ERROR_BAR_MIN_MAX]:
+                add_annotations(const_x, y_min,
+                                error_bar[config.ERROR_BAR_PRECISION],
+                                annotations[config.ANNOTATIONS_TEXT_COLORS],
+                                annotations[config.ANNOTATIONS_X_OFFSET],
+                                annotations[config.ANNOTATIONS_Y_OFFSET])
+                add_annotations(const_x, y_max,
+                                error_bar[config.ERROR_BAR_PRECISION],
+                                annotations[config.ANNOTATIONS_TEXT_COLORS],
+                                annotations[config.ANNOTATIONS_X_OFFSET],
+                                annotations[config.ANNOTATIONS_Y_OFFSET])
+
+        plotline, _, _ = plt.errorbar(const_x, y_curr, label=label,
+                                      yerr=yerr,
+                                      ecolor=ecolor,
+                                      capsize=error_bar[config.ERROR_BAR_CAP_SIZE])
+
+        plotline.set_color(color)
+        plotline.set_linestyle(style)
+        plotline.set_marker(marker)
+
+    plt.legend()
+    plt.savefig(output[config.OUTPUT_PATH],
+                bbox_inches='tight') # remove extra whitespace around border

@@ -77,7 +77,7 @@ PATH = os.path.realpath(__file__)
 SECONDS_PER_DAY = str(24 * 60 * 60) # do string conversion once
 
 '''file size units specified in GNU find.'''
-filesize = {'b' : 512,
+FILESIZE = {'b' : 512,
             'c' : 1,
             'w' : 2,
             'k' : 1024,
@@ -105,9 +105,11 @@ def validate_args(args):
 # n      for exactly n.
 #
 def numeric_arg(n):
+    # pylint: disable=invalid-name
     try:
         float(n)
     except:
+        # pylint: disable=raise-missing-from
         raise argparse.ArgumentTypeError("{0} is not a valid numeric argument".format(n))
 
     op = None
@@ -124,18 +126,21 @@ def numeric_arg(n):
 
 def parse_size(size):
     unit = 'b'
-    if size[-1] in filesize:
+    if size[-1] in FILESIZE:
         unit = size[-1]
         size = size[:-1]
 
     comp, actual_size = numeric_arg(size)
-    return comp, int(math.ceil(float(actual_size))) * filesize[unit]
+    return comp, int(math.ceil(float(actual_size))) * FILESIZE[unit]
 
 def need_aggregation(args):
     return bool(args.numresults or args.smallest or args.largest)
 
 def build_where(args, table, root_uid=0, root_gid=0):
     '''Build the WHERE clause'''
+
+    # pylint: disable=too-many-branches,unused-argument,too-many-locals,too-many-statements
+
     where = []
 
     now = time.time()
@@ -267,7 +272,7 @@ def build_where(args, table, root_uid=0, root_gid=0):
 
     return where
 
-def build_group_by(args, table):
+def build_group_by(_args, _table):
     '''Build the GROUP BY clause'''
     group_by = []
 
@@ -321,6 +326,7 @@ def parse_escape(fmt, i):
     return '"{0}"'.format(ret), i + 1
 
 def parse_directives(table, fmt, fmt_len, i, path):
+    # pylint: disable=too-many-branches,too-many-statements
     # unterminated directive prints ""; behavior is undefined in GNU find
     if i >= fmt_len:
         return '""', i
@@ -439,9 +445,9 @@ def build_output(args, table):
 
     return [output]
 
-def help(parser):
+def help(parser): # pylint: disable=redefined-builtin
     # generate list of expressions
-    expr = [expr for expr in sorted(parser.parse_args([]).__dict__.keys())]
+    expr = sorted(parser.parse_args([]).__dict__.keys())
 
     # don't show these
     expr.remove('aggregate_name')
@@ -696,6 +702,7 @@ def build_expression_parser():
 
 # argv[0] should be the command name
 def run(argv, config_path):
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
 
@@ -749,7 +756,7 @@ def run(argv, config_path):
         help(expression_parser)
         return 0
 
-    if len(unknown):
+    if len(unknown) > 0:
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
 
     validate_args(args)
@@ -761,6 +768,7 @@ def run(argv, config_path):
                  '-a',
                  '-d', ' ']
 
+    # pylint: disable=invalid-name
     if need_aggregation(args):
         columns = ['type', 'inode', 'mode', 'nlink', 'uid', 'gid',
                    'size', 'blksize', 'blocks', 'atime', 'mtime',
@@ -861,7 +869,7 @@ def run(argv, config_path):
     if args.skip:
         query_cmd += ['-k', args.skip]
 
-    query = subprocess.Popen(query_cmd + paths) # positional arguments must appear after flags
+    query = subprocess.Popen(query_cmd + paths) # pylint: disable=consider-using-with
     query.communicate()                         # block until query finishes
 
     return query.returncode

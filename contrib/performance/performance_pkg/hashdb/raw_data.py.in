@@ -61,11 +61,20 @@
 
 
 
-import sys
+TABLE_NAME = 'raw_data_dbs'
 
-import common
+# arg attr, sql column name, column type
+COLS_REQUIRED = [
+    ['hash',         None, str],
+]
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+COLS_HASHED = [
+    ['machine_hash', None, str],
+    ['gufi_hash',    None, str],
+]
+
+COLS_NOT_HASHED = [
+    ['extra',        None, str],
+]
+
+COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED

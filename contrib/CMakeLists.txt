@@ -82,10 +82,17 @@ if (CMAKE_CXX_COMPILER)
 endif()
 
 # potentially useful scripts
-configure_file(canned_queries.sh canned_queries.sh @ONLY)
-configure_file(gentrace.py gentrace.py @ONLY)
-configure_file(trace_anonymizer.py trace_anonymizer.py @ONLY)
-configure_file(output-on-failure output-on-failure @ONLY)
+set(USEFUL
+  canned_queries.sh
+  gentrace.py
+  hashes.py
+  trace_anonymizer.py
+  output-on-failure
+  )
+
+foreach(file ${USEFUL})
+    configure_file("${file}" "${file}" @ONLY)
+endforeach()
 
 # make benchmark
 #    clean up old benchmark directory and create a new one
@@ -146,3 +153,4 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 add_subdirectory(CI)
+add_subdirectory(performance)

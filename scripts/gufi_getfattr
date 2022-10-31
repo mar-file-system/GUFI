@@ -72,6 +72,8 @@ import gufi_config
 PATH = os.path.realpath(__file__)
 
 def getfattr(args, config, dirname, nondirname):
+    # pylint: disable=invalid-name,too-many-branches
+
     S_cols = []
     E_cols = []
     if args.only_values:
@@ -172,6 +174,8 @@ def getfattr(args, config, dirname, nondirname):
     return query_args + [os.path.join(config.indexroot(), dirname)]
 
 def run(argv, config_path):
+    # pylint: disable=invalid-name
+
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
 
@@ -233,8 +237,8 @@ def run(argv, config_path):
                      '-B', str(config.outputbuffer()),
                      '-d', args.delim] + getfattr(args, config, dirname, nondir)
 
-        query = subprocess.Popen(query_cmd)
-        query.communicate() # block until query finishes
+        query = subprocess.Popen(query_cmd) # pylint: disable=consider-using-with
+        query.communicate()                 # block until query finishes
 
         if query.returncode:
             rc = query.returncode

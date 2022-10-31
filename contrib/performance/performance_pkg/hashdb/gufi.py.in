@@ -60,12 +60,58 @@
 # OF SUCH DAMAGE.
 
 
+GUFI_QUERY = 'gufi_query'
 
-import sys
+COMMANDS = [
+    GUFI_QUERY,
+]
 
-import common
+CUMULATIVE_TIMES = 'cumulative-times'
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+# debug out put -> parser
+DEBUG_NAME = {
+    CUMULATIVE_TIMES : None,
+}
+
+TABLE_NAME = 'gufi_command'
+COL_CMD = 'cmd'
+COL_DEBUG_NAME = 'debug_name'
+
+# arg attr, sql column name, column type
+# None == arg attr
+COLS_REQUIRED = [
+    ['hash',         None,      str],
+    ['hash_alg',     None,      str],
+    [COL_CMD,        None,      str],
+    [COL_DEBUG_NAME, None,      str],
+]
+
+COLS_HASHED = [
+    # this script only handles flags listed in bf.c
+    ['x',            None,      bool],
+    ['a',            None,      bool],
+    ['n',            None,      int],
+    ['d',            None,      str],
+    ['o',            'outfile', str],
+    ['O',            'outdb',   str],
+    ['I',            None,      str],
+    ['T',            None,      str],
+    ['S',            None,      str],
+    ['E',            None,      str],
+    ['F',            None,      str],
+    ['y',            None,      int],
+    ['z',            None,      int],
+    ['J',            None,      str],
+    ['K',            None,      str],
+    ['G',            None,      str],
+    ['B',            None,      int],
+
+    # always exists
+    ['tree',         None,      str],
+]
+
+COLS_NOT_HASHED = [
+    ['extra',        None,      str],
+]
+
+COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED

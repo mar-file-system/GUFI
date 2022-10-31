@@ -68,4 +68,4 @@ import common
 # do not call this file directly - script will set up environment
 if __name__ == '__main__':
     gufi_ls = common.import_tool('gufi_ls')
-    sys.exit(gufi_ls.run(sys.argv, common.config_path))
+    sys.exit(gufi_ls.run(sys.argv, common.CONFIG_PATH))

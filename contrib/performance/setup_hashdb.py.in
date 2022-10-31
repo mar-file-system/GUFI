@@ -61,11 +61,28 @@
 
 
 
+import argparse
+import sqlite3
 import sys
 
-import common
+from performance_pkg import common
+from performance_pkg.hashdb import utils as hashdb
 
-# do not call this file directly - script will set up environment
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('database', help='Hash database path')
+    return parser.parse_args(argv)
+
+def run(argv):
+    args = parse_args(argv)
+
+    common.check_not_exists(args.database)
+    try:
+        con = sqlite3.connect(args.database)
+        hashdb.create_tables(con)
+        con.commit()
+    finally:
+        con.close()
+
 if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+    run(sys.argv[1:])

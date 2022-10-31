@@ -1,4 +1,3 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,11 +60,17 @@
 
 
 
-import sys
+cmake_minimum_required(VERSION 3.1.0)
 
-import common
+set(TESTS
+  hash
+  )
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+foreach(TEST ${TESTS})
+  configure_file("${TEST}.py.in" "${TEST}.py" @ONLY)
+
+  set(test_name "Performance-Package-${TEST}")
+  add_test(NAME "${test_name}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${TEST}.py")
+  set_tests_properties("${test_name}" PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}/../..:${CMAKE_CURRENT_BINARY_DIR}/..:${CMAKE_BINARY_DIR}/scripts:$ENV{PYTHONPATH}")
+  set_tests_properties("${test_name}" PROPERTIES LABELS "performance;python")
+endforeach()

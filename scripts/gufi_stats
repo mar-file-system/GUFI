@@ -83,7 +83,7 @@ ORDER = {'ASC'   : ASCENDING,
 def build_create(name, columns):
     return 'CREATE TABLE {0}({1})'.format(name, ', '.join(columns))
 
-def build_where(args, root_uid=0, root_gid=0):
+def build_where(args, root_uid=0, root_gid=0): # pylint: disable=unused-argument
     where = []
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
@@ -94,7 +94,7 @@ def build_where(args, root_uid=0, root_gid=0):
 
     return where
 
-def depth(config, args, where):
+def depth(_config, args, where):
     '''
     get the depths of the provided directories relative to the root directory
 
@@ -140,20 +140,23 @@ def depth(config, args, where):
 
     return queries
 
-def filesize(config, args, where):
+def filesize(_config, args, where):
     '''
     get the size the files in the immediate directory
 
-    using --recursive here will get the size taken up by all of files in all subdirectories, without adding them
+    using --recursive here will get the size taken up by all of files
+    in all subdirectories, without adding them
     '''
 
     queries = [
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
 
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['path(summary.name, summary.rollupscore)', 'CAST(TOTAL(pentries.size) as INT64)'],
+                                           gufi_common.build_query(['path(summary.name, summary.rollupscore)',
+                                                                    'CAST(TOTAL(pentries.size) as INT64)'],
                                                                    ['summary', 'pentries'],
-                                                                   where + ['summary.inode == pentries.pinode', 'pentries.type == "f"'],
+                                                                   where + ['summary.inode == pentries.pinode',
+                                                                            'pentries.type == "f"'],
                                                                    None,
                                                                    None,
                                                                    args.num_results,
@@ -186,7 +189,7 @@ def filesize(config, args, where):
 
     return queries
 
-def entries_count(config, args, where, type):
+def entries_count(_config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get the number of <type>s in the immediate directory
 
@@ -223,7 +226,7 @@ def filecount(config, args, where):
 def linkcount(config, args, where):
     return entries_count(config, args, where, 'l')
 
-def total_filesize(config, args, where):
+def total_filesize(_config, args, where):
     '''
     get the total size taken up by the entire directory
 
@@ -311,7 +314,7 @@ def total_filesize(config, args, where):
 
     return queries
 
-def total_entries_count(config, args, where, type):
+def total_entries_count(_config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get the total number of <type>s under the directory
 
@@ -320,9 +323,9 @@ def total_entries_count(config, args, where, type):
 
     group_by = None if args.cumulative else ['uid']
 
-    E_group_by = ['pinode']
+    E_group_by = ['pinode']    # pylint: disable=invalid-name
     if group_by is not None:
-        E_group_by += group_by
+        E_group_by += group_by # pylint: disable=invalid-name
 
     queries = [
         '-I', build_create(args.inmemory_name,
@@ -341,7 +344,8 @@ def total_entries_count(config, args, where, type):
                                                                    None)),
 
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
-                                           gufi_common.build_query(['NULL', 'uid', 'pinode', 'count'],
+                                           gufi_common.build_query(['NULL', 'uid',
+                                                                    'pinode', 'count'],
                                                                    [args.inmemory_name],
                                                                    None,
                                                                    None,
@@ -372,7 +376,7 @@ def total_filecount(config, args, where):
 def total_linkcount(config, args, where):
     return total_entries_count(config, args, where, 'l')
 
-def dircount(config, args, where):
+def dircount(_config, args, where):
     '''
     get the number of directories in the immediate directory
 
@@ -424,7 +428,7 @@ def dircount(config, args, where):
 
     return queries
 
-def total_dircount(config, args, where):
+def total_dircount(_config, args, where):
     '''
     get the total number of directories under the directory
 
@@ -474,7 +478,7 @@ def total_dircount(config, args, where):
 
     return queries
 
-def leaf_dirs(config, args, where):
+def leaf_dirs(_config, args, where):
     '''
     get the leaf directories immediately under the current directory
 
@@ -571,7 +575,7 @@ def leaf_depth(config, args, where):
 
     return queries
 
-def leaf(config, args, where, type):
+def leaf(_config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get number of <type>s in the leaf directories immediately under the current directory
 
@@ -624,7 +628,7 @@ def leaf_files(config, args, where):
 def leaf_links(config, args, where):
     return leaf(config, args, where, 'l')
 
-def total_leaf(config, args, where, type):
+def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get total number of <type>s in the leaf directories under this directory
 
@@ -678,7 +682,7 @@ def total_leaf_files(config, args, where):
 def total_leaf_links(config, args, where):
     return total_leaf(config, args, where, 'l')
 
-def median_leaf_files(config, args, where):
+def median_leaf_files(_config, args, where):
     '''
     get median number of leaf files under the provided directory
     '''
@@ -722,7 +726,7 @@ def median_leaf_files(config, args, where):
 
     return queries
 
-def average_leaf(config, args, where, type):
+def average_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get average number of leaf files under the provided directory
     '''
@@ -741,7 +745,8 @@ def average_leaf(config, args, where, type):
                            ['id INTEGER PRIMARY KEY', 'uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['NULL', 'uid', '({0}) AS count'.format(count)],
+                                           gufi_common.build_query(['NULL', 'uid',
+                                                                    '({0}) AS count'.format(count)],
                                                                    ['summary'],
                                                                    where + ['nlink == 2'],
                                                                    None,
@@ -779,7 +784,7 @@ def average_leaf_files(config, args, where):
 def average_leaf_links(config, args, where):
     return average_leaf(config, args, where, 'l')
 
-def per_level(config, args, where, type):
+def per_level(config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get counts of how many <type>s are in each level of the tree, by uid
 
@@ -795,7 +800,8 @@ def per_level(config, args, where, type):
         starting_depth = path[root_len - path_len:].count('/')
 
     group_by = ['level'] + ([] if args.cumulative else ['uid'])
-    order_by = None if args.cumulative else ['level {0}'.format(ORDER[args.order]), 'uid {0}'.format(ORDER[args.order])]
+    order_by = None if args.cumulative else ['level {0}'.format(ORDER[args.order]),
+                                             'uid {0}'.format(ORDER[args.order])]
 
     uid = [] if args.cumulative else ['uid']
     count = '1' if type == 'd' else '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)
@@ -849,7 +855,7 @@ def links_per_level(config, args, where):
 def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
-def duplicate_names(config, args, where):
+def duplicate_names(_config, args, where):
     columns = ['name', 'type', 'inode', 'mode', 'size']
 
     queries = [
@@ -899,47 +905,47 @@ def duplicate_names(config, args, where):
 
     return queries
 
+# mapping of desired statistics to functions
+# uses --recursive
+RECURSIVE = {
+    'depth'              : depth,
+    'filesize'           : filesize,
+    'filecount'          : filecount,
+    'linkcount'          : linkcount,
+    'dircount'           : dircount,
+    'leaf-dirs'          : leaf_dirs,
+    'leaf-depth'         : leaf_depth,
+    'leaf-files'         : leaf_files,
+    'leaf-links'         : leaf_links,
+}
+
+# uses --cumulative
+CUMULATIVE = {
+    'total-filesize'     : total_filesize,
+    'total-filecount'    : total_filecount,
+    'total-linkcount'    : total_linkcount,
+    'total-dircount'     : total_dircount,
+    'total-leaf-files'   : total_leaf_files,
+    'total-leaf-links'   : total_leaf_links,
+    'files-per-level'    : files_per_level,
+    'links-per-level'    : links_per_level,
+    'dirs-per-level'     : dirs_per_level,
+    'average-leaf-files' : average_leaf_files,
+    'average-leaf-links' : average_leaf_links,
+}
+
+# does not use either
+OTHERS = {
+    'median-leaf-files'  : median_leaf_files,
+    'duplicate-names'    : duplicate_names,
+}
+
 # argv[0] should be the command name
 def run(argv, config_path):
-    # mapping of desired statistics to functions
-    # uses --recursive
-    RECURSIVE = {
-        'depth'              : depth,
-        'filesize'           : filesize,
-        'filecount'          : filecount,
-        'linkcount'          : linkcount,
-        'dircount'           : dircount,
-        'leaf-dirs'          : leaf_dirs,
-        'leaf-depth'         : leaf_depth,
-        'leaf-files'         : leaf_files,
-        'leaf-links'         : leaf_links,
-    }
-
-    # uses --cumulative
-    CUMULATIVE = {
-        'total-filesize'     : total_filesize,
-        'total-filecount'    : total_filecount,
-        'total-linkcount'    : total_linkcount,
-        'total-dircount'     : total_dircount,
-        'total-leaf-files'   : total_leaf_files,
-        'total-leaf-links'   : total_leaf_links,
-        'files-per-level'    : files_per_level,
-        'links-per-level'    : links_per_level,
-        'dirs-per-level'     : dirs_per_level,
-        'average-leaf-files' : average_leaf_files,
-        'average-leaf-links' : average_leaf_links,
-    }
-
-    # does not use either
-    OTHERS = {
-        'median-leaf-files'  : median_leaf_files,
-        'duplicate-names'    : duplicate_names,
-    }
-
-    STATS = {}
-    STATS.update(RECURSIVE)
-    STATS.update(CUMULATIVE)
-    STATS.update(OTHERS)
+    stats = {}
+    stats.update(RECURSIVE)
+    stats.update(CUMULATIVE)
+    stats.update(OTHERS)
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -974,7 +980,7 @@ def run(argv, config_path):
                         type=gufi_common.get_uid,
                         help='restrict to user')
     parser.add_argument('stat',
-                        choices=STATS.keys(),
+                        choices=stats.keys(),
                         help='statistic to get')
     parser.add_argument('path',
                         type=str,
@@ -1000,13 +1006,13 @@ def run(argv, config_path):
     query_cmd = [config.executable(),
                  '-n', str(config.threads()),
                  '-B', str(config.outputbuffer()),
-                 '-d', args.delim] + STATS[args.stat](config, args, build_where(args))
+                 '-d', args.delim] + stats[args.stat](config, args, build_where(args))
 
     if args.skip:
         query_cmd += ['k', args.skip]
 
-    query = subprocess.Popen(query_cmd + [args.path])
-    query.communicate() # block until query finishes
+    query = subprocess.Popen(query_cmd + [args.path]) # pylint: disable=consider-using-with
+    query.communicate()                               # block until query finishes
 
     return query.returncode
 

@@ -46,7 +46,7 @@
 # modified to produce derivative works, such modified software should be
 # clearly marked, so as not to confuse it with the version available from
 # LANL.
-#
+
 # THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -61,11 +61,28 @@
 
 
 
-import sys
+from binascii import unhexlify
+import hashlib
 
-import common
+# wrapper for the built-in hash function to act as a hashlib hash class
+# update() and hexdigest() are not provided
+class BuiltInHash:
+    def __init__(self, string):
+        self.hashed = hex(abs(__builtins__.hash(string)))[2:]
+        if len(self.hashed) & 1:
+            self.hashed = '0' + self.hashed
+        self.hashed = unhexlify(self.hashed)
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+    def digest(self):
+        return self.hashed
+
+# Known hashes
+Hashes = {
+    'BuiltInHash' : BuiltInHash,
+    'md5'         : hashlib.md5,
+    'sha1'        : hashlib.sha1,
+    'sha224'      : hashlib.sha224,
+    'sha256'      : hashlib.sha256,
+    'sha384'      : hashlib.sha384,
+    'sha512'      : hashlib.sha512,
+}

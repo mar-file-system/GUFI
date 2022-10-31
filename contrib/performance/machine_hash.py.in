@@ -61,11 +61,76 @@
 
 
 
+import argparse
+import sqlite3
 import sys
 
-import common
+from performance_pkg import common
+from performance_pkg.hashdb import machine, utils as hashdb
 
-# do not call this file directly - script will set up environment
+def compute_hash(args):
+    if args.override:
+        return args.override
+
+    formatted = [args.hash_alg]
+    for col, _, type in machine.COLS_HASHED: # pylint: disable=redefined-builtin
+        val = getattr(args, col)
+        if val is not None:
+            formatted += [str(val)]
+
+    return common.hash_config(args.hash_alg, ' '.join(formatted))
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--hash_alg',
+                        default='md5',
+                        choices=common.Hashes.keys(),
+                        help='Hash algorithm')
+    parser.add_argument('--name',
+                        type=str,
+                        help='Name of machine')
+    parser.add_argument('--cpu',
+                        type=str,
+                        help='CPU name')
+    parser.add_argument('--cores',
+                        type=int,
+                        default=0,
+                        help='CPU core count')
+    parser.add_argument('--ram',
+                        type=str,
+                        help='Main memory size')
+    parser.add_argument('--storage',
+                        type=str,
+                        help='Backing storage')
+    parser.add_argument('--override',
+                        type=str,
+                        help='Use this value for the hash instead of the calculated value')
+    parser.add_argument('--extra',
+                        type=str,
+                        help='Additional notes (not hashed)')
+    parser.add_argument('--database',
+                        type=str,
+                        help='Hash database to write to (must already exist)')
+    return parser.parse_args(argv)
+
+def run(argv):
+    args = parse_args(argv)
+
+    # hash(machine config)
+    machine_hash = compute_hash(args)
+    print(machine_hash) # pylint: disable=superfluous-parens
+
+    if args.database:
+        try:
+            con = sqlite3.connect(args.database)
+            hashdb.insert(con, args, machine_hash,
+                          machine.TABLE_NAME,
+                          machine.COLS_REQUIRED,
+                          machine.COLS_HASHED,
+                          machine.COLS_NOT_HASHED)
+            con.commit()
+        finally:
+            con.close()
+
 if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+    run(sys.argv[1:])

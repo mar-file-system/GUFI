@@ -87,5 +87,5 @@ if (CMAKE_CXX_COMPILER)
 
   add_test(NAME unit_tests COMMAND "${CMAKE_CURRENT_BINARY_DIR}/unit_tests"
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  set_tests_properties(unit_tests PROPERTIES LABELS unit)
+  set_tests_properties(unit_tests PROPERTIES LABELS "unit")
 endif()
