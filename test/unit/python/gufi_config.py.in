@@ -67,12 +67,18 @@ import os
 import sys
 import unittest
 
-root = '@CMAKE_BINARY_DIR@'
-scripts = os.path.join(root, 'scripts')
+# test/regression/common.py
+# should probably move file to somewhere else
+sys.path.append(os.path.join('@CMAKE_BINARY_DIR@', 'test', 'regression'))
 
-# import the gufi_config in scripts
-sys.path.append(scripts)
-gufi_config = imp.load_source('gufi_config', os.path.join(scripts, 'gufi_config.py'))
+import common
+
+# this file can be run directly, so scripts/gufi_common.py needs to be
+# found in the environment for scripts/gufi_config.py to import
+common.add_import_path('scripts')
+
+# have to import explicitly since this file has the same name as the one being tested
+gufi_config = common.import_tool('gufi_config.py')
 
 def build_config(pairs, remove=None):
     return ['{0}={1}\n'.format(key, value) for key, value in pairs.items() if remove != key]
@@ -80,8 +86,8 @@ def build_config(pairs, remove=None):
 class server(object):
     default = {
         gufi_config.Server.THREADS      : '5',
-        gufi_config.Server.EXECUTABLE   : os.path.join(root, 'src', 'gufi_query'),
-        gufi_config.Server.INDEXROOT    : root,
+        gufi_config.Server.EXECUTABLE   : os.path.join(common.root, 'src', 'gufi_query'),
+        gufi_config.Server.INDEXROOT    : common.root,
         gufi_config.Server.OUTPUTBUFFER : '1024',
     }
 

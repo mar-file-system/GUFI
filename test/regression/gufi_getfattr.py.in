@@ -64,8 +64,8 @@
 import sys
 
 import common
-import version_control as vc
 
+# do not call this file directly - script will set up environment
 if __name__ == '__main__':
-    gufi_getfattr = vc.version_check('gufi_getfattr')
+    gufi_getfattr = common.import_tool('gufi_getfattr')
     sys.exit(gufi_getfattr.run(sys.argv, common.config_path))

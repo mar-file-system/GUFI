@@ -85,7 +85,6 @@ set(CORE
   setup.sh
 
   common.py
-  version_control.py
 )
 
 # .sh and .expected

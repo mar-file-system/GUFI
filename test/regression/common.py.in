@@ -61,8 +61,40 @@
 
 
 
-# get root directory of GUFI
-root = "@CMAKE_BINARY_DIR@"
+import os
+import sys
+
+# get root build directory of GUFI
+root = '@CMAKE_BINARY_DIR@'
 
 # test config file name
-config_path = "@CMAKE_CURRENT_BINARY_DIR@/config.test"
+config_path = os.path.join('@CMAKE_CURRENT_BINARY_DIR@', 'config.test')
+
+# add this path to sys.path so that import works
+def add_import_path(subdir):
+    fullpath = os.path.join(root, subdir)
+    sys.path.append(fullpath)
+
+# import a tool from the scripts directory directly
+# needed for duplicate filenames or files without the .py exetension
+def import_tool(tool):
+    if sys.version_info[0] < 3:
+        import imp
+
+        return imp.load_source(tool, os.path.join(root, 'scripts', tool))
+    # https://csatlas.com/python-import-file-module/
+    elif sys.version_info[0] >= 3:
+        import importlib.machinery
+        import importlib.util
+        from pathlib import Path
+
+        # Get path to mymodule
+        script_dir = Path(__file__).parent
+        mymodule_path = str(script_dir.joinpath('@CMAKE_BINARY_DIR@', 'scripts', tool))
+
+        # Import mymodule
+        loader = importlib.machinery.SourceFileLoader(tool, mymodule_path)
+        spec = importlib.util.spec_from_loader(tool, loader)
+        script = importlib.util.module_from_spec(spec)
+        loader.exec_module(script)
+        return script
