@@ -161,6 +161,15 @@ file_symlink
 $ gufi_find -lname 'directory*'
 directory/subdirectory/directory_symlink
 
+$ gufi_find -inum $(stat -c '%i' directory)
+directory
+
+$ gufi_find -inum $(stat -c '%i' empty_file)
+empty_file
+
+$ gufi_find -inum $(stat -c '%i' file_symlink)
+file_symlink
+
 $ gufi_find -name  'file*'
 file_symlink
 

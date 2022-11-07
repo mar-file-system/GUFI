@@ -109,6 +109,9 @@ run_sort "${GUFI_FIND} -iname 'LEAF'"             # regex on file name (should b
 run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
+run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/directory)"
+run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/empty_file)"
+run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/file_symlink)"
 run_sort "${GUFI_FIND} -name  'file*'"            # glob on file name
 run_sort "${GUFI_FIND} -name  'directory*'"       # glob on file name
 echo "# missing old_file"
