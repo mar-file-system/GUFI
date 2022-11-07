@@ -71,10 +71,6 @@ import time
 import gufi_common
 import gufi_config
 
-# table names
-SUMMARY  = 'summary'
-PENTRIES = 'pentries'
-
 # location of this file
 PATH = os.path.realpath(__file__)
 
@@ -112,7 +108,7 @@ def numeric_arg(n):
     try:
         float(n)
     except:
-        raise argparse.ArgumentTypeError("%s is not a valid numeric argument" % n)
+        raise argparse.ArgumentTypeError("{0} is not a valid numeric argument".format(n))
 
     op = None
     if n[0] == '+':
@@ -138,14 +134,14 @@ def parse_size(size):
 def need_aggregation(args):
     return bool(args.numresults or args.smallest or args.largest)
 
-def build_where(args, table, root_uid = 0, root_gid = 0):
+def build_where(args, table, root_uid=0, root_gid=0):
     '''Build the WHERE clause'''
     where = []
 
     now = time.time()
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
-    #     where  += ['(uid == {0})'.format(os.getuid())]
+    #     where += ['(uid == {0})'.format(os.getuid())]
 
     if args.amin is not None:
         where += ['({0} - {1}.atime) / 60 {2} {3}'.format(now, table, amin[0], amin[1]) for amin in args.amin]
@@ -193,10 +189,10 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
 
     # matches on whole path
     if args.iregex is not None:
-        if table == SUMMARY:
-            where += [' OR '.join(['((path({0}.name, {0}.rollupscore)) REGEXP \'(?i){1}\')'.format(SUMMARY, iregex) for iregex in args.iregex])]
-        elif table == PENTRIES:
-            where += [' OR '.join(['((path({0}.name, {0}.rollupscore) || "/" || {1}.name) REGEXP \'(?i){2}\')'.format(SUMMARY, PENTRIES, iregex) for iregex in args.iregex])]
+        if table == gufi_common.SUMMARY:
+            where += [' OR '.join(['((path({0}.name, {0}.rollupscore)) REGEXP \'(?i){1}\')'.format(gufi_common.SUMMARY, iregex) for iregex in args.iregex])]
+        elif table == gufi_common.PENTRIES:
+            where += [' OR '.join(['((path({0}.name, {0}.rollupscore) || "/" || {1}.name) REGEXP \'(?i){2}\')'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, iregex) for iregex in args.iregex])]
 
     # if args.iwholename is not None:
 
@@ -225,7 +221,7 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
     # if args.nouser is True:
 
     if args.path is not None:
-        where += [' OR '.join(['(path({0}.name, {0}.rollupscore) GLOB \'{1}\')'.format(SUMMARY, path) for path in args.path])]
+        where += [' OR '.join(['(path({0}.name, {0}.rollupscore) GLOB \'{1}\')'.format(gufi_common.SUMMARY, path) for path in args.path])]
 
     # if args.perm is not None:
 
@@ -234,10 +230,10 @@ def build_where(args, table, root_uid = 0, root_gid = 0):
 
     # matches on whole path
     if args.regex is not None:
-        if table == SUMMARY:
-            where += [' OR '.join(['((path({0}.name, {0}.rollupscore)) REGEXP \'{1}\')'.format(SUMMARY, regex) for regex in args.regex])]
-        elif table == PENTRIES:
-            where += [' OR '.join(['((path({0}.name, {0}.rollupscore) || "/" || {1}.name) REGEXP \'{2}\')'.format(SUMMARY, PENTRIES, regex) for regex in args.regex])]
+        if table == gufi_common.SUMMARY:
+            where += [' OR '.join(['((path({0}.name, {0}.rollupscore)) REGEXP \'{1}\')'.format(gufi_common.SUMMARY, regex) for regex in args.regex])]
+        elif table == gufi_common.PENTRIES:
+            where += [' OR '.join(['((path({0}.name, {0}.rollupscore) || "/" || {1}.name) REGEXP \'{2}\')'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, regex) for regex in args.regex])]
 
     if args.samefile is not None:
         where += ['{0}.inode == {1}'.format(table, args.samefile.st_ino)]
@@ -419,7 +415,7 @@ def build_output(args, table):
     '''Build the output columns SELECT clause'''
     output = ''
 
-    path = 'path({0}.name, {0}.rollupscore)'.format(SUMMARY)
+    path = 'path({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)
 
     if args.printf:
         i = 0
@@ -472,73 +468,229 @@ def help(parser):
           'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
           'page at https://github.com/mar-file-system/GUFI/issues\n')
 
-    exit(0)
-
 def build_expression_parser():
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI version of find', add_help=False)
 
     # override help to not use -h
-    parser.add_argument('-help', '--help',                                                         action='store_true',                                help='Print a summary of the command-line usage of find and exit.')
+    parser.add_argument('-help', '--help',
+                        action='store_true',
+                        help='Print a summary of the command-line usage of find and exit.')
 
     # GNU find global options
-    parser.add_argument('-maxdepth',           metavar='levels',     dest='maxdepth',              type=gufi_common.get_non_negative,                  help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
-    parser.add_argument('-mindepth',           metavar='levels',     dest='mindepth',              type=gufi_common.get_non_negative,                  help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
-    parser.add_argument('--version', '-v',                                                         action='version',                                   version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)))
+    parser.add_argument('-maxdepth',
+                        metavar='levels',
+                        type=gufi_common.get_non_negative,
+                        help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
+    parser.add_argument('-mindepth',
+                        metavar='levels',
+                        type=gufi_common.get_non_negative,
+                        help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)))
 
     # GNU find test expressions
-    parser.add_argument('-amin',               metavar='n',          dest='amin',                  type=numeric_arg, action='append',                  help='File was last accessed n minutes ago.')
-    # parser.add_argument('-anewer',             metavar='file',       dest='anewer',                type=gufi_common.get_non_negative,                  help='File was last accessed more recently than file was modified.')
-    parser.add_argument('-atime',              metavar='n',          dest='atime',                 type=numeric_arg, action='append',                  help='File was last accessed n*24 hours ago.')
-    parser.add_argument('-cmin',               metavar='n',          dest='cmin',                  type=numeric_arg, action='append',                  help='File\'s status was last changed n minutes ago.')
-    # parser.add_argument('-cnewer',             metavar='file',       dest='cnewer',                type=gufi_common.get_non_negative,                  help='File\'s status was last changed more recently than file was modified.')
-    parser.add_argument('-ctime',              metavar='n',          dest='ctime',                 type=numeric_arg, action='append',                  help='File\'s status was last changed n*24 hours ago.')
-    parser.add_argument('-empty',                                    dest='empty',                 action='store_true',                                help='File is empty and is either a regular file or a directory.')
-    parser.add_argument('-executable',                               dest='executable',            action='store_true',                                help='Matches files which are executable and directories which are searchable (in a file name resolution sense).')
-    parser.add_argument('-false',                                    dest='false',                 action='store_true',                                help='File is false and is either a regular file or a directory.')
-    # parser.add_argument('-fstype',             metavar='n',          dest='fstype',                type=str,                                           help='File is on a filesystem of type type.')
-    parser.add_argument('-gid',                metavar='n',          dest='gid',                   type=numeric_arg, action='append',                  help='File\'s numeric group ID is n.')
-    parser.add_argument('-group',              metavar='gname',      dest='group',                 type=gufi_common.get_group,                         help='File belongs to group gname (numeric group ID allowed).')
-    # parser.add_argument('-ilname',             metavar='pattern',    dest='ilname',                type=str,                                           help='Like -lname, but the match is case insensitive.')
-    parser.add_argument('-iname',              metavar='pattern',    dest='iname',                 type=str,         action='append',                  help='Like -name, but the match is case insensitive (uses regex, not glob).')
-    parser.add_argument('-inum',               metavar='n',          dest='inum',                  type=numeric_arg, action='append',                  help='File has inode number n. It is normally easier to use the -samefile test instead.')
-    # parser.add_argument('-ipath',              metavar='pattern',    dest='ipath',                 type=str,                                           help='Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.')
-    parser.add_argument('-iregex',             metavar='pattern',    dest='iregex',                type=str,         action='append',                  help='Like -regex, but the match is case insensitive.')
-    # parser.add_argument('-iwholename',         metavar='pattern',    dest='iwholename',            type=str,                                           help='Like -wholename, but the match is case insensitive.')
-    parser.add_argument('-links',              metavar='n',          dest='links',                 type=numeric_arg, action='append',                  help='File has n links.')
-    parser.add_argument('-lname',              metavar='pattern',    dest='lname',                 type=str,                                           help='File is a symbolic link whose contents match shell pattern.')
-    parser.add_argument('-mmin',               metavar='n',          dest='mmin',                  type=numeric_arg, action='append',                  help='File\'s data was last modified n minutes ago.')
-    parser.add_argument('-mtime',              metavar='n',          dest='mtime',                 type=numeric_arg, action='append',                  help='File\'s data was last modified n*24 hours ago.')
-    parser.add_argument('-name',               metavar='pattern',    dest='name',                  type=str,         action='append',                  help='Base of file name (the path with the leading directories removed) matches shell pattern.')
-    parser.add_argument('-newer',              metavar='file',       dest='newer',                 type=os.lstat,                                      help='File was modified more recently than file.')
-    # parser.add_argument('-newerXY',            metavar='reference',  dest='newerXY',               type=str,                                           help='Compares the timestamp of the current file with reference.')
-    # parser.add_argument('-nouser',                                   dest='nouser',                type='store_true',                                  help='No user corresponds to file\'s numeric user ID.')
-    parser.add_argument('-path',               metavar='pattern',    dest='path',                  type=str,         action='append',                  help='File name matches shell pattern.')
-    # parser.add_argument('-perm',               metavar='mode',       dest='perm',                  type=str,                                           help='File\'s  permission bits')
-    parser.add_argument('-readable',                                 dest='readable',              action='store_true',                                help='Matches files which are readable.')
-    parser.add_argument('-regex',              metavar='pattern',    dest='regex',                 type=str,         action='append',                  help='File name matches regular expression pattern.')
-    parser.add_argument('-samefile',           metavar='name',       dest='samefile',              type=os.lstat,                                      help='File refers to the same inode as name.')
-    parser.add_argument('-size',               metavar='n',          dest='size',                  type=parse_size,  action='append',                  help='')
-    parser.add_argument('-true',                                     dest='true',                  action='store_true',                                help='Always true')
-    parser.add_argument('-type',               metavar='c',          dest='type',                  action='append', type=gufi_common.get_char,         help='File is of type c')
-    parser.add_argument('-uid',                metavar='n',          dest='uid',                   type=numeric_arg,  action='append',                 help='File\'s numeric user ID is n.')
-    # parser.add_argument('-used',               metavar='n',          dest='used',                  type=numeric_arg, action='append',                  help='File was last accessed n days after its status was last changed.')
-    parser.add_argument('-user',               metavar='uname',      dest='user',                  type=gufi_common.get_user, help='File is owned by user uname (numeric user ID allowed).')
-    # parser.add_argument('-wholename',          metavar='pattern',    dest='wholename',             type=str,          action='append'                  help='See -path. This alternative is less portable than -path.')
-    parser.add_argument('-writable',                                 dest='writable',              action='store_true',                                help='Matches files which are writable.')
-    # parser.add_argument('-xtype',              metavar='c',          dest='xtype',                 type=gufi_common.get_char,                          help='The same as -type unless the file is a symbolic link.')
-    # parser.add_argument('-context',            metavar='pattern',    dest='context',               type=str,                                           help='(SELinux only) Security context of the file matches glob pattern.')
+    parser.add_argument('-amin',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File was last accessed n minutes ago.')
+    # parser.add_argument('-anewer',
+    #                     metavar='file',
+    #                     type=gufi_common.get_non_negative,
+    #                     help='File was last accessed more recently than file was modified.')
+    parser.add_argument('-atime',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File was last accessed n*24 hours ago.')
+    parser.add_argument('-cmin',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s status was last changed n minutes ago.')
+    # parser.add_argument('-cnewer',
+    #                     metavar='file',
+    #                     type=gufi_common.get_non_negative,
+    #                     help='File\'s status was last changed more recently than file was modified.')
+    parser.add_argument('-ctime',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s status was last changed n*24 hours ago.')
+    parser.add_argument('-empty',
+                        action='store_true',
+                        help='File is empty and is either a regular file or a directory.')
+    parser.add_argument('-executable',
+                        action='store_true',
+                        help='Matches files which are executable and directories which are searchable (in a file name resolution sense).')
+    parser.add_argument('-false',
+                        action='store_true',
+                        help='File is false and is either a regular file or a directory.')
+    # parser.add_argument('-fstype',
+    #                     metavar='n',
+    #                     type=str,
+    #                     help='File is on a filesystem of type type.')
+    parser.add_argument('-gid',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s numeric group ID is n.')
+    parser.add_argument('-group',
+                        metavar='gname',
+                        type=gufi_common.get_group,
+                        help='File belongs to group gname (numeric group ID allowed).')
+    # parser.add_argument('-ilname',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='Like -lname, but the match is case insensitive.')
+    parser.add_argument('-iname',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='Like -name, but the match is case insensitive (uses regex, not glob).')
+    parser.add_argument('-inum',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File has inode number n. It is normally easier to use the -samefile test instead.')
+    # parser.add_argument('-ipath',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.')
+    parser.add_argument('-iregex',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='Like -regex, but the match is case insensitive.')
+    # parser.add_argument('-iwholename',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='Like -wholename, but the match is case insensitive.')
+    parser.add_argument('-links',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File has n links.')
+    parser.add_argument('-lname',
+                        metavar='pattern',
+                        type=str,
+                        help='File is a symbolic link whose contents match shell pattern.')
+    parser.add_argument('-mmin',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s data was last modified n minutes ago.')
+    parser.add_argument('-mtime',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s data was last modified n*24 hours ago.')
+    parser.add_argument('-name',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='Base of file name (the path with the leading directories removed) matches shell pattern.')
+    parser.add_argument('-newer',
+                        metavar='file',
+                        type=os.lstat,
+                        help='File was modified more recently than file.')
+    # parser.add_argument('-newerXY',
+    #                     metavar='reference',
+    #                     type=str,
+    #                     help='Compares the timestamp of the current file with reference.')
+    # parser.add_argument('-nouser',
+    #                     type='store_true',
+    #                     help='No user corresponds to file\'s numeric user ID.')
+    parser.add_argument('-path',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='File name matches shell pattern.')
+    # parser.add_argument('-perm',
+    #                     metavar='mode',
+    #                     type=str,
+    #                     help='File\'s  permission bits')
+    parser.add_argument('-readable',
+                        action='store_true',
+                        help='Matches files which are readable.')
+    parser.add_argument('-regex',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='File name matches regular expression pattern.')
+    parser.add_argument('-samefile',
+                        metavar='name',
+                        type=os.lstat,
+                        help='File refers to the same inode as name.')
+    parser.add_argument('-size',
+                        metavar='n',
+                        type=parse_size,
+                        action='append',
+                        help='')
+    parser.add_argument('-true',
+                        action='store_true',
+                        help='Always true')
+    parser.add_argument('-type',
+                        metavar='c',
+                        action='append',
+                        type=gufi_common.get_char,
+                        help='File is of type c')
+    parser.add_argument('-uid',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s numeric user ID is n.')
+    # parser.add_argument('-used',
+    #                     metavar='n',
+    #                     type=numeric_arg,
+    #                     action='append',
+    #                     help='File was last accessed n days after its status was last changed.')
+    parser.add_argument('-user',
+                        metavar='uname',
+                        type=gufi_common.get_user,
+                        help='File is owned by user uname (numeric user ID allowed).')
+    # parser.add_argument('-wholename',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     action='append'
+    #                     help='See -path. This alternative is less portable than -path.')
+    parser.add_argument('-writable',
+                        action='store_true',
+                        help='Matches files which are writable.')
+    # parser.add_argument('-xtype',
+    #                     metavar='c',
+    #                     type=gufi_common.get_char,
+    #                     help='The same as -type unless the file is a symbolic link.')
+    # parser.add_argument('-context',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='(SELinux only) Security context of the file matches glob pattern.')
 
     # GNU find actions
-    parser.add_argument('-fprint',             metavar='file',       dest='fprint',                type=str,                                           help='Output file prefix (Creates file <output>.tid)')
-    parser.add_argument('-printf',             metavar='format',     dest='printf',                type=str,                                           help='print format on the standard output, similar to GNU find')
+    parser.add_argument('-fprint',
+                        metavar='file',
+                        type=str,
+                        help='Output file prefix (Creates file <output>.tid)')
+    parser.add_argument('-printf',
+                        metavar='format',
+                        type=str,
+                        help='print format on the standard output, similar to GNU find')
 
     # GUFI specific arguments
-    parser.add_argument('--numresults',        metavar='n',          dest='numresults',            type=gufi_common.get_non_negative,                  help='first n results')
-    parser.add_argument('--smallest',                                dest='smallest',              action='store_true',                                help='smallest results')
-    parser.add_argument('--largest',                                 dest='largest',               action='store_true',                                help='largest results')
+    parser.add_argument('--numresults',
+                        metavar='n',
+                        type=gufi_common.get_non_negative,
+                        help='first n results')
+    parser.add_argument('--smallest',
+                        action='store_true',
+                        help='smallest results')
+    parser.add_argument('--largest',
+                        action='store_true',
+                        help='largest results')
 
-    gufi_common.add_common_args(parser)
+    gufi_common.add_common_flags(parser)
 
     return parser
 
@@ -549,11 +701,9 @@ def run(argv, config_path):
 
     expression_parser = build_expression_parser()
 
-    i = 1
     at_expressions = False # whether or not the command line arguments started with expressions
 
     # parse 'real' options
-    # none are actually handled
     real = {
         # 'H': False,
         # 'L': False,
@@ -561,12 +711,12 @@ def run(argv, config_path):
         # 'D': False, # don't even handle here
         # 'O': False, # don't even handle here
     }
-    while (i < len(argv)) and (argv[i][0] == '-'):
-        if '-help' in argv[i]:
-            help(expression_parser)
 
+    i = 1
+    while (i < len(argv)) and (argv[i][0] == '-'):
         # must be separate arguments
-        # if any flags are not H, L, or P, immediately treat the rest of the flags as expression flags
+        # if any flags are not H, L, or P, immediately treat
+        # the rest of the flags as expression flags
         if argv[i][1:] not in ['H', 'L', 'P']:
             at_expressions = True
             break
@@ -597,6 +747,7 @@ def run(argv, config_path):
 
     if args.help:
         help(expression_parser)
+        return 0
 
     if len(unknown):
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
@@ -615,9 +766,7 @@ def run(argv, config_path):
                    'size', 'blksize', 'blocks', 'atime', 'mtime',
                    'ctime', 'linkname', 'xattr_names']
 
-        I = 'CREATE TABLE {0} ({1})'.format(
-            args.inmemory_name,
-            ', '.join(['id INTEGER PRIMARY KEY',
+        out_columns = ['id INTEGER PRIMARY KEY',
                        'name TEXT',        'type TEXT',
                        'inode INT64',      'mode INT64',
                        'nlink INT64',      'uid INT64',
@@ -625,44 +774,40 @@ def run(argv, config_path):
                        'blksize INT64',    'blocks INT64',
                        'atime INT64',      'mtime INT64',
                        'ctime INT64',      'linkname TEXT',
-                       'xattr_names TEXT', 'output TEXT']))
+                       'xattr_names TEXT', 'output TEXT']
+
+        I = 'CREATE TABLE {0} ({1})'.format(
+            args.inmemory_name,
+            ', '.join(out_columns))
 
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
             gufi_common.build_query(['NULL',
-                                     'path({0}.name, {0}.rollupscore)'.format(SUMMARY)] +
-                                    ['{0}.{1}'.format(SUMMARY, column) for column in columns] +
-                                    build_output(args, SUMMARY),
-                                    [SUMMARY],
-                                    build_where(args, SUMMARY),
-                                    build_group_by(args, SUMMARY),
-                                    build_order_by(args, SUMMARY),
+                                     'path({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)] +
+                                    ['{0}.{1}'.format(gufi_common.SUMMARY, column) for column in columns] +
+                                    build_output(args, gufi_common.SUMMARY),
+                                    [gufi_common.SUMMARY],
+                                    build_where(args, gufi_common.SUMMARY),
+                                    build_group_by(args, gufi_common.SUMMARY),
+                                    build_order_by(args, gufi_common.SUMMARY),
                                     args.numresults))
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
             gufi_common.build_query(['NULL',
-                                     'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(SUMMARY, PENTRIES)] +
-                                    ['{0}.{1}'.format(PENTRIES, column) for column in columns] +
-                                    build_output(args, PENTRIES),
-                                    [SUMMARY, PENTRIES],
-                                    build_where(args, PENTRIES) +
-                                    ['{0}.inode == {1}.pinode'.format(SUMMARY, PENTRIES)],
-                                    build_group_by(args, PENTRIES),
-                                    build_order_by(args, PENTRIES),
+                                     'path({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)] +
+                                    ['{0}.{1}'.format(gufi_common.PENTRIES, column) for column in columns] +
+                                    build_output(args, gufi_common.PENTRIES),
+                                    [gufi_common.SUMMARY, gufi_common.PENTRIES],
+                                    build_where(args, gufi_common.PENTRIES) +
+                                    ['{0}.inode == {1}.pinode'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)],
+                                    build_group_by(args, gufi_common.PENTRIES),
+                                    build_order_by(args, gufi_common.PENTRIES),
                                     args.numresults))
 
         K = 'CREATE TABLE {0} ({1})'.format(
             args.aggregate_name,
-            ', '.join(['id INTEGER PRIMARY KEY',
-                       'name TEXT',        'type TEXT',
-                       'inode INT64',      'mode INT64',
-                       'nlink INT64',      'uid INT64',
-                       'gid INT64',        'size INT64',
-                       'blksize INT64',    'blocks INT64',
-                       'atime INT64',      'mtime INT64',
-                       'ctime INT64',      'linkname TEXT',
-                       'xattr_names TEXT', 'output TEXT']))
+            ', '.join(out_columns))
 
         J = "INSERT INTO {0} {1}".format(
             args.aggregate_name,
@@ -687,19 +832,19 @@ def run(argv, config_path):
                       '-K', K,
                       '-G', G]
     else:
-        S = gufi_common.build_query(build_output(args, SUMMARY),
-                                    [SUMMARY],
-                                    build_where(args, SUMMARY),
-                                    build_group_by(args, SUMMARY),
-                                    build_order_by(args, SUMMARY),
+        S = gufi_common.build_query(build_output(args, gufi_common.SUMMARY),
+                                    [gufi_common.SUMMARY],
+                                    build_where(args, gufi_common.SUMMARY),
+                                    build_group_by(args, gufi_common.SUMMARY),
+                                    build_order_by(args, gufi_common.SUMMARY),
                                     args.numresults)
 
-        E = gufi_common.build_query(build_output(args, PENTRIES),
-                                    [SUMMARY, PENTRIES],
-                                    build_where(args, PENTRIES) +
-                                    ['{0}.inode == {1}.pinode'.format(SUMMARY, PENTRIES)],
-                                    build_group_by(args, PENTRIES),
-                                    build_order_by(args, PENTRIES),
+        E = gufi_common.build_query(build_output(args, gufi_common.PENTRIES),
+                                    [gufi_common.SUMMARY, gufi_common.PENTRIES],
+                                    build_where(args, gufi_common.PENTRIES) +
+                                    ['{0}.inode == {1}.pinode'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)],
+                                    build_group_by(args, gufi_common.PENTRIES),
+                                    build_order_by(args, gufi_common.PENTRIES),
                                     args.numresults)
         query_cmd += ['-S', S,
                       '-E', E]

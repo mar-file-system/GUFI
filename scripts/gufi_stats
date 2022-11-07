@@ -83,7 +83,7 @@ ORDER = {'ASC'   : ASCENDING,
 def build_create(name, columns):
     return 'CREATE TABLE {0}({1})'.format(name, ', '.join(columns))
 
-def build_where(args, root_uid = 0, root_gid = 0):
+def build_where(args, root_uid=0, root_gid=0):
     where = []
 
     # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
@@ -449,7 +449,7 @@ def total_dircount(config, args, where):
                                                                    None)),
 
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
-                                           gufi_common.build_query(['NULL', 'name',  'uid', 'count'],
+                                           gufi_common.build_query(['NULL', 'name', 'uid', 'count'],
                                                                    [args.inmemory_name],
                                                                    None,
                                                                    None,
@@ -858,14 +858,14 @@ def duplicate_names(config, args, where):
                             'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['NULL', 'path(name, rollupscore)'] +
-                                                                 columns,
-                                                                 ['summary'],
-                                                                 where,
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+                                           gufi_common.build_query(['NULL', 'path(name, rollupscore)'] +
+                                                                   columns,
+                                                                   ['summary'],
+                                                                   where,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL', 'path(summary.name, summary.rollupscore)'] +
@@ -878,14 +878,14 @@ def duplicate_names(config, args, where):
                                                                    None)),
 
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
-                                         gufi_common.build_query(['NULL', 'path'] +
-                                                                 columns,
-                                                                 [args.inmemory_name],
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None,
-                                                                 None)),
+                                           gufi_common.build_query(['NULL', 'path'] +
+                                                                   columns,
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
 
         '-K', build_create(args.aggregate_name,
                            ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT',
@@ -948,17 +948,40 @@ def run(argv, config_path):
     parser = argparse.ArgumentParser(description='GUFI statistics', add_help=False)
 
     # override help to not use -h
-    parser.add_argument('--help',                                                    action='help',                                         help='show this help message and exit')
-    parser.add_argument('--version', '-v',                                           action='version',          version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--recursive', '-r',                  dest='recursive',      action='store_true',                                   help='run command recursively ({0})'.format(', '.join(RECURSIVE.keys())))
-    parser.add_argument('--cumulative', '-c',                 dest='cumulative',     action='store_true',                                   help='return cumulative values ({0})'.format(', '.join(CUMULATIVE.keys())))
-    parser.add_argument('--order',           metavar='order', dest='order',          choices=ORDER.keys(),         default=ASCENDING,       help='sort output (if applicable)')
-    parser.add_argument('--num-results',     metavar='n',     dest='num_results',    type=gufi_common.get_non_negative,                     help='first n results')
-    parser.add_argument('--uid', '--user',   metavar='u',     dest='uid',            type=gufi_common.get_uid,                              help='restrict to user')
-    parser.add_argument('stat',                                                      choices=STATS.keys(),                                  help='statistic to get')
-    parser.add_argument('path',                                                      type=str, nargs='?',                default='')
+    parser.add_argument('--help',
+                        action='help',
+                        help='show this help message and exit')
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('--recursive', '-r',
+                        action='store_true',
+                        help='run command recursively ({0})'.format(', '.join(RECURSIVE.keys())))
+    parser.add_argument('--cumulative', '-c',
+                        action='store_true',
+                        help='return cumulative values ({0})'.format(', '.join(CUMULATIVE.keys())))
+    parser.add_argument('--order',
+                        metavar='order',
+                        choices=ORDER.keys(),
+                        default=ASCENDING,
+                        help='sort output (if applicable)')
+    parser.add_argument('--num-results',
+                        metavar='n',
+                        type=gufi_common.get_non_negative,
+                        help='first n results')
+    parser.add_argument('--uid', '--user',
+                        metavar='u',
+                        type=gufi_common.get_uid,
+                        help='restrict to user')
+    parser.add_argument('stat',
+                        choices=STATS.keys(),
+                        help='statistic to get')
+    parser.add_argument('path',
+                        type=str,
+                        nargs='?',
+                        default='')
 
-    gufi_common.add_common_args(parser)
+    gufi_common.add_common_flags(parser)
 
     args = parser.parse_args(argv[1:])
 

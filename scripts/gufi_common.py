@@ -67,6 +67,12 @@ import multiprocessing
 import pwd
 import re
 
+# table names
+SUMMARY   = 'summary'
+PENTRIES  = 'pentries'
+XSUMMARY  = 'xsummary'
+XPENTRIES = 'xpentries'
+
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
 # to make sure input fits certain criteria
@@ -75,33 +81,33 @@ def get_positive(value):
     '''Make sure the value is a positive integer.'''
     ivalue = int(value)
     if ivalue <= 0:
-        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+        raise argparse.ArgumentTypeError("{0} is an invalid positive int value".format(value))
     return ivalue
 
 def get_non_negative(value):
     '''Make sure the value is a non-negative integer.'''
     ivalue = int(value)
     if ivalue < 0:
-        raise argparse.ArgumentTypeError("%s is an invalid non-negative int value" % value)
+        raise argparse.ArgumentTypeError("{0} is an invalid non-negative int value".format(value))
     return ivalue
 
 def get_char(value):
     '''Make sure the value is a single character.'''
     if len(value) != 1:
-        raise argparse.ArgumentTypeError("%s is not a character" % value)
+        raise argparse.ArgumentTypeError("{0} is not a character".format(value))
     return value
 
 def get_size(value):
     '''Make sure the value matches [+/-]n[bcwkMG].'''
     if not re.match('^[+-]?[0-9]+[bcwkMG]?$', value):
-        raise argparse.ArgumentTypeError("%s is not a valid size" % value)
+        raise argparse.ArgumentTypeError("{0} is not a valid size".format(value))
     return value
 
 def get_port(port):
     '''Make sure the value is an integer between 0 and 65536'''
     p = int(port)
-    if (p < 0) or (65535 < p):
-        raise argparse.ArgumentTypeError("Bad port: %d" % p)
+    if (p < 0) or (p > 65535):
+        raise argparse.ArgumentTypeError("Bad port: {0}".format(p))
     return p
 
 def get_uid(uid_str):
@@ -151,7 +157,7 @@ def get_gid(grp_str):
 
     gid = int(grp_str)
     try:
-        return grp.getgruid(gid).gr_gid
+        return grp.getgrgid(gid).gr_gid
     except:
         return gid
 
@@ -185,7 +191,8 @@ ROLLUP_SUMMARY_WHERE = '''
     END
 '''
 
-def build_query(select, tables, where = None, group_by = None, order_by = None, num_results = None, extra = None):
+def build_query(select, tables, where=None, group_by=None,
+                order_by=None, num_results=None, extra=None):
     '''
     Builds a query using arrays of data for each field.
     'select' and 'from_tables' must exist. All other arguments are optional.
@@ -240,19 +247,32 @@ def cpus():
     except:
         return 1
 
-def add_common_args(parser):
-    parser.add_argument('--delim',          metavar='c',          dest='delim',
-                        type=get_char,      default=' ',
+def add_common_flags(parser):
+    '''Common GUFI tool flags'''
+    parser.add_argument('--delim',
+                        dest='delim',
+                        metavar='c',
+                        type=get_char,
+                        default=' ',
                         help='delimiter separating output columns')
 
-    parser.add_argument('--in-memory-name', metavar='name',       dest='inmemory_name',
-                        type=str,           default='out',
+    parser.add_argument('--in-memory-name',
+                        dest='inmemory_name',
+                        metavar='name',
+                        type=str,
+                        default='out',
                         help='Name of in-memory database when aggregation is performed')
 
-    parser.add_argument('--aggregate-name', metavar='name',       dest='aggregate_name',
-                        type=str,           default='aggregate',
+    parser.add_argument('--aggregate-name',
+                        dest='aggregate_name',
+                        metavar='name',
+                        type=str,
+                        default='aggregate',
                         help='Name of final database when aggregation is performed')
 
-    parser.add_argument('--skip-file',      metavar='filename',   dest='skip',
-                        type=str,           default=None,
+    parser.add_argument('--skip-file',
+                        dest='skip',
+                        metavar='filename',
+                        type=str,
+                        default=None,
                         help='Name of file containing directory basenames to skip')
