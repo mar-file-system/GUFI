@@ -161,6 +161,13 @@ file_symlink
 $ gufi_find -lname 'directory*'
 directory/subdirectory/directory_symlink
 
+$ gufi_find -name  'file*'
+file_symlink
+
+$ gufi_find -name  'directory*'
+directory
+directory/subdirectory/directory_symlink
+
 # missing old_file
 $ gufi_find -newer 'not_as_old_file'
 prefix
