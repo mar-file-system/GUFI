@@ -61,59 +61,61 @@
 
 
 
+import argparse
 import os
-import sys
 
 import gufi_common
-
-if sys.version_info[0] == 2:
-    import exceptions
-    TypeError = exceptions.TypeError
 
 # default configuration file location
 DEFAULT_PATH = '/etc/GUFI/config'
 
-def _read_file(settings, f):
-    out = {}
-    for line in f:
-        line.strip()
-        if line[-1] == '\n':
-            line = line[:-1]
+class Config(object):
+    def __init__(self, settings, config_reference=DEFAULT_PATH):
+        # path string
+        if isinstance(config_reference, str):
+            with open(config_reference, 'r') as config_file:
+                self.config = self._read_lines(settings, config_file)
+        # iterable object containing lines
+        elif self._check_iterable(config_reference):
+            self.config = self._read_lines(settings, config_reference)
+        else:
+            raise TypeError('Cannot convert {0} to a config'.format(type(config_reference)))
 
-        if len(line) == 0:
-            continue
+    def _check_iterable(self, obj):
+        try:
+            iter(obj)
+        except TypeError:
+            return False
+        return True
 
-        if line[0] == '#':
-            continue
+    def _read_lines(self, settings, lines):
+        out = {}
+        for line in lines:
+            line = line.strip()
 
-        key, value = line.split('=', 1)
+            if len(line) == 0:
+                continue
 
-        # only store known keys
-        if key in settings:
-            # some values need to be parsed
-            if settings[key]:
-                out[key] = settings[key](value)
-            else:
-                out[key] = value
+            if line[0] == '#':
+                continue
 
-    for key in settings:
-        if key not in out:
-            raise Exception('Missing {0}'.format(key))
+            key, value = line.split('=', 1)
 
-    return out
+            # only store known keys
+            if key in settings:
+                # some values need to be parsed
+                if settings[key]:
+                    out[key] = settings[key](value)
+                else:
+                    out[key] = value
 
-def _read_filename(settings, filename = DEFAULT_PATH):
-    with open(filename, 'r') as f:
-        return _read_file(settings, f)
+        for key in settings:
+            if key not in out:
+                raise Exception('Missing Setting {0}'.format(key))
 
-def _check_iterable(obj):
-    try:
-        iter(obj)
-    except TypeError:
-        return False
-    return True
+        return out
 
-class Server:
+class Server(Config):
     THREADS      = 'Threads'      # number of threads to use
     EXECUTABLE   = 'Executable'   # absolute path of gufi_query
     INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
@@ -127,12 +129,7 @@ class Server:
     }
 
     def __init__(self, file_reference):
-        if isinstance(file_reference,  str):
-            self.config = _read_filename(Server.SETTINGS, file_reference)
-        elif _check_iterable(file_reference):
-            self.config = _read_file(Server.SETTINGS, file_reference)
-        else:
-            raise TypeError('Cannot convert {} to a Server config'.format(type(file_reference)))
+        super(Server, self).__init__(Server.SETTINGS, file_reference)
 
     def threads(self):
         return self.config[Server.THREADS]
@@ -146,7 +143,7 @@ class Server:
     def outputbuffer(self):
         return self.config[Server.OUTPUTBUFFER]
 
-class Client:
+class Client(Config):
     SERVER       = 'Server'       # hostname
     PORT         = 'Port'         # ssh port
     PARAMIKO     = 'Paramiko'     # location of paramiko installation
@@ -158,12 +155,7 @@ class Client:
     }
 
     def __init__(self, file_reference):
-        if isinstance(file_reference,  str):
-            self.config = _read_filename(Client.SETTINGS, file_reference)
-        elif _check_iterable(file_reference):
-            self.config = _read_file(Client.SETTINGS, file_reference)
-        else:
-            raise TypeError('Cannot convert {} to a Client config'.format(type(file_reference)))
+        super(Client, self).__init__(Client.SETTINGS, file_reference)
 
     def server(self):
         return self.config[Client.SERVER]
@@ -173,3 +165,17 @@ class Client:
 
     def paramiko(self):
         return self.config[Client.PARAMIKO]
+
+if __name__ == '__main__':
+    # simple config validator
+    parser = argparse.ArgumentParser(description='GUFI Configuration Tester')
+    parser.add_argument('type', choices=['server', 'client'])
+    parser.add_argument('path')
+    args = parser.parse_args()
+
+    with open(args.path, 'r') as config:
+        if args.type == 'server':
+            Server(config)
+        elif args.type == 'client':
+            Client(config)
+        print('Valid Config') # won't print on error
