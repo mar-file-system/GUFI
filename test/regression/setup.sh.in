@@ -100,19 +100,20 @@ trap setup_cleanup EXIT
 setup_cleanup
 
 umask 002
-export LC_ALL=C
-export PATH=@CMAKE_BINARY_DIR@/scripts:${PATH}
-export PYTHONPATH=@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test/regression:${PYTHONPATH}
+export LC_ALL="C"
+export PATH="@CMAKE_BINARY_DIR@/scripts:${PATH}"
+export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test/regression:${PYTHONPATH}"
 
 # generate a fake config file
-CONFIG="@CMAKE_CURRENT_BINARY_DIR@/config.test"
+# shellcheck disable=SC2046
+CONFIG="$(realpath $(@PYTHON_INTERPRETER@ -c 'import common; print(common.config_path)'))"
 (
     echo "Threads=1"
     echo "Executable=@CMAKE_BINARY_DIR@/src/gufi_query"
     echo "IndexRoot=${INDEXROOT}"
     echo "OutputBuffer=4096"
-) > ${CONFIG}
-chmod 666 ${CONFIG}
+) > "${CONFIG}"
+chmod 666 "${CONFIG}"
 
 # paths of all executables
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
