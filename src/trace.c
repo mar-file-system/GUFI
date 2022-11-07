@@ -142,7 +142,7 @@ int linetowork(char *line, const size_t len, const char *delim, struct work *wor
     p = q;  q = split(p, delim, end); work->ossint4=atol(p);
     p = q;  q = split(p, delim, end); SNPRINTF(work->osstext1,MAXXATTR,"%s",p);
     p = q;  q = split(p, delim, end); SNPRINTF(work->osstext2,MAXXATTR,"%s",p);
-    p = q;  q = split(p, delim, end); work->pinode=atol(p);
+    p = q;      split(p, delim, end); work->pinode=atol(p);
 
     return 0;
 }

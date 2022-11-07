@@ -272,8 +272,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     chmod(nda.topath, nda.work->statuso.st_mode);
     chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
 
-  cleanup:
     closedir(dir);
+
+  cleanup:
 
     free(nda.work);
 

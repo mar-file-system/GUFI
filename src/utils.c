@@ -433,7 +433,6 @@ int shortpath(const char *name, char *nameout, char *endname) {
      int slashfound;
 
      *endname = 0;              // in case there's no '/'
-     i=0;
      SNPRINTF(prefix,MAXPATH,"%s",name);
      i=strlen(prefix);
      pp=prefix+i;
@@ -451,7 +450,7 @@ int shortpath(const char *name, char *nameout, char *endname) {
      }
      if (slashfound == 0) {
         sprintf(endname,"%s",name);
-        bzero(nameout,1);
+        memset(nameout,0,1);
         //printf("shortpath: name %s, nameout %s, endname %s.\n",name,nameout,endname);
      } else
         sprintf(nameout,"%s",prefix);

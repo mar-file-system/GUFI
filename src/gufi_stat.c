@@ -141,7 +141,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
         if (*f != '%') {
             /* handle escape sequences */
             if (*f == '\\') {
-                char escape = *f;
+                unsigned char escape = *f;
                 switch (*++f) {
                     case 'a':
                         escape = '\x07';

@@ -715,12 +715,13 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     pthread_mutex_unlock(&print_mutex);
     #endif
 
-    descend_timers_destroy(descend_timers);
-
     #ifdef PER_THREAD_STATS
     timestamp_print(ctx->buffers, id, "output_timestamps", output_timestamps);
     #endif
     #endif
+
+    /* call here to match descend_timers_init call outside of DEBUG block */
+    descend_timers_destroy(descend_timers);
 
     return 0;
 }
