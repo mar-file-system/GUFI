@@ -125,7 +125,8 @@ foreach(NAME ${SH_AND_EXPECTED})
   configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
   configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
-  add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
+  add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
+    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
   set_tests_properties("${NAME}" PROPERTIES LABELS regression)
 endforeach()
 
@@ -134,8 +135,10 @@ foreach(NAME ${SH_PY_AND_EXPECTED})
   configure_file("${NAME}.py.in"    "${NAME}.py"       @ONLY)
   configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
-  add_test(NAME "${NAME}" COMMAND "${NAME}.sh")
+  add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
+    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
   set_tests_properties("${NAME}" PROPERTIES LABELS regression)
+  set_tests_properties("${NAME}" PROPERTIES ENVIRONMENT PYTHONPATH="${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_BINARY_DIR}/scripts:$ENV{PYTHONPATH}")
 endforeach()
 
 find_program(SUDO sudo)
@@ -157,7 +160,8 @@ if (SUDO)
       configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
       configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
 
-      add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh")
+      add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
+        WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
       set_tests_properties("${NAME}" PROPERTIES LABELS sudo)
     endforeach()
   endif()

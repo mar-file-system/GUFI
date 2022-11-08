@@ -102,15 +102,18 @@ foreach(TEST
   configure_file(${TEST} ${TEST} COPYONLY)
 endforeach()
 
+set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
+execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")
+
 # create an empty directory and extract testdir.tar into it for runtests
 set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
-set(TESTDIR "${CMAKE_CURRENT_BINARY_DIR}/testdir")
-set(TESTDST "${CMAKE_CURRENT_BINARY_DIR}/gary")
+set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
+set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
 
 add_test(
   NAME gary
-  COMMAND ${CMAKE_COMMAND} -E env PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH} ${CMAKE_CURRENT_BINARY_DIR}/runtests ${TESTTAR} ${TESTDIR} ${TESTDST}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  COMMAND "${CMAKE_COMMAND}" -E env "PATH=${DEP_INSTALL_PREFIX}/sqlite3/bin:$ENV{PATH}" "${CMAKE_CURRENT_BINARY_DIR}/runtests" "${TESTTAR}" "${TESTDIR}" "${TESTDST}"
+  WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
 set_tests_properties(gary PROPERTIES LABELS manual)
 
 # add_test(NAME gufitest COMMAND gufitest.py all)
