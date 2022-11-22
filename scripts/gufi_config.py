@@ -81,14 +81,16 @@ class Config(object):
         else:
             raise TypeError('Cannot convert {0} to a config'.format(type(config_reference)))
 
-    def _check_iterable(self, obj):
+    @staticmethod
+    def _check_iterable(obj):
         try:
             iter(obj)
         except TypeError:
             return False
         return True
 
-    def _read_lines(self, settings, lines):
+    @staticmethod
+    def _read_lines(settings, lines):
         out = {}
         for line in lines:
             line = line.strip()
@@ -121,6 +123,7 @@ class Server(Config):
     INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
     OUTPUTBUFFER = 'OutputBuffer' # size of per-thread buffers used to buffer prints
 
+    # key -> str to value converter
     SETTINGS = {
         THREADS      : gufi_common.get_positive,
         EXECUTABLE   : None,
@@ -148,6 +151,7 @@ class Client(Config):
     PORT         = 'Port'         # ssh port
     PARAMIKO     = 'Paramiko'     # location of paramiko installation
 
+    # key -> str to value converter
     SETTINGS = {
         SERVER   : None,
         PORT     : gufi_common.get_port,

@@ -77,12 +77,12 @@ OUTPUT="gufi_dir2trace.out"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # count output files
-found=$(find "${TRACES[@]}" | wc -l)
+found=$(@FIND@ "${TRACES[@]}" | wc -l)
 echo "Expecting ${THREADS} trace files. Found ${found}."
 
 # count lines
 trace_lines=$(cat "${TRACES[@]}" | wc -l | awk '{print $1}')
-contents=$(find "${SRCDIR}")
+contents=$(@FIND@ "${SRCDIR}")
 content_lines=$(echo "${contents}" | wc -l | awk '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
@@ -91,7 +91,7 @@ columns=$(@SED@ "s/[^${DELIM}]//g" "${TRACES[@]}" | awk '{ print length }' | @SO
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
-src=$(find "${SRCDIR}" | @SORT@)
+src=$(@FIND@ "${SRCDIR}" | @SORT@)
 lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "s/\\/\\//\\//g" | @SORT@)
 
 echo "Source Directory:"

@@ -75,7 +75,7 @@ OUTPUT="gufi_dir2index.out"
     # generate the index
     ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}"
 
-    src=$(find "${SRCDIR}" | @SORT@)
+    src=$(@FIND@ "${SRCDIR}" | @SORT@)
 
     index=$(${GUFI_QUERY} -d " " -S "SELECT path(name, rollupscore) FROM summary;" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "${INDEXROOT}" | @SORT@)
 
@@ -97,7 +97,7 @@ do
     # generate the index
     ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXTARGET}"
 
-    src=$(find "${SRCDIR}" -maxdepth ${level} | @SORT@)
+    src=$(@FIND@ "${SRCDIR}" -maxdepth ${level} | @SORT@)
 
     index=$(${GUFI_QUERY} -d " " -S "SELECT path(name, rollupscore) FROM summary;" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "${INDEXROOT}" | @SORT@)
 

@@ -61,8 +61,10 @@
 
 
 
+set -e
+
 # Set Timezone to skip an interactive prompt when running apt-get update
-TZ=Europe/Kiev
+TZ=America/Denver
 ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 apt update

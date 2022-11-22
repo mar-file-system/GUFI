@@ -102,7 +102,7 @@ setup_cleanup
 umask 002
 export LC_ALL="C"
 export PATH="@CMAKE_BINARY_DIR@/scripts:${PATH}"
-export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test/regression:${PYTHONPATH}"
+export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test:${PYTHONPATH}"
 
 # generate a fake config file
 # shellcheck disable=SC2046

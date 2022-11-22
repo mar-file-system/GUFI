@@ -176,7 +176,7 @@ add_xattrs() {
 }
 export -f add_xattrs
 
-find "${SRCDIR}" -type f -exec "${SHELL}" -c "add_xattrs $0" {} \;
+@FIND@ "${SRCDIR}" -type f -exec "${SHELL}" -c "add_xattrs $0" {} \;
 
 # generate the index
 run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""

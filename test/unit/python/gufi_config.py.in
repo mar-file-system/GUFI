@@ -62,23 +62,20 @@
 
 
 import copy
-import imp
 import os
 import sys
 import unittest
 
-# test/regression/common.py
-# should probably move file to somewhere else
-sys.path.append(os.path.join('@CMAKE_BINARY_DIR@', 'test', 'regression'))
+sys.path += [
+    # test/regression/common.py
+    os.path.join('@CMAKE_BINARY_DIR@', 'test'),
+
+    # scripts/gufi_config.py imports scripts/gufi_common.py
+    os.path.join('@CMAKE_BINARY_DIR@', 'scripts'),
+]
 
 import common
-
-# this file can be run directly, so scripts/gufi_common.py needs to be
-# found in the environment for scripts/gufi_config.py to import
-common.add_import_path('scripts')
-
-# have to import explicitly since this file has the same name as the one being tested
-gufi_config = common.import_tool('gufi_config.py')
+gufi_config = common.import_tool('gufi_config', 'gufi_config.py')
 
 def build_config(pairs, remove=None):
     return ['{0}={1}\n'.format(key, value) for key, value in pairs.items() if remove != key]

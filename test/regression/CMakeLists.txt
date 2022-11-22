@@ -68,6 +68,7 @@ if (POLICY CMP0109)
 endif()
 
 find_exec_dependency(DIFF colordiff diff)
+find_exec_dependency(FIND find)
 find_exec_dependency(SED  sed)
 find_exec_dependency(SORT sort)
 find_exec_dependency(TEE  tee)
@@ -83,8 +84,6 @@ set(CORE
   generatetree.sh
   os_setfattr.sh
   setup.sh
-
-  common.py
 )
 
 # .sh and .expected
