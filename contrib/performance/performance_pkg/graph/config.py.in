@@ -98,7 +98,7 @@ ERROR_BAR = 'error_bar'                 # section
 ERROR_BAR_SHOW = 'show'                 # bool
 ERROR_BAR_PRECISION = 'precision'       # positive integer
 ERROR_BAR_MIN_MAX = 'min_max'           # bool
-ERROR_BAR_TEXT_COLORS = 'text_colors'   # string list
+ERROR_BAR_COLORS = 'colors'             # string list
 ERROR_BAR_CAP_SIZE = 'cap_size'         # positive integer
 
 def to_list(value, convert=str):
@@ -234,9 +234,9 @@ def process(filename):
     error_bar[ERROR_BAR_PRECISION] = read_value(parser,
                                                 ERROR_BAR, ERROR_BAR_PRECISION,
                                                 int, 3)
-    error_bar[ERROR_BAR_TEXT_COLORS] = read_value(parser,
-                                                  ERROR_BAR, ERROR_BAR_TEXT_COLORS,
-                                                  str_list, []) + (['green'] * column_count)
+    error_bar[ERROR_BAR_COLORS] = read_value(parser,
+                                             ERROR_BAR, ERROR_BAR_COLORS,
+                                             str_list, []) + (['red'] * column_count)
 
     error_bar[ERROR_BAR_CAP_SIZE] = read_value(parser,
                                                ERROR_BAR, ERROR_BAR_CAP_SIZE,
