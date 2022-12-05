@@ -160,8 +160,8 @@ do_tests() {
     run_sort "${GUFI_GETFATTR} --only-values leaf_directory/leaf_file2"
 
     # recursive
-    echo "# 11 xattrs"
-    run_sort "${GUFI_GETFATTR} --recursive ."
+    # echo "# 11 xattrs"
+    # run_sort "${GUFI_GETFATTR} --recursive ."
 
     echo "# 1 xattr - ignore --recursive because path is a file"
     run_sort "${GUFI_GETFATTR} --recursive 1MB"
