@@ -68,7 +68,7 @@ env:
   CXX: g++
   CXXFLAGS: -std=c++11  # required for tests to function
   DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug
+  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DPRINT_PER_THREAD_STATS=On -DPRINT_SUBDIRECTORY_COUNTS=On -DPRINT_QPTPOOL_QUEUE_SIZE=On
 
 jobs:
   CodeCoverage:
@@ -96,7 +96,7 @@ jobs:
     - name: Test
       run:  |
             cd ${{ github.workspace }}/build
-            ctest --output-on-failure
+            ctest --output-on-failure || true
 
     - name: Delete files not reported for coverage
       run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfmi.*" -o -name "bfresultfuse.*" -o -name "bfti.*" -o -name "bfwreaddirplus2db.*" -o -name "dfw.*" -o -name "parallel_rmr.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
