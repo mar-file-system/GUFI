@@ -139,7 +139,11 @@ class CommitStats(object): # pylint: disable=useless-object-inheritance, too-few
                 col_data = [row[col] for row in rows]
 
                 self.average += [float(sum(col_data)) / self.row_count]
-                self.median  += [sorted(col_data)[int(self.row_count / 2)]]
+                half = int(self.row_count / 2)
+                if self.row_count & 1:
+                    self.median += [sorted(col_data)[half]]
+                else:
+                    self.median += [sum(sorted(col_data)[half - 1:half + 1]) / 2]
                 self.minimum += [min(col_data)]
                 self.maximum += [max(col_data)]
         else:
