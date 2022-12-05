@@ -98,8 +98,8 @@ jobs:
             cd ${{ github.workspace }}/build
             ctest --output-on-failure
 
-    - name: Generate .gcov files
-      run:  find -name "*.gcna" -exec gcov {} \;
+    - name: Delete files not reported for coverage
+      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfmi.*" -o -name "bfresultfuse.*" -o -name "bfti.*" -o -name "bfwreaddirplus2db.*" -o -name "dfw.*" -o -name "parallel_rmr.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
