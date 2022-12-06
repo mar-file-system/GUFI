@@ -336,19 +336,8 @@ struct work *validate_source(char *path) {
     }
 
     /* check that the input path is a directory */
-    if (S_ISDIR(root->statuso.st_mode)) {
-        root->type[0] = 'd';
-    }
-    else {
+    if (!S_ISDIR(root->statuso.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
-        free(root);
-        return NULL;
-    }
-
-    /* check if the source directory can be accessed */
-    if (access(path, R_OK | X_OK) != 0) {
-        fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                root->name, strerror(errno));
         free(root);
         return NULL;
     }
@@ -356,6 +345,7 @@ struct work *validate_source(char *path) {
     root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
     root->root = path;
     root->root_len = dirname_len(path, root->name_len);
+    root->type[0] = 'd';
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];

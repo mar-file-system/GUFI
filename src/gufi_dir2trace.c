@@ -165,7 +165,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
 static int check_prefix(const char *nameto, const size_t nameto_len, const size_t thread_count) {
     /* check the output files, if a prefix was provided */
-    if (!nameto_len || !nameto_len) {
+    if (!nameto || !nameto_len) {
         fprintf(stderr, "No output file name specified\n");
         return -1;
     }
@@ -205,19 +205,8 @@ static struct work *validate_source(char *path) {
     }
 
     /* check that the input path is a directory */
-    if (S_ISDIR(root->statuso.st_mode)) {
-        root->type[0] = 'd';
-    }
-    else {
+    if (!S_ISDIR(root->statuso.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
-        free(root);
-        return NULL;
-    }
-
-    /* check if the source directory can be accessed */
-    if (access(path, R_OK | X_OK) != 0) {
-        fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                root->name, strerror(errno));
         free(root);
         return NULL;
     }
@@ -225,6 +214,7 @@ static struct work *validate_source(char *path) {
     root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
     root->root = path;
     root->root_len = dirname_len(path, root->name_len);
+    root->type[0] = 'd';
 
     return root;
 }
