@@ -87,4 +87,3 @@ endforeach()
 
 add_subdirectory(configs)
 add_subdirectory(performance_pkg)
-add_subdirectory(tests)
