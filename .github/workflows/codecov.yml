@@ -82,10 +82,14 @@ jobs:
         key:  ${{ runner.os }}-CodeCoverage
 
     - name: Ubuntu 20.04 Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Coverage Prerequisites
       run:  |
-            sudo contrib/CI/ubuntu.sh
             sudo apt install gcovr
             sudo apt install g++
+            pip install pytest
+            pip install coverage
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
@@ -101,8 +105,16 @@ jobs:
     - name: Delete files not reported for coverage
       run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfmi.*" -o -name "bfresultfuse.*" -o -name "bfti.*" -o -name "bfwreaddirplus2db.*" -o -name "dfw.*" -o -name "parallel_rmr.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
 
+    - name: Generate Python Coverage Report
+      run:  |
+            export PYTHONPATH="${{ github.workspace }}/build/contrib:${{ github.workspace }}/build/contrib/performance:${{ github.workspace }}/build/scripts:${PYTHONPATH}"
+            coverage run -m pytest ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py ${{ github.workspace }}/build/test/unit/python/gufi_config.py
+            coverage xml --omit=${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py,${{ github.workspace }}/build/test/unit/python/gufi_config.py
+            rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         verbose: true
         gcov: true
+        fail_ci_if_error: true
