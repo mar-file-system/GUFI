@@ -222,7 +222,7 @@ def build_query(select, tables, where=None, group_by=None,
     # pylint: disable=too-many-arguments
 
     if not select or len(select) == 0 or not tables or len(tables) == 0:
-        return ""
+        return ''
 
     query = 'SELECT {0} FROM {1}'.format(', '.join(select), ', '.join(tables))
 
