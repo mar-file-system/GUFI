@@ -1009,7 +1009,7 @@ def run(argv, config_path):
                  '-d', args.delim] + stats[args.stat](config, args, build_where(args))
 
     if args.skip:
-        query_cmd += ['k', args.skip]
+        query_cmd += ['-k', args.skip]
 
     query = subprocess.Popen(query_cmd + [args.path]) # pylint: disable=consider-using-with
     query.communicate()                               # block until query finishes
