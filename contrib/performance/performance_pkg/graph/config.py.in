@@ -66,6 +66,32 @@ from matplotlib import pyplot as plt # should be able to get rid of this
 
 from performance_pkg import common
 
+# converter functions for input read from ConfigParser
+def pos_int(value):
+    val = int(value)
+    if val < 1:
+        raise ValueError('Positive integer got a non-positive number: {0}'.format(val))
+    return val
+
+def pos_float(value):
+    val = float(value)
+    if val <= 0:
+        raise ValueError('Positive float got a non-positive number: {0}'.format(val))
+    return val
+
+def to_list(value, convert=str):
+    return [convert(item.strip()) for item in value.split(',')]
+
+def str_list(value):
+    return to_list(value)
+
+def pos_float_list(value):
+    values = to_list(value, float)
+    for val in values:
+        if val <= 0:
+            raise ValueError('Positive float list got a non-positive number: {0}'.format(val))
+    return values
+
 # config sections and keys
 RAW_DATA = 'raw_data'                   # section
 RAW_DATA_COMMITS = 'commits'            # string list
@@ -74,7 +100,7 @@ RAW_DATA_COLUMNS = 'columns'            # string list
 OUTPUT = 'output'                       # section
 OUTPUT_PATH = 'path'                    # string
 OUTPUT_GRAPH_TITLE = 'graph_title'      # string
-OUTPUT_DIMENSIONS = 'graph_dimensions'  # integer pair
+OUTPUT_DIMENSIONS = 'graph_dimensions'  # postive float pair
 
 LINES = 'lines'                         # section
 LINES_COLORS = 'colors'                 # string list
@@ -82,16 +108,16 @@ LINES_TYPES = 'types'                   # string list
 LINES_MARKERS = 'markers'               # string list
 
 AXES = 'axes'                           # section
-AXES_HASH_LEN = 'hash_len'              # non-zero integer
+AXES_HASH_LEN = 'hash_len'              # integer
 AXES_Y_LABEL = 'y_label'                # string
-AXES_Y_MIN = 'y_min'                    # number
-AXES_Y_MAX = 'y_max'                    # number
+AXES_Y_MIN = 'y_min'                    # float
+AXES_Y_MAX = 'y_max'                    # float
 
 ANNOTATIONS = 'annotations'             # section
 ANNOTATIONS_SHOW = 'show'               # bool
 ANNOTATIONS_PRECISION = 'precision'     # positive integer
-ANNOTATIONS_X_OFFSET = 'x_offset'       # number
-ANNOTATIONS_Y_OFFSET = 'y_offset'       # number
+ANNOTATIONS_X_OFFSET = 'x_offset'       # float
+ANNOTATIONS_Y_OFFSET = 'y_offset'       # float
 ANNOTATIONS_TEXT_COLORS = 'text_colors' # string list
 
 ERROR_BAR = 'error_bar'                 # section
@@ -99,33 +125,60 @@ ERROR_BAR_SHOW = 'show'                 # bool
 ERROR_BAR_PRECISION = 'precision'       # positive integer
 ERROR_BAR_MIN_MAX = 'min_max'           # bool
 ERROR_BAR_COLORS = 'colors'             # string list
-ERROR_BAR_CAP_SIZE = 'cap_size'         # positive integer
+ERROR_BAR_CAP_SIZE = 'cap_size'         # positive float
 
-def to_list(value, convert=str):
-    return [convert(item.strip()) for item in value.split(',')]
+DEFAULTS = {
+    RAW_DATA : {
+        RAW_DATA_COMMITS : [str_list, []],
+        RAW_DATA_COLUMNS : [str_list, []],
+    },
 
-def str_list(value):
-    return to_list(value)
+    OUTPUT : {
+        OUTPUT_PATH        : [str, ''],
+        OUTPUT_GRAPH_TITLE : [str, ''],
+        OUTPUT_DIMENSIONS  : [pos_float_list, [0.0, 0.0]],
+    },
 
-def int_list(value):
-    return to_list(value, int)
+    LINES : {
+        LINES_COLORS  : [str_list, []],
+        LINES_TYPES   : [str_list, []],
+        LINES_MARKERS : [str_list, []],
+    },
 
-def pos_int_list(value):
-    values = to_list(value, int)
-    for val in values:
-        if val < 1:
-            raise ValueError('Positive integer list got a non-positive number: {0}'.format(val))
-    return values
+    AXES: {
+        AXES_HASH_LEN : [int, 0],
+        AXES_Y_LABEL  : [str, 'Y Axis'],
+        AXES_Y_MIN    : [float, None],
+        AXES_Y_MAX    : [float, None],
+    },
 
-def read_value(parser, section, key,
-               convert, default=None):
+    ANNOTATIONS : {
+        ANNOTATIONS_SHOW        : [bool, False],
+        ANNOTATIONS_PRECISION   : [pos_int, 3],
+        ANNOTATIONS_X_OFFSET    : [float, 5],
+        ANNOTATIONS_Y_OFFSET    : [float, 5],
+        ANNOTATIONS_TEXT_COLORS : [str_list, []],
+    },
+
+    ERROR_BAR : {
+        ERROR_BAR_SHOW      : [bool, False],
+        ERROR_BAR_PRECISION : [pos_int, 3],
+        ERROR_BAR_MIN_MAX   : [bool, False],
+        ERROR_BAR_COLORS    : [str_list, []],
+        ERROR_BAR_CAP_SIZE  : [pos_float, 10],
+    },
+}
+
+def read_value(parser, section, key):
+    convert, default = DEFAULTS[section][key]
     try:
         value = convert(parser.get(section, key))
     except: # pylint: disable=bare-except
         value = default
     return value
 
-def read_bool(parser, section, key, default=None):
+def read_bool(parser, section, key):
+    _, default = DEFAULTS[section][key]
     try:
         value = parser.getboolean(section, key)
     except: # pylint: disable=bare-except
@@ -150,95 +203,50 @@ def process(filename):
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read(filename)
 
-    # raw_data
-    raw_data = {}
-    user_git_identifiers = read_value(parser,
-                                      RAW_DATA, RAW_DATA_COMMITS,
-                                      str_list, [])
-    raw_data[RAW_DATA_COMMITS] = expand_git_identifiers(user_git_identifiers)
-    raw_data[RAW_DATA_COLUMNS] = read_value(parser,
-                                            RAW_DATA, RAW_DATA_COLUMNS,
-                                            str_list, [])
+    git_identifiers = read_value(parser, RAW_DATA, RAW_DATA_COMMITS)
+    raw_data = {
+        RAW_DATA_COMMITS : expand_git_identifiers(git_identifiers),
+        RAW_DATA_COLUMNS : read_value(parser, RAW_DATA, RAW_DATA_COLUMNS),
+    }
 
     # how many columns to pull/lines to plot
     column_count = len(raw_data[RAW_DATA_COLUMNS])
 
-    # output
-    output = {}
-    output[OUTPUT_PATH] = read_value(parser,
-                                     OUTPUT, OUTPUT_PATH,
-                                     str, '')
-    output[OUTPUT_GRAPH_TITLE] = read_value(parser,
-                                            OUTPUT, OUTPUT_GRAPH_TITLE,
-                                            str, '')
-    dimensions = read_value(parser,
-                            OUTPUT, OUTPUT_DIMENSIONS,
-                            int_list, [0, 0])[:2]
-    output[OUTPUT_DIMENSIONS] = tuple(dimensions)
+    dimensions = read_value(parser, OUTPUT, OUTPUT_DIMENSIONS)[:2]
+    output = {
+        OUTPUT_PATH : read_value(parser, OUTPUT, OUTPUT_PATH),
+        OUTPUT_GRAPH_TITLE : read_value(parser, OUTPUT, OUTPUT_GRAPH_TITLE),
+        OUTPUT_DIMENSIONS : tuple(dimensions),
+    }
 
-    # lines
-    lines = {}
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    lines[LINES_COLORS] = read_value(parser,
-                                     LINES, LINES_COLORS,
-                                     str_list, []) + list(colors * column_count)
-    lines[LINES_TYPES] = read_value(parser,
-                                    LINES, LINES_TYPES,
-                                    str_list, []) + (["solid"] * column_count)
-    lines[LINES_MARKERS] = read_value(parser,
-                                      LINES, LINES_MARKERS,
-                                      str_list, []) + (["o"] * column_count)
+    lines = {
+        LINES_COLORS : read_value(parser, LINES, LINES_COLORS) + list(colors * column_count),
+        LINES_TYPES : read_value(parser, LINES, LINES_TYPES) + (['solid'] * column_count),
+        LINES_MARKERS : read_value(parser, LINES, LINES_MARKERS) + (['o'] * column_count),
+    }
 
-    # axes
-    axes = {}
-    axes[AXES_HASH_LEN] = read_value(parser,
-                                     AXES, AXES_HASH_LEN,
-                                     int, 6)
-    axes[AXES_Y_LABEL] = read_value(parser,
-                                    AXES, AXES_Y_LABEL,
-                                    str, 'Y Axis')
+    axes = {
+        AXES_HASH_LEN : read_value(parser, AXES, AXES_HASH_LEN),
+        AXES_Y_LABEL : read_value(parser, AXES, AXES_Y_LABEL),
+        AXES_Y_MIN : read_value(parser, AXES, AXES_Y_MIN),
+        AXES_Y_MAX : read_value(parser, AXES, AXES_Y_MAX),
+    }
 
-    axes[AXES_Y_MIN] = read_value(parser,
-                                  AXES, AXES_Y_MIN,
-                                  float, None)
-    axes[AXES_Y_MAX] = read_value(parser,
-                                  AXES, AXES_Y_MAX,
-                                  float, None)
-    # annotations
-    annotations = {}
-    annotations[ANNOTATIONS_SHOW] = read_bool(parser,
-                                              ANNOTATIONS, ANNOTATIONS_SHOW,
-                                              False)
+    annotations = {
+        ANNOTATIONS_SHOW : read_bool(parser, ANNOTATIONS, ANNOTATIONS_SHOW),
+        ANNOTATIONS_PRECISION : read_value(parser, ANNOTATIONS, ANNOTATIONS_PRECISION),
+        ANNOTATIONS_X_OFFSET : read_value(parser, ANNOTATIONS, ANNOTATIONS_X_OFFSET),
+        ANNOTATIONS_Y_OFFSET : read_value(parser, ANNOTATIONS, ANNOTATIONS_Y_OFFSET),
+        ANNOTATIONS_TEXT_COLORS : read_value(parser, ANNOTATIONS, ANNOTATIONS_TEXT_COLORS) + (['black'] * column_count),
+    }
 
-    annotations[ANNOTATIONS_PRECISION] = read_value(parser,
-                                                    ANNOTATIONS, ANNOTATIONS_PRECISION,
-                                                    int, 3)
-    annotations[ANNOTATIONS_X_OFFSET] = read_value(parser,
-                                                   ANNOTATIONS, ANNOTATIONS_X_OFFSET,
-                                                   int, 5)
-    annotations[ANNOTATIONS_Y_OFFSET] = read_value(parser,
-                                                   ANNOTATIONS, ANNOTATIONS_Y_OFFSET,
-                                                   int, 5)
-    annotations[ANNOTATIONS_TEXT_COLORS] = read_value(parser,
-                                                      ANNOTATIONS, ANNOTATIONS_TEXT_COLORS,
-                                                      str_list, []) + (["black"] * column_count)
+    error_bar = {
+        ERROR_BAR_SHOW : read_bool(parser, ERROR_BAR, ERROR_BAR_SHOW),
+        ERROR_BAR_PRECISION : read_value(parser, ERROR_BAR, ERROR_BAR_PRECISION),
+        ERROR_BAR_MIN_MAX : read_bool(parser, ERROR_BAR, ERROR_BAR_MIN_MAX),
+        ERROR_BAR_COLORS : read_value(parser, ERROR_BAR, ERROR_BAR_COLORS) + (['red'] * column_count),
+        ERROR_BAR_CAP_SIZE : read_value(parser, ERROR_BAR, ERROR_BAR_CAP_SIZE),
+    }
 
-    # error bar
-    error_bar = {}
-    error_bar[ERROR_BAR_SHOW] = read_bool(parser,
-                                          ERROR_BAR, ERROR_BAR_SHOW,
-                                          True)
-    error_bar[ERROR_BAR_MIN_MAX] = read_bool(parser,
-                                             ERROR_BAR, ERROR_BAR_MIN_MAX,
-                                             True)
-    error_bar[ERROR_BAR_PRECISION] = read_value(parser,
-                                                ERROR_BAR, ERROR_BAR_PRECISION,
-                                                int, 3)
-    error_bar[ERROR_BAR_COLORS] = read_value(parser,
-                                             ERROR_BAR, ERROR_BAR_COLORS,
-                                             str_list, []) + (['red'] * column_count)
-
-    error_bar[ERROR_BAR_CAP_SIZE] = read_value(parser,
-                                               ERROR_BAR, ERROR_BAR_CAP_SIZE,
-                                               int, 10)
     return raw_data, output, lines, axes, annotations, error_bar
