@@ -68,7 +68,7 @@ set(PERFORMANCE_PKG
 )
 
 foreach(SCRIPT ${PERFORMANCE_PKG})
-  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
 endforeach()
 
 add_subdirectory(hashdb)
