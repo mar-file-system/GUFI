@@ -68,5 +68,5 @@ set(GUFI_QUERY
 )
 
 foreach(SCRIPT ${GUFI_QUERY})
-  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
 endforeach()

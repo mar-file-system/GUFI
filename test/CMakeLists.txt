@@ -105,7 +105,7 @@ endforeach()
 foreach(PYTHON_SCRIPT
     common.py)
   # copy the python script into the build directory for easy access
-  configure_file("${PYTHON_SCRIPT}.in" "${PYTHON_SCRIPT}" @ONLY)
+  configure_file("${PYTHON_SCRIPT}" "${PYTHON_SCRIPT}" @ONLY)
 endforeach()
 
 set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")

@@ -74,5 +74,5 @@ set(HASHDB
 )
 
 foreach(SCRIPT ${HASHDB})
-  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
 endforeach()

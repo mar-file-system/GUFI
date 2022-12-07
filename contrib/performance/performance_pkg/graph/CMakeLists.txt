@@ -69,5 +69,5 @@ set(GRAPH
 )
 
 foreach(SCRIPT ${GRAPH})
-  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
 endforeach()

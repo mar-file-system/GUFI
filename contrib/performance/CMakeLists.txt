@@ -82,7 +82,7 @@ set(SCRIPTS
   )
 
 foreach(SCRIPT ${SCRIPTS})
-  configure_file("${SCRIPT}.in" "${SCRIPT}" @ONLY)
+  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
 endforeach()
 
 add_subdirectory(configs)

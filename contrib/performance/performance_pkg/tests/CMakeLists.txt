@@ -67,7 +67,7 @@ set(TESTS
   )
 
 foreach(TEST ${TESTS})
-  configure_file("${TEST}.py.in" "${TEST}.py" @ONLY)
+  configure_file("${TEST}.py" "${TEST}.py" @ONLY)
 
   set(test_name "Performance-Package-${TEST}")
   add_test(NAME "${test_name}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${TEST}.py")
