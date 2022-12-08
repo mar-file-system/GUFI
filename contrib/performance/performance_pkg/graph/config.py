@@ -173,7 +173,7 @@ def read_value(parser, section, key):
     convert, default = DEFAULTS[section][key]
     try:
         value = convert(parser.get(section, key))
-    except: # pylint: disable=bare-except
+    except Exception: # pylint: disable=broad-except
         value = default
     return value
 
@@ -181,7 +181,7 @@ def read_bool(parser, section, key):
     _, default = DEFAULTS[section][key]
     try:
         value = parser.getboolean(section, key)
-    except: # pylint: disable=bare-except
+    except ValueError:
         value = default
     return value
 

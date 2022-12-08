@@ -245,13 +245,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                topath, topath_len,
                "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
-    /* /\* don't bother doing anything if there is nothing to insert *\/ */
-    /* /\* (the database file will not exist for empty directories) *\/ */
-    /* if (!w->entries) { */
-    /*     row_destroy(w); */
-    /*     return 0; */
-    /* } */
-
     /* copy the template file */
     if (copy_template(&pa->db, dbname, dir.statuso.st_uid, dir.statuso.st_gid)) {
         row_destroy(w);
@@ -320,12 +313,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_start(free);
             free(line);
             timestamp_set_end(free);
-
-            /* /\* don't need this now because this loop uses the count acquired by the scout function *\/ */
-            /* /\* stop on directories, since files are listed first *\/ */
-            /* if (row.type[0] == 'd') { */
-            /*     break; */
-            /* } */
 
             /* update summary table */
             timestamp_start(sumit);

@@ -93,10 +93,7 @@ size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size
 }
 
 size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out) {
-    /* /\* skip argument checking *\/ */
-    /* if (!output_buffer || !out) { */
-    /*     return 0; */
-    /* } */
+    /* Not checking arguments */
 
     const size_t rc = fwrite(obuf->buf, sizeof(char), obuf->filled, out);
     obuf->filled = 0;
@@ -133,7 +130,7 @@ struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size
 }
 
 size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
-    /* skip argument checking */
+    /* Not checking arguments */
 
     if (obufs->mutex) {
         pthread_mutex_lock(obufs->mutex);
@@ -152,7 +149,7 @@ size_t OutputBuffers_flush_to_single(struct OutputBuffers *obufs, FILE *out) {
 }
 
 size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) {
-    /* skip argument checking */
+    /* Not checking arguments */
 
     if (obufs->mutex) {
         pthread_mutex_lock(obufs->mutex);

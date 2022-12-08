@@ -209,11 +209,6 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
 static std::string dirname(const std::string & path) {
     std::string::size_type len = path.size();
 
-    // // remove trailing slashes
-    // while (len && (path[len - 1] == '/')) {
-    //     len--;
-    // }
-
     // find parent (remove basename)
     while (len && (path[len - 1] != '/')) {
         len--;

@@ -1125,8 +1125,6 @@ int main(int argc, char *argv[]) {
     // list all directories
     std::cout << "    " << ThreadArgs::stats.size() << " + 1 directories" << std::endl;
     for(ThreadArgs::Stats const & stat : ThreadArgs::stats) {
-        // std::cout << "        " << stat.name << " " << stat.files << " " << stat.depth << " " << stat.leaf << std::endl;
-
         // count leaf nodes
         leaf_nodes += stat.leaf;
 
