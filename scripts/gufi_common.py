@@ -124,10 +124,10 @@ def get_uid(uid_str):
         An int that is an uid
     '''
 
-    uid = int(uid_str)
     try:
-        return pwd.getpwuid(int(uid_str)).pw_uid
-    except: # pylint: disable=bare-except
+        uid = int(uid_str)
+        return pwd.getpwuid(uid).pw_uid
+    except (KeyError, ValueError):
         return uid
 
 def get_user(user):
@@ -144,7 +144,7 @@ def get_user(user):
     try:
         # use the string as a username
         return pwd.getpwnam(user).pw_uid
-    except: # pylint: disable=bare-except
+    except KeyError:
         return get_uid(user)
 
 def get_gid(grp_str):
@@ -158,10 +158,10 @@ def get_gid(grp_str):
         An int that is a gid
     '''
 
-    gid = int(grp_str)
     try:
+        gid = int(grp_str)
         return grp.getgrgid(gid).gr_gid
-    except: # pylint: disable=bare-except
+    except (KeyError, ValueError):
         return gid
 
 def get_group(group):
@@ -177,7 +177,7 @@ def get_group(group):
 
     try:
         return grp.getgrnam(group).gr_gid
-    except: # pylint: disable=bare-except
+    except KeyError:
         return get_gid(group)
 # ###############################################
 
@@ -249,7 +249,7 @@ def cpus():
     '''Try to get the number of hardware threads'''
     try:
         return multiprocessing.cpu_count()
-    except: # pylint: disable=bare-except
+    except NotImplementedError:
         return 1
 
 def add_common_flags(parser):

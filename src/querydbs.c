@@ -224,7 +224,6 @@ int main(int argc, char *argv[])
    /*     char dbn[MAXSQL]; */
    /*     SNPRINTF(dbn, MAXSQL, "%s%d", dbname, i); */
    /*     detachdb(argv[i], db, dbn); */
-
    /*     i++; */
    /* } */
 
