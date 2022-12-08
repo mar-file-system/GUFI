@@ -97,8 +97,10 @@ jobs:
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
 
-    - name: Remove build/builds
-      run: rm -r ${{ github.workspace }}/build/builds
+    - name: Remove Duplicate/Unnecessary FIles
+      run: |
+        rm -r ${{ github.workspace }}/build/builds
+        find ${{ github.workspace }}/build -type f -name "*.py" -delete
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
