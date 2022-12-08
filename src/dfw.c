@@ -143,8 +143,8 @@ static int printload(struct input *in, const char *name, const struct stat *stat
 
 void listdir(struct input *in, const char *name, long long int level,
              struct dirent *entry, long long int pin, int statit,
-             int xattrit,int loader) {
-    DIR *dir;
+             int xattrit, int loader) {
+    DIR *dir = NULL;
     //struct dirent *entry;
     char path[MAXPATH];
     char lpath[MAXPATH];

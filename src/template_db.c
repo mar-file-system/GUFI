@@ -96,9 +96,7 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
 extern int errno;
 
 int init_template_db(struct template_db *tdb) {
-    /* if (!tdb) { */
-    /*     return 1; */
-    /* } */
+    /* Not checking argument */
 
     tdb->fd = -1;
     tdb->size = -1;
@@ -136,9 +134,7 @@ static int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
 }
 
 int close_template_db(struct template_db *tdb) {
-    /* if (!tdb) { */
-    /*     return 1; */
-    /* } */
+    /* Not checking argument */
 
     close(tdb->fd);
     return init_template_db(tdb);
@@ -147,9 +143,7 @@ int close_template_db(struct template_db *tdb) {
 /* create the database file to copy from */
 static int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
                            const char *name) {
-    /* if (!tdb) { */
-    /*     return 1; */
-    /* } */
+    /* Not checking arguments */
 
     sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
                          , create_tables, NULL
@@ -188,9 +182,7 @@ int create_dbdb_template(struct template_db *tdb) {
 /* copy the template file instead of creating a new database and new tables for each work item */
 /* the ownership and permissions are set too */
 int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
-    /* if (!tdb) { */
-    /*     return 1; */
-    /* } */
+    /* Not checking arguments */
 
     /* ignore errors here */
     const int src_db = dup(tdb->fd);

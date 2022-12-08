@@ -254,19 +254,7 @@ static size_t descend2(QPTPool_t *ctx,
     ) {
     buffered_start(within_descend);
 
-    /* buffered_start(check_args); */
-    /* passmywork was already checked in the calling thread */
-    /* if (!passmywork) { */
-    /*     fprintf(stderr, "Got NULL work\n"); */
-    /*     return 0; */
-    /* } */
-
-    /* dir was already checked in the calling thread */
-    /* if (!dir) { */
-    /*     fprintf(stderr, "Could not open directory %s: %d %s\n", passmywork->name, errno, strerror(errno)); */
-    /*     return 0; */
-    /* } */
-    /* buffered_end(check_args); */
+    /* Not checking arguments */
 
     buffered_start(level_cmp);
     size_t pushed = 0;
@@ -324,50 +312,35 @@ static size_t descend2(QPTPool_t *ctx,
             qwork.sqlite3_name_len += convertd_len;
             buffered_end(snprintf_call);
 
-            /* buffered_end(lstat_call); */
-            /* lstat(qwork.name, &qwork.statuso); */
-            /* buffered_end(lstat_call); */
-
             buffered_start(isdir_cmp);
             const int isdir = (entry->d_type == DT_DIR);
-            /* const int isdir = S_ISDIR(qwork.statuso.st_mode); */
             buffered_end(isdir_cmp);
 
             buffered_start(isdir_branch);
             if (isdir) {
                 buffered_end(isdir_branch);
 
-                /* const int accessible = !access(qwork.name, R_OK | X_OK); */
+                buffered_start(set);
+                qwork.level = next_level;
+                qwork.root = passmywork->root;
+                qwork.root_len = passmywork->root_len;
 
-                /* if (accessible) { */
-                    buffered_start(set);
-                    qwork.level = next_level;
-                    qwork.root = passmywork->root;
-                    qwork.root_len = passmywork->root_len;
-                    /* qwork.type[0] = 'd'; */
+                /* this is how the parent gets passed on */
+                buffered_end(set);
 
-                    /* this is how the parent gets passed on */
-                    /* qwork.pinode = passmywork->statuso.st_ino; */
-                    buffered_end(set);
+                /* make a clone here so that the data can be pushed into the queue */
+                /* this is more efficient than malloc+free for every single entry */
+                buffered_start(make_clone);
+                struct work *clone = (struct work *) malloc(sizeof(struct work));
+                memcpy(clone, &qwork, sizeof(struct work));
+                buffered_end(make_clone);
 
-                    /* make a clone here so that the data can be pushed into the queue */
-                    /* this is more efficient than malloc+free for every single entry */
-                    buffered_start(make_clone);
-                    struct work *clone = (struct work *) malloc(sizeof(struct work));
-                    memcpy(clone, &qwork, sizeof(struct work));
-                    buffered_end(make_clone);
+                /* push the subdirectory into the queue for processing */
+                buffered_start(pushdir);
+                QPTPool_enqueue(ctx, id, func, clone);
+                buffered_end(pushdir);
 
-                    /* push the subdirectory into the queue for processing */
-                    buffered_start(pushdir);
-                    QPTPool_enqueue(ctx, id, func, clone);
-                    buffered_end(pushdir);
-
-                    pushed++;
-                /* } */
-                /* else { */
-                /*     fprintf(stderr, "couldn't access dir '%s': %s\n", */
-                /*             qwork->name, strerror(errno)); */
-                /* } */
+                pushed++;
             }
             else {
                 buffered_end(isdir_branch);
@@ -389,16 +362,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     char endname[MAXPATH];
     DIR *dir = NULL;
 
-    /* /\* Can probably skip this *\/ */
-    /* if (!data) { */
-    /*     return 1; */
-    /* } */
-
-    /* /\* Can probably skip this *\/ */
-    /* if (!ctx || (id >= ctx->size)) { */
-    /*     free(data); */
-    /*     return 1; */
-    /* } */
+    /* Not checking arguments */
 
     PoolArgs_t *pa = (PoolArgs_t *) args;
     struct input *in = pa->in;
@@ -433,7 +397,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
-        /* fprintf(stderr, "Could not open directory %s: %d %s\n", work->name, errno, strerror(errno)); */
         goto out_free;
     }
 
@@ -550,14 +513,11 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (work->level >= in->min_level) {
                 /* run query on summary, print it if printing is needed, if returns none */
                 /* and we are doing AND, skip querying the entries db */
-                /* memset(endname, 0, sizeof(endname)); */
                 shortpath(work->name,shortname,endname);
 
                 if (in->sql.sum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
-                    /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
-
                     timestamp_set_start(sqlsum);
                     querydb(dbname, db, in->sql.sum, pa, id, &recs);
                     timestamp_set_end(sqlsum);
@@ -572,7 +532,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 if (recs > 0) {
                     if (in->sql.ent_len > 1) {
                         /* set the path so users can put path() in their queries */
-                        /* printf("****entries len of in.sql.ent %lu\n",strlen(in.sql.ent)); */
                         timestamp_set_start(sqlent);
                         querydb(dbname, db, in->sql.ent, pa, id, &recs); /* recs is not used */
                         timestamp_set_end(sqlent);

@@ -98,9 +98,7 @@ static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
 }
 
 Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
-    /* if (!aggregate || !in || !in->sql.init_agg_len) { */
-    /*     return NULL; */
-    /* } */
+    /* Not checking arguments */
 
     aggregate->outfile = stdout;
 
@@ -138,9 +136,7 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 }
 
 void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input *in) {
-    /* if (!aggregate || !pa || !in) { */
-    /*     return; */
-    /* } */
+    /* Not checking arguments */
 
     for(size_t i = 0; i < (size_t) in->maxthreads; i++) {
         ThreadArgs_t *ta = &(pa->ta[i]);
@@ -185,9 +181,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
 }
 
 void aggregate_fin(Aggregate_t *aggregate, struct input *in) {
-    /* if (!aggregate || !in) { */
-    /*     return; */
-    /* } */
+    /* Not checking arguments */
 
     closedb(aggregate->db);
 

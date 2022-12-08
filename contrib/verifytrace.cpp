@@ -152,31 +152,31 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         }
 
         // there should be at least one delimiter
-        const std::string::size_type first_delim = line.find(delim);
-        if (first_delim == std::string::npos) {
+        const std::string::size_type child_first_delim = line.find(delim);
+        if (child_first_delim == std::string::npos) {
             std::cerr << "Error: Entry missing delimiter: " << line << std::endl;
             return false;
         }
 
         // need at least 23 columns
-        const int columns = std::count(line.begin(), line.end(), delim);
-        if (columns < 23) {
+        const int child_columns = std::count(line.begin(), line.end(), delim);
+        if (child_columns < 23) {
             std::cerr << "Error: Not enough columns: " << line << std::endl;
             return false;
         }
-        else if (columns > 23) {
+        else if (child_columns > 23) {
             std::cerr << "Warning: Too many columns: " << line << std::endl;
         }
 
         // stop when a directory is encountered (new stanza)
-        if (line[first_delim + 1] == dir) {
+        if (line[child_first_delim + 1] == dir) {
             // go back to the beginning of this line
             stream.seekg(pos);
             break;
         }
 
         // check if the current path is a direct child of the parent path
-        std::string::size_type last_slash = line.find_last_of('/', first_delim);
+        std::string::size_type last_slash = line.find_last_of('/', child_first_delim);
 
         // entries in root directory don't have any slashes
         if (last_slash == std::string::npos) {
@@ -189,15 +189,15 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
             return false;
         }
 
-        std::string::size_type pinode_pos = 0;
-        for(size_t i = 0; (i < pinode_col) && (pinode_pos < std::string::npos); i++) {
-            pinode_pos = line.find(delim, pinode_pos + 1);
+        std::string::size_type child_pinode_pos = 0;
+        for(size_t i = 0; (i < pinode_col) && (child_pinode_pos < std::string::npos); i++) {
+            child_pinode_pos = line.find(delim, child_pinode_pos + 1);
         }
-        pinode_pos++;
+        child_pinode_pos++;
 
         // make sure the child pinode is 0
-        const std::string pinode = line.substr(pinode_pos, line.find(delim, pinode_pos + 1) - pinode_pos);
-        if (pinode != "0") {
+        const std::string child_pinode = line.substr(child_pinode_pos, line.find(delim, child_pinode_pos + 1) - child_pinode_pos);
+        if (child_pinode != "0") {
             std::cerr << "Error: Bad child pinode: " << line << std::endl;
             return false;
         }
@@ -257,10 +257,7 @@ static std::size_t complete_tree(const Tree & tree) {
 }
 
 static bool verify_trace(std::istream & stream, const char delim = '\x1e', const char dir = 'd') {
-    // if (!stream) {
-    //     std::cerr << "Bad stream" << std::endl;
-    //     return false;
-    // }
+    /* Not checking arguments */
 
     Tree tree;
 

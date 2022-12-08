@@ -306,7 +306,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     char sortf[MAXPATH];
     int transcnt;
     int wentry;
-    int todb;
+    int todb = 0;
     int tooutfile;
     int lookup;
     struct stat st;

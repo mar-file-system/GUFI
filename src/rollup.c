@@ -509,9 +509,7 @@ int can_rollup(struct input *in,
                struct DirStats *ds,
                sqlite3 *dst
                timestamp_sig) {
-    /* if (!rollup || !ds || !dst) { */
-    /*     return -1; */
-    /* } */
+    /* Not checking arguments */
 
     char *err = NULL;
 
@@ -700,9 +698,7 @@ int do_rollup(struct RollUp *rollup,
     /* assume that this directory can be rolled up */
     /* can_rollup should have been called earlier  */
 
-    /* if (!rollup || !dst) { */
-    /*     return -1; */
-    /* } */
+    /* Not checking arguments */
 
     timestamp_create_buffer(4096);
     timestamp_start(do_roll_up);

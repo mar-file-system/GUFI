@@ -120,18 +120,18 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
 
     struct work *passmywork = data;
     struct work qwork;
-    sqlite3 *db;
-    char *records;
+    sqlite3 *db = NULL;
+    char *records = NULL;
     struct sum summary;
-    sqlite3_stmt *res;
+    sqlite3_stmt *res = NULL;
     char dbpath[MAXPATH];
     int transcnt;
-    MYSQL_RES *lresult;
+    MYSQL_RES *lresult = NULL;
     MYSQL_ROW lrow;
     char lpinodec[128];
     char ltchar[256];
-    struct passwd *lmypasswd;
-    struct group *lmygrp;
+    struct passwd *lmypasswd = NULL;
+    struct group *lmygrp = NULL;
     char myinsql[MAXSQL];
 
     struct input *in = (struct input *) args;

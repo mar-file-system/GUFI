@@ -99,17 +99,9 @@ static void *worker_function(void *args) {
     timestamp_start(wf);
 
     struct worker_function_args *wf_args = (struct worker_function_args *) args;
-    /* if (!wf_args) { */
-    /*     timestamp_end(ctx->buffers, 0, "wf", wf); */
-    /*     return NULL; */
-    /* } */
+    /* Not checking arguments */
 
     QPTPool_t *ctx = wf_args->ctx;
-    /* if (!ctx) { */
-    /*     free(args); */
-    /*     timestamp_end(ctx->buffers, wf_args->id, "wf", wf); */
-    /*     return NULL; */
-    /* } */
 
     const size_t id = wf_args->id;
 
@@ -248,15 +240,8 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
     }
 
     QPTPool_t *ctx = calloc(1, sizeof(QPTPool_t));
-    /* if (!ctx) { */
-    /*     return NULL; */
-    /* } */
 
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
-    /* if (!ctx->data) { */
-    /*     free(ctx); */
-    /*     return NULL; */
-    /* } */
 
     ctx->nthreads = nthreads;
     ctx->args = args;
@@ -302,10 +287,8 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
 
 /* id selects the next_queue variable to use, not where the work will be placed */
 void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
-    /* skip argument checking */
-    /* if (!ctx) { */
-    /*     return; */
-    /* } */
+    /* Not checking arguments */
+
     struct queue_item *qi = malloc(sizeof(struct queue_item));
     qi->func = func; /* if no function is provided, the thread will segfault when it processes this item*/
     qi->work = new_work;
@@ -326,9 +309,7 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
 }
 
 void QPTPool_wait(QPTPool_t *ctx) {
-    /* if (!ctx) { */
-    /*     return; */
-    /* } */
+    /* Not checking arguments */
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->running = 0;
@@ -346,9 +327,7 @@ void QPTPool_wait(QPTPool_t *ctx) {
 }
 
 void QPTPool_destroy(QPTPool_t *ctx) {
-    /* if (!ctx) { */
-    /*     return; */
-    /* } */
+    /* Not checking arguments */
 
     for(size_t i = 0; i < ctx->nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
@@ -365,10 +344,8 @@ void QPTPool_destroy(QPTPool_t *ctx) {
 }
 
 size_t QPTPool_threads_started(QPTPool_t *ctx) {
-    /* skip argument checking */
-    /* if (!ctx) { */
-    /*     return (size_t) -1; */
-    /* } */
+    /* Not checking arguments */
+
     size_t sum = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
         sum += ctx->data[i].threads_started;
@@ -377,10 +354,8 @@ size_t QPTPool_threads_started(QPTPool_t *ctx) {
 }
 
 size_t QPTPool_threads_completed(QPTPool_t *ctx) {
-    /* skip argument checking */
-    /* if (!ctx) { */
-    /*     return (size_t) -1; */
-    /* } */
+    /* Not checking arguments */
+
     size_t sum = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
         sum += ctx->data[i].threads_successful;
