@@ -135,9 +135,7 @@ int xattr_can_rollin(struct stat *parent, struct stat *entry) {
 }
 
 int xattrs_setup(struct xattrs *xattrs) {
-    /* if (!xattrs) { */
-    /*     return 1; */
-    /* } */
+    /* Not checking argument */
 
     memset(xattrs, 0, sizeof(*xattrs));
     return 0;
@@ -154,9 +152,9 @@ static int xattrs_alloc(struct xattrs *xattrs) {
 }
 
 void xattrs_cleanup(struct xattrs *xattrs) {
-    /* if (xattrs) { */
-        free(xattrs->pairs);
-    /* } */
+    /* Not checking argument */
+
+    free(xattrs->pairs);
 }
 
 /* ************************************************** */
@@ -190,9 +188,6 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
     }
 
     xattrs_alloc(xattrs);
-    /* if (!xattrs->pairs) { */
-    /*     return -1; */
-    /* } */
 
     offset = 0;
     for(size_t i = 0; i < xattrs->count;) {

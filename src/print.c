@@ -70,10 +70,6 @@ OF SUCH DAMAGE.
 int print_parallel(void *args, int count, char **data, char **columns) {
     (void) columns;
 
-    /* if (!stmt || !ca) { */
-    /*     return 1; */
-    /* } */
-
     PrintArgs_t *print = (PrintArgs_t *) args;
     struct OutputBuffer *ob = print->output_buffer;
 

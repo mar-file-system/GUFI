@@ -74,7 +74,6 @@ void querydb(const char *dbname, sqlite3 *db, const char *query,
     args.mutex = pa->stdout_mutex;
     args.outfile = ta->outfile;
     args.rows = 0;
-    /* ca.printed = 0; */
 
     char *err = NULL;
 #ifdef SQL_EXEC

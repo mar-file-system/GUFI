@@ -200,15 +200,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_start(handle_args);
 
-    /* skip argument checking */
-    /* if (!data) { */
-    /*     return 1; */
-    /* } */
-
-    /* if (!ctx || (id >= ctx->size)) { */
-    /*     free(data); */
-    /*     return 1; */
-    /* } */
+    /* Not checking arguments */
 
     (void) ctx;
 
@@ -221,7 +213,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     timestamp_start(memset_work);
     struct work dir; /* name and name_len are not used */
-    /* memset(&dir, 0, sizeof(struct work)); */
     timestamp_set_end(memset_work);
 
     /* parse the directory data */

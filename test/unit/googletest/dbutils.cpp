@@ -187,7 +187,7 @@ TEST(addqueryfuncs, modetotxt) {
         char expected[11] = {};
 
         // file
-        SNPRINTF(query, MAXSQL, "SELECT modetotxt(%zu)", perm);
+        SNPRINTF(query, MAXSQL, "SELECT modetotxt(%zu)", (size_t) perm);
         ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
         EXPECT_STREQ(output, modetostr(expected, 11, perm));
 
@@ -212,7 +212,7 @@ TEST(addqueryfuncs, strftime) {
     const time_t now = time(nullptr);
 
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT strftime('%s', %d)", fmt, now);
+    SNPRINTF(query, MAXSQL, "SELECT strftime('%s', %d)", fmt, (int) now);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);

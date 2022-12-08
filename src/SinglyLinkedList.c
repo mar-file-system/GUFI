@@ -73,9 +73,8 @@ struct SinglyLinkedListNode {
 };
 
 static sll_t *sll_clear(sll_t *sll) {
-    /* if (!sll) { */
-    /*     return NULL; */
-    /* } */
+    /* Not checking arguments */
+
     return memset(sll, 0, sizeof(sll_t));
 }
 
@@ -84,9 +83,7 @@ sll_t *sll_init(sll_t *sll) {
 };
 
 sll_t *sll_push(sll_t *sll, void *data) {
-    /* if (!sll) { */
-    /*     return NULL; */
-    /* } */
+    /* Not checking arguments */
 
     sll_node_t *node = calloc(1, sizeof(sll_node_t));
     node->data = data;
@@ -107,9 +104,7 @@ sll_t *sll_push(sll_t *sll, void *data) {
 }
 
 sll_t *sll_move(sll_t *dst, sll_t *src) {
-    /* if (!dst || !src) { */
-    /*     return NULL; */
-    /* } */
+    /* Not checking arguments */
 
     /* dst is overwritten, not destroyed */
     *dst = *src;
@@ -118,9 +113,7 @@ sll_t *sll_move(sll_t *dst, sll_t *src) {
 }
 
 sll_t *sll_move_append(sll_t *dst, sll_t *src) {
-    /* if (!dst || !src) { */
-    /*     return NULL; */
-    /* } */
+    /* Not checking arguments */
 
     /* src is appended to dst and then cleared */
     if (!dst->head) {

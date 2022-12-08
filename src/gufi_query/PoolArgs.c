@@ -69,9 +69,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
-    /* if (!pa || !in) { */
-    /*     return -1; */
-    /* } */
+    /* Not checking arguments */
 
     memset(pa, 0, sizeof(*pa));
     pa->in = in;
@@ -88,9 +86,6 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     }
 
     pa->ta = calloc(in->maxthreads, sizeof(ThreadArgs_t));
-    /* if (!pa->ta) { */
-    /*     return -1; */
-    /* } */
 
     size_t i = 0;
     for(; i < (size_t) in->maxthreads; i++) {

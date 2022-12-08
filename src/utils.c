@@ -376,10 +376,7 @@ int tsumit(struct sum *sumin,struct sum *smout) {
 //
 int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
   for (char *p=strchr(path+1, '/'); p; p=strchr(p+1, '/')) {
-    //printf("mkpath mkdir file_path %s p %s\n", file_path,p);
     *p='\0';
-    //printf("mkpath mkdir file_path %s\n", file_path);
-    //if (mkdir(file_path, mode)==-1) {
     if (mkdir(path, mode)==-1) {
       if (errno!=EEXIST) {
          *p='/';
@@ -392,7 +389,6 @@ int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
     }
     *p='/';
   }
-  //printf("mkpath mkdir sp %s\n",sp);
   return mkdir(path,mode);
 }
 
@@ -405,13 +401,9 @@ int dupdir(const char *path, struct stat *stat)
                path, path_len);
     copy[path_len] = '\0';
 
-    //printf("mkdir %s\n",path);
     // the writer must be able to create the index files into this directory so or in S_IWRITE
-    //rc = mkdir(path,pwork->statuso.st_mode | S_IWRITE);
     if (mkdir(copy, stat->st_mode) != 0) {
-      //perror("mkdir");
       if (errno == ENOENT) {
-        //printf("calling mkpath on %s\n",path);
         mkpath(copy, stat->st_mode, stat->st_uid, stat->st_gid);
       } else if (errno != EEXIST) {
         return 1;
@@ -433,27 +425,25 @@ int shortpath(const char *name, char *nameout, char *endname) {
      int slashfound;
 
      *endname = 0;              // in case there's no '/'
-     SNPRINTF(prefix,MAXPATH,"%s",name);
-     i=strlen(prefix);
-     pp=prefix+i;
-     //printf("cutting name down %s len %d\n",prefix,i);
-     slashfound=0;
+     SNPRINTF(prefix, MAXPATH, "%s", name);
+     i = strlen(prefix);
+     pp = prefix+i;
+     slashfound = 0;
      while (i > 0) {
        if (!strncmp(pp,"/",1)) {
           memset(pp, 0, 1);
-          sprintf(endname,"%s",pp+1);
-          slashfound=1;
+          SNPRINTF(endname, MAXPATH, "%s", pp+1);
+          slashfound = 1;
           break;
        }
        pp--;
        i--;
      }
      if (slashfound == 0) {
-        sprintf(endname,"%s",name);
-        memset(nameout,0,1);
-        //printf("shortpath: name %s, nameout %s, endname %s.\n",name,nameout,endname);
+        SNPRINTF(endname, MAXPATH, "%s", name);
+        memset(nameout, 0, 1);
      } else
-        sprintf(nameout,"%s",prefix);
+        SNPRINTF(nameout, MAXPATH, "%s", prefix);
      return 0;
 }
 

@@ -150,15 +150,8 @@ static int process_nondir(struct work *entry, void *args) {
 }
 
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    /* skip argument checking */
-    /* if (!data) { */
-    /*     return 1; */
-    /* } */
+    /* Not checking arguments */
 
-    /* if (!ctx || (id >= ctx->size)) { */
-    /*     free(data); */
-    /*     return 1; */
-    /* } */
     int rc = 0;
 
     struct PoolArgs *pa = (struct PoolArgs *) args;

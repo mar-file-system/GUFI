@@ -72,9 +72,6 @@ OF SUCH DAMAGE.
 // allocate the array of FILE * and open file
 FILE **outfiles_init(const int openfiles, const char *prefix, const size_t count) {
     FILE **files = calloc(count, sizeof(FILE *));
-    /* if (!files) { */
-    /*     return NULL; */
-    /* } */
 
     if (openfiles) {
         for(size_t i = 0; i < count; i++) {

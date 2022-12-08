@@ -116,16 +116,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    /* /\* Can probably skip this *\/ */
-    /* if (!data) { */
-    /*     return 1; */
-    /* } */
-
-    /* /\* Can probably skip this *\/ */
-    /* if (!ctx || (id >= ctx->size)) { */
-    /*     free(data); */
-    /*     return 1; */
-    /* } */
+    /* Not checking arguments */
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
@@ -185,7 +176,7 @@ static int check_prefix(const char *nameto, const size_t nameto_len, const size_
     /* check if the destination path already exists (not an error) */
     for(size_t i = 0; i < thread_count; i++) {
         char outname[MAXPATH];
-        SNPRINTF(outname, MAXPATH, "%s.%d", nameto, i);
+        SNPRINTF(outname, MAXPATH, "%s.%zu", nameto, i);
 
         struct stat dst_st;
         if (lstat(outname, &dst_st) == 0) {

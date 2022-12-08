@@ -62,7 +62,7 @@
 
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
-from binascii import hexlify, unhexlify
+from binascii import hexlify
 import argparse
 import os
 import sys

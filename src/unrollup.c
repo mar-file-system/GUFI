@@ -121,12 +121,12 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
         );
 
     if (db) {
-        char *err = NULL;
+        char *err_msg = NULL;
         size_t xattr_count = 0;
         if (sqlite3_exec(db,
                          "DELETE FROM " XATTRS_ROLLUP ";"
                          "SELECT COUNT(*) FROM " XATTRS_PWD ";",
-                         count_pwd, &count, &err) == SQLITE_OK) {
+                         count_pwd, &count, &err_msg) == SQLITE_OK) {
              /* remove empty per-user/per-group xattr db files */
              if (xattr_count == 0) {
                  if (remove(fullpath) != 0) {
@@ -139,10 +139,10 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
         }
         else {
             fprintf(stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n",
-                    fullpath, err);
+                    fullpath, err_msg);
             rc = 1;
         }
-        sqlite3_free(err);
+        sqlite3_free(err_msg);
     }
 
     closedb(db);

@@ -310,14 +310,10 @@ int rawquerydb(const char     *name,
                int            printrows,
                int            ptid)         // pthread-ID
 {
-     sqlite3_stmt *res;
+     sqlite3_stmt *res       = NULL;
      int           error     = 0;
      int           rec_count = 0;
      const char   *tail;
-     //char   lsqlstmt[MAXSQL];
-     //char   prefix[MAXPATH];
-     //char   shortname[MAXPATH];
-     //char  *pp;
 
      FILE *        out = (output == OUTFILE)?gts.outfd[ptid]:stdout;
 
@@ -335,10 +331,8 @@ int rawquerydb(const char     *name,
           return -1;
        }
 
-       //printf("running on %s query %s printpath %d tail %s\n",name,sqlstmt,printpath,tail);
        if (*tail) {
          sqlite3_step(res);
-         //sqlite3_finalize(res);
          sqlite3_reset(res);
        }
        sqlstmt = (char*)tail;
@@ -372,8 +366,6 @@ int rawquerydb(const char     *name,
         } while (sqlite3_step(res) == SQLITE_ROW);
      }
 
-    //printf("We received %d records.\n", rec_count);
-    // sqlite3_reset(res);
     sqlite3_finalize(res);
     return(rec_count);
 }
@@ -397,7 +389,6 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
 
      sqlite3_step(res);
 
-     //sumin->totfiles = atoll((const char *)sqlite3_column_text(res, 0));
      sumin->totfiles   = sqlite3_column_int64(res, 0);
      sumin->totlinks   = sqlite3_column_int64(res, 1);
      sumin->minuid     = sqlite3_column_int64(res, 2);
@@ -451,8 +442,6 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
        sumin->maxsubdirsize  = 0;
      }
 
-     //printf("tsdb: totfiles %d totlinks %d minuid %d\n",
-     //       sumin->totfiles,sumin->totlinks,sumin->minuid);
      sqlite3_finalize(res);
 
      return 0;
@@ -579,11 +568,6 @@ int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     sqlite3_free(zlinkname);
     sqlite3_free(zosstext1);
     sqlite3_free(zosstext2);
-    /* if (error != SQLITE_ROW)  { */
-          /* fprintf(stderr, "SQL error on insertdbgo: error %d err %s\n",error,sqlite3_errmsg(db)); */
-          //return 0;
-    /* } */
-    /* sqlite3_clear_bindings(res); */
     sqlite3_reset(res);
 
     return 0;
@@ -697,10 +681,6 @@ int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res)
     error = sqlite3_step(res);
     sqlite3_free(zname);
     sqlite3_free(ztype);
-    if (error != SQLITE_ROW) {
-          //fprintf(stderr, "SQL error on insertdbgor: error %d err %s\n",error,sqlite3_errmsg(db));
-          //return 0;
-    }
     sqlite3_clear_bindings(res);
     sqlite3_reset(res);
 
@@ -961,7 +941,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
     (void) argc;
 
     const size_t size  = sqlite3_value_int64(argv[0]);
-    const char *unit  = (char *) sqlite3_value_text(argv[1]);
+    const char  *unit  = (char *) sqlite3_value_text(argv[1]);
     const int    align = sqlite3_value_int(argv[2]);
 
     const size_t len = strlen(unit);
