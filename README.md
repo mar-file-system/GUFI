@@ -48,7 +48,7 @@ cat <trace_file_prefix>.* > <trace_file>
 gufi_trace2index <trace_file> <index_dir>
 
 # use the index
-gufi_query/gufi_stat/bfti/bffuse/bfresultfuse/querydbs
+gufi_query/gufi_stat/bfti/querydbs
 
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
