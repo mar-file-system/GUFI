@@ -91,12 +91,19 @@ size_t total_files = 0;
 #endif
 
 struct PoolArgs {
+    struct input in;
     trie_t *skip;
     FILE **outfiles;
 };
 
+struct NondirArgs {
+    struct input *in;
+    FILE *fp;
+};
+
 static int process_nondir(struct work *entry, void *args) {
-    worktofile((FILE *) args, in.delim, entry->root_len, entry);
+    struct NondirArgs *nda = (struct NondirArgs *) args;
+    worktofile(nda->fp, nda->in->delim, entry->root_len, entry);
     return 0;
 }
 
@@ -121,6 +128,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct input *in = &pa->in;
     struct work *work = (struct work *) data;
 
     DIR *dir = opendir(work->name);
@@ -130,15 +138,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* get source directory xattrs */
-    if (in.external_enabled) {
+    if (in->external_enabled) {
         xattrs_setup(&work->xattrs);
         xattrs_get(work->name, &work->xattrs);
     }
 
     /* write start of stanza */
-    worktofile(pa->outfiles[id], in.delim, work->root_len, work);
+    worktofile(pa->outfiles[id], in->delim, work->root_len, work);
 
-    if (in.external_enabled) {
+    if (in->external_enabled) {
         xattrs_cleanup(&work->xattrs);
     }
 
@@ -147,8 +155,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     size_t nondirs_processed_benchmark = 0;
     nondirs_processed = &nondirs_processed_benchmark;
     #endif
-    descend(ctx, id, work, dir, pa->skip, 0, 1,
-            processdir, process_nondir, pa->outfiles[id],
+    struct NondirArgs nda = {
+        .in = in,
+        .fp = pa->outfiles[id],
+    };
+    descend(ctx, id, &pa->in, work, dir, pa->skip, 0, 1,
+            processdir, process_nondir, &nda,
             NULL, NULL, nondirs_processed);
 
     closedir(dir);
@@ -226,35 +238,35 @@ static void sub_help() {
 }
 
 int main(int argc, char *argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:", 2, "input_dir... output_prefix", &in);
-    struct PoolArgs args;
-    if (in.helped)
+    struct PoolArgs pa;
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:", 2, "input_dir... output_prefix", &pa.in);
+    if (pa.in.helped)
         sub_help();
     if (idx < 0)
         return -1;
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(in.nameto, argv[argc - 1], MAXPATH, "output_prefix");
+        INSTALL_STR(pa.in.nameto, argv[argc - 1], MAXPATH, "output_prefix");
 
         if (retval)
             return retval;
 
-        if (setup_directory_skip(in.skip, &args.skip) != 0) {
+        if (setup_directory_skip(pa.in.skip, &pa.skip) != 0) {
             return -1;
         }
 
-        in.nameto_len = strlen(in.nameto);
+        pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
-    if (check_prefix(in.nameto, in.nameto_len, in.maxthreads) != 0) {
-        trie_free(args.skip);
+    if (check_prefix(pa.in.nameto, pa.in.nameto_len, pa.in.maxthreads) != 0) {
+        trie_free(pa.skip);
         return -1;
     }
 
-    args.outfiles = outfiles_init(1, in.nameto, in.maxthreads);
-    if (!args.outfiles) {
-        trie_free(args.skip);
+    pa.outfiles = outfiles_init(1, pa.in.nameto, pa.in.maxthreads);
+    if (!pa.outfiles) {
+        trie_free(pa.skip);
         return -1;
     }
 
@@ -263,15 +275,15 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &args, NULL, NULL
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
                                    #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        outfiles_fin(args.outfiles, in.maxthreads);
-        trie_free(args.skip);
+        outfiles_fin(pa.outfiles, pa.in.maxthreads);
+        trie_free(pa.skip);
         return -1;
     }
 
@@ -303,8 +315,8 @@ int main(int argc, char *argv[]) {
         free(roots[i]);
     }
     free(roots);
-    outfiles_fin(args.outfiles, in.maxthreads);
-    trie_free(args.skip);
+    outfiles_fin(pa.outfiles, pa.in.maxthreads);
+    trie_free(pa.skip);
 
     #if BENCHMARK
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);

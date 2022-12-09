@@ -116,48 +116,6 @@ TEST(addqueryfuncs, path) {
     sqlite3_close(db);
 }
 
-TEST(addqueryfuncs, fpath) {
-    const char fpath[MAXPATH] = "fpath";
-    SNFORMAT_S(gps[0].gfpath, MAXPATH, 1, fpath, strlen(fpath));
-
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
-
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
-
-    char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, "SELECT fpath()", str_output, output, NULL), SQLITE_OK);
-
-    EXPECT_STREQ(output, fpath);
-
-    sqlite3_close(db);
-}
-
-TEST(addqueryfuncs, epath) {
-    const char epath[MAXPATH] = "epath";
-    SNFORMAT_S(gps[0].gepath, MAXPATH, 1, epath, strlen(epath));
-
-    struct work work;
-    memset(&work, 0, sizeof(work));
-
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
-
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
-
-    char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, "SELECT epath()", str_output, output, NULL), SQLITE_OK);
-
-    EXPECT_STREQ(output, epath);
-
-    sqlite3_close(db);
-}
-
 TEST(addqueryfuncs, uidtouser) {
     // user caller's uid
     const uid_t uid = getuid();

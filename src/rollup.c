@@ -110,7 +110,8 @@ struct RollUpStats {
     #endif
 };
 
-struct ThreadArgs {
+struct PoolArgs {
+    struct input in;
     struct template_db xattr_template;
     struct RollUpStats *stats;
 };
@@ -226,14 +227,15 @@ void print_stanza(const char *name, sll_t *stats) {
 }
 
 /* this function moves the sll stats up and deallocates them */
-void print_stats(char **paths, const int path_count, struct RollUpStats *stats, const size_t threads) {
+void print_stats(char **paths, const int path_count,
+                 struct input *in, struct RollUpStats *stats) {
     fprintf(stdout, "Roots:\n");
     for(int i = 0; i < path_count; i++) {
         fprintf(stdout, "    %s\n", paths[i]);
     }
     fprintf(stdout, "\n");
-    fprintf(stdout, "Thread Pool Size: %12d\n",  in.maxthreads);
-    fprintf(stdout, "Files/Links Limit: %11d\n", (int) in.max_in_dir);
+    fprintf(stdout, "Thread Pool Size: %12d\n",  in->maxthreads);
+    fprintf(stdout, "Files/Links Limit: %11d\n", (int) in->max_in_dir);
     fprintf(stdout, "\n");
 
     /* per-thread stats together */
@@ -248,7 +250,7 @@ void print_stats(char **paths, const int path_count, struct RollUpStats *stats, 
 
     size_t remaining = 0;
 
-    for(size_t i = 0; i < threads; i++) {
+    for(size_t i = 0; i < in->maxthreads; i++) {
         sll_move_append(&not_processed, &stats[i].not_processed);
         sll_move_append(&not_rolled_up, &stats[i].not_rolled_up);
         sll_move_append(&rolled_up,     &stats[i].rolled_up);
@@ -502,7 +504,8 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
  * @return   0 - cannot rollup
  *           1 - can rollup
  */
-int can_rollup(struct RollUp *rollup,
+int can_rollup(struct input *in,
+               struct RollUp *rollup,
                struct DirStats *ds,
                sqlite3 *dst
                timestamp_sig) {
@@ -525,7 +528,7 @@ int can_rollup(struct RollUp *rollup,
     timestamp_end(timestamp_buffers, rollup->data.tid.up, "nondir_count", nondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
-    if (ds->subnondir_count > in.max_in_dir) {
+    if (ds->subnondir_count > in->max_in_dir) {
         ds->too_many_before = ds->subnondir_count;
         goto end_can_rollup;
     }
@@ -573,7 +576,7 @@ int can_rollup(struct RollUp *rollup,
      */
     if (legal) {
         const size_t total_pentries = ds->subnondir_count + total_child_entries;
-        if (total_pentries > in.max_in_dir) {
+        if (total_pentries > in->max_in_dir) {
             ds->too_many_after = total_pentries;
             legal = 0;
         }
@@ -795,8 +798,9 @@ void rollup(void *args timestamp_sig) {
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
-    struct ThreadArgs *ta = dir->data.extra_args;
-    struct RollUpStats *stats = ta->stats;
+    struct PoolArgs *pa = (struct PoolArgs *) dir->data.extra_args;
+    struct input *in = &pa->in;
+    struct RollUpStats *stats = pa->stats;
 
     /* get statistics out of BottomUp */
     struct DirStats *ds = malloc(sizeof(struct DirStats));
@@ -825,16 +829,16 @@ void rollup(void *args timestamp_sig) {
     /* can attempt to roll up */
     if (dst) {
         /* check if rollup is allowed */
-        ds->score = can_rollup(dir, ds, dst timestamp_args);
+        ds->score = can_rollup(in, dir, ds, dst timestamp_args);
 
         /* if can roll up */
         if (ds->score > 0) {
             /* do the roll up */
-            if (in.dry_run) {
+            if (in->dry_run) {
                 ds->success = 1;
             }
             else {
-                ds->success = (do_rollup(dir, ds, dst, &ta->xattr_template timestamp_args) == 0);
+                ds->success = (do_rollup(dir, ds, dst, &pa->xattr_template timestamp_args) == 0);
             }
 
             dir->rolledup = ds->success;
@@ -882,15 +886,15 @@ int main(int argc, char *argv[]) {
 
     timestamp_start_raw(runtime);
 
-    int idx = parse_cmd_line(argc, argv, "hHn:L:X", 1, "GUFI_index ...", &in);
-    if (in.helped)
+    struct PoolArgs pa;
+    int idx = parse_cmd_line(argc, argv, "hHn:L:X", 1, "GUFI_index ...", &pa.in);
+    if (pa.in.helped)
         sub_help();
     if (idx < 0)
         return -1;
 
-    struct ThreadArgs ta;
-    init_template_db(&ta.xattr_template);
-    if (create_xattrs_template(&ta.xattr_template) != 0) {
+    init_template_db(&pa.xattr_template);
+    if (create_xattrs_template(&pa.xattr_template) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
         return -1;
     }
@@ -899,24 +903,24 @@ int main(int argc, char *argv[]) {
     pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     #ifdef PER_THREAD_STATS
-    timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, &print_mutex);
+    timestamp_init(timestamp_buffers, pa.in.maxthreads + 1, 1024 * 1024, &print_mutex);
     #endif
     #endif
 
-    ta.stats = calloc(in.maxthreads, sizeof(struct RollUpStats));
-    for(int i = 0; i < in.maxthreads; i++) {
-        sll_init(&ta.stats[i].not_processed);
-        sll_init(&ta.stats[i].not_rolled_up);
-        sll_init(&ta.stats[i].rolled_up);
-        ta.stats[i].remaining = 0;
+    pa.stats = calloc(pa.in.maxthreads, sizeof(struct RollUpStats));
+    for(int i = 0; i < pa.in.maxthreads; i++) {
+        sll_init(&pa.stats[i].not_processed);
+        sll_init(&pa.stats[i].not_rolled_up);
+        sll_init(&pa.stats[i].rolled_up);
+        pa.stats[i].remaining = 0;
     }
 
     #ifdef DEBUG
     struct OutputBuffers print_buffers;
-    OutputBuffers_init(&print_buffers, in.maxthreads, 1024 * 1024, &print_mutex);
+    OutputBuffers_init(&print_buffers, pa.in.maxthreads, 1024 * 1024, &print_mutex);
 
-    for(int i = 0; i < in.maxthreads; i++) {
-        ta.stats[i].print_buffers = &print_buffers;
+    for(int i = 0; i < pa.in.maxthreads; i++) {
+        pa.stats[i].print_buffers = &print_buffers;
     }
     #endif
 
@@ -924,11 +928,11 @@ int main(int argc, char *argv[]) {
     argc -= idx;
 
     const int rc = parallel_bottomup(argv, argc,
-                                     in.maxthreads,
+                                     pa.in.maxthreads,
                                      sizeof(struct RollUp),
                                      NULL, rollup,
                                      0,
-                                     &ta
+                                     &pa
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , timestamp_buffers
                                      #endif
@@ -944,18 +948,18 @@ int main(int argc, char *argv[]) {
 
     #endif
 
-    print_stats(argv, argc, ta.stats, in.maxthreads);
+    print_stats(argv, argc, &pa.in, pa.stats);
 
-    for(int i = 0; i < in.maxthreads; i++) {
+    for(int i = 0; i < pa.in.maxthreads; i++) {
         #ifdef DEBUG
-        ta.stats[i].print_buffers = NULL;
+        pa.stats[i].print_buffers = NULL;
         #endif
-        sll_destroy(&ta.stats[i].rolled_up, 0);
-        sll_destroy(&ta.stats[i].not_rolled_up, 0);
-        sll_destroy(&ta.stats[i].not_processed, 0);
+        sll_destroy(&pa.stats[i].rolled_up, 0);
+        sll_destroy(&pa.stats[i].not_rolled_up, 0);
+        sll_destroy(&pa.stats[i].not_processed, 0);
     }
-    free(ta.stats);
-    close_template_db(&ta.xattr_template);
+    free(pa.stats);
+    close_template_db(&pa.xattr_template);
 
     timestamp_set_end_raw(runtime);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));

@@ -96,6 +96,7 @@ int  globaldbs;
 char globaltab[MAXSQL];
 char globalview[MAXSQL];
 struct stat globalst;
+struct input in;
 
 int att(sqlite3 *indb) {
         sqlite3 *db = NULL;
@@ -131,7 +132,7 @@ int att(sqlite3 *indb) {
         strcat(sqlu,";");
 
         //fprintf(stderr,"sqlu: %s\n",sqlu);
-        rawquerydb(indbname, 0, indb, sqlu,0, 0, 0, 0);
+        rawquerydb(indbname, 0, indb, sqlu, in.output, in.delim, 0, 0, 0, 0);
         return 0;
 }
 
@@ -642,6 +643,8 @@ int main(int argc, char *argv[]) {
         const char   *tail;
         char cwd[MAXPATH];
 
+        memset(&in, 0, sizeof(in));
+        SNPRINTF(in.delim, sizeof(in.delim), "%c", '|');
 
         //printf("argc %d argv0 %s argv1 %s argv2 %s argv3 %s\n",argc,argv[0],argv[1],argv[2],argv[3]);
         // last arg has to be number of dbs

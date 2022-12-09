@@ -77,14 +77,6 @@ OF SUCH DAMAGE.
 #define DBNAME "db.db"
 #define DBNAME_LEN (sizeof(DBNAME) - 1)
 
-struct globalpathstate {
-  char gpath[MAXPATH];
-  char gepath[MAXPATH];
-  char gfpath[MAXPATH]; /* added to provide dumping of full path in query extension */
-};
-
-extern struct globalpathstate gps[MAXPTHREAD];
-
 struct sum {
   long long int totfiles;
   long long int totlinks;
@@ -226,8 +218,6 @@ struct input {
    /* filename containing strings to skip during tree traversal */
    const char *skip;
 };
-extern struct input in;
-
 
 void print_help(const char *prog_name,
                 const char *getopt_str,

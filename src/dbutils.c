@@ -299,14 +299,16 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
     return db;
 }
 
-int rawquerydb(const char *name,
-               int         isdir,        // (unused)
-               sqlite3    *db,
-               char       *sqlstmt,
-               int         printpath,    // (unused)
-               int         printheader,
-               int         printrows,
-               int         ptid)         // pthread-ID
+int rawquerydb(const char     *name,
+               int            isdir,        // (unused)
+               sqlite3        *db,
+               char           *sqlstmt,
+               OutputMethod_t output,
+               char           *delim,
+               int            printpath,    // (unused)
+               int            printheader,
+               int            printrows,
+               int            ptid)         // pthread-ID
 {
      sqlite3_stmt *res;
      int           error     = 0;
@@ -317,26 +319,12 @@ int rawquerydb(const char *name,
      //char   shortname[MAXPATH];
      //char  *pp;
 
-     FILE *        out;
-     char          ffielddelim[2];
+     FILE *        out = (output == OUTFILE)?gts.outfd[ptid]:stdout;
 
      if (!sqlstmt) {
         fprintf(stderr, "SQL was empty\n");
         return -1;
      }
-
-     out = stdout;
-     if (in.output == OUTFILE)
-        out = gts.outfd[ptid];
-
-     if (in.dodelim == 0)
-       SNPRINTF(ffielddelim,2,"|");
-
-     if (in.dodelim == 1)
-       SNPRINTF(ffielddelim,2,"%s",fielddelim);
-
-     if (in.dodelim == 2)
-       SNPRINTF(ffielddelim,2,"%s",in.delim);
 
      while (*sqlstmt) {
        // WARNING: passing length-arg that is longer than SQL text
@@ -365,7 +353,7 @@ int rawquerydb(const char *name,
          // maybe print column-names as a header (once)
          if (printheader) {
              for(int cnt = 0; cnt < ncols; cnt++) {
-                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),in.delim);
+                 fprintf(out,"%s%s", sqlite3_column_name(res,cnt),delim);
              }
              fprintf(out,"\n");
          }
@@ -374,7 +362,7 @@ int rawquerydb(const char *name,
              // maybe print result-row values
              if (printrows) {
                  for(int cnt = 0; cnt < ncols; cnt++) {
-                     fprintf(out,"%s%s", sqlite3_column_text(res,cnt),in.delim);
+                     fprintf(out,"%s%s", sqlite3_column_text(res,cnt),delim);
                  }
                  fprintf(out,"\n");
              }
@@ -894,24 +882,6 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
-static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc; (void) argv;
-
-    const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context);
-    sqlite3_result_text(context, gps[id].gfpath, -1, SQLITE_TRANSIENT);
-    return;
-}
-
-static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc; (void) argv;
-
-    const size_t id = (size_t) (uintptr_t) sqlite3_user_data(context);
-    sqlite3_result_text(context, gps[id].gepath, -1, SQLITE_TRANSIENT);
-    return;
-}
-
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
@@ -1142,13 +1112,8 @@ int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work) {
     /* only available if work is valid */
     if (work) {
         void *lvl = (void *) (uintptr_t) work->level;
-        void *id_ptr = (void *) (uintptr_t) id;
         if (!((sqlite3_create_function(db,  "path",                2, SQLITE_UTF8,
                                        work,                       &path,               NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "fpath",               0,  SQLITE_UTF8,
-                                       id_ptr,                     &fpath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "epath",               0,  SQLITE_UTF8,
-                                       id_ptr,                     &epath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
                                        (void *) work->root,        &starting_point,     NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,

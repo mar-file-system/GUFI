@@ -80,7 +80,9 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
-struct ThreadArgs {
+struct PoolArgs {
+    struct input in;
+
     trie_t *skip;
     struct template_db db;
     struct template_db xattr;
@@ -92,7 +94,9 @@ struct ThreadArgs {
     #endif
 };
 
-struct nondir_args {
+struct NonDirArgs {
+    struct input *in;
+
     /* thread args */
     struct template_db *temp_db;
     struct template_db *temp_xattr;
@@ -118,10 +122,11 @@ struct nondir_args {
 };
 
 static int process_nondir(struct work *entry, void *args) {
-    struct nondir_args *nda = (struct nondir_args *) args;
+    struct NonDirArgs *nda = (struct NonDirArgs *) args;
+    struct input *in = nda->in;
 
-    if (in.external_enabled) {
-        insertdbgo_xattrs(&in, &nda->work->statuso, entry,
+    if (in->external_enabled) {
+        insertdbgo_xattrs(in, &nda->work->statuso, entry,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);
@@ -156,16 +161,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* } */
     int rc = 0;
 
-    struct ThreadArgs *ta = (struct ThreadArgs *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct input *in = &pa->in;
+
     #if BENCHMARK
     pthread_mutex_lock(&print_mutex);
     ta->total_dirs++;
     pthread_mutex_unlock(&print_mutex);
     #endif
 
-    struct nondir_args nda;
-    nda.temp_db    = &ta->db;
-    nda.temp_xattr = &ta->xattr;
+    struct NonDirArgs nda;
+    nda.in         = &pa->in;
+    nda.temp_db    = &pa->db;
+    nda.temp_xattr = &pa->xattr;
     nda.work       = (struct work *) data;
 
     DIR *dir = opendir(nda.work->name);
@@ -177,7 +185,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* offset by work->root_len to remove prefix */
     nda.topath_len = SNFORMAT_S(nda.topath, MAXPATH, 3,
-                                in.nameto, in.nameto_len,
+                                in->nameto, in->nameto_len,
                                 "/", (size_t) 1,
                                 nda.work->name + nda.work->root_len, nda.work->name_len - nda.work->root_len);
 
@@ -224,7 +232,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.xattrs_res = NULL;
     nda.xattr_files_res = NULL;
 
-    if (in.external_enabled) {
+    if (in->external_enabled) {
         nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
         nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
 
@@ -234,14 +242,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     startdb(nda.db);
     size_t nondirs_processed = 0;
-    descend(ctx, id, nda.work, dir, ta->skip, 0, 1,
+    descend(ctx, id, in, nda.work, dir, pa->skip, 0, 1,
             processdir, process_nondir, &nda,
             NULL, NULL, &nondirs_processed);
     stopdb(nda.db);
 
     /* entries and xattrs have been inserted */
 
-    if (in.external_enabled) {
+    if (in->external_enabled) {
         /* write out per-user and per-group xattrs */
         sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
@@ -261,7 +269,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* insert this directory's summary data */
     /* the xattrs go into the xattrs_avail table in db.db */
     insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len, nda.work, &nda.summary);
-    if (in.external_enabled) {
+    if (in->external_enabled) {
         xattrs_cleanup(&nda.work->xattrs);
     }
 
@@ -280,7 +288,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     #if BENCHMARK
     pthread_mutex_lock(&print_mutex);
-    ta->total_files += nondirs_processed;
+    pa->total_files += nondirs_processed;
     pthread_mutex_unlock(&print_mutex);
     #endif
 
@@ -321,7 +329,7 @@ static int setup_dst(const char *nameto) {
     return 0;
 }
 
-struct work *validate_source(char *path) {
+struct work *validate_source(struct input *in, char *path) {
     struct work *root = (struct work *) calloc(1, sizeof(struct work));
     if (!root) {
         fprintf(stderr, "Could not allocate root struct\n");
@@ -351,7 +359,7 @@ struct work *validate_source(char *path) {
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", in.nameto, root->root + root->root_len);
+    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto, root->root + root->root_len);
     realpath(expathtst, expathout);
     realpath(root->root, expathin);
 
@@ -369,9 +377,9 @@ void sub_help() {
 }
 
 int main(int argc, char *argv[]) {
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:", 2, "input_dir... output_dir", &in);
-    struct ThreadArgs args;
-    if (in.helped)
+    struct PoolArgs pa;
+    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:", 2, "input_dir... output_dir", &pa.in);
+    if (pa.in.helped)
         sub_help();
     if (idx < 0)
         return -1;
@@ -380,39 +388,39 @@ int main(int argc, char *argv[]) {
         int retval = 0;
 
         /* does not have to be canonicalized */
-        INSTALL_STR(in.nameto, argv[argc - 1], MAXPATH, "output_dir");
+        INSTALL_STR(pa.in.nameto, argv[argc - 1], MAXPATH, "output_dir");
 
         if (retval)
             return retval;
 
-        if (setup_directory_skip(in.skip, &args.skip) != 0) {
+        if (setup_directory_skip(pa.in.skip, &pa.skip) != 0) {
             return -1;
         }
 
-        in.nameto_len = strlen(in.nameto);
+        pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
     #if BENCHMARK
     fprintf(stderr, "Creating GUFI Index %s with %d threads\n", in.nameto, in.maxthreads);
     #endif
 
-    if (setup_dst(in.nameto) != 0) {
-        trie_free(args.skip);
+    if (setup_dst(pa.in.nameto) != 0) {
+        trie_free(pa.skip);
         return -1;
     }
 
-    init_template_db(&args.db);
-    if (create_dbdb_template(&args.db) != 0) {
+    init_template_db(&pa.db);
+    if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        trie_free(args.skip);
+        trie_free(pa.skip);
         return -1;
     }
 
-    init_template_db(&args.xattr);
-    if (create_xattrs_template(&args.xattr) != 0) {
+    init_template_db(&pa.xattr);
+    if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        close_template_db(&args.db);
-        trie_free(args.skip);
+        close_template_db(&pa.db);
+        trie_free(pa.skip);
         return -1;
     }
 
@@ -420,20 +428,20 @@ int main(int argc, char *argv[]) {
     struct start_end benchmark;
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
 
-    args.total_dirs = 0;
-    args.total_files = 0;
+    pa.total_dirs = 0;
+    pa.total_files = 0;
     #endif
 
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &args, NULL, NULL
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
                                    #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        close_template_db(&args.xattr);
-        close_template_db(&args.db);
-        trie_free(args.skip);
+        close_template_db(&pa.xattr);
+        close_template_db(&pa.db);
+        trie_free(pa.skip);
         return -1;
     }
 
@@ -450,7 +458,7 @@ int main(int argc, char *argv[]) {
         }
 
         /* get first work item by validating source path */
-        struct work *root = validate_source(roots[i]);
+        struct work *root = validate_source(&pa.in, roots[i]);
         if (!root) {
             continue;
         }
@@ -476,19 +484,19 @@ int main(int argc, char *argv[]) {
         free(roots[i]);
     }
     free(roots);
-    close_template_db(&args.xattr);
-    close_template_db(&args.db);
-    trie_free(args.skip);
+    close_template_db(&pa.xattr);
+    close_template_db(&pa.db);
+    trie_free(pa.skip);
 
     #if BENCHMARK
     clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
     const long double processtime = sec(nsec(&benchmark));
 
-    fprintf(stderr, "Total Dirs:            %zu\n",    args.total_dirs);
-    fprintf(stderr, "Total Files:           %zu\n",    args.total_files);
+    fprintf(stderr, "Total Dirs:            %zu\n",    pa.total_dirs);
+    fprintf(stderr, "Total Files:           %zu\n",    pa.total_files);
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  args.total_dirs / processtime);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  args.total_files / processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  pa.total_dirs / processtime);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  pa.total_files / processtime);
     #endif
 
     return 0;

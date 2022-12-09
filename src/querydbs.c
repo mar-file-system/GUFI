@@ -77,32 +77,38 @@ void sub_help() {
    printf("\n");
 }
 
-int print_callback(void *args, int count, char **data, char **columns) {
-    size_t *rows = (size_t *) args;
+struct CallbackArgs {
+    struct input *in;
+    size_t rows;
+};
 
-    if (!*rows) {
-        if (in.printheader) {
+int print_callback(void *args, int count, char **data, char **columns) {
+    struct CallbackArgs *ca = (struct CallbackArgs *) args;
+
+    if (!ca->rows) {
+        if (ca->in->printheader) {
             for(int i = 0; i < count; i++) {
-                fprintf(stdout, "%s%c", columns[i], in.delim[0]);
+                fprintf(stdout, "%s%c", columns[i], ca->in->delim[0]);
             }
             fprintf(stdout, "\n");
         }
     }
 
-    if (in.printrows) {
+    if (ca->in->printrows) {
         for(int i = 0; i < count; i++) {
-            fprintf(stdout, "%s%c", data[i], in.delim[0]);
+            fprintf(stdout, "%s%c", data[i], ca->in->delim[0]);
         }
         fprintf(stdout, "\n");
     }
 
-    (*rows)++;
+    ca->rows++;
 
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
+    struct input in;
     char *dbname = NULL;
     char *tablename = NULL;
     char *rsqlstmt = NULL;
@@ -146,9 +152,6 @@ int main(int argc, char *argv[])
    /*     rc = 1; */
    /*     goto done; */
    /* } */
-
-   /* just zero out the global path so path() for this query is useless */
-   memset(gps[0].gpath, 0, sizeof(gps[0].gpath));
 
    /* length of a single "SELECT * FROM %s.%s UNION ALL" */
    const size_t single_db_len = strlen(" SELECT * FROM ") +
@@ -200,9 +203,12 @@ int main(int argc, char *argv[])
    }
 
    /* run the user query */
-   size_t records = 0;
-   if (sqlite3_exec(db, rsqlstmt, print_callback, &records, &err) == SQLITE_OK) {
-       printf("query returned %zu records\n", records);
+   struct CallbackArgs ca = {
+       .in = &in,
+       .rows = 0,
+   };
+   if (sqlite3_exec(db, rsqlstmt, print_callback, &ca, &err) == SQLITE_OK) {
+       printf("query returned %zu records\n", ca.rows);
    }
    else {
        fprintf(stderr, "Error: User query failed: %s\n", err);

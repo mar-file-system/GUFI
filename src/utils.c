@@ -82,22 +82,22 @@ pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
 // global variable to hold per thread state
 struct globalthreadstate gts = {};
 
-int printits(struct work *pwork, int ptid) {
+int printits(struct input *in, struct work *pwork, int ptid) {
   char  ffielddelim[2];
   FILE *out;
 
   out = stdout;
-  if (in.output == OUTFILE)
+  if (in->output == OUTFILE)
      out = gts.outfd[ptid];
 
-  if (in.dodelim == 0) {
+  if (in->dodelim == 0) {
     SNPRINTF(ffielddelim,2," ");
   }
-  if (in.dodelim == 2) {
+  if (in->dodelim == 2) {
     SNPRINTF(ffielddelim,2,"%s",fielddelim);
   }
-  if (in.dodelim == 1) {
-    SNPRINTF(ffielddelim,2,"%s",in.delim);
+  if (in->dodelim == 1) {
+    SNPRINTF(ffielddelim,2,"%s",in->delim);
   }
 
   fprintf(out, "%s%s",             pwork->name,               ffielddelim);
@@ -511,7 +511,8 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  * entry type. Links will not be read.
  */
 int descend(QPTPool_t *ctx, const size_t id,
-            struct work *work, DIR *dir, trie_t *skip_names, const int skip_db,
+            struct input *in, struct work *work, DIR *dir,
+            trie_t *skip_names, const int skip_db,
             const int stat_entries, QPTPoolFunc_t processdir,
             int (*process_nondir)(struct work *nondir, void *args), void *args,
             size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed) {
@@ -523,7 +524,7 @@ int descend(QPTPool_t *ctx, const size_t id,
     size_t nondirs = 0;
     size_t processed = 0;
 
-    if (work->level < in.max_level) {
+    if (work->level < in->max_level) {
         /* calculate once */
         const size_t next_level = work->level + 1;
 
@@ -605,14 +606,14 @@ int descend(QPTPool_t *ctx, const size_t id,
             nondirs++;
 
             if (process_nondir) {
-                if (in.external_enabled) {
+                if (in->external_enabled) {
                     xattrs_setup(&child.xattrs);
                     xattrs_get(child.name, &child.xattrs);
                 }
 
                 processed += !process_nondir(&child, args);
 
-                if (in.external_enabled) {
+                if (in->external_enabled) {
                     xattrs_cleanup(&child.xattrs);
                 }
             }

@@ -110,28 +110,30 @@ static int printit(const char *name, const struct stat *status, char *type, char
   return 0;
 }
 
-static int printload(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, long long pinode, char *sortf, FILE *of) {
-  fprintf(of,"%s%s",             name,in.delim);
-  fprintf(of,"%c%s",             type[0],in.delim);
-  fprintf(of,"%"STAT_ino"%s",    status->st_ino,in.delim);
-  //fprintf(of,"%lld%s", pinode,in.delim);
-  fprintf(of,"%d%s",             status->st_mode,in.delim);
-  fprintf(of,"%"STAT_nlink"%s",  status->st_nlink,in.delim);
-  fprintf(of,"%d%s",             status->st_uid,in.delim);
-  fprintf(of,"%d%s",             status->st_gid,in.delim);
-  fprintf(of,"%"STAT_size"%s",   status->st_size,in.delim);
-  fprintf(of,"%"STAT_bsize"%s",  status->st_blksize,in.delim);
-  fprintf(of,"%"STAT_blocks"%s", status->st_blocks,in.delim);
-  fprintf(of,"%ld%s",            status->st_atime,in.delim);
-  fprintf(of,"%ld%s",            status->st_mtime,in.delim);
-  fprintf(of,"%ld%s",            status->st_ctime,in.delim);
-  fprintf(of,"%s%s",             linkname,in.delim);
+static int printload(struct input *in, const char *name, const struct stat *status,
+                     char *type, char *linkname, struct xattrs *xattrs, long long pinode,
+                     char *sortf, FILE *of) {
+  fprintf(of,"%s%s",             name,in->delim);
+  fprintf(of,"%c%s",             type[0],in->delim);
+  fprintf(of,"%"STAT_ino"%s",    status->st_ino,in->delim);
+  //fprintf(of,"%lld%s", pinode,in->delim);
+  fprintf(of,"%d%s",             status->st_mode,in->delim);
+  fprintf(of,"%"STAT_nlink"%s",  status->st_nlink,in->delim);
+  fprintf(of,"%d%s",             status->st_uid,in->delim);
+  fprintf(of,"%d%s",             status->st_gid,in->delim);
+  fprintf(of,"%"STAT_size"%s",   status->st_size,in->delim);
+  fprintf(of,"%"STAT_bsize"%s",  status->st_blksize,in->delim);
+  fprintf(of,"%"STAT_blocks"%s", status->st_blocks,in->delim);
+  fprintf(of,"%ld%s",            status->st_atime,in->delim);
+  fprintf(of,"%ld%s",            status->st_mtime,in->delim);
+  fprintf(of,"%ld%s",            status->st_ctime,in->delim);
+  fprintf(of,"%s%s",             linkname,in->delim);
   for(size_t i = 0; i < xattrs->count; i++) {
       fprintf(of, "%s\\0", xattrs->pairs[i].name);
   }
-  fprintf(of,"%s",in.delim);
+  fprintf(of,"%s",in->delim);
   /* this one is for create time which posix doenst have */
-  fprintf(of,"%s",in.delim);
+  fprintf(of,"%s",in->delim);
   /* sort field at the end not required */
   if (strlen(sortf) > 0) fprintf(of,"%s",sortf);
 
@@ -139,8 +141,9 @@ static int printload(const char *name, const struct stat *status, char *type, ch
   return(0);
 }
 
-void listdir(const char *name, long long int level, struct dirent *entry, long long int pin, int statit, int xattrit,int loader )
-{
+void listdir(struct input *in, const char *name, long long int level,
+             struct dirent *entry, long long int pin, int statit,
+             int xattrit,int loader) {
     DIR *dir;
     //struct dirent *entry;
     char path[MAXPATH];
@@ -155,13 +158,13 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
     //printf("inlistdir name %s\n",name);
     if (statit) {
       lstat(name,&st);
-      if (in.dontdescend == 0) {
+      if (in->dontdescend == 0) {
         if (S_ISDIR(st.st_mode)) {
            dir = opendir(name);
         }
       }
     } else {
-      if (in.dontdescend == 0) {
+      if (in->dontdescend == 0) {
         if (!(dir = opendir(name)))
           return;
       }
@@ -184,12 +187,12 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
       }
       if (loader>0) {
         if (S_ISDIR(st.st_mode)) {
-          SNPRINTF(sortf,MAXPATH,"%s%s%s",name,in.delim,type);
+          SNPRINTF(sortf,MAXPATH,"%s%s%s",name,in->delim,type);
         } else {
           shortpath(name,beginpath,endpath);
-          SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in.delim,type);
+          SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in->delim,type);
         }
-        printload(name,&st,type,lpath,&xattrs,pin,sortf,stdout);
+        printload(in,name,&st,type,lpath,&xattrs,pin,sortf,stdout);
       } else {
         printit(name,&st,type,lpath,&xattrs,1,pin);
       }
@@ -201,7 +204,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
       if (!S_ISDIR(st.st_mode)) {
          return;
       }
-      if (in.dontdescend==1) {
+      if (in->dontdescend==1) {
          return;
       }
     }
@@ -231,7 +234,7 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
                 continue;
             SNPRINTF(type,2,"d");
             //printf("inwhile d %s %lld %lld\n", name, entry->d_ino, ppin);
-            listdir(path, pin, entry, entry->d_ino, statit, xattrit,loader);
+            listdir(in, path, pin, entry, entry->d_ino, statit, xattrit,loader);
         } else {
             len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
             bzero(lpath,sizeof(lpath));
@@ -249,12 +252,12 @@ void listdir(const char *name, long long int level, struct dirent *entry, long l
               //printf("readlink %s %s\n",path,lpath);
               if (loader>0) {
                 if (S_ISDIR(st.st_mode)) {
-                  SNPRINTF(sortf,MAXPATH,"%s%s%s",path,in.delim,type);
+                  SNPRINTF(sortf,MAXPATH,"%s%s%s",path,in->delim,type);
                 } else {
                   shortpath(path,beginpath,endpath);
-                  SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in.delim,type);
+                  SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in->delim,type);
                 }
-                printload(path,&st,type,lpath,&xattrs,pin,sortf,stdout);
+                printload(in,path,&st,type,lpath,&xattrs,pin,sortf,stdout);
               } else {
                 printit(path,&st,type,lpath,&xattrs,1,pin);
               }
@@ -281,6 +284,7 @@ void helpme() {
 
 int main(int argc, char **argv)
 {
+    struct input in;
     struct dirent *entries = NULL;
     struct stat status;
     int statit;
@@ -338,6 +342,6 @@ int main(int argc, char **argv)
 
     lstat(argv[optind],&status);
     //printf("inmain d %s %lld 0\n", argv[1],status.st_ino);
-    listdir(argv[optind], 0, entries, status.st_ino,statit,xattrit,loader);
+    listdir(&in, argv[optind], 0, entries, status.st_ino,statit,xattrit,loader);
     return 0;
 }

@@ -134,6 +134,8 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
     struct group *lmygrp;
     char myinsql[MAXSQL];
 
+    struct input *in = (struct input *) args;
+
     // get thread id so we can get access to thread state we need to keep until the thread ends
     //printf("id is %zu\n",id);
 
@@ -144,11 +146,11 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
     //    return NULL;
     SNPRINTF(passmywork->type,2,"%s","d");
     // print?
-    if (in.printing > 0 || in.printdir > 0) {
-      printits(passmywork,id);
+    if (in->printing > 0 || in->printdir > 0) {
+      printits(in, passmywork,id);
     }
 
-    if (in.buildindex > 0) {
+    if (in->buildindex > 0) {
        dupdir(passmywork->name, &passmywork->statuso);
        records=malloc(MAXRECS);
        memset(records, 0, MAXRECS);
@@ -211,10 +213,10 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
             QPTPool_enqueue(ctx, 0, processdir, clone);
 
         } else if (!strncmp(qwork.type,"l",1)) {
-            if (in.printing > 0 || in.printdir > 0) {
-               printits(&qwork,id);
+            if (in->printing > 0 || in->printdir > 0) {
+               printits(in,&qwork,id);
             }
-            if (in.buildindex > 0) {
+            if (in->buildindex > 0) {
               sumit(&summary,&qwork);
               insertdbgo(&qwork,db,res);
               transcnt++;
@@ -224,12 +226,12 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
                 transcnt=0;
               }
             }
-            if (in.printing > 0 || in.printdir > 0) {
-               printits(&qwork,id);
+            if (in->printing > 0 || in->printdir > 0) {
+               printits(in, &qwork,id);
             }
         }
         else if (!strncmp(qwork.type,"f",1)) {
-            if (in.buildindex > 0) {
+            if (in->buildindex > 0) {
               sumit(&summary,&qwork);
               insertdbgo(&qwork,db,res);
               transcnt++;
@@ -239,15 +241,15 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
                 transcnt=0;
               }
             }
-            if (in.printing > 0 || in.printdir > 0) {
-               printits(&qwork,id);
+            if (in->printing > 0 || in->printdir > 0) {
+               printits(in,&qwork,id);
             }
         }
       }
     }
     mysql_free_result(lresult);
 
-    if (in.buildindex > 0) {
+    if (in->buildindex > 0) {
       stopdb(db);
       insertdbfin(res);
 
@@ -255,7 +257,7 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
       insertsumdb(db, passmywork->name, passmywork, &summary);
       closedb(db);
 
-      SNPRINTF(dbpath, MAXPATH, "%s/%s/DBNAME", in.nameto,passmywork->name);
+      SNPRINTF(dbpath, MAXPATH, "%s/%s/DBNAME", in->nameto,passmywork->name);
       chown(dbpath, passmywork->statuso.st_uid, passmywork->statuso.st_gid);
       chmod(dbpath, passmywork->statuso.st_mode | S_IRUSR);
       free(records);
@@ -269,7 +271,7 @@ int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
 }
 
 
-int processinit(QPTPool_t * ctx) {
+int processinit(struct input *in, QPTPool_t * ctx) {
      struct work * mywork = malloc(sizeof(struct work));
      int i;
      FILE *robinfd;
@@ -302,7 +304,7 @@ int processinit(QPTPool_t * ctx) {
 
      // open connection to mysql db per thread
      i=0;
-     while (i < in.maxthreads) {
+     while (i < in->maxthreads) {
        if(mysql_init(&msn.mysql[i])==NULL) {
          printf("MySQL init failed");
          exit(1);
@@ -321,23 +323,23 @@ int processinit(QPTPool_t * ctx) {
      return 0;
 }
 
-int processfin() {
+int processfin(struct input *in) {
      // close mysql connections
-     for(int i = 0; i < in.maxthreads; i++) {
+     for(int i = 0; i < in->maxthreads; i++) {
        mysql_close(&msn.mysql[i]);
      }
 
      return 0;
 }
 
-int validate_inputs() {
-   if (in.buildindex && !in.nameto[0]) {
+int validate_inputs(struct input *in) {
+   if (in->buildindex && !in->nameto[0]) {
       fprintf(stderr, "building an index '-b' requires a destination dir (see '-t'))\n");
       return -1;
    }
-   else if (in.nameto[0] && ! in.buildindex) {
+   else if (in->nameto[0] && ! in->buildindex) {
       fprintf(stderr, "Destination dir '-t' found.  Assuming implicit '-b'.\n");
-      in.buildindex = 1; // you're welcome
+      in->buildindex = 1; // you're welcome
    }
 
    return 0;
@@ -365,6 +367,7 @@ int main(int argc, char *argv[])
     // but allow different fields to be filled at the command-line.
     // Callers provide the options-string for get_opt(), which will
     // control which options are parsed for each program.
+    struct input in;
     int idx = parse_cmd_line(argc, argv, "hHpn:d:xPbt:o:", 1, "robin_in", &in);
     if (in.helped)
         sub_help();
@@ -379,27 +382,27 @@ int main(int argc, char *argv[])
             return retval;
     }
 
-    if (validate_inputs())
+    if (validate_inputs(&in))
         return -1;
 
-    QPTPool_t * pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL
+    QPTPool_t * pool = QPTPool_init(in.maxthreads, &in, NULL, NULL
                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                     , NULL
                                     #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        processfin();
+        processfin(&in);
         return -1;
     }
 
-    processinit(pool);
+    processinit(&in, pool);
 
     QPTPool_wait(pool);
 
     QPTPool_destroy(pool);
 
-    processfin();
+    processfin(&in);
 
     return 0;
 }

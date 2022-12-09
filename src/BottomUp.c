@@ -385,7 +385,7 @@ int parallel_bottomup(char **root_names, size_t root_count,
         root->level = 0;
 
         timestamp_start(enqueue_root);
-        QPTPool_enqueue(pool, i % in.maxthreads, descend_to_bottom, root);
+        QPTPool_enqueue(pool, i % thread_count, descend_to_bottom, root);
         timestamp_end(ua.timestamp_buffers, thread_count, "enqueue_root", enqueue_root);
     }
     timestamp_end(ua.timestamp_buffers, thread_count, "enqueue_roots", enqueue_roots);

@@ -104,6 +104,7 @@ void sub_help() {
 }
 
 int main(int argc, char * argv[]) {
+    struct input in;
     int idx = parse_cmd_line(argc, argv, "hHn:", 1, "directory ...", &in);
     if (in.helped)
         sub_help();

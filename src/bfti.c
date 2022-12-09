@@ -89,9 +89,9 @@ OF SUCH DAMAGE.
 extern int errno;
 
 static int create_tables(const char *name, sqlite3 *db, void * args) {
-    (void) args;
+    struct input *in = (struct input *) args;
 
-     printf("writetsum %d\n", in.writetsum);
+    printf("writetsum %d\n", in->writetsum);
     if ((create_table_wrapper(name, db, "tsql",        tsql)        != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)   != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)  != SQLITE_OK) ||
@@ -101,6 +101,11 @@ static int create_tables(const char *name, sqlite3 *db, void * args) {
 
     return 0;
 }
+
+struct PoolArgs {
+    struct input in;
+    trie_t *skip;
+};
 
 static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
 {
@@ -112,14 +117,16 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     int recs;
     int trecs;
 
-    trie_t *skip = (trie_t *) args;
+    struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct input *in = &pa->in;
+    trie_t *skip = (trie_t *) pa->skip;
 
     if (!(dir = opendir(passmywork->name)))
        goto out_free;
 
     SNPRINTF(passmywork->type,2,"%s","d");
-    if (in.printing || in.printdir) {
-      printits(passmywork,id);
+    if (in->printing || in->printdir) {
+      printits(in,passmywork,id);
     }
 
     // push subdirectories into the queue
@@ -135,10 +142,10 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
                    ))) {
        zeroit(&sumin);
 
-       trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", 0, 0, 0, id);
+       trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", in->output, in->delim, 0, 0, 0, id);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(ctx, id, passmywork, dir, skip, 0, 1, processdir,
+         descend(ctx, id, in, passmywork, dir, skip, 0, 1, processdir,
                    NULL, NULL, NULL, NULL, NULL);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {
@@ -157,20 +164,20 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     return 0;
 }
 
-int processinit(QPTPool_t * ctx) {
+int processinit(struct input *in, QPTPool_t * ctx) {
 
      struct work * mywork = malloc(sizeof(struct work));
 
      // process input directory and put it on the queue
-     SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
-     lstat(in.name,&mywork->statuso);
-     if (access(in.name, R_OK | X_OK)) {
+     SNPRINTF(mywork->name,MAXPATH,"%s",in->name);
+     lstat(in->name,&mywork->statuso);
+     if (access(in->name, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in.name, strerror(errno));
+                in->name, strerror(errno));
         return 1;
      }
      if (!S_ISDIR(mywork->statuso.st_mode) ) {
-        fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
+        fprintf(stderr,"input-dir '%s' is not a directory\n", in->name);
         return 1;
      }
 
@@ -180,7 +187,7 @@ int processinit(QPTPool_t * ctx) {
      return 0;
 }
 
-int processfin() {
+int processfin(struct input *in) {
 
      sqlite3 *tdb;
      struct stat smt;
@@ -188,19 +195,19 @@ int processfin() {
      char dbpath[MAXPATH];
      struct utimbuf utimeStruct;
 
-     SNPRINTF(dbpath,MAXPATH,"%s/%s",in.name,DBNAME);
+     SNPRINTF(dbpath,MAXPATH,"%s/%s",in->name,DBNAME);
      rc=1;
      rc=lstat(dbpath,&smt);
-     if (in.writetsum) {
+     if (in->writetsum) {
         if (! (tdb = opendb(dbpath, SQLITE_OPEN_READWRITE, 1, 1
-                            , create_tables, NULL
+                            , create_tables, &in
                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
                             , NULL, NULL
                             , NULL, NULL
                             #endif
                             )))
            return -1;
-        inserttreesumdb(in.name,tdb,&sumout,0,0,0);
+        inserttreesumdb(in->name,tdb,&sumout,0,0,0);
         closedb(tdb);
      }
      if (rc==0) {
@@ -241,9 +248,9 @@ void sub_help() {
    printf("\n");
 }
 
-int validate_inputs() {
+int validate_inputs(struct input *in) {
    // not an error, but you might want to know ...
-   if (! in.writetsum)
+   if (! in->writetsum)
       fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
 
    return 0;
@@ -256,15 +263,16 @@ int main(int argc, char *argv[])
      // but allow different fields to be filled at the command-line.
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
-     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_index", &in);
-     if (in.helped)
+     struct PoolArgs pa;
+     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_index", &pa.in);
+     if (pa.in.helped)
         sub_help();
      if (idx < 0)
         return -1;
      else {
         // parse positional args, following the options
         int retval = 0;
-        INSTALL_STR(in.name, argv[idx++], MAXPATH, "GUFI_index");
+        INSTALL_STR(pa.in.name, argv[idx++], MAXPATH, "GUFI_index");
 
         if (retval)
            return retval;
@@ -272,15 +280,14 @@ int main(int argc, char *argv[])
 
      // option-parsing can't tell that some options are required,
      // or which combinations of options interact.
-     if (validate_inputs())
+     if (validate_inputs(&pa.in))
         return -1;
 
-     trie_t *skip = NULL;
-     if (setup_directory_skip(in.skip, &skip) != 0) {
+     if (setup_directory_skip(pa.in.skip, &pa.skip) != 0) {
          return -1;
      }
 
-     QPTPool_t * pool = QPTPool_init(in.maxthreads, skip, NULL, NULL
+     QPTPool_t * pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , NULL
                                      #endif
@@ -290,13 +297,13 @@ int main(int argc, char *argv[])
          return -1;
      }
 
-     processinit(pool);
+     processinit(&pa.in, pool);
 
      QPTPool_wait(pool);
 
      QPTPool_destroy(pool);
 
-     processfin();
+     processfin(&pa.in);
 
      return 0;
 }

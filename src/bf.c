@@ -77,12 +77,6 @@ extern int optind, opterr, optopt;
 
 char fielddelim[] = "\x1E";     // ASCII Record Separator
 
-struct globalpathstate gps[MAXPTHREAD] = {};
-
-struct input in = {};
-
-
-
 void print_help(const char* prog_name,
                 const char* getopt_str,
                 const char* positional_args_help_str) {

@@ -401,6 +401,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* } */
 
     PoolArgs_t *pa = (PoolArgs_t *) args;
+    struct input *in = pa->in;
     ThreadArgs_t *ta = &(pa->ta[id]);
 
     struct work *work = (struct work *) data;
@@ -438,7 +439,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     #if OPENDB
     timestamp_set_start(attachdb_call);
-    sqlite3 *db = attachdb(dbname, ta->outdb, ATTACH_NAME, in.open_flags, 1);
+    sqlite3 *db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
     timestamp_set_end(attachdb_call);
     increment_query_count(ta);
     #endif
@@ -455,7 +456,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
 
     /* set up XATTRS so that it can be used by -T, -S, and -E */
-    if (db && in.external_enabled) {
+    if (db && in->external_enabled) {
         static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
 
         timestamp_set_start(xattrprep_call);
@@ -481,8 +482,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
     /* if this is OR, as well as no-sql-to-run, skip this query */
-    if (in.sql.tsum_len > 1) {
-        if (in.andor == 0) {      /* AND */
+    if (in->sql.tsum_len > 1) {
+        if (in->andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
             timestamp_set_start(sqltsumcheck);
             querydb(dbname, db, "SELECT name FROM sqlite_master WHERE type=\'table\' AND name='treesummary';",
@@ -493,9 +494,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 recs = -1;
             }
             else {
-                /* run in.sql.tsum */
+                /* run in->sql.tsum */
                 timestamp_set_start(sqltsum);
-                querydb(dbname, db, in.sql.tsum, pa, id, &recs);
+                querydb(dbname, db, in->sql.tsum, pa, id, &recs);
                 timestamp_set_end(sqltsum);
                 increment_query_count(ta);
             }
@@ -529,7 +530,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             const size_t pushed =
             #endif
             #endif
-            descend2(ctx, id, work, dir, pa->skip, processdir, in.max_level
+            descend2(ctx, id, work, dir, pa->skip, processdir, in->max_level
                      #ifdef DEBUG
                      , descend_timers
                      #endif
@@ -546,40 +547,34 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         if (db) {
             /* only query this level if the min_level has been reached */
-            if (work->level >= in.min_level) {
+            if (work->level >= in->min_level) {
                 /* run query on summary, print it if printing is needed, if returns none */
                 /* and we are doing AND, skip querying the entries db */
                 /* memset(endname, 0, sizeof(endname)); */
                 shortpath(work->name,shortname,endname);
-                SNFORMAT_S(gps[id].gepath, MAXPATH, 1, endname, strlen(endname));
 
-                if (in.sql.sum_len > 1) {
+                if (in->sql.sum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
-                    SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
                     /* printf("processdir: setting gpath = %s and gepath %s\n",gps[mytid].gpath,gps[mytid].gepath); */
-                    realpath(work->name,gps[id].gfpath);
 
                     timestamp_set_start(sqlsum);
-                    querydb(dbname, db, in.sql.sum, pa, id, &recs);
+                    querydb(dbname, db, in->sql.sum, pa, id, &recs);
                     timestamp_set_end(sqlsum);
                     increment_query_count(ta);
                 } else {
                     recs = 1;
                 }
-                if (in.andor > 0) {
+                if (in->andor > 0) {
                     recs = 1;
                 }
                 /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
-                    if (in.sql.ent_len > 1) {
+                    if (in->sql.ent_len > 1) {
                         /* set the path so users can put path() in their queries */
                         /* printf("****entries len of in.sql.ent %lu\n",strlen(in.sql.ent)); */
-                        SNFORMAT_S(gps[id].gpath, MAXPATH, 1, work->name, work->name_len);
-                        realpath(work->name,gps[id].gfpath);
-
                         timestamp_set_start(sqlent);
-                        querydb(dbname, db, in.sql.ent, pa, id, &recs); /* recs is not used */
+                        querydb(dbname, db, in->sql.ent, pa, id, &recs); /* recs is not used */
                         timestamp_set_end(sqlent);
                         increment_query_count(ta);
                     }
@@ -590,7 +585,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* detach xattr dbs */
     timestamp_set_start(xattrdone_call);
-    if (db && in.external_enabled) {
+    if (db && in->external_enabled) {
         external_done(db, "DROP VIEW " XATTRS ";"
                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                       , &ta->queries
@@ -614,7 +609,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     timestamp_set_start(utime_call);
     /* restore mtime and atime */
-    if (in.keep_matime) {
+    if (in->keep_matime) {
         struct utimbuf dbtime = {};
         dbtime.actime  = work->statuso.st_atime;
         dbtime.modtime = work->statuso.st_mtime;
@@ -818,6 +813,7 @@ int main(int argc, char *argv[])
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
+    struct input in;
     int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();

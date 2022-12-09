@@ -156,7 +156,7 @@ static int create_readdirplus_tables(const char * name, sqlite3 * db, void * arg
     return 0;
 }
 
-int reprocessdir(void * passv, DIR *dir)
+int reprocessdir(struct input *in, void * passv, DIR *dir)
 {
     struct work *passmywork = passv;
     struct work qwork;
@@ -180,22 +180,22 @@ int reprocessdir(void * passv, DIR *dir)
     bzero(passmywork->linkname,sizeof(passmywork->linkname));
     SNPRINTF(passmywork->type,2,"d");
     xattrs_setup(&passmywork->xattrs);
-    if (in.external_enabled) {
+    if (in->external_enabled) {
       xattrs_get(passmywork->name, &passmywork->xattrs);
     }
 
 
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir
-    SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in.nameto,passmywork->statuso.st_ino);
-    if (in.buildinindir == 1) {
+    SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in->nameto,passmywork->statuso.st_ino);
+    if (in->buildinindir == 1) {
       SNPRINTF(dbpath,MAXPATH,"%s/%s",passmywork->name,DBNAME);
     } else {
-        SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in.nameto,passmywork->statuso.st_ino);
+        SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in->nameto,passmywork->statuso.st_ino);
     }
 
     /* if we are building a gufi in the src tree and the suspect mode is not zero then we need to wipe it out first */
-    if (in.buildinindir == 1) {
-        if (in.suspectmethod > 0) {
+    if (in->buildinindir == 1) {
+        if (in->suspectmethod > 0) {
           //unlink(dbpath);
           truncate(dbpath,0);
         }
@@ -225,7 +225,7 @@ int reprocessdir(void * passv, DIR *dir)
         if (!(entry = readdir(dir))) break;
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
           continue;
-        if (in.buildinindir == 1) {
+        if (in->buildinindir == 1) {
           if (strcmp(entry->d_name, DBNAME) == 0)
                continue;
         }
@@ -239,7 +239,7 @@ int reprocessdir(void * passv, DIR *dir)
         lstat(qwork.name, &qwork.statuso);
         /* qwork.xattrs_len = 0; */
         xattrs_setup(&qwork.xattrs);
-        if (in.external_enabled) {
+        if (in->external_enabled) {
           xattrs_get(qwork.name, &qwork.xattrs);
         }
         if (S_ISDIR(qwork.statuso.st_mode) ) {
@@ -314,7 +314,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     int locsuspecttime;
     struct stat sst;
 
-    (void) args;
+    struct input *in = (struct input *) args;
 
     // open directory
     if (!(dir = opendir(passmywork->name)))
@@ -324,11 +324,11 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
        goto out_dir; // return NULL;
 
     SNPRINTF(passmywork->type,2,"%s","d");
-    passmywork->suspect=in.suspectd;
+    passmywork->suspect=in->suspectd;
     /* if we are putting the gufi index into the source tree we can modify the suspecttime to be the mtime of the gufi db */
     /* this way we will just be looking at dirs or files that have changed since the gufi db was last updated */
-    locsuspecttime=in.suspecttime;
-    if (in.buildinindir == 1) {
+    locsuspecttime=in->suspecttime;
+    if (in->buildinindir == 1) {
       locsuspecttime=0;
       SNPRINTF(dbpath,MAXPATH,"%s/%s",passmywork->name,DBNAME);
       rc=lstat(dbpath,&sst);
@@ -341,30 +341,30 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     }
 
     /* if we are not looking for suspect directories we should just put the directory at the top of all the dirents */
-    if (in.output == OUTDB) {
-         if (in.insertdir > 0) {
-           if (in.suspectmethod == 0) {
+    if (in->output == OUTDB) {
+         if (in->insertdir > 0) {
+           if (in->suspectmethod == 0) {
              todb=id;
-             if (in.stride > 0) {
-               todb=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+             if (in->stride > 0) {
+               todb=(passmywork->statuso.st_ino/in->stride)%in->maxthreads; //striping inodes
                //******** start a lock
                pthread_mutex_lock(&outdb_mutex[todb]);
              }
              //printf("in processdirs in.outdb=%d in.insertdir=%d id=%d in.insertfl=%d\n",in.outdb,in.insertdir,id,in.insertfl);
              startdb(gts.outdbd[todb]);
              insertdbgor(passmywork,gts.outdbd[todb],global_res[todb]);
-             if (in.stride > 0) {
+             if (in->stride > 0) {
                stopdb(gts.outdbd[todb]); //striping inodes
                //***** drop a lock
                pthread_mutex_unlock(&outdb_mutex[todb]);
              }
            }
-           if (in.suspectmethod == 1) {  /* look up inode in trie to see if this is a suspect dir */
+           if (in->suspectmethod == 1) {  /* look up inode in trie to see if this is a suspect dir */
              lookup=0;
              lookup=searchmyll(passmywork->statuso.st_ino,0);
              if (lookup == 1) passmywork->suspect=1;  /* set the directory suspect flag on so we will mark it in output */
            }
-           if (in.suspectmethod > 1) {
+           if (in->suspectmethod > 1) {
              /* ????? we would add a stat call on the directory here and compare mtime and ctime with the last run time provided */
              /* and mark the dir suspect if mtime or ctime are >= provided last run time */
              // needed to fill in passmywork status structure
@@ -377,18 +377,18 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
          }
     }
 
-    if (in.output == OUTFILE) {
+    if (in->output == OUTFILE) {
       tooutfile=id;
-      if (in.stride > 0) {
-        tooutfile=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+      if (in->stride > 0) {
+        tooutfile=(passmywork->statuso.st_ino/in->stride)%in->maxthreads; //striping inodes
         //******** start a lock
         pthread_mutex_lock(&outfile_mutex[todb]);
       }
       //fprintf(stderr,"threadd %d inode %lld file %d\n",id,passmywork->statuso.st_ino,tooutfile);
       /* only directories are here so sortf is set to the directory full pathname */
       SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
-      fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",passmywork->name,in.delim,passmywork->statuso.st_ino,in.delim,passmywork->pinode,in.delim,passmywork->type,in.delim,sortf,in.delim);
-      if (in.stride > 0) {
+      fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",passmywork->name,in->delim,passmywork->statuso.st_ino,in->delim,passmywork->pinode,in->delim,passmywork->type,in->delim,sortf,in->delim);
+      if (in->stride > 0) {
         pthread_mutex_unlock(&outfile_mutex[todb]);
       }
     }
@@ -403,7 +403,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     do {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
            continue;
-        if (in.buildinindir == 1) {
+        if (in->buildinindir == 1) {
           if (strcmp(entry->d_name, DBNAME) == 0)
                continue;
         }
@@ -411,7 +411,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
         SNPRINTF(qwork.name,MAXPATH,"%s/%s", passmywork->name, entry->d_name);
         qwork.pinode=passmywork->statuso.st_ino;
         qwork.statuso.st_ino=entry->d_ino;
-        qwork.suspect=in.suspectfl;
+        qwork.suspect=in->suspectfl;
         wentry=0;
         //if (S_ISDIR(qwork.statuso.st_mode) ) {
         if (entry->d_type==DT_DIR) {
@@ -435,18 +435,18 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
           }
 */
           /* if suspect method is not zero then we can insert files and links, if not we dont care about files and links in db */
-          if (in.suspectmethod == 0) {
-            if (in.output == OUTDB) {
-              if (in.insertfl > 0) {
+          if (in->suspectmethod == 0) {
+            if (in->output == OUTDB) {
+              if (in->insertfl > 0) {
                 todb=id;
-                if (in.stride > 0) {
-                  todb=(qwork.statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+                if (in->stride > 0) {
+                  todb=(qwork.statuso.st_ino/in->stride)%in->maxthreads; //striping inodes
                   //************** start a lock
                   pthread_mutex_lock(&outdb_mutex[todb]);
                   startdb(gts.outdbd[todb]); //striping inodes
                 }
                 insertdbgor(&qwork,gts.outdbd[todb],global_res[todb]);
-                if (in.stride > 0) {
+                if (in->stride > 0) {
                   stopdb(gts.outdbd[todb]); //striping inodes
                   //************** drop a lock
                   pthread_mutex_unlock(&outdb_mutex[todb]);
@@ -462,7 +462,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
             }
           }
           if (passmywork->suspect == 0) { /* if suspect dir just skip looking any further */
-            if ((in.suspectmethod == 1) || (in.suspectmethod == 2)) {   /* if method 1 or 2 we look up the inode in trie and mark dir suspect or not */
+            if ((in->suspectmethod == 1) || (in->suspectmethod == 2)) {   /* if method 1 or 2 we look up the inode in trie and mark dir suspect or not */
                lookup=0;
                lookup=searchmyll(qwork.statuso.st_ino,1);
                if (lookup == 1) {
@@ -470,7 +470,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
                  //printf("######### found a file suspect %s %lld\n",qwork.name,qwork.statuso.st_ino);
                }
             }
-            if (in.suspectmethod > 2) {
+            if (in->suspectmethod > 2) {
               /* ???? we would stat the file/link and if ctime or mtime is >= provided last run time mark dir suspect */
               st.st_ctime=0;
               st.st_mtime=0;
@@ -479,18 +479,18 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
               if (st.st_mtime >= locsuspecttime) passmywork->suspect=1;
             }
           }
-          if (in.output == OUTFILE) {
+          if (in->output == OUTFILE) {
             tooutfile=id;
-            if (in.stride > 0) {
-              tooutfile=(qwork.statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+            if (in->stride > 0) {
+              tooutfile=(qwork.statuso.st_ino/in->stride)%in->maxthreads; //striping inodes
               //******** start a lock
               pthread_mutex_lock(&outfile_mutex[todb]);
             }
             //fprintf(stderr,"threadf %d inode %lld file %d\n",id,qwork.statuso.st_ino,tooutfile);
             /* since this is a file or link, we need the path to the file or link without the name as the sortf */
             SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
-            fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",qwork.name,in.delim,qwork.statuso.st_ino,in.delim,qwork.pinode,in.delim,qwork.type,in.delim,sortf,in.delim);
-            if (in.stride > 0) {
+            fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%s%s%s%s\n",qwork.name,in->delim,qwork.statuso.st_ino,in->delim,qwork.pinode,in->delim,qwork.type,in->delim,sortf,in->delim);
+            if (in->stride > 0) {
               pthread_mutex_unlock(&outfile_mutex[todb]);
             }
           }
@@ -498,19 +498,19 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     } while ((entry = (readdir(dir))));
 
     /* if we are not looking for suspect directories we should just put the directory at the top of all the dirents */
-    if (in.suspectmethod > 0) {
-      if (in.output == OUTFILE) {
-         if (in.insertdir > 0) {
+    if (in->suspectmethod > 0) {
+      if (in->output == OUTFILE) {
+         if (in->insertdir > 0) {
            todb=id;
-           if (in.stride > 0) {
-             todb=(passmywork->statuso.st_ino/in.stride)%in.maxthreads; //striping inodes
+           if (in->stride > 0) {
+             todb=(passmywork->statuso.st_ino/in->stride)%in->maxthreads; //striping inodes
              //******** start a lock
              pthread_mutex_lock(&outdb_mutex[todb]);
            }
            startdb(gts.outdbd[todb]);
            //printf("in processdirs in.outdb=%d in.insertdir=%d id=%d in.insertfl=%d\n",in.outdb,in.insertdir,id,in.insertfl);
            insertdbgor(passmywork,gts.outdbd[todb],global_res[todb]);
-           if (in.stride > 0) {
+           if (in->stride > 0) {
              stopdb(gts.outdbd[todb]); //striping inodes
              //***** drop a lock
              pthread_mutex_unlock(&outdb_mutex[todb]);
@@ -519,8 +519,8 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
       }
     }
 
-    if (in.output == OUTDB) {
-      if (in.stride == 0) {
+    if (in->output == OUTDB) {
+      if (in->stride == 0) {
         todb=id;
         stopdb(gts.outdbd[todb]);
       }
@@ -530,7 +530,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
       if (gltodirmode==1) {
         /* we may not have stat on the directory we may be told its suspect somehow not stating it */
         lstat(passmywork->name,&passmywork->statuso);
-        rc=reprocessdir(passmywork,dir);
+        rc=reprocessdir(in,passmywork,dir);
         if (rc !=0) fprintf(stderr,"problem producing gufi db for suspect directory\n");
       }
     }
@@ -547,7 +547,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     return 0;
 }
 
-int processinit(QPTPool_t * ctx) {
+int processinit(struct input *in, QPTPool_t * ctx) {
 
      struct work * mywork = malloc(sizeof(struct work));
      int i;
@@ -560,10 +560,10 @@ int processinit(QPTPool_t * ctx) {
      long long int cntfl;
      char outfn[MAXPATH];
 
-     if (in.suspectfile > 0) {
-       if( (isf = fopen(in.insuspect, "r")) == NULL)
+     if (in->suspectfile > 0) {
+       if( (isf = fopen(in->insuspect, "r")) == NULL)
        {
-          fprintf(stderr,"Cant open input suspect file %s\n",in.insuspect);
+          fprintf(stderr,"Cant open input suspect file %s\n",in->insuspect);
           exit(1);
        }
        cntfl=0;
@@ -614,10 +614,10 @@ int processinit(QPTPool_t * ctx) {
        fclose(isf);
      }
 
-     if (in.output == OUTDB) {
+     if (in->output == OUTDB) {
        i=0;
-       while (i < in.maxthreads) {
-           SNPRINTF(outdbn,MAXPATH,"%s.%d",in.outname,i);
+       while (i < in->maxthreads) {
+           SNPRINTF(outdbn,MAXPATH,"%s.%d",in->outname,i);
            gts.outdbd[i]=opendb(outdbn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
                                 , create_readdirplus_tables, NULL
                                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -626,7 +626,7 @@ int processinit(QPTPool_t * ctx) {
                                 #endif
                                 );
          global_res[i]=insertdbprep(gts.outdbd[i], READDIRPLUS_INSERT);
-         if (in.stride > 0) {
+         if (in->stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
              fprintf(stderr,"\n mutex %d init failed\n",i);
            }
@@ -636,13 +636,13 @@ int processinit(QPTPool_t * ctx) {
      }
 
      //open up the output files if needed
-     if (in.output == OUTFILE) {
+     if (in->output == OUTFILE) {
        i=0;
-       while (i < in.maxthreads) {
-         SNPRINTF(outfn,MAXPATH,"%s.%d",in.outname,i);
+       while (i < in->maxthreads) {
+         SNPRINTF(outfn,MAXPATH,"%s.%d",in->outname,i);
          //fprintf(stderr,"init opening %s.%d",in.outname,i);
          gts.outfd[i]=fopen(outfn,"w");
-         if (in.stride > 0) {
+         if (in->stride > 0) {
            if (pthread_mutex_init(&outfile_mutex[i], NULL) != 0) {
              fprintf(stderr,"\n mutex %d init failed\n",i);
            }
@@ -652,15 +652,15 @@ int processinit(QPTPool_t * ctx) {
      }
 
      // process input directory and put it on the queue
-     SNPRINTF(mywork->name,MAXPATH,"%s",in.name);
-     lstat(in.name, &mywork->statuso);
-     if (access(in.name, R_OK | X_OK)) {
+     SNPRINTF(mywork->name,MAXPATH,"%s",in->name);
+     lstat(in->name, &mywork->statuso);
+     if (access(in->name, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in.name, strerror(errno));
+                in->name, strerror(errno));
          return 1;
      }
      if (!S_ISDIR(mywork->statuso.st_mode) ) {
-        fprintf(stderr,"input-dir '%s' is not a directory\n", in.name);
+        fprintf(stderr,"input-dir '%s' is not a directory\n", in->name);
         return 1;
      }
 
@@ -671,16 +671,16 @@ int processinit(QPTPool_t * ctx) {
      return 0;
 }
 
-int processfin() {
+int processfin(struct input *in) {
 int i;
 
      // close output dbs here
-     if (in.output == OUTDB) {
+     if (in->output == OUTDB) {
        i=0;
-       while (i < in.maxthreads) {
+       while (i < in->maxthreads) {
          insertdbfin(global_res[i]);
          closedb(gts.outdbd[i]);
-         if (in.stride > 0) {
+         if (in->stride > 0) {
            pthread_mutex_destroy(&outdb_mutex[i]);
          }
          i++;
@@ -688,11 +688,11 @@ int i;
      }
 
      // close outputfiles
-     if (in.output == OUTFILE) {
+     if (in->output == OUTFILE) {
        i=0;
-       while (i < in.maxthreads) {
+       while (i < in->maxthreads) {
          fclose(gts.outfd[i]);
-         if (in.stride > 0) {
+         if (in->stride > 0) {
            pthread_mutex_destroy(&outdb_mutex[i]);
          }
          i++;
@@ -706,19 +706,19 @@ int i;
 }
 
 // This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb
-int validate_inputs() {
-   if (in.buildindex && in.nameto[0]) {
+int validate_inputs(struct input *in) {
+   if (in->buildindex && in->nameto[0]) {
       fprintf(stderr, "In bfwreaddirplus2db building an index '-b' the index must go into the src tree\n");
       fprintf(stderr, "and -t means you are specifying a parking lot directory for gufi directory db's to be put under their znumber\n");
       fprintf(stderr, "for incremental operations by inode\n");
       return -1;
    }
 
-   if (in.buildindex) {
+   if (in->buildindex) {
      fprintf(stderr,"You are putting the index dbs in input directory\n");
-     in.buildinindir = 1;
-     in.nameto = in.name;
-     in.nameto_len = in.name_len;
+     in->buildinindir = 1;
+     in->nameto = in->name;
+     in->nameto_len = in->name_len;
    }
    return 0;
 
@@ -739,6 +739,7 @@ int main(int argc, char *argv[])
      // Callers provide the options-string for get_opt(), which will
      // control which options are parsed for each program.
      //fprintf(stderr,"in main beforeparse\n");
+     struct input in;
      int idx = parse_cmd_line(argc, argv, "hHn:O:ro:d:RYZW:g:A:c:xbt:", 1, "input_dir", &in);
      //fprintf(stderr,"in main right after parse\n");
      if (in.helped)
@@ -755,7 +756,7 @@ int main(int argc, char *argv[])
            return retval;
      }
      //fprintf(stderr,"in main after parse\n");
-     if (validate_inputs())
+     if (validate_inputs(&in))
         return -1;
 
      //fprintf(stderr,"in main after validate\n");
@@ -788,13 +789,13 @@ int main(int argc, char *argv[])
          return -1;
      }
 
-     processinit(pool);
+     processinit(&in, pool);
 
      QPTPool_wait(pool);
 
      QPTPool_destroy(pool);
 
-     processfin();
+     processfin(&in);
 
      return 0;
 }

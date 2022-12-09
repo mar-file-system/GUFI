@@ -84,7 +84,8 @@ struct OutputBuffers debug_output_buffers;
 #endif
 
 struct ScoutArgs {
-    FILE **traces; /* reference to array */
+    struct input *in;  /* reference to PoolArgs */
+    FILE **traces;     /* reference to array */
 
     /* everything below is locked with print_mutex from debug.h */
 
@@ -94,12 +95,13 @@ struct ScoutArgs {
     uint64_t *time;
     size_t *files;
     size_t *dirs;
-    size_t *empty;  /* number of directories without files/links
-                     * can still have child directories */
+    size_t *empty;     /* number of directories without files/links
+                        * can still have child directories */
 };
 
 /* global to pool - passed around in "args" argument */
 struct PoolArgs {
+    struct input in;
     struct template_db db;
     struct template_db xattr;
 };
@@ -211,6 +213,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     (void) ctx;
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
+    struct input *in = &pa->in;
     struct row *w = (struct row *) data;
     FILE *trace = w->trace[id];
 
@@ -223,14 +226,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* parse the directory data */
     timestamp_start(dir_linetowork);
-    linetowork(w->line, w->len, in.delim, &dir);
+    linetowork(w->line, w->len, in->delim, &dir);
     timestamp_set_end(dir_linetowork);
 
     /* create the directory */
     timestamp_start(dupdir);
     char topath[MAXPATH];
     const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         in.nameto, in.nameto_len,
+                                         in->nameto, in->nameto_len,
                                          "/", (size_t) 1,
                                          w->line, w->first_delim);
 
@@ -320,7 +323,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_set_end(memset_row);
 
             timestamp_start(entry_linetowork);
-            linetowork(line, len, in.delim, &row);
+            linetowork(line, len, in->delim, &row);
             timestamp_set_end(entry_linetowork)
 
             timestamp_start(free);
@@ -344,7 +347,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /* add row to bulk insert */
             timestamp_start(insertdbgo);
             insertdbgo(&row, db, entries_res);
-            insertdbgo_xattrs(&in, &dir.statuso, &row,
+            insertdbgo_xattrs(in, &dir.statuso, &row,
                               &xattr_db_list, &pa->xattr,
                               topath, topath_len,
                               xattrs_res, xattr_files_res);
@@ -541,8 +544,9 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     /* skip argument checking */
     struct ScoutArgs *sa = (struct ScoutArgs *) data;
+    struct input *in = sa->in;
     FILE **traces = sa->traces;
-    FILE *trace = traces[in.maxthreads];
+    FILE *trace = traces[sa->in->maxthreads];
 
     (void) id;
     (void) args;
@@ -555,17 +559,17 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     if (getline(&line, &len, trace) == -1) {
         free(line);
         fclose(trace);
-        traces[in.maxthreads] = NULL;
+        traces[in->maxthreads] = NULL;
         fprintf(stderr, "Could not get the first line of the trace\n");
         return 1;
     }
 
     /* find a delimiter */
-    size_t first_delim = parsefirst(line, len, in.delim[0]);
+    size_t first_delim = parsefirst(line, len, in->delim[0]);
     if (first_delim == (size_t) -1) {
         free(line);
         fclose(trace);
-        traces[in.maxthreads] = NULL;
+        traces[in->maxthreads] = NULL;
         fprintf(stderr, "Could not find the specified delimiter\n");
         return 1;
     }
@@ -574,7 +578,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     if (line[first_delim + 1] != 'd') {
         free(line);
         fclose(trace);
-        traces[in.maxthreads] = NULL;
+        traces[in->maxthreads] = NULL;
         fprintf(stderr, "First line of trace is not a directory\n");
         return 1;
     }
@@ -593,7 +597,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     line = NULL;
     len = 0;
     while (getline(&line, &len, trace) != -1) {
-        first_delim = parsefirst(line, len, in.delim[0]);
+        first_delim = parsefirst(line, len, in->delim[0]);
 
         /* bad line */
         if (first_delim == (size_t) -1) {
@@ -638,7 +642,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     QPTPool_enqueue(ctx, target_thread, processdir, work);
 
     fclose(trace);
-    traces[in.maxthreads] = NULL;
+    traces[in->maxthreads] = NULL;
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 
@@ -727,61 +731,61 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &main_func.start);
     epoch = since_epoch(&main_func.start);
 
-    int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "trace_file... output_dir", &in);
-    if (in.helped)
+    struct PoolArgs pa;
+    int idx = parse_cmd_line(argc, argv, "hHn:d:", 2, "trace_file... output_dir", &pa.in);
+    if (pa.in.helped)
         sub_help();
     if (idx < 0)
         return -1;
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(in.nameto, argv[argc - 1], MAXPATH, "output_dir");
+        INSTALL_STR(pa.in.nameto, argv[argc - 1], MAXPATH, "output_dir");
 
         if (retval)
             return retval;
 
-        in.nameto_len = strlen(in.nameto);
+        pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
     /* open trace files for threads to jump around in */
     /* open the trace files here to not repeatedly open in threads */
     const size_t trace_count = argc - idx - 1;
-    FILE ***traces = open_per_thread_traces(&argv[idx], trace_count, in.maxthreads);
+    FILE ***traces = open_per_thread_traces(&argv[idx], trace_count, pa.in.maxthreads);
     if (!traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
         return -1;
     }
 
-    struct PoolArgs args;
-    init_template_db(&args.db);
-    if (create_dbdb_template(&args.db) != 0) {
+    init_template_db(&pa.db);
+    if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        close_per_thread_traces(traces, trace_count, in.maxthreads);
+        close_per_thread_traces(traces, trace_count, pa.in.maxthreads);
         return -1;
     }
 
-    init_template_db(&args.xattr);
-    if (create_xattrs_template(&args.xattr) != 0) {
+    init_template_db(&pa.xattr);
+    if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        close_template_db(&args.db);
-        close_per_thread_traces(traces, trace_count, in.maxthreads);
+        close_template_db(&pa.db);
+        close_per_thread_traces(traces, trace_count, pa.in.maxthreads);
         return -1;
     }
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    OutputBuffers_init(&debug_output_buffers, in.maxthreads, 1073741824ULL, &print_mutex);
+    OutputBuffers_init(&debug_output_buffers, pa.in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
 
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &args, NULL, NULL
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , &debug_output_buffers
                                    #endif
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        close_template_db(&args.xattr);
-        close_template_db(&args.db);
-        close_per_thread_traces(traces, trace_count, in.maxthreads);
+        close_template_db(&pa.xattr);
+        close_template_db(&pa.db);
+        close_per_thread_traces(traces, trace_count, pa.in.maxthreads);
         return -1;
     }
 
@@ -794,6 +798,7 @@ int main(int argc, char *argv[]) {
     for(size_t i = 0; i < trace_count; i++) {
         /* freed by scout_function */
         struct ScoutArgs *sa = malloc(sizeof(struct ScoutArgs));
+        sa->in = &pa.in;
         sa->traces = traces[i];
         sa->remaining = &remaining;
         sa->time = &scout_time;
@@ -811,9 +816,9 @@ int main(int argc, char *argv[]) {
     #endif
     QPTPool_destroy(pool);
 
-    close_template_db(&args.xattr);
-    close_template_db(&args.db);
-    close_per_thread_traces(traces, trace_count, in.maxthreads);
+    close_template_db(&pa.xattr);
+    close_template_db(&pa.db);
+    close_per_thread_traces(traces, trace_count, pa.in.maxthreads);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_flush_to_single(&debug_output_buffers, stderr);
@@ -821,13 +826,13 @@ int main(int argc, char *argv[]) {
     #endif
 
     /* set top level permissions */
-    chmod(in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    chmod(pa.in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     /* have to call clock_gettime explicitly to get end time */
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    fprintf(stderr, "Handle Args:               %.2Lfs\n", sec(total_handle_args));
+    fprintf(stderr, "Handle args:               %.2Lfs\n", sec(total_handle_args));
     fprintf(stderr, "memset(work):              %.2Lfs\n", sec(total_memset_work));
     fprintf(stderr, "Parse directory line:      %.2Lfs\n", sec(total_dir_linetowork));
     fprintf(stderr, "dupdir:                    %.2Lfs\n", sec(total_dupdir));
