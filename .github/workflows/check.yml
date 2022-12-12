@@ -172,8 +172,8 @@ jobs:
 
     - name: Install Extra Python Packages
       run: |
-        sudo apt -y install python3-pip python3-matplotlib
-        sudo pip3 install pylint
+           sudo apt -y install python3-pip python3-matplotlib
+           sudo pip3 install pylint
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp
