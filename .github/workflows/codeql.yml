@@ -100,8 +100,8 @@ jobs:
 
     - name: Remove Duplicate/Unnecessary Files
       run: |
-        rm -r ${{ github.workspace }}/build/builds
-        find ${{ github.workspace }}/build -type f -name "*.py" -delete
+           rm -r ${{ github.workspace }}/build/{builds,scripts,test}
+           find ${{ github.workspace }}/build -type f -name "*.py" -delete
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
