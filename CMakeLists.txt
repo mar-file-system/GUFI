@@ -220,6 +220,31 @@ endif()
 set(BIN "bin" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
 set(LIB "lib" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
 
+# find an executable dependency
+function(find_exec_dependency var exec)
+  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
+  if (${var})
+    message(STATUS "Found ${exec}: ${${var}}")
+  else ()
+    # try alternative
+    if (${ARGC} GREATER 2)
+      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
+      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
+    endif()
+
+    if (${var})
+      message(STATUS "Found alternative to ${exec}: ${${var}}")
+    endif()
+  endif()
+
+  if (NOT ${var})
+    message(FATAL_ERROR "Required program ${var} not found.")
+  endif()
+endfunction()
+
+# patch is needed to patch dependencies
+find_exec_dependency(PATCH patch)
+
 # Need pthread
 find_package(Threads REQUIRED)
 
@@ -371,28 +396,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
-# find an executable dependency
-function(find_exec_dependency var exec)
-  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
-  if (${var})
-    message(STATUS "Found ${exec}: ${${var}}")
-  else ()
-    # try alternative
-    if (${ARGC} GREATER 2)
-      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
-      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
-    endif()
-
-    if (${var})
-      message(STATUS "Found alternative to ${exec}: ${${var}}")
-    endif()
-  endif()
-
-  if (NOT ${var})
-    message(FATAL_ERROR "${var} not found. Cannot build tests.")
-  endif()
-endfunction()
-
+# grep is required in scripts and test/regression
 find_exec_dependency(GREP grep)
 
 # enable "make test"
