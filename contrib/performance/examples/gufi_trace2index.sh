@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,60 +60,84 @@
 # OF SUCH DAMAGE.
 
 
-GUFI_QUERY = 'gufi_query'
-GUFI_TRACE2INDEX = 'gufi_trace2index'
 
-COMMANDS = [
-    GUFI_QUERY,
-    GUFI_TRACE2INDEX
-]
+set -e
 
-CUMULATIVE_TIMES = 'cumulative-times'
+PERFORMANCE_PATH="@CMAKE_BINARY_DIR@/contrib/performance"
 
-# debug out put -> parser
-DEBUG_NAME = {
-    CUMULATIVE_TIMES : None,
+export PATH="${PERFORMANCE_PATH}:@DEP_INSTALL_PREFIX@/sqlite3/bin:${PATH}"
+export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite3/lib:${LD_LIBRARY_PATH}"
+export PYTHONPATH="@CMAKE_BINARY_DIR@/contrib:${PERFORMANCE_PATH}:@CMAKE_BINARY_DIR@/scripts:${PYTHONPATH}"
+
+# database containing hashes of machine properties and gufi commands
+HASHDB="hashes.db"
+
+# database containing raw data (gufi_query + cumulative times)
+RAW_DATA_DB="example_raw_data.db"
+
+# config file describing what to graph
+CONFIG_FILE="${PERFORMANCE_PATH}/configs/db_trace2index.ini"
+
+GUFI_CMD="gufi_trace2index"
+DEBUG_NAME="cumulative-times"
+TREE="test_tree"
+OVERRIDE="custom_hash_value"
+
+cleanup() {
+    rm -f "${HASHDB}" "${RAW_DATA_DB}"
+
+    # delete generated graph
+    rm -f "$(grep path ${CONFIG_FILE} | awk '{ print $3 }')"
 }
 
-TABLE_NAME = 'gufi_command'
-COL_CMD = 'cmd'
-COL_DEBUG_NAME = 'debug_name'
+cleanup
 
-# arg attr, sql column name, column type
-# None == arg attr
-COLS_REQUIRED = [
-    ['hash',         None,      str],
-    ['hash_alg',     None,      str],
-    [COL_CMD,        None,      str],
-    [COL_DEBUG_NAME, None,      str],
-]
+# setup hash database and insert hashes
+"${PERFORMANCE_PATH}/setup_hashdb.py" "${HASHDB}"
+machine_hash=$("${PERFORMANCE_PATH}/machine_hash.py" --database "${HASHDB}")
+gufi_hash=$("${PERFORMANCE_PATH}/gufi_hash.py" --database "${HASHDB}" "${GUFI_CMD}" "${DEBUG_NAME}" "${TREE}")
+raw_data_hash=$("${PERFORMANCE_PATH}/raw_data_hash.py" --database "${HASHDB}" --override "${OVERRIDE}" "${machine_hash}" "${gufi_hash}")
 
-COLS_HASHED = [
-    # this script only handles flags listed in bf.c
-    ['x',            None,      bool],
-    ['a',            None,      bool],
-    ['n',            None,      int],
-    ['d',            None,      str],
-    ['o',            'outfile', str],
-    ['O',            'outdb',   str],
-    ['I',            None,      str],
-    ['T',            None,      str],
-    ['S',            None,      str],
-    ['E',            None,      str],
-    ['F',            None,      str],
-    ['y',            None,      int],
-    ['z',            None,      int],
-    ['J',            None,      str],
-    ['K',            None,      str],
-    ['G',            None,      str],
-    ['B',            None,      int],
+# setup raw data database
+"${PERFORMANCE_PATH}/setup_raw_data_db.py" "${HASHDB}" "${raw_data_hash}" "${RAW_DATA_DB}"
 
-    # always exists
-    ['tree',         None,      str],
-]
+for((commit=0; commit<5; commit++))
+do
 
-COLS_NOT_HASHED = [
-    ['extra',        None,      str],
-]
+for((x=0; x<5; x++))
+do
+(
+# fake numbers
+cat <<EOF
+Handle args:               0.00s
+memset(work):              0.00s
+Parse directory line:      0.00s
+dupdir:                    0.00s
+copy_template:             0.00s
+opendb:                    0.00s
+Zero summary struct:       0.00s
+insertdbprep:              0.00s
+startdb:                   0.00s
+fseek:                     0.00s
+Read entries:              $((10 + x)).00s
+    getline:               0.00s
+    memset(entry struct):  0.00s
+    Parse entry line:      0.00s
+    free(entry line):      0.00s
+    sumit:                 0.00s
+    insertdbgo:            0.00s
+stopdb:                    0.00s
+insertdbfin:               0.00s
+insertsumdb:               0.00s
+closedb:                   ${x}.00s
+cleanup:                   0.00s
 
-COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED
+Directories created:       22
+Files inserted:            82
+
+EOF
+) | "${PERFORMANCE_PATH}/extract.py" "${HASHDB}" --commit "commit-${commit}" --branch "example" "${raw_data_hash}" "${RAW_DATA_DB}"
+done
+done
+
+"${PERFORMANCE_PATH}/graph_performance.py" "${HASHDB}" "${raw_data_hash}" "${RAW_DATA_DB}" "${CONFIG_FILE}"

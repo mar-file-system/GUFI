@@ -65,9 +65,9 @@ import argparse
 import sqlite3
 import sys
 
-from performance_pkg import common
-from performance_pkg.hashdb import gufi, utils as hashdb
 import gufi_common
+
+from performance_pkg.hashdb import gufi, utils as hashdb
 
 def format_for_hash(attr, value, type): # pylint: disable=redefined-builtin
     # pylint: disable=no-else-return
@@ -99,7 +99,7 @@ def compute_hash(args):
                 formatted += [formatted_val]
     formatted += [args.tree]
 
-    return common.hash_config(args.hash_alg, ' '.join(formatted))
+    return hashdb.hash_config(args.hash_alg, ' '.join(formatted))
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
@@ -239,7 +239,7 @@ def parse_args(argv):
     # Non gufi command_flags
     parser.add_argument('--hash_alg',
                         default='md5',
-                        choices=common.Hashes.keys(),
+                        choices=hashdb.Hashes.keys(),
                         help='Hash algorithm')
     parser.add_argument('--override',
                         type=str,

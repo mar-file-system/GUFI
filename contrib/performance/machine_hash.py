@@ -65,7 +65,6 @@ import argparse
 import sqlite3
 import sys
 
-from performance_pkg import common
 from performance_pkg.hashdb import machine, utils as hashdb
 
 def compute_hash(args):
@@ -78,13 +77,13 @@ def compute_hash(args):
         if val is not None:
             formatted += [str(val)]
 
-    return common.hash_config(args.hash_alg, ' '.join(formatted))
+    return hashdb.hash_config(args.hash_alg, ' '.join(formatted))
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--hash_alg',
                         default='md5',
-                        choices=common.Hashes.keys(),
+                        choices=hashdb.Hashes.keys(),
                         help='Hash algorithm')
     parser.add_argument('--name',
                         type=str,

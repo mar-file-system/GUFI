@@ -60,60 +60,64 @@
 # OF SUCH DAMAGE.
 
 
-GUFI_QUERY = 'gufi_query'
-GUFI_TRACE2INDEX = 'gufi_trace2index'
 
-COMMANDS = [
-    GUFI_QUERY,
-    GUFI_TRACE2INDEX
+from performance_pkg.extraction import common as common_extraction
+
+TABLE_NAME = 'cumulative_times'
+
+# ordered cumulative times columns
+COLUMNS = [
+    # not from gufi_trace2index
+    ['id',                                       None],
+    ['commit',                                    str],
+    ['branch',                                    str],
+
+    # from gufi_trace2index
+    ['Handle args',                             float],
+    ['memset(work)',                            float],
+    ['Parse directory line',                    float],
+    ['dupdir',                                  float],
+    ['copy_template',                           float],
+    ['opendb',                                  float],
+    ['Zero summary struct',                     float],
+    ['insertdbprep',                            float],
+    ['startdb',                                 float],
+    ['fseek',                                   float],
+    ['Read entries',                            float],
+    ['getline',                                 float],
+    ['memset(entry struct)',                    float],
+    ['Parse entry line',                        float],
+    ['free(entry line)',                        float],
+    ['sumit',                                   float],
+    ['insertdbgo',                              float],
+    ['stopdb',                                  float],
+    ['insertdbfin',                             float],
+    ['insertsumdb',                             float],
+    ['closedb',                                 float],
+    ['cleanup',                                 float],
+    ['Directories created',                       int],
+    ['Files inserted',                            int],
 ]
 
-CUMULATIVE_TIMES = 'cumulative-times'
+def extract(src, commit, branch):
+    # these aren't obtained from running gufi_trace2index
+    data = {
+        'id'    : None,
+        'commit': commit,
+        'branch': branch,
+    }
 
-# debug out put -> parser
-DEBUG_NAME = {
-    CUMULATIVE_TIMES : None,
-}
+    # parse input
+    for line in src:
+        line = line.strip()
+        if line == '':
+            continue
 
-TABLE_NAME = 'gufi_command'
-COL_CMD = 'cmd'
-COL_DEBUG_NAME = 'debug_name'
+        data.update(common_extraction.process_line(line, ':', 's'))
 
-# arg attr, sql column name, column type
-# None == arg attr
-COLS_REQUIRED = [
-    ['hash',         None,      str],
-    ['hash_alg',     None,      str],
-    [COL_CMD,        None,      str],
-    [COL_DEBUG_NAME, None,      str],
-]
+    # check for missing input
+    for col, _ in COLUMNS:
+        if col not in data:
+            raise ValueError('Cumulative times data missing {0}'.format(col))
 
-COLS_HASHED = [
-    # this script only handles flags listed in bf.c
-    ['x',            None,      bool],
-    ['a',            None,      bool],
-    ['n',            None,      int],
-    ['d',            None,      str],
-    ['o',            'outfile', str],
-    ['O',            'outdb',   str],
-    ['I',            None,      str],
-    ['T',            None,      str],
-    ['S',            None,      str],
-    ['E',            None,      str],
-    ['F',            None,      str],
-    ['y',            None,      int],
-    ['z',            None,      int],
-    ['J',            None,      str],
-    ['K',            None,      str],
-    ['G',            None,      str],
-    ['B',            None,      int],
-
-    # always exists
-    ['tree',         None,      str],
-]
-
-COLS_NOT_HASHED = [
-    ['extra',        None,      str],
-]
-
-COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED
+    return data

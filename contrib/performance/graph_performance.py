@@ -71,9 +71,9 @@ if sys.version_info.major < 3:
     mpl.use('Agg')
 
 # pylint: disable=wrong-import-position
-from performance_pkg import common
 from performance_pkg.graph import config, graph
-from performance_pkg.gufi_query import cumulative_times
+from performance_pkg.extraction.gufi_query import cumulative_times as gq_cumulative_times
+from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt_cumulative_times
 from performance_pkg.hashdb import gufi, utils as hashdb
 
 def parse_args(argv):
@@ -95,7 +95,7 @@ def gather_raw_numbers(dbname, table_name, columns, commits):
     raw_numbers = [] # raw numbers grouped by commit
 
     # extract raw values from database
-    common.check_exists(dbname)
+    hashdb.check_exists(dbname)
     try:
         con = sqlite3.connect(dbname)
 
@@ -175,9 +175,13 @@ def run(argv):
     # get table name where raw data is stored
     table_name = None
     gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
-    if gufi_cmd == gufi.GUFI_QUERY:
-        if debug_name == gufi.CUMULATIVE_TIMES:
-            table_name = cumulative_times.TABLE_NAME
+
+    if debug_name == gufi.CUMULATIVE_TIMES:
+        if gufi_cmd == gufi.GUFI_QUERY:
+            table_name = gq_cumulative_times.TABLE_NAME
+        if gufi_cmd == gufi.GUFI_TRACE2INDEX:
+            table_name = gt_cumulative_times.TABLE_NAME
+
     if table_name is None:
         raise ValueError('Configuration Hash "{0}" not found.'.format(args.raw_data_hash))
 

@@ -65,8 +65,9 @@ import argparse
 import sqlite3
 import sys
 
-from performance_pkg import common
-from performance_pkg.gufi_query import cumulative_times
+from performance_pkg.extraction import common as common_extraction
+from performance_pkg.extraction.gufi_query import cumulative_times as gq
+from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt
 from performance_pkg.hashdb import gufi, utils as hashdb
 
 def parse_args(argv):
@@ -87,12 +88,16 @@ def run(argv):
     gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
     print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
 
-    common.check_not_exists(args.raw_data_db)
+    hashdb.check_not_exists(args.raw_data_db)
     try:
         con = sqlite3.connect(args.raw_data_db)
-        if gufi_cmd == gufi.GUFI_QUERY:
-            if debug_name == gufi.CUMULATIVE_TIMES:
-                cumulative_times.create_tables(con)
+
+        if debug_name == gufi.CUMULATIVE_TIMES:
+            if gufi_cmd == gufi.GUFI_QUERY:
+                common_extraction.create_tables(con, gq.COLUMNS, gq.TABLE_NAME)
+            if gufi_cmd == gufi.GUFI_TRACE2INDEX:
+                common_extraction.create_tables(con, gt.COLUMNS, gt.TABLE_NAME)
+
         con.commit()
     finally:
         con.close()

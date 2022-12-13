@@ -72,6 +72,6 @@ foreach(SCRIPT ${PERFORMANCE_PKG})
 endforeach()
 
 add_subdirectory(hashdb)
-add_subdirectory(gufi_query)
+add_subdirectory(extraction)
 add_subdirectory(graph)
 add_subdirectory(tests)

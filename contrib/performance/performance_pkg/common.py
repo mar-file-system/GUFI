@@ -61,11 +61,8 @@
 
 
 
-import os
 import subprocess
 import sys
-
-from hashes import Hashes # not part of performance_pkg
 
 if (sys.version_info.major > 3) or ((sys.version_info.major == 3) and (sys.version_info.minor >= 3)):
     DEVNULL = subprocess.DEVNULL # pylint: disable=no-member
@@ -80,23 +77,6 @@ TYPE_TO_SQLITE = {
     None : 'INTEGER PRIMARY KEY',
 }
 
-def hash_config(alg, data):
-    return Hashes[alg](data.encode()).hexdigest()
-
-def check_exists(path):
-    if not os.path.exists(path):
-        print("'{0}' does not exist!".format(path)) # pylint: disable=superfluous-parens
-        sys.exit(1)
-
-    if not os.path.isfile(path):
-        print("'{0}' is not a file!".format(path)) # pylint: disable=superfluous-parens
-        sys.exit(2)
-
-def check_not_exists(path):
-    if os.path.exists(path):
-        print("'{0}' already exists!".format(path)) # pylint: disable=superfluous-parens
-        sys.exit(1)
-
 def run_get_stdout(command):
     # pylint: disable=consider-using-with
     process = subprocess.Popen(command,
@@ -104,14 +84,3 @@ def run_get_stdout(command):
                                stderr=DEVNULL)
     out, _ = process.communicate()
     return out.decode('ascii')
-
-def get_current_commit():
-    commit_hash = run_get_stdout(['git', 'rev-parse', 'HEAD'])[:-1]
-
-    # pylint: disable=consider-using-with
-    diff = subprocess.Popen(['git', 'diff-index', '--quiet', 'HEAD', '--'])
-    diff.communicate() # no output
-    if diff.returncode != 0:
-        commit_hash += '~dirty'
-
-    return commit_hash
