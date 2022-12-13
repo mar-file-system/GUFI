@@ -61,16 +61,16 @@
 
 
 
-from performance_pkg import common
+from performance_pkg.extraction import common as common_extraction
 
 TABLE_NAME = 'cumulative_times'
 
 # ordered cumulative times columns
 COLUMNS = [
     # not from gufi_query
-    ['id',                                      None],
-    ['commit',                                  str],
-    ['branch',                                  str],
+    ['id',                                       None],
+    ['commit',                                    str],
+    ['branch',                                    str],
 
     # from gufi_query
     ['set up globals',                          float],
@@ -111,25 +111,12 @@ COLUMNS = [
     ['aggregate into final databases',          float],
     ['print aggregated results',                float],
     ['clean up globals',                        float],
-    ['Threads run',                             int],
-    ['Queries performed',                       int],
-    ['Rows printed to stdout or outfiles',      int],
+    ['Threads run',                               int],
+    ['Queries performed',                         int],
+    ['Rows printed to stdout or outfiles',        int],
     ['Total Thread Time (not including main)',  float],
     ['Real time (main)',                        float],
 ]
-
-# setup
-def create_tables(con):
-    # all column names need to be surrounded by quotation marks, even ones that don't have spaces
-    cols = ', '.join('"{0}" {1}'.format(col, common.TYPE_TO_SQLITE[type]) for col, type in COLUMNS)
-    con.execute('CREATE TABLE {0} ({1});'.format(TABLE_NAME, cols))
-
-# extract
-def process_line(line, sep=':', rstrip=None):
-    event, value = line.split(sep)
-    event = event.strip()
-    value = value.strip().rstrip(rstrip)
-    return {event: value}
 
 def extract(src, commit, branch):
     # these aren't obtained from running gufi_query
@@ -145,7 +132,7 @@ def extract(src, commit, branch):
         if line == '':
             continue
 
-        data.update(process_line(line, ':', 's'))
+        data.update(common_extraction.process_line(line, ':', 's'))
 
     # check for missing input
     for col, _ in COLUMNS:
@@ -153,17 +140,3 @@ def extract(src, commit, branch):
             raise ValueError('Cumulative times data missing {0}'.format(col))
 
     return data
-
-# insert
-def format_value(value, type): # pylint: disable=redefined-builtin
-    # pylint: disable=no-else-return
-    if type is None:
-        return 'NULL'
-    elif type == str:
-        return '"{0}"'.format(value)
-    return str(value)
-
-def insert(con, parsed):
-    cols = ', '.join('"{0}"'.format(col) for col, _ in COLUMNS)
-    vals = ', '.join(format_value(parsed[col], type) for col, type in COLUMNS)
-    con.execute('INSERT INTO {0} ({1}) VALUES ({2});'.format(TABLE_NAME, cols, vals))

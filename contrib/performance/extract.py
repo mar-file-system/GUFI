@@ -66,8 +66,22 @@ import sqlite3
 import sys
 
 from performance_pkg import common
-from performance_pkg.gufi_query import cumulative_times
+from performance_pkg.extraction import common as common_extraction
+from performance_pkg.extraction.gufi_query import cumulative_times as gq
+from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt
 from performance_pkg.hashdb import gufi, utils as hashdb
+
+def get_current_commit():
+    commit_hash = common.run_get_stdout(['git', 'rev-parse', 'HEAD'])[:-1]
+
+    # pylint: disable=consider-using-with
+    diff = common.subprocess.Popen(['git', 'diff-index', '--quiet', 'HEAD', '--'],
+                                   stdout=common.DEVNULL, stderr=common.DEVNULL)
+    diff.communicate() # no output
+    if diff.returncode != 0:
+        commit_hash += '~dirty'
+
+    return commit_hash
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
@@ -97,7 +111,7 @@ def run(argv):
 
     commit = args.commit
     if commit is None:
-        commit = common.get_current_commit()
+        commit = get_current_commit()
 
     branch = args.branch
     if branch is None:
@@ -106,21 +120,28 @@ def run(argv):
     # parse the output
     # allow for errors to throw here
     parsed = None
-    if gufi_cmd == gufi.GUFI_QUERY:
-        if debug_name == gufi.CUMULATIVE_TIMES:
-            parsed = cumulative_times.extract(sys.stdin, commit, branch)
+
+    if debug_name == gufi.CUMULATIVE_TIMES:
+        if gufi_cmd == gufi.GUFI_QUERY:
+            parsed = gq.extract(sys.stdin, commit, branch)
+        if gufi_cmd == gufi.GUFI_TRACE2INDEX:
+            parsed = gt.extract(sys.stdin, commit, branch)
 
     if parsed is None:
         raise ValueError('Configuration hash "{0}" was found '.format(args.raw_data_hash) +
                          'but no function was called to parse the output')
 
     # insert the parsed data into the raw data database
-    common.check_exists(args.raw_data_db)
+    hashdb.check_exists(args.raw_data_db)
     try:
         raw_data_db = sqlite3.connect(args.raw_data_db)
-        if gufi_cmd == gufi.GUFI_QUERY:
-            if debug_name == gufi.CUMULATIVE_TIMES:
-                cumulative_times.insert(raw_data_db, parsed)
+
+        if debug_name == gufi.CUMULATIVE_TIMES:
+            if gufi_cmd == gufi.GUFI_QUERY:
+                common_extraction.insert(raw_data_db, parsed, gq.COLUMNS, gq.TABLE_NAME)
+            if gufi_cmd == gufi.GUFI_TRACE2INDEX:
+                common_extraction.insert(raw_data_db, parsed, gt.COLUMNS, gt.TABLE_NAME)
+
         raw_data_db.commit()
     finally:
         raw_data_db.close()

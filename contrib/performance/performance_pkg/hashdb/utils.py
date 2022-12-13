@@ -61,11 +61,28 @@
 
 
 
+import os
 import sqlite3
 import sys
 
+from hashes import Hashes # not part of performance_pkg
+
 from performance_pkg import common
 from performance_pkg.hashdb import machine, gufi, raw_data
+
+def check_exists(path):
+    if not os.path.exists(path):
+        print("'{0}' does not exist!".format(path)) # pylint: disable=superfluous-parens
+        sys.exit(1)
+
+    if not os.path.isfile(path):
+        print("'{0}' is not a file!".format(path)) # pylint: disable=superfluous-parens
+        sys.exit(2)
+
+def check_not_exists(path):
+    if os.path.exists(path):
+        print("'{0}' already exists!".format(path)) # pylint: disable=superfluous-parens
+        sys.exit(1)
 
 # set up tables
 def create_tables(con):
@@ -89,7 +106,7 @@ def get_config(hashdb_name, user_raw_data_hash):
     debug_name = None
 
     # verify that the hash db exists and contains the configuration
-    common.check_exists(hashdb_name)
+    check_exists(hashdb_name)
     try:
         hashdb = sqlite3.connect(hashdb_name)
 
@@ -116,6 +133,9 @@ def get_config(hashdb_name, user_raw_data_hash):
         hashdb.close()
 
     return gufi_cmd, debug_name
+
+def hash_config(alg, data):
+    return Hashes[alg](data.encode()).hexdigest()
 
 def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_hashed):
     '''

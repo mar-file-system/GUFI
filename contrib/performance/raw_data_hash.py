@@ -65,21 +65,20 @@ import argparse
 import sqlite3
 import sys
 
-from performance_pkg import common
 from performance_pkg.hashdb import raw_data, utils as hashdb
 
 def compute_hash(args):
     if args.override:
         return args.override
 
-    return common.hash_config(args.hash_alg,
+    return hashdb.hash_config(args.hash_alg,
                               '{0} {1}'.format(args.machine_hash, args.gufi_hash))
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--hash_alg',
                         default='md5',
-                        choices=common.Hashes.keys(),
+                        choices=hashdb.Hashes.keys(),
                         help='Hashing method to use')
     parser.add_argument('--override',
                         type=str,

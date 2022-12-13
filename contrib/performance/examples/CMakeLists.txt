@@ -1,4 +1,3 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,60 +59,15 @@
 # OF SUCH DAMAGE.
 
 
-GUFI_QUERY = 'gufi_query'
-GUFI_TRACE2INDEX = 'gufi_trace2index'
 
-COMMANDS = [
-    GUFI_QUERY,
-    GUFI_TRACE2INDEX
-]
+cmake_minimum_required(VERSION 3.1.0)
 
-CUMULATIVE_TIMES = 'cumulative-times'
+set(SCRIPTS
+  # examples
+  gufi_query.sh           # example generating gufi_query database
+  gufi_trace2index.sh     # example generating gufi_trace2index database
+  )
 
-# debug out put -> parser
-DEBUG_NAME = {
-    CUMULATIVE_TIMES : None,
-}
-
-TABLE_NAME = 'gufi_command'
-COL_CMD = 'cmd'
-COL_DEBUG_NAME = 'debug_name'
-
-# arg attr, sql column name, column type
-# None == arg attr
-COLS_REQUIRED = [
-    ['hash',         None,      str],
-    ['hash_alg',     None,      str],
-    [COL_CMD,        None,      str],
-    [COL_DEBUG_NAME, None,      str],
-]
-
-COLS_HASHED = [
-    # this script only handles flags listed in bf.c
-    ['x',            None,      bool],
-    ['a',            None,      bool],
-    ['n',            None,      int],
-    ['d',            None,      str],
-    ['o',            'outfile', str],
-    ['O',            'outdb',   str],
-    ['I',            None,      str],
-    ['T',            None,      str],
-    ['S',            None,      str],
-    ['E',            None,      str],
-    ['F',            None,      str],
-    ['y',            None,      int],
-    ['z',            None,      int],
-    ['J',            None,      str],
-    ['K',            None,      str],
-    ['G',            None,      str],
-    ['B',            None,      int],
-
-    # always exists
-    ['tree',         None,      str],
-]
-
-COLS_NOT_HASHED = [
-    ['extra',        None,      str],
-]
-
-COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED
+foreach(SCRIPT ${SCRIPTS})
+  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
+endforeach()

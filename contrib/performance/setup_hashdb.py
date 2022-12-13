@@ -65,7 +65,6 @@ import argparse
 import sqlite3
 import sys
 
-from performance_pkg import common
 from performance_pkg.hashdb import utils as hashdb
 
 def parse_args(argv):
@@ -76,7 +75,7 @@ def parse_args(argv):
 def run(argv):
     args = parse_args(argv)
 
-    common.check_not_exists(args.database)
+    hashdb.check_not_exists(args.database)
     try:
         con = sqlite3.connect(args.database)
         hashdb.create_tables(con)
@@ -84,5 +83,7 @@ def run(argv):
     finally:
         con.close()
 
+    return 0
+
 if __name__ == '__main__':
-    run(sys.argv[1:])
+    sys.exit(run(sys.argv[1:]))

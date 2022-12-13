@@ -60,60 +60,32 @@
 # OF SUCH DAMAGE.
 
 
-GUFI_QUERY = 'gufi_query'
-GUFI_TRACE2INDEX = 'gufi_trace2index'
 
-COMMANDS = [
-    GUFI_QUERY,
-    GUFI_TRACE2INDEX
-]
+from performance_pkg import common
 
-CUMULATIVE_TIMES = 'cumulative-times'
+# setup
+def create_tables(con, columns, table_name):
+    # all column names need to be surrounded by quotation marks, even ones that don't have spaces
+    cols = ', '.join('"{0}" {1}'.format(col, common.TYPE_TO_SQLITE[type]) for col, type in columns)
+    con.execute('CREATE TABLE {0} ({1});'.format(table_name, cols))
 
-# debug out put -> parser
-DEBUG_NAME = {
-    CUMULATIVE_TIMES : None,
-}
+# extract
+def process_line(line, sep=':', rstrip=None):
+    event, value = line.split(sep)
+    event = event.strip()
+    value = value.strip().rstrip(rstrip)
+    return {event: value}
 
-TABLE_NAME = 'gufi_command'
-COL_CMD = 'cmd'
-COL_DEBUG_NAME = 'debug_name'
+# insert
+def format_value(value, type): # pylint: disable=redefined-builtin
+    # pylint: disable=no-else-return
+    if type is None:
+        return 'NULL'
+    elif type == str:
+        return '"{0}"'.format(value)
+    return str(value)
 
-# arg attr, sql column name, column type
-# None == arg attr
-COLS_REQUIRED = [
-    ['hash',         None,      str],
-    ['hash_alg',     None,      str],
-    [COL_CMD,        None,      str],
-    [COL_DEBUG_NAME, None,      str],
-]
-
-COLS_HASHED = [
-    # this script only handles flags listed in bf.c
-    ['x',            None,      bool],
-    ['a',            None,      bool],
-    ['n',            None,      int],
-    ['d',            None,      str],
-    ['o',            'outfile', str],
-    ['O',            'outdb',   str],
-    ['I',            None,      str],
-    ['T',            None,      str],
-    ['S',            None,      str],
-    ['E',            None,      str],
-    ['F',            None,      str],
-    ['y',            None,      int],
-    ['z',            None,      int],
-    ['J',            None,      str],
-    ['K',            None,      str],
-    ['G',            None,      str],
-    ['B',            None,      int],
-
-    # always exists
-    ['tree',         None,      str],
-]
-
-COLS_NOT_HASHED = [
-    ['extra',        None,      str],
-]
-
-COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED
+def insert(con, parsed, columns, table_name):
+    cols = ', '.join('"{0}"'.format(col) for col, _ in columns)
+    vals = ', '.join(format_value(parsed[col], type) for col, type in columns)
+    con.execute('INSERT INTO {0} ({1}) VALUES ({2});'.format(table_name, cols, vals))
