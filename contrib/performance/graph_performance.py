@@ -189,7 +189,8 @@ def run(argv):
     conf = config.process(args.config)
 
     # aliases
-    raw_data, _, _, axes, _, _ = conf
+    raw_data = conf[config.RAW_DATA]
+    axes = conf[config.AXES]
     commits = raw_data[config.RAW_DATA_COMMITS]
     columns = raw_data[config.RAW_DATA_COLUMNS]
 

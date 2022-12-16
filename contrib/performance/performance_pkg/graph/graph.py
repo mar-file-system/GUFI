@@ -65,6 +65,33 @@ from matplotlib import pyplot as plt
 
 from performance_pkg.graph import config
 
+def pad_config(conf):
+    '''
+    pad certain configuration settings with extra data to make sure
+    graphing doesn't run out of values
+    '''
+
+    # how many columns to pull/lines to plot
+    column_count = len(conf[config.RAW_DATA][config.RAW_DATA_COLUMNS])
+
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    conf[config.LINES][config.LINES_COLORS]  += list(colors * column_count)
+    conf[config.LINES][config.LINES_TYPES]   += ['solid'] * column_count
+    conf[config.LINES][config.LINES_MARKERS] += ['o'] * column_count
+
+    conf[config.ANNOTATIONS][config.ANNOTATIONS_TEXT_COLORS] += ['black'] * column_count
+
+    conf[config.ERROR_BAR][config.ERROR_BAR_COLORS] += ['red'] * column_count
+
+    return [
+        # raw data is not needed
+        conf[config.OUTPUT],
+        conf[config.LINES],
+        conf[config.AXES],
+        conf[config.ANNOTATIONS],
+        conf[config.ERROR_BAR],
+    ]
+
 def add_annotations(x_vals, y_vals,
                     precision,
                     color,
@@ -87,8 +114,8 @@ def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-ar
 
     # pylint: disable=too-many-locals
 
-    # unpack the config
-    _, output, lines, axes, annotations, error_bar = conf
+    # pad and unpack config
+    output, lines, axes, annotations, error_bar = pad_config(conf)
 
     # plot data
     plt.figure(figsize=output[config.OUTPUT_DIMENSIONS])
@@ -102,10 +129,13 @@ def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-ar
                        lines[config.LINES_COLORS],
                        lines[config.LINES_TYPES],
                        lines[config.LINES_MARKERS],
-                       annotations[config.ANNOTATIONS_TEXT_COLORS], annot_mins, annot_maxs,
-                       error_bar[config.ERROR_BAR_COLORS], eb_mins, eb_maxs)
+                       annotations[config.ANNOTATIONS_TEXT_COLORS],
+                       annot_mins, annot_maxs,
+                       error_bar[config.ERROR_BAR_COLORS],
+                       eb_mins, eb_maxs)
 
-    for y_curr, label, color, style, marker, acolor, annot_min, annot_max, ecolor, eb_min, eb_max in line_configs:
+    for (y_curr, label, color, style, marker, acolor,
+         annot_min, annot_max, ecolor, eb_min, eb_max) in line_configs:
         yerr = None
         if annotations[config.ANNOTATIONS_SHOW]:
             add_annotations(const_x, y_curr,

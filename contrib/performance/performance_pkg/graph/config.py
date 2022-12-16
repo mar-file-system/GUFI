@@ -62,7 +62,6 @@
 
 
 from configparser import ConfigParser, ExtendedInterpolation
-from matplotlib import pyplot as plt # should be able to get rid of this
 
 from performance_pkg import common
 
@@ -169,21 +168,23 @@ DEFAULTS = {
     },
 }
 
-def read_value(parser, section, key):
-    convert, default = DEFAULTS[section][key]
+def read_value(conf, parser, defaults, section, key, modify_val=None):
+    convert, default = defaults[section][key]
     try:
         value = convert(parser.get(section, key))
     except Exception: # pylint: disable=broad-except
         value = default
-    return value
 
-def read_bool(parser, section, key):
-    _, default = DEFAULTS[section][key]
+    conf[section][key] = value if modify_val is None else modify_val(value)
+
+def read_bool(conf, parser, defaults, section, key):
+    _, default = defaults[section][key]
     try:
         value = parser.getboolean(section, key)
     except ValueError:
         value = default
-    return value
+
+    conf[section][key] = value
 
 def expand_git_identifiers(identifiers):
     commits = []
@@ -200,53 +201,45 @@ def expand_git_identifiers(identifiers):
     return commits
 
 def process(filename):
+    '''
+    Parse settings found in config file
+
+    This function creates a complete configuration for graphing. The
+    graphing function may modify the values even further but will not
+    require any more sections or keys.
+    '''
+
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read(filename)
 
-    git_identifiers = read_value(parser, RAW_DATA, RAW_DATA_COMMITS)
-    raw_data = {
-        RAW_DATA_COMMITS : expand_git_identifiers(git_identifiers),
-        RAW_DATA_COLUMNS : read_value(parser, RAW_DATA, RAW_DATA_COLUMNS),
-    }
+    conf = {section : {} for section in DEFAULTS.keys()}
 
-    # how many columns to pull/lines to plot
-    column_count = len(raw_data[RAW_DATA_COLUMNS])
+    read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COMMITS, expand_git_identifiers)
+    read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COLUMNS)
 
-    dimensions = read_value(parser, OUTPUT, OUTPUT_DIMENSIONS)[:2]
-    output = {
-        OUTPUT_PATH : read_value(parser, OUTPUT, OUTPUT_PATH),
-        OUTPUT_GRAPH_TITLE : read_value(parser, OUTPUT, OUTPUT_GRAPH_TITLE),
-        OUTPUT_DIMENSIONS : tuple(dimensions),
-    }
+    read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_PATH)
+    read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_GRAPH_TITLE)
+    read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_DIMENSIONS, lambda val : tuple(val[:2]))
 
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    lines = {
-        LINES_COLORS : read_value(parser, LINES, LINES_COLORS) + list(colors * column_count),
-        LINES_TYPES : read_value(parser, LINES, LINES_TYPES) + (['solid'] * column_count),
-        LINES_MARKERS : read_value(parser, LINES, LINES_MARKERS) + (['o'] * column_count),
-    }
+    read_value(conf, parser, DEFAULTS, LINES, LINES_COLORS)
+    read_value(conf, parser, DEFAULTS, LINES, LINES_TYPES)
+    read_value(conf, parser, DEFAULTS, LINES, LINES_MARKERS)
 
-    axes = {
-        AXES_HASH_LEN : read_value(parser, AXES, AXES_HASH_LEN),
-        AXES_Y_LABEL : read_value(parser, AXES, AXES_Y_LABEL),
-        AXES_Y_MIN : read_value(parser, AXES, AXES_Y_MIN),
-        AXES_Y_MAX : read_value(parser, AXES, AXES_Y_MAX),
-    }
+    read_value(conf, parser, DEFAULTS, AXES, AXES_HASH_LEN)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_Y_LABEL)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MIN)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MAX)
 
-    annotations = {
-        ANNOTATIONS_SHOW : read_bool(parser, ANNOTATIONS, ANNOTATIONS_SHOW),
-        ANNOTATIONS_PRECISION : read_value(parser, ANNOTATIONS, ANNOTATIONS_PRECISION),
-        ANNOTATIONS_X_OFFSET : read_value(parser, ANNOTATIONS, ANNOTATIONS_X_OFFSET),
-        ANNOTATIONS_Y_OFFSET : read_value(parser, ANNOTATIONS, ANNOTATIONS_Y_OFFSET),
-        ANNOTATIONS_TEXT_COLORS : read_value(parser, ANNOTATIONS, ANNOTATIONS_TEXT_COLORS) + (['black'] * column_count),
-    }
+    read_bool (conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_SHOW)
+    read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_PRECISION)
+    read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_X_OFFSET)
+    read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_Y_OFFSET)
+    read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_TEXT_COLORS)
 
-    error_bar = {
-        ERROR_BAR_SHOW : read_bool(parser, ERROR_BAR, ERROR_BAR_SHOW),
-        ERROR_BAR_PRECISION : read_value(parser, ERROR_BAR, ERROR_BAR_PRECISION),
-        ERROR_BAR_MIN_MAX : read_bool(parser, ERROR_BAR, ERROR_BAR_MIN_MAX),
-        ERROR_BAR_COLORS : read_value(parser, ERROR_BAR, ERROR_BAR_COLORS) + (['red'] * column_count),
-        ERROR_BAR_CAP_SIZE : read_value(parser, ERROR_BAR, ERROR_BAR_CAP_SIZE),
-    }
+    read_bool (conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_SHOW)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_PRECISION)
+    read_bool (conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_MIN_MAX)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_COLORS)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_CAP_SIZE)
 
-    return raw_data, output, lines, axes, annotations, error_bar
+    return conf
