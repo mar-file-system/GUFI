@@ -181,7 +181,7 @@ def read_bool(conf, parser, defaults, section, key):
     _, default = defaults[section][key]
     try:
         value = parser.getboolean(section, key)
-    except ValueError:
+    except Exception: # pylint: disable=broad-except
         value = default
 
     conf[section][key] = value
@@ -210,7 +210,7 @@ def config_file(filename):
     '''
 
     parser = ConfigParser(interpolation=ExtendedInterpolation())
-    parser.read(filename)
+    parser.read(filename) # this can raise exception
 
     conf = {section : {} for section in DEFAULTS}
 
