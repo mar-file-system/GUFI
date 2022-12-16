@@ -89,6 +89,9 @@ def parse_args(argv):
     parser.add_argument('config',
                         type=str,
                         help='Config file')
+
+    config.override_args(parser)
+
     return parser.parse_args(argv)
 
 def gather_raw_numbers(dbname, table_name, columns, commits):
@@ -186,7 +189,7 @@ def run(argv):
         raise ValueError('Configuration Hash "{0}" not found.'.format(args.raw_data_hash))
 
     # process the user's config file
-    conf = config.process(args.config)
+    conf = config.process(args.config, args)
 
     # aliases
     raw_data = conf[config.RAW_DATA]

@@ -168,7 +168,7 @@ DEFAULTS = {
     },
 }
 
-def read_value(conf, parser, defaults, section, key, modify_val=None):
+def read_value(conf, parser, defaults, section, key, modify_val=None): # pylint: disable=too-many-arguments
     convert, default = defaults[section][key]
     try:
         value = convert(parser.get(section, key))
@@ -200,7 +200,7 @@ def expand_git_identifiers(identifiers):
 
     return commits
 
-def process(filename):
+def config_file(filename):
     '''
     Parse settings found in config file
 
@@ -212,14 +212,14 @@ def process(filename):
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read(filename)
 
-    conf = {section : {} for section in DEFAULTS.keys()}
+    conf = {section : {} for section in DEFAULTS}
 
     read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COMMITS, expand_git_identifiers)
     read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COLUMNS)
 
     read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_PATH)
     read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_GRAPH_TITLE)
-    read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_DIMENSIONS, lambda val : tuple(val[:2]))
+    read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_DIMENSIONS)
 
     read_value(conf, parser, DEFAULTS, LINES, LINES_COLORS)
     read_value(conf, parser, DEFAULTS, LINES, LINES_TYPES)
@@ -243,3 +243,34 @@ def process(filename):
     read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_CAP_SIZE)
 
     return conf
+
+def override_name(section, key):
+    return '{0}_{1}'.format(section, key)
+
+def override_args(parser):
+    '''Add extra arguments to command line argument parser'''
+    for section, keys in DEFAULTS.items():
+        for key, setting in keys.items():
+            type, _ = setting # pylint: disable=redefined-builtin
+            dest = override_name(section, key)
+            flag = '--{0}'.format(dest)
+
+            # do not set default to allow for override() to detect that the value wasn't overridden
+            parser.add_argument(flag, dest=dest, type=type,
+                                help='Override [{0}][{1}] set in the config file'.format(section, key))
+
+    return parser
+
+def override(conf, args):
+    for section, keys in DEFAULTS.items():
+        for key, _ in keys.items():
+            dest = override_name(section, key)
+            value = getattr(args, dest)
+            if value is not None:
+                conf[section][key] = value
+
+    return conf
+
+def process(filename, args):
+    '''Read config file first and then override with values from the command line'''
+    return override(config_file(filename), args)

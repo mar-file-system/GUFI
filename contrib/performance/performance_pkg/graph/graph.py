@@ -118,7 +118,7 @@ def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-ar
     output, lines, axes, annotations, error_bar = pad_config(conf)
 
     # plot data
-    plt.figure(figsize=output[config.OUTPUT_DIMENSIONS])
+    plt.figure(figsize=tuple(output[config.OUTPUT_DIMENSIONS][:2]))
     plt.title(output[config.OUTPUT_GRAPH_TITLE])
     plt.xlabel('Commit') # fixed
     plt.ylabel(axes[config.AXES_Y_LABEL])
