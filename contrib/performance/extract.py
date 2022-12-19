@@ -66,10 +66,8 @@ import sqlite3
 import sys
 
 from performance_pkg import common
-from performance_pkg.extraction import common as common_extraction
-from performance_pkg.extraction.gufi_query import cumulative_times as gq
-from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt
-from performance_pkg.hashdb import gufi, utils as hashdb
+from performance_pkg.extraction import DebugPrints
+from performance_pkg.hashdb import utils as hashdb
 
 def get_current_commit():
     commit_hash = common.run_get_stdout(['git', 'rev-parse', 'HEAD'])[:-1]
@@ -109,6 +107,9 @@ def run(argv):
     gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
     print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
 
+    # find functions for handling these debug prints
+    debug_print = DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name]
+
     commit = args.commit
     if commit is None:
         commit = get_current_commit()
@@ -118,30 +119,13 @@ def run(argv):
         branch = common.run_get_stdout(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])[:-1]
 
     # parse the output
-    # allow for errors to throw here
-    parsed = None
-
-    if debug_name == gufi.CUMULATIVE_TIMES:
-        if gufi_cmd == gufi.GUFI_QUERY:
-            parsed = gq.extract(sys.stdin, commit, branch)
-        if gufi_cmd == gufi.GUFI_TRACE2INDEX:
-            parsed = gt.extract(sys.stdin, commit, branch)
-
-    if parsed is None:
-        raise ValueError('Configuration hash "{0}" was found '.format(args.raw_data_hash) +
-                         'but no function was called to parse the output')
+    parsed = debug_print.extract(sys.stdin, commit, branch)
 
     # insert the parsed data into the raw data database
     hashdb.check_exists(args.raw_data_db)
     try:
         raw_data_db = sqlite3.connect(args.raw_data_db)
-
-        if debug_name == gufi.CUMULATIVE_TIMES:
-            if gufi_cmd == gufi.GUFI_QUERY:
-                common_extraction.insert(raw_data_db, parsed, gq.COLUMNS, gq.TABLE_NAME)
-            if gufi_cmd == gufi.GUFI_TRACE2INDEX:
-                common_extraction.insert(raw_data_db, parsed, gt.COLUMNS, gt.TABLE_NAME)
-
+        debug_print.insert(raw_data_db, parsed)
         raw_data_db.commit()
     finally:
         raw_data_db.close()

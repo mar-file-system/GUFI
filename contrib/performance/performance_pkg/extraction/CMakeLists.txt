@@ -65,6 +65,7 @@ cmake_minimum_required(VERSION 3.1.0)
 set(EXTRACTION
   __init__.py
   common.py
+  DebugPrints.py
 )
 
 foreach(SCRIPT ${EXTRACTION})

@@ -75,6 +75,6 @@ do
     if [[ "$(head -n 1 ${file} | strings)" =~ ^#!/usr/bin/env\ python(2|3).*$ ]]
     then
         echo "${file}"
-        pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string -- "${file}"
+        pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string,invalid-name -- "${file}"
     fi
 done

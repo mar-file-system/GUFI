@@ -66,15 +66,13 @@ import numbers
 import sqlite3
 import sys
 
+from performance_pkg.extraction import DebugPrints
+from performance_pkg.graph import config, graph
+from performance_pkg.hashdb import utils as hashdb
+
 if sys.version_info.major < 3:
     import matplotlib as mpl
     mpl.use('Agg')
-
-# pylint: disable=wrong-import-position
-from performance_pkg.graph import config, graph
-from performance_pkg.extraction.gufi_query import cumulative_times as gq_cumulative_times
-from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt_cumulative_times
-from performance_pkg.hashdb import gufi, utils as hashdb
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
@@ -165,17 +163,10 @@ def run(argv):
     args = parse_args(argv)
 
     # get table name where raw data is stored
-    table_name = None
     gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
 
-    if debug_name == gufi.CUMULATIVE_TIMES:
-        if gufi_cmd == gufi.GUFI_QUERY:
-            table_name = gq_cumulative_times.TABLE_NAME
-        if gufi_cmd == gufi.GUFI_TRACE2INDEX:
-            table_name = gt_cumulative_times.TABLE_NAME
-
-    if table_name is None:
-        raise ValueError('Configuration Hash "{0}" not found.'.format(args.raw_data_hash))
+    # will throw if not found
+    debug_print = DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name]
 
     # process the user's config file
     conf = config.process(args.config, args)
@@ -186,7 +177,7 @@ def run(argv):
     columns = raw_data[config.RAW_DATA_COLUMNS]
 
     # get raw data
-    raw_numbers = gather_raw_numbers(args.raw_data_db, table_name, columns, commits)
+    raw_numbers = gather_raw_numbers(args.raw_data_db, debug_print.TABLE_NAME, columns, commits)
 
     # compute stats
     col_count = len(columns)

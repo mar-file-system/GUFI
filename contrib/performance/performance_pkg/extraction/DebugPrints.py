@@ -61,38 +61,17 @@
 
 
 
-import argparse
-import sqlite3
-import sys
+from performance_pkg.hashdb import gufi
+import performance_pkg.extraction.gufi_query.cumulative_times
+import performance_pkg.extraction.gufi_trace2index.cumulative_times
 
-from performance_pkg.extraction import DebugPrints
-from performance_pkg.hashdb import utils as hashdb
+# look up table for all debug print functions
+DEBUG_PRINTS = {
+    gufi.GUFI_QUERY : {
+        gufi.CUMULATIVE_TIMES : performance_pkg.extraction.gufi_query.cumulative_times,
+    },
 
-def parse_args(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('database',
-                        type=str,
-                        help='Hash database of configurations (must already exist)')
-    parser.add_argument('raw_data_hash',
-                        help='Hash of a single configuration')
-    parser.add_argument('raw_data_db',
-                        type=str,
-                        help='Raw data database (must already exist)')
-    return parser.parse_args(argv)
-
-def run(argv):
-    args = parse_args(argv)
-
-    gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
-    print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
-
-    hashdb.check_not_exists(args.raw_data_db)
-    try:
-        con = sqlite3.connect(args.raw_data_db)
-        DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name].create_table(con)
-        con.commit()
-    finally:
-        con.close()
-
-if __name__ == '__main__':
-    run(sys.argv[1:])
+    gufi.GUFI_TRACE2INDEX : {
+        gufi.CUMULATIVE_TIMES : performance_pkg.extraction.gufi_trace2index.cumulative_times,
+    },
+}

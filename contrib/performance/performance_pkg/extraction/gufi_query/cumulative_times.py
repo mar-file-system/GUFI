@@ -61,7 +61,7 @@
 
 
 
-from performance_pkg.extraction import common as common_extraction
+from performance_pkg.extraction import common
 
 TABLE_NAME = 'cumulative_times'
 
@@ -118,6 +118,9 @@ COLUMNS = [
     ['Real time (main)',                        float],
 ]
 
+def create_table(con):
+    common.create_table(con, TABLE_NAME, COLUMNS)
+
 def extract(src, commit, branch):
     # these aren't obtained from running gufi_query
     data = {
@@ -132,7 +135,7 @@ def extract(src, commit, branch):
         if line == '':
             continue
 
-        data.update(common_extraction.process_line(line, ':', 's'))
+        data.update(common.process_line(line, ':', 's'))
 
     # check for missing input
     for col, _ in COLUMNS:
@@ -140,3 +143,6 @@ def extract(src, commit, branch):
             raise ValueError('Cumulative times data missing {0}'.format(col))
 
     return data
+
+def insert(con, parsed):
+    common.insert(con, parsed, TABLE_NAME, COLUMNS)

@@ -257,7 +257,8 @@ def override_args(parser):
 
             # do not set default to allow for override() to detect that the value wasn't overridden
             parser.add_argument(flag, dest=dest, type=type,
-                                help='Override [{0}][{1}] set in the config file'.format(section, key))
+                                help='Override [{0}][{1}] set ''in the config file'.format(
+                                    section, key))
 
     return parser
 

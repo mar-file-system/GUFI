@@ -63,20 +63,20 @@
 
 from performance_pkg import common
 
-# setup
-def create_tables(con, columns, table_name):
+# common functions used to process multiple debug prints
+
+def create_table(con, table_name, columns):
     # all column names need to be surrounded by quotation marks, even ones that don't have spaces
     cols = ', '.join('"{0}" {1}'.format(col, common.TYPE_TO_SQLITE[type]) for col, type in columns)
     con.execute('CREATE TABLE {0} ({1});'.format(table_name, cols))
 
-# extract
 def process_line(line, sep=':', rstrip=None):
     event, value = line.split(sep)
     event = event.strip()
     value = value.strip().rstrip(rstrip)
     return {event: value}
 
-# insert
+# helper function
 def format_value(value, type): # pylint: disable=redefined-builtin
     # pylint: disable=no-else-return
     if type is None:
@@ -85,7 +85,7 @@ def format_value(value, type): # pylint: disable=redefined-builtin
         return '"{0}"'.format(value)
     return str(value)
 
-def insert(con, parsed, columns, table_name):
+def insert(con, parsed, table_name, columns):
     cols = ', '.join('"{0}"'.format(col) for col, _ in columns)
     vals = ', '.join(format_value(parsed[col], type) for col, type in columns)
     con.execute('INSERT INTO {0} ({1}) VALUES ({2});'.format(table_name, cols, vals))
