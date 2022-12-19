@@ -61,9 +61,13 @@
 
 
 
-from configparser import ConfigParser, ExtendedInterpolation
+import sys
+if sys.version_info.major >= 3:
+    from configparser import ConfigParser
+else:
+    from ConfigParser import ConfigParser # pylint: disable=import-error
 
-from performance_pkg import common
+from performance_pkg import common        # pylint: disable=wrong-import-position
 
 # converter functions for input read from ConfigParser
 def pos_int(value):
@@ -209,7 +213,7 @@ def config_file(filename):
     require any more sections or keys.
     '''
 
-    parser = ConfigParser(interpolation=ExtendedInterpolation())
+    parser = ConfigParser()
     parser.read(filename) # this can raise exception
 
     conf = {section : {} for section in DEFAULTS}

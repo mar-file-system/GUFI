@@ -63,15 +63,10 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 set(TESTS
+  config
   hash
   utils
   )
-
-
-if (NOT "${PYTHON_INTERPRETER}" STREQUAL "python2")
-  list(APPEND TESTS
-    config)
-endif()
 
 foreach(TEST ${TESTS})
   configure_file("${TEST}.py" "${TEST}.py" @ONLY)
