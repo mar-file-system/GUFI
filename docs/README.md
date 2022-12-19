@@ -3,8 +3,11 @@ This directory contains documentation on what GUFI is, how this repository is st
 how to build GUFI, and how to run GUFI.
 
 ## Full Documentation
-The full documentation can be found at [GUFI.docx](GUFI.docx).
+Documentation can be found at [GUFI.docx](GUFI.docx) and in the Supercomputing 2022 paper:
 
+Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider, and Bradley Settlemyer. 2022. GUFI: fast, secure file system metadata search for both privileged and unprivileged users. In Proceedings of the International Conference on High Performance Computing, Networking, Storage and Analysis (SC '22). IEEE Press, Article 57, 1–14. https://dl.acm.org/doi/abs/10.5555/3571885.3571960
+
+## Guides
 [User, administrator, and developer guides](latex) will be placed into
 `docs/latex/pdfs` if building them was enabled with the CMake
 configuration `-DBUILD_LATEX_DOCS=On`.
