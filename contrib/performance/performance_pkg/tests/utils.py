@@ -1,3 +1,4 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,61 +61,76 @@
 
 
 
-name: Codecov
+import sqlite3
+import unittest
 
-on: [push, pull_request]
+from performance_pkg.hashdb import gufi, machine, raw_data, utils as hashdb
 
-env:
-  CC: gcc
-  CXX: g++
-  CXXFLAGS: -std=c++11  # required for tests to function
-  DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DDEP_USE_JEMALLOC=Off -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DPRINT_PER_THREAD_STATS=On -DPRINT_SUBDIRECTORY_COUNTS=On -DPRINT_QPTPOOL_QUEUE_SIZE=On
+# test hashdb.get_config_with_con (instead of
+# hashdb.get_config) to not have to create an
+# actual file
+class TestGetConfig(unittest.TestCase):
+    GUFI_CMD   = 'gufi_cmd'
+    DEBUG_NAME = 'test'
 
-jobs:
-  CodeCoverage:
-    runs-on: ubuntu-20.04
-    steps:
-    - uses: actions/checkout@v3
+    RAW_PREFIX = 'raw'
 
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-CodeCoverage
+    @staticmethod
+    def raw_data_hash(i):
+        return '{0}{1}'.format(TestGetConfig.RAW_PREFIX, i)
 
-    - name: Ubuntu 20.04 Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
+    def setUp(self):
+        self.row_count = 5
 
-    - name: Coverage Prerequisites
-      run:  |
-            sudo apt install gcovr
-            sudo apt install g++
-            pip install pytest
-            pip install coverage
+        self.db = sqlite3.connect(':memory:')
+        hashdb.create_tables(self.db)
 
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+        # machine configuration is not used, so
+        # don't need to insert extra columns
+        machine_hash = 'machine'
+        self.db.execute('INSERT INTO {0} (hash) VALUES ("{1}");'.format(
+            machine.TABLE_NAME, machine_hash))
 
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
+        # cmd and debug_name are returned from the
+        # gufi configuration, so fill them in
+        gufi_hash = 'gufi_cmd'
+        self.db.execute('''
+                        INSERT INTO {0} (hash, cmd, debug_name)
+                        VALUES ("{1}", "{2}", "{3}");
+                        '''.format(gufi.TABLE_NAME, gufi_hash,
+                                   TestGetConfig.GUFI_CMD,
+                                   TestGetConfig.DEBUG_NAME))
 
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run:  ctest || true
+        # all rows in the raw_data table point to
+        # the same machine and gufi configurations
+        for i in range(self.row_count):
+            rd_hash = TestGetConfig.raw_data_hash(i)
+            self.db.execute('''
+                            INSERT INTO {0} (hash, machine_hash, gufi_hash)
+                            VALUES ("{1}", "{2}", "{3}");
+                            '''.format(raw_data.TABLE_NAME,
+                                       rd_hash,
+                                       machine_hash,
+                                       gufi_hash))
 
-    - name: Delete files not reported for coverage
-      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfmi.*" -o -name "bfresultfuse.*" -o -name "bfti.*" -o -name "bfwreaddirplus2db.*" -o -name "dfw.*" -o -name "parallel_rmr.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
+            self.db.commit()
 
-    - name: Generate Python Coverage Report
-      run:  |
-            export PYTHONPATH="${{ github.workspace }}/build/contrib:${{ github.workspace }}/build/contrib/performance:${{ github.workspace }}/build/scripts:${PYTHONPATH}"
-            coverage run -m pytest ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/config.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py ${{ github.workspace }}/build/test/unit/python/gufi_config.py
-            coverage xml --omit=${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/config.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py,${{ github.workspace }}/build/test/unit/python/gufi_config.py
-            rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
+    def tearDown(self):
+        self.db.close()
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        verbose: true
-        gcov: true
-        fail_ci_if_error: true
+    def test_not_found(self):
+        with self.assertRaises(KeyError):
+            hashdb.get_config_with_con(self.db, str(self.row_count))
+
+    def test_ok(self):
+        for i in range(self.row_count):
+            gufi_cmd, debug_name = hashdb.get_config_with_con(self.db, self.raw_data_hash(i))
+            self.assertEqual(TestGetConfig.GUFI_CMD, gufi_cmd)
+            self.assertEqual(TestGetConfig.DEBUG_NAME, debug_name)
+
+    def test_multiple(self):
+        with self.assertRaises(ValueError):
+            hashdb.get_config_with_con(self.db, TestGetConfig.RAW_PREFIX)
+
+if __name__ == '__main__':
+    unittest.main()

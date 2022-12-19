@@ -101,6 +101,33 @@ def create_tables(con):
         raw_data.TABLE_NAME, raw_data_col_str))
 
 # extract gufi command and debug name using provided hash
+def get_config_with_con(hashdb, user_raw_data_hash):
+    # figure out what configurations this hash points to
+    hashes_cur = hashdb.execute('SELECT hash, machine_hash, gufi_hash ' +
+                                'FROM {0} WHERE hash GLOB "*{1}*";'.format(
+                                    raw_data.TABLE_NAME, user_raw_data_hash))
+    records = hashes_cur.fetchall()
+    count = len(records)
+
+    if count == 0:
+        raise KeyError('"{0}" did not match any known hashes'.format(user_raw_data_hash))
+
+    if count > 1:     # can happen if partial hash is provided
+        found = '\n'.join(['    {0} -> {1} {2}'.format(raw_data_hash, machine_hash, gufi_hash)
+                           for raw_data_hash, machine_hash, gufi_hash in records])
+        raise ValueError('"{0}" matched {1} hashes:\n{2}'.format(user_raw_data_hash, count, found))
+
+    # guaranteed only 1 record can be found at this point
+    _, _, gufi_hash = records[0]
+
+    # figure out which gufi command and set of debug numbers this hash is associated with
+    info_cur = hashdb.execute('SELECT {0}, {1} FROM {2};'.format(
+        gufi.COL_CMD, gufi.COL_DEBUG_NAME, gufi.TABLE_NAME))
+    gufi_cmd, debug_name = info_cur.fetchall()[0]
+
+    return gufi_cmd, debug_name
+
+# wrapper function for get_config_with_con
 def get_config(hashdb_name, user_raw_data_hash):
     gufi_cmd = None
     debug_name = None
@@ -109,31 +136,13 @@ def get_config(hashdb_name, user_raw_data_hash):
     check_exists(hashdb_name)
     try:
         hashdb = sqlite3.connect(hashdb_name)
-
-        # figure out what configurations this hash points to
-        hashes_cur = hashdb.execute('SELECT hash, machine_hash, gufi_hash ' +
-                                    'FROM {0} WHERE hash GLOB "*{1}*";'.format(
-                                        raw_data.TABLE_NAME, user_raw_data_hash))
-        records = hashes_cur.fetchall()
-
-        # can happen if partial hash is provided
-        if len(records) > 1:
-            for raw_data_hash, machine_hash, gufi_hash in records:
-                sys.stderr.write('{0} -> {1} {2}\n', raw_data_hash, machine_hash, gufi_hash)
-            raise ValueError('{0} matched more than 1 hash:\n'.format(user_raw_data_hash))
-
-        # guaranteed only 1 record can be found at this point
-        _, _, gufi_hash = records[0]
-
-        # figure out which gufi command and set of debug numbers this hash is associated with
-        info_cur = hashdb.execute('SELECT {0}, {1} FROM {2};'.format(
-            gufi.COL_CMD, gufi.COL_DEBUG_NAME, gufi.TABLE_NAME))
-        gufi_cmd, debug_name = info_cur.fetchall()[0]
+        gufi_cmd, debug_name = get_config_with_con(hashdb, user_raw_data_hash)
     finally:
         hashdb.close()
 
     return gufi_cmd, debug_name
 
+# hash a configuration, not configure the hash algorithm
 def hash_config(alg, data):
     return Hashes[alg](data.encode()).hexdigest()
 
