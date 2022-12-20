@@ -63,7 +63,6 @@
 
 import argparse
 import grp
-import multiprocessing
 import pwd
 import re
 
@@ -244,13 +243,6 @@ def build_query(select, tables, where=None, group_by=None,
             query += ' {0}'.format(sql)
 
     return query
-
-def cpus():
-    '''Try to get the number of hardware threads'''
-    try:
-        return multiprocessing.cpu_count()
-    except NotImplementedError:
-        return 1
 
 def add_common_flags(parser):
     '''Common GUFI tool flags'''
