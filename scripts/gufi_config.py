@@ -115,7 +115,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
 
         for key in settings:
             if key not in out:
-                raise Exception('Missing Setting {0}'.format(key))
+                raise KeyError('Missing Setting {0}'.format(key))
 
         return out
 
@@ -133,10 +133,9 @@ class Server(Config):
         OUTPUTBUFFER : gufi_common.get_non_negative
     }
 
-    def __init__(self, file_reference):
+    def __init__(self, config_reference):
         # pylint: disable=super-with-arguments
-        super(Server, self).__init__(Server.SETTINGS, file_reference)
-
+        super(Server, self).__init__(Server.SETTINGS, config_reference)
 
     def threads(self):
         '''return number of threads to use'''
@@ -166,9 +165,9 @@ class Client(Config):
         PARAMIKO : os.path.normpath,
     }
 
-    def __init__(self, file_reference):
+    def __init__(self, config_reference):
         # pylint: disable=super-with-arguments
-        super(Client, self).__init__(Client.SETTINGS, file_reference)
+        super(Client, self).__init__(Client.SETTINGS, config_reference)
 
     def server(self):
         '''return hostname of server'''

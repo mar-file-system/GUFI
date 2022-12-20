@@ -80,39 +80,44 @@ gufi_config = common.import_tool('gufi_config', 'gufi_config.py') # pylint: disa
 def build_config(pairs, remove=None):
     return ['{0}={1}\n'.format(key, value) for key, value in pairs.items() if remove != key]
 
-# not inheriting
+class TestConfig(unittest.TestCase):
+    def test_constructor(self):
+        with self.assertRaises(TypeError):
+            gufi_config.Config([], None)
+
 class TestServerConfig(unittest.TestCase):
     default = {
-        gufi_config.Server.THREADS      : '5',
+        gufi_config.Server.THREADS      : 5,
         gufi_config.Server.EXECUTABLE   : os.path.join(common.ROOT, 'src', 'gufi_query'),
         gufi_config.Server.INDEXROOT    : common.ROOT,
-        gufi_config.Server.OUTPUTBUFFER : '1024',
+        gufi_config.Server.OUTPUTBUFFER : 1024,
     }
 
     def setUp(self): # pylint: disable=invalid-name
         self.pairs = copy.deepcopy(TestServerConfig.default)
 
-    def test_ok(self):
+    def check_values(self, config):
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.THREADS],
+                         config.threads())
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.EXECUTABLE],
+                         config.executable())
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.INDEXROOT],
+                         config.indexroot())
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.OUTPUTBUFFER],
+                         config.outputbuffer())
+
+    def test_iterable(self):
         try:
-            gufi_config.Server(build_config(self.pairs))
+            config = gufi_config.Server(build_config(self.pairs) + ['', '#'])
         except Exception as err: # pylint: disable=broad-except
-            self.fail("Reading good server configuration raised: {0}".format(err))
+            self.fail('Reading good server configuration raised: {0}'.format(err))
 
-    def test_missing_threads(self):
-        with self.assertRaises(Exception):
-            gufi_config.Server(build_config(self.pairs, gufi_config.Server.THREADS))
+        self.check_values(config)
 
-    def test_missing_executable(self):
-        with self.assertRaises(Exception):
-            gufi_config.Server(build_config(self.pairs, gufi_config.Server.EXECUTABLE))
-
-    def test_missing_indexroot(self):
-        with self.assertRaises(Exception):
-            gufi_config.Server(build_config(self.pairs, gufi_config.Server.INDEXROOT))
-
-    def test_missing_outputbuffer(self):
-        with self.assertRaises(Exception):
-            gufi_config.Server(build_config(self.pairs, gufi_config.Server.OUTPUTBUFFER))
+    def test_missing(self):
+        for key in TestServerConfig.default:
+            with self.assertRaises(KeyError):
+                gufi_config.Server(build_config(self.pairs, key))
 
     def bad_int(self, key, badvalues):
         bad = copy.deepcopy(self.pairs)
@@ -132,30 +137,33 @@ class TestServerConfig(unittest.TestCase):
 class TestClientConfig(unittest.TestCase):
     default = {
         gufi_config.Client.SERVER   : 'hostname',
-        gufi_config.Client.PORT     : '22',
+        gufi_config.Client.PORT     : 22,
         gufi_config.Client.PARAMIKO : 'paramiko',
     }
 
     def setUp(self):
         self.pairs = copy.deepcopy(TestClientConfig.default)
 
-    def test_ok(self):
+    def check_values(self, config):
+        self.assertEqual(TestClientConfig.default[gufi_config.Client.SERVER],
+                         config.server())
+        self.assertEqual(TestClientConfig.default[gufi_config.Client.PORT],
+                         config.port())
+        self.assertEqual(TestClientConfig.default[gufi_config.Client.PARAMIKO],
+                         config.paramiko())
+
+    def test_iterable(self):
         try:
-            gufi_config.Client(build_config(self.pairs))
+            config = gufi_config.Client(build_config(self.pairs) + ['', '#'])
         except Exception as err: # pylint: disable=broad-except
-            self.fail("Reading good client configuration raised: {0}".format(err))
+            self.fail('Reading good client configuration raised: {0}'.format(err))
 
-    def test_missing_server(self):
-        with self.assertRaises(Exception):
-            gufi_config.Client(build_config(self.pairs, gufi_config.Client.SERVER))
+        self.check_values(config)
 
-    def test_missing_port(self):
-        with self.assertRaises(Exception):
-            gufi_config.Client(build_config(self.pairs, gufi_config.Client.PORT))
-
-    def test_missing_paramiko(self):
-        with self.assertRaises(Exception):
-            gufi_config.Client(build_config(self.pairs, gufi_config.Client.PARAMIKO))
+    def test_missing(self):
+        for key in TestClientConfig.default:
+            with self.assertRaises(KeyError):
+                gufi_config.Client(build_config(self.pairs, key))
 
     def bad_int(self, key, badvalues):
         bad = copy.deepcopy(self.pairs)
