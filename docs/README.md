@@ -13,6 +13,7 @@ Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider,
 configuration `-DBUILD_LATEX_DOCS=On`.
 
 ## Directory Structure
+- [config](/config)     - Example GUFI wrapper script configuration files
 - [contrib](/contrib)   - Contains support files (cmake package finders, CI scripts, etc.)
 - [docs](/docs)         - The documentation (you are here)
 - [examples](/examples) - Scripts showing how to run GUFI to perform various tasks
