@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,33 +61,93 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
+set -e
 
-set(SCRIPTS
-  # call in this order
+# DEFAULTS
+COMMIT_START="HEAD"
+COMMIT_END="HEAD"
+COMMIT_RATE=2
+COMMIT_RUNS=5
 
-  # set up
-  setup_hashdb.py              # set up db for all benchmark configs
-  machine_hash.py              # generate machine config hash and add it to the hash db
-  gufi_hash.py                 # generate gufi command hash and add it to the hash db
-  raw_data_hash.py             # generate benchmark config using machine config and gufi command hashes and add it to the hash db
-  setup_raw_data_db.py         # generate the database for storing raw numbers using the gufi command and its known performance metrics
+# https://stackoverflow.com/a/14203146
+# Bruno Bronosky
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
 
-  # extract
-  extract.py                   # parse debug output and insert them into the raw data db
+case $key in
+    --commit_start)
+        COMMIT_START="$2"
+        shift
+        ;;
+    --commit_end)
+        COMMIT_END="$2"
+        shift
+        ;;
+    --commit_rate)
+        COMMIT_RATE="$2"
+        shift
+        ;;
+    --commit_runs)
+        COMMIT_RUNS="$2"
+        shift
+        ;;
+    *)  # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        ;;
+esac
+    shift # past flag
+done
 
-  # graph
-  graph_performance.py         # calculate stats on stored data and plot them onto a graph
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
-  # data generation
-  generate_gufi_query_data.sh  # Generate and store data from a range of commits provided
+GUFI="$1"
+EXTRACTION_SCRIPT="$2"
+HASHES_DB="$3"
+FULL_HASH="$4"
+RAW_DATA_DB="$5"
 
-  )
+# Arguments check
+if [[ "$#" -lt 5 ]]
+then
+    echo "Provide gufi build path, extraction script, hashdb, full hash, raw data db" 1>&2
+    exit 1
+fi
 
-foreach(SCRIPT ${SCRIPTS})
-  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
-endforeach()
+function read_from_db(){
+    S=$(sqlite3 "${HASHES_DB}" "SELECT S FROM gufi_command;")
+    E=$(sqlite3 "${HASHES_DB}" "SELECT E FROM gufi_command;")
+    tree=$(sqlite3 "${HASHES_DB}" "SELECT tree FROM gufi_command;")
+    echo "-S \"${S}\" -E \"${E}\" \"${tree}\""
+}
 
-add_subdirectory(configs)
-add_subdirectory(examples)
-add_subdirectory(performance_pkg)
+function drop_caches(){
+    sync
+    sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
+}
+
+# Run gufi_query on provided commit and store debug values in database
+function query_commit(){
+    git checkout "$1"
+    make > /dev/null
+    for ((i=0; i<"${COMMIT_RUNS}"; i++))
+    do
+        drop_caches
+        "${GUFI}/src/gufi_query" $(read_from_db) 2>&1 >/dev/null | "${EXTRACTION_SCRIPT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
+    done
+}
+
+# Main
+cd "${GUFI}"
+COMMITS=$(git rev-list "${COMMIT_START}..${COMMIT_END}")
+
+i=0
+while IFS= read -r commit
+do
+    if (("${i}" % "${COMMIT_RATE}" == 0));
+    then
+        query_commit "${commit}"
+    fi
+    ((i="${i}"+1))
+done <<< "${COMMITS}"
