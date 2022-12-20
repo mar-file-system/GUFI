@@ -59,4 +59,3 @@ configuration `-DBUILD_LATEX_DOCS=On`.
 - [SQL Schemas](SQLSchemas)
 - [SQL Functions](SQLFunctions)
 - [Tests](tests)
-- [Notes](NOTES.txt)
