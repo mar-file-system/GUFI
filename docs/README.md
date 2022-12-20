@@ -13,16 +13,13 @@ Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider,
 configuration `-DBUILD_LATEX_DOCS=On`.
 
 ## Directory Structure
-- [contrib](/contrib)   - Contains support files (cmake package finders, Travis CI scripts, etc.)
+- [contrib](/contrib)   - Contains support files (cmake package finders, CI scripts, etc.)
 - [docs](/docs)         - The documentation (you are here)
 - [examples](/examples) - Scripts showing how to run GUFI to perform various tasks
 - [include](/include)   - Headers
 - [scripts](/scripts)   - Scripts that will be installed
 - [src](/src)           - Source code for GUFI and executables
 - [test](/test)         - GUFI tests
-
-## How To Build and Install
-Please see [INSTALL](/INSTALL).
 
 ## [Executables](/src)
 - [bffuse](bffuse)

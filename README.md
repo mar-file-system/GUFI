@@ -56,9 +56,7 @@ gufi_query/gufi_stat/bfti/querydbs
 gufi_find/gufi_ls/gufi_stats/gufi_getfattr
 ```
 
-For the dependency list, detailed build and install instructions, and common issues, please see [INSTALL](INSTALL).
-
-## [Documentation](docs/README.md)
+For the dependency list, detailed build and install instructions, and details about GUFI, please see the [documentation](docs/README.md).
 
 ## Contact
 gufi-lanl@lanl.gov
