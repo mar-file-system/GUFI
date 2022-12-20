@@ -87,7 +87,6 @@ set(USEFUL
   gentrace.py
   hashes.py
   trace_anonymizer.py
-  output-on-failure
   )
 
 foreach(file ${USEFUL})
@@ -144,9 +143,6 @@ if (BENCHMARK)
                     DEPENDS benchmark_query parallel_rmr)
   add_custom_target(benchmark DEPENDS benchmark_fin)
 endif()
-
-# add target to build with makefiles
-add_subdirectory(make)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_subdirectory(debug)

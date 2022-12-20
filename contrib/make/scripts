@@ -1,9 +1,0 @@
-CP=cp
-SCRIPTS=gufi_find gufi_ls gufi_stats gufi_config.py gufi_common.py
-
-TARGETS=$(SCRIPTS)
-
-all: $(TARGETS)
-
-../%: %
-	 $(CP) $< $@
