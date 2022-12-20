@@ -71,7 +71,10 @@ def create_table(con, table_name, columns):
     con.execute('CREATE TABLE {0} ({1});'.format(table_name, cols))
 
 def process_line(line, sep=':', rstrip=None):
-    event, value = line.split(sep)
+    split_line = line.split(sep)
+    if len(split_line) != 2:
+        return {}
+    event, value = split_line
     event = event.strip()
     value = value.strip().rstrip(rstrip)
     return {event: value}
