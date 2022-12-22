@@ -75,7 +75,7 @@ sys.path += [
 ]
 
 import common
-gufi_config = common.import_tool('gufi_config', 'gufi_config.py') # pylint: disable=invalid-name
+import gufi_config
 
 def build_config(pairs, remove=None):
     return ['{0}={1}\n'.format(key, value) for key, value in pairs.items() if remove != key]

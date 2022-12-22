@@ -108,8 +108,8 @@ jobs:
     - name: Generate Python Coverage Report
       run:  |
             export PYTHONPATH="${{ github.workspace }}/build/contrib:${{ github.workspace }}/build/contrib/performance:${{ github.workspace }}/build/scripts:${PYTHONPATH}"
-            coverage run -m pytest ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/config.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py ${{ github.workspace }}/build/test/unit/python/gufi_config.py
-            coverage xml --omit=${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/config.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py,${{ github.workspace }}/build/test/unit/python/gufi_config.py
+            coverage run -m pytest ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/config.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py ${{ github.workspace }}/build/test/unit/python/test_gufi_common.py ${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
+            coverage xml --omit=${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/config.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py,${{ github.workspace }}/build/test/unit/python/gufi_common.py,${{ github.workspace }}/build/test/unit/python/gufi_config.py
             rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
 
     - name: Upload coverage to Codecov

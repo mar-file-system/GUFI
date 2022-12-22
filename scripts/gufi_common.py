@@ -123,11 +123,8 @@ def get_uid(uid_str):
         An int that is an uid
     '''
 
-    try:
-        uid = int(uid_str)
-        return pwd.getpwuid(uid).pw_uid
-    except (KeyError, ValueError):
-        return uid
+    uid = int(uid_str)
+    return pwd.getpwuid(uid).pw_uid
 
 def get_user(user):
     '''
@@ -157,11 +154,8 @@ def get_gid(grp_str):
         An int that is a gid
     '''
 
-    try:
-        gid = int(grp_str)
-        return grp.getgrgid(gid).gr_gid
-    except (KeyError, ValueError):
-        return gid
+    gid = int(grp_str)
+    return grp.getgrgid(gid).gr_gid
 
 def get_group(group):
     '''
