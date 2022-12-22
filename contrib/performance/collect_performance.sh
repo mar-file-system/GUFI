@@ -67,14 +67,16 @@ set -e
 RUNS=30
 EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
 BUILD_THREADS="" # empty
+SEPARATOR="|"
 
 function help() {
-    echo "Syntax: $0 [options] gufi_build_path hashdb full_hash raw_data_db [commit_id or commit_range@freq...]"
+    echo "Syntax: $0 [options] gufi_build_path hashdb full_hash raw_data_db [commit_id...] [commit_range@freq...]"
     echo
     echo "Options:"
     echo "    --runs COUNT             number of times to run the GUFI executable per commit"
     echo "    --extract PATH           path of extract.py"
     echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
+    echo "    --separator c            sqlite3 separator character"
     echo
 }
 
@@ -102,6 +104,10 @@ case "${key}" in
         BUILD_THREADS="$2"
         shift
         ;;
+    --separator)
+        SEPARATOR="$2"
+        shift
+        ;;
     *)  # unknown option
         POSITIONAL+=("$1") # save it in an array for later
         ;;
@@ -120,17 +126,17 @@ then
     exit 1
 fi
 
-GUFI="$(realpath $1)"
-HASHES_DB="$(realpath $2)"
+GUFI=$(realpath "$1")
+HASHES_DB=$(realpath "$2")
 FULL_HASH="$3"
-RAW_DATA_DB="$(realpath $4)"
+RAW_DATA_DB=$(realpath "$4")
 
-shift 4 # shift multiple here because it doesn't matter if it silently fails
+shift 4 # shift multiple here because it doesn't matter if this silently fails
 
 # Main
 cd "${GUFI}"
 
-# all remaining arguments are treated as commit hashes
+# all remaining arguments are treated as commit ids
 COMMITS=()
 while [[ $# -gt 0 ]]
 do
@@ -159,25 +165,62 @@ do
             ((i = i + 1))
         done
     else
-        # shellcheck disable=SC2207
-        COMMITS+=($(git rev-parse "${ish}"))
+        mapfile -t commits < <(git rev-parse "${ish}")
+        COMMITS+=("${commits[@]}")
     fi
 
     shift
 done
 
 export PATH="@DEP_INSTALL_PREFIX@/sqlite3/bin:${PATH}"
+export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite3/lib:${LD_LIBRARY_PATH}"
 export PYTHONPATH="@CMAKE_CURRENT_BINARY_DIR@/..:${PYTHONPATH}"
 
-# generate the original GUFI command that was run
+# reconstruct the original command
+# shellcheck disable=SC2034,SC2046,SC2154
 function generate_cmd() {
     gufi_hash="$1"
 
-    cmd=$(sqlite3 "${HASHES_DB}" "SELECT cmd FROM gufi_command WHERE hash == \"${gufi_hash}\";")
-    S=$(sqlite3 "${HASHES_DB}" "SELECT S FROM gufi_command WHERE hash == \"${gufi_hash}\";")
-    E=$(sqlite3 "${HASHES_DB}" "SELECT E FROM gufi_command WHERE hash == \"${gufi_hash}\";")
-    tree=$(sqlite3 "${HASHES_DB}" "SELECT tree FROM gufi_command WHERE hash == \"${gufi_hash}\";")
-    echo "${GUFI}/src/${cmd} -S \"${S}\" -E \"${E}\" \"${tree}\""
+    # strings
+    for col in cmd outfile outdb I T S E F J K G tree
+    do
+        # shellcheck disable=SC2229
+        read -r "${col}" <<<$(sqlite3 "${HASHES_DB}" "SELECT ${col} FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+    done
+
+    # non-strings
+    IFS="${SEPARATOR}" read -r x n a d y z B <<<$(sqlite3 -separator "${SEPARATOR}" "${HASHES_DB}" "SELECT x, n, a, d, y, z, B FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+
+    # booleans
+    flags=""
+    for flag in x a
+    do
+        if (( "${!flag}" ))
+        then
+            flags="${flags} -${flag}"
+        fi
+    done
+
+    # flags with non-empty string representations
+    for flag in n d o O I T S E F y z J K G B
+    do
+        if [[ "${!flag}" ]]
+        then
+            flags="${flags} -${flag} \"${!flag}\""
+        fi
+    done
+
+    # command will complain if both -o and -O are set
+    if [[ "${outfile}" ]]
+    then
+        flags="${flags} -o \"${outfile}\""
+    fi
+    if [[ "${outdb}" ]]
+    then
+        flags="${flags} -O \"${outdb}\""
+    fi
+
+    echo "${GUFI}/src/${cmd} ${flags} \"${tree}\""
 }
 
 gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data_dbs WHERE hash == \"${FULL_HASH}\";")
@@ -196,13 +239,14 @@ do
     # shellcheck disable=SC2046
     make -j ${BUILD_THREADS} > /dev/null
 
-    # for a single commit, run the GUFI command multiple times
-    # and put the performance numbers in the raw data database
+    # for a single commit, run the command multiple times and
+    # put the performance numbers in the raw data database
     for ((i = 0; i < RUNS; i++))
     do
         drop_caches
 
-        # shellcheck disable=SC2046
-        ${gufi_cmd} 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
+        # run gufi_cmd through bash to remove single quotes
+        # shellcheck disable=SC2069
+        bash -c "${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
     done
 done
