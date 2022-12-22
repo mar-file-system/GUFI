@@ -72,15 +72,11 @@ set(SCRIPTS
   raw_data_hash.py             # generate benchmark config using machine config and gufi command hashes and add it to the hash db
   setup_raw_data_db.py         # generate the database for storing raw numbers using the gufi command and its known performance metrics
 
-  # extract
   extract.py                   # parse debug output and insert them into the raw data db
 
-  # graph
   graph_performance.py         # calculate stats on stored data and plot them onto a graph
 
-  # data generation
-  generate_gufi_query_data.sh  # Generate and store data from a range of commits provided
-
+  collect_performance.sh       # run executables and store performance data
   )
 
 foreach(SCRIPT ${SCRIPTS})

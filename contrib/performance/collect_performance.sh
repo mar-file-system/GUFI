@@ -64,10 +64,19 @@
 set -e
 
 # DEFAULTS
-COMMIT_START="HEAD"
-COMMIT_END="HEAD"
-COMMIT_RATE=2
-COMMIT_RUNS=5
+RUNS=30
+EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
+BUILD_THREADS="" # empty
+
+function help() {
+    echo "Syntax: $0 [options] gufi_build_path hashdb full_hash raw_data_db [commit_id or commit_range@freq...]"
+    echo
+    echo "Options:"
+    echo "    --runs COUNT             number of times to run the GUFI executable per commit"
+    echo "    --extract PATH           path of extract.py"
+    echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
+    echo
+}
 
 # https://stackoverflow.com/a/14203146
 # Bruno Bronosky
@@ -76,78 +85,124 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 
-case $key in
-    --commit_start)
-        COMMIT_START="$2"
+case "${key}" in
+    -h|--help)
+        help
+        exit 0
+        ;;
+    --runs)
+        RUNS="$2"
         shift
         ;;
-    --commit_end)
-        COMMIT_END="$2"
+    --extract)
+        EXTRACT="$2"
         shift
         ;;
-    --commit_rate)
-        COMMIT_RATE="$2"
-        shift
-        ;;
-    --commit_runs)
-        COMMIT_RUNS="$2"
+    --build-threads)
+        BUILD_THREADS="$2"
         shift
         ;;
     *)  # unknown option
         POSITIONAL+=("$1") # save it in an array for later
         ;;
 esac
-    shift # past flag
+
+shift # past flag
+
 done
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
-GUFI="$1"
-EXTRACTION_SCRIPT="$2"
-HASHES_DB="$3"
-FULL_HASH="$4"
-RAW_DATA_DB="$5"
-
 # Arguments check
-if [[ "$#" -lt 5 ]]
+if [[ "$#" -lt 4 ]]
 then
-    echo "Provide gufi build path, extraction script, hashdb, full hash, raw data db" 1>&2
+    help 1>&2
     exit 1
 fi
 
-function read_from_db(){
-    S=$(sqlite3 "${HASHES_DB}" "SELECT S FROM gufi_command;")
-    E=$(sqlite3 "${HASHES_DB}" "SELECT E FROM gufi_command;")
-    tree=$(sqlite3 "${HASHES_DB}" "SELECT tree FROM gufi_command;")
-    echo "-S \"${S}\" -E \"${E}\" \"${tree}\""
+GUFI="$(realpath $1)"
+HASHES_DB="$(realpath $2)"
+FULL_HASH="$3"
+RAW_DATA_DB="$(realpath $4)"
+
+shift 4 # shift multiple here because it doesn't matter if it silently fails
+
+# Main
+cd "${GUFI}"
+
+# all remaining arguments are treated as commit hashes
+COMMITS=()
+while [[ $# -gt 0 ]]
+do
+    ish="$1"
+
+    if [[ "${ish}" =~ ^.*\.\..*$ ]]
+    then
+        range="${ish%@*}"
+        freq="${ish##*@}"
+
+        if [[ "${freq}" == "${ish}" ]]
+        then
+            freq=1
+        fi
+
+        mapfile -t commits < <(git rev-list --reverse "${range}")
+
+        i=0
+        for commit in "${commits[@]}"
+        do
+            if ! (( i % freq ))
+            then
+                COMMITS+=("${commit}")
+            fi
+
+            ((i = i + 1))
+        done
+    else
+        # shellcheck disable=SC2207
+        COMMITS+=($(git rev-parse "${ish}"))
+    fi
+
+    shift
+done
+
+export PATH="@DEP_INSTALL_PREFIX@/sqlite3/bin:${PATH}"
+export PYTHONPATH="@CMAKE_CURRENT_BINARY_DIR@/..:${PYTHONPATH}"
+
+# generate the original GUFI command that was run
+function generate_cmd() {
+    gufi_hash="$1"
+
+    cmd=$(sqlite3 "${HASHES_DB}" "SELECT cmd FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+    S=$(sqlite3 "${HASHES_DB}" "SELECT S FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+    E=$(sqlite3 "${HASHES_DB}" "SELECT E FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+    tree=$(sqlite3 "${HASHES_DB}" "SELECT tree FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+    echo "${GUFI}/src/${cmd} -S \"${S}\" -E \"${E}\" \"${tree}\""
 }
 
-function drop_caches(){
+gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data_dbs WHERE hash == \"${FULL_HASH}\";")
+gufi_cmd=$(generate_cmd "${gufi_hash}")
+
+function drop_caches() {
     sync
     sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
 }
 
-# Run gufi_query on provided commit and store debug values in database
-function query_commit(){
-    git checkout "$1"
-    make > /dev/null
-    for ((i=0; i<"${COMMIT_RUNS}"; i++))
+# collect performance numbers for each commit
+for commit in "${COMMITS[@]}"
+do
+    # switch to commit and rebuild
+    git -c advice.detachedHead=false checkout "${commit}"
+    # shellcheck disable=SC2046
+    make -j ${BUILD_THREADS} > /dev/null
+
+    # for a single commit, run the GUFI command multiple times
+    # and put the performance numbers in the raw data database
+    for ((i = 0; i < RUNS; i++))
     do
         drop_caches
-        "${GUFI}/src/gufi_query" $(read_from_db) 2>&1 >/dev/null | "${EXTRACTION_SCRIPT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
+
+        # shellcheck disable=SC2046
+        ${gufi_cmd} 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
     done
-}
-
-# Main
-cd "${GUFI}"
-COMMITS=$(git rev-list "${COMMIT_START}..${COMMIT_END}")
-
-i=0
-while IFS= read -r commit
-do
-    if (("${i}" % "${COMMIT_RATE}" == 0));
-    then
-        query_commit "${commit}"
-    fi
-    ((i="${i}"+1))
-done <<< "${COMMITS}"
+done
