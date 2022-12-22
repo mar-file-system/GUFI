@@ -70,6 +70,7 @@ const char STR[] = "string";
 const std::size_t LEN = strlen(STR); // includes the null terminator
 
 TEST(OutputBuffer, use) {
+    EXPECT_EQ(OutputBuffer_init(nullptr, (std::size_t) 0), nullptr);
 
     struct OutputBuffer obuf;
     ASSERT_EQ(OutputBuffer_init(&obuf, LEN), &obuf);
@@ -110,9 +111,13 @@ TEST(OutputBuffer, use) {
     EXPECT_EQ(memcmp((char *) obuf.buf, STR, LEN), 0);
 
     EXPECT_NO_THROW(OutputBuffer_destroy(&obuf));
+    EXPECT_NO_THROW(OutputBuffer_destroy(&obuf)); // double free should not throw
+    EXPECT_NO_THROW(OutputBuffer_destroy(nullptr));
 }
 
 TEST(OutputBuffers, use) {
+    EXPECT_EQ(OutputBuffers_init(nullptr, (std::size_t) 0, (std::size_t) 0, nullptr), nullptr);
+
     pthread_mutex_t mutex;
     ASSERT_EQ(pthread_mutex_init(&mutex, nullptr), 0);
 
@@ -123,7 +128,7 @@ TEST(OutputBuffers, use) {
     ASSERT_NE(obufs.buffers, nullptr);
 
     for(std::size_t i = 0; i < buffer_count; i++) {
-        struct OutputBuffer & obuf = obufs.buffers[i];
+        struct OutputBuffer &obuf = obufs.buffers[i];
         EXPECT_EQ(obuf.capacity, LEN);
         EXPECT_EQ(obuf.filled, (std::size_t) 0);
         EXPECT_EQ(obuf.count, (std::size_t) 0);
@@ -133,6 +138,8 @@ TEST(OutputBuffers, use) {
     {
         ASSERT_EQ(OutputBuffer_write(&obufs.buffers[0], STR, LEN, 0), LEN);
         ASSERT_EQ(OutputBuffer_write(&obufs.buffers[1], STR, LEN, 0), LEN);
+
+        EXPECT_EQ(OutputBuffers_flush_to_single(&obufs, stdin), (std::size_t) 0);
 
         char buf[4096];
         FILE *file = fmemopen(buf, sizeof(buf), "w");
@@ -148,27 +155,31 @@ TEST(OutputBuffers, use) {
 
     // flush buffers to multiple files
     {
+        FILE *files[] = {stdin, stdin};
+
         ASSERT_EQ(OutputBuffer_write(&obufs.buffers[0], STR, LEN, 0), LEN);
         ASSERT_EQ(OutputBuffer_write(&obufs.buffers[1], STR, LEN, 0), LEN);
 
+        EXPECT_EQ(OutputBuffers_flush_to_multiple(&obufs, files), (std::size_t) 0);
+
+        char buf0[4096];
+        FILE *file0 = fmemopen(buf0, sizeof(buf0), "w");
+        ASSERT_NE(file0, nullptr);
+        files[0] = file0;
+
+        // flush buffer to a file
         char buf1[4096];
         FILE *file1 = fmemopen(buf1, sizeof(buf1), "w");
         ASSERT_NE(file1, nullptr);
-
-        // flush buffer to a file
-        char buf2[4096];
-        FILE *file2 = fmemopen(buf2, sizeof(buf2), "w");
-        ASSERT_NE(file2, nullptr);
-
-        FILE *files[] = {file1, file2};
+        files[1] = file1;
 
         EXPECT_EQ(OutputBuffers_flush_to_multiple(&obufs, files), LEN + LEN);
 
-        fclose(file2);
         fclose(file1);
+        fclose(file0);
 
+        EXPECT_STREQ(buf0, STR);
         EXPECT_STREQ(buf1, STR);
-        EXPECT_STREQ(buf2, STR);
     }
 
     // check if mutex is still valid
@@ -176,5 +187,7 @@ TEST(OutputBuffers, use) {
     EXPECT_EQ(pthread_mutex_unlock(&mutex), 0);
 
     EXPECT_NO_THROW(OutputBuffers_destroy(&obufs));
+    EXPECT_NO_THROW(OutputBuffers_destroy(&obufs)); // double free should not throw
+    EXPECT_NO_THROW(OutputBuffers_destroy(nullptr));
     EXPECT_EQ(pthread_mutex_destroy(&mutex), 0);
 }

@@ -96,7 +96,9 @@ size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out) {
     /* Not checking arguments */
 
     const size_t rc = fwrite(obuf->buf, sizeof(char), obuf->filled, out);
-    obuf->filled = 0;
+    if (rc == obuf->filled) {
+        obuf->filled = 0;
+    }
 
     return rc;
 }
@@ -104,6 +106,7 @@ size_t OutputBuffer_flush(struct OutputBuffer *obuf, FILE *out) {
 void OutputBuffer_destroy(struct OutputBuffer *obuf) {
     if (obuf) {
         free(obuf->buf);
+        obuf->buf = NULL;
     }
 }
 
@@ -157,7 +160,12 @@ size_t OutputBuffers_flush_to_multiple(struct OutputBuffers *obufs, FILE **out) 
 
     size_t octets = 0;
     for(size_t i = 0; i < obufs->count; i++) {
-        octets += OutputBuffer_flush(&obufs->buffers[i], out[i]);
+        const size_t written = OutputBuffer_flush(&obufs->buffers[i], out[i]);
+        if ((written < obufs->buffers[i].filled) &&
+            obufs->buffers[i].filled) {
+            continue;
+        }
+        octets += written;
     }
 
     if (obufs->mutex) {

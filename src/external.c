@@ -98,6 +98,8 @@ int external_loop(struct work *work, sqlite3 *db,
                   , size_t *query_count
                   #endif
     ) {
+    /* Not checking arguments */
+
     int           rec_count = 0;
     sqlite3_stmt *res = NULL;
     /* not checking if the view exists - if it does, it's an error and will error */

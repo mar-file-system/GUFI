@@ -76,12 +76,20 @@ extern "C" {
 
 }
 
-int str_output(void *args, int, char **data, char **) {
+static int str_output(void *args, int, char **data, char **) {
     char *output = static_cast <char *> (args);
     const size_t len = strlen(data[0]);
     memcpy(output, data[0], len);
     output[len] = '\0';
     return 0;
+}
+
+TEST(create_table_wrapper, nullptr) {
+    EXPECT_NE(create_table_wrapper(nullptr, nullptr, nullptr, nullptr), SQLITE_OK);
+}
+
+TEST(set_db_pragmas, nullptr) {
+    EXPECT_EQ(set_db_pragmas(nullptr), 1);
 }
 
 TEST(addqueryfuncs, path) {

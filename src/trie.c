@@ -135,7 +135,7 @@ int trie_search(trie_t *head, const char *str, const size_t len)
 }
 
 // returns 1 if given node has any children
-int trie_have_children(trie_t *curr)
+static int trie_have_children(trie_t *curr)
 {
     for (int i = 0; i < 256; i++)
         if (curr->character[i])
@@ -147,10 +147,6 @@ int trie_have_children(trie_t *curr)
 // Recursive function to delete a string in Trie.
 static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i, const size_t len)
 {
-    // return if Trie is empty
-    if (*curr == NULL)
-        return 0;
-
     // if we have not reached the end of the string
     if (i < len)
     {

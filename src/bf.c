@@ -80,12 +80,9 @@ char fielddelim[] = "\x1E";     // ASCII Record Separator
 void print_help(const char* prog_name,
                 const char* getopt_str,
                 const char* positional_args_help_str) {
+   /* Not checking arguments */
 
-   // "hxpPin:d:o:"
    const char* opt = getopt_str;
-   if (! opt)
-      return;
-
    printf("usage: %s [options] %s\n", prog_name, positional_args_help_str);
    printf("options:\n");
 

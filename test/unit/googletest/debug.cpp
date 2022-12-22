@@ -62,19 +62,75 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef TRIE_H
-#define TRIE_H
+#include <gtest/gtest.h>
 
-typedef struct trie
-{
-    int isLeaf;    // 1 when node is a leaf node
-    struct trie *character[256];
-} trie_t;
+extern "C" {
 
-trie_t *trie_alloc();
-void trie_insert(trie_t *head, const char* str, const size_t len);
-int trie_search(trie_t *head, const char* str, const size_t len);
-int trie_delete(trie_t *head, const char* str, const size_t len);
-void trie_free(trie_t *head);
+#include "debug.h"
 
-#endif
+}
+
+static const uint64_t nsecs_per_sec = 1000000000ULL;
+
+TEST(debug, since_epoch) {
+    epoch = 0;
+
+    struct timespec ts = {
+        .tv_sec = 1,
+        .tv_nsec = 0,
+    };
+
+    EXPECT_EQ(since_epoch(&ts), nsecs_per_sec);
+}
+
+TEST(debug, nsec) {
+    epoch = 0;
+
+    struct start_end se = {
+        .start = {
+            .tv_sec = 1,
+            .tv_nsec = 0,
+        },
+        .end = {
+            .tv_sec = 2,
+            .tv_nsec = 0,
+        },
+    };
+
+    EXPECT_EQ(nsec(&se), nsecs_per_sec);
+}
+
+TEST(debug, sec) {
+    EXPECT_EQ(sec(nsecs_per_sec), 1.0L);
+}
+
+TEST(debug, print_timer) {
+    epoch = 0;
+
+    struct start_end se = {
+        .start = {
+            .tv_sec = 1,
+            .tv_nsec = 0,
+        },
+        .end = {
+            .tv_sec = 2,
+            .tv_nsec = 0,
+        },
+    };
+
+    struct OutputBuffers obufs;
+
+    ASSERT_EQ(OutputBuffers_init(&obufs, 1, (std::size_t) 4096, nullptr), &obufs);
+    EXPECT_EQ(obufs.mutex, nullptr);
+    ASSERT_NE(obufs.buffers, nullptr);
+
+    struct OutputBuffer &obuf = obufs.buffers[0];
+    EXPECT_EQ(obuf.capacity, (std::size_t) 4096);
+    EXPECT_EQ(obuf.filled, (std::size_t) 0);
+    EXPECT_EQ(obuf.count, (std::size_t) 0);
+
+    char buf[4096];
+    EXPECT_EQ(print_timer(&obufs, 0, buf, sizeof(buf), "", &se), 0);
+
+    EXPECT_NO_THROW(OutputBuffers_destroy(&obufs));
+}

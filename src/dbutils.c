@@ -130,28 +130,21 @@ vssql(group, 2);
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err)
 {
+  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
   char attach[MAXSQL];
   if (flags & SQLITE_OPEN_READONLY) {
-      if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro&vfs=" GUFI_SQLITE_VFS "' AS %Q", name, dbn)) {
-          if (print_err) {
-              fprintf(stderr, "Cannot create ATTACH command\n");
-          }
-          return NULL;
-      }
+      sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro&vfs=" GUFI_SQLITE_VFS "' AS %Q", name, dbn);
   }
   else if (flags & SQLITE_OPEN_READWRITE) {
-      if (!sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn)) {
-          if (print_err) {
-              fprintf(stderr, "Cannot create ATTACH command\n");
-          }
-          return NULL;
-      }
+      sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn);
   }
 
-  if (sqlite3_exec(db, attach, NULL, NULL, NULL) != SQLITE_OK) {
+  char *err = NULL;
+  if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
       if (print_err) {
-          fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, sqlite3_errmsg(db));
+          fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
       }
+      sqlite3_free(err);
       return NULL;
   }
 
@@ -160,13 +153,9 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
 
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err)
 {
+  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
   char detach[MAXSQL];
-  if (!sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn)) {
-      if (print_err) {
-          fprintf(stderr, "Cannot create DETACH command\n");
-      }
-      return NULL;
-  }
+  sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn);
 
   if (sqlite3_exec(db, detach, NULL, NULL, NULL) != SQLITE_OK) {
       if (print_err) {

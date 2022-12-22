@@ -88,6 +88,8 @@ TEST(gufi_query, aggregate) {
     const std::string J = "INSERT INTO  aggregate(partial) SELECT tot from intermediate;";
     const std::string G = "SELECT SUM(partial) FROM aggregate";
 
+    const std::string BAD_SQL = "SELECT";
+
     std::random_device rd;
     std::mt19937 gen(rd());
 
@@ -135,6 +137,13 @@ TEST(gufi_query, aggregate) {
 
     // set up the aggregation table
     Aggregate_t aggregate;
+
+    // init with bad SQL statement
+    in.sql.init_agg = BAD_SQL.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);
+    ASSERT_EQ(aggregate_init(&aggregate, &in), nullptr);
+
+    // init with good SQL statement
+    in.sql.init_agg = K.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);
     ASSERT_NE(aggregate_init(&aggregate, &in), nullptr);
 
     // replace stdout with in-memory file
@@ -142,11 +151,20 @@ TEST(gufi_query, aggregate) {
     aggregate.outfile = fmemopen(db_sum_str, sizeof(db_sum_str), "w+b");
     ASSERT_NE(aggregate.outfile, nullptr);
 
+    // run bad intermediate SQL statement
+    in.sql.intermediate = BAD_SQL.c_str(); in.sql.intermediate_len = strlen(in.sql.intermediate);
+    EXPECT_NO_THROW(aggregate_intermediate(&aggregate, &pa, &in));
+
     // run intermediate SQL statement to move data into aggregate table
+    in.sql.intermediate = J.c_str(); in.sql.intermediate_len = strlen(in.sql.intermediate);
     EXPECT_NO_THROW(aggregate_intermediate(&aggregate, &pa, &in));
 
     // run aggregate SQL to get final result
     EXPECT_EQ(aggregate_process(&aggregate, &in), 0);
+
+    // run a bad aggregate SQL statement
+    in.sql.agg = BAD_SQL.c_str(); in.sql.agg_len = strlen(in.sql.agg);
+    EXPECT_EQ(aggregate_process(&aggregate, &in), -1);
 
     // cleanup
     aggregate_fin(&aggregate, &in);

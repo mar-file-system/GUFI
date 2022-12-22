@@ -82,6 +82,7 @@ TEST(trie, insert_nullptr) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
+    EXPECT_NO_THROW(trie_insert(nullptr, nullptr, 0));
     trie_insert(root, nullptr, 0);
 
     EXPECT_EQ(trie_search(root, nullptr, 0), 0);
@@ -110,22 +111,8 @@ TEST(trie, search) {
 
     trie_insert(root, buf, 4);
 
+    EXPECT_EQ(trie_search(nullptr, buf, 0), 0);
     EXPECT_EQ(trie_search(root, buf, 4),  1);
-
-    trie_free(root);
-}
-
-TEST(trie, have_children) {
-    char buf[MAXPATH] = "0123";
-
-    trie_t *root = trie_alloc();
-    ASSERT_NE(root, nullptr);
-
-    EXPECT_EQ(trie_have_children(root), 0);
-
-    trie_insert(root, buf, 4);
-
-    EXPECT_EQ(trie_have_children(root), 1);
 
     trie_free(root);
 }
@@ -138,6 +125,10 @@ TEST(trie, delete) {
 
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
+
+    EXPECT_EQ(trie_delete(nullptr, nullptr, 0), 0);
+    EXPECT_EQ(trie_delete(root, nullptr,    0), 0);
+    EXPECT_EQ(trie_delete(root, str,        0), 0);
 
     {
         /* insert long string and sub string */
