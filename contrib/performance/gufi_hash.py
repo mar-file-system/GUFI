@@ -62,6 +62,7 @@
 
 
 import argparse
+import os
 import sqlite3
 import sys
 
@@ -264,6 +265,10 @@ def parse_args(argv):
 
 def run(argv):
     args = parse_args(argv)
+
+    # this should be done during parse_args, but
+    # doing here instead to make testing easier
+    args.tree = os.path.realpath(args.tree)
 
     # hash(gufi command, benchmark name, flags, tree)
     gufi_hash = compute_hash(args)
