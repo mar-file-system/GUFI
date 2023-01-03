@@ -83,7 +83,5 @@ def run(argv):
     finally:
         con.close()
 
-    return 0
-
 if __name__ == '__main__':
-    sys.exit(run(sys.argv[1:]))
+    run(sys.argv[1:])

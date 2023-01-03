@@ -208,7 +208,5 @@ def run(argv):
     graph.generate(conf, commits, averages, columns,
                    low_pnts, high_pnts, minimums, maximums)
 
-    return 0
-
 if __name__ == '__main__':
-    sys.exit(run(sys.argv[1:]))
+    run(sys.argv[1:])

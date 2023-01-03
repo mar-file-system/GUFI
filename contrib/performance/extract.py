@@ -130,7 +130,5 @@ def run(argv):
     finally:
         raw_data_db.close()
 
-    return 0
-
 if __name__ == '__main__':
-    sys.exit(run(sys.argv[1:]))
+    run(sys.argv[1:])
