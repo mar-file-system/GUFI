@@ -251,6 +251,9 @@ def parse_args(argv):
     parser.add_argument('--database',
                         type=str,
                         help='Hash database to write to (must already exist)')
+    parser.add_argument('--delete',
+                        action='store_true',
+                        help='Remove record from database')
 
     parser.add_argument('cmd',
                         choices=gufi.COMMANDS,
@@ -261,6 +264,7 @@ def parse_args(argv):
     parser.add_argument('tree',
                         type=str,
                         help='Tree that was processed')
+
     return parser.parse_args(argv)
 
 def run(argv):
@@ -277,11 +281,17 @@ def run(argv):
     if args.database:
         try:
             con = sqlite3.connect(args.database)
-            hashdb.insert(con, args, gufi_hash,
-                          gufi.TABLE_NAME,
-                          gufi.COLS_REQUIRED,
-                          gufi.COLS_HASHED,
-                          gufi.COLS_NOT_HASHED)
+
+            if args.delete:
+                con.execute('DELETE FROM {0} WHERE hash == "{1}";'.format(
+                    gufi.TABLE_NAME, gufi_hash))
+            else:
+                hashdb.insert(con, args, gufi_hash,
+                              gufi.TABLE_NAME,
+                              gufi.COLS_REQUIRED,
+                              gufi.COLS_HASHED,
+                              gufi.COLS_NOT_HASHED)
+
             con.commit()
         finally:
             con.close()

@@ -110,6 +110,10 @@ def parse_args(argv):
     parser.add_argument('--database',
                         type=str,
                         help='Hash database to write to (must already exist)')
+    parser.add_argument('--delete',
+                        action='store_true',
+                        help='Remove record from database')
+
     return parser.parse_args(argv)
 
 def run(argv):
@@ -122,11 +126,17 @@ def run(argv):
     if args.database:
         try:
             con = sqlite3.connect(args.database)
-            hashdb.insert(con, args, machine_hash,
-                          machine.TABLE_NAME,
-                          machine.COLS_REQUIRED,
-                          machine.COLS_HASHED,
-                          machine.COLS_NOT_HASHED)
+
+            if args.delete:
+                con.execute('DELETE FROM {0} WHERE hash == "{1}";'.format(
+                    machine.TABLE_NAME, machine_hash))
+            else:
+                hashdb.insert(con, args, machine_hash,
+                              machine.TABLE_NAME,
+                              machine.COLS_REQUIRED,
+                              machine.COLS_HASHED,
+                              machine.COLS_NOT_HASHED)
+
             con.commit()
         finally:
             con.close()

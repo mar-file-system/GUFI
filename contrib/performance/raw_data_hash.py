@@ -83,19 +83,21 @@ def parse_args(argv):
     parser.add_argument('--override',
                         type=str,
                         help='Use this value for the hash instead of the calculated value')
-    parser.add_argument('--delete',
-                        action='store_true',
-                        help='Remove record from hash database')
     parser.add_argument('--extra',
                         type=str,
                         help='Additional notes (not hashed)')
     parser.add_argument('--database',
                         type=str,
                         help='Hash database to write to (must already exist)')
+    parser.add_argument('--delete',
+                        action='store_true',
+                        help='Remove record from database')
+
     parser.add_argument('machine_hash',
                         help='Hash of machine configuration')
     parser.add_argument('gufi_hash',
                         help='Hash of GUFI command')
+
     return parser.parse_args(argv)
 
 
