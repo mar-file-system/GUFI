@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/github/mar-file-system/GUFI/branch/master/graph/badge.svg?token=VIOCZC7KIO)](https://codecov.io/github/mar-file-system/GUFI)
 
 [![Latest Release](https://img.shields.io/github/release/mar-file-system/GUFI.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/mar-file-system/GUFI/latest/total.svg?style=popout)](https://github.com/mar-file-system/GUFI/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mar-file-system/GUFI/total)](https://github.com/mar-file-system/GUFI/releases)
 
 GUFI is part of MarFS, which is released under the [BSD License](LICENSE.txt).
 LA-CC-15-039
