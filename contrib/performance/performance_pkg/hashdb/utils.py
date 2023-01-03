@@ -167,6 +167,8 @@ def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_has
 
             if type == str:
                 vals += ['"{0}"'.format(val)]
+            elif type == bool:
+                vals += [str(int(val))]
             else:
                 vals += [str(val)]
 
