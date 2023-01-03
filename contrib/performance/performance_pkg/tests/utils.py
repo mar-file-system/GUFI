@@ -61,10 +61,59 @@
 
 
 
+import os
 import sqlite3
 import unittest
 
 from performance_pkg.hashdb import gufi, machine, raw_data, utils as hashdb
+
+class TestExistence(unittest.TestCase):
+    def test_check_exists(self):
+        try:
+            hashdb.check_exists(__file__)
+        except SystemExit:
+            self.fail('Existence of current script somehow returned false')
+
+    def test_check_exists_not_exists(self):
+        with self.assertRaises(SystemExit):
+            hashdb.check_exists('')
+
+    def test_check_sxists_not_file(self):
+        with self.assertRaises(SystemExit):
+            hashdb.check_exists(os.path.dirname(__file__))
+
+    def test_check_not_exists(self):
+        try:
+            hashdb.check_not_exists('')
+        except SystemExit:
+            self.fail('Existence of empty file name somehow returned true')
+
+    def test_check_not_exists_exists(self):
+        with self.assertRaises(SystemExit):
+            hashdb.check_not_exists(__file__)
+
+class TestDBFuncs(unittest.TestCase):
+    def test_setup_insert(self):
+        hash = 'abcd' # pylint: disable=redefined-builtin
+        try:
+            db = sqlite3.connect(':memory:')
+
+            hashdb.create_tables(db)
+            cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
+            rows = [row[0] for row in cur.fetchall()]
+            self.assertEqual(3, len(rows))
+            for table_name in [gufi.TABLE_NAME, machine.TABLE_NAME, raw_data.TABLE_NAME]:
+                self.assertTrue(table_name in rows)
+
+            hashdb.insert(db, None, hash, raw_data.TABLE_NAME, [], [], [])
+            cur = db.execute('SELECT hash FROM {0};'.format(raw_data.TABLE_NAME))
+            rows = cur.fetchall()
+            self.assertEqual(1, len(rows))
+            self.assertEqual(hash, rows[0][0])
+
+            db.close()
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Testing database utility functions raised: {0}'.format(err))
 
 # test hashdb.get_config_with_con (instead of
 # hashdb.get_config) to not have to create an

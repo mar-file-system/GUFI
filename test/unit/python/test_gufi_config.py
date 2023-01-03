@@ -193,5 +193,19 @@ class TestClientConfigCombined(TestClientConfig):
         # add server configuration
         self.pairs.update(TestServerConfig.default)
 
+# make sure example configuration files are valid
+#
+# if example configuration files are not present
+# in build root directory, reconfigure cmake
+class TestConfigFile(unittest.TestCase):
+    def test_server(self):
+        try:
+            gufi_config.run(['server', os.path.join('@CMAKE_BINARY_DIR@', 'server.example')])
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Reading good server configuration file raised: {0}'.format(err))
+
+    # not testing client.example
+    # CMake @CLIENT@ variable can be anything CMake accepts as a boolean
+
 if __name__ == '__main__':
     unittest.main()

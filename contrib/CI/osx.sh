@@ -78,3 +78,7 @@ brew install coreutils cmake mysql pcre python3
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew install --cask osxfuse
+
+# for performance history framework testing
+python3 -m pip install --upgrade pip
+python3 -m pip install matplotlib

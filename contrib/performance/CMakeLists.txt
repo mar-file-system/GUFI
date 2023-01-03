@@ -74,10 +74,22 @@ set(SCRIPTS
 
   extract.py                   # parse debug output and insert them into the raw data db
 
-  graph_performance.py         # calculate stats on stored data and plot them onto a graph
-
   collect_performance.sh       # run executables and store performance data
   )
+
+# need matplotlib for performance history framework
+execute_process(COMMAND "${PYTHON_INTERPRETER}" -c "import os, matplotlib; print(os.path.dirname(matplotlib.__file__))"
+  OUTPUT_VARIABLE MATPLOTLIB_PATH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET)
+if (MATPLOTLIB_PATH)
+  message(STATUS "Found matplotlib for ${PYTHON_INTERPRETER}: ${MATPLOTLIB_PATH}")
+  list(APPEND SCRIPTS
+    graph_performance.py       # calculate stats on stored data and plot them onto a graph
+    )
+else()
+  message(STATUS "matplotlib not found for ${PYTHON_INTERPRETER}. Not configuring graphing script of performance history framework.")
+endif()
 
 foreach(SCRIPT ${SCRIPTS})
   configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)

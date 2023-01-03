@@ -100,6 +100,42 @@ def create_tables(con):
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
         raw_data.TABLE_NAME, raw_data_col_str))
 
+# hash a configuration, not configure the hash algorithm
+def hash_config(alg, data):
+    return Hashes[alg](data.encode()).hexdigest()
+
+def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_hashed):
+    '''
+    only insert args/columns that are present rather than insert
+    filler values into the database - let sqlite set the defaults
+
+    args should contains members with the same names as the columns
+    '''
+
+    # pylint: disable=redefined-builtin,too-many-arguments
+
+    cols = ['hash']
+    vals = ['"{0}"'.format(hash)]
+
+    # first column of cols_required should aways be hash
+    for col, name, type in cols_required[1:] + cols_hashed + cols_not_hashed:
+        val = getattr(args, col)
+        if val is not None:
+            cols += [name if name else col]
+
+            if type == str:
+                vals += ['"{0}"'.format(val)]
+            elif type == bool:
+                vals += [str(int(val))]
+            else:
+                vals += [str(val)]
+
+    # leave as separate variable for debug
+    sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
+        table_name, ', '.join(cols), ', '.join(vals))
+
+    con.execute(sql)
+
 # extract gufi command and debug name using provided hash
 def get_config_with_con(hashdb, user_raw_data_hash):
     # figure out what configurations this hash points to
@@ -141,39 +177,3 @@ def get_config(hashdb_name, user_raw_data_hash):
         hashdb.close()
 
     return gufi_cmd, debug_name
-
-# hash a configuration, not configure the hash algorithm
-def hash_config(alg, data):
-    return Hashes[alg](data.encode()).hexdigest()
-
-def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_hashed):
-    '''
-    only insert args/columns that are present rather than insert
-    filler values into the database - let sqlite set the defaults
-
-    args should contains members with the same names as the columns
-    '''
-
-    # pylint: disable=redefined-builtin,too-many-arguments
-
-    cols = ['hash']
-    vals = ['"{0}"'.format(hash)]
-
-    # first column of cols_required should aways be hash
-    for col, name, type in cols_required[1:] + cols_hashed + cols_not_hashed:
-        val = getattr(args, col)
-        if val is not None:
-            cols += [name if name else col]
-
-            if type == str:
-                vals += ['"{0}"'.format(val)]
-            elif type == bool:
-                vals += [str(int(val))]
-            else:
-                vals += [str(val)]
-
-    # leave as separate variable for debug
-    sql = 'INSERT INTO {0} ({1}) VALUES ({2});'.format(
-        table_name, ', '.join(cols), ', '.join(vals))
-
-    con.execute(sql)

@@ -99,14 +99,12 @@ jobs:
            cmake .. ${{ env.COMMON_CONFIG }}
 
     - name: Build
-      run: |
-           cd build
-           make -j
+      working-directory: ${{ github.workspace }}/build
+      run: make -j
 
     - name: Test
-      run: |
-           cd build
-           ctest --output-on-failure
+      working-directory: ${{ github.workspace }}/build
+      run: ctest --output-on-failure
 
   Python2:
     runs-on: ubuntu-20.04
@@ -123,6 +121,14 @@ jobs:
 
     - name: Install Python 2
       run: sudo apt -y install python2
+
+    - name: Install Matplotlib
+      run: |
+           sudo apt -y install curl
+           curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+           sudo python2 get-pip.py
+           python2 -m pip install --upgrade pip
+           python2 -m pip install matplotlib
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2

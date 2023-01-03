@@ -62,10 +62,16 @@
 
 
 import argparse
+import io
 import tempfile
 import unittest
 
-from performance_pkg.graph import config
+# https://stackoverflow.com/a/4935945
+# by Joe Kington
+import matplotlib as mpl
+mpl.use('Agg')
+
+from performance_pkg.graph import config, graph # pylint: disable=wrong-import-position
 
 class TestConfig(unittest.TestCase):
     def test_pos_int(self):
@@ -153,6 +159,24 @@ class TestConfig(unittest.TestCase):
             for section, keys in config.DEFAULTS.items():
                 for key, _ in keys.items():
                     self.assertEqual(override, conf[section][key])
+
+class TestGraph(unittest.TestCase):
+    def test_generate(self):
+        # set up configuration
+        conf = {section : {key : setting[1]
+                           for key, setting in keys.items()}
+                for section, keys in config.DEFAULTS.items()}
+        conf[config.OUTPUT][config.OUTPUT_PATH] = io.BytesIO()
+        conf[config.OUTPUT][config.OUTPUT_DIMENSIONS] = [10, 10]
+        conf[config.ANNOTATIONS][config.ANNOTATIONS_SHOW] = True
+        conf[config.ERROR_BAR][config.ERROR_BAR_SHOW] = True
+        conf[config.ERROR_BAR][config.ERROR_BAR_MIN_MAX] = True
+
+        try:
+            # generate in-memory graph
+            graph.generate(conf, ['x'], [0], ['line'], [-1], [1], [-1], [1])
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Graphing test raised: {0}'.format(err))
 
 if __name__ == '__main__':
     unittest.main()

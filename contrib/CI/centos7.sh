@@ -67,10 +67,15 @@ set -e
 yum -y install epel-release centos-release-scl
 
 # install libraries
-yum -y install fuse-devel libattr1 pcre-devel
+yum -y install fuse-devel libattr-devel pcre-devel
 
 # install required packages
-yum -y install attr autoconf cmake3 fuse llvm-toolset-7 make patch pkgconfig sudo
+yum -y install attr autoconf cmake3 fuse llvm-toolset-7 make patch pkgconfig python3 sudo
+
+# for performance history framework testing
+yum -y install python3-pip
+python3 -m pip install --upgrade pip
+python3 -m pip install matplotlib
 
 # make sure 'cmake' and 'ctest' are valid commands
 ln -sf /usr/bin/cmake3 /usr/bin/cmake

@@ -63,10 +63,15 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 set(TESTS
-  config
   hash
   utils
   )
+
+if (MATPLOTLIB_PATH)
+  list(APPEND TESTS
+    graphing
+    )
+endif()
 
 foreach(TEST ${TESTS})
   configure_file("${TEST}.py" "${TEST}.py" @ONLY)

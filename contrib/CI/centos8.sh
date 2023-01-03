@@ -66,7 +66,6 @@ set -e
 # Point to appropriate repos, current is no longer supported
 sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
 sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-yum -y update
 
 # install Extra Tools for Enterprise Linux (EPEL)
 yum -y install epel-release
@@ -76,3 +75,8 @@ yum -y install fuse-devel libattr pcre-devel
 
 # install required packages
 yum -y install attr autoconf clang cmake3 diffutils fuse make patch pkgconfig python3 sudo
+
+# for performance history framework testing
+yum -y install python3-pip
+python3 -m pip install --upgrade pip
+python3 -m pip install matplotlib

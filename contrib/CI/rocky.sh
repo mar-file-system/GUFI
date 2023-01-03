@@ -72,3 +72,8 @@ yum -y install fuse-devel libattr-devel pcre-devel
 
 # install required packages
 yum -y install attr autoconf clang cmake3 findutils fuse make patch pkgconfig python3 sudo
+
+# for performance history framework testing
+yum -y install python3-pip
+python3 -m pip install --upgrade pip
+python3 -m pip install matplotlib
