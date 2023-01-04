@@ -112,9 +112,7 @@ case "${key}" in
         ;;
     --sudo)
         SUDO="sudo"
-        shift
         ;;
-
     *)  # unknown option
         POSITIONAL+=("$1") # save it in an array for later
         ;;
@@ -159,7 +157,7 @@ do
             freq=1
         fi
 
-        mapfile -t commits < <(git rev-list --reverse "${range}")
+        mapfile -t commits < <(git rev-list "${range}")
 
         i=0
         for commit in "${commits[@]}"
