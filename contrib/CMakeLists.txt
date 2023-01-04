@@ -149,4 +149,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 add_subdirectory(CI)
-add_subdirectory(performance)
+if (GIT_FOUND)
+  add_subdirectory(performance)
+endif()

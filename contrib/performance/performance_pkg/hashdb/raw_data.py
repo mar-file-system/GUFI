@@ -66,6 +66,7 @@ TABLE_NAME = 'raw_data_dbs'
 # arg attr, sql column name, column type
 COLS_REQUIRED = [
     ['hash',         None, str],
+    ['hash_alg',     None, str],
 ]
 
 COLS_HASHED = [

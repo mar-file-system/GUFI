@@ -81,6 +81,7 @@ apt -y install \
     autoconf \
     clang \
     cmake \
+    git \
     patch \
     pkg-config \
     python3 \

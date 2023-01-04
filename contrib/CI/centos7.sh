@@ -70,7 +70,7 @@ yum -y install epel-release centos-release-scl
 yum -y install fuse-devel libattr-devel pcre-devel
 
 # install required packages
-yum -y install attr autoconf cmake3 fuse llvm-toolset-7 make patch pkgconfig python3 sudo
+yum -y install attr autoconf cmake3 fuse git llvm-toolset-7 make patch pkgconfig python3 sudo
 
 # for performance history framework testing
 yum -y install python3-pip

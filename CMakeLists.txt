@@ -72,9 +72,9 @@ endif()
 project(GUFI VERSION 0.5.1 LANGUAGES C)
 
 # print version info
+find_package(Git)
 set(VERSION_STRING "GUFI ${GUFI_VERSION}")
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
-  find_package(Git)
   if (GIT_FOUND)
     # git branch name
     execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD

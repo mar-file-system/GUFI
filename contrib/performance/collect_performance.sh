@@ -66,6 +66,7 @@ set -e
 # DEFAULTS
 RUNS=30
 EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
+GIT="@GIT_EXECUTABLE@"
 BUILD_THREADS="" # empty
 SEPARATOR="|"
 SUDO=""
@@ -76,6 +77,7 @@ function help() {
     echo "Options:"
     echo "    --runs COUNT             number of times to run the GUFI executable per commit"
     echo "    --extract PATH           path of extract.py"
+    echo "    --git PATH               path of git executable"
     echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
     echo "    --separator c            sqlite3 separator character"
     echo "    --sudo                   run the GUFI executable with sudo"
@@ -100,6 +102,10 @@ case "${key}" in
         ;;
     --extract)
         EXTRACT="$2"
+        shift
+        ;;
+    --git)
+        GIT="$2"
         shift
         ;;
     --build-threads)
@@ -157,7 +163,7 @@ do
             freq=1
         fi
 
-        mapfile -t commits < <(git rev-list "${range}")
+        mapfile -t commits < <("${GIT}" rev-list "${range}")
 
         i=0
         for commit in "${commits[@]}"
@@ -170,7 +176,7 @@ do
             ((i = i + 1))
         done
     else
-        mapfile -t commits < <(git rev-parse "${ish}")
+        mapfile -t commits < <("${GIT}" rev-parse "${ish}")
         COMMITS+=("${commits[@]}")
     fi
 

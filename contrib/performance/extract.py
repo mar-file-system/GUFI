@@ -70,10 +70,10 @@ from performance_pkg.extraction import DebugPrints
 from performance_pkg.hashdb import utils as hashdb
 
 def get_current_commit():
-    commit_hash = common.run_get_stdout(['git', 'rev-parse', 'HEAD'])[:-1]
+    commit_hash = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-parse', 'HEAD'])[:-1]
 
     # pylint: disable=consider-using-with
-    diff = common.subprocess.Popen(['git', 'diff-index', '--quiet', 'HEAD', '--'],
+    diff = common.subprocess.Popen(['@GIT_EXECUTABLE@', 'diff-index', '--quiet', 'HEAD', '--'],
                                    stdout=common.DEVNULL, stderr=common.DEVNULL)
     diff.communicate() # no output
     if diff.returncode != 0:

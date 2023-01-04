@@ -74,15 +74,6 @@ mpl.use('Agg')
 from performance_pkg.graph import config, graph # pylint: disable=wrong-import-position
 
 class TestConfig(unittest.TestCase):
-    def test_pos_int(self):
-        with self.assertRaises(ValueError):
-            config.pos_int('-1')
-        with self.assertRaises(ValueError):
-            config.pos_int('0')
-        self.assertEqual(1, config.pos_int('1'))
-        with self.assertRaises(ValueError):
-            config.pos_int('abc')
-
     def test_pos_float(self):
         with self.assertRaises(ValueError):
             config.pos_float('-1')
@@ -166,15 +157,24 @@ class TestGraph(unittest.TestCase):
         conf = {section : {key : setting[1]
                            for key, setting in keys.items()}
                 for section, keys in config.DEFAULTS.items()}
-        conf[config.OUTPUT][config.OUTPUT_PATH] = io.BytesIO()
-        conf[config.OUTPUT][config.OUTPUT_DIMENSIONS] = [10, 10]
+
+        conf[config.RAW_DATA][config.RAW_DATA_COLUMNS] = ['column'] # single line
+        conf[config.OUTPUT][config.OUTPUT_PATH] = io.BytesIO()      # in-memory graph
+        conf[config.OUTPUT][config.OUTPUT_DIMENSIONS] = [1, 1]
+        conf[config.AXES][config.AXES_Y_MIN] = -10
+        conf[config.AXES][config.AXES_Y_MAX] = 10
         conf[config.ANNOTATIONS][config.ANNOTATIONS_SHOW] = True
         conf[config.ERROR_BAR][config.ERROR_BAR_SHOW] = True
         conf[config.ERROR_BAR][config.ERROR_BAR_MIN_MAX] = True
 
+        points = 5 # number of points in this line
         try:
-            # generate in-memory graph
-            graph.generate(conf, ['x'], [0], ['line'], [-1], [1], [-1], [1])
+            graph.generate(conf,
+                           ['commit'] * points,
+                           [[0]  * points],
+                           ['line'],
+                           [[1]  * points], [[1] * points],
+                           [[-1] * points], [[1] * points])
         except Exception as err: # pylint: disable=broad-except
             self.fail('Graphing test raised: {0}'.format(err))
 

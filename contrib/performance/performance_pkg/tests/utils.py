@@ -94,22 +94,37 @@ class TestExistence(unittest.TestCase):
 
 class TestDBFuncs(unittest.TestCase):
     def test_setup_insert(self):
-        hash = 'abcd' # pylint: disable=redefined-builtin
         try:
             db = sqlite3.connect(':memory:')
 
             hashdb.create_tables(db)
             cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
+
+            # check that columns are correct
             rows = [row[0] for row in cur.fetchall()]
             self.assertEqual(3, len(rows))
             for table_name in [gufi.TABLE_NAME, machine.TABLE_NAME, raw_data.TABLE_NAME]:
                 self.assertIn(table_name, rows)
 
-            hashdb.insert(db, None, hash, raw_data.TABLE_NAME, [], [], [])
-            cur = db.execute('SELECT hash FROM {0};'.format(raw_data.TABLE_NAME))
+            # create fake args
+            class Fake: # pylint: disable=too-few-public-methods
+                pass
+            args = Fake()
+            for key, _, _ in raw_data.COLS:
+                setattr(args, key, key)
+
+            # insert
+            hashdb.insert(db, args, getattr(args, 'hash'),
+                          raw_data.TABLE_NAME, raw_data.COLS_REQUIRED,
+                          raw_data.COLS_HASHED, raw_data.COLS_NOT_HASHED)
+
+            # check inserted data
+            cur = db.execute('SELECT {0} FROM {1};'.format(
+                ', '.join(col for col, _, _ in raw_data.COLS), raw_data.TABLE_NAME))
             rows = cur.fetchall()
             self.assertEqual(1, len(rows))
-            self.assertEqual(hash, rows[0][0])
+            for col, value in zip([col for col, _, _ in raw_data.COLS], rows[0]):
+                self.assertEqual(getattr(args, col), value)
 
             db.close()
         except Exception as err: # pylint: disable=broad-except

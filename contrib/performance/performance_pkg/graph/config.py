@@ -68,14 +68,9 @@ else:
     from ConfigParser import ConfigParser # pylint: disable=import-error
 
 from performance_pkg import common        # pylint: disable=wrong-import-position
+import gufi_common                        # pylint: disable=wrong-import-position
 
 # converter functions for input read from ConfigParser
-def pos_int(value):
-    val = int(value)
-    if val < 1:
-        raise ValueError('Positive integer got a non-positive number: {0}'.format(val))
-    return val
-
 def pos_float(value):
     val = float(value)
     if val <= 0:
@@ -157,7 +152,7 @@ DEFAULTS = {
 
     ANNOTATIONS : {
         ANNOTATIONS_SHOW        : [bool, False],
-        ANNOTATIONS_PRECISION   : [pos_int, 3],
+        ANNOTATIONS_PRECISION   : [gufi_common.get_positive, 3],
         ANNOTATIONS_X_OFFSET    : [float, 5],
         ANNOTATIONS_Y_OFFSET    : [float, 5],
         ANNOTATIONS_TEXT_COLORS : [str_list, []],
@@ -165,7 +160,7 @@ DEFAULTS = {
 
     ERROR_BAR : {
         ERROR_BAR_SHOW      : [bool, False],
-        ERROR_BAR_PRECISION : [pos_int, 3],
+        ERROR_BAR_PRECISION : [gufi_common.get_positive, 3],
         ERROR_BAR_MIN_MAX   : [bool, False],
         ERROR_BAR_COLORS    : [str_list, []],
         ERROR_BAR_CAP_SIZE  : [pos_float, 10],
@@ -195,9 +190,9 @@ def expand_git_identifiers(identifiers):
     for ish in identifiers:
         # try expanding identifier using git
         if '..' in ish:
-            expanded = common.run_get_stdout(['git', 'rev-list', ish])
+            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-list', ish])
         else:
-            expanded = common.run_get_stdout(['git', 'rev-parse', ish])
+            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-parse', ish])
 
         # failure to expand still returns the original ish as output
         commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list

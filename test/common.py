@@ -64,17 +64,13 @@
 import os
 import sys
 
-# get root build directory of GUFI
-ROOT = '@CMAKE_BINARY_DIR@'
-
-SCRIPTS = os.path.join(ROOT, 'scripts')
-
 # test config file name
 CONFIG_PATH = os.path.join('@CMAKE_CURRENT_BINARY_DIR@', 'config.test')
 
 # import a tool by path (default: the scripts directory)
 # needed for duplicate filenames or files without the .py extension
-def import_tool(tool, filename=None, path=SCRIPTS):
+def import_tool(tool, filename=None,
+                path=os.path.join('@CMAKE_BINARY_DIR@', 'scripts')):
     if filename is None:
         filename = tool
 

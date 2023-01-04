@@ -67,11 +67,11 @@ TABLE_NAME = 'machine_config'
 # arg attr, sql column name, column type
 COLS_REQUIRED = [
     ['hash',     None, str],
+    ['hash_alg', None, str],
 ]
 
 COLS_HASHED = [
     # these column names match the argument names
-    ['hash_alg', None, str],
     ['name',     None, str],
     ['cpu',      None, str],
     ['cores',    None, int],

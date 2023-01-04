@@ -74,7 +74,6 @@ sys.path += [
     os.path.join('@CMAKE_BINARY_DIR@', 'scripts'),
 ]
 
-import common
 import gufi_config
 
 def build_config(pairs, remove=None):
@@ -88,8 +87,8 @@ class TestConfig(unittest.TestCase):
 class TestServerConfig(unittest.TestCase):
     default = {
         gufi_config.Server.THREADS      : 5,
-        gufi_config.Server.EXECUTABLE   : os.path.join(common.ROOT, 'src', 'gufi_query'),
-        gufi_config.Server.INDEXROOT    : common.ROOT,
+        gufi_config.Server.EXECUTABLE   : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_query'),
+        gufi_config.Server.INDEXROOT    : '@CMAKE_BINARY_DIR@',
         gufi_config.Server.OUTPUTBUFFER : 1024,
     }
 

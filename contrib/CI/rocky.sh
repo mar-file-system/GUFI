@@ -71,7 +71,7 @@ yum -y install epel-release
 yum -y install fuse-devel libattr-devel pcre-devel
 
 # install required packages
-yum -y install attr autoconf clang cmake3 findutils fuse make patch pkgconfig python3 sudo
+yum -y install attr autoconf clang cmake3 findutils fuse git make patch pkgconfig python3 sudo
 
 # for performance history framework testing
 yum -y install python3-pip
