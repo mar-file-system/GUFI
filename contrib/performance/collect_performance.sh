@@ -68,6 +68,7 @@ RUNS=30
 EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
 BUILD_THREADS="" # empty
 SEPARATOR="|"
+SUDO=""
 
 function help() {
     echo "Syntax: $0 [options] gufi_build_path hashdb full_hash raw_data_db [commit_id...] [commit_range@freq...]"
@@ -77,6 +78,7 @@ function help() {
     echo "    --extract PATH           path of extract.py"
     echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
     echo "    --separator c            sqlite3 separator character"
+    echo "    --sudo                   run the GUFI executable with sudo"
     echo
 }
 
@@ -108,6 +110,11 @@ case "${key}" in
         SEPARATOR="$2"
         shift
         ;;
+    --sudo)
+        SUDO="sudo"
+        shift
+        ;;
+
     *)  # unknown option
         POSITIONAL+=("$1") # save it in an array for later
         ;;
@@ -247,6 +254,6 @@ do
 
         # run gufi_cmd through bash to remove single quotes
         # shellcheck disable=SC2069
-        bash -c "${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
+        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
     done
 done
