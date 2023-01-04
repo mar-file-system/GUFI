@@ -140,7 +140,7 @@ def extract(src, commit, branch):
     # check for missing input
     for col, _ in COLUMNS:
         if col not in data:
-            raise ValueError('Cumulative times data missing {0}'.format(col))
+            raise ValueError('Cumulative times data missing {0} on commit {1}'.format(col, commit))
 
     return data
 
