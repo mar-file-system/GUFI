@@ -103,7 +103,7 @@ class TestDBFuncs(unittest.TestCase):
             rows = [row[0] for row in cur.fetchall()]
             self.assertEqual(3, len(rows))
             for table_name in [gufi.TABLE_NAME, machine.TABLE_NAME, raw_data.TABLE_NAME]:
-                self.assertTrue(table_name in rows)
+                self.assertIn(table_name, rows)
 
             hashdb.insert(db, None, hash, raw_data.TABLE_NAME, [], [], [])
             cur = db.execute('SELECT hash FROM {0};'.format(raw_data.TABLE_NAME))
