@@ -68,7 +68,6 @@ RUNS=30
 EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
 GIT="@GIT_EXECUTABLE@"
 BUILD_THREADS="" # empty
-SEPARATOR="|"
 SUDO=""
 
 function help() {
@@ -79,7 +78,6 @@ function help() {
     echo "    --extract PATH           path of extract.py"
     echo "    --git PATH               path of git executable"
     echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
-    echo "    --separator c            sqlite3 separator character"
     echo "    --sudo                   run the GUFI executable with sudo"
     echo
 }
@@ -112,10 +110,6 @@ case "${key}" in
         BUILD_THREADS="$2"
         shift
         ;;
-    --separator)
-        SEPARATOR="$2"
-        shift
-        ;;
     --sudo)
         SUDO="sudo"
         ;;
@@ -142,7 +136,7 @@ HASHES_DB=$(realpath "$2")
 FULL_HASH="$3"
 RAW_DATA_DB=$(realpath "$4")
 
-shift 4 # shift multiple here because it doesn't matter if this silently fails
+shift 4
 
 # Main
 cd "${GUFI}"
@@ -173,7 +167,7 @@ do
                 COMMITS+=("${commit}")
             fi
 
-            ((i = i + 1))
+            (( i++ ))
         done
     else
         mapfile -t commits < <("${GIT}" rev-parse "${ish}")
@@ -192,19 +186,16 @@ export PYTHONPATH="@CMAKE_CURRENT_BINARY_DIR@/..:${PYTHONPATH}"
 function generate_cmd() {
     gufi_hash="$1"
 
-    # strings
-    for col in cmd outfile outdb I T S E F J K G tree
+    # extract command components one at a time just in case a value has spaces in it when it shouldn't
+    for col in cmd outfile outdb x a n d I T S E F y z J K G m B w tree
     do
         # shellcheck disable=SC2229
         read -r "${col}" <<<$(sqlite3 "${HASHES_DB}" "SELECT ${col} FROM gufi_command WHERE hash == \"${gufi_hash}\";")
     done
 
-    # non-strings
-    IFS="${SEPARATOR}" read -r x n a d y z B <<<$(sqlite3 -separator "${SEPARATOR}" "${HASHES_DB}" "SELECT x, n, a, d, y, z, B FROM gufi_command WHERE hash == \"${gufi_hash}\";")
-
     # booleans
     flags=""
-    for flag in x a
+    for flag in x a m w
     do
         if (( "${!flag}" ))
         then
@@ -213,7 +204,7 @@ function generate_cmd() {
     done
 
     # flags with non-empty string representations
-    for flag in n d o O I T S E F y z J K G B
+    for flag in n d I T S E F y z J K G B
     do
         if [[ "${!flag}" ]]
         then

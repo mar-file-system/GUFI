@@ -232,10 +232,16 @@ def parse_args(argv):
                         metavar='<SQL_aggregate>',
                         type=str,
                         help='SQL for aggregated results')
+    parser.add_argument('-m',
+                        action='store_true',
+                        help='Keep mtime and atime same on the database files')
     parser.add_argument('-B',
                         metavar='<buffer size>',
                         type=gufi_common.get_non_negative,
                         help='size of each thread\'s output buffer in bytes')
+    parser.add_argument('-w',
+                        action='store_true',
+                        help='open the database files in read-write mode instead of read only mode')
 
     # Non gufi command_flags
     parser.add_argument('--hash_alg',

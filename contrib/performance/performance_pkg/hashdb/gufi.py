@@ -106,7 +106,9 @@ COLS_HASHED = [
     ['J',            None,      str],
     ['K',            None,      str],
     ['G',            None,      str],
+    ['m',            None,      bool],
     ['B',            None,      int],
+    ['w',            None,      bool],
 
     # always exists
     ['tree',         None,      str],
