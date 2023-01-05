@@ -167,7 +167,7 @@ do
                 COMMITS+=("${commit}")
             fi
 
-            (( i++ ))
+            (( i = i + 1 ))
         done
     else
         mapfile -t commits < <("${GIT}" rev-parse "${ish}")
