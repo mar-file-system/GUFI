@@ -114,8 +114,7 @@ class TestDBFuncs(unittest.TestCase):
                 setattr(args, key, key)
 
             # insert
-            hashdb.insert(db, args, getattr(args, 'hash'),
-                          raw_data.TABLE_NAME, raw_data.COLS_REQUIRED,
+            hashdb.insert(db, args, 'hash', raw_data.TABLE_NAME,
                           raw_data.COLS_HASHED, raw_data.COLS_NOT_HASHED)
 
             # check inserted data

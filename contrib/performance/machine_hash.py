@@ -133,7 +133,6 @@ def run(argv):
             else:
                 hashdb.insert(con, args, machine_hash,
                               machine.TABLE_NAME,
-                              machine.COLS_REQUIRED,
                               machine.COLS_HASHED,
                               machine.COLS_NOT_HASHED)
 

@@ -81,15 +81,12 @@ COL_DEBUG_NAME = 'debug_name'
 
 # arg attr, sql column name, column type
 # None == arg attr
-COLS_REQUIRED = [
-    ['hash',         None,      str],
+COLS_HASHED = [
     ['hash_alg',     None,      str],
     [COL_CMD,        None,      str],
     [COL_DEBUG_NAME, None,      str],
-]
 
-COLS_HASHED = [
-    # this script only handles flags listed in bf.c
+    # flags listed in bf.c
     ['x',            None,      bool],
     ['a',            None,      bool],
     ['n',            None,      int],
@@ -118,4 +115,4 @@ COLS_NOT_HASHED = [
     ['extra',        None,      str],
 ]
 
-COLS = COLS_REQUIRED + COLS_HASHED + COLS_NOT_HASHED
+COLS = COLS_HASHED + COLS_NOT_HASHED

@@ -119,7 +119,6 @@ def run(argv):
             else:
                 hashdb.insert(con, args, raw_data_hash,
                               raw_data.TABLE_NAME,
-                              raw_data.COLS_REQUIRED,
                               raw_data.COLS_HASHED,
                               raw_data.COLS_NOT_HASHED)
 

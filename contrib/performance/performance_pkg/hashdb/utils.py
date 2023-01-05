@@ -86,12 +86,15 @@ def check_not_exists(path):
 
 # set up tables
 def create_tables(con):
+    # always the first column
+    hash_col = [['hash', None, str]]
+
     machine_col_str = ', '.join('{0} {1}'.format(
-        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in machine.COLS)
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + machine.COLS)
     gufi_col_str = ', '.join('{0} {1}'.format(
-        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in gufi.COLS)
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + gufi.COLS)
     raw_data_col_str = ', '.join('{0} {1}'.format(
-        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in raw_data.COLS)
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + raw_data.COLS)
 
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
         machine.TABLE_NAME, machine_col_str))
@@ -104,7 +107,7 @@ def create_tables(con):
 def hash_config(alg, data):
     return Hashes[alg](data.encode()).hexdigest()
 
-def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_hashed):
+def insert(con, args, hash, table_name, cols_hashed, cols_not_hashed):
     '''
     only insert args/columns that are present rather than insert
     filler values into the database - let sqlite set the defaults
@@ -117,8 +120,7 @@ def insert(con, args, hash, table_name, cols_required, cols_hashed, cols_not_has
     cols = ['hash']
     vals = ['"{0}"'.format(hash)]
 
-    # first column of cols_required should aways be hash
-    for col, name, type in cols_required[1:] + cols_hashed + cols_not_hashed:
+    for col, name, type in cols_hashed + cols_not_hashed:
         val = getattr(args, col)
         if val is not None:
             cols += [name if name else col]

@@ -294,7 +294,6 @@ def run(argv):
             else:
                 hashdb.insert(con, args, gufi_hash,
                               gufi.TABLE_NAME,
-                              gufi.COLS_REQUIRED,
                               gufi.COLS_HASHED,
                               gufi.COLS_NOT_HASHED)
 
