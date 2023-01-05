@@ -116,7 +116,7 @@ def run(argv):
 
     branch = args.branch
     if branch is None:
-        branch = common.run_get_stdout(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])[:-1]
+        branch = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-parse', '--abbrev-ref', 'HEAD'])[:-1]
 
     # parse the output
     parsed = debug_print.extract(sys.stdin, commit, branch)
