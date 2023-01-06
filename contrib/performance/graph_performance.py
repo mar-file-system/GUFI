@@ -67,16 +67,23 @@ import os
 import sqlite3
 import sys
 
+from performance_pkg import common
 from performance_pkg.extraction import DebugPrints
 from performance_pkg.graph import config, graph
 from performance_pkg.hashdb import utils as hashdb
 
 if sys.version_info.major < 3:
+    # https://stackoverflow.com/a/4935945
+    # by Joe Kington
     import matplotlib as mpl
     mpl.use('Agg')
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--git-path',
+                        type=os.path.abspath,
+                        default='@CMAKE_SOURCE_DIR@',
+                        help='Directory of repository to get commit hashes from')
     parser.add_argument('database',
                         type=str,
                         help='Hash database of configurations (must already exist)')
@@ -92,6 +99,20 @@ def parse_args(argv):
     config.override_args(parser)
 
     return parser.parse_args(argv)
+
+def expand_git_identifiers(identifiers, git_path='@CMAKE_SOURCE_DIR@'):
+    commits = []
+    for ish in identifiers:
+        # try expanding identifier using git
+        if '..' in ish:
+            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', '-C', git_path, 'rev-list', ish])
+        else:
+            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', '-C', git_path, 'rev-parse', ish])
+
+        # failure to expand still returns the original ish as output
+        commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list
+
+    return commits
 
 def gather_raw_numbers(dbname, table_name, columns, commits):
     raw_numbers = [] # raw numbers grouped by commit
@@ -166,29 +187,7 @@ def set_hash_len(hash, len): # pylint: disable=redefined-builtin
         return hash[len:]
     return hash
 
-def expand_git_identifiers(identifiers):
-    commits = []
-    for ish in identifiers:
-        # try expanding identifier using git
-        if '..' in ish:
-            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-list', ish])
-        else:
-            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-parse', ish])
-
-        # failure to expand still returns the original ish as output
-        commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list
-
-    return commits
-
 def run(argv):
-    # save current working directory
-    working_directory = os.getcwd()
-
-    # navigate to repo to have access to git
-    abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
-    os.chdir(dname)
-
     # pylint: disable=too-many-locals
     args = parse_args(argv)
 
@@ -203,7 +202,7 @@ def run(argv):
 
     # aliases
     raw_data = conf[config.RAW_DATA]
-    commits = expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS])
+    commits = expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS], args.git_path)
     columns = raw_data[config.RAW_DATA_COLUMNS]
 
     # get raw data
@@ -234,10 +233,7 @@ def run(argv):
     commits = [set_hash_len(commit, hash_len)
                for commit in commits]
 
-    # return to working directory
-    os.chdir(working_directory)
-
-    # plot stats and save in working directory
+    # plot stats and save to file
     graph.generate(conf, commits, averages, columns,
                    low_pnts, high_pnts, minimums, maximums)
 

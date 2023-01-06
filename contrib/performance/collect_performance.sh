@@ -138,9 +138,6 @@ RAW_DATA_DB=$(realpath "$4")
 
 shift 4
 
-# Main
-cd "${GUFI}"
-
 # all remaining arguments are treated as commit ids
 COMMITS=()
 while [[ $# -gt 0 ]]
@@ -157,7 +154,7 @@ do
             freq=1
         fi
 
-        mapfile -t commits < <("${GIT}" rev-list "${range}")
+        mapfile -t commits < <("${GIT}" -C "${GUFI}" rev-list "${range}")
 
         i=0
         for commit in "${commits[@]}"
@@ -170,7 +167,7 @@ do
             (( i = i + 1 ))
         done
     else
-        mapfile -t commits < <("${GIT}" rev-parse "${ish}")
+        mapfile -t commits < <("${GIT}" -C "${GUFI}" rev-parse "${ish}")
         COMMITS+=("${commits[@]}")
     fi
 
@@ -237,9 +234,9 @@ function drop_caches() {
 for commit in "${COMMITS[@]}"
 do
     # switch to commit and rebuild
-    git -c advice.detachedHead=false checkout "${commit}"
+    "${GIT}" -C "${GUFI}" -c advice.detachedHead=false checkout "${commit}"
     # shellcheck disable=SC2046
-    make -j ${BUILD_THREADS} > /dev/null
+    make -C "${GUFI}" -j ${BUILD_THREADS} > /dev/null
 
     # for a single commit, run the command multiple times and
     # put the performance numbers in the raw data database

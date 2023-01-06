@@ -67,7 +67,6 @@ if sys.version_info.major >= 3:
 else:
     from ConfigParser import ConfigParser # pylint: disable=import-error
 
-from performance_pkg import common        # pylint: disable=wrong-import-position
 import gufi_common                        # pylint: disable=wrong-import-position
 
 # converter functions for input read from ConfigParser
