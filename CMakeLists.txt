@@ -63,16 +63,16 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 # Don't allow in-source build
-get_filename_component(CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR} REALPATH)
-get_filename_component(CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR} REALPATH)
-if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+get_filename_component(CMAKE_SOURCE_DIR "${CMAKE_SOURCE_DIR}" REALPATH)
+get_filename_component(CMAKE_BINARY_DIR "${CMAKE_BINARY_DIR}" REALPATH)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Refusing to build in source directory \"${CMAKE_SOURCE_DIR}\"")
 endif()
 
-project(GUFI VERSION 0.5.1 LANGUAGES C)
+project(GUFI VERSION 0.6.0 LANGUAGES C)
 
 # print version info
-find_package(Git)
+find_package(Git) # not required
 set(VERSION_STRING "GUFI ${GUFI_VERSION}")
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
   if (GIT_FOUND)
@@ -139,10 +139,10 @@ if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
 
   # GCC prior to 4.9.3 doesn't have full standard support
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.3)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9.3")
     set(CMAKE_CXX_COMPILER false)
     message(STATUS "Require GNU C++ version 4.9.3 or greater: Not compiling C++ sources")
-  elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.9)
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.9")
     set(CMAKE_CXX_COMPILER false)
     message(STATUS "Require Clang version 3.9 or greater: not compiling C++ sources")
   else()
@@ -173,7 +173,7 @@ set(CMAKE_SKIP_BUILD_RPATH TRUE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # Python is required
-if ("${CMAKE_VERSION}" VERSION_GREATER "3.12.0")
+if (CMAKE_VERSION VERSION_GREATER "3.12.0")
   find_package(Python REQUIRED COMPONENTS Interpreter)
 else()
   find_program(Python python REQUIRED)

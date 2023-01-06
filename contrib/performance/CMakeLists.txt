@@ -84,11 +84,13 @@ execute_process(COMMAND "${PYTHON_INTERPRETER}" -c "import os, matplotlib; print
   ERROR_QUIET)
 if (MATPLOTLIB_PATH)
   message(STATUS "Found matplotlib for ${PYTHON_INTERPRETER}: ${MATPLOTLIB_PATH}")
+  message(STATUS "Configuring graphing script of performance history framework")
   list(APPEND SCRIPTS
     graph_performance.py       # calculate stats on stored data and plot them onto a graph
     )
 else()
-  message(STATUS "matplotlib not found for ${PYTHON_INTERPRETER}. Not configuring graphing script of performance history framework.")
+  message(STATUS "matplotlib not found for ${PYTHON_INTERPRETER}")
+  message(STATUS "Not configuring graphing script of performance history framework")
 endif()
 
 foreach(SCRIPT ${SCRIPTS})

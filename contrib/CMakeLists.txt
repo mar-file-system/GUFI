@@ -106,7 +106,7 @@ if (BENCHMARK)
 
   function(check_int VAR)
     string(REGEX MATCH "^[0-9]+$" PARSED "${${VAR}}")
-    if ("${PARSED}" STREQUAL "")
+    if (PARSED STREQUAL "")
       message(FATAL_ERROR "Invalid ${VAR} value: \"${${VAR}}\"")
     endif()
   endfunction()
@@ -150,5 +150,25 @@ endif()
 
 add_subdirectory(CI)
 if (GIT_FOUND)
-  add_subdirectory(performance)
+  # git -C <path>
+  set(GIT_PERFORMANCE_VERSION "1.8.5")
+
+  if (CMAKE_VERSION GREATER "3.14")
+    set(GIT_VERSION "${GIT_VERSION_STRING}")
+  else()
+    execute_process(COMMAND ${GIT_EXECUTABLE} --version
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_VERSION_STRING
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX MATCH "[0-9]+\.[0-9]+(\.[0-9]+)?" GIT_VERSION "${GIT_VERSION_STRING}")
+  endif()
+  message(STATUS "git version: ${GIT_VERSION}")
+
+  # VERSION_GREATER_EQUAL was introduced in CMake 3.7
+  if (GIT_VERSION VERSION_LESS GIT_PERFORMANCE_VERSION)
+    message(STATUS "Not adding performance history framework")
+  else()
+    message(STATUS "Adding performance history framework")
+    add_subdirectory(performance)
+  endif()
 endif()
