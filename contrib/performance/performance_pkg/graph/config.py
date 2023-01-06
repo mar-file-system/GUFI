@@ -185,20 +185,6 @@ def read_bool(conf, parser, defaults, section, key):
 
     conf[section][key] = value
 
-def expand_git_identifiers(identifiers):
-    commits = []
-    for ish in identifiers:
-        # try expanding identifier using git
-        if '..' in ish:
-            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-list', ish])
-        else:
-            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-parse', ish])
-
-        # failure to expand still returns the original ish as output
-        commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list
-
-    return commits
-
 def config_file(filename):
     '''
     Parse settings found in config file

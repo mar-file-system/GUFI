@@ -166,6 +166,20 @@ def set_hash_len(hash, len): # pylint: disable=redefined-builtin
         return hash[len:]
     return hash
 
+def expand_git_identifiers(identifiers):
+    commits = []
+    for ish in identifiers:
+        # try expanding identifier using git
+        if '..' in ish:
+            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-list', ish])
+        else:
+            expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', 'rev-parse', ish])
+
+        # failure to expand still returns the original ish as output
+        commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list
+
+    return commits
+
 def run(argv):
     # save current working directory
     working_directory = os.getcwd()
@@ -189,7 +203,7 @@ def run(argv):
 
     # aliases
     raw_data = conf[config.RAW_DATA]
-    commits = config.expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS])
+    commits = expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS])
     columns = raw_data[config.RAW_DATA_COLUMNS]
 
     # get raw data
