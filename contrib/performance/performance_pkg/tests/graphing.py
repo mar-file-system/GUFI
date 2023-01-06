@@ -132,24 +132,36 @@ class TestConfig(unittest.TestCase):
                 self.assertTrue(hasattr(args, attr))
 
     def test_override(self):
-        override = '' # any non-None value
+        str_override = '-'
+        num_override = '1'
 
-        class Temp: # pylint: disable=too-few-public-methods
+        class Fake: # pylint: disable=too-few-public-methods
             pass
 
         # fake args
-        args = Temp()
+        args = Fake()
         for section, keys in config.DEFAULTS.items():
-            for key, _ in keys.items():
+            for key, settings in keys.items():
+                convert, _ = settings
                 attr = config.override_name(section, key)
-                setattr(args, attr, override)
+                if convert in [str, config.str_list]:
+                    setattr(args, attr, str_override)
+                elif convert in [int, float, bool]:
+                    setattr(args, attr, num_override)
+                else:
+                    setattr(args, attr, None)
 
         with tempfile.NamedTemporaryFile() as cfg:
             conf = config.override(config.config_file(cfg.name), args)
-
             for section, keys in config.DEFAULTS.items():
-                for key, _ in keys.items():
-                    self.assertEqual(override, conf[section][key])
+                for key, settings in keys.items():
+                    convert, _ = settings
+                    if convert in [str]:
+                        self.assertEqual(str_override, conf[section][key])
+                    elif convert in [config.str_list]:
+                        self.assertEqual([str_override], conf[section][key])
+                    elif convert in [int, float, bool]:
+                        self.assertEqual(convert(num_override), conf[section][key])
 
 class TestGraph(unittest.TestCase):
     def test_generate(self):
