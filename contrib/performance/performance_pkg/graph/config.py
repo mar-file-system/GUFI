@@ -61,6 +61,7 @@
 
 
 
+import os
 import sys
 if sys.version_info.major >= 3:
     from configparser import ConfigParser
@@ -131,7 +132,7 @@ DEFAULTS = {
     },
 
     OUTPUT : {
-        OUTPUT_PATH        : [str, ''],
+        OUTPUT_PATH        : [os.path.abspath, ''],
         OUTPUT_GRAPH_TITLE : [str, ''],
         OUTPUT_DIMENSIONS  : [pos_float_list, [0.0, 0.0]],
     },
