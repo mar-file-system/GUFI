@@ -167,6 +167,9 @@ def set_hash_len(hash, len): # pylint: disable=redefined-builtin
     return hash
 
 def run(argv):
+    # save current working directory
+    working_directory = os.getcwd()
+
     # navigate to repo to have access to git
     abspath = os.path.abspath(__file__)
     dname = os.path.dirname(abspath)
@@ -217,7 +220,10 @@ def run(argv):
     commits = [set_hash_len(commit, hash_len)
                for commit in commits]
 
-    # plot stats
+    # return to working directory
+    os.chdir(working_directory)
+
+    # plot stats and save in working directory
     graph.generate(conf, commits, averages, columns,
                    low_pnts, high_pnts, minimums, maximums)
 
