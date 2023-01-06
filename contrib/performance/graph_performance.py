@@ -63,6 +63,7 @@
 
 import argparse
 import numbers
+import os
 import sqlite3
 import sys
 
@@ -159,6 +160,11 @@ def set_hash_len(hash, len): # pylint: disable=redefined-builtin
     return hash
 
 def run(argv):
+    # navigate to repo to have access to git
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
+
     # pylint: disable=too-many-locals
     args = parse_args(argv)
 
