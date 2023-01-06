@@ -249,11 +249,16 @@ def override_args(parser):
 
 def override(conf, args):
     for section, keys in DEFAULTS.items():
-        for key, _ in keys.items():
+        for key, settings in keys.items():
+            convert, _ = settings
             dest = override_name(section, key)
             value = getattr(args, dest)
+
             if value is not None:
-                conf[section][key] = value
+                try:
+                    conf[section][key] = convert(value)
+                except Exception: # pylint: disable=broad-except
+                    pass
 
     return conf
 
