@@ -213,7 +213,7 @@ def config_file(filename):
 
     conf = {section : {} for section in DEFAULTS}
 
-    read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COMMITS, expand_git_identifiers)
+    read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COMMITS)
     read_value(conf, parser, DEFAULTS, RAW_DATA, RAW_DATA_COLUMNS)
 
     read_value(conf, parser, DEFAULTS, OUTPUT, OUTPUT_PATH)

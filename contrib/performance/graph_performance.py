@@ -105,12 +105,19 @@ def gather_raw_numbers(dbname, table_name, columns, commits):
         col_str = ', '.join('"{0}"'.format(col) for col in columns)
 
         # get raw numbers grouped by commit
-        for commit in commits:
+        for commit in commits[:]:
             query = 'SELECT {0} FROM {1} WHERE "commit" == "{2}";'.format(
                 col_str, table_name, commit
             )
             cur = con.execute(query)
-            raw_numbers += [cur.fetchall()]
+
+            # We want to skip empty commits
+            raw_commit = cur.fetchall()
+            if len(raw_commit) == 0:
+                commits.remove(commit)
+                continue
+
+            raw_numbers += [raw_commit]
     finally:
         con.close()
 
@@ -179,7 +186,7 @@ def run(argv):
 
     # aliases
     raw_data = conf[config.RAW_DATA]
-    commits = raw_data[config.RAW_DATA_COMMITS]
+    commits = config.expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS])
     columns = raw_data[config.RAW_DATA_COLUMNS]
 
     # get raw data
