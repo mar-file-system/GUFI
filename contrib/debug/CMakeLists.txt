@@ -62,7 +62,7 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
-if(PER_THREAD_STATS)
+if(PRINT_PER_THREAD_STATS)
   foreach(plot
       prepare_timestamps.sh
 
