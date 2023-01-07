@@ -101,8 +101,9 @@ class TestHashing(unittest.TestCase):
                       '--cpu', '',
                       '--cores', '0',
                       '--ram', '0',
-                      '--storage', '']
-        expected_hash = '58b63f5433e2fa2f054c132e363beaaa'
+                      '--storage', '',
+                      '--os', '']
+        expected_hash = '46145e0e675d9142d54d85eecbff1fa4'
 
         self.template(machine_hash.parse_args, input_args,
                       machine_hash.compute_hash, expected_hash)
