@@ -82,9 +82,12 @@ GUFI_CMD="gufi_trace2index"
 DEBUG_NAME="cumulative-times"
 TREE="test_tree"
 OVERRIDE="custom_hash_value"
+TRACE_PREFIX="test_trace"
+INDEX="test_index"
 
 cleanup() {
-    rm -f "${HASHDB}" "${RAW_DATA_DB}"
+    rm -f "${TRACE_PREFIX}".* "${HASHDB}" "${RAW_DATA_DB}"
+    rm -rf "${INDEX}"
 
     # delete generated graph
     rm -f "$(grep path ${CONFIG_FILE} | awk '{ print $3 }')"
@@ -101,43 +104,19 @@ raw_data_hash=$("${PERFORMANCE_PATH}/raw_data_hash.py" --database "${HASHDB}" --
 # setup raw data database
 "${PERFORMANCE_PATH}/setup_raw_data_db.py" "${HASHDB}" "${raw_data_hash}" "${RAW_DATA_DB}"
 
+# create a trace
+"@CMAKE_BINARY_DIR@/src/gufi_dir2trace" "@CMAKE_BINARY_DIR@" "${TRACE_PREFIX}"
+
 for((commit=0; commit<5; commit++))
 do
+    for((x=0; x<5; x++))
+    do
+        # drop caches
 
-for((x=0; x<5; x++))
-do
-(
-# fake numbers
-cat <<EOF
-Handle args:               0.00s
-memset(work):              0.00s
-Parse directory line:      0.00s
-dupdir:                    0.00s
-copy_template:             0.00s
-opendb:                    0.00s
-Zero summary struct:       0.00s
-insertdbprep:              0.00s
-startdb:                   0.00s
-fseek:                     0.00s
-Read entries:              $((10 + x)).00s
-    getline:               0.00s
-    memset(entry struct):  0.00s
-    Parse entry line:      0.00s
-    free(entry line):      0.00s
-    sumit:                 0.00s
-    insertdbgo:            0.00s
-stopdb:                    0.00s
-insertdbfin:               0.00s
-insertsumdb:               0.00s
-closedb:                   ${x}.00s
-cleanup:                   0.00s
+        "@CMAKE_BINARY_DIR@/src/gufi_trace2index" "${TRACE_PREFIX}".* "${INDEX}" 2>&1 > /dev/null | "${PERFORMANCE_PATH}/extract.py" "${HASHDB}" --commit "commit-${commit}" --branch "example" "${raw_data_hash}" "${RAW_DATA_DB}"
 
-Directories created:       22
-Files inserted:            82
-
-EOF
-) | "${PERFORMANCE_PATH}/extract.py" "${HASHDB}" --commit "commit-${commit}" --branch "example" "${raw_data_hash}" "${RAW_DATA_DB}"
-done
+        rm -r "${INDEX}"
+    done
 done
 
 "${PERFORMANCE_PATH}/graph_performance.py" "${HASHDB}" "${raw_data_hash}" "${RAW_DATA_DB}" "${CONFIG_FILE}"
