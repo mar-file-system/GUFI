@@ -115,9 +115,9 @@ class TestHashing(unittest.TestCase):
                       '-S', '',
                       '-E', '',
                       'gufi_query',
-                      'cumulative-times',
+                      'cumulative_times',
                       'tree']
-        expected_hash = 'a4f50876832d4fe637f5f90253d8f69d'
+        expected_hash = '507417ff9005cf3d2561ec641fb81aa8'
 
         self.template(gufi_hash.parse_args, input_args,
                       gufi_hash.compute_hash, expected_hash)

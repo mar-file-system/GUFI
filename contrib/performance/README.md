@@ -55,13 +55,18 @@ This directory contains scripts for collecting performance numbers from GUFI too
     * **Syntax**: `gufi_hash.py <gufi_command> <debug_name> <tree> [gufi command flags]`
         * Use `--database` to store the unique identifier in the **gufi_command** table of the hash database.
         *  `<debug_name>` can be one of the following:
-            * **cumulative-times** (for `gufi_query`)
-            * **cumulative-times** (for `gufi_trace2index`)
+            * For `gufi_query`
+                * **cumulative_times**
+                * **cumulative_times_terse**
+                    * **cumulative_times** data printed in a different format; data is placed into the **cumulative_times** table
+                    * Pass `-j` to `gufi_query` and `gufi_hash.py`
+            * For `gufi_trace2index`
+                * **cumulative_times**
 
     * **Example**:
 
     ```bash
-    $ gufi_hash.py gufi_query cumulative-times /path/to/tree -n 16 -S "SELECT uid FROM summary;" --database hashes.db
+    $ gufi_hash.py gufi_query cumulative_times /path/to/tree -n 16 -S "SELECT uid FROM summary;" --database hashes.db
     0b5c2dbf57a397906f1d4bf7cf4fae4c
     ````
 
@@ -87,7 +92,7 @@ This directory contains scripts for collecting performance numbers from GUFI too
 
     ```bash
     $ setup_raw_data_db.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db
-    825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+    825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
     ```
 
     **raw_numbers.db** will be created with (in this case) the **cumulative_times** table for `gufi_query`.
@@ -101,7 +106,7 @@ Use **extraction.py** to extract a single set of performance numbers and store t
 
 ```bash
 $ ${GUFI_BUILD}/src/gufi_query -n 16 -S "SELECT uid FROM summary;" /path/to/tree 2>&1 >/dev/null | extract.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
 ```
 
 The benchmark numbers from `gufi_query` will be stored in the **cumulative_times** table of **raw_numbers.db**.
@@ -128,13 +133,13 @@ An additional copy of the GUFI repository (`GUFI_variable`) will also be require
 ```bash
 $ collect_performance.sh GUFI_variable/build/ hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db HEAD~300..HEAD@15 --runs 2 --sudo
 HEAD is now at c8cdd6e Collect performance will fail if build fails or extraction fails
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
 ...
 Previous HEAD position was 03e525e test server/client rpms
 HEAD is now at 5e928ac cleanup
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
 ```
 
 ## Graphing

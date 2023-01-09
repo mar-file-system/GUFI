@@ -189,7 +189,7 @@ function generate_cmd() {
     gufi_hash="$1"
 
     # extract command components one at a time just in case a value has spaces in it when it shouldn't
-    for col in cmd outfile outdb x a n d I T S E F y z J K G m B w tree
+    for col in cmd x a n d outfile outdb I T S E F y z J K G m B w terse tree
     do
         # shellcheck disable=SC2229
         read -r "${col}" <<<$(sqlite3 "${HASHES_DB}" "SELECT ${col} FROM gufi_command WHERE hash == \"${gufi_hash}\";")
@@ -204,6 +204,11 @@ function generate_cmd() {
             flags="${flags} -${flag}"
         fi
     done
+
+    if (( "${terse}" ))
+    then
+        flags="${flags} -j"
+    fi
 
     # flags with non-empty string representations
     for flag in n d I T S E F y z J K G B

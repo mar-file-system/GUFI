@@ -79,7 +79,7 @@ RAW_DATA_DB="example_raw_data.db"
 CONFIG_FILE="${PERFORMANCE_PATH}/configs/db_trace2index.ini"
 
 GUFI_CMD="gufi_trace2index"
-DEBUG_NAME="cumulative-times"
+DEBUG_NAME="cumulative_times"
 TREE="test_tree"
 OVERRIDE="custom_hash_value"
 TRACE_PREFIX="test_trace"

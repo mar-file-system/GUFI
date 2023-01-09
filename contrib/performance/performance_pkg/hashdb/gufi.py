@@ -68,11 +68,13 @@ COMMANDS = [
     GUFI_TRACE2INDEX
 ]
 
-CUMULATIVE_TIMES = 'cumulative-times'
+CUMULATIVE_TIMES = 'cumulative_times'
+CUMULATIVE_TIMES_TERSE = 'cumulative_times_terse'
 
 # debug out put -> parser
 DEBUG_NAME = {
     CUMULATIVE_TIMES : None,
+    CUMULATIVE_TIMES_TERSE : None,
 }
 
 TABLE_NAME = 'gufi_command'
@@ -100,6 +102,7 @@ COLS_HASHED = [
     ['F',            None,      str],
     ['y',            None,      int],
     ['z',            None,      int],
+    ['j',            'terse',   bool],
     ['J',            None,      str],
     ['K',            None,      str],
     ['G',            None,      str],

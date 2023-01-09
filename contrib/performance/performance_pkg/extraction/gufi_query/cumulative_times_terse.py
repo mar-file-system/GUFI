@@ -61,19 +61,33 @@
 
 
 
-from performance_pkg.hashdb import gufi
-import performance_pkg.extraction.gufi_query.cumulative_times
-import performance_pkg.extraction.gufi_query.cumulative_times_terse
-import performance_pkg.extraction.gufi_trace2index.cumulative_times
+from performance_pkg.extraction.gufi_query.cumulative_times import * # pylint: disable=wildcard-import,unused-wildcard-import
 
-# look up table for all debug print functions
-DEBUG_PRINTS = {
-    gufi.GUFI_QUERY : {
-        gufi.CUMULATIVE_TIMES : performance_pkg.extraction.gufi_query.cumulative_times,
-        gufi.CUMULATIVE_TIMES_TERSE : performance_pkg.extraction.gufi_query.cumulative_times_terse
-    },
+def extract(src, commit, branch): # pylint: disable=function-redefined
+    # these aren't obtained from running gufi_query
+    data = {
+        'id'    : None,
+        'commit': commit,
+        'branch': branch,
+    }
 
-    gufi.GUFI_TRACE2INDEX : {
-        gufi.CUMULATIVE_TIMES : performance_pkg.extraction.gufi_trace2index.cumulative_times,
-    },
-}
+    CUMULATIVE_ENTRIES = len(COLUMNS)-3
+
+    # parse input
+    for line in src:
+        line = line.strip()
+        if line == '':
+            continue
+
+        numbers = line.split(' ')
+        if len(numbers) != CUMULATIVE_ENTRIES:
+            raise ValueError('Improper number of cumulative times entries. Got: {0}, Expected: {1}'.format(len(numbers), CUMULATIVE_ENTRIES))
+
+        data.update({column[0] : num for column, num in zip(COLUMNS[3:], numbers)})
+
+    # check for missing input
+    for col, _ in COLUMNS:
+        if col not in data:
+            raise ValueError('Cumulative times data missing "{0}" on commit {1}'.format(col, commit))
+
+    return data

@@ -242,6 +242,9 @@ def parse_args(argv):
     parser.add_argument('-w',
                         action='store_true',
                         help='open the database files in read-write mode instead of read only mode')
+    parser.add_argument('-j',
+                         action='store_true',
+                         help='print the information in terse form')
 
     # Non gufi command_flags
     parser.add_argument('--hash_alg',

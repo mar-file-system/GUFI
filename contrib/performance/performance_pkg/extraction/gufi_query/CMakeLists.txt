@@ -65,6 +65,7 @@ cmake_minimum_required(VERSION 3.1.0)
 set(GUFI_QUERY
   __init__.py # needed for python2
   cumulative_times.py
+  cumulative_times_terse.py
 )
 
 foreach(SCRIPT ${GUFI_QUERY})

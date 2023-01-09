@@ -79,7 +79,7 @@ RAW_DATA_DB="example_raw_data.db"
 CONFIG_FILE="${PERFORMANCE_PATH}/configs/db_query.ini"
 
 GUFI_CMD="gufi_query"
-DEBUG_NAME="cumulative-times"
+DEBUG_NAME="cumulative_times"
 TREE="test_tree"
 OVERRIDE="custom_hash_value"
 
