@@ -245,8 +245,10 @@ for commit in "${COMMITS[@]}"
 do
     # switch to commit and rebuild
     "${GIT}" -C "${GUFI}" -c advice.detachedHead=false checkout "${commit}"
+
+    # if build fails, skip current commit
     # shellcheck disable=SC2046
-    make -C "${GUFI}" -j ${BUILD_THREADS} > /dev/null
+    make -C "${GUFI}" -j ${BUILD_THREADS} > /dev/null || continue
 
     # for a single commit, run the command multiple times and
     # put the performance numbers in the raw data database
@@ -258,7 +260,8 @@ do
         fi
 
         # run gufi_cmd through bash to remove single quotes
+        # if invalid data from commit break loop
         # shellcheck disable=SC2069
-        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}" --commit "${commit}"
+        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}" --commit "${commit}" || break
     done
 done
