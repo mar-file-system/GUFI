@@ -104,6 +104,9 @@ def parse_args(argv):
     parser.add_argument('--os',
                         type=str,
                         help='Operating System')
+    parser.add_argument('--kernel',
+                        type=str,
+                        help='Kernel Version')
     parser.add_argument('--override',
                         type=str,
                         help='Use this value for the hash instead of the calculated value')

@@ -73,6 +73,7 @@ COLS_HASHED = [
     ['ram',      None, str],
     ['storage',  None, str],
     ['os',       None, str],
+    ['kernel',   None, str],
 ]
 
 COLS_NOT_HASHED = [
