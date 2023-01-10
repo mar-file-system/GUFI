@@ -353,12 +353,12 @@ set(COMMON_LIBRARIES
   pcre
   Threads::Threads
   m
-  dl
 )
 
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
     ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
+    dl
   )
 endif()
 
