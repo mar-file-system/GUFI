@@ -110,6 +110,8 @@ def run(argv):
 
     # only inserts into hash db - run raw_data_db to create the actual db
     if args.database:
+        hashdb.check_exists(args.database)
+
         try:
             con = sqlite3.connect(args.database)
 

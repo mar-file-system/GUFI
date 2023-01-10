@@ -285,6 +285,8 @@ def run(argv):
     print(gufi_hash) # pylint: disable=superfluous-parens
 
     if args.database:
+        hashdb.check_exists(args.database)
+
         try:
             con = sqlite3.connect(args.database)
 
