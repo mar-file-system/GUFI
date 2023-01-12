@@ -103,14 +103,23 @@ def parse_args(argv):
 def expand_git_identifiers(identifiers, git_path='@CMAKE_SOURCE_DIR@'):
     commits = []
     for ish in identifiers:
+        freq = 1
+
         # try expanding identifier using git
         if '..' in ish:
+            split = ish.split('@')
+            if len(split) > 1:
+                ish = split[0]
+                freq = int(split[1])
+
             expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', '-C', git_path, 'rev-list', ish])
         else:
             expanded = common.run_get_stdout(['@GIT_EXECUTABLE@', '-C', git_path, 'rev-parse', ish])
 
-        # failure to expand still returns the original ish as output
-        commits += expanded.split('\n')[-2::-1]  # remove last empty line and reverse list
+        # failure to expand returns either empty string or the original ish as output
+
+        # remove last empty line from git output, reverse, and keep every freq commit
+        commits += expanded.split('\n')[-2::-1][::freq]
 
     return commits
 
