@@ -78,6 +78,9 @@ def pos_float(value):
     return val
 
 def to_list(value, convert=str):
+    # don't return empty list if input is None
+    if value is None:
+        return None
     return [convert(item.strip()) for item in value.split(',')]
 
 def str_list(value):
@@ -195,7 +198,10 @@ def config_file(filename):
     '''
 
     parser = ConfigParser()
-    parser.read(filename) # this can raise exception
+
+    # raise exception if file doesn't exist
+    with open(filename, 'r') as f:
+        parser.read_file(f)
 
     conf = {section : {} for section in DEFAULTS}
 
