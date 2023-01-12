@@ -246,6 +246,6 @@ do
 
         # run gufi_cmd through bash to remove single quotes
         # shellcheck disable=SC2069
-        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}"
+        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}" --commit "${commit}"
     done
 done
