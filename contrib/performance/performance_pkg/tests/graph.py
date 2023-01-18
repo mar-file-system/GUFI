@@ -145,9 +145,9 @@ class TestConfig(unittest.TestCase):
                 convert, _ = settings
                 attr = config.override_name(section, key)
                 if convert in [str, config.str_list]:
-                    setattr(args, attr, str_override)
+                    setattr(args, attr, convert(str_override))
                 elif convert in [int, float, bool]:
-                    setattr(args, attr, num_override)
+                    setattr(args, attr, convert(num_override))
                 else:
                     setattr(args, attr, None)
 

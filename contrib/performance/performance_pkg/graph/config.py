@@ -260,12 +260,12 @@ def override_args(parser):
     '''Add extra arguments to command line argument parser'''
     for section, keys in DEFAULTS.items():
         for key, setting in keys.items():
-            type, _ = setting # pylint: disable=redefined-builtin
+            convert, _ = setting # pylint: disable=redefined-builtin
             dest = override_name(section, key)
             flag = '--{0}'.format(dest)
 
             # do not set default to allow for override() to detect that the value wasn't overridden
-            parser.add_argument(flag, dest=dest, type=type,
+            parser.add_argument(flag, dest=dest, type=convert,
                                 help='Override [{0}][{1}] set ''in the config file'.format(
                                     section, key))
 
@@ -273,14 +273,13 @@ def override_args(parser):
 
 def override(conf, args):
     for section, keys in DEFAULTS.items():
-        for key, settings in keys.items():
-            convert, _ = settings
+        for key, _ in keys.items():
             dest = override_name(section, key)
             value = getattr(args, dest)
 
             if value is not None:
                 try:
-                    conf[section][key] = convert(value)
+                    conf[section][key] = value
                 except Exception: # pylint: disable=broad-except
                     pass
 
