@@ -61,7 +61,7 @@
 
 
 
-TABLE_NAME = 'raw_data_dbs'
+TABLE_NAME = 'raw_data'
 
 # arg attr, sql column name, column type
 COLS_HASHED = [

@@ -1,152 +1,154 @@
 # Performance Tracking and Graphing
 
-The performance history framework tracks the performance of GUFI. It contains scripts to store debug values and generate graphs.
+This directory contains scripts for collecting performance numbers from GUFI tools across commits and generating graphs using those numbers.
 
-Prerequisites
--------------
-
+## Prerequisites
 * `git 1.8.5+`
-
 * `Python 2.7+`
+* GUFI must be configured with **Debug** mode enabled and one of the debug prints supported by extract.py (currently only `PRINT_CUMULATIVE_TIMES`).
+* (Optional) Graph generation requires a recent version of the **Matplotlib** Python package for user's Python version. The non-graphing scripts will be placed into the build directory even if Matplotlib is not found.
 
-* GUFI must be built with **Debug** mode enabled and one of the debug prints supported by extract.py (currently only cumulative_times)
+## Notes
+* Unless explicitly specified, the executables run in the examples below are located in the performance directory of the build directory (e.g. `GUFI/build/contrib/performance`).
+* Running through the workflow below will not yield the same exact output. This workflow is meant to be a generic example.
+* Not every flag for each executable is listed below. Use `--help` or `-h` to print help menus.
 
-Setup:
-------
+## Setup:
+1. Setup Python Environment:
 
-**NOTE:** Running through the workflow below may not yield the same hashes. This workflow is meant to be a generic example.
-
-**NOTE:** This is run inside of the GUFI/build/contrib/performance directory
-
-1. Setup Python Enviornment:
+    ```bash
+    export GUFI_BUILD="GUFI/build"
+    export PYTHONPATH="${GUFI_BUILD}/contrib:${PYTHONPATH}"
+    export PYTHONPATH="${GUFI_BUILD}/contrib/performance:${PYTHONPATH}"
+    export PYTHONPATH="${GUFI_BUILD}/scripts:${PYTHONPATH}"
     ```
-    export PYTHONPATH="GUFI/build/contrib:${PYTHONPATH}"
-    export PYTHONPATH="GUFI/build/contrib/performance:${PYTHONPATH}"
-    export PYTHONPATH="GUFI/build/scripts:${PYTHONPATH}"
+
+2. Use **setup_hashdb.py** to initialize a database to store unique identifiers and the data that was used to generate them.
+    * This database contains the tables:
+        * **machine_config** - contains information about the machine where GUFI is being benchmarked
+        * **gufi_command** - contains the command used to generate the performance numbers being collected
+        * **raw_data** - maps the `machine_config` and `gufi_command` unique identifiers to a single unique identifier
+
+    * **Syntax**: `setup_hashdb.py <database>`
+
+    * **Example**:
+
+    ```bash
+    $ setup_hashdb.py hashes.db
     ```
 
-2. Use **setup_hashdb.py** to initialize a database to store hashes:
+    The **hashes.db** file will be created with no output. This file should be used for all `--database` and `<database>` arguments passed into the following scripts.
 
-    * **Syntax:** `setup_hashdb.py <hashdb_name>`
+3. Use **machine_hash.py** to create a unique identifier for the machine that GUFI will be benchmarked on.
+    * **Syntax**: `machine_hash.py [optional arguments that describe the machine]`
+        * Use `--database` to store the unique identifier in the **machine_config** table of the hash database.
+        * This will run with **no arguments**.
 
-    * **Example:** `setup_hashdb.py hashes.db`
+    * **Example**:
 
-    * **Output:** (`hashes.db` file created)
+    ```bash
+    $ machine_hash.py --cores 8 --ram 8GB --database hashes.db
+    d15e2506a6c1664f7e931b55f39d06fd
+    ```
 
-3. Use **gufi_hash.py** to hash GUFI command and store in hash database:
+4. Use **gufi_hash.py** to create a unique identifier for the GUFI command that will be benchmarked.
+    * **Syntax**: `gufi_hash.py <gufi_command> <debug_name> <tree> [gufi command flags]`
+        * Use `--database` to store the unique identifier in the **gufi_command** table of the hash database.
+        *  `<debug_name>` can be one of the following:
+            * **cumulative-times** (for `gufi_query`)
+            * **cumulative-times** (for `gufi_trace2index`)
 
-    * **Syntax:** `gufi_hash.py <gufi_command> <debug_values> <gufi_index> [gufi command flags][--database <hashdb_name>]`
+    * **Example**:
 
-        * **NOTE:** Without **--database** the hash is calculated, but not stored
+    ```bash
+    $ gufi_hash.py gufi_query cumulative-times /path/to/tree -n 16 -S "SELECT uid FROM summary;" --database hashes.db
+    0b5c2dbf57a397906f1d4bf7cf4fae4c
+    ````
 
-        * **NOTE:** See `gufi_hash.py -h` for full list of command options
+5. Use **raw_data_hash.py** to create a unique identifer that combines the **machine_hash** and **gufi_hash**.
+    * **Syntax**: `raw_data_hash.py <machine_hash> <gufi_hash>`
+        * Use `--database` to store the unique identifier in the **raw_data** table of the hash database
 
-    * **Example:** `gufi_hash.py gufi_query cumulative_times_terse /path/to/tree -S "SELECT uid FROM summary;" -n 112 -j --database hashes.db`
+    * **Example**:
 
-    * **Output:** `0b5c2dbf57a397906f1d4bf7cf4fae4c` (will be stored in **hashes.db** in the **gufi_command** table)
+    ```bash
+    $ raw_data_hash.py d15e2506a6c1664f7e931b55f39d06fd 0b5c2dbf57a397906f1d4bf7cf4fae4c --database hashes.db
+    825577c396836cdaa6491b7bfb6901c9
+    ```
 
-4. Use **machine_hash.py** to hash machine attributes and store in hash database:
+6. Use **setup_raw_data_db.py** to initialize a database that will contain raw numbers extracted from runs of a GUFI tool.
+    * The database will contain only one of the following tables:
+        * **cumulative_times** (for `gufi_query`)
+        * **cumulative_times** (for `gufi_trace2index`)
 
-    * **Syntax:** `machine_hash.py [machine command flags] [--database <hashdb_name>]`
+    * **Syntax**: `setup_raw_data_db.py <database> <raw_data_hash> <raw_data_db>`
 
-        * **NOTE:** Without **--database** the hash is calculated, but not stored
+    * **Example**:
 
-        * **NOTE:** This will run with **no arguments**.
+    ```bash
+    $ setup_raw_data_db.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db
+    825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+    ```
 
-        * **NOTE:** see `machine_hash.py -h` for full list of command flags
+    **raw_numbers.db** will be created with (in this case) the **cumulative_times** table for `gufi_query`.
 
-    * **Example:** `machine_hash.py --cores 8 --ram 8GB --database hashes.db`
+## Collecting One Set of Performance Numbers
+Use **extraction.py** to extract a single set of performance numbers and store them in the database generated by **setup_raw_data_db.py**.
 
-    * **Output:** `d15e2506a6c1664f7e931b55f39d06fd` (will be stored in **hashes.db** in the **machine_config** table)
+* **Syntax**: `<gufi_cmd> 2>&1 >/dev/null | extract.py <database> <raw_data_hash> <raw_data_db>`
 
-5. Use **raw_data_hash.py** to generate a combined hash using the machine_hash and gufi_hash as inputs:
+* **Example**:
 
-    * **Syntax:** `raw_data_hash.py <machine_hash> <gufi_hash> [--database <hashdb_name>]`
+```bash
+$ ${GUFI_BUILD}/src/gufi_query -n 16 -S "SELECT uid FROM summary;" /path/to/tree 2>&1 >/dev/null | extract.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+```
 
-        * **NOTE:** Without **--database** the hash is calculated, but not stored
+The benchmark numbers from `gufi_query` will be stored in the **cumulative_times** table of **raw_numbers.db**.
 
-    * **Example:** `raw_data_hash.py d15e2506a6c1664f7e931b55f39d06fd 0b5c2dbf57a397906f1d4bf7cf4fae4c --database hashes.db`
+## Collecting Multiple Sets of Performance Numbers Across Commits
+A user may want to automatically collect data for multiple runs, possibly across multiple commits. `collect_performance.sh` was written to simplify this task.
 
-    * **Output:** `825577c396836cdaa6491b7bfb6901c9` (will be stored in **hashes.db** in the **raw_data_dbs** table)
+An additional copy of the GUFI repository (`GUFI_variable`) will also be required when running `collect_performance.sh`. `GUFI_variable` will be moved across commits so that the scripts doing the collection are not modified while collecting data. `GUFI_variable` should be configured before running `collect_performance.sh`.
 
-6. Use **setup_raw_data_db.py** to initialize a raw data database:
+* **Syntax**: `collect_performance.sh <gufi_variable_build> <database> <raw_data_hash> <raw_data_db> [identifier]... [--runs <count>] [--sudo]`
+    * `[identifier]...` is a list of any [commit-ish or tree-ish identifiers](https://stackoverflow.com/a/23303550) that `git` can convert into commit hashes:
+        * **A single identifier**: `commit1`
+        * **A range**: `commit2..commit4`
+            * Will collect numbers from `commit4` and `commit3`, but not `commit2`
+            * Suffix a range with the `%` character followed by an integer to denote distance between commits
+                * `commit5..commit67%8` will collect numbers from `commit67`, `commit59`, `commit51`, ... up to but not including `commit5`
+    * `--runs`: How many times to run the GUFI command on a single commit
+    * `--sudo`: Run the GUFI command with sudo (in case the tree has permissions set)
+    * Before each run of the GUFI command, this script drops caches, which requires root access.
+        * The `--dont-drop-caches` flag can be used to skip dropping caches, but the numbers collected will contain cache performance rather than storage device performance. **Use of this flag is highly discouraged.**
 
-    * **Syntax:** `setup_raw_data_db.py <hashdb_name> <raw_hash> <raw_data_db_name>`
+* **Example**:
 
-    * **Example:** `setup_raw_data_db.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db`
-
-    * **Output:** `825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times` (`raw_numbers.db` file created)
-
-Database Tables
----------------
-
-1. hashdb (Result of running: **setup_hashdb.py**)
-
-    * gufi_command
-    * machine_config
-    * raw_data_dbs (raw_hash|machine_hash|gufi_hash)
-
-2. raw_data_db (Result of running: **setup_raw_data_db.py**, based on debug values stored)
-
-    * cumulative_times
-
-Inserting debug data
----------------------
-
-Use **extraction.py** to extract a single set of debug values and store in database
-
-* **Syntax:** `<gufi_cmd> 2>&1 >/dev/null | <extraction.py_path> <hashdb_name> <raw_hash> <raw_data_db_name>`
-
-* **Example:** `GUFI/build/src/gufi_query -S "SELECT uid FROM summary" ./tree 2>&1 >/dev/null | extraction.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db`
-
-* **Output:** `825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times` (resulting cumulative_times be stored in `raw_numbers.db`)
-
-Collect and insert debug data across commits
---------------------------------------------
-
-While in most cases, a user can gather cumulative times data run by run, in some cases, a user will want to use the `collect_performance.sh` script to automatically collect data across commits. Should this be the case, the user will need to download a separate GUFI repo for acquiring performance numbers that will switch between commits (`GUFI_variable`).
-
-This task has been greatly simplified and can be accomplished using `collect_performance.sh` inside of the first GUFI build.
-
-* **Syntax:** `collect_performance.sh <gufi_variable_build> <hashdb_name> <raw_hash> <raw_data_db_name> <commits> [--extract <path_to_extract>] [--runs <runs_on_each_commit>] [--build-threads <thread count>] [--sudo]`
-
-    * **Runs:** How many times to run the debug command on a given commit
-
-    * **Frequency:** Rate at which to change commits in a given range (Defined with @)
-
-    * **\<commits\>** can be any of:
-
-        * **Single commit:** commit1
-        * **Commit range:** commit2..commit3
-            - with frequencies: commit4..commit56@7
-
-* **Example:** `collect_performance.sh GUFI_variable/build/ hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db master~300..master@15 --build-threads 64 --runs 2 --sudo`
-
-* **Output:** 
-``` 
+```bash
+$ collect_performance.sh GUFI_variable/build/ hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db HEAD~300..HEAD@15 --runs 2 --sudo
 HEAD is now at c8cdd6e Collect performance will fail if build fails or extraction fails
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times_terse 
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times_terse
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
 ...
 Previous HEAD position was 03e525e test server/client rpms
 HEAD is now at 5e928ac cleanup
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times_terse
-825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times_terse
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
+825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative-times
 ```
 
-***************************************************************************
+## Graphing
+Use **graph_performance.py** to compute basic statistics on the data stored in the raw data database and plot them on a graph.
 
-Graphing
---------
+* **Syntax**: `graph_performance.py <database> <raw_data_hash> <raw_data_db> <config_file>`
+    * Override flags of the form `--{section}_{key} {value}` can be provided to override configuration file values from the command line. The override value should be a string in the same format as the value passed into the configuration file.
 
-**Prerequisite:** Must have the latest **Matplotlib** Python package for user's Python version
+* **Example**:
 
-Use **graph_performance.py** to plot data with user configurations
+```bash
+$ graph_performance.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db configs/db_query.ini
+```
 
-* **Syntax:** `graph_performance.py <hashdb_name> <rawhash> <raw_data_db_name> <config_file> [overwrite config arguments]`
-
-* **Example:** `graph_performance.py hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db configs/db_query.ini`
-
-* **Output:** 
+The script does not print anything to stdout, but does create an image file as specified by the configuration.
 
 <img title="Example Graph" src="configs/example.png" width="800" height="400">

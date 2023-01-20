@@ -69,9 +69,10 @@ EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
 GIT="@GIT_EXECUTABLE@"
 BUILD_THREADS="" # empty
 SUDO=""
+DROP_CACHES=1
 
 function help() {
-    echo "Syntax: $0 [options] gufi_build_path hashdb full_hash raw_data_db [commit_id...] [commit_range@freq...]"
+    echo "Syntax: $0 [options] gufi_build_path database raw_data_hash raw_data_db [identifier]... [identifier_range[%freq]]..."
     echo
     echo "Options:"
     echo "    --runs COUNT             number of times to run the GUFI executable per commit"
@@ -79,6 +80,7 @@ function help() {
     echo "    --git PATH               path of git executable"
     echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
     echo "    --sudo                   run the GUFI executable with sudo"
+    echo "    --dont-drop-caches       DO NOT use this flag unless you cannot drop caches"
     echo
 }
 
@@ -113,6 +115,9 @@ case "${key}" in
     --sudo)
         SUDO="sudo"
         ;;
+    --dont-drop-caches)
+        DROP_CACHES=0
+        ;;
     *)  # unknown option
         POSITIONAL+=("$1") # save it in an array for later
         ;;
@@ -146,8 +151,8 @@ do
 
     if [[ "${ish}" =~ ^.*\.\..*$ ]]
     then
-        range="${ish%@*}"
-        freq="${ish##*@}"
+        range="${ish%\%*}"
+        freq="${ish##*\%}"
 
         if [[ "${freq}" == "${ish}" ]]
         then
@@ -222,7 +227,7 @@ function generate_cmd() {
     echo "${GUFI}/src/${cmd} ${flags} \"${tree}\""
 }
 
-gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data_dbs WHERE hash == \"${FULL_HASH}\";")
+gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data WHERE hash == \"${FULL_HASH}\";")
 gufi_cmd=$(generate_cmd "${gufi_hash}")
 
 function drop_caches() {
@@ -242,7 +247,10 @@ do
     # put the performance numbers in the raw data database
     for ((i = 0; i < RUNS; i++))
     do
-        drop_caches
+        if [[ "${DROP_CACHES}" -eq "1" ]]
+        then
+            drop_caches
+        fi
 
         # run gufi_cmd through bash to remove single quotes
         # shellcheck disable=SC2069

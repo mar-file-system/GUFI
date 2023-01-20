@@ -107,7 +107,7 @@ def expand_git_identifiers(identifiers, git_path='@CMAKE_SOURCE_DIR@'):
 
         # try expanding identifier using git
         if '..' in ish:
-            split = ish.split('@')
+            split = ish.split('%')
             if len(split) > 1:
                 ish = split[0]
                 freq = int(split[1])
