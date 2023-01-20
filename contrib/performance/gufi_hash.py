@@ -69,6 +69,7 @@ import sys
 import gufi_common
 
 from performance_pkg.hashdb import gufi, utils as hashdb
+from performance_pkg.extraction import DebugPrints
 
 def format_for_hash(attr, value, type): # pylint: disable=redefined-builtin
     # pylint: disable=no-else-return
@@ -265,16 +266,30 @@ def parse_args(argv):
                         help='Remove record from database')
 
     parser.add_argument('cmd',
-                        choices=gufi.COMMANDS,
+                        choices=DebugPrints.COMMANDS,
                         help='GUFI command')
     parser.add_argument('debug_name',
-                        choices=gufi.DEBUG_NAME,
+                        choices=DebugPrints.DEBUG_NAME,
                         help='GUFI debug name')
     parser.add_argument('tree',
                         type=str,
                         help='Tree that was processed')
 
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+
+    # there should be a way to do this with subparsers
+    # that works in both Python 2 and 3
+    try:
+        DebugPrints.DEBUG_PRINTS[args.cmd][args.debug_name]
+    except KeyError: # pylint: disable=broad-except
+        err_msg = '{0} does not have an extractor for the debug print "{1}"'.format(args.cmd, args.debug_name)
+        if ((sys.version_info.major == 2 and sys.version_info.minor >= 7) or
+            (sys.version_info.major == 3 and sys.version_info.minor < 3)):
+            raise NotImplementedError(err_msg) # pylint: disable=raise-missing-from
+        if sys.version_info.major >= 3 and sys.version_info.minor >= 3:
+            raise NotImplementedError(err_msg) from None
+
+    return args
 
 def run(argv):
     args = parse_args(argv)

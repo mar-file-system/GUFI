@@ -61,19 +61,36 @@
 
 
 
-from performance_pkg.hashdb import gufi
 import performance_pkg.extraction.gufi_query.cumulative_times
 import performance_pkg.extraction.gufi_query.cumulative_times_terse
 import performance_pkg.extraction.gufi_trace2index.cumulative_times
 
-# look up table for all debug print functions
+# GUFI commands that have debug prints
+GUFI_QUERY = 'gufi_query'
+GUFI_TRACE2INDEX = 'gufi_trace2index'
+
+COMMANDS = [
+    GUFI_QUERY,
+    GUFI_TRACE2INDEX
+]
+
+# known debug/table names
+CUMULATIVE_TIMES = 'cumulative_times'
+CUMULATIVE_TIMES_TERSE = 'cumulative_times_terse'
+
+DEBUG_NAME = {
+    CUMULATIVE_TIMES,
+    CUMULATIVE_TIMES_TERSE,
+}
+
+# look up table for existing debug print extractors
 DEBUG_PRINTS = {
-    gufi.GUFI_QUERY : {
-        gufi.CUMULATIVE_TIMES : performance_pkg.extraction.gufi_query.cumulative_times,
-        gufi.CUMULATIVE_TIMES_TERSE : performance_pkg.extraction.gufi_query.cumulative_times_terse
+    GUFI_QUERY : {
+        CUMULATIVE_TIMES : performance_pkg.extraction.gufi_query.cumulative_times,
+        CUMULATIVE_TIMES_TERSE : performance_pkg.extraction.gufi_query.cumulative_times_terse
     },
 
-    gufi.GUFI_TRACE2INDEX : {
-        gufi.CUMULATIVE_TIMES : performance_pkg.extraction.gufi_trace2index.cumulative_times,
+    GUFI_TRACE2INDEX : {
+        CUMULATIVE_TIMES : performance_pkg.extraction.gufi_trace2index.cumulative_times,
     },
 }

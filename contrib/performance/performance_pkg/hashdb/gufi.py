@@ -60,22 +60,6 @@
 # OF SUCH DAMAGE.
 
 
-GUFI_QUERY = 'gufi_query'
-GUFI_TRACE2INDEX = 'gufi_trace2index'
-
-COMMANDS = [
-    GUFI_QUERY,
-    GUFI_TRACE2INDEX
-]
-
-CUMULATIVE_TIMES = 'cumulative_times'
-CUMULATIVE_TIMES_TERSE = 'cumulative_times_terse'
-
-# debug out put -> parser
-DEBUG_NAME = {
-    CUMULATIVE_TIMES : None,
-    CUMULATIVE_TIMES_TERSE : None,
-}
 
 TABLE_NAME = 'gufi_command'
 COL_CMD = 'cmd'
