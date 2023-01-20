@@ -200,7 +200,7 @@ def config_file(filename):
     parser = ConfigParser()
 
     # raise exception if file doesn't exist
-    with open(filename, 'r') as f:
+    with open(filename, 'r') as f: # pylint: disable=unspecified-encoding
         parser.read_file(f)
 
     conf = {section : {} for section in DEFAULTS}
