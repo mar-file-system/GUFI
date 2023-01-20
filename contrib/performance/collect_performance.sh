@@ -138,7 +138,7 @@ fi
 
 GUFI=$(realpath "$1")
 HASHES_DB=$(realpath "$2")
-FULL_HASH="$3"
+RAW_DATA_HASH="$3"
 RAW_DATA_DB=$(realpath "$4")
 
 shift 4
@@ -232,7 +232,7 @@ function generate_cmd() {
     echo "${GUFI}/src/${cmd} ${flags} \"${tree}\""
 }
 
-gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data WHERE hash == \"${FULL_HASH}\";")
+gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data WHERE hash == \"${RAW_DATA_HASH}\";")
 gufi_cmd=$(generate_cmd "${gufi_hash}")
 
 function drop_caches() {
@@ -262,6 +262,6 @@ do
         # run gufi_cmd through bash to remove single quotes
         # if invalid data from commit break loop
         # shellcheck disable=SC2069
-        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${FULL_HASH}" "${RAW_DATA_DB}" --commit "${commit}" || break
+        bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${RAW_DATA_HASH}" "${RAW_DATA_DB}" --commit "${commit}" || break
     done
 done
