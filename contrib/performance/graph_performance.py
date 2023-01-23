@@ -80,6 +80,9 @@ if sys.version_info.major < 3:
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', '-v',
+                        action='store_true',
+                        help='Print stats as they are computed')
     parser.add_argument('--git-path',
                         type=os.path.abspath,
                         default='@CMAKE_SOURCE_DIR@',
@@ -219,7 +222,16 @@ def run(argv):
 
     # compute stats
     col_count = len(columns)
-    stats = [CommitStats(raw, col_count) for raw in raw_numbers]
+    stats = []
+    for commit, raw in zip(commits, raw_numbers):
+        cs = CommitStats(raw, col_count)
+        stats += [cs]
+        if args.verbose:
+            for col in range(col_count):
+                print('Commit {0}: Col: "{1}\": Rows: {2}, Avg {3}, Med: {4}, Min: {5}, Max: {6}'.format(
+                    commit, columns[col], len(raw),
+                    cs.average[col], cs.median[col], cs.minimum[col], cs.maximum[col]
+            ))
 
     # reorganize stats into lines
     averages  = []
