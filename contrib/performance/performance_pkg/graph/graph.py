@@ -122,8 +122,6 @@ def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-ar
     plt.title(output[config.OUTPUT_GRAPH_TITLE])
     plt.xlabel('Commit') # fixed
     plt.ylabel(axes[config.AXES_Y_LABEL])
-    if axes[config.AXES_Y_MIN] is not None and axes[config.AXES_Y_MAX] is not None:
-        plt.ylim(axes[config.AXES_Y_MIN], axes[config.AXES_Y_MAX])
 
     line_configs = zip(y_vals, line_names,
                        lines[config.LINES_COLORS],
@@ -167,6 +165,12 @@ def generate(conf, const_x, y_vals, line_names,    # pylint: disable=too-many-ar
         plotline.set_color(color)
         plotline.set_linestyle(style)
         plotline.set_marker(marker)
+
+    if axes[config.AXES_Y_MIN] is not None:
+        plt.ylim(bottom=axes[config.AXES_Y_MIN])
+
+    if axes[config.AXES_Y_MAX] is not None:
+        plt.ylim(top=axes[config.AXES_Y_MAX])
 
     plt.legend()
     plt.savefig(output[config.OUTPUT_PATH],
