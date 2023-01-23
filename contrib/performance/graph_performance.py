@@ -238,7 +238,7 @@ def run(argv):
         high_pnts += [[commit.maximum[col] - commit.average[col] for commit in stats]]
 
     # modify the commit list to length specified in the config
-    hash_len = conf[config.AXES][config.AXES_HASH_LEN]
+    hash_len = conf[config.AXES][config.AXES_X_HASH_LEN]
     commits = [set_hash_len(commit, hash_len)
                for commit in commits]
 

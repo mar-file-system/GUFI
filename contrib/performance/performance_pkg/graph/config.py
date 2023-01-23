@@ -109,7 +109,9 @@ LINES_TYPES = 'types'                   # string list
 LINES_MARKERS = 'markers'               # string list
 
 AXES = 'axes'                           # section
-AXES_HASH_LEN = 'hash_len'              # integer
+AXES_X_HASH_LEN = 'hash_len'            # integer
+AXES_X_LABEL_SIZE = 'x_label_size'      # string
+AXES_X_ROTATION = 'x_rotation'          # floating point
 AXES_Y_LABEL = 'y_label'                # string
 AXES_Y_MIN = 'y_min'                    # float
 AXES_Y_MAX = 'y_max'                    # float
@@ -147,10 +149,12 @@ DEFAULTS = {
     },
 
     AXES: {
-        AXES_HASH_LEN : [int, 0],
-        AXES_Y_LABEL  : [str, 'Y Axis'],
-        AXES_Y_MIN    : [float, None],
-        AXES_Y_MAX    : [float, None],
+        AXES_X_HASH_LEN   : [int, 0],
+        AXES_X_LABEL_SIZE : [float, None],
+        AXES_X_ROTATION   : [float, None],
+        AXES_Y_LABEL      : [str, 'Y Axis'],
+        AXES_Y_MIN        : [float, None],
+        AXES_Y_MAX        : [float, None],
     },
 
     ANNOTATIONS : {
@@ -216,7 +220,9 @@ def config_file(filename):
     read_value(conf, parser, DEFAULTS, LINES, LINES_TYPES)
     read_value(conf, parser, DEFAULTS, LINES, LINES_MARKERS)
 
-    read_value(conf, parser, DEFAULTS, AXES, AXES_HASH_LEN)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_X_HASH_LEN)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_X_LABEL_SIZE)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_X_ROTATION)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_LABEL)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MIN)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MAX)
