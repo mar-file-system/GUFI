@@ -81,13 +81,13 @@ def extract(src, commit, branch): # pylint: disable=function-redefined
 
         numbers = line.split(' ')
         if len(numbers) != CUMULATIVE_ENTRIES:
-            raise ValueError('Improper number of cumulative times entries. Got: {0}, Expected: {1}'.format(len(numbers), CUMULATIVE_ENTRIES))
+            continue
 
         data.update({column[0] : num for column, num in zip(COLUMNS[3:], numbers)})
 
     # check for missing input
-    for col, _ in COLUMNS:
-        if col not in data:
-            raise ValueError('Cumulative times data missing "{0}" on commit {1}'.format(col, commit))
+    if len(numbers) != CUMULATIVE_ENTRIES:
+        raise ValueError('Improper number of cumulative times entries. Got: {0}, Expected: {1}'.format(
+            len(numbers), CUMULATIVE_ENTRIES))
 
     return data
