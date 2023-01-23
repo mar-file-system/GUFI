@@ -63,9 +63,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 set(CONFIGS
-  db_query.ini
-  db_test_complex.ini
-  db_trace2index.ini
+  example.ini
   )
 
 foreach(CONFIG ${CONFIGS})

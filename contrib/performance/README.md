@@ -146,7 +146,9 @@ HEAD is now at 5e928ac cleanup
 Use **graph_performance.py** to compute basic statistics on the data stored in the raw data database and plot them on a graph.
 
 * **Syntax**: `graph_performance.py <database> <raw_data_hash> <raw_data_db> <config_file>`
+    * To see the layout of config files, visit the [config readme](configs/README.md)
     * Override flags of the form `--{section}_{key} {value}` can be provided to override configuration file values from the command line. The override value should be a string in the same format as the value passed into the configuration file.
+        * To see a full list of override flags visit the [overrides](configs/README.md#overrides) section of the config readme
 
 * **Example**:
 
