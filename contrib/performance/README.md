@@ -114,7 +114,7 @@ The benchmark numbers from `gufi_query` will be stored in the **cumulative_times
 ## Collecting Multiple Sets of Performance Numbers Across Commits
 A user may want to automatically collect data for multiple runs, possibly across multiple commits. `collect_performance.sh` was written to simplify this task.
 
-An additional copy of the GUFI repository (`GUFI_variable`) will also be required when running `collect_performance.sh`. `GUFI_variable` will be moved across commits so that the scripts doing the collection are not modified while collecting data. `GUFI_variable` should be configured before running `collect_performance.sh`.
+An additional copy of the GUFI repository (`GUFI_variable`) will also be required when running `collect_performance.sh`. `GUFI_variable` will be moved across commits so that the scripts doing the collection are not modified while collecting data. Generally, `GUFI_variable` should be configured before running `collect_performance.sh`. If the source for `GUFI_variable` is not found, the GUFI source will be cloned into the parent directory of `GUFI_variable` and be automatically configured with the minimum `CMake` options required.
 
 * **Syntax**: `collect_performance.sh <gufi_variable_build> <database> <raw_data_hash> <raw_data_db> [identifier]... [--runs <count>] [--sudo]`
     * `[identifier]...` is a list of any [commit-ish or tree-ish identifiers](https://stackoverflow.com/a/23303550) that `git` can convert into commit hashes:

@@ -67,6 +67,8 @@ set -e
 RUNS=30
 EXTRACT="@CMAKE_CURRENT_BINARY_DIR@/extract.py"
 GIT="@GIT_EXECUTABLE@"
+REPO="https://github.com/mar-file-system/GUFI.git"
+DEP_INSTALL_PREFIX="@DEP_INSTALL_PREFIX@"
 BUILD_THREADS="" # empty
 SUDO=""
 DROP_CACHES=1
@@ -74,12 +76,16 @@ DROP_CACHES=1
 function help() {
     echo "Syntax: $0 [options] gufi_build_path database raw_data_hash raw_data_db [identifier]... [identifier_range[%freq]]..."
     echo
+    echo  "gufi_build_path should be an immediate subdirectory of a second copy of the GUFI source"
+    echo
     echo "Options:"
     echo "    --runs COUNT             number of times to run the GUFI executable per commit"
+    echo "    --sudo                   run the GUFI executable with sudo"
     echo "    --extract PATH           path of extract.py"
     echo "    --git PATH               path of git executable"
+    echo "    --repo URI               URI of second GUFI repo to clone"
+    echo "    --dep-install-prefix     directory of GUFI dependencies to link against"
     echo "    --build-threads COUNT    number of threads to use when building GUFI after changing commit"
-    echo "    --sudo                   run the GUFI executable with sudo"
     echo "    --dont-drop-caches       DO NOT use this flag unless you cannot drop caches"
     echo
 }
@@ -101,11 +107,23 @@ case "${key}" in
         shift
         ;;
     --extract)
-        EXTRACT="$2"
+        EXTRACT="$(realpath -e $2)"
         shift
         ;;
     --git)
-        GIT="$2"
+        GIT="$(realpath -e $2)"
+        shift
+        ;;
+    --repo)
+        REPO="$2"
+        shift
+        ;;
+    --src-dir)
+        SRCDIR2="$(realpath -m $2)"
+        shift
+        ;;
+    --dep-install-prefix)
+        DEP_INSTALL_PREFIX="$(realpath -m $2)"
         shift
         ;;
     --build-threads)
@@ -136,14 +154,37 @@ then
     exit 1
 fi
 
-GUFI=$(realpath "$1")
-HASHES_DB=$(realpath "$2")
+GUFI=$(realpath -m "$1")
+HASHES_DB=$(realpath -e "$2")
 RAW_DATA_HASH="$3"
-RAW_DATA_DB=$(realpath "$4")
+RAW_DATA_DB=$(realpath -e "$4")
+
+# if the user didn't provide a source directory
+if [[ -z "${SRCDIR2}" ]]
+then
+    # try to find source directory of second GUFI repo
+    if [[ -f "${GUFI}/CMakeCache.txt" ]]
+    then
+        # shellcheck disable=SC2016
+        SRCDIR2="$(@GREP@ SOURCE_DIR ${GUFI}/CMakeCache.txt | @AWK@ -F '=' '{ printf $2 }' )"
+    else
+        SRCDIR2="$(dirname ${GUFI})"
+    fi
+fi
+
+# not checking if the SRCDIR2 exists - will clone later
+SRCDIR2="$(realpath -m ${SRCDIR2})"
+
+if [[ "${SRCDIR2}" == "@CMAKE_SOURCE_DIR@" ]]
+then
+    echo "Error: Do not point --src-dir to the current repo's root" 1>&2
+    exit 1
+fi
 
 shift 4
 
 # all remaining arguments are treated as commit ids
+# the commit ids are read from CMAKE_SOURCE_DIR, not GUFI
 COMMITS=()
 while [[ $# -gt 0 ]]
 do
@@ -159,7 +200,7 @@ do
             freq=1
         fi
 
-        mapfile -t commits < <("${GIT}" -C "${GUFI}" rev-list "${range}")
+        mapfile -t commits < <("${GIT}" -C "@CMAKE_SOURCE_DIR@" rev-list "${range}")
 
         i=0
         for commit in "${commits[@]}"
@@ -172,7 +213,7 @@ do
             (( i = i + 1 ))
         done
     else
-        mapfile -t commits < <("${GIT}" -C "${GUFI}" rev-parse "${ish}")
+        mapfile -t commits < <("${GIT}" -C "@CMAKE_SOURCE_DIR@" rev-parse "${ish}")
         COMMITS+=("${commits[@]}")
     fi
 
@@ -235,16 +276,40 @@ function generate_cmd() {
 gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data WHERE hash == \"${RAW_DATA_HASH}\";")
 gufi_cmd=$(generate_cmd "${gufi_hash}")
 
+echo -e "Collecting numbers for\n${gufi_cmd}"
+
 function drop_caches() {
     sync
     sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
 }
 
+if [[ -d "${SRCDIR2}" ]]
+then
+    # make sure existing SRCDIR2 is at least tracked by git
+    "${GIT}" -C "${SRCDIR2}" rev-parse --is-inside-work-tree
+else
+    # if the second copy's source directory doesn't
+    # exist, clone a new copy of the repo
+    "${GIT}" clone "${REPO}" "${SRCDIR2}"
+
+    mkdir -p "${GUFI}"
+
+    # cmake --build might be bugged
+    # configure the second repo
+    (
+        cd "${GUFI}"
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DPRINT_CUMULATIVE_TIMES=On
+    )
+fi
+
+# update second repo's data
+"${GIT}" -C "${SRCDIR2}" fetch --all
+
 # collect performance numbers for each commit
 for commit in "${COMMITS[@]}"
 do
     # switch to commit and rebuild
-    "${GIT}" -C "${GUFI}" -c advice.detachedHead=false checkout "${commit}"
+    "${GIT}" -C "${SRCDIR2}" -c advice.detachedHead=false checkout "${commit}"
 
     # if build fails, skip current commit
     # shellcheck disable=SC2046
