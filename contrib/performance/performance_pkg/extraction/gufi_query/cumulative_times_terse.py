@@ -73,6 +73,8 @@ def extract(src, commit, branch): # pylint: disable=function-redefined
 
     CUMULATIVE_ENTRIES = len(COLUMNS)-3
 
+    found = False
+
     # parse input
     for line in src:
         line = line.strip()
@@ -83,11 +85,11 @@ def extract(src, commit, branch): # pylint: disable=function-redefined
         if len(numbers) != CUMULATIVE_ENTRIES:
             continue
 
-        data.update({column[0] : num for column, num in zip(COLUMNS[3:], numbers)})
+        data.update({column[0] : float(num) for column, num in zip(COLUMNS[3:], numbers)})
+        found = True
+        # keep looping even if a line with the correct format has been found
 
-    # check for missing input
-    if len(numbers) != CUMULATIVE_ENTRIES:
-        raise ValueError('Improper number of cumulative times entries. Got: {0}, Expected: {1}'.format(
-            len(numbers), CUMULATIVE_ENTRIES))
+    if not found:
+        raise ValueError('Did not find cumulative times data.')
 
     return data
