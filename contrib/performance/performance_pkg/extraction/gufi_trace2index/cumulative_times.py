@@ -103,27 +103,7 @@ def create_table(con):
     common.create_table(con, TABLE_NAME, COLUMNS)
 
 def extract(src, commit, branch):
-    # these aren't obtained from running gufi_trace2index
-    data = {
-        'id'    : None,
-        'commit': commit,
-        'branch': branch,
-    }
-
-    # parse input
-    for line in src:
-        line = line.strip()
-        if line == '':
-            continue
-
-        data.update(common.process_line(line, ':', 's'))
-
-    # check for missing input
-    for col, _ in COLUMNS:
-        if col not in data:
-            raise ValueError('Cumulative times data missing "{0}" on commit {1}'.format(col, commit))
-
-    return data
+    return common.cumulative_times_extract(src, commit, branch, COLUMNS)
 
 def insert(con, parsed):
     common.insert(con, parsed, TABLE_NAME, COLUMNS)
