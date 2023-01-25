@@ -201,7 +201,7 @@ def config_file(filename):
     require any more sections or keys.
     '''
 
-    parser = ConfigParser()
+    parser = ConfigParser(interpolation=None)
 
     # raise exception if file doesn't exist
     with open(filename, 'r') as f: # pylint: disable=unspecified-encoding
