@@ -66,6 +66,7 @@ set(GRAPH
   __init__.py
   config.py
   graph.py
+  stats.py
 )
 
 foreach(SCRIPT ${GRAPH})

@@ -71,7 +71,7 @@ import unittest
 import matplotlib as mpl
 mpl.use('Agg')
 
-from performance_pkg.graph import config, graph # pylint: disable=wrong-import-position
+from performance_pkg.graph import config, graph, stats # pylint: disable=wrong-import-position
 
 class TestConfig(unittest.TestCase):
     def test_pos_float(self):
@@ -173,20 +173,28 @@ class TestGraph(unittest.TestCase):
         conf[config.RAW_DATA][config.RAW_DATA_COLUMNS] = ['column'] # single line
         conf[config.OUTPUT][config.OUTPUT_PATH] = io.BytesIO()      # in-memory graph
         conf[config.OUTPUT][config.OUTPUT_DIMENSIONS] = [1, 1]
+        conf[config.AXES][config.AXES_X_ROTATION] = 0
+        conf[config.AXES][config.AXES_X_LABEL_SIZE] = 10
+        conf[config.AXES][config.AXES_Y_STAT] = stats.AVERAGE
         conf[config.AXES][config.AXES_Y_MIN] = -10
         conf[config.AXES][config.AXES_Y_MAX] = 10
-        conf[config.ANNOTATIONS][config.ANNOTATIONS_SHOW] = True
-        conf[config.ERROR_BAR][config.ERROR_BAR_SHOW] = True
-        conf[config.ERROR_BAR][config.ERROR_BAR_MIN_MAX] = True
+        conf[config.AXES][config.AXES_ANNOTATE] = True
+        conf[config.ERROR_BAR][config.ERROR_BAR_BOTTOM] = stats.MINIMUM
+        conf[config.ERROR_BAR][config.ERROR_BAR_TOP] = stats.MAXIMUM
+        conf[config.ERROR_BAR][config.ERROR_BAR_ANNOTATE] = True
 
-        points = 5 # number of points in this line
+        points = 5 # number of commits/points in each line
+        commits = ['commit'] * points
+        lines = {
+            'column' : {
+                stats.AVERAGE : list(range(points)),
+                stats.MINIMUM : list(range(points)),
+                stats.MAXIMUM : list(range(points)),
+            },
+        }
+
         try:
-            graph.generate(conf,
-                           ['commit'] * points,
-                           [[0]  * points],
-                           ['line'],
-                           [[1]  * points], [[1] * points],
-                           [[-1] * points], [[1] * points])
+            graph.generate(conf, commits, lines)
         except Exception as err: # pylint: disable=broad-except
             self.fail('Graphing test raised: {0}'.format(err))
 

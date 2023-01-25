@@ -68,6 +68,7 @@ if sys.version_info.major >= 3:
 else:
     from ConfigParser import ConfigParser # pylint: disable=import-error
 
+from performance_pkg.graph import stats   # pylint: disable=wrong-import-position
 import gufi_common                        # pylint: disable=wrong-import-position
 
 # converter functions for input read from ConfigParser
@@ -113,22 +114,23 @@ AXES_X_HASH_LEN = 'hash_len'            # integer
 AXES_X_LABEL_SIZE = 'x_label_size'      # string
 AXES_X_ROTATION = 'x_rotation'          # floating point
 AXES_Y_LABEL = 'y_label'                # string
+AXES_Y_STAT = 'y_stat'                  # string
 AXES_Y_MIN = 'y_min'                    # float
 AXES_Y_MAX = 'y_max'                    # float
+AXES_ANNOTATE = 'annotate'              # bool
+
+ERROR_BAR = 'error_bar'                 # section
+ERROR_BAR_BOTTOM = 'bottom'             # string
+ERROR_BAR_TOP = 'top'                   # string
+ERROR_BAR_COLORS = 'colors'             # string list
+ERROR_BAR_CAP_SIZE = 'cap_size'         # positive float
+ERROR_BAR_ANNOTATE = 'annotate'         # bool
 
 ANNOTATIONS = 'annotations'             # section
-ANNOTATIONS_SHOW = 'show'               # bool
 ANNOTATIONS_PRECISION = 'precision'     # positive integer
 ANNOTATIONS_X_OFFSET = 'x_offset'       # float
 ANNOTATIONS_Y_OFFSET = 'y_offset'       # float
 ANNOTATIONS_TEXT_COLORS = 'text_colors' # string list
-
-ERROR_BAR = 'error_bar'                 # section
-ERROR_BAR_SHOW = 'show'                 # bool
-ERROR_BAR_PRECISION = 'precision'       # positive integer
-ERROR_BAR_MIN_MAX = 'min_max'           # bool
-ERROR_BAR_COLORS = 'colors'             # string list
-ERROR_BAR_CAP_SIZE = 'cap_size'         # positive float
 
 DEFAULTS = {
     RAW_DATA : {
@@ -153,24 +155,26 @@ DEFAULTS = {
         AXES_X_LABEL_SIZE : [str, None],
         AXES_X_ROTATION   : [float, None],
         AXES_Y_LABEL      : [str, 'Y Axis'],
+        AXES_Y_STAT       : [str, stats.AVERAGE],
         AXES_Y_MIN        : [float, None],
         AXES_Y_MAX        : [float, None],
+        AXES_ANNOTATE     : [bool, False]
     },
 
+    ERROR_BAR : {
+        ERROR_BAR_BOTTOM    : [str, None],
+        ERROR_BAR_TOP       : [str, None],
+        ERROR_BAR_COLORS    : [str_list, []],
+        ERROR_BAR_CAP_SIZE  : [pos_float, 10],
+        ERROR_BAR_ANNOTATE  : [bool, False]
+    },
+
+    # affects both AXES_Y_STAT and ERROR_BAR
     ANNOTATIONS : {
-        ANNOTATIONS_SHOW        : [bool, False],
         ANNOTATIONS_PRECISION   : [gufi_common.get_positive, 3],
         ANNOTATIONS_X_OFFSET    : [float, 5],
         ANNOTATIONS_Y_OFFSET    : [float, 5],
         ANNOTATIONS_TEXT_COLORS : [str_list, []],
-    },
-
-    ERROR_BAR : {
-        ERROR_BAR_SHOW      : [bool, False],
-        ERROR_BAR_PRECISION : [gufi_common.get_positive, 3],
-        ERROR_BAR_MIN_MAX   : [bool, False],
-        ERROR_BAR_COLORS    : [str_list, []],
-        ERROR_BAR_CAP_SIZE  : [pos_float, 10],
     },
 }
 
@@ -224,20 +228,21 @@ def config_file(filename):
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_LABEL_SIZE)
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_ROTATION)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_LABEL)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_Y_STAT)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MIN)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MAX)
+    read_bool (conf, parser, DEFAULTS, AXES, AXES_ANNOTATE)
 
-    read_bool (conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_SHOW)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_BOTTOM)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_TOP)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_COLORS)
+    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_CAP_SIZE)
+    read_bool (conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_ANNOTATE)
+
     read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_PRECISION)
     read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_X_OFFSET)
     read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_Y_OFFSET)
     read_value(conf, parser, DEFAULTS, ANNOTATIONS, ANNOTATIONS_TEXT_COLORS)
-
-    read_bool (conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_SHOW)
-    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_PRECISION)
-    read_bool (conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_MIN_MAX)
-    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_COLORS)
-    read_value(conf, parser, DEFAULTS, ERROR_BAR, ERROR_BAR_CAP_SIZE)
 
     return conf
 

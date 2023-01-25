@@ -62,14 +62,13 @@
 
 
 import argparse
-import numbers
 import os
 import sqlite3
 import sys
 
 from performance_pkg import common
 from performance_pkg.extraction import DebugPrints
-from performance_pkg.graph import config, graph
+from performance_pkg.graph import config, graph, stats
 from performance_pkg.hashdb import utils as hashdb
 
 if sys.version_info.major < 3:
@@ -156,42 +155,6 @@ def gather_raw_numbers(dbname, table_name, columns, commits):
 
     return raw_numbers
 
-class CommitStats(object): # pylint: disable=useless-object-inheritance, too-few-public-methods
-    def __init__(self, rows, col_count):
-        # make sure all values are numeric
-        for row in rows:
-            for col in row:
-                if not isinstance(col, numbers.Number):
-                    raise TypeError('Raw value {0} is not numeric'.format(col))
-
-        # not storing commit hash or original values
-
-        row_count = len(rows)
-
-        # values to plot
-        self.average = []
-        self.median  = []
-        self.minimum = []
-        self.maximum = []
-
-        if row_count > 0:
-            for col in range(col_count):
-                col_data = [row[col] for row in rows]
-
-                self.average += [float(sum(col_data)) / row_count]
-                half = int(row_count / 2)
-                if row_count & 1:
-                    self.median += [sorted(col_data)[half]]
-                else:
-                    self.median += [sum(sorted(col_data)[half - 1:half + 1]) / 2]
-                self.minimum += [min(col_data)]
-                self.maximum += [max(col_data)]
-        else:
-            self.average = [float('nan')] * col_count
-            self.median  = [float('nan')] * col_count
-            self.minimum = [float('nan')] * col_count
-            self.maximum = [float('nan')] * col_count
-
 def set_hash_len(hash, len): # pylint: disable=redefined-builtin
     if len > 0:
         return hash[:len]
@@ -220,34 +183,8 @@ def run(argv):
     # get raw data
     raw_numbers = gather_raw_numbers(args.raw_data_db, debug_print.TABLE_NAME, columns, commits)
 
-    # compute stats
-    col_count = len(columns)
-    stats = []
-    for commit, raw in zip(commits, raw_numbers):
-        cs = CommitStats(raw, col_count)
-        stats += [cs]
-        if args.verbose:
-            for col in range(col_count):
-                print('Commit {0}: Col: "{1}\": Rows: {2}, Avg {3}, Med: {4}, Min: {5}, Max: {6}'.format(
-                    commit, columns[col], len(raw),
-                    cs.average[col], cs.median[col], cs.minimum[col], cs.maximum[col]
-            ))
-
-    # reorganize stats into lines
-    averages  = []
-    medians   = []
-    minimums  = []
-    maximums  = []
-    low_pnts  = []
-    high_pnts = []
-    for col in range(col_count):
-        # extract a single column's stats
-        averages  += [[commit.average[col] for commit in stats]]
-        medians   += [[commit.median[col]  for commit in stats]]
-        minimums  += [[commit.minimum[col] for commit in stats]]
-        maximums  += [[commit.maximum[col] for commit in stats]]
-        low_pnts  += [[commit.average[col] - commit.minimum[col] for commit in stats]]
-        high_pnts += [[commit.maximum[col] - commit.average[col] for commit in stats]]
+    # generate lines from raw data
+    lines = stats.generate_lines(conf, commits, columns, raw_numbers, args.verbose)
 
     # modify the commit list to length specified in the config
     hash_len = conf[config.AXES][config.AXES_X_HASH_LEN]
@@ -255,8 +192,7 @@ def run(argv):
                for commit in commits]
 
     # plot stats and save to file
-    graph.generate(conf, commits, averages, columns,
-                   low_pnts, high_pnts, minimums, maximums)
+    graph.generate(conf, commits, lines)
 
 if __name__ == '__main__':
     run(sys.argv[1:])
