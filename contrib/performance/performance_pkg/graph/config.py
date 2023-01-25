@@ -150,7 +150,7 @@ DEFAULTS = {
 
     AXES: {
         AXES_X_HASH_LEN   : [int, 0],
-        AXES_X_LABEL_SIZE : [float, None],
+        AXES_X_LABEL_SIZE : [str, None],
         AXES_X_ROTATION   : [float, None],
         AXES_Y_LABEL      : [str, 'Y Axis'],
         AXES_Y_MIN        : [float, None],
