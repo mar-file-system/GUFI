@@ -63,6 +63,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 set(TESTS
+  extraction
   hash
   utils
   )

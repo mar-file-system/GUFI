@@ -1,3 +1,4 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,61 +61,58 @@
 
 
 
-name: Codecov
+import unittest
 
-on: [push, pull_request]
+from performance_pkg.extraction.gufi_query import cumulative_times as gq_ct, cumulative_times_terse as gq_ctt
+from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt2i_ct
 
-env:
-  CC: gcc
-  CXX: g++
-  CXXFLAGS: -std=c++11  # required for tests to function
-  DEP_INSTALL_PREFIX: ~/.local
-  COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On -DGCOV=On -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DPRINT_PER_THREAD_STATS=On -DPRINT_SUBDIRECTORY_COUNTS=On -DPRINT_QPTPOOL_QUEUE_SIZE=On
+class TestExtraction(unittest.TestCase):
+    def key_colon_value(self, module):
+        columns = module.COLUMNS[3:]
 
-jobs:
-  CodeCoverage:
-    runs-on: ubuntu-20.04
-    steps:
-    - uses: actions/checkout@v3
+        # create input
+        lines = []
+        for i, column in enumerate(columns):
+            key, type = column                          # pylint: disable=redefined-builtin
+            lines += ['{0}: {1}'.format(key, type(i))]  # pylint: disable=redefined-builtin
 
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-CodeCoverage
+        # parse input
+        # prefix empty line and bad line
+        # sort lines to change order lines are received
+        parsed = module.extract(['', columns[0][0]] + sorted(lines), None, None)
 
-    - name: Ubuntu 20.04 Prerequisites
-      run:  sudo contrib/CI/ubuntu.sh
+        self.assertEqual(len(parsed), len(module.COLUMNS))
+        for i, column in enumerate(columns):
+            key, type = column                          # pylint: disable=redefined-builtin
+            self.assertEqual(parsed[key], str(type(i))) # pylint: disable=redefined-builtin
 
-    - name: Coverage Prerequisites
-      run:  |
-            sudo apt install gcovr
-            sudo apt install g++
-            pip install coverage
-            pip install pytest
+        # did not get enough values
+        with self.assertRaises(ValueError):
+            module.extract([], None, None)
 
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+    def test_gufi_query_cumulative_times(self):
+        self.key_colon_value(gq_ct)
 
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
+    def test_gufi_query_cumulative_times_terse(self):
+        columns = gq_ctt.COLUMNS[3:]
 
-    - name: Test
-      working-directory: ${{ github.workspace }}/build
-      run:  ctest || true
+        line = ' '.join(str(columns[i][1](i)) for i in range(len(columns)))
 
-    - name: Delete files not reported for coverage
-      run:  find -name "*.gc*" -a \( -name "gendir.*" -o -name "make_testindex.*" -o -name "bffuse.*" -o -name "bfmi.*" -o -name "bfresultfuse.*" -o -name "bfti.*" -o -name "bfwreaddirplus2db.*" -o -name "dfw.*" -o -name "parallel_rmr.*" -o -name "tsmepoch2time.*" -o -name "tsmtime2epoch.*" -o -path "*/test/*" \) -delete
+        # parse input
+        # prefix empty line and bad line
+        parsed = gq_ctt.extract(['', ':', line], None, None)
 
-    - name: Generate Python Coverage Report
-      run:  |
-            export PYTHONPATH="${{ github.workspace }}/build/contrib:${{ github.workspace }}/build/contrib/performance:${{ github.workspace }}/build/scripts:${PYTHONPATH}"
-            coverage run -m pytest ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/extraction.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/graph.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/stats.py ${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py ${{ github.workspace }}/build/test/unit/python/test_gufi_common.py ${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
-            coverage xml --omit=${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/extraction.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/graph.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/hash.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/stats.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/utils.py,${{ github.workspace }}/build/test/unit/python/test_gufi_common.py,${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
-            rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions
+        self.assertEqual(len(parsed), len(gq_ctt.COLUMNS))
+        for i, column in enumerate(columns):
+            key, type = column                          # pylint: disable=redefined-builtin
+            self.assertEqual(parsed[key], str(type(i))) # pylint: disable=redefined-builtin
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        verbose: true
-        gcov: true
-        fail_ci_if_error: true
+        # did not find valid line
+        with self.assertRaises(ValueError):
+            gq_ctt.extract([], None, None)
+
+    def test_gufi_trace2index_cumulative_times(self):
+        self.key_colon_value(gt2i_ct)
+
+if __name__ == '__main__':
+    unittest.main()

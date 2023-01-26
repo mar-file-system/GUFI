@@ -85,7 +85,7 @@ def extract(src, commit, branch): # pylint: disable=function-redefined
         if len(numbers) != CUMULATIVE_ENTRIES:
             continue
 
-        data.update({column[0] : float(num) for column, num in zip(COLUMNS[3:], numbers)})
+        data.update({column[0] : num for column, num in zip(COLUMNS[3:], numbers)})
         found = True
         # keep looping even if a line with the correct format has been found
 
