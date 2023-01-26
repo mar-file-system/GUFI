@@ -119,8 +119,8 @@ def generate(conf, const_x, ys):
     plt.figure(figsize=tuple(output[config.OUTPUT_DIMENSIONS][:2]))
     plt.title(output[config.OUTPUT_GRAPH_TITLE])
     plt.xlabel('Commit') # fixed
-    if axes[config.AXES_X_ROTATION] is not None:
-        plt.tick_params(axis='x', labelrotation=axes[config.AXES_X_ROTATION])
+    if axes[config.AXES_X_LABEL_ROTATION] is not None:
+        plt.tick_params(axis='x', labelrotation=axes[config.AXES_X_LABEL_ROTATION])
     if axes[config.AXES_X_LABEL_SIZE] is not None:
         plt.tick_params(axis='x', labelsize=axes[config.AXES_X_LABEL_SIZE])
     plt.ylabel(axes[config.AXES_Y_LABEL])

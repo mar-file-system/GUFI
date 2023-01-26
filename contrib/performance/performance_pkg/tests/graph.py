@@ -173,7 +173,7 @@ class TestGraph(unittest.TestCase):
         conf[config.RAW_DATA][config.RAW_DATA_COLUMNS] = ['column'] # single line
         conf[config.OUTPUT][config.OUTPUT_PATH] = io.BytesIO()      # in-memory graph
         conf[config.OUTPUT][config.OUTPUT_DIMENSIONS] = [1, 1]
-        conf[config.AXES][config.AXES_X_ROTATION] = 0
+        conf[config.AXES][config.AXES_X_LABEL_ROTATION] = 0
         conf[config.AXES][config.AXES_X_LABEL_SIZE] = 10
         conf[config.AXES][config.AXES_Y_STAT] = stats.AVERAGE
         conf[config.AXES][config.AXES_Y_MIN] = -10
