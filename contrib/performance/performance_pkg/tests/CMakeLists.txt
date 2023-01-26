@@ -69,7 +69,8 @@ set(TESTS
 
 if (MATPLOTLIB_PATH)
   list(APPEND TESTS
-    graphing
+    graph
+    stats
     )
 endif()
 
