@@ -63,7 +63,6 @@ OF SUCH DAMAGE.
 
 
 #include <dirent.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -87,8 +86,6 @@ OF SUCH DAMAGE.
 #include "gufi_query/aggregate.h"
 #include "gufi_query/rollup.h"
 #include "gufi_query/query.h"
-
-extern int errno;
 
 #ifdef DEBUG
 struct start_end *buffer_create(sll_t *timers) {
