@@ -161,6 +161,8 @@ uint64_t total_opendir_time           = 0;
 uint64_t total_attachdb_time          = 0;
 uint64_t total_addqueryfuncs_time     = 0;
 uint64_t total_xattrprep_time         = 0;
+uint64_t total_sqltsumcheck_time      = 0;
+uint64_t total_sqltsum_time           = 0;
 uint64_t total_get_rollupscore_time   = 0;
 uint64_t total_descend_time           = 0;
 uint64_t total_check_args_time        = 0;
@@ -179,8 +181,6 @@ uint64_t total_access_time            = 0;
 uint64_t total_set_time               = 0;
 uint64_t total_clone_time             = 0;
 uint64_t total_pushdir_time           = 0;
-uint64_t total_sqltsumcheck_time      = 0;
-uint64_t total_sqltsum_time           = 0;
 uint64_t total_sqlsum_time            = 0;
 uint64_t total_sqlent_time            = 0;
 uint64_t total_xattrdone_time         = 0;
@@ -377,11 +377,11 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_zero(attachdb_call,        pa->start_time);
     timestamp_create_zero(addqueryfuncs_call,   pa->start_time);
     timestamp_create_zero(xattrprep_call,       pa->start_time);
+    timestamp_create_zero(sqltsumcheck,         pa->start_time);
+    timestamp_create_zero(sqltsum,              pa->start_time);
     timestamp_create_zero(get_rollupscore_call, pa->start_time);
     timestamp_create_zero(descend_call,         pa->start_time);
     sll_t *descend_timers = descend_timers_init();
-    timestamp_create_zero(sqltsumcheck,         pa->start_time);
-    timestamp_create_zero(sqltsum,              pa->start_time);
     timestamp_create_zero(sqlsum,               pa->start_time);
     timestamp_create_zero(sqlent,               pa->start_time);
     timestamp_create_zero(xattrdone_call,       pa->start_time);
@@ -562,19 +562,21 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_set_end(detachdb_call);
     #endif
 
+    /* restore mtime and atime */
+    timestamp_set_start(utime_call);
+    if (db) {
+        if (in->keep_matime) {
+            struct utimbuf dbtime = {};
+            dbtime.actime  = work->statuso.st_atime;
+            dbtime.modtime = work->statuso.st_mtime;
+            utime(dbname, &dbtime);
+        }
+    }
+    timestamp_set_end(utime_call);
+
     timestamp_set_start(closedir_call);
     closedir(dir);
     timestamp_set_end(closedir_call);
-
-    timestamp_set_start(utime_call);
-    /* restore mtime and atime */
-    if (in->keep_matime) {
-        struct utimbuf dbtime = {};
-        dbtime.actime  = work->statuso.st_atime;
-        dbtime.modtime = work->statuso.st_mtime;
-        utime(dbname, &dbtime);
-    }
-    timestamp_set_end(utime_call);
 
   out_free:
     ;
@@ -589,14 +591,12 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_buffer(4096);
     timestamp_print             (ctx->buffers, id, "opendir",            opendir_call);
     if (dir) {
-        #ifdef OPENDB
         timestamp_print         (ctx->buffers, id, "attachdb",           attachdb_call);
-        #endif
         if (db) {
-            #ifdef ADDQUERYFUNCS
             timestamp_print     (ctx->buffers, id, "addqueryfuncs",      addqueryfuncs_call);
-            #endif
             timestamp_print     (ctx->buffers, id, "xattrprep",          xattrprep_call);
+            timestamp_print     (ctx->buffers, id, "sqltsumcheck",       sqltsumcheck);
+            timestamp_print     (ctx->buffers, id, "sqltsum",            sqltsum);
             timestamp_print     (ctx->buffers, id, "get_rollupscore",    get_rollupscore_call);
             timestamp_print     (ctx->buffers, id, "descend",            descend_call);
             print_descend_timers(ctx->buffers, id, "within_descend",     descend_timers, within_descend);
@@ -616,17 +616,13 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             print_descend_timers(ctx->buffers, id, "set",                descend_timers, set);
             print_descend_timers(ctx->buffers, id, "clone",              descend_timers, make_clone);
             print_descend_timers(ctx->buffers, id, "pushdir",            descend_timers, pushdir);
-            #ifdef SQL_EXEC
-            timestamp_print     (ctx->buffers, id, "sqltsumcheck",       sqltsumcheck);
-            timestamp_print     (ctx->buffers, id, "sqltsum",            sqltsum);
             timestamp_print     (ctx->buffers, id, "sqlsum",             sqlsum);
             timestamp_print     (ctx->buffers, id, "sqlent",             sqlent);
-            #endif
             timestamp_print     (ctx->buffers, id, "xattrdone",          xattrdone_call);
             timestamp_print     (ctx->buffers, id, "detachdb",           detachdb_call);
+            timestamp_print     (ctx->buffers, id, "utime",              utime_call);
         }
         timestamp_print         (ctx->buffers, id, "closedir",           closedir_call);
-        timestamp_print         (ctx->buffers, id, "utime",              utime_call);
         timestamp_print         (ctx->buffers, id, "free_work",          free_work);
     }
 
@@ -638,6 +634,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     total_opendir_time           += timestamp_elapsed(opendir_call);
     total_attachdb_time          += timestamp_elapsed(attachdb_call);
     total_xattrprep_time         += timestamp_elapsed(xattrprep_call);
+    total_sqltsumcheck_time      += timestamp_elapsed(sqltsumcheck);
+    total_sqltsum_time           += timestamp_elapsed(sqltsum);
     total_get_rollupscore_time   += timestamp_elapsed(get_rollupscore_call);
     total_descend_time           += timestamp_elapsed(descend_call);
     total_check_args_time        += buffer_sum(&descend_timers[dt_check_args]);
@@ -656,14 +654,12 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     total_set_time               += buffer_sum(&descend_timers[dt_set]);
     total_clone_time             += buffer_sum(&descend_timers[dt_make_clone]);
     total_pushdir_time           += buffer_sum(&descend_timers[dt_pushdir]);
-    total_closedir_time          += timestamp_elapsed(closedir_call);
-    total_sqltsumcheck_time      += timestamp_elapsed(sqltsumcheck);
-    total_sqltsum_time           += timestamp_elapsed(sqltsum);
     total_sqlsum_time            += timestamp_elapsed(sqlsum);
     total_sqlent_time            += timestamp_elapsed(sqlent);
     total_xattrdone_time         += timestamp_elapsed(xattrdone_call);
     total_detachdb_time          += timestamp_elapsed(detachdb_call);
     total_utime_time             += timestamp_elapsed(utime_call);
+    total_closedir_time          += timestamp_elapsed(closedir_call);
     total_free_work_time         += timestamp_elapsed(free_work);
     total_output_timestamps_time += timestamp_elapsed(output_timestamps);
     pthread_mutex_unlock(&print_mutex);
