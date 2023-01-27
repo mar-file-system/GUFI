@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "external.h"
 #include "outfiles.h"
-#include "pcre.h"
 #include "trie.h"
 #include "utils.h"
 
