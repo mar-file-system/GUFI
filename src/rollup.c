@@ -399,8 +399,6 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
         return 1;
     }
 
-    timestamp_create_buffer(4096);
-
     struct Permissions *child_perms =
         malloc(sizeof(struct Permissions) *sll_get_size(&rollup->data.subdirs));
 
@@ -412,7 +410,7 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
         char dbname[MAXPATH] = {0};
         SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, child->data.name);
 
-        timestamp_start(open_child_db);
+        timestamp_create_start(open_child_db);
         sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
                              , NULL, NULL
                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -420,24 +418,24 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
                              , NULL, NULL
                              #endif
             );
-        timestamp_end(timestamp_buffers, rollup->data.tid.up, "open_child_db", open_child_db);
+        timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "open_child_db", open_child_db);
 
         if (!db) {
             break;
         }
 
         /* get the child directory's permissions and pentries count */
-        timestamp_start(get_child_data);
+        timestamp_create_start(get_child_data);
         struct ChildData data;
         data.perms = &child_perms[idx];
         data.count = 0;
         char *err = NULL;
         const int rc = sqlite3_exec(db, PERM_SQL, get_permissions_and_count, &data, &err);
-        timestamp_end(timestamp_buffers, rollup->data.tid.up, "get_child_data", get_child_data);
+        timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "get_child_data", get_child_data);
 
-        timestamp_start(close_child_db);
+        timestamp_create_start(close_child_db);
         closedb(db);
-        timestamp_end(timestamp_buffers, rollup->data.tid.up, "close_child_db", close_child_db);
+        timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "close_child_db", close_child_db);
 
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Error: Could not get permissions of child directory \"%s\": %s\n", child->data.name, err);
@@ -513,17 +511,16 @@ int can_rollup(struct input *in,
 
     char *err = NULL;
 
-    timestamp_create_buffer(4096);
-    timestamp_start(can_roll_up);
+    timestamp_create_start(can_roll_up);
 
     /* default to cannot roll up */
     int legal = 0;
 
     /* get count of number of non-directories in the current directory */
-    timestamp_start(nondir_count);
+    timestamp_create_start(nondir_count);
     ds->subnondir_count = 0;
     get_nondirs(rollup->data.name, dst, &ds->subnondir_count);
-    timestamp_end(timestamp_buffers, rollup->data.tid.up, "nondir_count", nondir_count);
+    timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "nondir_count", nondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
     if (ds->subnondir_count > in->max_in_dir) {
@@ -535,14 +532,14 @@ int can_rollup(struct input *in,
     size_t total_subdirs = 0;
 
     /* check if ALL children have been rolled up */
-    timestamp_start(check_subdirs_rolledup);
+    timestamp_create_start(check_subdirs_rolledup);
     size_t rolledup = 0;
     sll_loop(&rollup->data.subdirs, node) {
         struct RollUp *child = (struct RollUp *) sll_node_data(node);
         rolledup += child->rolledup;
         total_subdirs++;
     }
-    timestamp_end(timestamp_buffers, rollup->data.tid.up, "check_subdirs_rolledup", check_subdirs_rolledup);
+    timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "check_subdirs_rolledup", check_subdirs_rolledup);
 
     /* quick check to see if all chilren were rolled up */
     if (total_subdirs != rolledup) {
@@ -550,10 +547,10 @@ int can_rollup(struct input *in,
     }
 
     /* get permissions of the current directory */
-    timestamp_start(get_perms);
+    timestamp_create_start(get_perms);
     struct Permissions perms;
     const int exec_rc = sqlite3_exec(dst, PERM_SQL, get_permissions, &perms, &err);
-    timestamp_end(timestamp_buffers, rollup->data.tid.up, "get_perms", get_perms);
+    timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "get_perms", get_perms);
 
     if (exec_rc != SQLITE_OK) {
         fprintf(stderr, "Error: Could not get permissions of current directory \"%s\": %s\n", rollup->data.name, err);
@@ -562,10 +559,10 @@ int can_rollup(struct input *in,
     }
 
     /* check if the permissions of this directory and its children match */
-    timestamp_start(check_perms);
+    timestamp_create_start(check_perms);
     size_t total_child_entries = 0;
     legal = check_children(rollup, &perms, total_subdirs, &total_child_entries timestamp_args);
-    timestamp_end(timestamp_buffers, rollup->data.tid.up, "check_perms", check_perms);
+    timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "check_perms", check_perms);
 
     /*
      * even if this directory can be rolled up, don't
@@ -583,7 +580,7 @@ int can_rollup(struct input *in,
 end_can_rollup:
     sqlite3_free(err);
 
-    timestamp_end(timestamp_buffers, rollup->data.tid.up, "can_rollup", can_roll_up);
+    timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "can_rollup", can_roll_up);
 
     return legal;
 }
@@ -700,8 +697,7 @@ int do_rollup(struct RollUp *rollup,
 
     /* Not checking arguments */
 
-    timestamp_create_buffer(4096);
-    timestamp_start(do_roll_up);
+    timestamp_create_start(do_roll_up);
 
     #ifdef DEBUG
     #ifdef PER_THREAD_STATS
@@ -717,9 +713,9 @@ int do_rollup(struct RollUp *rollup,
     char rollup_current_dir[] = "UPDATE " SUMMARY " SET rollupscore = 0;";
     rollup_current_dir[sizeof(rollup_current_dir) - sizeof("0;")] += ds->score;
 
-    timestamp_start(rollup_current_dir);
+    timestamp_create_start(rollup_current_dir);
     exec_rc = sqlite3_exec(dst, rollup_current_dir, NULL, NULL, &err);
-    timestamp_end(timestamp_buffers, id, "rollup_current_dir", rollup_current_dir);
+    timestamp_end_print(timestamp_buffers, id, "rollup_current_dir", rollup_current_dir);
 
     if (exec_rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to copy \"%s\" entries into pentries table: %s\n", rollup->data.name, err);
@@ -728,10 +724,10 @@ int do_rollup(struct RollUp *rollup,
     }
 
     /* process each child */
-    timestamp_start(rollup_subdirs);
+    timestamp_create_start(rollup_subdirs);
 
     sll_loop(&rollup->data.subdirs, node) {
-        timestamp_start(rollup_subdir);
+        timestamp_create_start(rollup_subdir);
 
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
@@ -743,7 +739,7 @@ int do_rollup(struct RollUp *rollup,
 
         /* roll up the subdir into this dir */
         if (!rc) {
-            timestamp_start(rollup_subdir);
+            timestamp_create_start(rollup_subdir);
             struct CallbackArgs ca = {
                 .xattr      = xattr_template,
                 .parent     = rollup->data.name,
@@ -753,7 +749,7 @@ int do_rollup(struct RollUp *rollup,
             };
 
             exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_xattr_dbs_callback, &ca, &err);
-            timestamp_end(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
+            timestamp_end_print(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
             if (exec_rc != SQLITE_OK) {
                 fprintf(stderr, "Error: Failed to copy \"%s\" subdir pentries into pentries table: %s\n", child->name, err);
             }
@@ -762,26 +758,24 @@ int do_rollup(struct RollUp *rollup,
         /* always detach subdir */
         detachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, 1);
 
-        timestamp_end(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
+        timestamp_end_print(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
 
         if (rc) {
             break;
         }
     }
 
-    timestamp_end(timestamp_buffers, id, "rollup_subdirs", rollup_subdirs);
+    timestamp_end_print(timestamp_buffers, id, "rollup_subdirs", rollup_subdirs);
 
 end_rollup:
     sqlite3_free(err);
 
-    timestamp_end(timestamp_buffers, id, "do_rollup", do_roll_up);
+    timestamp_end_print(timestamp_buffers, id, "do_rollup", do_roll_up);
     return rc;
 }
 
 void rollup(void *args timestamp_sig) {
-    timestamp_create_buffer(4096);
-
-    timestamp_start(setup);
+    timestamp_create_start(setup);
 
     struct RollUp *dir = (struct RollUp *) args;
     dir->rolledup = 0;
@@ -809,10 +803,10 @@ void rollup(void *args timestamp_sig) {
     ds->score = 0;
     ds->success = 1;
 
-    timestamp_end(timestamp_buffers, id, "setup", setup);
+    timestamp_end_print(timestamp_buffers, id, "setup", setup);
 
     /* open the database file here to reduce number of open calls */
-    timestamp_start(open_curr_db);
+    timestamp_create_start(open_curr_db);
     sqlite3 *dst = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0
                            , NULL, NULL
                            #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -820,7 +814,7 @@ void rollup(void *args timestamp_sig) {
                            , NULL, NULL
                            #endif
         );
-    timestamp_end(timestamp_buffers, id, "opendb", open_curr_db);
+    timestamp_end_print(timestamp_buffers, id, "opendb", open_curr_db);
 
     /* can attempt to roll up */
     if (dst) {
@@ -880,7 +874,7 @@ void sub_help() {
 int main(int argc, char *argv[]) {
     epoch = since_epoch(NULL);
 
-    timestamp_start_raw(runtime);
+    timestamp_create_start_raw(runtime);
 
     struct PoolArgs pa;
     int idx = parse_cmd_line(argc, argv, "hHn:L:X", 1, "GUFI_index ...", &pa.in);
@@ -899,7 +893,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     #ifdef PER_THREAD_STATS
-    timestamp_init(timestamp_buffers, pa.in.maxthreads + 1, 1024 * 1024, &print_mutex);
+    timestamp_print_init(timestamp_buffers, pa.in.maxthreads + 1, 1024 * 1024, &print_mutex);
     #endif
     #endif
 
@@ -939,7 +933,7 @@ int main(int argc, char *argv[]) {
     OutputBuffers_destroy(&print_buffers);
 
     #ifdef PER_THREAD_STATS
-    timestamp_destroy(timestamp_buffers);
+    timestamp_print_destroy(timestamp_buffers);
     #endif
 
     #endif

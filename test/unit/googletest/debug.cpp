@@ -84,8 +84,6 @@ TEST(debug, since_epoch) {
 }
 
 TEST(debug, nsec) {
-    epoch = 0;
-
     struct start_end se = {
         .start = {
             .tv_sec = 1,
@@ -129,8 +127,7 @@ TEST(debug, print_timer) {
     EXPECT_EQ(obuf.filled, (std::size_t) 0);
     EXPECT_EQ(obuf.count, (std::size_t) 0);
 
-    char buf[4096];
-    EXPECT_EQ(print_timer(&obufs, 0, buf, sizeof(buf), "", &se), 0);
+    EXPECT_EQ(print_timer(&obufs, 0, "", &se), 0);
 
     EXPECT_NO_THROW(OutputBuffers_destroy(&obufs));
 }

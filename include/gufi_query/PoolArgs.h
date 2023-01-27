@@ -67,11 +67,17 @@ OF SUCH DAMAGE.
 
 #include <pthread.h>
 #include <stddef.h>
+#include <stdio.h>
+#ifdef DEBUG
+#include <time.h>
+#endif
 
 #include "OutputBuffers.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "debug.h"
+#if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+#include "gufi_query/timers.h"
+#endif
 #include "trie.h"
 
 typedef struct ThreadArgs {
@@ -92,8 +98,12 @@ typedef struct PoolArgs {
     trie_t *skip;
     pthread_mutex_t *stdout_mutex;
 
-    #ifdef DEBUG
-    struct timespec *start_time;
+    #if defined(DEBUG)
+    struct timespec start_time;
+    #endif
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    total_time_t tt;
     #endif
 } PoolArgs_t;
 

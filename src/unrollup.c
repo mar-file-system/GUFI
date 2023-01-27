@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     epoch = since_epoch(NULL);
 
-    timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
+    timestamp_print_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
     #endif
 
     QPTPool_t *pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL
@@ -331,10 +331,8 @@ int main(int argc, char *argv[]) {
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
-    #ifdef DEBUG
-    #ifdef PER_THREAD_STATS
-    timestamp_destroy(timestamp_buffers);
-    #endif
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    timestamp_print_destroy(timestamp_buffers);
     #endif
 
     return 0;

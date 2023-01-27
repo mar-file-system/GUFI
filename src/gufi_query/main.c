@@ -76,7 +76,9 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "dbutils.h"
+#if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
 #include "debug.h"
+#endif
 #include "external.h"
 #include "outfiles.h"
 #include "trie.h"
@@ -85,117 +87,9 @@ OF SUCH DAMAGE.
 #include "gufi_query/aggregate.h"
 #include "gufi_query/rollup.h"
 #include "gufi_query/query.h"
+#include "gufi_query/timers.h"
 
-#ifdef DEBUG
-struct start_end *buffer_create(sll_t *timers) {
-    struct start_end *timer = malloc(sizeof(struct start_end));
-    sll_push(timers, timer);
-    return timer;
-}
-
-/* descend timer types */
-enum {
-    dt_within_descend = 0,
-    dt_check_args,
-    dt_level_cmp,
-    dt_level_branch,
-    dt_while_branch,
-    dt_readdir_call,
-    dt_readdir_branch,
-    dt_strncmp_call,
-    dt_strncmp_branch,
-    dt_snprintf_call,
-    dt_lstat_call,
-    dt_isdir_cmp,
-    dt_isdir_branch,
-    dt_access_call,
-    dt_set,
-    dt_make_clone,
-    dt_pushdir,
-
-    dt_max
-};
-
-sll_t *descend_timers_init() {
-    sll_t *dt = malloc(dt_max * sizeof(sll_t));
-    for(int i = 0; i < dt_max; i++) {
-        sll_init(&dt[i]);
-    }
-
-    return dt;
-}
-
-void descend_timers_destroy(sll_t *dt) {
-    for(int i = 0; i < dt_max; i++) {
-        sll_destroy(&dt[i], free);
-    }
-    free(dt);
-}
-
-#define buffered_name(name) (dt_##name)
-#define buffered_get(timers, name)  timers[buffered_name(name)]
-
-#define buffered_start(name)                                             \
-    struct start_end *name = buffer_create(&buffered_get(timers, name)); \
-    timestamp_set_start_raw((*(name)));
-
-#define buffered_end(name) timestamp_set_end_raw((*(name)));
-
-#ifdef PER_THREAD_STATS
-
-#define print_descend_timers(obufs, id, name, timers, type)              \
-    sll_loop(&buffered_get(timers, type), node) {                        \
-        struct start_end *timestamp = sll_node_data(node);               \
-        print_timer(obufs, id, ts_buf, sizeof(ts_buf), name, timestamp); \
-    }
-#else
-#define print_descend_timers(obufs, id, name, timers, type)
-#endif
-
-#ifdef CUMULATIVE_TIMES
-uint64_t total_opendir_time           = 0;
-uint64_t total_attachdb_time          = 0;
-uint64_t total_addqueryfuncs_time     = 0;
-uint64_t total_xattrprep_time         = 0;
-uint64_t total_sqltsumcheck_time      = 0;
-uint64_t total_sqltsum_time           = 0;
-uint64_t total_get_rollupscore_time   = 0;
-uint64_t total_descend_time           = 0;
-uint64_t total_check_args_time        = 0;
-uint64_t total_level_time             = 0;
-uint64_t total_level_branch_time      = 0;
-uint64_t total_while_branch_time      = 0;
-uint64_t total_readdir_time           = 0;
-uint64_t total_readdir_branch_time    = 0;
-uint64_t total_strncmp_time           = 0;
-uint64_t total_strncmp_branch_time    = 0;
-uint64_t total_snprintf_time          = 0;
-uint64_t total_lstat_time             = 0;
-uint64_t total_isdir_time             = 0;
-uint64_t total_isdir_branch_time      = 0;
-uint64_t total_access_time            = 0;
-uint64_t total_set_time               = 0;
-uint64_t total_clone_time             = 0;
-uint64_t total_pushdir_time           = 0;
-uint64_t total_sqlsum_time            = 0;
-uint64_t total_sqlent_time            = 0;
-uint64_t total_xattrdone_time         = 0;
-uint64_t total_detachdb_time          = 0;
-uint64_t total_closedir_time          = 0;
-uint64_t total_utime_time             = 0;
-uint64_t total_free_work_time         = 0;
-uint64_t total_output_timestamps_time = 0;
-
-uint64_t buffer_sum(sll_t *timers) {
-    uint64_t sum = 0;
-    sll_loop(timers, node) {
-        struct start_end *timer = (struct start_end *) sll_node_data(node);
-        sum += nsec(timer);
-    }
-
-    return sum;
-}
-
+#if defined(DEBUG) && defined(CUMULATIVE_TIMES)
 #define print_stats(normal_fmt, terse_fmt, ...)             \
     if (in.terse) {                                         \
         fprintf(stderr, terse_fmt " ", ##__VA_ARGS__);      \
@@ -204,27 +98,15 @@ uint64_t buffer_sum(sll_t *timers) {
         fprintf(stderr, normal_fmt "\n", ##__VA_ARGS__);    \
     }
 
-#endif
+#define query_count_arg , &ta->queries
+#define increment_query_count(ta) ta->queries++
 #else
-sll_t *descend_timers_init() { return NULL; }
-void descend_timers_destroy(sll_t *dt) { (void) dt; }
-#define buffered_start(name)
-#define buffered_end(name)
+#define query_count_arg
+#define increment_query_count(ta)
 #endif
-
-static void increment_query_count(ThreadArgs_t *ta) {
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    ta->queries++;
-    #else
-    (void) ta;
-    #endif
-}
 
 /* name doesn't matter, so long as it is not used by callers */
 static const char ATTACH_NAME[] = "tree";
-
-/* mutex doing global things */
-pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* prepend the current direcoty to the database filenamee */
 size_t xattr_modify_filename(char *dst, const size_t dst_size,
@@ -244,59 +126,59 @@ static size_t descend2(QPTPool_t *ctx,
                        trie_t *skip_names,
                        QPTPoolFunc_t func,
                        const size_t max_level
-                       #ifdef DEBUG
-                       , sll_t *timers
+                       #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                       , sll_t *dts
                        #endif
     ) {
-    buffered_start(within_descend);
+    descend_timestamp_start(dts, within_descend);
 
     /* Not checking arguments */
 
-    buffered_start(level_cmp);
+    descend_timestamp_start(dts, level_cmp);
     size_t pushed = 0;
     const size_t next_level = passmywork->level + 1;
     const int level_check = (next_level < max_level);
-    buffered_end(level_cmp);
+    descend_timestamp_end(level_cmp);
 
-    buffered_start(level_branch);
+    descend_timestamp_start(dts, level_branch);
     if (level_check) {
-        buffered_end(level_branch);
+        descend_timestamp_end(level_branch);
 
         /* Send subdirs to queue */
         /* loop over dirents*/
         /* skip db.db and any filename listed in the trie struct*/
         /* fill qwork struct for each dirent*/
-        buffered_start(while_branch);
+        descend_timestamp_start(dts, while_branch);
         while (1) {
-            buffered_start(readdir_call);
+            descend_timestamp_start(dts, readdir_call);
             struct dirent *entry = readdir(dir);
-            buffered_end(readdir_call);
+            descend_timestamp_end(readdir_call);
 
-            buffered_start(readdir_branch);
+            descend_timestamp_start(dts, readdir_branch);
             if (!entry) {
-                buffered_end(readdir_branch);
+                descend_timestamp_end(readdir_branch);
                 break;
             }
             else {
-                buffered_end(readdir_branch);
+                descend_timestamp_end(readdir_branch);
             }
 
-            buffered_start(strncmp_call);
+            descend_timestamp_start(dts, strncmp_call);
             size_t len = strlen(entry->d_name);
             const int skip = (trie_search(skip_names, entry->d_name, len) ||
                              (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
-            buffered_end(strncmp_call);
+            descend_timestamp_end(strncmp_call);
 
-            buffered_start(strncmp_branch);
+            descend_timestamp_start(dts, strncmp_branch);
             if (skip) {
-                buffered_end(strncmp_branch);
+                descend_timestamp_end(strncmp_branch);
                 continue;
             }
             else {
-                buffered_end(strncmp_branch);
+                descend_timestamp_end(strncmp_branch);
             }
 
-            buffered_start(snprintf_call);
+            descend_timestamp_start(dts, snprintf_call);
             struct work qwork;
 
             /* append entry name to directory */
@@ -306,48 +188,48 @@ static size_t descend2(QPTPool_t *ctx,
             qwork.sqlite3_name_len = SNFORMAT_S(qwork.sqlite3_name, MAXPATH, 2, passmywork->sqlite3_name, passmywork->sqlite3_name_len, "/", (size_t) 1);
             size_t convertd_len = sqlite_uri_path(qwork.sqlite3_name + qwork.sqlite3_name_len, MAXPATH - qwork.sqlite3_name_len, entry->d_name, &len);
             qwork.sqlite3_name_len += convertd_len;
-            buffered_end(snprintf_call);
+            descend_timestamp_end(snprintf_call);
 
-            buffered_start(isdir_cmp);
+            descend_timestamp_start(dts, isdir_cmp);
             const int isdir = (entry->d_type == DT_DIR);
-            buffered_end(isdir_cmp);
+            descend_timestamp_end(isdir_cmp);
 
-            buffered_start(isdir_branch);
+            descend_timestamp_start(dts, isdir_branch);
             if (isdir) {
-                buffered_end(isdir_branch);
+                descend_timestamp_end(isdir_branch);
 
-                buffered_start(set);
+                descend_timestamp_start(dts, set);
                 qwork.level = next_level;
                 qwork.root = passmywork->root;
                 qwork.root_len = passmywork->root_len;
 
                 /* this is how the parent gets passed on */
-                buffered_end(set);
+                descend_timestamp_end(set);
 
                 /* make a clone here so that the data can be pushed into the queue */
                 /* this is more efficient than malloc+free for every single entry */
-                buffered_start(make_clone);
+                descend_timestamp_start(dts, make_clone);
                 struct work *clone = (struct work *) malloc(sizeof(struct work));
                 memcpy(clone, &qwork, sizeof(struct work));
-                buffered_end(make_clone);
+                descend_timestamp_end(make_clone);
 
                 /* push the subdirectory into the queue for processing */
-                buffered_start(pushdir);
+                descend_timestamp_start(dts, pushdir);
                 QPTPool_enqueue(ctx, id, func, clone);
-                buffered_end(pushdir);
+                descend_timestamp_end(pushdir);
 
                 pushed++;
             }
             else {
-                buffered_end(isdir_branch);
+                descend_timestamp_end(isdir_branch);
             }
         }
-        buffered_end(while_branch);
+        descend_timestamp_end(while_branch);
     }
     else {
-        buffered_end(level_branch);
+        descend_timestamp_end(level_branch);
     }
-    buffered_end(within_descend);
+    descend_timestamp_end(within_descend);
 
     return pushed;
 }
@@ -369,27 +251,15 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, MAXPATH, 2, work->sqlite3_name, work->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
-    timestamp_create_zero(opendir_call,         pa->start_time);
-    timestamp_create_zero(attachdb_call,        pa->start_time);
-    timestamp_create_zero(addqueryfuncs_call,   pa->start_time);
-    timestamp_create_zero(xattrprep_call,       pa->start_time);
-    timestamp_create_zero(sqltsumcheck,         pa->start_time);
-    timestamp_create_zero(sqltsum,              pa->start_time);
-    timestamp_create_zero(get_rollupscore_call, pa->start_time);
-    timestamp_create_zero(descend_call,         pa->start_time);
-    sll_t *descend_timers = descend_timers_init();
-    timestamp_create_zero(sqlsum,               pa->start_time);
-    timestamp_create_zero(sqlent,               pa->start_time);
-    timestamp_create_zero(xattrdone_call,       pa->start_time);
-    timestamp_create_zero(detachdb_call,        pa->start_time);
-    timestamp_create_zero(closedir_call,        pa->start_time);
-    timestamp_create_zero(utime_call,           pa->start_time);
-    timestamp_create_zero(free_work,            pa->start_time);
+    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+    timestamps_t ts;
+    timestamps_init(&ts, &pa->start_time);
+    #endif
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
-    timestamp_set_start(opendir_call);
+    thread_timestamp_start(ts.tts, opendir_call);
     dir = opendir(work->name);
-    timestamp_set_end(opendir_call);
+    thread_timestamp_end(opendir_call);
 
     /* if the directory can't be opened, don't bother with anything else */
     if (!dir) {
@@ -397,43 +267,35 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     #if OPENDB
-    timestamp_set_start(attachdb_call);
+    thread_timestamp_start(ts.tts, attachdb_call);
     sqlite3 *db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
-    timestamp_set_end(attachdb_call);
+    thread_timestamp_end(attachdb_call);
     increment_query_count(ta);
     #endif
 
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     #ifdef ADDQUERYFUNCS
-    timestamp_set_start(addqueryfuncs_call);
+    thread_timestamp_start(ts.tts, addqueryfuncs_call);
     if (db) {
         if (addqueryfuncs_with_context(db, id, work) != 0) {
             fprintf(stderr, "Could not add functions to sqlite\n");
         }
     }
-    timestamp_set_end(addqueryfuncs_call);
+    thread_timestamp_end(addqueryfuncs_call);
     #endif
 
     /* set up XATTRS so that it can be used by -T, -S, and -E */
     if (db && in->external_enabled) {
         static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
 
-        timestamp_set_start(xattrprep_call);
+        thread_timestamp_start(ts.tts, xattrprep_call);
         external_loop(work, db,
                       XATTRS, sizeof(XATTRS) - 1,
                       XATTR_COLS, sizeof(XATTR_COLS) - 1,
                       XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
-                      xattr_modify_filename
-                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                      , &ta->queries
-                      #endif
-            );
-        xattr_create_views(db
-                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                           , &ta->queries
-                           #endif
-            );
-        timestamp_set_end(xattrprep_call);
+                      xattr_modify_filename query_count_arg);
+        xattr_create_views(db query_count_arg);
+        thread_timestamp_end(xattrprep_call);
     }
 
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
@@ -444,19 +306,19 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (in->sql.tsum_len > 1) {
         if (in->andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
-            timestamp_set_start(sqltsumcheck);
+            thread_timestamp_start(ts.tts, sqltsumcheck);
             querydb(dbname, db, "SELECT name FROM sqlite_master WHERE type=\'table\' AND name='treesummary';",
                   pa, id, &recs);
-            timestamp_set_end(sqltsumcheck);
+            thread_timestamp_end(sqltsumcheck);
             increment_query_count(ta);
             if (recs < 1) {
                 recs = -1;
             }
             else {
                 /* run in->sql.tsum */
-                timestamp_set_start(sqltsum);
+                thread_timestamp_start(ts.tts, sqltsum);
                 querydb(dbname, db, in->sql.tsum, pa, id, &recs);
-                timestamp_set_end(sqltsum);
+                thread_timestamp_end(sqltsum);
                 increment_query_count(ta);
             }
         }
@@ -473,34 +335,30 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
          * ignore errors - if the db wasn't opened, or if
          * summary is missing the columns, keep descending
          */
-        timestamp_set_start(get_rollupscore_call);
+        thread_timestamp_start(ts.tts, get_rollupscore_call);
         int rollupscore = 0;
         if (db) {
             get_rollupscore(db, &rollupscore);
             increment_query_count(ta);
         }
-        timestamp_set_end(get_rollupscore_call);
+        thread_timestamp_end(get_rollupscore_call);
 
         /* push subdirectories into the queue */
         if (rollupscore == 0) {
-            #ifdef DEBUG
-            timestamp_set_start(descend_call);
-            #ifdef SUBDIRECTORY_COUNTS
+            thread_timestamp_start(ts.tts, descend_call);
+            #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
             const size_t pushed =
             #endif
-            #endif
             descend2(ctx, id, work, dir, pa->skip, processdir, in->max_level
-                     #ifdef DEBUG
-                     , descend_timers
+                     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                     , ts.dts
                      #endif
                     );
-            #ifdef DEBUG
-            timestamp_set_end(descend_call);
-            #ifdef SUBDIRECTORY_COUNTS
+            thread_timestamp_end(descend_call);
+            #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
             pthread_mutex_lock(&print_mutex);
             fprintf(stderr, "%s %zu\n", work->name, pushed);
             pthread_mutex_unlock(&print_mutex);
-            #endif
             #endif
         }
 
@@ -514,9 +372,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 if (in->sql.sum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
-                    timestamp_set_start(sqlsum);
+                    thread_timestamp_start(ts.tts, sqlsum);
                     querydb(dbname, db, in->sql.sum, pa, id, &recs);
-                    timestamp_set_end(sqlsum);
+                    thread_timestamp_end(sqlsum);
                     increment_query_count(ta);
                 } else {
                     recs = 1;
@@ -528,9 +386,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 if (recs > 0) {
                     if (in->sql.ent_len > 1) {
                         /* set the path so users can put path() in their queries */
-                        timestamp_set_start(sqlent);
+                        thread_timestamp_start(ts.tts, sqlent);
                         querydb(dbname, db, in->sql.ent, pa, id, &recs); /* recs is not used */
-                        timestamp_set_end(sqlent);
+                        thread_timestamp_end(sqlent);
                         increment_query_count(ta);
                     }
                 }
@@ -539,27 +397,23 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* detach xattr dbs */
-    timestamp_set_start(xattrdone_call);
+    thread_timestamp_start(ts.tts, xattrdone_call);
     if (db && in->external_enabled) {
-        external_done(db, "DROP VIEW " XATTRS ";"
-                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                      , &ta->queries
-                      #endif
-        );
+        external_done(db, "DROP VIEW " XATTRS ";" query_count_arg);
     }
-    timestamp_set_end(xattrdone_call);
+    thread_timestamp_end(xattrdone_call);
 
     #ifdef OPENDB
-    timestamp_set_start(detachdb_call);
+    thread_timestamp_start(ts.tts, detachdb_call);
     if (db) {
         detachdb(dbname, db, ATTACH_NAME, 1);
         increment_query_count(ta);
     }
-    timestamp_set_end(detachdb_call);
+    thread_timestamp_end(detachdb_call);
     #endif
 
     /* restore mtime and atime */
-    timestamp_set_start(utime_call);
+    thread_timestamp_start(ts.tts, utime_call);
     if (db) {
         if (in->keep_matime) {
             struct utimbuf dbtime = {};
@@ -568,106 +422,29 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             utime(dbname, &dbtime);
         }
     }
-    timestamp_set_end(utime_call);
+    thread_timestamp_end(utime_call);
 
-    timestamp_set_start(closedir_call);
+    thread_timestamp_start(ts.tts, closedir_call);
     closedir(dir);
-    timestamp_set_end(closedir_call);
+    thread_timestamp_end(closedir_call);
 
   out_free:
     ;
 
-    timestamp_set_start(free_work);
+    thread_timestamp_start(ts.tts, free_work);
     free(work);
-    timestamp_set_end(free_work);
+    thread_timestamp_end(free_work);
 
-    #ifdef DEBUG
-    timestamp_start(output_timestamps);
-
-    timestamp_create_buffer(4096);
-    timestamp_print             (ctx->buffers, id, "opendir",            opendir_call);
-    if (dir) {
-        timestamp_print         (ctx->buffers, id, "attachdb",           attachdb_call);
-        if (db) {
-            timestamp_print     (ctx->buffers, id, "addqueryfuncs",      addqueryfuncs_call);
-            timestamp_print     (ctx->buffers, id, "xattrprep",          xattrprep_call);
-            timestamp_print     (ctx->buffers, id, "sqltsumcheck",       sqltsumcheck);
-            timestamp_print     (ctx->buffers, id, "sqltsum",            sqltsum);
-            timestamp_print     (ctx->buffers, id, "get_rollupscore",    get_rollupscore_call);
-            timestamp_print     (ctx->buffers, id, "descend",            descend_call);
-            print_descend_timers(ctx->buffers, id, "within_descend",     descend_timers, within_descend);
-            print_descend_timers(ctx->buffers, id, "check_args",         descend_timers, check_args);
-            print_descend_timers(ctx->buffers, id, "level",              descend_timers, level_cmp);
-            print_descend_timers(ctx->buffers, id, "level_branch",       descend_timers, level_branch);
-            print_descend_timers(ctx->buffers, id, "while_branch",       descend_timers, while_branch);
-            print_descend_timers(ctx->buffers, id, "readdir",            descend_timers, readdir_call);
-            print_descend_timers(ctx->buffers, id, "readdir_branch",     descend_timers, readdir_branch);
-            print_descend_timers(ctx->buffers, id, "strncmp",            descend_timers, strncmp_call);
-            print_descend_timers(ctx->buffers, id, "strncmp_branch",     descend_timers, strncmp_branch);
-            print_descend_timers(ctx->buffers, id, "snprintf",           descend_timers, snprintf_call);
-            print_descend_timers(ctx->buffers, id, "lstat",              descend_timers, lstat_call);
-            print_descend_timers(ctx->buffers, id, "isdir",              descend_timers, isdir_cmp);
-            print_descend_timers(ctx->buffers, id, "isdir_branch",       descend_timers, isdir_branch);
-            print_descend_timers(ctx->buffers, id, "access",             descend_timers, access_call);
-            print_descend_timers(ctx->buffers, id, "set",                descend_timers, set);
-            print_descend_timers(ctx->buffers, id, "clone",              descend_timers, make_clone);
-            print_descend_timers(ctx->buffers, id, "pushdir",            descend_timers, pushdir);
-            timestamp_print     (ctx->buffers, id, "sqlsum",             sqlsum);
-            timestamp_print     (ctx->buffers, id, "sqlent",             sqlent);
-            timestamp_print     (ctx->buffers, id, "xattrdone",          xattrdone_call);
-            timestamp_print     (ctx->buffers, id, "detachdb",           detachdb_call);
-            timestamp_print     (ctx->buffers, id, "utime",              utime_call);
-        }
-        timestamp_print         (ctx->buffers, id, "closedir",           closedir_call);
-        timestamp_print         (ctx->buffers, id, "free_work",          free_work);
-    }
-
-    timestamp_set_end(output_timestamps);
-    timestamp_print             (ctx->buffers, id, "output_timestamps",  output_timestamps);
-
-    #ifdef CUMULATIVE_TIMES
-    pthread_mutex_lock(&print_mutex);
-    total_opendir_time           += timestamp_elapsed(opendir_call);
-    total_attachdb_time          += timestamp_elapsed(attachdb_call);
-    total_xattrprep_time         += timestamp_elapsed(xattrprep_call);
-    total_sqltsumcheck_time      += timestamp_elapsed(sqltsumcheck);
-    total_sqltsum_time           += timestamp_elapsed(sqltsum);
-    total_get_rollupscore_time   += timestamp_elapsed(get_rollupscore_call);
-    total_descend_time           += timestamp_elapsed(descend_call);
-    total_check_args_time        += buffer_sum(&descend_timers[dt_check_args]);
-    total_level_time             += buffer_sum(&descend_timers[dt_level_cmp]);
-    total_level_branch_time      += buffer_sum(&descend_timers[dt_level_branch]);
-    total_while_branch_time      += buffer_sum(&descend_timers[dt_while_branch]);
-    total_readdir_time           += buffer_sum(&descend_timers[dt_readdir_call]);
-    total_readdir_branch_time    += buffer_sum(&descend_timers[dt_readdir_branch]);
-    total_strncmp_time           += buffer_sum(&descend_timers[dt_strncmp_call]);
-    total_strncmp_branch_time    += buffer_sum(&descend_timers[dt_strncmp_branch]);
-    total_snprintf_time          += buffer_sum(&descend_timers[dt_snprintf_call]);
-    total_lstat_time             += buffer_sum(&descend_timers[dt_lstat_call]);
-    total_isdir_time             += buffer_sum(&descend_timers[dt_isdir_cmp]);
-    total_isdir_branch_time      += buffer_sum(&descend_timers[dt_isdir_branch]);
-    total_access_time            += buffer_sum(&descend_timers[dt_access_call]);
-    total_set_time               += buffer_sum(&descend_timers[dt_set]);
-    total_clone_time             += buffer_sum(&descend_timers[dt_make_clone]);
-    total_pushdir_time           += buffer_sum(&descend_timers[dt_pushdir]);
-    total_sqlsum_time            += timestamp_elapsed(sqlsum);
-    total_sqlent_time            += timestamp_elapsed(sqlent);
-    total_xattrdone_time         += timestamp_elapsed(xattrdone_call);
-    total_detachdb_time          += timestamp_elapsed(detachdb_call);
-    total_utime_time             += timestamp_elapsed(utime_call);
-    total_closedir_time          += timestamp_elapsed(closedir_call);
-    total_free_work_time         += timestamp_elapsed(free_work);
-    total_output_timestamps_time += timestamp_elapsed(output_timestamps);
-    pthread_mutex_unlock(&print_mutex);
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    timestamps_print(ctx->buffers, id, &ts, dir, db);
+    #endif
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    timestamps_sum(&pa->tt, &ts);
     #endif
 
-    #ifdef PER_THREAD_STATS
-    timestamp_print(ctx->buffers, id, "output_timestamps", output_timestamps);
+    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+    timestamps_destroy(&ts);
     #endif
-    #endif
-
-    /* call here to match descend_timers_init call outside of DEBUG block */
-    descend_timers_destroy(descend_timers);
 
     return 0;
 }
@@ -754,12 +531,6 @@ void sub_help() {
 
 int main(int argc, char *argv[])
 {
-    #ifdef DEBUG
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    epoch = since_epoch(&now);
-    #endif
-
     /* process input args - all programs share the common 'struct input', */
     /* but allow different fields to be filled at the command-line. */
     /* Callers provide the options-string for get_opt(), which will */
@@ -776,20 +547,20 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    timestamp_start(setup_globals);
+    timestamp_create_start(setup_globals);
     #endif
 
+    /* mutex writing to stdout/stderr */
+    pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
     PoolArgs_t pa;
     if (PoolArgs_init(&pa, &in, &global_mutex) != 0) {
         return -1;
     }
 
     #ifdef DEBUG
-    pa.start_time = &now;
+    #ifdef PER_THREAD_STATS
+    timestamp_print_init(timestamp_buffers, in.maxthreads, 1073741824ULL, &global_mutex);
     #endif
-
-    #ifdef DEBUG
-    timestamp_init(timestamp_buffers, in.maxthreads, 1073741824ULL, &global_mutex);
 
     #ifdef CUMULATIVE_TIMES
     timestamp_set_end(setup_globals);
@@ -806,7 +577,7 @@ int main(int argc, char *argv[])
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    timestamp_start(setup_aggregate);
+    timestamp_create_start(setup_aggregate);
     #endif
 
     Aggregate_t aggregate;
@@ -826,7 +597,7 @@ int main(int argc, char *argv[])
     #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
     uint64_t total_time = 0;
 
-    timestamp_start(work);
+    timestamp_create_start(work);
     #endif
 
     /* provide a function to print if PRINT is set */
@@ -904,7 +675,7 @@ int main(int argc, char *argv[])
     int rc = 0;
     if (in.sql.init_agg_len) {
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        timestamp_start(aggregation);
+        timestamp_create_start(aggregation);
         #endif
 
         /* aggregate the intermediate results */
@@ -918,7 +689,7 @@ int main(int argc, char *argv[])
 
         /* final query on aggregate results */
         #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
-        timestamp_start(output);
+        timestamp_create_start(output);
 
         rows +=
         #endif
@@ -935,7 +706,7 @@ int main(int argc, char *argv[])
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
-    timestamp_start(cleanup_globals);
+    timestamp_create_start(cleanup_globals);
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -956,6 +727,15 @@ int main(int argc, char *argv[])
         #endif
     }
 
+    /*
+     * PoolArgs_fin does not deallocate the total_times
+     * struct, but reading from pa would look weird
+     * after PoolArgs_fin was called.
+     */
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    total_time_t *tt = &pa.tt;
+    #endif
+
     /* clean up globals */
     PoolArgs_fin(&pa, in.maxthreads);
 
@@ -968,55 +748,47 @@ int main(int argc, char *argv[])
     #endif
 
     #ifdef DEBUG
-    timestamp_destroy(timestamp_buffers);
+    timestamp_print_destroy(timestamp_buffers);
     #endif
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    const long double thread_time =
-        total_opendir_time + total_xattrprep_time +
-        total_attachdb_time + total_addqueryfuncs_time +
-        total_descend_time + total_sqltsumcheck_time +
-        total_sqltsum_time + total_sqlsum_time +
-        total_sqlent_time + total_xattrdone_time +
-        total_detachdb_time + total_closedir_time +
-        total_utime_time + total_free_work_time +
-        total_output_timestamps_time;
+    const uint64_t thread_time = total_time_sum(tt);
 
     print_stats("set up globals:                             %.2Lfs", "%Lf", sec(setup_globals_time));
     print_stats("set up intermediate databases:              %.2Lfs", "%Lf", sec(setup_aggregate_time));
     print_stats("thread pool:                                %.2Lfs", "%Lf", sec(work_time));
-    print_stats("    open directories:                       %.2Lfs", "%Lf", sec(total_opendir_time));
-    print_stats("    attach index:                           %.2Lfs", "%Lf", sec(total_attachdb_time));
-    print_stats("    xattrprep:                              %.2Lfs", "%Lf", sec(total_xattrprep_time));
-    print_stats("    addqueryfuncs:                          %.2Lfs", "%Lf", sec(total_addqueryfuncs_time));
-    print_stats("    get_rollupscore:                        %.2Lfs", "%Lf", sec(total_get_rollupscore_time));
-    print_stats("    descend:                                %.2Lfs", "%Lf", sec(total_descend_time));
-    print_stats("        check args:                         %.2Lfs", "%Lf", sec(total_check_args_time));
-    print_stats("        check level:                        %.2Lfs", "%Lf", sec(total_level_time));
-    print_stats("        check level <= max_level branch:    %.2Lfs", "%Lf", sec(total_level_branch_time));
-    print_stats("        while true:                         %.2Lfs", "%Lf", sec(total_while_branch_time));
-    print_stats("            readdir:                        %.2Lfs", "%Lf", sec(total_readdir_time));
-    print_stats("            readdir != null branch:         %.2Lfs", "%Lf", sec(total_readdir_branch_time));
-    print_stats("            strncmp:                        %.2Lfs", "%Lf", sec(total_strncmp_time));
-    print_stats("            strncmp != . or ..:             %.2Lfs", "%Lf", sec(total_strncmp_branch_time));
-    print_stats("            snprintf:                       %.2Lfs", "%Lf", sec(total_snprintf_time));
-    print_stats("            lstat:                          %.2Lfs", "%Lf", sec(total_lstat_time));
-    print_stats("            isdir:                          %.2Lfs", "%Lf", sec(total_isdir_time));
-    print_stats("            isdir branch:                   %.2Lfs", "%Lf", sec(total_isdir_branch_time));
-    print_stats("            access:                         %.2Lfs", "%Lf", sec(total_access_time));
-    print_stats("            set:                            %.2Lfs", "%Lf", sec(total_set_time));
-    print_stats("            clone:                          %.2Lfs", "%Lf", sec(total_clone_time));
-    print_stats("            pushdir:                        %.2Lfs", "%Lf", sec(total_pushdir_time));
-    print_stats("    check if treesummary table exists:      %.2Lfs", "%Lf", sec(total_sqltsumcheck_time));
-    print_stats("    sqltsum:                                %.2Lfs", "%Lf", sec(total_sqltsum_time));
-    print_stats("    sqlsum:                                 %.2Lfs", "%Lf", sec(total_sqlsum_time));
-    print_stats("    sqlent:                                 %.2Lfs", "%Lf", sec(total_sqlent_time));
-    print_stats("    xattrdone:                              %.2Lfs", "%Lf", sec(total_xattrdone_time));
-    print_stats("    detach index:                           %.2Lfs", "%Lf", sec(total_detachdb_time));
-    print_stats("    close directories:                      %.2Lfs", "%Lf", sec(total_closedir_time));
-    print_stats("    restore timestamps:                     %.2Lfs", "%Lf", sec(total_utime_time));
-    print_stats("    free work:                              %.2Lfs", "%Lf", sec(total_free_work_time));
-    print_stats("    output timestamps:                      %.2Lfs", "%Lf", sec(total_output_timestamps_time));
+    print_stats("    open directories:                       %.2Lfs", "%Lf", sec(tt->opendir));
+    print_stats("    attach index:                           %.2Lfs", "%Lf", sec(tt->attachdb));
+    print_stats("    xattrprep:                              %.2Lfs", "%Lf", sec(tt->xattrprep));
+    print_stats("    addqueryfuncs:                          %.2Lfs", "%Lf", sec(tt->addqueryfuncs));
+    print_stats("    get_rollupscore:                        %.2Lfs", "%Lf", sec(tt->get_rollupscore));
+    print_stats("    descend:                                %.2Lfs", "%Lf", sec(tt->descend));
+    print_stats("        check args:                         %.2Lfs", "%Lf", sec(tt->check_args));
+    print_stats("        check level:                        %.2Lfs", "%Lf", sec(tt->level));
+    print_stats("        check level <= max_level branch:    %.2Lfs", "%Lf", sec(tt->level_branch));
+    print_stats("        while true:                         %.2Lfs", "%Lf", sec(tt->while_branch));
+    print_stats("            readdir:                        %.2Lfs", "%Lf", sec(tt->readdir));
+    print_stats("            readdir != null branch:         %.2Lfs", "%Lf", sec(tt->readdir_branch));
+    print_stats("            strncmp:                        %.2Lfs", "%Lf", sec(tt->strncmp));
+    print_stats("            strncmp != . or ..:             %.2Lfs", "%Lf", sec(tt->strncmp_branch));
+    print_stats("            snprintf:                       %.2Lfs", "%Lf", sec(tt->snprintf));
+    print_stats("            lstat:                          %.2Lfs", "%Lf", sec(tt->lstat));
+    print_stats("            isdir:                          %.2Lfs", "%Lf", sec(tt->isdir));
+    print_stats("            isdir branch:                   %.2Lfs", "%Lf", sec(tt->isdir_branch));
+    print_stats("            access:                         %.2Lfs", "%Lf", sec(tt->access));
+    print_stats("            set:                            %.2Lfs", "%Lf", sec(tt->set));
+    print_stats("            clone:                          %.2Lfs", "%Lf", sec(tt->clone));
+    print_stats("            pushdir:                        %.2Lfs", "%Lf", sec(tt->pushdir));
+    print_stats("    check if treesummary table exists:      %.2Lfs", "%Lf", sec(tt->sqltsumcheck));
+    print_stats("    sqltsum:                                %.2Lfs", "%Lf", sec(tt->sqltsum));
+    print_stats("    sqlsum:                                 %.2Lfs", "%Lf", sec(tt->sqlsum));
+    print_stats("    sqlent:                                 %.2Lfs", "%Lf", sec(tt->sqlent));
+    print_stats("    xattrdone:                              %.2Lfs", "%Lf", sec(tt->xattrdone));
+    print_stats("    detach index:                           %.2Lfs", "%Lf", sec(tt->detachdb));
+    print_stats("    close directories:                      %.2Lfs", "%Lf", sec(tt->closedir));
+    print_stats("    restore timestamps:                     %.2Lfs", "%Lf", sec(tt->utime));
+    print_stats("    free work:                              %.2Lfs", "%Lf", sec(tt->free_work));
+    print_stats("    output timestamps:                      %.2Lfs", "%Lf", sec(tt->output_timestamps));
     print_stats("aggregate into final databases:             %.2Lfs", "%Lf", sec(aggregate_time));
     print_stats("print aggregated results:                   %.2Lfs", "%Lf", sec(output_time));
     print_stats("clean up globals:                           %.2Lfs", "%Lf", sec(cleanup_globals_time));

@@ -111,14 +111,12 @@ int main(int argc, char * argv[]) {
     if (idx < 0)
         return -1;
 
-    #ifdef DEBUG
-    #ifdef PER_THREAD_STATS
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
     epoch = since_epoch(&now);
-    #endif
 
-    timestamp_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
+    timestamp_print_init(timestamp_buffers, in.maxthreads + 1, 1024 * 1024, NULL);
     #endif
 
     const int rc = parallel_bottomup(argv + idx, argc - idx,
@@ -132,7 +130,7 @@ int main(int argc, char * argv[]) {
                                      #endif
         );
 
-    timestamp_destroy(timestamp_buffers);
+    timestamp_print_destroy(timestamp_buffers);
 
     return rc;
 }

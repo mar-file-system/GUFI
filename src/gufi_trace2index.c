@@ -197,8 +197,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
     #endif
 
-    timestamp_create_buffer(4096);
-    timestamp_start(handle_args);
+    timestamp_create_start(handle_args);
 
     /* Not checking arguments */
 
@@ -211,17 +210,17 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     timestamp_set_end(handle_args);
 
-    timestamp_start(memset_work);
+    timestamp_create_start(memset_work);
     struct work dir; /* name and name_len are not used */
     timestamp_set_end(memset_work);
 
     /* parse the directory data */
-    timestamp_start(dir_linetowork);
+    timestamp_create_start(dir_linetowork);
     linetowork(w->line, w->len, in->delim, &dir);
     timestamp_set_end(dir_linetowork);
 
     /* create the directory */
-    timestamp_start(dupdir);
+    timestamp_create_start(dupdir);
     char topath[MAXPATH];
     const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
                                          in->nameto, in->nameto_len,
@@ -237,7 +236,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
     timestamp_set_end(dupdir);
 
-    timestamp_start(copy_template);
+    timestamp_create_start(copy_template);
 
     /* create the database name */
     char dbname[MAXPATH];
@@ -254,7 +253,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_set_end(copy_template);
 
     /* process the work */
-    timestamp_start(opendb);
+    timestamp_create_start(opendb);
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
                           , NULL, NULL
                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -265,7 +264,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_set_end(opendb);
 
     if (db) {
-        timestamp_start(zero_summary);
+        timestamp_create_start(zero_summary);
         struct sum summary;
         zeroit(&summary);
         timestamp_set_end(zero_summary);
@@ -274,25 +273,25 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         sll_init(&xattr_db_list);
 
         /* INSERT statement bindings into db.db */
-        timestamp_start(insertdbprep);
+        timestamp_create_start(insertdbprep);
         sqlite3_stmt *entries_res     = insertdbprep(db, ENTRIES_INSERT);           /* entries */
         sqlite3_stmt *xattrs_res      = insertdbprep(db, XATTRS_PWD_INSERT);        /* xattrs within db.db */
         sqlite3_stmt *xattr_files_res = insertdbprep(db, EXTERNAL_DBS_PWD_INSERT);  /* per-user and per-group db file names*/
         timestamp_set_end(insertdbprep);
 
-        timestamp_start(startdb);
+        timestamp_create_start(startdb);
         startdb(db);
         timestamp_set_end(startdb);
 
         /* move the trace file to the offset */
-        timestamp_start(fseek);
+        timestamp_create_start(fseek);
         fseek(trace, w->offset, SEEK_SET);
         timestamp_set_end(fseek);
 
-        timestamp_start(read_entries);
+        timestamp_create_start(read_entries);
         size_t row_count = 0;
         for(size_t i = 0; i < w->entries; i++) {
-            timestamp_start(getline);
+            timestamp_create_start(getline);
             char *line = NULL;
             size_t len = 0;
             if (getline(&line, &len, trace) == -1) {
@@ -301,21 +300,21 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
             timestamp_set_end(getline);
 
-            timestamp_start(memset_row);
+            timestamp_create_start(memset_row);
             struct work row;
             memset(&row, 0, sizeof(struct work));
             timestamp_set_end(memset_row);
 
-            timestamp_start(entry_linetowork);
+            timestamp_create_start(entry_linetowork);
             linetowork(line, len, in->delim, &row);
             timestamp_set_end(entry_linetowork)
 
-            timestamp_start(free);
+            timestamp_create_start(free);
             free(line);
             timestamp_set_end(free);
 
             /* update summary table */
-            timestamp_start(sumit);
+            timestamp_create_start(sumit);
             sumit(&summary, &row);
             timestamp_set_end(sumit);
 
@@ -323,7 +322,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             row.pinode = 0;
 
             /* add row to bulk insert */
-            timestamp_start(insertdbgo);
+            timestamp_create_start(insertdbgo);
             insertdbgo(&row, db, entries_res);
             insertdbgo_xattrs(in, &dir.statuso, &row,
                               &xattr_db_list, &pa->xattr,
@@ -335,19 +334,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             row_count++;
             if (row_count > 100000) {
-                timestamp_start(stopdb);
+                timestamp_create_start(stopdb);
                 stopdb(db);
                 timestamp_set_end(stopdb);
 
-                timestamp_start(startdb);
+                timestamp_create_start(startdb);
                 startdb(db);
                 timestamp_set_end(startdb);
 
                 #ifdef DEBUG
-                timestamp_start(print_timestamps);
-                timestamp_print(ctx->buffers, id, "startdb",          startdb);
-                timestamp_print(ctx->buffers, id, "stopdb",           stopdb);
-                timestamp_end(ctx->buffers,   id, "print_timestamps", print_timestamps);
+                timestamp_create_start(print_timestamps);
+                timestamp_print    (ctx->buffers, id, "startdb",          startdb);
+                timestamp_print    (ctx->buffers, id, "stopdb",           stopdb);
+                timestamp_end_print(ctx->buffers, id, "print_timestamps", print_timestamps);
 
                 #ifdef CUMULATIVE_TIMES
                 thread_startdb += timestamp_elapsed(startdb);
@@ -359,14 +358,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
 
             #ifdef DEBUG
-            timestamp_start(print_timestamps);
-            timestamp_print(ctx->buffers, id, "getline",          getline);
-            timestamp_print(ctx->buffers, id, "memset_row",       memset_row);
-            timestamp_print(ctx->buffers, id, "entry_linetowork", entry_linetowork);
-            timestamp_print(ctx->buffers, id, "free",             free);
-            timestamp_print(ctx->buffers, id, "sumit",            sumit);
-            timestamp_print(ctx->buffers, id, "insertdbgo",       insertdbgo);
-            timestamp_end  (ctx->buffers, id, "print_timestamps", print_timestamps);
+            timestamp_create_start(print_timestamps);
+            timestamp_print    (ctx->buffers, id, "getline",          getline);
+            timestamp_print    (ctx->buffers, id, "memset_row",       memset_row);
+            timestamp_print    (ctx->buffers, id, "entry_linetowork", entry_linetowork);
+            timestamp_print    (ctx->buffers, id, "free",             free);
+            timestamp_print    (ctx->buffers, id, "sumit",            sumit);
+            timestamp_print    (ctx->buffers, id, "insertdbgo",       insertdbgo);
+            timestamp_end_print(ctx->buffers, id, "print_timestamps", print_timestamps);
 
             #ifdef CUMULATIVE_TIMES
             thread_getline          += timestamp_elapsed(getline);
@@ -382,7 +381,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         timestamp_set_end(read_entries);
 
-        timestamp_start(stopdb);
+        timestamp_create_start(stopdb);
         stopdb(db);
         timestamp_set_end(stopdb);
 
@@ -393,13 +392,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         insertdbgo_xattrs_avail(&dir, xattrs_res);
 
         /* write out data going into db.db */
-        timestamp_start(insertdbfin);
+        timestamp_create_start(insertdbfin);
         insertdbfin(xattr_files_res); /* per-user and per-group xattr db file names */
         insertdbfin(xattrs_res);
         insertdbfin(entries_res);
         timestamp_set_end(insertdbfin);
 
-        timestamp_start(insertsumdb);
+        timestamp_create_start(insertsumdb);
 
         /* find the basename of this path */
         w->line[w->first_delim] = '\x00';
@@ -412,12 +411,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         xattrs_cleanup(&dir.xattrs);
         timestamp_set_end(insertsumdb);
 
-        timestamp_start(closedb);
+        timestamp_create_start(closedb);
         closedb(db); /* don't set to nullptr */
         timestamp_set_end(closedb);
 
         #ifdef DEBUG
-        timestamp_start(print_timestamps);
+        timestamp_create_start(print_timestamps);
         timestamp_print(ctx->buffers, id, "zero_summary", zero_summary);
         timestamp_print(ctx->buffers, id, "insertdbprep", insertdbprep);
         timestamp_print(ctx->buffers, id, "startdb",      startdb);
@@ -447,12 +446,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         #endif
     }
 
-    timestamp_start(row_destroy);
+    timestamp_create_start(row_destroy);
     row_destroy(w);
     timestamp_set_end(row_destroy);
 
     #ifdef DEBUG
-    timestamp_start(print_timestamps);
+    timestamp_create_start(print_timestamps);
     timestamp_print(ctx->buffers, id, "handle_args",      handle_args);
     timestamp_print(ctx->buffers, id, "memset_work",      memset_work);
     timestamp_print(ctx->buffers, id, "dir_linetowork",   dir_linetowork);

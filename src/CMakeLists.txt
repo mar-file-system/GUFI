@@ -190,6 +190,7 @@ add_library(gufi_query_lib OBJECT
   gufi_query/aggregate.c
   gufi_query/query.c
   gufi_query/rollup.c
+  gufi_query/timers.c
   gufi_query/xattrs.c
 )
 

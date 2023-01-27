@@ -159,7 +159,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     #if BENCHMARK
     pthread_mutex_lock(&print_mutex);
-    ta->total_dirs++;
+    pa->total_dirs++;
     pthread_mutex_unlock(&print_mutex);
     #endif
 
@@ -394,7 +394,7 @@ int main(int argc, char *argv[]) {
     }
 
     #if BENCHMARK
-    fprintf(stderr, "Creating GUFI Index %s with %d threads\n", in.nameto, in.maxthreads);
+    fprintf(stderr, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
     #endif
 
     if (setup_dst(pa.in.nameto) != 0) {

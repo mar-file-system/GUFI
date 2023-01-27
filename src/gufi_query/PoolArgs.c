@@ -64,9 +64,7 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#include "dbutils.h"
 #include "gufi_query/PoolArgs.h"
-#include "utils.h"
 
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
     /* Not checking arguments */
@@ -151,10 +149,23 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         return 1;
     }
 
+    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+    clock_gettime(CLOCK_MONOTONIC, &pa->start_time);
+    epoch = since_epoch(&pa->start_time); /* debug.h */
+    #endif
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    total_time_init(&pa->tt);
+    #endif
+
     return 0;
 }
 
 void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    total_time_destroy(&pa->tt);
+    #endif
+
     for(size_t i = 0; i < allocated; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
 
