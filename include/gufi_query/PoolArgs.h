@@ -81,7 +81,7 @@ typedef struct ThreadArgs {
     struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    size_t queries;                    /* query count, not including -T, -S, and -E */
+    size_t queries;                    /* query count */
     #endif
 } ThreadArgs_t;
 
