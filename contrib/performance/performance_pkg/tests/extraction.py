@@ -96,7 +96,7 @@ class TestExtraction(unittest.TestCase):
     def test_gufi_query_cumulative_times_terse(self):
         columns = gq_ctt.COLUMNS[3:]
 
-        line = ' '.join(str(columns[i][1](i)) for i in range(len(columns)))
+        line = ' '.join(str(column[1](i)) for i, column in enumerate(columns))
 
         # parse input
         # prefix empty line and bad line
