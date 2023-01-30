@@ -95,42 +95,42 @@ def pos_float_list(value):
     return values
 
 # config sections and keys
-RAW_DATA = 'raw_data'                   # section
-RAW_DATA_COMMITS = 'commits'            # string list
-RAW_DATA_COLUMNS = 'columns'            # string list
+RAW_DATA = 'raw_data'                      # section
+RAW_DATA_COMMITS = 'commits'               # string list
+RAW_DATA_COLUMNS = 'columns'               # string list
 
-OUTPUT = 'output'                       # section
-OUTPUT_PATH = 'path'                    # string
-OUTPUT_GRAPH_TITLE = 'graph_title'      # string
-OUTPUT_DIMENSIONS = 'graph_dimensions'  # postive float pair
+OUTPUT = 'output'                          # section
+OUTPUT_PATH = 'path'                       # string
+OUTPUT_GRAPH_TITLE = 'graph_title'         # string
+OUTPUT_DIMENSIONS = 'graph_dimensions'     # postive float pair
 
-LINES = 'lines'                         # section
-LINES_COLORS = 'colors'                 # string list
-LINES_TYPES = 'types'                   # string list
-LINES_MARKERS = 'markers'               # string list
+LINES = 'lines'                            # section
+LINES_COLORS = 'colors'                    # string list
+LINES_TYPES = 'types'                      # string list
+LINES_MARKERS = 'markers'                  # string list
 
-AXES = 'axes'                           # section
-AXES_X_HASH_LEN = 'hash_len'            # integer
-AXES_X_LABEL_SIZE = 'x_label_size'      # string
-AXES_X_ROTATION = 'x_rotation'          # floating point
-AXES_Y_LABEL = 'y_label'                # string
-AXES_Y_STAT = 'y_stat'                  # string
-AXES_Y_MIN = 'y_min'                    # float
-AXES_Y_MAX = 'y_max'                    # float
-AXES_ANNOTATE = 'annotate'              # bool
+AXES = 'axes'                              # section
+AXES_X_HASH_LEN = 'hash_len'               # integer
+AXES_X_LABEL_SIZE = 'x_label_size'         # string
+AXES_X_LABEL_ROTATION = 'x_label_rotation' # floating point
+AXES_Y_LABEL = 'y_label'                   # string
+AXES_Y_STAT = 'y_stat'                     # string
+AXES_Y_MIN = 'y_min'                       # float
+AXES_Y_MAX = 'y_max'                       # float
+AXES_ANNOTATE = 'annotate'                 # bool
 
-ERROR_BAR = 'error_bar'                 # section
-ERROR_BAR_BOTTOM = 'bottom'             # string
-ERROR_BAR_TOP = 'top'                   # string
-ERROR_BAR_COLORS = 'colors'             # string list
-ERROR_BAR_CAP_SIZE = 'cap_size'         # positive float
-ERROR_BAR_ANNOTATE = 'annotate'         # bool
+ERROR_BAR = 'error_bar'                    # section
+ERROR_BAR_BOTTOM = 'bottom'                # string
+ERROR_BAR_TOP = 'top'                      # string
+ERROR_BAR_COLORS = 'colors'                # string list
+ERROR_BAR_CAP_SIZE = 'cap_size'            # positive float
+ERROR_BAR_ANNOTATE = 'annotate'            # bool
 
-ANNOTATIONS = 'annotations'             # section
-ANNOTATIONS_PRECISION = 'precision'     # positive integer
-ANNOTATIONS_X_OFFSET = 'x_offset'       # float
-ANNOTATIONS_Y_OFFSET = 'y_offset'       # float
-ANNOTATIONS_TEXT_COLORS = 'text_colors' # string list
+ANNOTATIONS = 'annotations'                # section
+ANNOTATIONS_PRECISION = 'precision'        # positive integer
+ANNOTATIONS_X_OFFSET = 'x_offset'          # float
+ANNOTATIONS_Y_OFFSET = 'y_offset'          # float
+ANNOTATIONS_TEXT_COLORS = 'text_colors'    # string list
 
 DEFAULTS = {
     RAW_DATA : {
@@ -151,14 +151,14 @@ DEFAULTS = {
     },
 
     AXES: {
-        AXES_X_HASH_LEN   : [int, 0],
-        AXES_X_LABEL_SIZE : [str, None],
-        AXES_X_ROTATION   : [float, None],
-        AXES_Y_LABEL      : [str, 'Y Axis'],
-        AXES_Y_STAT       : [str, stats.AVERAGE],
-        AXES_Y_MIN        : [float, None],
-        AXES_Y_MAX        : [float, None],
-        AXES_ANNOTATE     : [bool, False]
+        AXES_X_HASH_LEN       : [int, 0],
+        AXES_X_LABEL_SIZE     : [str, None],
+        AXES_X_LABEL_ROTATION : [float, None],
+        AXES_Y_LABEL          : [str, 'Y Axis'],
+        AXES_Y_STAT           : [str, stats.AVERAGE],
+        AXES_Y_MIN            : [float, None],
+        AXES_Y_MAX            : [float, None],
+        AXES_ANNOTATE         : [bool, False]
     },
 
     ERROR_BAR : {
@@ -226,7 +226,7 @@ def config_file(filename):
 
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_HASH_LEN)
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_LABEL_SIZE)
-    read_value(conf, parser, DEFAULTS, AXES, AXES_X_ROTATION)
+    read_value(conf, parser, DEFAULTS, AXES, AXES_X_LABEL_ROTATION)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_LABEL)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_STAT)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MIN)
