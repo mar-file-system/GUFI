@@ -151,14 +151,14 @@ DEFAULTS = {
     },
 
     AXES: {
-        AXES_X_HASH_LEN   : [int, 0],
-        AXES_X_LABEL_SIZE : [str, None],
-        AXES_X_LABEL_ROTATION   : [float, None],
-        AXES_Y_LABEL      : [str, 'Y Axis'],
-        AXES_Y_STAT       : [str, stats.AVERAGE],
-        AXES_Y_MIN        : [float, None],
-        AXES_Y_MAX        : [float, None],
-        AXES_ANNOTATE     : [bool, False]
+        AXES_X_HASH_LEN       : [int, 0],
+        AXES_X_LABEL_SIZE     : [str, None],
+        AXES_X_LABEL_ROTATION : [float, None],
+        AXES_Y_LABEL          : [str, 'Y Axis'],
+        AXES_Y_STAT           : [str, stats.AVERAGE],
+        AXES_Y_MIN            : [float, None],
+        AXES_Y_MAX            : [float, None],
+        AXES_ANNOTATE         : [bool, False]
     },
 
     ERROR_BAR : {
