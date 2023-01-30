@@ -97,6 +97,7 @@ def parse_args(argv):
                         help='Hash of a single configuration')
     parser.add_argument('raw_data_db',
                         type=str,
+                        nargs="?",
                         help='Raw data database (must already exist)')
 
     return parser.parse_args(argv)
@@ -122,13 +123,14 @@ def run(argv):
     parsed = debug_print.extract(sys.stdin, commit, branch)
 
     # insert the parsed data into the raw data database
-    hashdb.check_exists(args.raw_data_db)
-    try:
-        raw_data_db = sqlite3.connect(args.raw_data_db)
-        debug_print.insert(raw_data_db, parsed)
-        raw_data_db.commit()
-    finally:
-        raw_data_db.close()
+    if args.raw_data_db is not None:
+        hashdb.check_exists(args.raw_data_db)
+        try:
+            raw_data_db = sqlite3.connect(args.raw_data_db)
+            debug_print.insert(raw_data_db, parsed)
+            raw_data_db.commit()
+        finally:
+            raw_data_db.close()
 
 if __name__ == '__main__':
     run(sys.argv[1:])
