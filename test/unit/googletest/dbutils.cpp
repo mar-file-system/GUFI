@@ -88,6 +88,13 @@ TEST(create_table_wrapper, nullptr) {
     EXPECT_NE(create_table_wrapper(nullptr, nullptr, nullptr, nullptr), SQLITE_OK);
 }
 
+TEST(set_db_pragmas, good) {
+    sqlite3 *db = NULL;
+    ASSERT_EQ(sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, NULL), SQLITE_OK);
+    EXPECT_EQ(set_db_pragmas(db), 0);
+    EXPECT_EQ(sqlite3_close(db), SQLITE_OK);
+}
+
 TEST(set_db_pragmas, nullptr) {
     EXPECT_EQ(set_db_pragmas(nullptr), 1);
 }
