@@ -92,8 +92,29 @@ class TestExtraction(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.extract([], None, None)
 
+    def key_value_no_colon(self, module):
+        columns = module.COLUMNS[3:]
+
+        # create input
+        lines = []
+        for i, column in enumerate(columns):
+            key, type = column                          # pylint: disable=redefined-builtin
+            lines += ['{0} {1}'.format(key, type(i))]   # pylint: disable=redefined-builtin
+
+        parsed = module.extract(sorted(lines), None, None)
+
+        self.assertEqual(len(parsed), len(module.COLUMNS))
+        for i, column in enumerate(columns):
+            key, type = column                          # pylint: disable=redefined-builtin
+            self.assertEqual(parsed[key], str(type(i)))   # pylint: disable=redefined-builtin
+
+        # did not get enough values
+        with self.assertRaises(ValueError):
+            module.extract([], None, None)
+
     def test_gufi_query_cumulative_times(self):
         self.key_colon_value(gq_ct)
+        self.key_value_no_colon(gq_ct)
 
     def test_gufi_query_cumulative_times_terse(self):
         columns = gq_ctt.COLUMNS[3:]
