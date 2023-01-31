@@ -93,7 +93,7 @@ class TestExistence(unittest.TestCase):
             hashdb.check_not_exists(__file__)
 
 class TestDBFuncs(unittest.TestCase):
-    def test_setup_insert(self):
+    def test_setup(self):
         try:
             db = sqlite3.connect(':memory:')
 
@@ -106,28 +106,54 @@ class TestDBFuncs(unittest.TestCase):
             for table_name in [gufi.TABLE_NAME, machine.TABLE_NAME, raw_data.TABLE_NAME]:
                 self.assertIn(table_name, rows)
 
-            # create fake args
-            class Fake: # pylint: disable=too-few-public-methods
-                pass
-            args = Fake()
-            for key, _, _ in raw_data.COLS:
-                setattr(args, key, key)
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Testing hashdb setup raised: {0}'.format(err))
+        finally:
+            db.close()
+
+    def test_insert(self):
+        table_name = 'table_name'
+
+        columns = [
+            ['str',  None, str],
+            ['bool', None, bool],
+            ['int',  None, int],
+        ]
+
+        values = {
+            'str'  : '',
+            'bool' : True,
+            'int'  : 0,
+        }
+
+        # create fake args
+        class Fake: # pylint: disable=too-few-public-methods
+            pass
+        args = Fake()
+        for key, _, _ in columns:
+            setattr(args, key, values[key])
+
+        try:
+            db = sqlite3.connect(":memory:")
+
+            col_str = ', '.join('{0} {1}'.format(
+                col, hashdb.common.TYPE_TO_SQLITE[type]) for col, _, type in columns)
+            db.execute('CREATE TABLE {0} (hash TEXT, {1});'.format(table_name, col_str))
 
             # insert
-            hashdb.insert(db, args, 'hash', raw_data.TABLE_NAME,
-                          raw_data.COLS_HASHED, raw_data.COLS_NOT_HASHED)
+            hashdb.insert(db, args, 'hash', table_name, columns, [])
 
             # check inserted data
             cur = db.execute('SELECT {0} FROM {1};'.format(
-                ', '.join(col for col, _, _ in raw_data.COLS), raw_data.TABLE_NAME))
+                ', '.join(col for col, _, _ in columns), table_name))
             rows = cur.fetchall()
             self.assertEqual(1, len(rows))
-            for col, value in zip([col for col, _, _ in raw_data.COLS], rows[0]):
+            for col, value in zip([col for col, _, _ in columns], rows[0]):
                 self.assertEqual(getattr(args, col), value)
-
-            db.close()
         except Exception as err: # pylint: disable=broad-except
-            self.fail('Testing database utility functions raised: {0}'.format(err))
+            self.fail('Testing hashdb insert raised: {0}'.format(err))
+        finally:
+            db.close()
 
 # test hashdb.get_config_with_con (instead of
 # hashdb.get_config) to not have to create an
