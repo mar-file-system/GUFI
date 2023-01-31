@@ -132,7 +132,7 @@ An additional copy of the GUFI repository (`GUFI_variable`) will also be require
 * **Example**:
 
 ```bash
-$ collect_performance.sh GUFI_variable/build/ hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db HEAD~300..HEAD@15 --runs 2 --sudo
+$ collect_performance.sh GUFI_variable/build/ hashes.db 825577c396836cdaa6491b7bfb6901c9 raw_numbers.db HEAD~300..HEAD%15 --runs 2 --sudo
 HEAD is now at c8cdd6e Collect performance will fail if build fails or extraction fails
 825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
 825577c396836cdaa6491b7bfb6901c9 was run with gufi_query, debug name cumulative_times
