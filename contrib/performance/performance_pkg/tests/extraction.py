@@ -61,8 +61,10 @@
 
 
 
+import sqlite3
 import unittest
 
+from performance_pkg.extraction import common
 from performance_pkg.extraction.gufi_query import cumulative_times as gq_ct, cumulative_times_terse as gq_ctt
 from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt2i_ct
 
@@ -113,6 +115,31 @@ class TestExtraction(unittest.TestCase):
 
     def test_gufi_trace2index_cumulative_times(self):
         self.key_colon_value(gt2i_ct)
+
+class TestCommon(unittest.TestCase):
+    def test(self):
+        table_name = 'table_name'
+
+        columns = [
+            ['None', None],
+            ['str',  str],
+            ['int',  int],
+        ]
+
+        parsed = {
+            'None': None,
+            'str' : '',
+            'int' : 0,
+        }
+
+        try:
+            db = sqlite3.connect(":memory:")
+            common.create_table(db, table_name, columns)
+            common.insert(db, parsed, table_name, columns)
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Testing extraction common functions raised: {0}'.format(err))
+        finally:
+            db.close()
 
 if __name__ == '__main__':
     unittest.main()
