@@ -130,7 +130,7 @@ jobs:
            python2 -m pip install --upgrade pip
            python2 -m pip install matplotlib
 
-    - name: Configure CMake
+    - name: Configure CMake For Core Tests
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2
 
     - name: Build
@@ -139,6 +139,16 @@ jobs:
     - name: Test
       working-directory: ${{ github.workspace }}/build
       run:  ctest --output-on-failure
+
+    - name: Configure CMake For Performance Package Tests
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2 -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run:  ctest --output-on-failure -L performance_pkg
 
   TestDirectory:
     runs-on: ubuntu-20.04

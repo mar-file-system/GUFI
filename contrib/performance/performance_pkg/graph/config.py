@@ -64,12 +64,12 @@
 import os
 import sys
 if sys.version_info.major >= 3:
-    from configparser import ConfigParser
+    import configparser
 else:
-    from ConfigParser import ConfigParser # pylint: disable=import-error
+    import ConfigParser             # pylint: disable=import-error
 
-from performance_pkg.graph import stats   # pylint: disable=wrong-import-position
-import gufi_common                        # pylint: disable=wrong-import-position
+import performance_pkg.graph.stats  # pylint: disable=wrong-import-position
+import gufi_common                  # pylint: disable=wrong-import-position
 
 # converter functions for input read from ConfigParser
 def pos_float(value):
@@ -155,7 +155,7 @@ DEFAULTS = {
         AXES_X_LABEL_SIZE     : [str, None],
         AXES_X_LABEL_ROTATION : [float, None],
         AXES_Y_LABEL          : [str, 'Y Axis'],
-        AXES_Y_STAT           : [str, stats.AVERAGE],
+        AXES_Y_STAT           : [str, performance_pkg.graph.stats.AVERAGE],
         AXES_Y_MIN            : [float, None],
         AXES_Y_MAX            : [float, None],
         AXES_ANNOTATE         : [bool, False]
@@ -205,11 +205,18 @@ def config_file(filename):
     require any more sections or keys.
     '''
 
-    parser = ConfigParser(interpolation=None)
+    if sys.version_info.major >= 3:
+        parser = configparser.ConfigParser(interpolation=None)
 
-    # raise exception if file doesn't exist
-    with open(filename, 'r') as f: # pylint: disable=unspecified-encoding
-        parser.read_file(f)
+        # raise exception if file doesn't exist
+        with open(filename, 'r') as f: # pylint: disable=unspecified-encoding
+            parser.read_file(f)
+    else:
+        parser = ConfigParser.ConfigParser()
+
+        # raise exception if file doesn't exist
+        with open(filename, 'r') as f: # pylint: disable=unspecified-encoding
+            parser.readfp(f)
 
     conf = {section : {} for section in DEFAULTS}
 

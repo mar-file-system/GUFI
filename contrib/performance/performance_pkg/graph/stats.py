@@ -63,7 +63,7 @@
 
 import numbers
 
-from performance_pkg.graph import config
+import performance_pkg.graph.config
 
 def average(data):
     return float(sum(data)) / len(data)
@@ -234,14 +234,14 @@ def generate_lines(conf, commits, columns, raw_numbers, verbose):
     '''
 
     # statistic names come from axes and error bar
-    axes = conf[config.AXES]
-    error_bar = conf[config.ERROR_BAR]
+    axes = conf[performance_pkg.graph.config.AXES]
+    error_bar = conf[performance_pkg.graph.config.ERROR_BAR]
 
     # get unique set of statistics to compute
     stat_names = []
-    for stat_name in list({axes[config.AXES_Y_STAT],
-                           error_bar[config.ERROR_BAR_BOTTOM],
-                           error_bar[config.ERROR_BAR_TOP]}):
+    for stat_name in list({axes[performance_pkg.graph.config.AXES_Y_STAT],
+                           error_bar[performance_pkg.graph.config.ERROR_BAR_BOTTOM],
+                           error_bar[performance_pkg.graph.config.ERROR_BAR_TOP]}):
         if stat_name is None:
             continue
 

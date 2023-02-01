@@ -6,7 +6,7 @@ This directory contains scripts for collecting performance numbers from GUFI too
 * `git 1.8.5+`
 * `Python 2.7+`
 * GUFI must be configured with **Debug** mode enabled and one of the debug prints supported by extract.py (currently only `PRINT_CUMULATIVE_TIMES`).
-* (Optional) Graph generation requires a recent version of the **Matplotlib** Python package for user's Python version. The non-graphing scripts will be placed into the build directory even if Matplotlib is not found.
+* (Optional) Graph generation requires **Matplotlib** version 2.2.5 or better for user's Python version. The non-graphing scripts will be placed into the build directory even if Matplotlib is not found.
 
 ## Notes
 * Unless explicitly specified, the executables run in the examples below are located in the performance directory of the build directory (e.g. `GUFI/build/contrib/performance`).
