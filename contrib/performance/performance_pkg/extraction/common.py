@@ -71,10 +71,7 @@ def create_table(con, table_name, columns):
     con.execute('CREATE TABLE {0} ({1});'.format(table_name, cols))
 
 def process_line(line, event, rstrip=None):
-    line = line.strip().rstrip(rstrip)
-    if line == '':
-        return {}
-    return {event: line}
+    return {event: line.strip().rstrip(rstrip)}
 
 # helper function
 def format_value(value, type): # pylint: disable=redefined-builtin
@@ -117,8 +114,10 @@ def cumulative_times_extract(src, commit, branch, columns):
                 line = line[len(value):]
                 if line == '':
                     continue
-                if line[0] == ":":
+
+                if line[0] == ':':
                     line = line[1:]
+
                 data.update(process_line(line, value, 's'))
                 break
 
