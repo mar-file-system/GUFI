@@ -69,14 +69,14 @@ from performance_pkg.extraction.gufi_query import cumulative_times as gq_ct, cum
 from performance_pkg.extraction.gufi_trace2index import cumulative_times as gt2i_ct
 
 class TestExtraction(unittest.TestCase):
-    def key_colon_value(self, module):
-        columns = module.COLUMNS[3:]
 
+    def key_value_test(self, module, seperator):
         # create input
+        columns = module.COLUMNS[3:]
         lines = []
         for i, column in enumerate(columns):
-            key, type = column                          # pylint: disable=redefined-builtin
-            lines += ['{0}: {1}'.format(key, type(i))]  # pylint: disable=redefined-builtin
+            key, type = column                                       # pylint: disable=redefined-builtin
+            lines += ['{0}{1} {2}'.format(key, seperator, type(i))]  # pylint: disable=redefined-builtin
 
         # parse input
         # prefix empty line and bad line
@@ -85,15 +85,16 @@ class TestExtraction(unittest.TestCase):
 
         self.assertEqual(len(parsed), len(module.COLUMNS))
         for i, column in enumerate(columns):
-            key, type = column                          # pylint: disable=redefined-builtin
-            self.assertEqual(parsed[key], str(type(i))) # pylint: disable=redefined-builtin
+            key, type = column                            # pylint: disable=redefined-builtin
+            self.assertEqual(parsed[key], str(type(i)))   # pylint: disable=redefined-builtin
 
         # did not get enough values
         with self.assertRaises(ValueError):
             module.extract([], None, None)
 
     def test_gufi_query_cumulative_times(self):
-        self.key_colon_value(gq_ct)
+        self.key_value_test(gq_ct, ':')
+        self.key_value_test(gq_ct, '')
 
     def test_gufi_query_cumulative_times_terse(self):
         columns = gq_ctt.COLUMNS[3:]
@@ -114,7 +115,7 @@ class TestExtraction(unittest.TestCase):
             gq_ctt.extract([], None, None)
 
     def test_gufi_trace2index_cumulative_times(self):
-        self.key_colon_value(gt2i_ct)
+        self.key_value_test(gt2i_ct, ':')
 
 class TestCommon(unittest.TestCase):
     def test(self):
