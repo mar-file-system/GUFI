@@ -116,13 +116,14 @@ class TestHashing(unittest.TestCase):
 
     def test_gufi_hash(self):
         input_args = ['--hash_alg', 'md5',
+                      '-a',
                       '-n', '1',
                       '-S', '',
                       '-E', '',
                       'gufi_query',
                       'cumulative_times',
                       'tree']
-        expected_hash = '507417ff9005cf3d2561ec641fb81aa8'
+        expected_hash = '78832610e4ddba81a0776973f7ae64f2'
 
         self.template(gufi_hash.parse_args, input_args,
                       gufi_hash.compute_hash, expected_hash)
