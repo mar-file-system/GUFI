@@ -71,7 +71,10 @@ def create_table(con, table_name, columns):
     con.execute('CREATE TABLE {0} ({1});'.format(table_name, cols))
 
 def process_line(line, event, rstrip=None):
-    return {event: line.strip().rstrip(rstrip)}
+    line = line.strip().rstrip(rstrip)
+    if line == '':
+        return {}
+    return {event: line}
 
 # helper function
 def format_value(value, type): # pylint: disable=redefined-builtin
