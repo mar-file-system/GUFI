@@ -61,12 +61,17 @@
 
 
 
+import os
+import sqlite3
+import tempfile
 import unittest
 
-# the binaries in contrib/performance
+# the executables in contrib/performance
 import gufi_hash
 import machine_hash
 import raw_data_hash
+import setup_hashdb
+import setup_raw_data_db
 
 OVERRIDE = 'override'
 
@@ -130,6 +135,147 @@ class TestHashing(unittest.TestCase):
 
         self.template(raw_data_hash.parse_args, input_args,
                       raw_data_hash.compute_hash, expected_hash)
+
+class IntegrationTest(unittest.TestCase): # pylint: disable=too-many-instance-attributes
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+        self.hashes_name = os.path.abspath(os.path.join(self.tempdir, 'hashes.db'))
+        self.machine_hash = 'machine_hash'
+        self.gufi_cmd = 'gufi_query'
+        self.debug_name = 'cumulative_times'
+        self.gufi_hash = 'gufi_hash'
+        self.raw_data_hash = 'raw_data_hash'
+
+    def opendb(self):
+        # file:name?mode=ro doesn't work in Python2
+        setup_hashdb.hashdb.check_exists(self.hashes_name)
+        return sqlite3.connect(self.hashes_name)
+
+    def check_table(self, table_name, expected_hash, test_name):
+        try:
+            db = self.opendb()
+
+            cur = db.execute('SELECT hash FROM {0};'.format(table_name))
+            res = cur.fetchall()
+            if expected_hash is None:
+                self.assertEqual(len(res), 0)
+            else:
+                self.assertEqual(len(res), 1)
+                self.assertEqual(res[0][0], expected_hash)
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Testing {0} raised: {1}'.format(test_name, err))
+        finally:
+            db.close()
+
+    # see the Setup section in the README for descriptions
+
+    # step 1 is setting up PYTHONPATH
+
+    def step2(self):
+        setup_hashdb.run([self.hashes_name])
+
+        db = self.opendb()
+        try:
+            # make sure tables exist
+            cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
+            res = cur.fetchall()
+            self.assertEqual(len(res), 3)
+            for table_name in res:
+                self.assertIn(table_name[0], [machine_hash.machine.TABLE_NAME,
+                                              gufi_hash.gufi.TABLE_NAME,
+                                              raw_data_hash.raw_data.TABLE_NAME])
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Testing setup_hashdb raised: {0}'.format(err))
+        finally:
+            db.close()
+
+    def step3(self):
+        machine_hash.run(['--override', self.machine_hash,
+                          '--database', self.hashes_name])
+        self.check_table(machine_hash.machine.TABLE_NAME, self.machine_hash, 'machine_hash')
+
+    def step4(self):
+        gufi_hash.run([self.gufi_cmd,
+                       self.debug_name,
+                       'tree',
+                       '--override', self.gufi_hash,
+                       '--database', self.hashes_name])
+
+        self.check_table(gufi_hash.gufi.TABLE_NAME, self.gufi_hash, 'gufi_hash')
+
+    def step5(self):
+        raw_data_hash.run([self.machine_hash,
+                           self.gufi_hash,
+                           '--override', self.raw_data_hash,
+                           '--database', self.hashes_name])
+
+        self.check_table(raw_data_hash.raw_data.TABLE_NAME, self.raw_data_hash, 'raw_data_hash')
+
+    def step6(self):
+        raw_data_db_name = os.path.abspath(os.path.join(self.tempdir, 'raw_data.db'))
+        setup_raw_data_db.run([self.hashes_name, self.raw_data_hash, raw_data_db_name])
+
+        try:
+            setup_hashdb.hashdb.check_exists(raw_data_db_name)
+        except SystemExit:
+            self.fail('setup_raw_data_db did not create a database file')
+
+        db = sqlite3.connect(raw_data_db_name)
+        try:
+            cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
+            res = cur.fetchall()
+            self.assertEqual(len(res), 1)
+            self.assertEqual(res[0][0], self.debug_name)
+        except Exception as err: # pylint: disable=broad-except
+            self.fail('Testing setup_raw_data_db raised: {0}'.format(err))
+        finally:
+            db.close()
+            os.remove(raw_data_db_name)
+
+    # raw_data_hash --delete
+    def delete5(self):
+        raw_data_hash.run([self.machine_hash,
+                           self.gufi_hash,
+                           '--delete',
+                           '--override', self.raw_data_hash,
+                           '--database', self.hashes_name])
+
+        self.check_table(raw_data_hash.raw_data.TABLE_NAME, None, 'raw_data_hash')
+
+    # gufi_hash --delete
+    def delete4(self):
+        gufi_hash.run([self.gufi_cmd,
+                       self.debug_name,
+                       'tree',
+                       '--delete',
+                       '--override', self.gufi_hash,
+                       '--database', self.hashes_name])
+
+        self.check_table(gufi_hash.gufi.TABLE_NAME, None, 'gufi_hash')
+
+    # machine_hash --delete
+    def delete3(self):
+        machine_hash.run(['--delete',
+                          '--override', self.machine_hash,
+                          '--database', self.hashes_name])
+
+        self.check_table(machine_hash.machine.TABLE_NAME, None, 'machine_hash')
+
+    def test_setup(self):
+        self.step2()
+        self.step3()
+        self.step4()
+        self.step5()
+        self.step6()
+
+        # test --delete
+        self.delete5()
+        self.delete4()
+        self.delete3()
+
+    def tearDown(self):
+        os.remove(self.hashes_name)
+        os.rmdir(self.tempdir)
 
 if __name__ == '__main__':
     unittest.main()
