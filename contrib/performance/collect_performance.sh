@@ -311,6 +311,12 @@ do
     # switch to commit and rebuild
     "${GIT}" -C "${SRCDIR2}" -c advice.detachedHead=false checkout "${commit}"
 
+    # PRINT_CUMULATIVE_TIMES changes to CUMULATIVE_TIMES for commits before commit 1a6137e "group debug macros together"
+    (
+        cd "${GUFI}"
+        cmake -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DCUMULATIVE_TIMES=On "${SRCDIR2}"
+    )
+
     # if build fails, skip current commit
     # shellcheck disable=SC2046
     make -C "${GUFI}" -j ${BUILD_THREADS} > /dev/null || continue
