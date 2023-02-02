@@ -63,6 +63,61 @@
 
 from performance_pkg.extraction.gufi_query.cumulative_times import * # pylint: disable=wildcard-import,unused-wildcard-import
 
+TABLE_NAME = 'cumulative_times_terse'
+
+COLUMNS = [
+    # not from gufi_query
+    ['id',                                         None],
+    ['commit',                                      str],
+    ['branch',                                      str],
+
+    # from gufi_query
+    # order of columns matters
+    ['set up globals',                             float],
+    ['set up intermediate databases',              float],
+    ['thread pool',                                float],
+    ['open directories',                           float],
+    ['attach index',                               float],
+    ['xattrprep',                                  float],
+    ['addqueryfuncs',                              float],
+    ['get_rollupscore',                            float],
+    ['descend',                                    float],
+    ['check args',                                 float],
+    ['check level',                                float],
+    ['check level <= max_level branch',            float],
+    ['while true',                                 float],
+    ['readdir',                                    float],
+    ['readdir != null branch',                     float],
+    ['strncmp',                                    float],
+    ['strncmp != . or ..',                         float],
+    ['snprintf',                                   float],
+    ['lstat',                                      float],
+    ['isdir',                                      float],
+    ['isdir branch',                               float],
+    ['access',                                     float],
+    ['set',                                        float],
+    ['clone',                                      float],
+    ['pushdir',                                    float],
+    ['check if treesummary table exists',          float],
+    ['sqltsum',                                    float],
+    ['sqlsum',                                     float],
+    ['sqlent',                                     float],
+    ['xattrdone',                                  float],
+    ['detach index',                               float],
+    ['close directories',                          float],
+    ['restore timestamps',                         float],
+    ['free work',                                  float],
+    ['output timestamps',                          float],
+    ['aggregate into final databases',             float],
+    ['print aggregated results',                   float],
+    ['clean up globals',                           float],
+    ['Threads run',                                  int],
+    ['Queries performed',                            int],
+    ['Rows printed to stdout or outfiles',           int],
+    ['Total Thread Time (not including main)',     float],
+    ['Real time (main)',                           float],
+]
+
 def extract(src, commit, branch): # pylint: disable=function-redefined
     # these aren't obtained from running gufi_query
     data = {
@@ -93,3 +148,13 @@ def extract(src, commit, branch): # pylint: disable=function-redefined
         raise ValueError('Did not find cumulative times data.')
 
     return data
+
+def insert(con, parsed): # pylint: disable=function-redefined
+    cols = ', '.join('"{0}"'.format(col) for col, _ in COLUMNS)
+    vals = ', '.join(common.format_value(parsed[col], type) for col, type in COLUMNS)
+    con.execute('INSERT INTO {0} ({1}) VALUES ({2});'.format(TABLE_NAME, cols, vals))
+
+def create_table(con): # pylint: disable=function-redefined
+    # all column names need to be surrounded by quotation marks, even ones that don't have spaces
+    cols = ', '.join('"{0}" {1}'.format(col, common.common.TYPE_TO_SQLITE[type]) for col, type in COLUMNS)
+    con.execute('CREATE TABLE {0} ({1});'.format(TABLE_NAME, cols))
