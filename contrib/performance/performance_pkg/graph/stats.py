@@ -130,6 +130,10 @@ def single_commit_stats(columns, rows, stat_names):
     # make sure all values are numeric
     for row in rows:
         for col in row:
+            # None values should only occur if column name does not exist at current commit
+            if col is None:
+                break
+
             if not isinstance(col, numbers.Number):
                 raise TypeError('Raw value {0} is not numeric'.format(col))
 
@@ -137,7 +141,11 @@ def single_commit_stats(columns, rows, stat_names):
     for c in range(len(columns)):
         col_data = [row[c] for row in rows]
         for stat_name in stat_names:
-            stats[stat_name] += [STATS[stat_name](col_data)]
+            # If first entry is None, all will be
+            if col_data[0] is None:
+                stats[stat_name] += [float('nan')]
+            else:
+                stats[stat_name] += [STATS[stat_name](col_data)]
 
     return stats
 

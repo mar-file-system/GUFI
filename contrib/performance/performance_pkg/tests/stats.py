@@ -61,6 +61,7 @@
 
 
 
+import math
 import unittest
 
 from performance_pkg.graph import config, stats
@@ -99,17 +100,31 @@ class TestStat(unittest.TestCase): # pylint: disable=too-many-instance-attribute
             self.assertEqual(scs[stats.MINIMUM][c], c)
             self.assertEqual(scs[stats.MAXIMUM][c], c)
 
+    def single_commit_nan(self, scs):
+        for stat_name in self.stat_names:
+            self.assertIn(stat_name, scs)
+
+            for c in range(self.col_count):
+                self.assertEqual(math.isnan(scs[stats.AVERAGE][c]), True)
+                self.assertEqual(math.isnan(scs[stats.MEDIAN] [c]), True)
+                self.assertEqual(math.isnan(scs[stats.MINIMUM][c]), True)
+                self.assertEqual(math.isnan(scs[stats.MAXIMUM][c]), True)
+
     def test_single_commit_stats(self):
         scs = stats.single_commit_stats(self.columns,
                                         self.single_commit_raw_numbers,
                                         self.stat_names)
 
+        scs_none = stats.single_commit_stats(self.columns,
+                                             [[None for x in range(len(self.odd))]]*self.runs,
+                                             self.stat_names)
         self.single_commit_stats_check(scs)
+        self.single_commit_nan(scs_none)
 
     def test_bad_raw_value(self):
         with self.assertRaises(TypeError):
             stats.single_commit_stats(self.columns,
-                                      self.single_commit_raw_numbers + [[None]],
+                                      self.single_commit_raw_numbers + [['abc', 1, 2, 3, 4]],
                                       self.stat_names)
 
     def test_multiple_commit_stats(self):
