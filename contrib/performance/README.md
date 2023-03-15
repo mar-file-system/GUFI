@@ -22,7 +22,6 @@ This directory contains scripts for collecting performance numbers from GUFI too
     export PYTHONPATH="${GUFI_BUILD}/contrib/performance:${PYTHONPATH}"
     export PYTHONPATH="${GUFI_BUILD}/scripts:${PYTHONPATH}"
     ```
-
 2. Use **setup_hashdb.py** to initialize a database to store unique identifiers and the data that was used to generate them.
     * This database contains the tables:
         * **machine_config** - contains information about the machine where GUFI is being benchmarked
