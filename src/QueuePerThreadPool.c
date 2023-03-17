@@ -289,7 +289,7 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
     /* Not checking arguments */
 
     struct queue_item *qi = malloc(sizeof(struct queue_item));
-    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item*/
+    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
     qi->work = new_work;
 
     QPTPoolThreadData_t *data = &ctx->data[id];
@@ -338,6 +338,7 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         sll_destroy(&data->queue, NULL);
     }
 
+    pthread_mutex_destroy(&ctx->mutex);
     free(ctx->data);
     free(ctx);
 }

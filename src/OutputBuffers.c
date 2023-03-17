@@ -85,7 +85,7 @@ size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size
         return 0;
     }
 
-    memcpy(obuf->buf + obuf->filled, buf, size);
+    memcpy((char *) obuf->buf + obuf->filled, buf, size);
     obuf->filled += size;
     obuf->count += !!increment_count;
 

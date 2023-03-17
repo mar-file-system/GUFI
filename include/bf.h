@@ -299,7 +299,6 @@ struct work {
    long long int pinode;
    long long int offset;
    struct xattrs xattrs;
-   void*         freeme;
    int           crtime;
    int           ossint1;
    int           ossint2;
