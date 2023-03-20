@@ -122,12 +122,11 @@ int processdirs(DirFunc dir_fn);
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function
  */
-int descend(QPTPool_t *ctx, const size_t id,
-            struct input *in, struct work *work, DIR *dir,
-            trie_t *skip, const int skip_db,
+int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
+            struct input *in, DIR *dir, trie_t *skip, const int skip_db,
             const int stat_entries,  QPTPoolFunc_t processdir,
-            int (*process_nondir)(struct work *nondir, void *args), void *args,
-            size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed);
+            int (*process_nondir)(struct work *nondir, void *nondir_args), void *nondir_args,
+            size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed);
 
 /* convert a mode to a human readable string */
 char *modetostr(char *str, const size_t size, const mode_t mode);

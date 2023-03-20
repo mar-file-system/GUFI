@@ -499,24 +499,30 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  * If stat_entries is set to 0, the processing thread should stat
  * the path. Nothing in work->statuso will be filled except the
  * entry type. Links will not be read.
+ *
+ * If work->recursion_level > 0, the work item that is passed
+ * into the processdir function will be allocated on the stack
+ * instead of on the heap, so do not free it.
  */
-int descend(QPTPool_t *ctx, const size_t id,
-            struct input *in, struct work *work, DIR *dir,
+int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
+            struct input *in, DIR *dir,
             trie_t *skip_names, const int skip_db,
             const int stat_entries, QPTPoolFunc_t processdir,
-            int (*process_nondir)(struct work *nondir, void *args), void *args,
-            size_t *dir_count, size_t *nondir_count, size_t *nondirs_processed) {
+            int (*process_nondir)(struct work *nondir, void *nondir_args), void *nondir_args,
+            size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed) {
     if (!work) {
         return 1;
     }
 
     size_t dirs = 0;
+    size_t insitu = 0;
     size_t nondirs = 0;
     size_t processed = 0;
 
     if (work->level < in->max_level) {
         /* calculate once */
         const size_t next_level = work->level + 1;
+        const size_t recursion_level = work->recursion_level + 1;
 
         struct dirent *dir_child = NULL;
         while ((dir_child = readdir(dir))) {
@@ -567,12 +573,33 @@ int descend(QPTPool_t *ctx, const size_t id,
             if (S_ISDIR(child.statuso.st_mode)) {
                 child.type[0] = 'd';
 
-                /* make a copy here so that the data can be pushed into the queue */
-                /* this is more efficient than malloc+free for every single child */
-                struct work *copy = (struct work *) calloc(1, sizeof(struct work));
-                memcpy(copy, &child, sizeof(struct work));
+                if (!in->subdir_limit || (dirs < in->subdir_limit)) {
+                    /* make a copy here so that the data can be pushed into the queue */
+                    /* this is more efficient than malloc+free for every single child */
+                    struct work *copy = (struct work *) calloc(1, sizeof(struct work));
+                    memcpy(copy, &child, sizeof(struct work));
 
-                QPTPool_enqueue(ctx, id, processdir, copy);
+                    QPTPool_enqueue(ctx, id, processdir, copy);
+                }
+                else {
+                    /*
+                     * If this directory has too many subdirectories,
+                     * process the current subdirectory here instead
+                     * of enqueuing it. This only allows for one
+                     * subdirectory work item to be allocated at a
+                     * time instead of all of them, reducing overall
+                     * memory usage. This branch is only applied at
+                     * this level, so small subdirectories will still
+                     * enqueue work, and large subdirectories will
+                     * still enqueue some work and process the
+                     * remaining in-situ.
+                     *
+                     * Return value should probably be used.
+                     */
+                    child.recursion_level = recursion_level;
+                    processdir(ctx, id, &child, args);
+                    insitu++;
+                }
 
                 dirs++;
 
@@ -601,7 +628,7 @@ int descend(QPTPool_t *ctx, const size_t id,
                     xattrs_get(child.name, &child.xattrs);
                 }
 
-                processed += !process_nondir(&child, args);
+                processed += !process_nondir(&child, nondir_args);
 
                 if (in->external_enabled) {
                     xattrs_cleanup(&child.xattrs);
@@ -612,6 +639,10 @@ int descend(QPTPool_t *ctx, const size_t id,
 
     if (dir_count) {
         *dir_count = dirs;
+    }
+
+    if (dirs_insitu) {
+        *dirs_insitu = insitu;
     }
 
     if (nondir_count) {

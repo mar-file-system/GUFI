@@ -235,9 +235,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     startdb(nda.db);
     size_t nondirs_processed = 0;
-    descend(ctx, id, in, nda.work, dir, pa->skip, 0, 1,
+    descend(ctx, id, nda.work, args, in, dir, pa->skip, 0, 1,
             processdir, process_nondir, &nda,
-            NULL, NULL, &nondirs_processed);
+            NULL, NULL, NULL, &nondirs_processed);
     stopdb(nda.db);
 
     /* entries and xattrs have been inserted */
@@ -276,8 +276,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     closedir(dir);
 
   cleanup:
-
-    free(nda.work);
+    if (nda.work->recursion_level == 0) {
+        free(nda.work);
+    }
 
     #if BENCHMARK
     pthread_mutex_lock(&print_mutex);
@@ -371,7 +372,7 @@ void sub_help() {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:", 2, "input_dir... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:C:", 2, "input_dir... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
