@@ -372,7 +372,7 @@ void sub_help() {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:C:", 2, "input_dir... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:M:C:", 2, "input_dir... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
@@ -426,7 +426,8 @@ int main(int argc, char *argv[]) {
     pa.total_files = 0;
     #endif
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
+    const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
                                    #endif

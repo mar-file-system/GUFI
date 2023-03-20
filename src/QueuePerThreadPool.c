@@ -73,7 +73,8 @@ OF SUCH DAMAGE.
 
 /* The context for a single thread in QPTPool */
 struct QPTPoolThreadData {
-    sll_t queue;
+    sll_t queue;        /* generally push into this queue */
+    sll_t deferred;     /* push into here if queue is too big; pop when queue is empty */
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     size_t next_queue;
@@ -121,28 +122,42 @@ static void *worker_function(void *args) {
 
         /* wait for work */
         timestamp_create_start(wf_wait);
-        while ((ctx->running && (!ctx->incomplete || !tw->queue.head)) ||
-               (!ctx->running && (ctx->incomplete && !tw->queue.head))) {
+        while (
+            /* running, but no work in pool */
+            (ctx->running && !ctx->incomplete) ||
+            /*
+             * not running and still have work in
+             * other threads, just not this one
+             */
+            (!ctx->running && ctx->incomplete &&
+             !tw->queue.size && !tw->deferred.size)
+            ) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_cond_wait(&tw->cv, &tw->mutex);
             pthread_mutex_lock(&ctx->mutex);
         }
         timestamp_set_end(wf_wait);
 
-        if (!ctx->running && !ctx->incomplete && !tw->queue.head) {
+        if (!ctx->running && !ctx->incomplete && !tw->queue.head && !tw->deferred.size) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_mutex_unlock(&tw->mutex);
             break;
         }
 
-        pthread_mutex_unlock(&ctx->mutex);
-
         /* moves entire queue into work and clears out queue */
         timestamp_create_start(wf_move_queue);
-        sll_move(&work, &tw->queue);
+        if (tw->queue.size) {
+            pthread_mutex_unlock(&ctx->mutex);
+            sll_move(&work, &tw->queue);
+        }
+        else {
+            sll_move(&work, &tw->deferred);
+            pthread_mutex_unlock(&ctx->mutex);
+        }
         timestamp_set_end(wf_move_queue);
 
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
+        pthread_mutex_lock(&ctx->mutex);
         pthread_mutex_lock(&print_mutex);
         tw->queue.size = work.size;
 
@@ -154,10 +169,13 @@ static void *worker_function(void *args) {
         for(size_t i = 0; i < ctx->nthreads; i++) {
             fprintf(stderr, "%zu ", ctx->data[i].queue.size);
             sum += ctx->data[i].queue.size;
+            fprintf(stderr, "%zu ", ctx->data[i].deferred.size);
+            sum += ctx->data[i].deferred.size;
         }
         fprintf(stderr, "%zu\n", sum);
         tw->queue.size = 0;
         pthread_mutex_unlock(&print_mutex);
+        pthread_mutex_unlock(&ctx->mutex);
         #endif
 
         pthread_mutex_unlock(&tw->mutex);
@@ -222,14 +240,15 @@ static void *worker_function(void *args) {
 
 static size_t QPTPool_round_robin(const size_t id, const size_t prev, const size_t threads,
                                   void *data, void *args) {
-    (void) data; (void) args;
+    (void) id; (void) data; (void) args;
     return (prev + 1) % threads;
 }
 
 QPTPool_t *QPTPool_init(const size_t nthreads,
                         void *args,
                         QPTPoolNextFunc_t next,
-                        void *next_args
+                        void *next_args,
+                        const uint64_t queue_limit
                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                         , struct OutputBuffers *buffers
                         #endif
@@ -243,6 +262,7 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
 
     ctx->nthreads = nthreads;
+    ctx->queue_limit = queue_limit;
     ctx->args = args;
     ctx->next = QPTPool_round_robin;
     ctx->next_args = NULL;
@@ -262,6 +282,7 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
     for(size_t i = 0; i < nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
         sll_init(&data->queue);
+        sll_init(&data->deferred);
         pthread_mutex_init(&data->mutex, NULL);
         pthread_cond_init(&data->cv, NULL);
         data->next_queue = i;
@@ -293,9 +314,16 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
     qi->work = new_work;
 
     QPTPoolThreadData_t *data = &ctx->data[id];
-    pthread_mutex_lock(&ctx->data[data->next_queue].mutex);
-    sll_push(&ctx->data[data->next_queue].queue, qi);
-    pthread_mutex_unlock(&ctx->data[data->next_queue].mutex);
+    QPTPoolThreadData_t *next = &ctx->data[data->next_queue];
+
+    pthread_mutex_lock(&next->mutex);
+    if (!ctx->queue_limit || (next->queue.size > ctx->queue_limit)) {
+        sll_push(&next->deferred, qi);
+    }
+    else {
+        sll_push(&next->queue, qi);
+    }
+    pthread_mutex_unlock(&next->mutex);
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->incomplete++;
@@ -335,6 +363,7 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         data->thread = 0;
         pthread_cond_destroy(&data->cv);
         pthread_mutex_destroy(&data->mutex);
+        sll_destroy(&data->deferred, NULL);
         sll_destroy(&data->queue, NULL);
     }
 

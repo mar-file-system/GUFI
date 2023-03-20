@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
          return -1;
      }
 
-     QPTPool_t * pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
+     QPTPool_t * pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , NULL
                                      #endif

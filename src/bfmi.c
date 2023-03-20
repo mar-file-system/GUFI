@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
     if (validate_inputs(&in))
         return -1;
 
-    QPTPool_t * pool = QPTPool_init(in.maxthreads, &in, NULL, NULL
+    QPTPool_t * pool = QPTPool_init(in.maxthreads, &in, NULL, NULL, (uint64_t) -1
                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                     , NULL
                                     #endif

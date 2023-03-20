@@ -233,7 +233,7 @@ static void sub_help() {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:C:", 2, "input_dir... output_prefix", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:", 2, "input_dir... output_prefix", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
@@ -269,7 +269,8 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
     #endif
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL
+    const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
                                    #endif
