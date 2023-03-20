@@ -145,8 +145,8 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", in->output, in->delim, 0, 0, 0, id);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(ctx, id, in, passmywork, dir, skip, 0, 1, processdir,
-                   NULL, NULL, NULL, NULL, NULL);
+         descend(ctx, id, passmywork, args, in, dir, skip, 0, 1, processdir,
+                   NULL, NULL, NULL, NULL, NULL, NULL);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {
          querytsdb(passmywork->name,&sumin,db,&recs,1);
@@ -159,7 +159,9 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     closedir(dir);
 
  out_free:
-    free(passmywork);
+    if (passmywork->recursion_level == 0) {
+        free(passmywork);
+    }
 
     return 0;
 }

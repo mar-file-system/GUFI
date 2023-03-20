@@ -150,12 +150,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .in = in,
         .fp = pa->outfiles[id],
     };
-    descend(ctx, id, &pa->in, work, dir, pa->skip, 0, 1,
+    descend(ctx, id, work, args,
+            &pa->in, dir, pa->skip, 0, 1,
             processdir, process_nondir, &nda,
-            NULL, NULL, nondirs_processed);
+            NULL, NULL, NULL, nondirs_processed);
 
     closedir(dir);
-    free(data);
+    if (work->recursion_level == 0) {
+        free(work);
+    }
 
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
@@ -230,7 +233,7 @@ static void sub_help() {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:", 2, "input_dir... output_prefix", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:C:", 2, "input_dir... output_prefix", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)

@@ -217,6 +217,17 @@ struct input {
 
    /* filename containing strings to skip during tree traversal */
    const char *skip;
+
+   /*
+    * If a directory has more than this many subdirectories,
+    * subdirectories discovered past this number will be processed
+    * in-situ rather than in a separate thread.
+    *
+    * This is a size_t rather than a fixed width integer because if a
+    * directory has more than a few thousand subdirectories, it is
+    * probably too big.
+    */
+   size_t subdir_limit;
 };
 
 void print_help(const char *prog_name,
@@ -308,6 +319,7 @@ struct work {
    char          osstext2[MAXXATTR];
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
+   size_t        recursion_level;
 };
 
 extern char fielddelim[];

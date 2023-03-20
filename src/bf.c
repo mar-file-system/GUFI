@@ -134,6 +134,7 @@ void print_help(const char* prog_name,
       case 'X': printf("  -X                     Dry run"); break;
       case 'L': printf("  -L <count>             Highest number of files/links in a directory allowed to be rolled up"); break;
       case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
+      case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
 
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
@@ -190,6 +191,7 @@ void show_input(struct input* in, int retval) {
    printf("in.dry_run            = %d\n",    in->dry_run);
    printf("in.max_in_dir         = %zu\n",   in->max_in_dir);
    printf("in.skip               = %s\n",    in->skip);
+   printf("in.subdir_limit       = %zu\n",   in->subdir_limit);
    printf("\n");
    printf("retval                = %d\n",    retval);
    printf("\n");
@@ -435,6 +437,10 @@ int parse_cmd_line(int         argc,
 
       case 'k':
           INSTALL_STR(in->skip, optarg, MAXPATH, "-k");
+          break;
+
+      case 'C':
+          INSTALL_UINT(in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C");
           break;
 
       case '?':
