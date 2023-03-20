@@ -65,7 +65,7 @@ OF SUCH DAMAGE.
 #ifndef SINGLY_LINKED_LIST_H
 #define SINGLY_LINKED_LIST_H
 
-#include <stddef.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,7 +77,7 @@ typedef struct SinglyLinkedListNode sll_node_t;
 struct SinglyLinkedList {
     sll_node_t *head;
     sll_node_t *tail;
-    size_t size;
+    uint64_t size;
 };
 
 typedef struct SinglyLinkedList sll_t;
@@ -86,7 +86,7 @@ sll_t *sll_init(sll_t *sll);
 sll_t *sll_push(sll_t *sll, void *data);
 sll_t *sll_move(sll_t *dst, sll_t *src);
 sll_t *sll_move_append(sll_t *dst, sll_t *src);
-size_t sll_get_size(sll_t *sll);
+uint64_t sll_get_size(sll_t *sll);
 
 /* functions for looping over a sll */
 sll_node_t *sll_head_node(sll_t *sll);

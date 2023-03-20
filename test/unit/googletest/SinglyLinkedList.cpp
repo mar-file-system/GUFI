@@ -342,13 +342,13 @@ TEST(SinglyLinkedList, node_data) {
 }
 
 TEST(SinglyLinkedList, loop) {
-    const size_t count = 10;
+    const uint64_t count = 10;
     int *values = new int[count]();
 
     // fill up queue with values
     sll_t sll;
     EXPECT_EQ(&sll, sll_init(&sll));
-    for(size_t i = 0; i < count; i++) {
+    for(uint64_t i = 0; i < count; i++) {
         values[i] = i;
         EXPECT_EQ(&sll, sll_push(&sll, &values[i]));
     }

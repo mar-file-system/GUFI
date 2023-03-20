@@ -80,7 +80,7 @@ static sll_t *sll_clear(sll_t *sll) {
 
 sll_t *sll_init(sll_t *sll) {
     return sll_clear(sll);
-};
+}
 
 sll_t *sll_push(sll_t *sll, void *data) {
     /* Not checking arguments */
@@ -134,7 +134,7 @@ sll_t *sll_move_append(sll_t *dst, sll_t *src) {
     return dst;
 }
 
-size_t sll_get_size(sll_t *sll) {
+uint64_t sll_get_size(sll_t *sll) {
     return sll?sll->size:0;
 }
 
