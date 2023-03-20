@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef QUEUE_PER_THREAD_POOL_H
 #define QUEUE_PER_THREAD_POOL_H
 
+#include <inttypes.h>
 #include <pthread.h>
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -95,6 +96,7 @@ typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const si
 typedef struct QPTPool {
     QPTPoolThreadData_t *data;
     size_t nthreads;
+    uint64_t queue_limit;
 
     void *args;
 
@@ -103,7 +105,7 @@ typedef struct QPTPool {
 
     pthread_mutex_t mutex;
     int running;
-    size_t incomplete;
+    uint64_t incomplete;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct OutputBuffers *buffers;
@@ -114,7 +116,8 @@ typedef struct QPTPool {
 QPTPool_t *QPTPool_init(const size_t nthreads,
                         void *args,
                         QPTPoolNextFunc_t next,
-                        void *next_args
+                        void *next_args,
+                        const uint64_t queue_limit
                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                         , struct OutputBuffers *buffers
                         #endif

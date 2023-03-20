@@ -67,9 +67,9 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, nullptr)
+#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, 0, nullptr)
 #else
-#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr)
+#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, 0)
 #endif
 
 static const     size_t THREADS = 5;
@@ -269,7 +269,8 @@ TEST(QueuePerThreadPool, custom_next) {
                                         [](const size_t, const size_t prev, const size_t threads,
                                            void *, void *) -> size_t {
                                             return (prev?prev:threads) - 1;
-                                        }, nullptr
+                                        }, nullptr,
+                                        0
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , nullptr
                                         #endif

@@ -243,7 +243,7 @@ int main(int argc, char * argv[]) {
     }
 
     // start up threads and push root into the queue for processing
-    QPTPool_t * pool = QPTPool_init(threads, &settings, NULL, NULL
+    QPTPool_t * pool = QPTPool_init(threads, &settings, NULL, NULL, 0
                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                     , NULL
                                     #endif

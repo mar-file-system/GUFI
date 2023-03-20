@@ -108,7 +108,7 @@ OF SUCH DAMAGE.
 /* name doesn't matter, so long as it is not used by callers */
 static const char ATTACH_NAME[] = "tree";
 
-/* prepend the current direcoty to the database filenamee */
+/* prepend the current directory to the database filenamee */
 size_t xattr_modify_filename(char *dst, const size_t dst_size,
                              const char *src, const size_t src_len,
                              struct work *work) {
@@ -145,9 +145,9 @@ static size_t descend2(QPTPool_t *ctx,
         descend_timestamp_end(level_branch);
 
         /* Send subdirs to queue */
-        /* loop over dirents*/
-        /* skip db.db and any filename listed in the trie struct*/
-        /* fill qwork struct for each dirent*/
+        /* loop over dirents */
+        /* skip db.db and any filename listed in the trie struct */
+        /* fill qwork struct for each dirent */
         descend_timestamp_start(dts, while_branch);
         while (1) {
             descend_timestamp_start(dts, readdir_call);
@@ -536,7 +536,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:M:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -601,7 +601,8 @@ int main(int argc, char *argv[])
     #endif
 
     /* provide a function to print if PRINT is set */
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &pa, NULL, NULL
+    const uint64_t queue_depth = in.target_memory_footprint / sizeof(struct work) / in.maxthreads;
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &pa, NULL, NULL, queue_depth
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , timestamp_buffers
                                    #endif

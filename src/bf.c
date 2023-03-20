@@ -134,6 +134,7 @@ void print_help(const char* prog_name,
       case 'X': printf("  -X                     Dry run"); break;
       case 'L': printf("  -L <count>             Highest number of files/links in a directory allowed to be rolled up"); break;
       case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
+      case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
 
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
@@ -145,55 +146,56 @@ void print_help(const char* prog_name,
 
 // DEBUGGING
 void show_input(struct input* in, int retval) {
-   printf("in.printing           = %d\n",    in->printing);
-   printf("in.printdir           = %d\n",    in->printdir);
-   printf("in.printheader        = %d\n",    in->printheader);
-   printf("in.printrows          = %d\n",    in->printrows);
-   printf("in.writetsum          = %d\n",    in->writetsum);
-   printf("in.buildindex         = %d\n",    in->buildindex);
-   printf("in.maxthreads         = %d\n",    in->maxthreads);
-   printf("in.dodelim            = %d\n",    in->dodelim);
-   printf("in.delim              = '%s'\n",  in->delim);
-   printf("in.name               = '%s'\n",  in->name);
-   printf("in.name_len           = '%zu'\n", in->name_len);
-   printf("in.nameto             = '%s'\n",  in->nameto);
-   printf("in.andor              = %d\n",    in->andor);
-   printf("in.external_enabled   = %d\n",    in->external_enabled);
-   printf("in.nobody.uid         = %d\n",    (int) in->nobody.uid);
-   printf("in.nobody.gid         = %d\n",    (int) in->nobody.gid);
-   printf("in.sql.init           = '%s'\n",  in->sql.init);
-   printf("in.sql.tsum           = '%s'\n",  in->sql.tsum);
-   printf("in.sql.sum            = '%s'\n",  in->sql.sum);
-   printf("in.sql.ent            = '%s'\n",  in->sql.ent);
-   printf("in.sql.fin            = '%s'\n",  in->sql.fin);
-   printf("in.insertdir          = '%d'\n",  in->insertdir);
-   printf("in.insertfl           = '%d'\n",  in->insertfl);
-   printf("in.dontdescend        = '%d'\n",  in->dontdescend);
-   printf("in.suspectd           = '%d'\n",  in->suspectd);
-   printf("in.suspectfl          = '%d'\n",  in->suspectfl);
-   printf("in.insuspect          = '%s'\n",  in->insuspect);
-   printf("in.suspectfile        = '%d'\n",  in->suspectfile);
-   printf("in.suspectmethod      = '%d'\n",  in->suspectmethod);
-   printf("in.suspecttime        = '%d'\n",  in->suspecttime);
-   printf("in.stride             = '%d'\n",  in->stride);
-   printf("in.infile             = '%d'\n",  in->infile);
-   printf("in.min_level          = %zu\n",   in->min_level);
-   printf("in.max_level          = %zu\n",   in->max_level);
-   printf("in.sql.intermediate   = '%s'\n",  in->sql.intermediate);
-   printf("in.sql.init_agg       = '%s'\n",  in->sql.init_agg);
-   printf("in.sql.agg            = '%s'\n",  in->sql.agg);
-   printf("in.keep_matime        = %d\n",    in->keep_matime);
-   printf("in.output_buffer_size = %zu\n",   in->output_buffer_size);
-   printf("in.open_flags         = %d\n",    in->open_flags);
-   printf("in.format_set         = %d\n",    in->format_set);
-   printf("in.format             = '%s'\n",  in->format);
-   printf("in.terse              = %d\n",    in->terse);
-   printf("in.dry_run            = %d\n",    in->dry_run);
-   printf("in.max_in_dir         = %zu\n",   in->max_in_dir);
-   printf("in.skip               = %s\n",    in->skip);
-   printf("in.subdir_limit       = %zu\n",   in->subdir_limit);
+   printf("in.printing                 = %d\n",            in->printing);
+   printf("in.printdir                 = %d\n",            in->printdir);
+   printf("in.printheader              = %d\n",            in->printheader);
+   printf("in.printrows                = %d\n",            in->printrows);
+   printf("in.writetsum                = %d\n",            in->writetsum);
+   printf("in.buildindex               = %d\n",            in->buildindex);
+   printf("in.maxthreads               = %d\n",            in->maxthreads);
+   printf("in.dodelim                  = %d\n",            in->dodelim);
+   printf("in.delim                    = '%s'\n",          in->delim);
+   printf("in.name                     = '%s'\n",          in->name);
+   printf("in.name_len                 = '%zu'\n",         in->name_len);
+   printf("in.nameto                   = '%s'\n",          in->nameto);
+   printf("in.andor                    = %d\n",            in->andor);
+   printf("in.external_enabled         = %d\n",            in->external_enabled);
+   printf("in.nobody.uid               = %d\n",            (int) in->nobody.uid);
+   printf("in.nobody.gid               = %d\n",            (int) in->nobody.gid);
+   printf("in.sql.init                 = '%s'\n",          in->sql.init);
+   printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum);
+   printf("in.sql.sum                  = '%s'\n",          in->sql.sum);
+   printf("in.sql.ent                  = '%s'\n",          in->sql.ent);
+   printf("in.sql.fin                  = '%s'\n",          in->sql.fin);
+   printf("in.insertdir                = '%d'\n",          in->insertdir);
+   printf("in.insertfl                 = '%d'\n",          in->insertfl);
+   printf("in.dontdescend              = '%d'\n",          in->dontdescend);
+   printf("in.suspectd                 = '%d'\n",          in->suspectd);
+   printf("in.suspectfl                = '%d'\n",          in->suspectfl);
+   printf("in.insuspect                = '%s'\n",          in->insuspect);
+   printf("in.suspectfile              = '%d'\n",          in->suspectfile);
+   printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
+   printf("in.suspecttime              = '%d'\n",          in->suspecttime);
+   printf("in.stride                   = '%d'\n",          in->stride);
+   printf("in.infile                   = '%d'\n",          in->infile);
+   printf("in.min_level                = %zu\n",           in->min_level);
+   printf("in.max_level                = %zu\n",           in->max_level);
+   printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate);
+   printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg);
+   printf("in.sql.agg                  = '%s'\n",          in->sql.agg);
+   printf("in.keep_matime              = %d\n",            in->keep_matime);
+   printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
+   printf("in.open_flags               = %d\n",            in->open_flags);
+   printf("in.format_set               = %d\n",            in->format_set);
+   printf("in.format                   = '%s'\n",          in->format);
+   printf("in.terse                    = %d\n",            in->terse);
+   printf("in.dry_run                  = %d\n",            in->dry_run);
+   printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
+   printf("in.skip                     = %s\n",            in->skip);
+   printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
+   printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
    printf("\n");
-   printf("retval                = %d\n",    retval);
+   printf("retval                      = %d\n",    retval);
    printf("\n");
 }
 
@@ -215,23 +217,24 @@ int parse_cmd_line(int         argc,
                    const char* positional_args_help_str,
                    struct input *in) {
    memset(in, 0, sizeof(*in));
-   in->maxthreads         = 1;                      // don't default to zero threads
+   in->maxthreads              = 1;                      // don't default to zero threads
    SNPRINTF(in->delim, sizeof(in->delim), fielddelim);
-   in->max_level          = -1;                     // default to all the way down
-   in->nobody.uid  = 65534;
-   in->nobody.gid  = 65534;
-   struct passwd *passwd = getpwnam("nobody");
+   in->max_level               = -1;                     // default to all the way down
+   in->nobody.uid              = 65534;
+   in->nobody.gid              = 65534;
+   struct passwd *passwd       = getpwnam("nobody");
    if (passwd) {
-       in->nobody.uid = passwd->pw_uid;
-       in->nobody.gid = passwd->pw_gid;
+       in->nobody.uid          = passwd->pw_uid;
+       in->nobody.gid          = passwd->pw_gid;
    }
-   in->output             = STDOUT;
-   in->output_buffer_size = 4096;
-   in->open_flags         = SQLITE_OPEN_READONLY;   // default to read-only opens
-   in->max_in_dir         = (size_t) -1;
+   in->output                  = STDOUT;
+   in->output_buffer_size      = 4096;
+   in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
+   in->max_in_dir              = (size_t) -1;
+   in->target_memory_footprint = 0;
 
-   int show   = 0;
-   int retval = 0;
+   int show                    = 0;
+   int retval                  = 0;
    int ch;
    optind = 1; // reset to 1, not 0 (man 3 getopt)
    while ( (ch = getopt(argc, argv, getopt_str)) != -1) {
@@ -437,6 +440,10 @@ int parse_cmd_line(int         argc,
 
       case 'k':
           INSTALL_STR(in->skip, optarg, MAXPATH, "-k");
+          break;
+
+      case 'M':
+          INSTALL_UINT64(in->target_memory_footprint, optarg, (uint64_t) 0, (uint64_t) -1, "-M");
           break;
 
       case 'C':

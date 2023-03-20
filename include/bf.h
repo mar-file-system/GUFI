@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef BF_H
 #define BF_H
 
+#include <inttypes.h>
 #include <sys/stat.h>
 
 #include "xattrs.h"
@@ -218,6 +219,9 @@ struct input {
    /* filename containing strings to skip during tree traversal */
    const char *skip;
 
+   /* attempt to drain QPTPool work items until this memory footprint is reached */
+   uint64_t target_memory_footprint;
+
    /*
     * If a directory has more than this many subdirectories,
     * subdirectories discovered past this number will be processed
@@ -277,6 +281,19 @@ int parse_cmd_line(int         argc,
 #define INSTALL_UINT(VAR, SOURCE, MIN, MAX, ARG_NAME)                       \
    do {                                                                     \
       if (sscanf((SOURCE), "%lu", &(VAR)) != 1) {                           \
+        retval = -1;                                                        \
+        break;                                                              \
+      }                                                                     \
+      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                             \
+         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",          \
+                 (ARG_NAME), (MIN), (MAX));                                 \
+         retval = -1;                                                       \
+      }                                                                     \
+   } while (0)
+
+#define INSTALL_UINT64(VAR, SOURCE, MIN, MAX, ARG_NAME)                     \
+   do {                                                                     \
+      if (sscanf((SOURCE), "%" PRIu64 "", &(VAR)) != 1) {                   \
         retval = -1;                                                        \
         break;                                                              \
       }                                                                     \
