@@ -8,25 +8,24 @@ Through commit history cumulative_times values are either added, removed, or the
 Below is a table listing commit ranges grouped by format change
 * **NOTE**: These ranges are all inclusive [start, end]
 
-|      Commits                       | Number of commits  |  Comments                     |
-| :--------------------------------: | :----------------: | :---------------------------- |
-| 908c161..HEAD                      |        316+        |                               |
-| 61c0a9d..8060d30                   |          4         |                               |
-| 7cd35f8..4164985                   |         19         |                               |
-| a13a330..216ef5b                   |         51         |                               |
-| 75e2c5b..00ba871                   |         13         |                               |
-| 093dc32..3235400                   |         74         |                               |
-| 941e8ca..97fabf7                   |         64         |                               |
-|     aad5b08                        |          1         |                               |
-| 90611bf..aaa5b89                   |        107         |                               |
-| 86d3d0e..a9a1ef7                   |         18         |                               |
-| 831705f..6bde154                   |         18         | SEGFAULTS                     |
-| 8480cd1..ea4c148                   |         18         | Same as 86d3d0e..a9a1ef7      |
-| 69213c6..1a95766                   |        42          | entries required for -E query |
-| FIRST..54bfc53                     |       ????         | Fails to build                |
+|      Commits                       | Number of commits  |  Comments                        |
+| :--------------------------------: | :----------------: | :------------------------------: |
+| 908c161..HEAD                      |        313+        |                                  |
+| 61c0a9d..8060d30                   |          5         |                                  |
+| 7cd35f8..4164985                   |         20         |                                  |
+| a13a330..216ef5b                   |         52         |                                  |
+| 75e2c5b..00ba871                   |         14         |                                  |
+| 093dc32..3235400                   |         75         |                                  |
+| 941e8ca..97fabf7                   |         65         |                                  |
+|     aad5b08                        |          1         |                                  |
+| 90611bf..aaa5b89                   |        108         |                                  |
+| 86d3d0e..a9a1ef7                   |         19         |                                  |
+| 831705f..6bde154                   |          3         | [See notes](#831705f6bde154)     |
+| 8480cd1..ea4c148                   |          9         | Same as 86d3d0e..a9a1ef7         |
+| 69213c6..1a95766                   |         43         | entries required for -E query    |
+| FIRST..54bfc53                     |       ????         | Fails to build                   |
 
 ## Line format
-
 Each Line of the cumulative_times output has the following format:
 
 `<name><separator> <value>`
@@ -44,3 +43,9 @@ Each Line of the cumulative_times output has the following format:
 * If time (seconds), if an `s` is present, it is ignored 
 
 **Example**: `Real Time: 32.6s`
+
+## Notes
+
+### 831705f..6bde154
+* There is a hardcoded value of 48 that prevents `gufi_query` from being run at thread counts greater than 48.
+* [`831705f`](https://github.com/mar-file-system/GUFI/commit/831705f) causes a significant increase in performance by reducing the amount of memory being zeroed. 
