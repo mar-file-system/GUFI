@@ -73,7 +73,7 @@ brew --prefix grep
 echo 'export PATH="$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"' >> ~/.bash_profile
 
 # install required packages
-brew install coreutils cmake mysql pcre python3
+brew install coreutils cmake pcre python3
 
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask

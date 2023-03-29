@@ -98,9 +98,6 @@ ${TESTS}/runquerydbs                    ${INDEX} 2
 ${TESTS}/runbfwreaddirplus2db           ${INDEX}
 ${TESTS}/rundfw                         ${INDEX}
 
-# TBD
-# runbfmi ...
-
 # other tests
 ${TESTS}/runlistschemadb                ${INDEX}
 ${TESTS}/runlisttablesdb                ${INDEX}

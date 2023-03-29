@@ -63,7 +63,6 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 set(MAN_PAGES
-  bfmi.1
   bfti.1
   bfwreaddirplus2db.1
   gufi_dir2index.1

@@ -24,7 +24,6 @@ configuration `-DBUILD_LATEX_DOCS=On`.
 
 ## [Executables](/src)
 - [bffuse](bffuse)
-- [bfmi](bfmi)
 - [bfresultfuse](bfresultfuse)
 - [bfti](bfti)
 - [bfwreaddirplus2db](bfwreaddriplus2b)

@@ -225,17 +225,6 @@ if (MY_FUSE_FOUND)
   install(TARGETS bffuse bfresultfuse DESTINATION ${BIN} COMPONENT Server)
 endif()
 
-# only build bfmi if MySQL is found
-if (MYSQL_FOUND)
-  # create the bfmi executable
-  add_executable(bfmi bfmi.c)
-  target_include_directories(bfmi SYSTEM PRIVATE ${MYSQL_INCLUDEDIR})
-  target_link_libraries(bfmi ${COMMON_LIBRARIES} ${MYSQL_LIBDIR})
-
-  # install the MySQL binaries in ${CMAKE_INSTALL_PREFIX}/${BIN}
-  install(TARGETS bfmi DESTINATION ${BIN} COMPONENT Server)
-endif()
-
 # only build db2 sources if db2 is found
 pkg_search_module(DB2 db2)
 if (DB2_FOUND)

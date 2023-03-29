@@ -77,7 +77,6 @@ foreach(TEST
     gufitest.py
     robinhoodin
     runbffuse
-    runbfmi
     runbfq
     runbfqforfuse
     runbfti
