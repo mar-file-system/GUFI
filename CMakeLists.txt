@@ -307,16 +307,6 @@ else()
   message(STATUS "FUSE not found. Not building bffuse and bfresultfuse.")
 endif()
 
-# Find MySQL
-find_package(MYSQL)
-if (MYSQL_FOUND)
-  message(STATUS "MySQL headers located in ${MYSQL_INCLUDEDIR}")
-  message(STATUS "MySQL libraries located in ${MYSQL_LIBDIR}")
-  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, mysql")
-else()
-  message(STATUS "MySQL not found. Not building bfmi.")
-endif()
-
 # Find GPFS
 find_library(GPFS_LIB gpfs PATH "/usr/lpp/mmfs/lib")
 if(GPFS_LIB)

@@ -60,12 +60,6 @@ OF SUCH DAMAGE.
 
 
 
---- testtools
-
-runbfmi - run bfmi to read from a robinhood mysql db and list and/or create
-    a gufi tree - requires an input file on how to talk to mysql
-
-
 -- The following functional tests all work together, create a gufi index
    from input testdir into testdirdup and run queries/etc.
 
