@@ -90,14 +90,14 @@ struct start_end {
     memcpy(&name.end,   zero, sizeof(struct timespec))
 
 #define timestamp_set_start_raw(name)                                   \
-    clock_gettime(CLOCK_MONOTONIC, &((name).start));
+    clock_gettime(CLOCK_MONOTONIC, &((name).start))
 
 #define timestamp_create_start_raw(name)                                \
     timestamp_create_raw(name);                                         \
     timestamp_set_start_raw(name)
 
 #define timestamp_set_end_raw(name)                                     \
-    clock_gettime(CLOCK_MONOTONIC, &((name).end));
+    clock_gettime(CLOCK_MONOTONIC, &((name).end))
 
 #define timestamp_print_raw(obs, id, str, name)                         \
     print_timer(obs, id, ts_buf, sizeof(ts_buf), str, &name)

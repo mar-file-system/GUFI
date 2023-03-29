@@ -182,11 +182,18 @@ static size_t descend2(QPTPool_t *ctx,
             struct work qwork;
 
             /* append entry name to directory */
-            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3, passmywork->name, passmywork->name_len, "/", (size_t) 1, entry->d_name, len);
+            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3,
+                       passmywork->name, passmywork->name_len,
+                       "/", (size_t) 1,
+                       entry->d_name, len);
 
             /* append convertd entry name to convertd directory */
-            qwork.sqlite3_name_len = SNFORMAT_S(qwork.sqlite3_name, MAXPATH, 2, passmywork->sqlite3_name, passmywork->sqlite3_name_len, "/", (size_t) 1);
-            size_t convertd_len = sqlite_uri_path(qwork.sqlite3_name + qwork.sqlite3_name_len, MAXPATH - qwork.sqlite3_name_len, entry->d_name, &len);
+            qwork.sqlite3_name_len = SNFORMAT_S(qwork.sqlite3_name, MAXPATH, 2,
+                       passmywork->sqlite3_name, passmywork->sqlite3_name_len,
+                       "/", (size_t) 1);
+            const size_t convertd_len = sqlite_uri_path(qwork.sqlite3_name + qwork.sqlite3_name_len,
+                                                        MAXPATH - qwork.sqlite3_name_len,
+                                                        entry->d_name, &len);
             qwork.sqlite3_name_len += convertd_len;
             descend_timestamp_end(snprintf_call);
 
@@ -256,6 +263,15 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamps_init(&ts, &pa->start_time);
     #endif
 
+    /* lstat first to not affect atime and mtime */
+    thread_timestamp_start(ts.tts, lstat_call);
+    struct stat st;
+    if (lstat(work->name, &st) != 0) {
+        fprintf(stderr, "Could not stat directory \"%s\"\n", work->name);
+        goto out_free;
+    }
+    thread_timestamp_end(lstat_call);
+
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
     thread_timestamp_start(ts.tts, opendir_call);
     dir = opendir(work->name);
@@ -277,7 +293,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #ifdef ADDQUERYFUNCS
     thread_timestamp_start(ts.tts, addqueryfuncs_call);
     if (db) {
-        if (addqueryfuncs_with_context(db, id, work) != 0) {
+        if (addqueryfuncs_with_context(db, work) != 0) {
             fprintf(stderr, "Could not add functions to sqlite\n");
         }
     }
@@ -417,8 +433,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (db) {
         if (in->keep_matime) {
             struct utimbuf dbtime = {};
-            dbtime.actime  = work->statuso.st_atime;
-            dbtime.modtime = work->statuso.st_mtime;
+            dbtime.actime  = st.st_atime;
+            dbtime.modtime = st.st_mtime;
             utime(dbname, &dbtime);
         }
     }
@@ -626,18 +642,22 @@ int main(int argc, char *argv[])
             len = 1;
         }
 
-        struct work *mywork = calloc(1, sizeof(struct work));
+        struct stat st;
 
-        /* copy argv[i] into the work item */
-        mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
-        mywork->sqlite3_name_len = sqlite_uri_path(mywork->sqlite3_name, MAXPATH, argv[i], &len);
-
-        lstat(mywork->name,&mywork->statuso);
-        if (!S_ISDIR(mywork->statuso.st_mode) ) {
-            fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
-            free(mywork);
+        if (lstat(argv[i], &st) != 0) {
+            fprintf(stderr, "Could not stat directory \"%s\"\n", argv[i]);
             continue;
         }
+
+        if (!S_ISDIR(st.st_mode)) {
+            fprintf(stderr,"input-dir '%s' is not a directory\n", argv[i]);
+            continue;
+        }
+
+        /* copy argv[i] into the work item */
+        struct work *mywork = calloc(1, sizeof(struct work));
+        mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
+        mywork->sqlite3_name_len = sqlite_uri_path(mywork->sqlite3_name, MAXPATH, argv[i], &len);
 
         /* parent of input path */
         mywork->root = argv[i];
@@ -758,6 +778,7 @@ int main(int argc, char *argv[])
     print_stats("set up globals:                             %.2Lfs", "%Lf", sec(setup_globals_time));
     print_stats("set up intermediate databases:              %.2Lfs", "%Lf", sec(setup_aggregate_time));
     print_stats("thread pool:                                %.2Lfs", "%Lf", sec(work_time));
+    print_stats("    lstat:                                  %.2Lfs", "%Lf", sec(tt->lstat));
     print_stats("    open directories:                       %.2Lfs", "%Lf", sec(tt->opendir));
     print_stats("    attach index:                           %.2Lfs", "%Lf", sec(tt->attachdb));
     print_stats("    xattrprep:                              %.2Lfs", "%Lf", sec(tt->xattrprep));
@@ -773,7 +794,6 @@ int main(int argc, char *argv[])
     print_stats("            strncmp:                        %.2Lfs", "%Lf", sec(tt->strncmp));
     print_stats("            strncmp != . or ..:             %.2Lfs", "%Lf", sec(tt->strncmp_branch));
     print_stats("            snprintf:                       %.2Lfs", "%Lf", sec(tt->snprintf));
-    print_stats("            lstat:                          %.2Lfs", "%Lf", sec(tt->lstat));
     print_stats("            isdir:                          %.2Lfs", "%Lf", sec(tt->isdir));
     print_stats("            isdir branch:                   %.2Lfs", "%Lf", sec(tt->isdir_branch));
     print_stats("            access:                         %.2Lfs", "%Lf", sec(tt->access));

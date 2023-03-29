@@ -212,11 +212,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     timestamp_create_start(memset_work);
     struct work dir; /* name and name_len are not used */
+    struct entry_data ed;
     timestamp_set_end(memset_work);
 
     /* parse the directory data */
     timestamp_create_start(dir_linetowork);
-    linetowork(w->line, w->len, in->delim, &dir);
+    linetowork(w->line, w->len, in->delim, &dir, &ed);
     timestamp_set_end(dir_linetowork);
 
     /* create the directory */
@@ -227,7 +228,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                                          "/", (size_t) 1,
                                          w->line, w->first_delim);
 
-    if (dupdir(topath, &dir.statuso)) {
+    if (dupdir(topath, &ed.statuso)) {
         const int err = errno;
         fprintf(stderr, "Dupdir failure: \"%s\": %s (%d)\n",
                 topath, strerror(err), err);
@@ -245,7 +246,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
     /* copy the template file */
-    if (copy_template(&pa->db, dbname, dir.statuso.st_uid, dir.statuso.st_gid)) {
+    if (copy_template(&pa->db, dbname, ed.statuso.st_uid, ed.statuso.st_gid)) {
         row_destroy(w);
         return 1;
     }
@@ -302,12 +303,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             timestamp_create_start(memset_row);
             struct work row;
-            memset(&row, 0, sizeof(struct work));
+            struct entry_data row_ed;
             timestamp_set_end(memset_row);
 
             timestamp_create_start(entry_linetowork);
-            linetowork(line, len, in->delim, &row);
-            timestamp_set_end(entry_linetowork)
+            linetowork(line, len, in->delim, &row, &row_ed);
+            timestamp_set_end(entry_linetowork);
 
             timestamp_create_start(free);
             free(line);
@@ -315,7 +316,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* update summary table */
             timestamp_create_start(sumit);
-            sumit(&summary, &row);
+            sumit(&summary, &row_ed);
             timestamp_set_end(sumit);
 
             /* don't record pinode */
@@ -323,14 +324,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* add row to bulk insert */
             timestamp_create_start(insertdbgo);
-            insertdbgo(&row, db, entries_res);
-            insertdbgo_xattrs(in, &dir.statuso, &row,
+            insertdbgo(&row, &row_ed, db, entries_res);
+            insertdbgo_xattrs(in, &ed.statuso, &row, &row_ed,
                               &xattr_db_list, &pa->xattr,
                               topath, topath_len,
                               xattrs_res, xattr_files_res);
             timestamp_set_end(insertdbgo);
 
-            xattrs_cleanup(&row.xattrs);
+            xattrs_cleanup(&row_ed.xattrs);
 
             row_count++;
             if (row_count > 100000) {
@@ -389,7 +390,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         sll_destroy(&xattr_db_list, destroy_xattr_db);
 
         /* write out the current directory's xattrs */
-        insertdbgo_xattrs_avail(&dir, xattrs_res);
+        insertdbgo_xattrs_avail(&ed, xattrs_res);
 
         /* write out data going into db.db */
         timestamp_create_start(insertdbfin);
@@ -407,8 +408,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             basename_start--;
         }
 
-        insertsumdb(db, w->line + basename_start, &dir, &summary);
-        xattrs_cleanup(&dir.xattrs);
+        insertsumdb(db, w->line + basename_start, &dir, &ed, &summary);
+        xattrs_cleanup(&ed.xattrs);
         timestamp_set_end(insertsumdb);
 
         timestamp_create_start(closedb);

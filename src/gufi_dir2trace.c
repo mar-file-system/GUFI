@@ -101,9 +101,14 @@ struct NondirArgs {
     FILE *fp;
 };
 
-static int process_nondir(struct work *entry, void *args) {
+static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NondirArgs *nda = (struct NondirArgs *) args;
-    worktofile(nda->fp, nda->in->delim, entry->root_len, entry);
+    if (lstat(entry->name, &ed->statuso) == 0) {
+        if (ed->type == 'l') {
+            readlink(entry->name, ed->linkname, MAXPATH);
+        }
+        worktofile(nda->fp, nda->in->delim, entry->root_len, entry, ed);
+    }
     return 0;
 }
 
@@ -121,6 +126,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
     struct work *work = (struct work *) data;
+    struct entry_data ed;
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -128,17 +134,26 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         return 1;
     }
 
-    /* get source directory xattrs */
-    if (in->external_enabled) {
-        xattrs_setup(&work->xattrs);
-        xattrs_get(work->name, &work->xattrs);
+    memset(&ed, 0, sizeof(ed));
+    if (lstat(work->name, &ed.statuso) != 0) {
+        fprintf(stderr, "Could not stat directory \"%s\"\n", work->name);
+        free(data);
+        return 1;
     }
 
+    /* get source directory xattrs */
+    if (in->external_enabled) {
+        xattrs_setup(&ed.xattrs);
+        xattrs_get(work->name, &ed.xattrs);
+    }
+
+    ed.type = 'd';
+
     /* write start of stanza */
-    worktofile(pa->outfiles[id], in->delim, work->root_len, work);
+    worktofile(pa->outfiles[id], in->delim, work->root_len, work, &ed);
 
     if (in->external_enabled) {
-        xattrs_cleanup(&work->xattrs);
+        xattrs_cleanup(&ed.xattrs);
     }
 
     size_t *nondirs_processed = NULL;
@@ -150,8 +165,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .in = in,
         .fp = pa->outfiles[id],
     };
-    descend(ctx, id, work, args,
-            &pa->in, dir, pa->skip, 0, 1,
+    descend(ctx, id, pa,
+            in, work, ed.statuso.st_ino,
+            dir, pa->skip, 0, 0,
             processdir, process_nondir, &nda,
             NULL, NULL, NULL, nondirs_processed);
 
@@ -203,15 +219,17 @@ static struct work *validate_source(char *path) {
         return NULL;
     }
 
+    struct stat st;
+
     /* get input path metadata */
-    if (lstat(path, &root->statuso) < 0) {
+    if (lstat(path, &st) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
         free(root);
         return NULL;
     }
 
     /* check that the input path is a directory */
-    if (!S_ISDIR(root->statuso.st_mode)) {
+    if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
         free(root);
         return NULL;
@@ -220,7 +238,6 @@ static struct work *validate_source(char *path) {
     root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
     root->root = path;
     root->root_len = dirname_len(path, root->name_len);
-    root->type[0] = 'd';
 
     return root;
 }

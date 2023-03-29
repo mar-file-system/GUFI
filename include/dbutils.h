@@ -147,22 +147,23 @@ int insertdbfin(sqlite3_stmt *res);
 sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli);
 
 /* insert entries and xattr names */
-int insertdbgo(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
+int insertdbgo(struct work *pwork, struct entry_data *data,
+    sqlite3 *db, sqlite3_stmt *res);
 /* insert directly into xattrs_avail in the associated db */
-int insertdbgo_xattrs_avail(struct work *entry, sqlite3_stmt *res);
+int insertdbgo_xattrs_avail(struct entry_data *data, sqlite3_stmt *res);
 /* figure out where the xattr should go and insert it there */
-int insertdbgo_xattrs(struct input *in, struct stat *dir, struct work *entry,
+int insertdbgo_xattrs(struct input *in, struct stat *dir, struct work *entry, struct entry_data *data,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);
-int insertdbgor(struct work *pwork, sqlite3 *db, sqlite3_stmt *res);
+int insertdbgor(struct work *pwork, struct entry_data *data, sqlite3 *db, sqlite3_stmt *res);
 
-int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct sum *su);
+int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *data, struct sum *su);
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su, int rectype, int uid, int gid);
 
 int addqueryfuncs_common(sqlite3 *db);
-int addqueryfuncs_with_context(sqlite3 *db, size_t id, struct work *work);
+int addqueryfuncs_with_context(sqlite3 *db, struct work *work);
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
 /* xattr db list item */

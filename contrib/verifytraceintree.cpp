@@ -102,7 +102,7 @@ struct CallbackArgs {
     struct stat st;
 };
 
-int callback(void *arg, int, char **data, char **) {
+static int callback(void *arg, int, char **data, char **) {
     static const int mode_col = 0;
     static const int uid_col  = 1;
     static const int gid_col  = 2;
@@ -143,9 +143,9 @@ struct CheckStanzaArgs {
     std::vector <std::istream *> traces;
 };
 
-int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
+static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
     struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (args);
-    std::istream & trace = *(csa->traces[id]);
+    std::istream &trace = *(csa->traces[id]);
 
     struct StanzaStart *sa = static_cast <struct StanzaStart *> (data);
 
@@ -188,11 +188,12 @@ int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         char buf[MAXPATH] = {};
         memcpy(buf, sa->line.c_str(), sa->line.size());
         struct work work;
-        linetowork(buf, sa->line.size(), csa->delim, &work);
-        xattrs_cleanup(&work.xattrs);
+        struct entry_data ed;
+        linetowork(buf, sa->line.size(), csa->delim, &work, &ed);
+        xattrs_cleanup(&ed.xattrs);
 
         // make sure the permissions are correct
-        if (st.st_mode != work.statuso.st_mode) {
+        if (st.st_mode != ed.statuso.st_mode) {
             std::cerr << "Permission mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
@@ -200,7 +201,7 @@ int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         }
 
         // make sure the uid is correct
-        if (st.st_uid != work.statuso.st_uid) {
+        if (st.st_uid != ed.statuso.st_uid) {
             std::cerr << "UID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
@@ -208,7 +209,7 @@ int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         }
 
         // make sure the gid is correct
-        if (st.st_gid != work.statuso.st_gid) {
+        if (st.st_gid != ed.statuso.st_gid) {
             std::cerr << "GID mismatch on directory: " << parent << std::endl;
             csa->correct = false;
             delete sa;
@@ -268,8 +269,9 @@ int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         char buf[MAXPATH] = {};
         memcpy(buf, line.c_str(), line.size());
         struct work work;
-        linetowork(buf, line.size(), csa->delim, &work);
-        xattrs_cleanup(&work.xattrs);
+        struct entry_data ed;
+        linetowork(buf, line.size(), csa->delim, &work, &ed);
+        xattrs_cleanup(&ed.xattrs);
 
         // extract the basename from the entry name
         char *bufbase = basename(work.name);
@@ -291,19 +293,19 @@ int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
             continue;
         }
 
-        if (ca.st.st_mode != work.statuso.st_mode) {
+        if (ca.st.st_mode != ed.statuso.st_mode) {
             std::cerr << "Permission mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
             continue;
         }
 
-        if (ca.st.st_uid != work.statuso.st_uid) {
+        if (ca.st.st_uid != ed.statuso.st_uid) {
             std::cerr << "UID mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
             continue;
         }
 
-        if (ca.st.st_gid != work.statuso.st_gid) {
+        if (ca.st.st_gid != ed.statuso.st_gid) {
             std::cerr << "GID mismatch on entry \"" << bufbase << "\""
                       << " in " << db_name << std::endl;
             continue;
@@ -331,11 +333,11 @@ int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
 }
 
 // find first occurance of the delimiter
-std::string::size_type parsefirst(const char delim, struct StanzaStart *work) {
+static std::string::size_type parsefirst(const char delim, struct StanzaStart *work) {
     return (work->first_delim = work->line.find(delim));
 }
 
-int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct CheckStanzaArgs *csa = static_cast <struct CheckStanzaArgs *> (args);
     csa->correct = false;
 

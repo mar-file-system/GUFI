@@ -477,54 +477,55 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         const std::size_t bucket = bucket_rng(gen);
 
         struct work work;
+        struct entry_data ed;
 
         SNPRINTF(work.name, MAXPATH, "%s", s.str().c_str());
-        SNPRINTF(work.type, 2, "f");
-        work.linkname[0] = '\0';
+        ed.type = 'f';
+        ed.linkname[0] = '\0';
 
         struct xattr xattr;
         xattr.name_len = SNPRINTF(xattr.name, sizeof(xattr.name), "xattr %zu", i);
         xattr.value_len = SNPRINTF(xattr.value, sizeof(xattr.value), "value %zu", i);
 
-        work.xattrs.pairs = &xattr;
-        work.xattrs.name_len = xattr.name_len;
-        work.xattrs.len = xattr.name_len + xattr.value_len;
-        work.xattrs.count = 1;
+        ed.xattrs.pairs = &xattr;
+        ed.xattrs.name_len = xattr.name_len;
+        ed.xattrs.len = xattr.name_len + xattr.value_len;
+        ed.xattrs.count = 1;
 
-        SNPRINTF(work.osstext1, MAXXATTR, "osstext1 %zu", i);
-        SNPRINTF(work.osstext2, MAXXATTR, "osstext2 %zu", i);
+        SNPRINTF(ed.osstext1, MAXXATTR, "osstext1 %zu", i);
+        SNPRINTF(ed.osstext2, MAXXATTR, "osstext2 %zu", i);
 
-        work.statuso.st_ino = rng(gen);
-        work.statuso.st_mode = (arg->settings->permissions > 0777)?(rng(gen) & 0777):arg->settings->permissions;
-        work.statuso.st_nlink = 1;
-        work.statuso.st_uid = arg->uid;
-        work.statuso.st_gid = arg->gid;
-        work.statuso.st_size = static_cast <off_t> (size_rngs[bucket](gen));
-        work.statuso.st_blksize = arg->settings->blocksize;
-        work.statuso.st_blocks = work.statuso.st_size / work.statuso.st_blksize;
-        work.statuso.st_ctime = time_rng(gen);
-        work.statuso.st_atime = std::max(work.statuso.st_ctime, (time_t) time_rng(gen));
-        work.statuso.st_mtime = std::max(work.statuso.st_ctime, (time_t) time_rng(gen));
+        ed.statuso.st_ino = rng(gen);
+        ed.statuso.st_mode = (arg->settings->permissions > 0777)?(rng(gen) & 0777):arg->settings->permissions;
+        ed.statuso.st_nlink = 1;
+        ed.statuso.st_uid = arg->uid;
+        ed.statuso.st_gid = arg->gid;
+        ed.statuso.st_size = static_cast <off_t> (size_rngs[bucket](gen));
+        ed.statuso.st_blksize = arg->settings->blocksize;
+        ed.statuso.st_blocks = ed.statuso.st_size / ed.statuso.st_blksize;
+        ed.statuso.st_ctime = time_rng(gen);
+        ed.statuso.st_atime = std::max(ed.statuso.st_ctime, (time_t) time_rng(gen));
+        ed.statuso.st_mtime = std::max(ed.statuso.st_ctime, (time_t) time_rng(gen));
 
-        work.pinode     = rng(gen);
-        work.crtime     = rng(gen);
-        work.ossint1    = rng(gen);
-        work.ossint2    = rng(gen);
-        work.ossint3    = rng(gen);
-        work.ossint4    = rng(gen);
+        work.pinode   = rng(gen);
+        ed.crtime     = rng(gen);
+        ed.ossint1    = rng(gen);
+        ed.ossint2    = rng(gen);
+        ed.ossint3    = rng(gen);
+        ed.ossint4    = rng(gen);
 
         // add this data to the summary
-        sumit(&summary, &work);
+        sumit(&summary, &ed);
 
         // insert the row
-        insertdbgo(&work, on_disk, res);
+        insertdbgo(&work, &ed, on_disk, res);
 
         // store stats in local variables first
         // to prevent lock contention and
         // because nothing is inserted until
         // the transaction ends
-        curr_size += work.statuso.st_size;
-        curr_sizes.push_back(work.statuso.st_size);
+        curr_size += ed.statuso.st_size;
+        curr_sizes.push_back(ed.statuso.st_size);
     }
 
     // complete the transaction
@@ -553,42 +554,43 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
 
     // summarize this directory
     struct work work;
+    struct entry_data ed;
 
     SNPRINTF(work.name, MAXPATH, "%s", arg->path.c_str());
-    SNPRINTF(work.type, 2, "d");
-    work.linkname[0] = '\0';
+    ed.type = 'd';
+    ed.linkname[0] = '\0';
 
     struct xattr xattr;
     xattr.name_len = SNPRINTF(xattr.name, sizeof(xattr.name), "xattr.key");
     xattr.value_len = SNPRINTF(xattr.value, sizeof(xattr.value), "xattr.value");
 
-    work.xattrs.pairs = &xattr;
-    work.xattrs.name_len = xattr.name_len;
-    work.xattrs.len = xattr.name_len + xattr.value_len;
-    work.xattrs.count = 1;
+    ed.xattrs.pairs = &xattr;
+    ed.xattrs.name_len = xattr.name_len;
+    ed.xattrs.len = xattr.name_len + xattr.value_len;
+    ed.xattrs.count = 1;
 
-    SNPRINTF(work.osstext1, MAXXATTR, "osstext1");
-    SNPRINTF(work.osstext2, MAXXATTR, "osstext2");
+    SNPRINTF(ed.osstext1, MAXXATTR, "osstext1");
+    SNPRINTF(ed.osstext2, MAXXATTR, "osstext2");
 
-    work.statuso.st_ino = rng(gen);
-    work.statuso.st_mode = 0775;
-    work.statuso.st_nlink = 1;
-    work.statuso.st_uid = arg->uid;
-    work.statuso.st_gid = arg->gid;
-    work.statuso.st_size = curr_size;
-    work.statuso.st_blksize = rng(gen);
-    work.statuso.st_blocks = rng(gen);
-    work.statuso.st_ctime = time_rng(gen);
-    work.statuso.st_atime = work.statuso.st_ctime + time_rng(gen);
-    work.statuso.st_mtime = work.statuso.st_ctime + time_rng(gen);
+    ed.statuso.st_ino = rng(gen);
+    ed.statuso.st_mode = 0775;
+    ed.statuso.st_nlink = 1;
+    ed.statuso.st_uid = arg->uid;
+    ed.statuso.st_gid = arg->gid;
+    ed.statuso.st_size = curr_size;
+    ed.statuso.st_blksize = rng(gen);
+    ed.statuso.st_blocks = rng(gen);
+    ed.statuso.st_ctime = time_rng(gen);
+    ed.statuso.st_atime = ed.statuso.st_ctime + time_rng(gen);
+    ed.statuso.st_mtime = ed.statuso.st_ctime + time_rng(gen);
 
-    work.crtime  = rng(gen);
-    work.ossint1 = rng(gen);
-    work.ossint2 = rng(gen);
-    work.ossint3 = rng(gen);
-    work.ossint4 = rng(gen);
+    ed.crtime  = rng(gen);
+    ed.ossint1 = rng(gen);
+    ed.ossint2 = rng(gen);
+    ed.ossint3 = rng(gen);
+    ed.ossint4 = rng(gen);
 
-    insertsumdb(on_disk, work.name, &work, &summary);
+    insertsumdb(on_disk, work.name, &work, &ed, &summary);
 
     sqlite3_close(on_disk);
 

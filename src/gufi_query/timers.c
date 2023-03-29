@@ -118,6 +118,7 @@ static void print_descend(struct OutputBuffers *obufs, const size_t id,
 void timestamps_print(struct OutputBuffers *obs, const size_t id,
                       timestamps_t *ts, void *dir, void *db) {
     thread_timestamp_start(ts->tts, output_timestamps);
+    print_timer          (obs, id, "lstat",              &ts->tts[tts_lstat_call]);
     print_timer          (obs, id, "opendir",            &ts->tts[tts_opendir_call]);
     if (dir) {
         print_timer      (obs, id, "attachdb",           &ts->tts[tts_attachdb_call]);
@@ -138,7 +139,6 @@ void timestamps_print(struct OutputBuffers *obs, const size_t id,
             print_descend(obs, id, "strncmp",            &ts->dts[dts_strncmp_call]);
             print_descend(obs, id, "strncmp_branch",     &ts->dts[dts_strncmp_branch]);
             print_descend(obs, id, "snprintf",           &ts->dts[dts_snprintf_call]);
-            print_descend(obs, id, "lstat",              &ts->dts[dts_lstat_call]);
             print_descend(obs, id, "isdir",              &ts->dts[dts_isdir_cmp]);
             print_descend(obs, id, "isdir_branch",       &ts->dts[dts_isdir_branch]);
             print_descend(obs, id, "access",             &ts->dts[dts_access_call]);
@@ -172,6 +172,7 @@ static uint64_t nsec_descend(sll_t *sll) {
 
 void timestamps_sum(total_time_t *tt, timestamps_t *ts) {
     pthread_mutex_lock(&tt->mutex);
+    tt->lstat             += nsec(&ts->tts[tts_lstat_call]);
     tt->opendir           += nsec(&ts->tts[tts_opendir_call]);
     tt->attachdb          += nsec(&ts->tts[tts_attachdb_call]);
     tt->xattrprep         += nsec(&ts->tts[tts_xattrprep_call]);
@@ -188,7 +189,6 @@ void timestamps_sum(total_time_t *tt, timestamps_t *ts) {
     tt->strncmp           += nsec_descend(&ts->dts[dts_strncmp_call]);
     tt->strncmp_branch    += nsec_descend(&ts->dts[dts_strncmp_branch]);
     tt->snprintf          += nsec_descend(&ts->dts[dts_snprintf_call]);
-    tt->lstat             += nsec_descend(&ts->dts[dts_lstat_call]);
     tt->isdir             += nsec_descend(&ts->dts[dts_isdir_cmp]);
     tt->isdir_branch      += nsec_descend(&ts->dts[dts_isdir_branch]);
     tt->access            += nsec_descend(&ts->dts[dts_access_call]);
