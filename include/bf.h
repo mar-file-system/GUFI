@@ -312,6 +312,7 @@ typedef enum {
    CLOSE_DB  = 0x04,
 } CleanUpTasks;
 
+/* minimum data needs to be passed around between threads */
 struct work {
    char*         root;         /* parent of the the top level directory */
    size_t        root_len;
@@ -321,10 +322,15 @@ struct work {
    char          sqlite3_name[MAXPATH];  /* some characters need to be converted for sqlite3, but opendir must use the unconverted version */
    size_t        sqlite3_name_len;
    size_t        basename_len; /* can usually get through readdir */
-   char          type[2];
+   long long int pinode;
+   size_t        recursion_level;
+};
+
+/* extra data used by entries that does not depend on data from other directories */
+struct entry_data {
+   char          type;
    char          linkname[MAXPATH];
    struct stat   statuso;
-   long long int pinode;
    long long int offset;
    struct xattrs xattrs;
    int           crtime;
@@ -336,7 +342,6 @@ struct work {
    char          osstext2[MAXXATTR];
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
-   size_t        recursion_level;
 };
 
 extern char fielddelim[];

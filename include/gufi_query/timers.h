@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 typedef struct total_time {
     pthread_mutex_t mutex;
 
+    uint64_t lstat;
     uint64_t opendir;
     uint64_t attachdb;
     uint64_t addqueryfuncs;
@@ -93,7 +94,6 @@ typedef struct total_time {
     uint64_t strncmp;
     uint64_t strncmp_branch;
     uint64_t snprintf;
-    uint64_t lstat;
     uint64_t isdir;
     uint64_t isdir_branch;
     uint64_t access;
@@ -127,7 +127,6 @@ enum {
     dts_strncmp_call,
     dts_strncmp_branch,
     dts_snprintf_call,
-    dts_lstat_call,
     dts_isdir_cmp,
     dts_isdir_branch,
     dts_access_call,
@@ -167,7 +166,8 @@ enum {
 /* ************************************************************************* */
 /* thread timestamp types (used to index into array) */
 enum {
-    tts_opendir_call = 0,
+    tts_lstat_call = 0,
+    tts_opendir_call,
     tts_attachdb_call,
     tts_addqueryfuncs_call,
     tts_xattrprep_call,

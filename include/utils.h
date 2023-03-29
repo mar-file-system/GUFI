@@ -95,13 +95,13 @@ extern struct globalthreadstate gts;
 
 extern struct sum sumout;
 
-int printits(struct input *in, struct work *pwork,int ptid);
+int printits(struct input *in, struct work *pwork, struct entry_data *data, int ptid);
 
 int zeroit(struct sum *summary);
 
-int sumit(struct sum *summary, struct work *pwork);
+int sumit(struct sum *summary, struct entry_data *data);
 
-int tsumit (struct sum *sumin,struct sum *smout);
+int tsumit (struct sum *sumin, struct sum *smout);
 
 // given a possibly-multi-level path of directories (final component is
 // also a dir), create the parent dirs all the way down.
@@ -118,14 +118,17 @@ typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
 
+typedef int (*processnondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+
 /*
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function
  */
-int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
-            struct input *in, DIR *dir, trie_t *skip, const int skip_db,
+int descend(QPTPool_t *ctx, const size_t id, void *args,
+            struct input *in, struct work *work, ino_t inode,
+            DIR *dir, trie_t *skip, const int skip_db,
             const int stat_entries,  QPTPoolFunc_t processdir,
-            int (*process_nondir)(struct work *nondir, void *nondir_args), void *nondir_args,
+            processnondir_f processnondir, void *nondir_args,
             size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed);
 
 /* convert a mode to a human readable string */

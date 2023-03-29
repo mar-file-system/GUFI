@@ -101,6 +101,7 @@ struct NonDirArgs {
     struct template_db *temp_db;
     struct template_db *temp_xattr;
     struct work *work;
+    struct entry_data ed;
 
     /* index path */
     char topath[MAXPATH];
@@ -121,12 +122,21 @@ struct NonDirArgs {
     sll_t xattr_db_list;
 };
 
-static int process_nondir(struct work *entry, void *args) {
+static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) args;
     struct input *in = nda->in;
 
+    if (lstat(entry->name, &ed->statuso) != 0) {
+        return 1;
+    }
+
+    if (ed->type == 'l') {
+        readlink(entry->name, ed->linkname, MAXPATH);
+        /* error? */
+    }
+
     if (in->external_enabled) {
-        insertdbgo_xattrs(in, &nda->work->statuso, entry,
+        insertdbgo_xattrs(in, &nda->ed.statuso, entry, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);
@@ -141,10 +151,10 @@ static int process_nondir(struct work *entry, void *args) {
     /* e.name_len = */ SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
 
     /* update summary table */
-    sumit(&nda->summary, entry);
+    sumit(&nda->summary, ed);
 
     /* add entry + xattr names into bulk insert */
-    insertdbgo(entry, nda->db, nda->entries_res);
+    insertdbgo(entry, ed, nda->db, nda->entries_res);
 
     return 0;
 }
@@ -157,6 +167,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
 
+    size_t nondirs_processed = 0;
+
     #if BENCHMARK
     pthread_mutex_lock(&print_mutex);
     pa->total_dirs++;
@@ -168,10 +180,18 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.temp_db    = &pa->db;
     nda.temp_xattr = &pa->xattr;
     nda.work       = (struct work *) data;
+    memset(&nda.ed, 0, sizeof(nda.ed));
+    nda.ed.type    = 'd';
 
     DIR *dir = opendir(nda.work->name);
     if (!dir) {
         fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
+        rc = 1;
+        goto cleanup;
+    }
+
+    if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
+        fprintf(stderr, "Could not stat directory \"%s\"\n", nda.work->name);
         rc = 1;
         goto cleanup;
     }
@@ -200,7 +220,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                DBNAME, DBNAME_LEN);
 
     /* copy the template file */
-    if (copy_template(nda.temp_db, dbname, nda.work->statuso.st_uid, nda.work->statuso.st_gid)) {
+    if (copy_template(nda.temp_db, dbname, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid)) {
         rc = 1;
         goto cleanup;
     }
@@ -234,10 +254,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     startdb(nda.db);
-    size_t nondirs_processed = 0;
-    descend(ctx, id, nda.work, args, in, dir, pa->skip, 0, 1,
-            processdir, process_nondir, &nda,
-            NULL, NULL, NULL, &nondirs_processed);
+    descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir, pa->skip, 0, 0,
+            processdir, process_nondir, &nda, NULL, NULL, NULL, &nondirs_processed);
     stopdb(nda.db);
 
     /* entries and xattrs have been inserted */
@@ -250,28 +268,29 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         insertdbfin(nda.xattr_files_res);
 
         /* pull this directory's xattrs because they were not pulled by the parent */
-        xattrs_setup(&nda.work->xattrs);
-        xattrs_get(nda.work->name, &nda.work->xattrs);
+        xattrs_setup(&nda.ed.xattrs);
+        xattrs_get(nda.work->name, &nda.ed.xattrs);
 
         /* directory xattrs go into the same table as entries xattrs */
-        insertdbgo_xattrs_avail(nda.work, nda.xattrs_res);
+        insertdbgo_xattrs_avail(&nda.ed, nda.xattrs_res);
         insertdbfin(nda.xattrs_res);
     }
     insertdbfin(nda.entries_res);
 
     /* insert this directory's summary data */
     /* the xattrs go into the xattrs_avail table in db.db */
-    insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len, nda.work, &nda.summary);
+    insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
+                nda.work, &nda.ed, &nda.summary);
     if (in->external_enabled) {
-        xattrs_cleanup(&nda.work->xattrs);
+        xattrs_cleanup(&nda.ed.xattrs);
     }
 
     closedb(nda.db);
     nda.db = NULL;
 
     /* ignore errors */
-    chmod(nda.topath, nda.work->statuso.st_mode);
-    chown(nda.topath, nda.work->statuso.st_uid, nda.work->statuso.st_gid);
+    chmod(nda.topath, nda.ed.statuso.st_mode);
+    chown(nda.topath, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
 
     closedir(dir);
 
@@ -330,15 +349,17 @@ struct work *validate_source(struct input *in, char *path) {
         return NULL;
     }
 
+    struct stat st;
+
     /* get input path metadata */
-    if (lstat(path, &root->statuso) < 0) {
+    if (lstat(path, &st) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
         free(root);
         return NULL;
     }
 
     /* check that the input path is a directory */
-    if (!S_ISDIR(root->statuso.st_mode)) {
+    if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
         free(root);
         return NULL;
@@ -347,7 +368,6 @@ struct work *validate_source(struct input *in, char *path) {
     root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
     root->root = path;
     root->root_len = dirname_len(path, root->name_len);
-    root->type[0] = 'd';
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];

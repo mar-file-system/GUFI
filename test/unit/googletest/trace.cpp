@@ -101,38 +101,36 @@ static const char EXPECTED_XATTRS_STR[] = "xattr.key0\x1fxattr.val0\x1f"
                                           "xattr.key1\x1fxattr.val1\x1f";
 static const size_t EXPECTED_XATTRS_STR_LEN = sizeof(EXPECTED_XATTRS_STR) - 1;
 
-static struct work *get_work() {
-    struct work *work = new struct work;
-    work->name_len           = snprintf(work->name, sizeof(work->name), "name");
-    snprintf(work->type,     sizeof(work->type), "t");
-    snprintf(work->linkname, sizeof(work->linkname), "link");
-    work->statuso.st_ino     = 0xfedc;
-    work->statuso.st_mode    = 0777;
-    work->statuso.st_nlink   = 2048;
-    work->statuso.st_uid     = 1001;
-    work->statuso.st_gid     = 1001;
-    work->statuso.st_size    = 4096;
-    work->statuso.st_blksize = 4096;
-    work->statuso.st_blocks  = 1;
-    work->statuso.st_atime   = 0x1234;
-    work->statuso.st_mtime   = 0x5678;
-    work->statuso.st_ctime   = 0x9abc;
-    work->xattrs.pairs       = (struct xattr *) EXPECTED_XATTR;
-    work->xattrs.name_len    = 0;
-    work->xattrs.len         = 0;
-    work->xattrs.count       = 2;
-    work->crtime             = 0x9abc;
-    work->ossint1            = 1;
-    work->ossint2            = 2;
-    work->ossint3            = 3;
-    work->ossint4            = 4;
-    snprintf(work->osstext1, sizeof(work->osstext1), "osstext1");
-    snprintf(work->osstext2, sizeof(work->osstext2), "osstext2");
-    work->pinode             = 0xdef0;
-    return work;
+static void get_work(struct work *work, struct entry_data *ed) {
+    work->name_len         = snprintf(work->name, sizeof(work->name), "name");
+    ed->type               = 't';
+    snprintf(ed->linkname, sizeof(ed->linkname), "link");
+    ed->statuso.st_ino     = 0xfedc;
+    ed->statuso.st_mode    = 0777;
+    ed->statuso.st_nlink   = 2048;
+    ed->statuso.st_uid     = 1001;
+    ed->statuso.st_gid     = 1001;
+    ed->statuso.st_size    = 4096;
+    ed->statuso.st_blksize = 4096;
+    ed->statuso.st_blocks  = 1;
+    ed->statuso.st_atime   = 0x1234;
+    ed->statuso.st_mtime   = 0x5678;
+    ed->statuso.st_ctime   = 0x9abc;
+    ed->xattrs.pairs       = (struct xattr *) EXPECTED_XATTR;
+    ed->xattrs.name_len    = 0;
+    ed->xattrs.len         = 0;
+    ed->xattrs.count       = 2;
+    ed->crtime             = 0x9abc;
+    ed->ossint1            = 1;
+    ed->ossint2            = 2;
+    ed->ossint3            = 3;
+    ed->ossint4            = 4;
+    snprintf(ed->osstext1, sizeof(ed->osstext1), "osstext1");
+    snprintf(ed->osstext2, sizeof(ed->osstext2), "osstext2");
+    work->pinode           = 0xdef0;
 }
 
-static int to_string(char *line, const size_t size, struct work *work) {
+static int to_string(char *line, const size_t size, struct work *work, struct entry_data *ed) {
     const int part1 = snprintf(line, size,
                                "%s%c"
                                "%c%c"
@@ -148,20 +146,20 @@ static int to_string(char *line, const size_t size, struct work *work) {
                                "%ld%c"
                                "%ld%c"
                                "%s%c",
-                               work->name,               delim[0],
-                               work->type[0],            delim[0],
-                               work->statuso.st_ino,     delim[0],
-                               work->statuso.st_mode,    delim[0],
-                               work->statuso.st_nlink,   delim[0],
-                               work->statuso.st_uid,     delim[0],
-                               work->statuso.st_gid,     delim[0],
-                               work->statuso.st_size,    delim[0],
-                               work->statuso.st_blksize, delim[0],
-                               work->statuso.st_blocks,  delim[0],
-                               work->statuso.st_atime,   delim[0],
-                               work->statuso.st_mtime,   delim[0],
-                               work->statuso.st_ctime,   delim[0],
-                               work->linkname,           delim[0]);
+                               work->name,             delim[0],
+                               ed->type,               delim[0],
+                               ed->statuso.st_ino,     delim[0],
+                               ed->statuso.st_mode,    delim[0],
+                               ed->statuso.st_nlink,   delim[0],
+                               ed->statuso.st_uid,     delim[0],
+                               ed->statuso.st_gid,     delim[0],
+                               ed->statuso.st_size,    delim[0],
+                               ed->statuso.st_blksize, delim[0],
+                               ed->statuso.st_blocks,  delim[0],
+                               ed->statuso.st_atime,   delim[0],
+                               ed->statuso.st_mtime,   delim[0],
+                               ed->statuso.st_ctime,   delim[0],
+                               ed->linkname,           delim[0]);
 
     line += part1;
 
@@ -179,15 +177,15 @@ static int to_string(char *line, const size_t size, struct work *work) {
                                "%s%c"
                                "%lld%c"
                                "\n",
-                                               delim[0],
-                               work->crtime,   delim[0],
-                               work->ossint1,  delim[0],
-                               work->ossint2,  delim[0],
-                               work->ossint3,  delim[0],
-                               work->ossint4,  delim[0],
-                               work->osstext1, delim[0],
-                               work->osstext2, delim[0],
-                               work->pinode,   delim[0]);
+                                             delim[0],
+                               ed->crtime,   delim[0],
+                               ed->ossint1,  delim[0],
+                               ed->ossint2,  delim[0],
+                               ed->ossint3,  delim[0],
+                               ed->ossint4,  delim[0],
+                               ed->osstext1, delim[0],
+                               ed->osstext2, delim[0],
+                               work->pinode, delim[0]);
 
     line += part2;
     *line = '\0';
@@ -196,15 +194,16 @@ static int to_string(char *line, const size_t size, struct work *work) {
 }
 
 TEST(trace, worktofile) {
-    struct work *work = get_work();
-    ASSERT_NE(work, nullptr);
+    struct work work;
+    struct entry_data ed;
+    get_work(&work, &ed);
 
     // write a known struct to a file
     char buf[4096];
     FILE *file = fmemopen(buf, sizeof(buf), "w");
     ASSERT_NE(file, nullptr);
 
-    const int written = worktofile(file, delim, 0, work);
+    const int written = worktofile(file, delim, 0, &work, &ed);
     fclose(file);
 
     ASSERT_GT(written, 0);
@@ -212,8 +211,7 @@ TEST(trace, worktofile) {
 
     // generate the string to compare with
     char line[4096];
-    const int rc = to_string(line, sizeof(line), work);
-    delete work;
+    const int rc = to_string(line, sizeof(line), &work, &ed);
 
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
@@ -221,51 +219,52 @@ TEST(trace, worktofile) {
     EXPECT_STREQ(buf, line);
 }
 
-#define COMPARE(src, dst)                                          \
-    EXPECT_STREQ(dst.name,            src->name);                  \
-    EXPECT_STREQ(dst.type,            src->type);                  \
-    EXPECT_EQ(dst.statuso.st_ino,     src->statuso.st_ino);        \
-    EXPECT_EQ(dst.statuso.st_mode,    src->statuso.st_mode);       \
-    EXPECT_EQ(dst.statuso.st_nlink,   src->statuso.st_nlink);      \
-    EXPECT_EQ(dst.statuso.st_uid,     src->statuso.st_uid);        \
-    EXPECT_EQ(dst.statuso.st_gid,     src->statuso.st_gid);        \
-    EXPECT_EQ(dst.statuso.st_size,    src->statuso.st_size);       \
-    EXPECT_EQ(dst.statuso.st_blksize, src->statuso.st_blksize);    \
-    EXPECT_EQ(dst.statuso.st_blocks,  src->statuso.st_blocks);     \
-    EXPECT_EQ(dst.statuso.st_atime,   src->statuso.st_atime);      \
-    EXPECT_EQ(dst.statuso.st_mtime,   src->statuso.st_mtime);      \
-    EXPECT_EQ(dst.statuso.st_ctime,   src->statuso.st_ctime);      \
-    EXPECT_STREQ(dst.linkname,        src->linkname);              \
-    EXPECT_EQ(dst.crtime,             src->crtime);                \
-    EXPECT_EQ(dst.ossint1,            src->ossint1);               \
-    EXPECT_EQ(dst.ossint2,            src->ossint2);               \
-    EXPECT_EQ(dst.ossint3,            src->ossint3);               \
-    EXPECT_EQ(dst.ossint4,            src->ossint4);               \
-    EXPECT_STREQ(dst.osstext1,        src->osstext1);              \
-    EXPECT_STREQ(dst.osstext2,        src->osstext2);              \
-    EXPECT_EQ(dst.pinode,             src->pinode);                \
+#define COMPARE(src, src_ed, dst, dst_ed)                               \
+    EXPECT_STREQ(dst.name,               src.name);                     \
+    EXPECT_EQ(dst_ed.type,               src_ed.type);                  \
+    EXPECT_EQ(dst_ed.statuso.st_ino,     src_ed.statuso.st_ino);        \
+    EXPECT_EQ(dst_ed.statuso.st_mode,    src_ed.statuso.st_mode);       \
+    EXPECT_EQ(dst_ed.statuso.st_nlink,   src_ed.statuso.st_nlink);      \
+    EXPECT_EQ(dst_ed.statuso.st_uid,     src_ed.statuso.st_uid);        \
+    EXPECT_EQ(dst_ed.statuso.st_gid,     src_ed.statuso.st_gid);        \
+    EXPECT_EQ(dst_ed.statuso.st_size,    src_ed.statuso.st_size);       \
+    EXPECT_EQ(dst_ed.statuso.st_blksize, src_ed.statuso.st_blksize);    \
+    EXPECT_EQ(dst_ed.statuso.st_blocks,  src_ed.statuso.st_blocks);     \
+    EXPECT_EQ(dst_ed.statuso.st_atime,   src_ed.statuso.st_atime);      \
+    EXPECT_EQ(dst_ed.statuso.st_mtime,   src_ed.statuso.st_mtime);      \
+    EXPECT_EQ(dst_ed.statuso.st_ctime,   src_ed.statuso.st_ctime);      \
+    EXPECT_STREQ(dst_ed.linkname,        src_ed.linkname);              \
+    EXPECT_EQ(dst_ed.crtime,             src_ed.crtime);                \
+    EXPECT_EQ(dst_ed.ossint1,            src_ed.ossint1);               \
+    EXPECT_EQ(dst_ed.ossint2,            src_ed.ossint2);               \
+    EXPECT_EQ(dst_ed.ossint3,            src_ed.ossint3);               \
+    EXPECT_EQ(dst_ed.ossint4,            src_ed.ossint4);               \
+    EXPECT_STREQ(dst_ed.osstext1,        src_ed.osstext1);              \
+    EXPECT_STREQ(dst_ed.osstext2,        src_ed.osstext2);              \
+    EXPECT_EQ(dst.pinode,                src.pinode);                   \
 
 TEST(trace, linetowork) {
-    struct work *src = get_work();
+    struct work src;
+    struct entry_data src_ed;
+    get_work(&src, &src_ed);
 
     // write the known struct to a string using an alternative write function
     char line[4096];
-    const int rc = to_string(line, sizeof(line), src);
+    const int rc = to_string(line, sizeof(line), &src, &src_ed);
     ASSERT_GT(rc, -1);
     ASSERT_LT(rc, (int) sizeof(line));
 
     // read the string
     struct work work;
-    EXPECT_EQ(linetowork(line, rc, delim, &work), 0);
+    struct entry_data ed;
+    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed), 0);
 
-    COMPARE(src, work);
+    COMPARE(src, src_ed, work, ed);
 
-    EXPECT_STREQ(work.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
-    EXPECT_STREQ(work.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
-    EXPECT_STREQ(work.xattrs.pairs[1].name,  EXPECTED_XATTRS.pairs[1].name);
-    EXPECT_STREQ(work.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
+    EXPECT_STREQ(ed.xattrs.pairs[0].name,  EXPECTED_XATTRS.pairs[0].name);
+    EXPECT_STREQ(ed.xattrs.pairs[0].value, EXPECTED_XATTRS.pairs[0].value);
+    EXPECT_STREQ(ed.xattrs.pairs[1].name,  EXPECTED_XATTRS.pairs[1].name);
+    EXPECT_STREQ(ed.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
 
-    xattrs_cleanup(&work.xattrs);
-
-    delete src;
+    xattrs_cleanup(&ed.xattrs);
 }

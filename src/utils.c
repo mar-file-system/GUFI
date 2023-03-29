@@ -82,7 +82,7 @@ pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
 // global variable to hold per thread state
 struct globalthreadstate gts = {};
 
-int printits(struct input *in, struct work *pwork, int ptid) {
+int printits(struct input *in, struct work *pwork, struct entry_data *ed, int ptid) {
   char  ffielddelim[2];
   FILE *out;
 
@@ -100,43 +100,43 @@ int printits(struct input *in, struct work *pwork, int ptid) {
     SNPRINTF(ffielddelim,2,"%s",in->delim);
   }
 
-  fprintf(out, "%s%s",             pwork->name,               ffielddelim);
-  fprintf(out, "%c%s",             pwork->type[0],            ffielddelim);
-  fprintf(out, "%"STAT_ino"%s",    pwork->statuso.st_ino,     ffielddelim);
-  fprintf(out, "%d%s",             pwork->statuso.st_mode,    ffielddelim);
-  fprintf(out, "%"STAT_nlink"%s",  pwork->statuso.st_nlink,   ffielddelim);
-  fprintf(out, "%d%s",             pwork->statuso.st_uid,     ffielddelim);
-  fprintf(out, "%d%s",             pwork->statuso.st_gid,     ffielddelim);
-  fprintf(out, "%"STAT_size"%s",   pwork->statuso.st_size,    ffielddelim);
-  fprintf(out, "%"STAT_bsize"%s",  pwork->statuso.st_blksize, ffielddelim);
-  fprintf(out, "%"STAT_blocks"%s", pwork->statuso.st_blocks,  ffielddelim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_atime,   ffielddelim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_mtime,   ffielddelim);
-  fprintf(out, "%ld%s",            pwork->statuso.st_ctime,   ffielddelim);
+  fprintf(out, "%s%s",             pwork->name,            ffielddelim);
+  fprintf(out, "%c%s",             ed->type,               ffielddelim);
+  fprintf(out, "%"STAT_ino"%s",    ed->statuso.st_ino,     ffielddelim);
+  fprintf(out, "%d%s",             ed->statuso.st_mode,    ffielddelim);
+  fprintf(out, "%"STAT_nlink"%s",  ed->statuso.st_nlink,   ffielddelim);
+  fprintf(out, "%d%s",             ed->statuso.st_uid,     ffielddelim);
+  fprintf(out, "%d%s",             ed->statuso.st_gid,     ffielddelim);
+  fprintf(out, "%"STAT_size"%s",   ed->statuso.st_size,    ffielddelim);
+  fprintf(out, "%"STAT_bsize"%s",  ed->statuso.st_blksize, ffielddelim);
+  fprintf(out, "%"STAT_blocks"%s", ed->statuso.st_blocks,  ffielddelim);
+  fprintf(out, "%ld%s",            ed->statuso.st_atime,   ffielddelim);
+  fprintf(out, "%ld%s",            ed->statuso.st_mtime,   ffielddelim);
+  fprintf(out, "%ld%s",            ed->statuso.st_ctime,   ffielddelim);
 
 /* we need this field even if its not populated for gufi_trace2index */
 /*
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s%s", pwork->linkname,ffielddelim);
+    fprintf(out, "%s%s", ed->linkname,ffielddelim);
   }
 */
-  fprintf(out, "%s%s", pwork->linkname,ffielddelim);
+  fprintf(out, "%s%s", ed->linkname,ffielddelim);
 
 /* we need this field even if its not populated for gufi_trace2index */
 /*
-  if (pwork->xattrs > 0) {
+  if (ed->xattrs > 0) {
     //printf("xattr: ");
-    fprintf(out,"%s%s",pwork->xattr,ffielddelim);
+    fprintf(out,"%s%s",ed->xattr,ffielddelim);
   }
 */
-  /* fwrite(pwork->xattrs, sizeof(char), pwork->xattrs_len, out); */
+  /* fwrite(ed->xattrs, sizeof(char), ed->xattrs_len, out); */
   fprintf(out,"%s",ffielddelim);
 
   /* this one is for create tiem which posix doesnt have */
   fprintf(out,"%s", ffielddelim);
   /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
   fprintf(out, "%lld%s", pwork->pinode, ffielddelim);
-  fprintf(out, "%d%s", pwork->suspect, ffielddelim);
+  fprintf(out, "%d%s", ed->suspect, ffielddelim);
   fprintf(out,"\n");
   return 0;
 }
@@ -189,93 +189,93 @@ int zeroit(struct sum *summary)
   return 0;
 }
 
-int sumit(struct sum *summary, struct work *pwork) {
+int sumit(struct sum *summary, struct entry_data *ed) {
 
   if (summary->setit == 0) {
-    summary->minuid=pwork->statuso.st_uid;
-    summary->maxuid=pwork->statuso.st_uid;
-    summary->mingid=pwork->statuso.st_gid;
-    summary->maxgid=pwork->statuso.st_gid;
-    summary->minsize=pwork->statuso.st_size;
-    summary->maxsize=pwork->statuso.st_size;;
-    summary->minctime=pwork->statuso.st_ctime;
-    summary->maxctime=pwork->statuso.st_ctime;
-    summary->minmtime=pwork->statuso.st_mtime;
-    summary->maxmtime=pwork->statuso.st_mtime;
-    summary->minatime=pwork->statuso.st_atime;
-    summary->maxatime=pwork->statuso.st_atime;;
-    summary->minblocks=pwork->statuso.st_blocks;
-    summary->maxblocks=pwork->statuso.st_blocks;
-    summary->mincrtime=pwork->crtime;
-    summary->maxcrtime=pwork->crtime;
-    summary->minossint1=pwork->ossint1;
-    summary->maxossint1=pwork->ossint1;
-    summary->totossint1=pwork->ossint1;
-    summary->minossint2=pwork->ossint2;
-    summary->maxossint2=pwork->ossint2;
-    summary->totossint2=pwork->ossint2;
-    summary->minossint3=pwork->ossint3;
-    summary->maxossint3=pwork->ossint3;
-    summary->totossint3=pwork->ossint3;
-    summary->minossint4=pwork->ossint4;
-    summary->maxossint4=pwork->ossint4;
-    summary->totossint4=pwork->ossint4;
+    summary->minuid=ed->statuso.st_uid;
+    summary->maxuid=ed->statuso.st_uid;
+    summary->mingid=ed->statuso.st_gid;
+    summary->maxgid=ed->statuso.st_gid;
+    summary->minsize=ed->statuso.st_size;
+    summary->maxsize=ed->statuso.st_size;;
+    summary->minctime=ed->statuso.st_ctime;
+    summary->maxctime=ed->statuso.st_ctime;
+    summary->minmtime=ed->statuso.st_mtime;
+    summary->maxmtime=ed->statuso.st_mtime;
+    summary->minatime=ed->statuso.st_atime;
+    summary->maxatime=ed->statuso.st_atime;;
+    summary->minblocks=ed->statuso.st_blocks;
+    summary->maxblocks=ed->statuso.st_blocks;
+    summary->mincrtime=ed->crtime;
+    summary->maxcrtime=ed->crtime;
+    summary->minossint1=ed->ossint1;
+    summary->maxossint1=ed->ossint1;
+    summary->totossint1=ed->ossint1;
+    summary->minossint2=ed->ossint2;
+    summary->maxossint2=ed->ossint2;
+    summary->totossint2=ed->ossint2;
+    summary->minossint3=ed->ossint3;
+    summary->maxossint3=ed->ossint3;
+    summary->totossint3=ed->ossint3;
+    summary->minossint4=ed->ossint4;
+    summary->maxossint4=ed->ossint4;
+    summary->totossint4=ed->ossint4;
     summary->setit=1;
   }
-  if (!strncmp(pwork->type,"f",1)) {
+  if (ed->type == 'f') {
      summary->totfiles++;
-     if (pwork->statuso.st_size < summary->minsize) summary->minsize=pwork->statuso.st_size;
-     if (pwork->statuso.st_size > summary->maxsize) summary->maxsize=pwork->statuso.st_size;
-     if (pwork->statuso.st_size <= 1024) summary->totltk++;
-     if (pwork->statuso.st_size > 1024) summary->totmtk++;
-     if (pwork->statuso.st_size <= 1048576) summary->totltm++;
-     if (pwork->statuso.st_size > 1048576) summary->totmtm++;
-     if (pwork->statuso.st_size > 1073741824) summary->totmtg++;
-     if (pwork->statuso.st_size > 1099511627776) summary->totmtt++;
-     summary->totsize=summary->totsize+pwork->statuso.st_size;
+     if (ed->statuso.st_size < summary->minsize) summary->minsize=ed->statuso.st_size;
+     if (ed->statuso.st_size > summary->maxsize) summary->maxsize=ed->statuso.st_size;
+     if (ed->statuso.st_size <= 1024) summary->totltk++;
+     if (ed->statuso.st_size > 1024) summary->totmtk++;
+     if (ed->statuso.st_size <= 1048576) summary->totltm++;
+     if (ed->statuso.st_size > 1048576) summary->totmtm++;
+     if (ed->statuso.st_size > 1073741824) summary->totmtg++;
+     if (ed->statuso.st_size > 1099511627776) summary->totmtt++;
+     summary->totsize=summary->totsize+ed->statuso.st_size;
 
-     if (pwork->statuso.st_blocks < summary->minblocks) summary->minblocks=pwork->statuso.st_blocks;
-     if (pwork->statuso.st_blocks > summary->maxblocks) summary->maxblocks=pwork->statuso.st_blocks;
+     if (ed->statuso.st_blocks < summary->minblocks) summary->minblocks=ed->statuso.st_blocks;
+     if (ed->statuso.st_blocks > summary->maxblocks) summary->maxblocks=ed->statuso.st_blocks;
   }
-  if (!strncmp(pwork->type,"l",1)) {
+  if (ed->type == 'l') {
      summary->totlinks++;
   }
 
-  if (pwork->statuso.st_uid < summary->minuid) summary->minuid=pwork->statuso.st_uid;
-  if (pwork->statuso.st_uid > summary->maxuid) summary->maxuid=pwork->statuso.st_uid;
-  if (pwork->statuso.st_gid < summary->mingid) summary->mingid=pwork->statuso.st_gid;
-  if (pwork->statuso.st_gid > summary->maxgid) summary->maxgid=pwork->statuso.st_gid;
-  if (pwork->statuso.st_ctime < summary->minctime) summary->minctime=pwork->statuso.st_ctime;
-  if (pwork->statuso.st_ctime > summary->maxctime) summary->maxctime=pwork->statuso.st_ctime;
-  if (pwork->statuso.st_mtime < summary->minmtime) summary->minmtime=pwork->statuso.st_mtime;
-  if (pwork->statuso.st_mtime > summary->maxmtime) summary->maxmtime=pwork->statuso.st_mtime;
-  if (pwork->statuso.st_atime < summary->minatime) summary->minatime=pwork->statuso.st_atime;
-  if (pwork->statuso.st_atime > summary->maxatime) summary->maxatime=pwork->statuso.st_atime;
-  if (pwork->crtime < summary->mincrtime) summary->mincrtime=pwork->crtime;
-  if (pwork->crtime > summary->maxcrtime) summary->maxcrtime=pwork->crtime;
+  if (ed->statuso.st_uid < summary->minuid) summary->minuid=ed->statuso.st_uid;
+  if (ed->statuso.st_uid > summary->maxuid) summary->maxuid=ed->statuso.st_uid;
+  if (ed->statuso.st_gid < summary->mingid) summary->mingid=ed->statuso.st_gid;
+  if (ed->statuso.st_gid > summary->maxgid) summary->maxgid=ed->statuso.st_gid;
+  if (ed->statuso.st_ctime < summary->minctime) summary->minctime=ed->statuso.st_ctime;
+  if (ed->statuso.st_ctime > summary->maxctime) summary->maxctime=ed->statuso.st_ctime;
+  if (ed->statuso.st_mtime < summary->minmtime) summary->minmtime=ed->statuso.st_mtime;
+  if (ed->statuso.st_mtime > summary->maxmtime) summary->maxmtime=ed->statuso.st_mtime;
+  if (ed->statuso.st_atime < summary->minatime) summary->minatime=ed->statuso.st_atime;
+  if (ed->statuso.st_atime > summary->maxatime) summary->maxatime=ed->statuso.st_atime;
+  if (ed->crtime < summary->mincrtime) summary->mincrtime=ed->crtime;
+  if (ed->crtime > summary->maxcrtime) summary->maxcrtime=ed->crtime;
 
-  if (pwork->ossint1 < summary->minossint1) summary->minossint1=pwork->ossint1;
-  if (pwork->ossint1 > summary->maxossint1) summary->maxossint1=pwork->ossint1;
-  summary->totossint1=summary->totossint1+pwork->ossint1;
+  if (ed->ossint1 < summary->minossint1) summary->minossint1=ed->ossint1;
+  if (ed->ossint1 > summary->maxossint1) summary->maxossint1=ed->ossint1;
+  summary->totossint1=summary->totossint1+ed->ossint1;
 
-  if (pwork->ossint2 < summary->minossint2) summary->minossint2=pwork->ossint2;
-  if (pwork->ossint2 > summary->maxossint2) summary->maxossint2=pwork->ossint2;
-  summary->totossint2=summary->totossint2+pwork->ossint2;
+  if (ed->ossint2 < summary->minossint2) summary->minossint2=ed->ossint2;
+  if (ed->ossint2 > summary->maxossint2) summary->maxossint2=ed->ossint2;
+  summary->totossint2=summary->totossint2+ed->ossint2;
 
-  if (pwork->ossint3 < summary->minossint3) summary->minossint3=pwork->ossint3;
-  if (pwork->ossint3 > summary->maxossint3) summary->maxossint3=pwork->ossint3;
-  summary->totossint3=summary->totossint3+pwork->ossint3;
+  if (ed->ossint3 < summary->minossint3) summary->minossint3=ed->ossint3;
+  if (ed->ossint3 > summary->maxossint3) summary->maxossint3=ed->ossint3;
+  summary->totossint3=summary->totossint3+ed->ossint3;
 
-  if (pwork->ossint4 < summary->minossint4) summary->minossint4=pwork->ossint4;
-  if (pwork->ossint4 > summary->maxossint4) summary->maxossint4=pwork->ossint4;
-  summary->totossint4=summary->totossint4+pwork->ossint4;
+  if (ed->ossint4 < summary->minossint4) summary->minossint4=ed->ossint4;
+  if (ed->ossint4 > summary->maxossint4) summary->maxossint4=ed->ossint4;
+  summary->totossint4=summary->totossint4+ed->ossint4;
 
-  summary->totxattr += pwork->xattrs.count;
+  summary->totxattr += ed->xattrs.count;
 
   return 0;
 }
 
-int tsumit(struct sum *sumin,struct sum *smout) {
+int tsumit(struct sum *sumin, struct sum *smout) {
 
   pthread_mutex_lock(&sum_mutex);
 
@@ -504,11 +504,11 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  * into the processdir function will be allocated on the stack
  * instead of on the heap, so do not free it.
  */
-int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
-            struct input *in, DIR *dir,
-            trie_t *skip_names, const int skip_db,
+int descend(QPTPool_t *ctx, const size_t id, void *args,
+            struct input *in, struct work *work, ino_t inode,
+            DIR *dir, trie_t *skip_names, const int skip_db,
             const int stat_entries, QPTPoolFunc_t processdir,
-            int (*process_nondir)(struct work *nondir, void *nondir_args), void *nondir_args,
+            processnondir_f processnondir, void *nondir_args,
             size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed) {
     if (!work) {
         return 1;
@@ -535,9 +535,13 @@ int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
                 continue;
             }
 
-            /* get child path */
             struct work child;
-            memset(&child, 0, sizeof(struct work));
+            memset(&child, 0, sizeof(child));
+
+            struct entry_data child_ed;
+            memset(&child_ed, 0, sizeof(child_ed));
+
+            /* get child path */
             child.name_len = SNFORMAT_S(child.name, MAXPATH, 3,
                                         work->name, work->name_len,
                                         "/", (size_t) 1,
@@ -546,11 +550,11 @@ int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
             child.level = next_level;
             child.root = work->root;
             child.root_len = work->root_len;
-            child.pinode = work->statuso.st_ino;
+            child.pinode = inode;
 
             if (stat_entries) {
                 /* get the child's metadata */
-                if (lstat(child.name, &child.statuso) < 0) {
+                if (lstat(child.name, &child_ed.statuso) < 0) {
                     continue;
                 }
             }
@@ -558,20 +562,22 @@ int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
                 /* only get the child's type - processing thread should stat */
                 switch (dir_child->d_type) {
                     case DT_DIR:
-                        child.statuso.st_mode = S_IFDIR;
+                        child_ed.statuso.st_mode = S_IFDIR;
                         break;
                     case DT_LNK:
-                        child.statuso.st_mode = S_IFLNK;
+                        child_ed.statuso.st_mode = S_IFLNK;
                         break;
                     case DT_REG:
-                        child.statuso.st_mode = S_IFREG;
+                        child_ed.statuso.st_mode = S_IFREG;
+                        break;
+                    default:
                         break;
                 }
             }
 
             /* push subdirectories onto the queue */
-            if (S_ISDIR(child.statuso.st_mode)) {
-                child.type[0] = 'd';
+            if (S_ISDIR(child_ed.statuso.st_mode)) {
+                child_ed.type = 'd';
 
                 if (!in->subdir_limit || (dirs < in->subdir_limit)) {
                     /* make a copy here so that the data can be pushed into the queue */
@@ -606,14 +612,14 @@ int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
                 continue;
             }
             /* non directories */
-            else if (S_ISLNK(child.statuso.st_mode)) {
-                child.type[0] = 'l';
+            else if (S_ISLNK(child_ed.statuso.st_mode)) {
+                child_ed.type = 'l';
                 if (stat_entries) {
-                    readlink(child.name, child.linkname, MAXPATH);
+                    readlink(child.name, child_ed.linkname, MAXPATH);
                 }
             }
-            else if (S_ISREG(child.statuso.st_mode)) {
-                child.type[0] = 'f';
+            else if (S_ISREG(child_ed.statuso.st_mode)) {
+                child_ed.type = 'f';
             }
             else {
                 /* other types are not stored */
@@ -622,16 +628,17 @@ int descend(QPTPool_t *ctx, const size_t id, struct work *work, void *args,
 
             nondirs++;
 
-            if (process_nondir) {
+            if (processnondir) {
                 if (in->external_enabled) {
-                    xattrs_setup(&child.xattrs);
-                    xattrs_get(child.name, &child.xattrs);
+                    xattrs_setup(&child_ed.xattrs);
+                    xattrs_get(child.name, &child_ed.xattrs);
                 }
 
-                processed += !process_nondir(&child, nondir_args);
+                processnondir(&child, &child_ed, nondir_args);
+                processed++;
 
                 if (in->external_enabled) {
-                    xattrs_cleanup(&child.xattrs);
+                    xattrs_cleanup(&child_ed.xattrs);
                 }
             }
         }

@@ -110,6 +110,7 @@ struct PoolArgs {
 static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
 {
     struct work *passmywork = data;
+    struct entry_data ed;
     char dbname[MAXPATH];
     DIR *dir;
     sqlite3 *db;
@@ -124,9 +125,12 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     if (!(dir = opendir(passmywork->name)))
        goto out_free;
 
-    SNPRINTF(passmywork->type,2,"%s","d");
+    if (lstat(passmywork->name, &ed.statuso) != 0) {
+        goto out_free;
+    }
+
     if (in->printing || in->printdir) {
-      printits(in,passmywork,id);
+        printits(in,passmywork,&ed,id);
     }
 
     // push subdirectories into the queue
@@ -145,8 +149,10 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
        trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", in->output, in->delim, 0, 0, 0, id);
        if (trecs<1) {
          // push subdirectories into the queue
-         descend(ctx, id, passmywork, args, in, dir, skip, 0, 1, processdir,
-                   NULL, NULL, NULL, NULL, NULL, NULL);
+         descend(ctx, id, pa,
+                 in, passmywork, ed.statuso.st_ino,
+                 dir, skip, 0, 0, processdir,
+                 NULL, NULL, NULL, NULL, NULL, NULL);
          querytsdb(passmywork->name,&sumin,db,&recs,0);
        } else {
          querytsdb(passmywork->name,&sumin,db,&recs,1);
@@ -169,16 +175,17 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
 int processinit(struct input *in, QPTPool_t * ctx) {
 
      struct work * mywork = malloc(sizeof(struct work));
+     struct stat st;
 
      // process input directory and put it on the queue
      SNPRINTF(mywork->name,MAXPATH,"%s",in->name);
-     lstat(in->name,&mywork->statuso);
+     lstat(in->name,&st);
      if (access(in->name, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 in->name, strerror(errno));
         return 1;
      }
-     if (!S_ISDIR(mywork->statuso.st_mode) ) {
+     if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr,"input-dir '%s' is not a directory\n", in->name);
         return 1;
      }
