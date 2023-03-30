@@ -276,6 +276,17 @@ if (DEP_USE_JEMALLOC)
 endif()
 add_custom_target(install_dependencies ALL COMMAND ${CMAKE_SOURCE_DIR}/contrib/deps/install_deps.sh ${DEP_OPTIONS} "${DEP_DOWNLOAD_PREFIX}" "${DEP_BUILD_PREFIX}" "${DEP_INSTALL_PREFIX}")
 
+# Find zlib
+pkg_search_module(ZLIB zlib)
+if (ZLIB_FOUND)
+  message(STATUS "ZLIB headers located in ${ZLIB_INCLUDEDIR}")
+  message(STATUS "ZLIB libraries located in ${ZLIB_LIBDIR}")
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, zlib")
+  add_definitions(-DHAVE_ZLIB=1)
+else()
+  message(STATUS "ZLIB not found.")
+endif()
+
 # search for FUSE on Linux, or OSXFUSE on OSX
 if (UNIX AND NOT APPLE AND NOT CYGWIN)
   pkg_search_module(FUSE fuse)
@@ -344,6 +355,12 @@ set(COMMON_LIBRARIES
   Threads::Threads
   m
 )
+
+if (ZLIB_FOUND)
+  list(APPEND COMMON_LIBRARIES
+    z
+  )
+endif()
 
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES

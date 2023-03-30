@@ -118,6 +118,12 @@ typedef void(DirFunc)(void*);
 
 int processdirs(DirFunc dir_fn);
 
+int enqueue_work(const int comp, struct work *stack,
+                 QPTPool_t *ctx, const size_t id, QPTPoolFunc_t processdir);
+int dequeue_work(const int comp, void *data,
+                 struct work **heap, struct work *stack);
+int free_work(const int comp, struct work *heap, struct work *stack);
+
 typedef int (*processnondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
 
 /*

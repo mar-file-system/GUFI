@@ -136,7 +136,9 @@ void print_help(const char* prog_name,
       case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
       case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
-
+#if HAVE_ZLIB
+      case 'e': printf("  -e                     compress work items"); break;
+#endif
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -194,6 +196,7 @@ void show_input(struct input* in, int retval) {
    printf("in.skip                     = %s\n",            in->skip);
    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
+   printf("in.compress                 = %d\n",            in->compress);
    printf("\n");
    printf("retval                      = %d\n",    retval);
    printf("\n");
@@ -449,6 +452,12 @@ int parse_cmd_line(int         argc,
       case 'C':
           INSTALL_UINT(in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C");
           break;
+
+#if HAVE_ZLIB
+      case 'e':
+          in->compress = 1;
+          break;
+#endif
 
       case '?':
          // getopt returns '?' when there is a problem.  In this case it

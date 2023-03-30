@@ -67,7 +67,7 @@ set -e
 yum -y install epel-release centos-release-scl
 
 # install libraries
-yum -y install fuse-devel libattr-devel pcre-devel
+yum -y install fuse-devel libattr-devel pcre-devel zlib-devel
 
 # install required packages
 yum -y install attr autoconf cmake3 fuse git llvm-toolset-7 make patch pkgconfig python3 sudo
