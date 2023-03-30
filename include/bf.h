@@ -232,6 +232,9 @@ struct input {
     * probably too big.
     */
    size_t subdir_limit;
+
+   /* compress work items (if compression library was found) */
+   int compress;
 };
 
 void print_help(const char *prog_name,
@@ -314,14 +317,19 @@ typedef enum {
 
 /* minimum data needs to be passed around between threads */
 struct work {
-   char*         root;         /* parent of the the top level directory */
+   #if HAVE_ZLIB
+   int           compressed;             /* is this struct compressed? */
+   size_t        len;                    /* only meaningful if compressed == 1 */
+   #endif
+
+   char*         root;                   /* parent of the the top level directory */
    size_t        root_len;
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;
    char          sqlite3_name[MAXPATH];  /* some characters need to be converted for sqlite3, but opendir must use the unconverted version */
    size_t        sqlite3_name_len;
-   size_t        basename_len; /* can usually get through readdir */
+   size_t        basename_len;           /* can usually get through readdir */
    long long int pinode;
    size_t        recursion_level;
 };
@@ -343,6 +351,12 @@ struct entry_data {
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
 };
+
+#if HAVE_ZLIB
+#define COMPRESS_OPT "e"
+#else
+#define COMPRESS_OPT
+#endif
 
 extern char fielddelim[];
 

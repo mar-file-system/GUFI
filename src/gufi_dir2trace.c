@@ -125,20 +125,24 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
-    struct work *work = (struct work *) data;
+    struct work work_src;
+    struct work *work = NULL;
     struct entry_data ed;
+    int rc = 0;
+
+    dequeue_work(in->compress, data, &work, &work_src);
 
     DIR *dir = opendir(work->name);
     if (!dir) {
-        free(data);
-        return 1;
+        rc = 1;
+        goto cleanup;
     }
 
     memset(&ed, 0, sizeof(ed));
     if (lstat(work->name, &ed.statuso) != 0) {
         fprintf(stderr, "Could not stat directory \"%s\"\n", work->name);
-        free(data);
-        return 1;
+        rc = 1;
+        goto cleanup;
     }
 
     /* get source directory xattrs */
@@ -171,10 +175,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             processdir, process_nondir, &nda,
             NULL, NULL, NULL, nondirs_processed);
 
+  cleanup:
     closedir(dir);
-    if (work->recursion_level == 0) {
-        free(work);
-    }
+
+    free_work(in->compress, work, &work_src);
 
     #if BENCHMARK
     pthread_mutex_lock(&global_mutex);
@@ -182,7 +186,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     pthread_mutex_unlock(&global_mutex);
     #endif
 
-    return 0;
+    return rc;
 }
 
 static int check_prefix(const char *nameto, const size_t nameto_len, const size_t thread_count) {
@@ -212,34 +216,27 @@ static int check_prefix(const char *nameto, const size_t nameto_len, const size_
     return 0;
 }
 
-static struct work *validate_source(char *path) {
-    struct work *root = (struct work *) calloc(1, sizeof(struct work));
-    if (!root) {
-        fprintf(stderr, "Could not allocate root struct\n");
-        return NULL;
-    }
-
-    struct stat st;
+static int validate_source(char *path, struct work *work) {
+    memset(work, 0, sizeof(*work));
 
     /* get input path metadata */
+    struct stat st;
     if (lstat(path, &st) < 0) {
         fprintf(stderr, "Could not stat source directory \"%s\"\n", path);
-        free(root);
-        return NULL;
+        return 1;
     }
 
     /* check that the input path is a directory */
     if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "Source path is not a directory \"%s\"\n", path);
-        free(root);
-        return NULL;
+        return 1;
     }
 
-    root->name_len = SNFORMAT_S(root->name, MAXPATH, 1, path, strlen(path));
-    root->root = path;
-    root->root_len = dirname_len(path, root->name_len);
+    work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
+    work->root = path;
+    work->root_len = dirname_len(path, work->name_len);
 
-    return root;
+    return 0;
 }
 
 static void sub_help() {
@@ -250,7 +247,7 @@ static void sub_help() {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:", 2, "input_dir... output_prefix", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:" COMPRESS_OPT, 2, "input_dir... output_prefix", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
@@ -312,12 +309,13 @@ int main(int argc, char *argv[]) {
         }
 
         /* get first work item by validating source path */
-        struct work *root = validate_source(roots[i]);
-        if (!root) {
+        struct work root;
+        if (validate_source(roots[i], &root) != 0) {
             continue;
         }
 
-        QPTPool_enqueue(pool, 0, processdir, root);
+        enqueue_work(pa.in.compress, &root, pool, 0, processdir);
+
         i++;
     }
     QPTPool_wait(pool);

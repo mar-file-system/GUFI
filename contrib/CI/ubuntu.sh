@@ -73,7 +73,8 @@ apt update
 apt -y install \
     libattr1-dev \
     libfuse-dev \
-    libpcre3-dev
+    libpcre3-dev \
+    zlib1g-dev
 
 # install required packages
 apt -y install \
