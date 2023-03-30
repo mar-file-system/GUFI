@@ -171,7 +171,7 @@ DEFAULTS = {
 
     # affects both AXES_Y_STAT and ERROR_BAR
     ANNOTATIONS : {
-        ANNOTATIONS_PRECISION   : [gufi_common.get_positive, 3],
+        ANNOTATIONS_PRECISION   : [gufi_common.get_non_negative, 3],
         ANNOTATIONS_X_OFFSET    : [float, 5],
         ANNOTATIONS_Y_OFFSET    : [float, 5],
         ANNOTATIONS_TEXT_COLORS : [str_list, []],
