@@ -584,14 +584,6 @@ int main(int argc, char *argv[])
     #endif
     #endif
 
-    #if BENCHMARK
-    fprintf(stderr, "Querying GUFI Index");
-    for(int i = idx; i < argc; i++) {
-        fprintf(stderr, " %s", argv[i]);
-    }
-    fprintf(stderr, " with %d threads\n", in.maxthreads);
-    #endif
-
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_create_start(setup_aggregate);
     #endif
@@ -610,7 +602,7 @@ int main(int argc, char *argv[])
     const uint64_t setup_aggregate_time = timestamp_elapsed(setup_aggregate);
     #endif
 
-    #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     uint64_t total_time = 0;
 
     timestamp_create_start(work);
@@ -674,20 +666,20 @@ int main(int argc, char *argv[])
 
     QPTPool_wait(pool);
 
-    #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     const size_t thread_count = QPTPool_threads_completed(pool);
     #endif
 
     QPTPool_destroy(pool);
 
-    #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_set_end(work);
 
     const uint64_t work_time = timestamp_elapsed(work);
     total_time += work_time;
     #endif
 
-    #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     uint64_t aggregate_time = 0;
     uint64_t output_time = 0;
     size_t rows = 0;
@@ -695,21 +687,21 @@ int main(int argc, char *argv[])
 
     int rc = 0;
     if (in.sql.init_agg_len) {
-        #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_create_start(aggregation);
         #endif
 
         /* aggregate the intermediate results */
         aggregate_intermediate(&aggregate, &pa, &in);
 
-        #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_set_end(aggregation);
         aggregate_time = timestamp_elapsed(aggregation);
         total_time += aggregate_time;
         #endif
 
         /* final query on aggregate results */
-        #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_create_start(output);
 
         rows +=
@@ -717,7 +709,7 @@ int main(int argc, char *argv[])
 
         aggregate_process(&aggregate, &in);
 
-        #if (defined(DEBUG) && defined(CUMULATIVE_TIMES)) || BENCHMARK
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_set_end(output);
         output_time = timestamp_elapsed(output);
         total_time += output_time;
@@ -726,7 +718,7 @@ int main(int argc, char *argv[])
         aggregate_fin(&aggregate, &in);
     }
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_create_start(cleanup_globals);
     #endif
 
@@ -743,7 +735,7 @@ int main(int argc, char *argv[])
         ThreadArgs_t *ta = &(pa.ta[i]);
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);
 
-        #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         rows += ta->output_buffer.count;
         #endif
     }
@@ -760,7 +752,7 @@ int main(int argc, char *argv[])
     /* clean up globals */
     PoolArgs_fin(&pa, in.maxthreads);
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES) || BENCHMARK
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_set_end(cleanup_globals);
     const uint64_t cleanup_globals_time = timestamp_elapsed(cleanup_globals);
     total_time += cleanup_globals_time;
@@ -825,14 +817,5 @@ int main(int argc, char *argv[])
         fprintf(stderr, "\n");
     }
     #endif
-
-    #if BENCHMARK
-    fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
-    fprintf(stderr, "Total Files:           %zu\n",    rows);
-    fprintf(stderr, "Time Spent Querying:   %.2Lfs\n", total_time_sec);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / total_time_sec);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  rows / total_time_sec);
-    #endif
-
     return rc;
 }

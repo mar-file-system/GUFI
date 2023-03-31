@@ -372,7 +372,6 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # ##########################################
   # Debug prints
-  # Should not be used with BENCHMARK
   # ##########################################
 
   # Cumulative times shown at end of run
