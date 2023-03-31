@@ -76,10 +76,6 @@ add_definitions(-DLOCALTIME_R=${LOCALTIME_R})
 # All binaries should be able to run
 # even if all of the values are changed.
 #
-option(BENCHMARK "Enable the 'benchmark' make target" Off)
-if (BENCHMARK)
-  add_definitions(-DBENCHMARK=1)
-endif()
 
 # opendb can be turned off
 # addqueryfuncs fails silently if not turned off

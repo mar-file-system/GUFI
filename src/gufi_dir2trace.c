@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -82,18 +83,14 @@ OF SUCH DAMAGE.
 
 extern int errno;
 
-#if BENCHMARK
-#include <time.h>
-
-pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
-size_t total_dirs = 0;
-size_t total_files = 0;
-#endif
-
 struct PoolArgs {
     struct input in;
     trie_t *skip;
     FILE **outfiles;
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    uint64_t *total_files;
+    #endif
 };
 
 struct NondirArgs {
@@ -115,12 +112,6 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
 /* process the work under one directory (no recursion) */
 /* deletes work */
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
-    #if BENCHMARK
-    pthread_mutex_lock(&global_mutex);
-    total_dirs++;
-    pthread_mutex_unlock(&global_mutex);
-    #endif
-
     /* Not checking arguments */
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
@@ -128,6 +119,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work work_src;
     struct work *work = NULL;
     struct entry_data ed;
+    uint64_t nondirs_processed = 0;
     int rc = 0;
 
     dequeue_work(in->compress, data, &work, &work_src);
@@ -160,11 +152,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         xattrs_cleanup(&ed.xattrs);
     }
 
-    size_t *nondirs_processed = NULL;
-    #if BENCHMARK
-    size_t nondirs_processed_benchmark = 0;
-    nondirs_processed = &nondirs_processed_benchmark;
-    #endif
     struct NondirArgs nda = {
         .in = in,
         .fp = pa->outfiles[id],
@@ -173,17 +160,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             in, work, ed.statuso.st_ino,
             dir, pa->skip, 0, 0,
             processdir, process_nondir, &nda,
-            NULL, NULL, NULL, nondirs_processed);
+            NULL, NULL, NULL, &nondirs_processed);
 
   cleanup:
     closedir(dir);
 
     free_work(in->compress, work, &work_src);
 
-    #if BENCHMARK
-    pthread_mutex_lock(&global_mutex);
-    total_files += nondirs_processed_benchmark;
-    pthread_mutex_unlock(&global_mutex);
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    pa->total_files[id] += nondirs_processed;
     #endif
 
     return rc;
@@ -278,11 +263,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    #if BENCHMARK
-    struct start_end benchmark;
-    clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
-    #endif
-
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
     QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -295,6 +275,15 @@ int main(int argc, char *argv[]) {
         trie_free(pa.skip);
         return -1;
     }
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    fprintf(stderr, "Creating GUFI Traces %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+
+    pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
+
+    struct start_end after_init;
+    clock_gettime(CLOCK_MONOTONIC, &after_init.start);
+    #endif
 
     const size_t root_count = argc - idx - 1;
     char **roots = calloc(root_count, sizeof(char *));
@@ -319,6 +308,11 @@ int main(int argc, char *argv[]) {
         i++;
     }
     QPTPool_wait(pool);
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    const uint64_t thread_count = QPTPool_threads_completed(pool);
+    #endif
+
     QPTPool_destroy(pool);
 
     for(size_t i = 0; i < root_count; i++) {
@@ -328,14 +322,22 @@ int main(int argc, char *argv[]) {
     outfiles_fin(pa.outfiles, pa.in.maxthreads);
     trie_free(pa.skip);
 
-    #if BENCHMARK
-    clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
-    const long double processtime = sec(nsec(&benchmark));
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    const long double processtime = sec(nsec(&after_init));
 
-    fprintf(stderr, "Total Dirs:            %zu\n",    total_dirs);
+    /* don't count as part of processtime */
+    uint64_t total_files = 0;
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+        total_files += pa.total_files[i];
+    }
+
+    free(pa.total_files);
+
+    fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
     fprintf(stderr, "Total Files:           %zu\n",    total_files);
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  total_dirs / processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / processtime);
     fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
     #endif
 

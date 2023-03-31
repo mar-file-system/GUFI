@@ -198,35 +198,3 @@ Do not turn these off unless you know what you are doing.
   \hline
 \end{tabularx}
 \end{table}
-
-\subsubsection{Benchmarking}
-\begin{table}[H]
-\centering
-\begin{tabularx}{1.2\textwidth}{| l | X |}
-  \hline
-  \texttt{-D<VAR>=<VALUE>} & Description \\
-  \hline
-  \texttt{BENCHMARK=<On|Off>}
-  & Build so that \gufiquery prints out some benchmarks at the end of
-  a run. Make target 'benchmark' is created. This target generates a
-  source tree, indexes the tree, and queries the tree. At each step,
-  benchmark values will be printed. The tree is deleted after the
-  benchmarks complete. \\
-  \hline
-  \texttt{BENCHMARK\_ROOT=<PATH>}
-  & Directory to place benchmark tree and index under \\
-  \hline
-  \texttt{BENCHMARK\_DIRS=<COUNT>}
-  & Default: 4 \\
-  \hline
-  \texttt{BENCHMARK\_DEPTH=<COUNT>}
-  & Default: 10 \\
-  \hline
-  \texttt{BENCHMARK\_FILES=<COUNT>}
-  & Default: 42 \\
-  \hline
-  \texttt{BENCHMARK\_THREADS=<COUNT>}
-  & Default: \# of processors on the machine \\
-  \hline
-\end{tabularx}
-\end{table}

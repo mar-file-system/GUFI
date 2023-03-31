@@ -93,57 +93,6 @@ foreach(file ${USEFUL})
     configure_file("${file}" "${file}" @ONLY)
 endforeach()
 
-# make benchmark
-#    clean up old benchmark directory and create a new one
-#    generate a tree
-#    index the tree with bfwi
-#    query the tree with gufi_find
-#    delete the benchmark directory
-set(BENCHMARK Off CACHE BOOL "Whether or not to enable the benchmark target")
-if (BENCHMARK)
-  message(WARNING "Make sure IndexRoot in the GUFI config also points to BENCHMARK_ROOT")
-  set(BENCHMARK_ROOT "/tmp/gufi-benchmark" CACHE PATH "Where to place benchmark trees.")
-
-  function(check_int VAR)
-    string(REGEX MATCH "^[0-9]+$" PARSED "${${VAR}}")
-    if (PARSED STREQUAL "")
-      message(FATAL_ERROR "Invalid ${VAR} value: \"${${VAR}}\"")
-    endif()
-  endfunction()
-
-  set(BENCHMARK_DIRS  "5" CACHE STRING "Number of directories per level in the benchmark tree")
-  check_int(BENCHMARK_DIRS)
-
-  set(BENCHMARK_FILES "5" CACHE STRING "Number of files per directory in the benchmark tree")
-  check_int(BENCHMARK_FILES)
-
-  set(BENCHMARK_DEPTH "5" CACHE STRING "Number of levels in the benchmark tree")
-  check_int(BENCHMARK_DEPTH)
-
-  include(ProcessorCount)
-  ProcessorCount(N)
-  set(BENCHMARK_THREADS "${N}" CACHE STRING "Number of levels in the benchmark tree")
-  check_int(BENCHMARK_DEPTH)
-  if (NOT "${BENCHMARK_THREADS}" GREATER "0")
-    message(FATAL_ERROR "Need at least one thread to run executables")
-  endif()
-
-  set(BENCHMARK_TREE "${BENCHMARK_ROOT}/tree")
-  set(BENCHMARK_GUFI_TREE "${BENCHMARK_ROOT}/gufi_tree")
-  add_custom_target(benchmark_init COMMAND $<TARGET_FILE:parallel_rmr> -n "${BENCHMARK_THREADS}" "${BENCHMARK_ROOT}"
-                                   COMMAND ${CMAKE_COMMAND} -E make_directory "${BENCHMARK_ROOT}"
-                    DEPENDS parallel_rmr )
-  add_custom_target(benchmark_generate_dir COMMAND $<TARGET_FILE:gendir> "${BENCHMARK_TREE}" "${BENCHMARK_DIRS}" "${BENCHMARK_FILES}" "${BENCHMARK_DEPTH}" "${BENCHMARK_THREADS}"
-                    DEPENDS benchmark_init gendir)
-  add_custom_target(benchmark_dir2index COMMAND $<TARGET_FILE:gufi_dir2index> -n "${BENCHMARK_THREADS}" "${BENCHMARK_TREE}" "${BENCHMARK_GUFI_TREE}"
-                    DEPENDS benchmark_generate_dir gufi_dir2index)
-  add_custom_target(benchmark_query COMMAND ${CMAKE_BINARY_DIR}/scripts/gufi_find > /dev/null
-                    DEPENDS benchmark_dir2index gufi_query ${CMAKE_BINARY_DIR}/scripts/gufi_find)
-  add_custom_target(benchmark_fin COMMAND $<TARGET_FILE:parallel_rmr> -n "${BENCHMARK_THREADS}" "${BENCHMARK_ROOT}"
-                    DEPENDS benchmark_query parallel_rmr)
-  add_custom_target(benchmark DEPENDS benchmark_fin)
-endif()
-
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_subdirectory(debug)
 endif()

@@ -208,7 +208,6 @@ jobs:
         PRINT_PER_THREAD_STATS:    [ "On", "Off" ]
         PRINT_QPTPOOL_QUEUE_SIZE:  [ "On", "Off" ]
         PRINT_SUBDIRECTORY_COUNTS: [ "On", "Off" ]
-        BENCHMARK:                 [ "On", "Off" ]
     steps:
     - uses: actions/checkout@v3
 
@@ -221,7 +220,7 @@ jobs:
       run: sudo contrib/CI/ubuntu.sh
 
     - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=${{ matrix.PRINT_CUMULATIVE_TIMES }} -DPRINT_PER_THREAD_STATS=${{ matrix.PRINT_PER_THREAD_STATS }} -DPRINT_QPTPOOL_QUEUE_SIZE=${{ matrix.PRINT_QPTPOOL_QUEUE_SIZE }} -DPRINT_SUBDIRECTORY_COUNTS=${{ matrix.PRINT_SUBDIRECTORY_COUNTS }} -DBENCHMARK=${{ matrix.BENCHMARK }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=${{ matrix.PRINT_CUMULATIVE_TIMES }} -DPRINT_PER_THREAD_STATS=${{ matrix.PRINT_PER_THREAD_STATS }} -DPRINT_QPTPOOL_QUEUE_SIZE=${{ matrix.PRINT_QPTPOOL_QUEUE_SIZE }} -DPRINT_SUBDIRECTORY_COUNTS=${{ matrix.PRINT_SUBDIRECTORY_COUNTS }}
 
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j

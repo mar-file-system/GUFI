@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -87,10 +88,8 @@ struct PoolArgs {
     struct template_db db;
     struct template_db xattr;
 
-    #if BENCHMARK
-    /* locked by print_mutex in debug.h */
-    size_t total_dirs;
-    size_t total_files;
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    uint64_t *total_files;
     #endif
 };
 
@@ -169,12 +168,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     struct work work_src;
     size_t nondirs_processed = 0;
-
-    #if BENCHMARK
-    pthread_mutex_lock(&print_mutex);
-    pa->total_dirs++;
-    pthread_mutex_unlock(&print_mutex);
-    #endif
 
     struct NonDirArgs nda;
     nda.in         = &pa->in;
@@ -300,10 +293,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     free_work(in->compress, nda.work, &work_src);
 
-    #if BENCHMARK
-    pthread_mutex_lock(&print_mutex);
-    pa->total_files += nondirs_processed;
-    pthread_mutex_unlock(&print_mutex);
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    pa->total_files[id] += nondirs_processed;
     #endif
 
     return rc;
@@ -408,10 +399,6 @@ int main(int argc, char *argv[]) {
         pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
-    #if BENCHMARK
-    fprintf(stderr, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
-    #endif
-
     if (setup_dst(pa.in.nameto) != 0) {
         trie_free(pa.skip);
         return -1;
@@ -432,14 +419,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    #if BENCHMARK
-    struct start_end benchmark;
-    clock_gettime(CLOCK_MONOTONIC, &benchmark.start);
-
-    pa.total_dirs = 0;
-    pa.total_files = 0;
-    #endif
-
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
     QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -453,6 +432,16 @@ int main(int argc, char *argv[]) {
         trie_free(pa.skip);
         return -1;
     }
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    fprintf(stderr, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+
+    pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
+
+    struct start_end after_init;
+    clock_gettime(CLOCK_MONOTONIC, &after_init.start);
+    #endif
+
 
     const size_t root_count = argc - idx - 1;
     char **roots = calloc(root_count, sizeof(char *));
@@ -487,6 +476,11 @@ int main(int argc, char *argv[]) {
     }
 
     QPTPool_wait(pool);
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    const uint64_t thread_count = QPTPool_threads_completed(pool);
+    #endif
+
     QPTPool_destroy(pool);
 
     for(size_t i = 0; i < root_count; i++) {
@@ -497,15 +491,23 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.db);
     trie_free(pa.skip);
 
-    #if BENCHMARK
-    clock_gettime(CLOCK_MONOTONIC, &benchmark.end);
-    const long double processtime = sec(nsec(&benchmark));
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    const long double processtime = sec(nsec(&after_init));
 
-    fprintf(stderr, "Total Dirs:            %zu\n",    pa.total_dirs);
-    fprintf(stderr, "Total Files:           %zu\n",    pa.total_files);
+    /* don't count as part of processtime */
+    uint64_t total_files = 0;
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+        total_files += pa.total_files[i];
+    }
+
+    free(pa.total_files);
+
+    fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
+    fprintf(stderr, "Total Files:           %zu\n",    total_files);
     fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  pa.total_dirs / processtime);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  pa.total_files / processtime);
+    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / processtime);
+    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
     #endif
 
     return 0;
