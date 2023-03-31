@@ -79,8 +79,8 @@ struct QPTPoolThreadData {
     pthread_cond_t cv;
     size_t next_queue;
     pthread_t thread;
-    size_t threads_started;
-    size_t threads_successful;
+    uint64_t threads_started;
+    uint64_t threads_successful;
 };
 
 /* struct to pass into pthread_create */
@@ -372,20 +372,20 @@ void QPTPool_destroy(QPTPool_t *ctx) {
     free(ctx);
 }
 
-size_t QPTPool_threads_started(QPTPool_t *ctx) {
+uint64_t QPTPool_threads_started(QPTPool_t *ctx) {
     /* Not checking arguments */
 
-    size_t sum = 0;
+    uint64_t sum = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
         sum += ctx->data[i].threads_started;
     }
     return sum;
 }
 
-size_t QPTPool_threads_completed(QPTPool_t *ctx) {
+uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
     /* Not checking arguments */
 
-    size_t sum = 0;
+    uint64_t sum = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
         sum += ctx->data[i].threads_successful;
     }
