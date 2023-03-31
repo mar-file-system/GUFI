@@ -594,7 +594,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
             /* put the previous work on the queue */
             QPTPool_enqueue(ctx, target_thread, processdir, work);
-            target_thread = (target_thread + 1) % ctx->nthreads;
+            target_thread = (target_thread + 1) % in->maxthreads;
 
             /* put the current line into a new work item */
             work = row_init(traces, first_delim, line, len, ftell(trace));

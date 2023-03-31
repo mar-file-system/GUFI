@@ -151,10 +151,10 @@ void QPTPool_destroy(QPTPool_t *ctx);
 /* utility functions */
 
 /* get the number of threads that were started by the QPTPool */
-size_t QPTPool_threads_started(QPTPool_t *ctx);
+uint64_t QPTPool_threads_started(QPTPool_t *ctx);
 
 /* get the number of started threads that completed successfully */
-size_t QPTPool_threads_completed(QPTPool_t *ctx);
+uint64_t QPTPool_threads_completed(QPTPool_t *ctx);
 
 #ifdef __cplusplus
 }
