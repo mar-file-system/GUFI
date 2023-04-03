@@ -66,13 +66,29 @@ contents of a provided directory.
 
 \begin{table} [h]
   \centering
-  \begin{tabular}{l|r}
-    Flag & Functionality \\\hline
+  \begin{tabular}{l|l}
+    Flag & Functionality \\
+    \hline
     -h & help manual \\
+    \hline
     -H & Show assigned input values \\
-    -n \textless num\_threads\textgreater  & define number of threads to use \\
+    \hline
+    -n \textless num\_threads\textgreater & define number of threads to use \\
+    \hline
     -x & pull xattrs from source file-sys into GUFI \\
-    -z \textless max\_level\textgreater & maximum level to go down to
+    \hline
+    -z \textless max\_level\textgreater & maximum level to go down to \\
+    \hline
+    -k \textless filename\textgreater & file containing directory names to skip \\
+    \hline
+    -M \textless bytes\textgreater & target memory footprint \\
+    \hline
+    -C \textless count\textgreater & Number of subdirectories allowed to be \\
+                                   & enqueued for parallel processing. Any \\
+                                   & remainders will be processed in-situ \\
+    \hline
+    -e & compress work items \\
+    \hline
   \end{tabular}
   \caption{\label{fig:Flags_for_dir2index} \gufidirindex Flags and Arguments}
 \end{table}

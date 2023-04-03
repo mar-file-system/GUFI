@@ -82,12 +82,27 @@ the contention the work queues would experience if each work item were
 popped off one at a time. All work is processed before the thread
 returns to the work queue to find more work.
 
+There exists a second work queue, called the deferred work queue, that
+is pushed to if the thread pool is initialized with a non-zero
+\texttt{queue\_limit}. Work items are placed in the deferred work
+queue when the normal work queue has more than \texttt{queue\_limit}
+items enqueued. The deferred work queue is only processed if the
+normal work queue is empty when the worker thread goes to look for
+more work. The normal work queue may still be pushed to if the work
+queue was recently moved to the worker thread for processing. This
+changes the order that work is processed, allowing for work to drain,
+reducing memory pressure, while still continuously processing work
+when there is work present.
+
 \subsubsection{Usage}
 \begin{enumerate}
 \item Create a thread pool: \\ \texttt{QPTPool\_t *pool =
-  QPTPool\_init(nthreads, args, next, next\_args);} \\ The
-  \texttt{args} argument will be accessible by all threads that are
-  run. The \texttt{next} argument is a function that selects the
+  QPTPool\_init(nthreads, args, next, next\_args, queue\_limit);}
+
+  The \texttt{args} argument will be accessible by all threads that
+  are run.
+
+  The \texttt{next} argument is a function that selects the
   thread id of the work queue to place the new work item
   into. \texttt{next\_args} allows for extra arguments to be passed
   into \texttt{next}. If \texttt{next} is \texttt{NULL}, the thread
@@ -96,12 +111,15 @@ returns to the work queue to find more work.
   instead of at \texttt{QPTPool\_enqueue} in order to not require a
   branch to figure out whether or not the provided function pointer is
   valid.
+
 \item Add work: \\ \texttt{QPTPool\_enqueue(pool, 0, function,
   work);} \\ The function passed into \texttt{QPTPool\_enqueue} must
   match the signature found in \texttt{QPTPool.h}. The \texttt{work}
   argument will only be accessible to the thread processing this work.
+
 \item Wait for all work to be completed (threads are joined):
   \\ \texttt{QPTPool\_wait(pool);} \\ This function exists to allow
   for the collection of statistics before the context is destroyed.
+
 \item Destroy the pool context: \\ \texttt{QPTPool\_destroy(pool);}
 \end{enumerate}

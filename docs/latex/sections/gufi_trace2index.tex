@@ -71,5 +71,28 @@ result in running out of file descriptors. Alternatively, the per
 thread trace files may be concatenated in any order into a smaller
 number of larger files for processing.
 
+Extended attributes will be processed if they are found in the traces.
+There is no need to tell \gufitraceindex to process them
+with \texttt{-x}.
+
+\begin{table} [htb]
+  \centering
+  \begin{tabular}{l|l}
+    Flag & Functionality \\
+    \hline
+    -h & help manual \\
+    \hline
+    -H & Show assigned input values \\
+    \hline
+    -n \textless num\_threads\textgreater & define number of threads to use \\
+    \hline
+    -d \textless delim\textgreater & delimiter (one char)  [use 'x' for 0x1E] \\
+    \hline
+    -M \textless bytes\textgreater & target memory footprint \\
+    \hline
+  \end{tabular}
+  \caption{\label{fig:Flags_for_dir2trace} \gufidirtrace Flags and Arguments}
+\end{table}
+
 \paragraph{Usage} ~\\
 \gufitraceindex \texttt{[flags] trace\_file... index\_root}
