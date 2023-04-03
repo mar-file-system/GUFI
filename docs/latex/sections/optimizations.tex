@@ -64,7 +64,7 @@
 In order for GUFI to be performant, many optimizations were used and
 implemented.
 
-\subsubsection{Reducing Branching}
+\subsubsection{Reduced Branching}
 In order to reduce the number of failed branch predictions experienced
 by GUFI, branching was removed where possible. The main way this was
 done was by intentionally skipping \texttt{NULL} pointer checks that
@@ -75,19 +75,25 @@ Dynamic allocations are more costly to make than static
 allocations. To reduce the amount of dynamic allocations, C-string are
 usually declared as fixed size arrays instead of pointers.
 
+During descent, each work item is initially allocated on the stack since
+there is no way to tell beforehand whether or not the path pointed to
+by a directory entry is a directory. If the path is a directory to be
+enqueued, the work item is copied into dynamically allocated memory
+first. If not, the work item allocated on the stack is used.
+
 Additionally, allocations are not performed by the standard
 malloc. Instead, \texttt{jemalloc(3)} is used to override
 \texttt{malloc(3)}. See \href{https://jemalloc.net/}{jemalloc's
   website} for details.
 
 \subsubsection{Not Calling \lstat During Tree Walk}
-\texttt{struct dirent}s are returned when reading a directory with
-\readdir. glibc's implementation of \texttt{struct dirent}
-provides extra fields not required by POSIX.1. GUFI takes advantage of
-the nonstandard \texttt{d\_type} field to not call \lstat when
-determining whether or not the entry is a directory. This also
-prevents memory allocations of work items that end up not being
-enqueued for processing.
+\texttt{struct~dirent}s are returned when reading a directory with
+\readdir. glibc's implementation of \texttt{struct~dirent} provides
+extra fields not required by POSIX.1. GUFI takes advantage of the
+nonstandard \texttt{d\_type} field to not call \lstat when determining
+whether or not the entry is a directory. This also prevents memory
+allocations of work items that end up not being enqueued for
+processing.
 
 \subsubsection{Enqueuing Work Before Processing}
 In order to reduce the amount of time the thread pool spends waiting
@@ -113,11 +119,55 @@ into or cut short strings.
 One method of combining C-strings is by concantenating them with
 \texttt{snprintf(3)} with format strings containing only \texttt{\%s}
 format specifiers. Instead of parsing the format string, the
-\texttt{SNFORMAT\_S} function was created to do \memcpy s on
-the arguments, skipping figuring out whether or not inputs are strings
-and how long they are by finding NULL terminators. Instead, lengths are
-obtained as by-products of previous string manipulations and the
-values are reused.
+\texttt{SNFORMAT\_S} function was created to do \memcpy s on the
+arguments, skipping figuring out whether or not inputs are strings and
+how long they are by finding \texttt{NULL} terminators. Instead,
+lengths are obtained as by-products of previous string manipulations
+and the values are reused.
+
+\subsubsection{In-Situ Processing}
+Occassionally, GUFI might encounter extremely large directories. This
+results in many long lived dynamic allocations being created during
+descent, which can overwhelm memory. Users can set a subdirectory
+limit so that if too many subdirectories are encountered within a
+single directory, subdirectories past the user provided count will be
+processed recursively using a work item allocated on the thread's
+stack instead of being dynamically allocated and enqueued for
+processing. This reduces memory pressure by limiting the amount of
+work items that extremely large directories would otherwise spawn. The
+subdirectories being processed recursively may themselves enqueue
+dynamically allocated subdirectory work or recurse further down with
+subdirectory work allocated on the stack.
+
+\subsubsection{Smaller Enqueued Work Items}
+The main data structure that is enqueued is \texttt{struct~work}. This
+struct was approximately 14KiB in size prior to
+\href{https://github.com/mar-file-system/GUFI/commit/2227d00665eb6d507ac2052e80616c077a5da853}{2227d00}. After
+moving the parts of this structure that were not necssary for
+directory tree traversal to \texttt{struct~entry\_data},
+\texttt{struct work} was reduced to slightly over 8KiB.
+
+This was used to fix
+\href{https://github.com/mar-file-system/GUFI/issues/121}{Issue 121}.
+
+\subsubsection{Compression with zlib}
+When zlib is detected during CMake configuration, \texttt{struct~work}
+can be compressed to further reduce the size of each work item that is
+sitting in memory waiting to be processed. The compressed buffer,
+originally allocated with \texttt{sizeof(struct~work))} bytes, is then
+reallocated to the compressed size. The bulk of \texttt{struct~work}
+is made up of text strings followed by \texttt{NULL} characters, both
+of which are highly compressible, meaning that compressed work items
+can be expected to be much smaller than uncompressed work items.
+
+Note that \texttt{struct~work} is its own compressed buffer. Whether
+or not the work item is compressed and the compressed length are now
+the first two fields of \texttt{struct~work}. When a work item is
+compressed, a pointer pointing to it will have less space allocated to
+it than \texttt{sizeof(struct~work))}.
+
+This was used to fix
+\href{https://github.com/mar-file-system/GUFI/issues/121}{Issue 121}.
 
 \subsubsection{Database Templates}
 Every directory in an index contains at least one database file,
