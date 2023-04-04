@@ -63,8 +63,9 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <fcntl.h>
+#include <dirent.h>
 #include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>

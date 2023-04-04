@@ -63,18 +63,18 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
-#include <fcntl.h>
+#include <dirent.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "dbutils.h"
-#include "debug.h"
 #include "template_db.h"
 #include "trie.h"
 #include "utils.h"
