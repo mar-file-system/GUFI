@@ -108,7 +108,6 @@ set(GUFI_SOURCES
   dbutils.c
   debug.c
   external.c
-  outfiles.c
   print.c
   template_db.c
   trace.c

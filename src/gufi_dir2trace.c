@@ -76,7 +76,6 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
-#include "outfiles.h"
 #include "trace.h"
 #include "trie.h"
 #include "utils.h"
@@ -173,31 +172,47 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return rc;
 }
 
-static int check_prefix(const char *nameto, const size_t nameto_len, const size_t thread_count) {
-    /* check the output files, if a prefix was provided */
-    if (!nameto || !nameto_len) {
-        fprintf(stderr, "No output file name specified\n");
-        return -1;
+/* close all output files */
+static int outfiles_fin(FILE **files, const size_t end) {
+    /* Not checking arguments */
+    for(size_t i = 0; i < end; i++) {
+        fflush(files[i]);
+        fclose(files[i]);
     }
+    free(files);
+    return 0;
+}
 
-    /* check if the destination path already exists (not an error) */
-    for(size_t i = 0; i < thread_count; i++) {
+/* allocate the array of FILE * and open files */
+static FILE **outfiles_init(const char *prefix, const size_t count) {
+    /* Not checking arguments */
+    FILE **files = calloc(count, sizeof(FILE *));
+
+    for(size_t i = 0; i < count; i++) {
         char outname[MAXPATH];
-        SNPRINTF(outname, MAXPATH, "%s.%zu", nameto, i);
+        SNPRINTF(outname, MAXPATH, "%s.%zu", prefix, i);
 
-        struct stat dst_st;
-        if (lstat(outname, &dst_st) == 0) {
+        /* check if the destination path already exists (not an error) */
+        struct stat st;
+        if (lstat(outname, &st) == 0) {
             fprintf(stderr, "\"%s\" Already exists!\n", outname);
 
-            /* if the destination path is not a directory (error) */
-            if (S_ISDIR(dst_st.st_mode)) {
-                fprintf(stderr, "Destination path is a directory \"%s\"\n", outname);
-                return -1;
+            /* if the deestination path is not a regular file (error) */
+            if (!S_ISREG(st.st_mode)) {
+                outfiles_fin(files, i);
+                fprintf(stderr, "Destination path is not a file \"%s\"\n", outname);
+                return NULL;
             }
+        }
+
+        if (!(files[i] = fopen(outname, "w"))) {
+            outfiles_fin(files, i);
+            fprintf(stderr, "Could not open output file %s\n", outname);
+            return NULL;
         }
     }
 
-    return 0;
+    return files;
 }
 
 static int validate_source(char *path, struct work *work) {
@@ -251,12 +266,7 @@ int main(int argc, char *argv[]) {
         pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
-    if (check_prefix(pa.in.nameto, pa.in.nameto_len, pa.in.maxthreads) != 0) {
-        trie_free(pa.skip);
-        return -1;
-    }
-
-    pa.outfiles = outfiles_init(1, pa.in.nameto, pa.in.maxthreads);
+    pa.outfiles = outfiles_init(pa.in.nameto, pa.in.maxthreads);
     if (!pa.outfiles) {
         trie_free(pa.skip);
         return -1;

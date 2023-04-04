@@ -51,7 +51,7 @@ $ mkdir "prefix.0"
 # target is directory
 $ gufi_dir2trace -d "|" -n 2 "prefix" "prefix"
 "prefix.0" Already exists!
-Destination path is a directory "prefix.0"
+Destination path is not a file "prefix.0"
 
 $ rm -r "prefix.0"
 

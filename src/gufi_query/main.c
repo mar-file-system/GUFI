@@ -80,7 +80,6 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #endif
 #include "external.h"
-#include "outfiles.h"
 #include "trie.h"
 #include "utils.h"
 

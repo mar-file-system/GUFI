@@ -76,7 +76,6 @@ if (CMAKE_CXX_COMPILER)
     bf.cpp
     dbutils.cpp
     debug.cpp
-    outfiles.cpp
     print.cpp
     trace.cpp
     trie.cpp
