@@ -327,8 +327,6 @@ struct work {
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;
-   char          sqlite3_name[MAXPATH];  /* some characters need to be converted for sqlite3, but opendir must use the unconverted version */
-   size_t        sqlite3_name_len;
    size_t        basename_len;           /* can usually get through readdir */
    long long int pinode;
    size_t        recursion_level;

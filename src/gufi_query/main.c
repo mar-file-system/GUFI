@@ -107,6 +107,18 @@ OF SUCH DAMAGE.
 /* name doesn't matter, so long as it is not used by callers */
 static const char ATTACH_NAME[] = "tree";
 
+/* additional data gufi_query needs */
+typedef struct gufi_query_work {
+    struct work work;
+
+    /*
+     * some characters need to be converted for sqlite3,
+     * but opendir must use the unconverted version
+     */
+    char          sqlite3_name[MAXPATH];
+    size_t        sqlite3_name_len;
+} gqw_t;
+
 /* prepend the current directory to the database filenamee */
 size_t xattr_modify_filename(char *dst, const size_t dst_size,
                              const char *src, const size_t src_len,
@@ -120,7 +132,7 @@ size_t xattr_modify_filename(char *dst, const size_t dst_size,
 /* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(QPTPool_t *ctx,
                        const size_t id,
-                       struct work *passmywork,
+                       gqw_t *gqw,
                        DIR *dir,
                        trie_t *skip_names,
                        QPTPoolFunc_t func,
@@ -135,7 +147,7 @@ static size_t descend2(QPTPool_t *ctx,
 
     descend_timestamp_start(dts, level_cmp);
     size_t pushed = 0;
-    const size_t next_level = passmywork->level + 1;
+    const size_t next_level = gqw->work.level + 1;
     const int level_check = (next_level < max_level);
     descend_timestamp_end(level_cmp);
 
@@ -178,22 +190,13 @@ static size_t descend2(QPTPool_t *ctx,
             }
 
             descend_timestamp_start(dts, snprintf_call);
-            struct work qwork;
+            gqw_t child;
 
             /* append entry name to directory */
-            qwork.name_len = SNFORMAT_S(qwork.name, MAXPATH, 3,
-                       passmywork->name, passmywork->name_len,
-                       "/", (size_t) 1,
-                       entry->d_name, len);
-
-            /* append convertd entry name to convertd directory */
-            qwork.sqlite3_name_len = SNFORMAT_S(qwork.sqlite3_name, MAXPATH, 2,
-                       passmywork->sqlite3_name, passmywork->sqlite3_name_len,
-                       "/", (size_t) 1);
-            const size_t convertd_len = sqlite_uri_path(qwork.sqlite3_name + qwork.sqlite3_name_len,
-                                                        MAXPATH - qwork.sqlite3_name_len,
-                                                        entry->d_name, &len);
-            qwork.sqlite3_name_len += convertd_len;
+            child.work.name_len = SNFORMAT_S(child.work.name, MAXPATH, 3,
+                                             gqw->work.name, gqw->work.name_len,
+                                             "/", (size_t) 1,
+                                             entry->d_name, len);
             descend_timestamp_end(snprintf_call);
 
             descend_timestamp_start(dts, isdir_cmp);
@@ -205,9 +208,19 @@ static size_t descend2(QPTPool_t *ctx,
                 descend_timestamp_end(isdir_branch);
 
                 descend_timestamp_start(dts, set);
-                qwork.level = next_level;
-                qwork.root = passmywork->root;
-                qwork.root_len = passmywork->root_len;
+
+                child.work.level = next_level;
+                child.work.root = gqw->work.root;
+                child.work.root_len = gqw->work.root_len;
+
+                /* append converted entry name to converted directory */
+                child.sqlite3_name_len = SNFORMAT_S(child.sqlite3_name, MAXPATH, 2,
+                                                    gqw->sqlite3_name, gqw->sqlite3_name_len,
+                                                    "/", (size_t) 1);
+                const size_t converted_len = sqlite_uri_path(child.sqlite3_name + child.sqlite3_name_len,
+                                                            MAXPATH - child.sqlite3_name_len,
+                                                            entry->d_name, &len);
+                child.sqlite3_name_len += converted_len;
 
                 /* this is how the parent gets passed on */
                 descend_timestamp_end(set);
@@ -215,8 +228,8 @@ static size_t descend2(QPTPool_t *ctx,
                 /* make a clone here so that the data can be pushed into the queue */
                 /* this is more efficient than malloc+free for every single entry */
                 descend_timestamp_start(dts, make_clone);
-                struct work *clone = (struct work *) malloc(sizeof(struct work));
-                memcpy(clone, &qwork, sizeof(struct work));
+                gqw_t *clone = (gqw_t *) malloc(sizeof(gqw_t));
+                memcpy(clone, &child, sizeof(gqw_t));
                 descend_timestamp_end(make_clone);
 
                 /* push the subdirectory into the queue for processing */
@@ -252,10 +265,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct input *in = pa->in;
     ThreadArgs_t *ta = &(pa->ta[id]);
 
-    struct work *work = (struct work *) data;
+    gqw_t *gqw = (gqw_t *) data;
 
     char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2, work->sqlite3_name, work->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
+    SNFORMAT_S(dbname, MAXPATH, 2, gqw->sqlite3_name, gqw->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
     timestamps_t ts;
@@ -265,15 +278,15 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* lstat first to not affect atime and mtime */
     thread_timestamp_start(ts.tts, lstat_call);
     struct stat st;
-    if (lstat(work->name, &st) != 0) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", work->name);
+    if (lstat(gqw->work.name, &st) != 0) {
+        fprintf(stderr, "Could not stat directory \"%s\"\n", gqw->work.name);
         goto out_free;
     }
     thread_timestamp_end(lstat_call);
 
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
     thread_timestamp_start(ts.tts, opendir_call);
-    dir = opendir(work->name);
+    dir = opendir(gqw->work.name);
     thread_timestamp_end(opendir_call);
 
     /* if the directory can't be opened, don't bother with anything else */
@@ -292,7 +305,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #ifdef ADDQUERYFUNCS
     thread_timestamp_start(ts.tts, addqueryfuncs_call);
     if (db) {
-        if (addqueryfuncs_with_context(db, work) != 0) {
+        if (addqueryfuncs_with_context(db, &gqw->work) != 0) {
             fprintf(stderr, "Could not add functions to sqlite\n");
         }
     }
@@ -304,7 +317,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
 
         thread_timestamp_start(ts.tts, xattrprep_call);
-        external_loop(work, db,
+        external_loop(&gqw->work, db,
                       XATTRS, sizeof(XATTRS) - 1,
                       XATTR_COLS, sizeof(XATTR_COLS) - 1,
                       XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
@@ -364,7 +377,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
             const size_t pushed =
             #endif
-            descend2(ctx, id, work, dir, pa->skip, processdir, in->max_level
+            descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level
                      #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                      , ts.dts
                      #endif
@@ -372,17 +385,17 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             thread_timestamp_end(descend_call);
             #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
             pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%s %zu\n", work->name, pushed);
+            fprintf(stderr, "%s %zu\n", gqw->work.name, pushed);
             pthread_mutex_unlock(&print_mutex);
             #endif
         }
 
         if (db) {
             /* only query this level if the min_level has been reached */
-            if (work->level >= in->min_level) {
+            if (gqw->work.level >= in->min_level) {
                 /* run query on summary, print it if printing is needed, if returns none */
                 /* and we are doing AND, skip querying the entries db */
-                shortpath(work->name,shortname,endname);
+                shortpath(gqw->work.name,shortname,endname);
 
                 if (in->sql.sum_len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
@@ -447,7 +460,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ;
 
     thread_timestamp_start(ts.tts, free_work);
-    free(work);
+    free(gqw);
     thread_timestamp_end(free_work);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -646,21 +659,21 @@ int main(int argc, char *argv[])
         }
 
         /* copy argv[i] into the work item */
-        struct work *mywork = calloc(1, sizeof(struct work));
-        mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
-        mywork->sqlite3_name_len = sqlite_uri_path(mywork->sqlite3_name, MAXPATH, argv[i], &len);
+        gqw_t *root = calloc(1, sizeof(gqw_t));
+        root->work.name_len = SNFORMAT_S(root->work.name, MAXPATH, 1, argv[i], len);
+        root->sqlite3_name_len = sqlite_uri_path(root->sqlite3_name, MAXPATH, argv[i], &len);
 
         /* parent of input path */
-        mywork->root = argv[i];
-        mywork->root_len = mywork->name_len;
-        while (mywork->root_len && (mywork->root[mywork->root_len - 1] != '/')) {
-            mywork->root_len--;
+        root->work.root = argv[i];
+        root->work.root_len = root->work.name_len;
+        while (root->work.root_len && (root->work.root[root->work.root_len - 1] != '/')) {
+            root->work.root_len--;
         }
 
-        mywork->root[mywork->root_len] = '\0';
+        root->work.root[root->work.root_len] = '\0';
 
         /* push the path onto the queue */
-        QPTPool_enqueue(pool, i % in.maxthreads, processdir, mywork);
+        QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
     }
 
     QPTPool_wait(pool);

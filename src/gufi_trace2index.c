@@ -251,6 +251,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* process the work */
     timestamp_create_start(opendb);
+    /*
+     * don't need to convert dbname because sqlite3_open_v2
+     * does not interpret strings as SQL statements
+     */
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
                           , NULL, NULL
                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
