@@ -1220,10 +1220,13 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
         size_t dst_len;
     };
 
-    /* https://www.sqlite.org/uri.html */
     static const struct convert need_convert[] = {
+        /* https://www.sqlite.org/uri.html */
         {'#', "%23", 3},
         {'?', "%3f", 3},
+
+        /* percent signs need to be replaced too */
+        {'%', "%25", 3},
     };
 
     static const size_t need_convert_count = sizeof(need_convert) / sizeof(need_convert[0]);
