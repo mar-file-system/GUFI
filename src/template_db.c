@@ -239,17 +239,23 @@ int create_dbdb_template(struct template_db *tdb) {
 int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
     /* Not checking arguments */
 
-    /* ignore errors here */
+    int err = 0;
     const int src_db = dup(tdb->fd);
+    err = err?err:errno;
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    err = err?err:errno;
     const ssize_t sf = gufi_copyfd(src_db, dst_db, tdb->size);
+    err = err?err:errno;
     fchown(dst_db, uid, gid);
+    err = err?err:errno;
     close(src_db);
+    err = err?err:errno;
     close(dst_db);
+    err = err?err:errno;
 
     if (sf == -1) {
         fprintf(stderr, "Could not copy template file (%d) to %s (%d): %s (%d)\n",
-                src_db, dst, dst_db, strerror(errno), errno);
+                src_db, dst, dst_db, strerror(err), err);
         return -1;
     }
 
