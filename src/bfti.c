@@ -86,8 +86,6 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "QueuePerThreadPool.h"
 
-extern int errno;
-
 static int create_tables(const char *name, sqlite3 *db, void * args) {
     struct input *in = (struct input *) args;
 

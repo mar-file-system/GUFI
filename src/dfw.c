@@ -78,8 +78,6 @@ OF SUCH DAMAGE.
 #include "utils.c"
 #include "xattrs.h"
 
-extern int errno;
-
 static int printit(const char *name, const struct stat *status, char *type, char *linkname, struct xattrs *xattrs, int printing, long long pinode) {
   if (!printing) return 0;
   printf("%c ", type[0]);

@@ -77,8 +77,6 @@ OF SUCH DAMAGE.
 #include "template_db.h"
 #include "utils.h"
 
-extern int errno;
-
 #define SUBDIR_ATTACH_NAME "subdir"
 
 /* statistics stored when processing each directory */

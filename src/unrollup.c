@@ -75,8 +75,6 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "utils.h"
 
-extern int errno;
-
 struct Unrollup {
     char name[MAXPATH];
     int rolledup; /* set by parent, can be modified by self */

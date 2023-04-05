@@ -74,8 +74,6 @@ OF SUCH DAMAGE.
 #include "trace.h"
 #include "utils.h"
 
-extern int errno;
-
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 #include "OutputBuffers.h"
 struct OutputBuffers debug_output_buffers;

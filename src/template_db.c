@@ -148,8 +148,6 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
 
 #endif
 
-extern int errno;
-
 int init_template_db(struct template_db *tdb) {
     /* Not checking argument */
 

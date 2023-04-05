@@ -77,8 +77,6 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "utils.h"
 
-extern int errno;
-
 /* query to extract data fom databases - this determines the indexing in the print callback */
 static const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names FROM";
 

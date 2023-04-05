@@ -73,8 +73,6 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 
-extern int errno;
-
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
 #define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
 

@@ -73,8 +73,6 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #include "utils.h"
 
-extern int errno;
-
 /* Remove all non-subdirectories in the   */
 /* current directory. Then remove itself. */
 /* Subdirectories are already gone, so    */

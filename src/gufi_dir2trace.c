@@ -82,8 +82,6 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-extern int errno;
-
 struct PoolArgs {
     struct input in;
     trie_t *skip;

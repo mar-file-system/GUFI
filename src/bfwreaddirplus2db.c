@@ -85,7 +85,6 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-extern int errno;
 pthread_mutex_t outdb_mutex[MAXPTHREAD];
 pthread_mutex_t outfile_mutex[MAXPTHREAD];
 sqlite3_stmt *global_res[MAXPTHREAD];

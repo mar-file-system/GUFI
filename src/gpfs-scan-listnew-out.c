@@ -77,7 +77,6 @@ OF SUCH DAMAGE.
 //for testing where gpfs doesnt exisst
 //#include <mygpfs.h>
 
-extern int errno;
 pthread_mutex_t lock;
 int gotit;
 

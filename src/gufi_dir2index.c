@@ -79,8 +79,6 @@ OF SUCH DAMAGE.
 #include "trie.h"
 #include "utils.h"
 
-extern int errno;
-
 struct PoolArgs {
     struct input in;
 

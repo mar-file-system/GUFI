@@ -77,8 +77,6 @@ OF SUCH DAMAGE.
 
 #include "utils.h"
 
-extern int errno;
-
 volatile int sumlock = 0;
 struct sum sumout;
 pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
