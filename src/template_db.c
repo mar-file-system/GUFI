@@ -73,7 +73,7 @@ OF SUCH DAMAGE.
 #include "template_db.h"
 #include "xattrs.h"
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 #include <copyfile.h>
 
@@ -83,7 +83,7 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
     return fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
 }
 
-#else
+#elif defined(__linux__)
 
 #include <sys/sendfile.h>
 
@@ -91,6 +91,61 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
     off_t offset = 0;
     return sendfile(dst_fd, src_fd, &offset, size);
 }
+
+#else
+
+static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
+    #define buf_size 40960 /* size of empty db.db */
+    char buf[buf_size];
+
+    const off_t src_start = lseek(src_fd, 0, SEEK_CUR);
+    const off_t dst_start = lseek(dst_fd, 0, SEEK_CUR);
+
+    if (lseek(src_fd, 0, SEEK_SET) != 0) {
+        return -1;
+    }
+
+    if (lseek(dst_fd, 0, SEEK_SET) != 0) {
+        return -1;
+    }
+
+    ssize_t copied = 0;
+    while ((size_t) copied < size) {
+        const ssize_t r = read(src_fd, buf, buf_size);
+        if (r == 0) {
+            break;
+        }
+        if (r < 0) {
+            copied = -1;
+            break;
+        }
+
+        ssize_t written = 0;
+        while (written < r) {
+            const ssize_t w = write(dst_fd, buf + written, buf_size - written);
+            if (w < 1) {
+                copied = -1;
+                break;
+            }
+
+            written += w;
+        }
+
+        if (copied == -1) {
+            break;
+        }
+
+        copied += written;
+    }
+
+    if (copied == -1) {
+        lseek(src_fd, src_start, SEEK_SET);
+        lseek(dst_fd, dst_start, SEEK_SET);
+    }
+
+    return copied;
+}
+
 #endif
 
 extern int errno;
