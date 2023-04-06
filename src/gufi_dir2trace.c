@@ -120,7 +120,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     uint64_t nondirs_processed = 0;
     int rc = 0;
 
-    dequeue_work(in->compress, data, &work, &work_src);
+    decompress_struct(in->compress, data, (void **) &work, &work_src, sizeof(work_src));
 
     DIR *dir = opendir(work->name);
     if (!dir) {
@@ -163,7 +163,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
-    free_work(in->compress, work, &work_src);
+    free_struct(in->compress, work, &work_src, work->recursion_level);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     pa->total_files[id] += nondirs_processed;
@@ -312,7 +312,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        enqueue_work(pa.in.compress, &root, pool, 0, processdir);
+        struct work *copy = compress_struct(pa.in.compress, &root, sizeof(root));
+        QPTPool_enqueue(pool, 0, processdir, copy);
 
         i++;
     }

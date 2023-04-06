@@ -68,6 +68,7 @@ OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <sys/stat.h>
 
+#include "compress.h"
 #include "xattrs.h"
 
 #define MAXPATH 4096
@@ -317,10 +318,9 @@ typedef enum {
 
 /* minimum data needs to be passed around between threads */
 struct work {
-   #if HAVE_ZLIB
-   int           compressed;             /* is this struct compressed? */
-   size_t        len;                    /* only meaningful if compressed == 1 */
-   #endif
+#if HAVE_ZLIB
+   compressed_t  compressed;
+#endif
 
    char*         root;                   /* parent of the the top level directory */
    size_t        root_len;
@@ -353,12 +353,6 @@ struct entry_data {
    char          pinodec[128];
    int           suspect;  // added for bfwreaddirplus2db for suspect
 };
-
-#if HAVE_ZLIB
-#define COMPRESS_OPT "e"
-#else
-#define COMPRESS_OPT
-#endif
 
 extern char fielddelim[];
 

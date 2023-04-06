@@ -492,119 +492,6 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
     return dst_len - max_len - 1;
 }
 
-#if HAVE_ZLIB
-/*
- * not static to allow for these globals and
- * functions to be declared for testing
- */
-
-/* starting offset of actual struct work data */
-const size_t WORK_OFFSET =
-    ((size_t) &((struct work *) NULL)->root);
-
-/* size of struct work without the compression information */
-const size_t WORK_LEN =
-    sizeof(struct work) - WORK_OFFSET;
-
-const size_t MAXIMUM_COMPRESSED_LEN = WORK_LEN;
-
-/* dst is a reference to a pointer on the heap */
-void compress_work_zlib(struct work **dst, struct work *src, const size_t max_len) {
-    /* compress work item */
-    (*dst)->len = WORK_LEN;
-    const int ret = compress((unsigned char *) &(*dst)->root, &(*dst)->len,
-                             (unsigned char *) &src->root, WORK_LEN);
-    (*dst)->compressed = (ret == Z_OK);
-
-    /* if compressed enough, reallocate to reduce memory usage */
-    if ((*dst)->compressed && ((*dst)->len < max_len)) {
-        struct work *r = realloc(*dst, WORK_OFFSET + (*dst)->len);
-        if (r) {
-            *dst = r;
-        }
-        /* if realloc failed, dst can still be used */
-    }
-}
-
-void decompress_work_zlib(struct work **dst, struct work *src, void *data) {
-    struct work *work = (struct work *) data;
-    if (work->compressed) {
-        size_t work_len = WORK_LEN;
-        uncompress((unsigned char *) &src->root, &work_len,
-                   (unsigned char *) &work->root, work->len);
-        free(data);
-
-        *dst = src;
-    }
-    else {
-        *dst = work;
-    }
-}
-
-void free_work_zlib(struct work *heap, struct work *stack) {
-    if (heap != stack) {
-        free(heap);
-    }
-}
-#endif
-
-int enqueue_work(const int comp, struct work *stack,
-                 QPTPool_t *ctx, const size_t id, QPTPoolFunc_t processdir) {
-    struct work *copy = malloc(sizeof(*stack));
-
-    #if HAVE_ZLIB
-    if (comp) {
-        compress_work_zlib(&copy, stack, MAXIMUM_COMPRESSED_LEN);
-        if (copy->compressed) {
-            QPTPool_enqueue(ctx, id, processdir, copy);
-            return 0;
-        }
-    }
-    #else
-    (void) comp;
-    #endif
-
-    memcpy(copy, stack, sizeof(*stack));
-
-    QPTPool_enqueue(ctx, id, processdir, copy);
-
-    return 0;
-}
-
-int dequeue_work(const int comp, void *data,
-                 struct work **heap, struct work *stack) {
-    #if HAVE_ZLIB
-    if (comp) {
-        decompress_work_zlib(heap, stack, data);
-        return 0;
-    }
-    #else
-    (void) comp;
-    (void) stack;
-    #endif
-
-    *heap = (struct work *) data;
-
-    return 0;
-}
-
-int free_work(const int comp, struct work *heap, struct work *stack) {
-    #if HAVE_ZLIB
-    if (comp) {
-        free_work_zlib(heap, stack);
-        return 0;
-    }
-    #else
-    (void) comp;
-    (void) stack;
-    #endif
-    if (heap->recursion_level == 0) {
-        free(heap);
-    }
-
-    return 0;
-}
-
 /*
  * Push the subdirectories in the current directory onto the queue
  * and process non directories using a user provided function.
@@ -695,7 +582,8 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 child_ed.type = 'd';
 
                 if (!in->subdir_limit || (dirs < in->subdir_limit)) {
-                    enqueue_work(in->compress, &child, ctx, id, processdir);
+                    struct work *copy = compress_struct(in->compress, &child, sizeof(child));
+                    QPTPool_enqueue(ctx, id, processdir, copy);
                 }
                 else {
                     /*

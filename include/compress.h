@@ -62,90 +62,38 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef GUFI_COMPRESS_H
+#define GUFI_COMPRESS_H
 
-#include <dirent.h>
-#include <stdio.h>
-#include <sys/types.h>
+#include <inttypes.h>
+#include <stddef.h>
 
-#include <sqlite3.h>
-
-#include "QueuePerThreadPool.h"
-#include "bf.h"
-#include "config.h"
-#include "trie.h"
-#include "xattrs.h"
-
-/* Wrapper around snprintf to catch issues and print them to stderr */
-int SNPRINTF(char *str, size_t size, const char *format, ...);
-
-/* Equivalent to snprintf printing only strings. Variadic arguments
-   should be pairs of strings and their lengths (to try to prevent
-   unnecessary calls to strlen). Make sure to typecast the lengths
-   to size_t or weird bugs may occur */
-size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...);
-
-// global variable to hold per thread state goes here
-struct globalthreadstate {
-   FILE*    outfd[MAXPTHREAD];
-   sqlite3* outdbd[MAXPTHREAD];
-};
-extern struct globalthreadstate gts;
-
-extern struct sum sumout;
-
-int printits(struct input *in, struct work *pwork, struct entry_data *data, int ptid);
-
-int zeroit(struct sum *summary);
-
-int sumit(struct sum *summary, struct entry_data *data);
-
-int tsumit (struct sum *sumin, struct sum *smout);
-
-// given a possibly-multi-level path of directories (final component is
-// also a dir), create the parent dirs all the way down.
-//
-int mkpath(char*path, mode_t mode, uid_t uid, gid_t gid);
-
-int dupdir(const char *path, struct stat *stat);
-
-int shortpath(const char *name, char *nameout, char *endname);
-
-typedef int (*processnondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
- * Push the subdirectories in the current directory onto the queue
- * and process non directories using a user provided function
+ * make this struct the first member of
+ * another struct that needs compression
  */
-int descend(QPTPool_t *ctx, const size_t id, void *args,
-            struct input *in, struct work *work, ino_t inode,
-            DIR *dir, trie_t *skip, const int skip_db,
-            const int stat_entries,  QPTPoolFunc_t processdir,
-            processnondir_f processnondir, void *nondir_args,
-            size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed);
+typedef struct compressed {
+    int8_t          yes;  /* is this struct compressed? */
+    size_t          len;  /* only meaningful if yes == 1 */
+} compressed_t;
 
-/* convert a mode to a human readable string */
-char *modetostr(char *str, const size_t size, const mode_t mode);
+#if HAVE_ZLIB /* or any other algorithm */
+#define COMPRESS_OPT "e"
+#else
+#define COMPRESS_OPT
+#endif
 
-/* find the index of the first match, walking backwards */
-size_t trailing_match_index(const char *str, size_t len,
-                            const char *match, const size_t match_count);
+void *compress_struct(const int comp, void *stack, const size_t struct_len);
+int decompress_struct(const int comp, void *data,
+                      void **heap, void *stack, const size_t struct_len);
+int free_struct(const int comp, void *heap, void *stack, const size_t recursion_level);
 
-/* find the index of the first non-match, walking backwards */
-size_t trailing_non_match_index(const char *str, size_t len,
-                                const char *not_match, const size_t not_match_count);
-
-/*
- * convenience function to find first slash before the basename
- *
- * used for processing input paths that have been run through realpath
- */
-size_t dirname_len(const char *path, size_t len);
-
-int setup_directory_skip(const char *filename, trie_t **skip);
-
-/* strstr/strtok replacement */
-char *split(char *src, const char *delim, const char *end);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

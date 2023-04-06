@@ -74,6 +74,7 @@ if (CMAKE_CXX_COMPILER)
     SinglyLinkedList.cpp
     aggregate.cpp
     bf.cpp
+    compress.cpp
     dbutils.cpp
     debug.cpp
     print.cpp

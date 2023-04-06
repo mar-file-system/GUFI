@@ -105,6 +105,7 @@ set(GUFI_SOURCES
   QueuePerThreadPool.c
   SinglyLinkedList.c
   bf.c
+  compress.c
   dbutils.c
   debug.c
   external.c
