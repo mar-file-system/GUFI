@@ -125,7 +125,7 @@ def expand_git_identifiers(identifiers, git_path='@CMAKE_SOURCE_DIR@'):
 
     return commits
 
-def gather_raw_numbers(dbname, table_name, columns, commits):
+def gather_raw_numbers(dbname, table_name, columns, commits, plot_full_x_range):
     raw_numbers = [] # raw numbers grouped by commit
 
     # extract raw values from database
@@ -142,12 +142,13 @@ def gather_raw_numbers(dbname, table_name, columns, commits):
                 col_str, table_name, commit
             )
             cur = con.execute(query)
-
-            # We want to skip empty commits
             raw_commit = cur.fetchall()
+
+            # Skip empty commits if not plotting the full range
             if len(raw_commit) == 0:
-                commits.remove(commit)
-                continue
+                if not plot_full_x_range:
+                    commits.remove(commit)
+                    continue
 
             raw_numbers += [raw_commit]
     finally:
@@ -179,9 +180,11 @@ def run(argv):
     raw_data = conf[config.RAW_DATA]
     commits = expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS], args.git_path)
     columns = raw_data[config.RAW_DATA_COLUMNS]
+    plot_full_x_range = conf[config.AXES][config.AXES_X_FULL_RANGE]
 
     # get raw data
-    raw_numbers = gather_raw_numbers(args.raw_data_db, debug_print.TABLE_NAME, columns, commits)
+    raw_numbers = gather_raw_numbers(args.raw_data_db, debug_print.TABLE_NAME,
+                                     columns, commits, plot_full_x_range)
 
     # generate lines from raw data
     lines = stats.generate_lines(conf, commits, columns, raw_numbers, args.verbose)

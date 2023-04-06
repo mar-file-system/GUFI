@@ -126,6 +126,9 @@ def single_commit_stats(columns, rows, stat_names):
                 ...
             }
     '''
+    if len(rows) == 0:
+        return {stat_name: [float('nan')] * len(columns) for stat_name in stat_names}
+
 
     # make sure all values are numeric
     for row in rows:

@@ -113,6 +113,7 @@ AXES = 'axes'                              # section
 AXES_X_HASH_LEN = 'hash_len'               # integer
 AXES_X_LABEL_SIZE = 'x_label_size'         # string
 AXES_X_LABEL_ROTATION = 'x_label_rotation' # floating point
+AXES_X_FULL_RANGE = 'x_full_range'         # bool
 AXES_Y_LABEL = 'y_label'                   # string
 AXES_Y_STAT = 'y_stat'                     # string
 AXES_Y_MIN = 'y_min'                       # float
@@ -154,6 +155,7 @@ DEFAULTS = {
         AXES_X_HASH_LEN       : [int, 0],
         AXES_X_LABEL_SIZE     : [str, None],
         AXES_X_LABEL_ROTATION : [float, None],
+        AXES_X_FULL_RANGE     : [bool, False],
         AXES_Y_LABEL          : [str, 'Y Axis'],
         AXES_Y_STAT           : [str, performance_pkg.graph.stats.AVERAGE],
         AXES_Y_MIN            : [float, None],
@@ -234,6 +236,7 @@ def config_file(filename):
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_HASH_LEN)
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_LABEL_SIZE)
     read_value(conf, parser, DEFAULTS, AXES, AXES_X_LABEL_ROTATION)
+    read_bool (conf, parser, DEFAULTS, AXES, AXES_X_FULL_RANGE)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_LABEL)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_STAT)
     read_value(conf, parser, DEFAULTS, AXES, AXES_Y_MIN)
