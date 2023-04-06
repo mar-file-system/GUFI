@@ -92,11 +92,21 @@ opened for querying.
     \hline
     Function Name & Purpose \\
     \hline
-    path & Relative path of current directory \\
+    path & Current directory relative to path passed into executable \\
+    \hline
+    epath & Current directory basename \\
     \hline
     fpath & Full path of current directory \\
     \hline
-    epath & Current directory name \\
+    rpath & Current directory relative to path passed into executable \\
+          & taking into account the rolled up name in summary table \\
+          & and rollup score \\
+          & \\
+          & Usage: \\
+          & \ \ \ \ \texttt{SELECT rpath(summary.name, summary.rollupscore)} \\
+          & \ \ \ \ \texttt{\ \ \ \ \ \ \ || "/" || pentries.name} \\
+          & \ \ \ \ \texttt{FROM summary, pentries} \\
+          & \ \ \ \ \texttt{WHERE summary.inodes == pentries.pinode;} \\
     \hline
     level & Depth of the current directory from the starting directory \\
     \hline
