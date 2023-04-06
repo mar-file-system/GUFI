@@ -225,9 +225,13 @@ static void *worker_function(void *args) {
         #endif
     }
 
+    /* signal all threads to loop, just in case */
     timestamp_create_start(wf_broadcast);
     for(size_t i = 0; i < ctx->nthreads; i++) {
-        pthread_cond_broadcast(&ctx->data[i].cv);
+        QPTPoolThreadData_t *data = &ctx->data[i];
+        pthread_mutex_lock(&data->mutex);
+        pthread_cond_broadcast(&data->cv);
+        pthread_mutex_unlock(&data->mutex);
     }
     timestamp_end_print(ctx->buffers, id, "wf_broadcast", wf_broadcast);
 
@@ -323,13 +327,13 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
     else {
         sll_push(&next->queue, qi);
     }
-    pthread_mutex_unlock(&next->mutex);
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->incomplete++;
     pthread_mutex_unlock(&ctx->mutex);
 
-    pthread_cond_broadcast(&ctx->data[data->next_queue].cv);
+    pthread_cond_broadcast(&next->cv);
+    pthread_mutex_unlock(&next->mutex);
 
     data->next_queue = ctx->next(id, data->next_queue, ctx->nthreads,
                                  new_work, ctx->next_args);
