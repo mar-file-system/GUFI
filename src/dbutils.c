@@ -1002,8 +1002,6 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 static void human_readable_size(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
-    const int align = sqlite3_value_int(argv[1]);
-    char format[MAXPATH];
     char buf[MAXPATH];
 
     double size = sqlite3_value_double(argv[0]);
@@ -1015,17 +1013,14 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
         }
 
         if (unit_index == 0) {
-            snprintf(format, sizeof(format), "%%%d.1f", align);
-            snprintf(buf, sizeof(buf), format, size);
+            snprintf(buf, sizeof(buf), "%.1f", size);
         }
         else {
-            snprintf(format, sizeof(format), "%%%d.1f%%c", align);
-            snprintf(buf, sizeof(buf), format, size, SIZE[unit_index - 1]);
+            snprintf(buf, sizeof(buf), "%.1f%c", size, SIZE[unit_index - 1]);
         }
     }
     else {
-        snprintf(format, sizeof(format), "%%%dd", align);
-        snprintf(buf, sizeof(buf), format, 0);
+        snprintf(buf, sizeof(buf), "0");
     }
 
     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
@@ -1096,7 +1091,7 @@ int addqueryfuncs_common(sqlite3 *db) {
                                       NULL,                       &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
                                       NULL,                       &blocksize,           NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "human_readable_size", 2,   SQLITE_UTF8,
+             (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,
                                       NULL,                       &human_readable_size, NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
                                       NULL,                       &sqlite_basename,     NULL, NULL) == SQLITE_OK));

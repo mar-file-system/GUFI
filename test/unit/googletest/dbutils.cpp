@@ -368,7 +368,7 @@ TEST(addqueryfuncs, human_readable_size) {
 
     size_t size = 1;
 
-    SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu, 0)", size);
+    SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu)", size);
     ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
     EXPECT_STREQ(output, "1.0");
 
@@ -378,11 +378,10 @@ TEST(addqueryfuncs, human_readable_size) {
 
         size *= 1024;
 
-        SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu, 0)", size + (size / 10));
+        SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu)", size + (size / 10));
         ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
         SNPRINTF(expected, MAXPATH, "1.1%c", SIZE[i]);
         EXPECT_STREQ(output, expected);
-
     }
 
     sqlite3_close(db);
