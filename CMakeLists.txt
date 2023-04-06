@@ -400,6 +400,9 @@ endif()
 # grep is required in scripts and test/regression
 find_exec_dependency(GREP grep)
 
+# awk is required in contrib/performance and test/regression
+find_exec_dependency(AWK awk gawk)
+
 # enable "make test"
 enable_testing()
 

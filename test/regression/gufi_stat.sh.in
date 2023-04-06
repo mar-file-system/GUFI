@@ -102,7 +102,8 @@ echo
 echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}" "${variable_size[@]}"
 do
-    "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | awk '{ print $1 " " $2 }'
+    # shellcheck disable=SC2016
+    "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
 done | remove_root | @SORT@
 echo
 
@@ -130,7 +131,8 @@ nonprintable=('a' 'b' 'e' 'f' 'n' 'r' 't' 'v')
 for c in "${nonprintable[@]}"
 do
     echo -n "\\${c} -> "
-    "${GUFI_STAT}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | awk '{ print $2 }'
+    # shellcheck disable=SC2016
+    "${GUFI_STAT}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"

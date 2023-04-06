@@ -81,10 +81,12 @@ src_contents=$(@FIND@ "${SRCDIR}" | @SORT@)
 index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(name, rollupscore) FROM summary;" -E "SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "${INDEXROOT}" | replace | @SORT@)
 
 echo "Source Directory:"
-echo "${src_contents}" | awk '{ printf "    " $0 "\n" }'
+# shellcheck disable=SC2016
+echo "${src_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
 echo "GUFI Index:"
-echo "${index_contents}" | awk '{ printf "    " $0 "\n" }'
+# shellcheck disable=SC2016
+echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
 
 cat "${TRACES[@]}" > "${TRACE}"

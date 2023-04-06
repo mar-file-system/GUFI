@@ -81,23 +81,28 @@ found=$(@FIND@ "${TRACES[@]}" | wc -l)
 echo "Expecting ${THREADS} trace files. Found ${found}."
 
 # count lines
-trace_lines=$(cat "${TRACES[@]}" | wc -l | awk '{print $1}')
+# shellcheck disable=SC2016
+trace_lines=$(cat "${TRACES[@]}" | wc -l | @AWK@ '{print $1}')
 contents=$(@FIND@ "${SRCDIR}")
-content_lines=$(echo "${contents}" | wc -l | awk '{print $1}')
+# shellcheck disable=SC2016
+content_lines=$(echo "${contents}" | wc -l | @AWK@ '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
-columns=$(@SED@ "s/[^${DELIM}]//g" "${TRACES[@]}" | awk '{ print length }' | @SORT@ | uniq)
+columns=$(@SED@ "s/[^${DELIM}]//g" "${TRACES[@]}" | @AWK@ '{ print length }' | @SORT@ | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
 src=$(@FIND@ "${SRCDIR}" | @SORT@)
-lines=$(awk -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "s/\\/\\//\\//g" | @SORT@)
+# shellcheck disable=SC2016
+lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "s/\\/\\//\\//g" | @SORT@)
 
 echo "Source Directory:"
-echo "${src}"   | awk '{ print "    " $1 }'
+# shellcheck disable=SC2016
+echo "${src}"   | @AWK@ '{ print "    " $1 }'
 echo "Trace File:"
-echo "${lines}" | awk '{ print "    " $1 }'
+# shellcheck disable=SC2016
+echo "${lines}" | @AWK@ '{ print "    " $1 }'
 echo
 
 run_no_sort "mkdir \"${SRCDIR}.0\""

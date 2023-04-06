@@ -98,8 +98,11 @@ foreach(TEST
     runtests
     testdir.tar)
   # copy the script into the build directory for easy access
-  configure_file("${TEST}" "${TEST}" COPYONLY)
+  configure_file("${TEST}" "${TEST}" @ONLY)
 endforeach()
+
+# don't modify the tarball
+configure_file("testdir.tar" "testdir.tar" COPYONLY)
 
 foreach(PYTHON_SCRIPT
     common.py)

@@ -211,10 +211,10 @@ echo
 echo "send to output db dirs  only 2 threads suspectmethod 1 insuspectdfile"
 
 rm insuspectfile
-#stat testdir/a | awk ' { print $2 " f" } ' >> insuspectfile
-ls -i testdir/a | awk ' { print $1 " f" } ' >> insuspectfile
-#stat testdir/c | awk ' { print $2 " d" } ' >> insuspectfile
-ls -id testdir/c | awk ' { print $1 " d" } ' >> insuspectfile
+#stat testdir/a | @AWK@ ' { print $2 " f" } ' >> insuspectfile
+ls -i testdir/a | @AWK@ ' { print $1 " f" } ' >> insuspectfile
+#stat testdir/c | @AWK@ ' { print $2 " d" } ' >> insuspectfile
+ls -id testdir/c | @AWK@ ' { print $1 " d" } ' >> insuspectfile
 
 rm bfwreaddirplusdb.*
 echo $BFWREADDIRPLUS2DB -n 2 -R -A 1 -W insuspectfile -O bfwreaddirplusdb $DEST
@@ -273,11 +273,11 @@ ls -l testbwrpdb
 #numpl=`ls -l testbwrpdb | wc -l`
 #if [ $numpl -gt 0 ]
 #then
-t1=`ls testbwrpdb | head -1 | awk ' { print $1 } '`
+t1=`ls testbwrpdb | head -1 | @AWK@ ' { print $1 } '`
 sqlite3 -line testbwrpdb/$t1 '.tables'
 sqlite3 -line testbwrpdb/$t1 'select * from entries;'
 sqlite3 -line testbwrpdb/$t1 'select * from summary;'
-t2=`ls testbwrpdb | tail -1 | awk ' { print $1 } '`
+t2=`ls testbwrpdb | tail -1 | @AWK@ ' { print $1 } '`
 sqlite3 -line testbwrpdb/$t1 '.tables'
 sqlite3 -line testbwrpdb/$t2 'select * from entries;'
 sqlite3 -line testbwrpdb/$t2 'select * from summary;'

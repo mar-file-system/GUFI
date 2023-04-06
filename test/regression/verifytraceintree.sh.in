@@ -120,11 +120,13 @@ echo "# verify that all entries in the trace can be found in the GUFI tree (Pass
 run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# first line bad delimiter (Fail)"
-awk -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "d" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "d" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# second line bad delimiter (Fail)"
-awk -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "f" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${BADDELIM}" -v TYPE="${AWK_TYPE}" '$TYPE == "f" { $1=$1 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# first line is not a directory (Fail)"
@@ -145,21 +147,25 @@ echo "# path exists, but is not directory (Fail)"
     head -n 2 "${TRACE}" | tail -n 1 | @SED@ "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
     tail -n +3 "${TRACE}"
 ) > "${BADTRACE}"
-filename=$(echo -n "${INDEXTARGET}/"; head -n 1 "${BADTRACE}" | awk -F "${DELIM}" '{ printf $1 }')
+# shellcheck disable=SC2016
+filename=$(echo -n "${INDEXTARGET}/"; head -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
 touch "${filename}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 rm "${filename}"
 
 echo "# directory permission mismatch (Fail)"
-awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "d" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "d" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# directory uid mismatch (Fail)"
-awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# directory gid mismatch (Fail)"
-awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# missing db.db (Fail)"
@@ -172,15 +178,18 @@ echo "# non-directory name mismatch (Fail)"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# non-directory permissions mismatch (Fail)"
-awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "f" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v MODE="${AWK_MODE}" '$TYPE == "f" { $MODE = 0 }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# non-directory uid mismatch (Fail)"
-awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# non-directory gid mismatch (Fail)"
-awk -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+# shellcheck disable=SC2016
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# empty line (Pass)"

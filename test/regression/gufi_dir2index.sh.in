@@ -81,10 +81,12 @@ OUTPUT="gufi_dir2index.out"
 
     echo "Index Everything:"
     echo "    Source Directory:"
-    echo "${src}" | awk '{ printf "        " $0 "\n" }'
+    # shellcheck disable=SC2016
+    echo "${src}" | @AWK@ '{ printf "        " $0 "\n" }'
     echo
     echo "    GUFI Index:"
-    echo "${index}" | awk '{ printf "        " $0 "\n" }'
+    # shellcheck disable=SC2016
+    echo "${index}" | @AWK@ '{ printf "        " $0 "\n" }'
     echo
 )
 
@@ -103,10 +105,12 @@ do
 
     echo "Index up to level ${level}:"
     echo "    Source Directory:"
-    echo "${src}" | awk '{ printf "        " $0 "\n" }'
+    # shellcheck disable=SC2016
+    echo "${src}" | @AWK@ '{ printf "        " $0 "\n" }'
     echo
     echo "    GUFI Index:"
-    echo "${index}" | awk '{ printf "        " $0 "\n" }'
+    # shellcheck disable=SC2016
+    echo "${index}" | @AWK@ '{ printf "        " $0 "\n" }'
     echo
 done
 echo
