@@ -369,7 +369,7 @@ def parse_directives(table, fmt, fmt_len, i, path):
         ret = 'printf("%{{0}}s", {0}.name)'.format(table)
     # elif ret == 'F':
     elif ret == 'g':
-        ret = 'gidtogroup({0}.gid, {{0}})'.format(table)
+        ret = 'gidtogroup({0}.gid)'.format(table)
     elif ret == 'G':
         ret = 'printf("%{{0}}d", {0}.gid)'.format(table)
     elif ret == 'h':
@@ -400,7 +400,7 @@ def parse_directives(table, fmt, fmt_len, i, path):
         ret = 'printf("%{{0}}d", {0}.mtime)'.format(table)
     # elif ret == 'T':
     elif ret == 'u':
-        ret = 'uidtouser({0}.uid, {{0}})'.format(table)
+        ret = 'uidtouser({0}.uid)'.format(table)
     elif ret == 'U':
         ret = 'printf("%{{0}}d", {0}.uid)'.format(table)
     elif ret == 'y':

@@ -68,7 +68,7 @@ QUERYDBS=$DIR/../src/querydbs
 #echo "running groupfilespacehog bfq is $BFQ and querydbs is $QUERYDBS"
 echo "query to create db insert recs from entry query into out db group file space hog"
 rm -f outdb*
-$BFQ -E "insert into sument select gidtogroup(gid, 0), count(*), sum(size) from entries where type='f' group by gid;" -n $2 -O outdb -I "create table sument (groupname text, totfiles int64, totsize int64);" $1
+$BFQ -E "insert into sument select gidtogroup(gid), count(*), sum(size) from entries where type='f' group by gid;" -n $2 -O outdb -I "create table sument (groupname text, totfiles int64, totsize int64);" $1
 #ls -l
 #$EPATH/querydbs outdb "select groupname, totfiles, totsize from vsument group by groupname;" 0 1 1 $2 sument
 $QUERYDBS -NV outdb sument "select groupname, sum(totfiles), sum(totsize) from vsument group by groupname;" outdb.*

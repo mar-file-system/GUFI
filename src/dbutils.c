@@ -855,18 +855,11 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
     (void) argc;
 
     const char *text = (char *) sqlite3_value_text(argv[0]);
-    const size_t width = sqlite3_value_int64(argv[1]);
-
-    static const char FORMAT[] = "%%%zus";
-    char format[256];
-    SNPRINTF(format, 256, FORMAT, width);
 
     const int fuid = atoi(text);
     struct passwd *fmypasswd = getpwuid(fuid);
     const char *show = fmypasswd?fmypasswd->pw_name:text;
 
-    char fname[256];
-    SNPRINTF(fname, 256, format, text);
     sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
 
     return;
@@ -877,19 +870,12 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     (void) argc;
 
     const char *text = (char *) sqlite3_value_text(argv[0]);
-    const size_t width = sqlite3_value_int64(argv[1]);
-
-    static const char FORMAT[] = "%%%zus";
-    char format[256];
-    SNPRINTF(format, 256, FORMAT, width);
 
     const int fgid = atoi(text);
     struct group *fmygroup = getgrgid(fgid);
     const char *show = fmygroup?fmygroup->gr_name:text;
 
-    char fgroup[256];
-    SNPRINTF(fgroup, 256, format, show);
-    sqlite3_result_text(context, fgroup, -1, SQLITE_TRANSIENT);
+    sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
 
     return;
 }
@@ -1065,9 +1051,9 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
 }
 
 int addqueryfuncs_common(sqlite3 *db) {
-    return !((sqlite3_create_function(db,  "uidtouser",           2,   SQLITE_UTF8,
+    return !((sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
                                       NULL,                       &uidtouser,           NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "gidtogroup",          2,   SQLITE_UTF8,
+             (sqlite3_create_function(db,  "gidtogroup",          1,   SQLITE_UTF8,
                                       NULL,                       &gidtogroup,          NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "modetotxt",           1,   SQLITE_UTF8,
                                       NULL,                       &modetotxt,           NULL, NULL) == SQLITE_OK) &&

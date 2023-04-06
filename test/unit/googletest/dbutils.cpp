@@ -150,7 +150,7 @@ TEST(addqueryfuncs, uidtouser) {
 
     // use value obtained from summary table
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT uidtouser('%d', 0)", uid);
+    SNPRINTF(query, MAXSQL, "SELECT uidtouser('%d')", uid);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
@@ -179,7 +179,7 @@ TEST(addqueryfuncs, gidtogroup) {
 
     // use value obtained from summary table
     char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT gidtogroup('%d', 0)", gid);
+    SNPRINTF(query, MAXSQL, "SELECT gidtogroup('%d')", gid);
 
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);

@@ -130,9 +130,9 @@ def build_select(args):
     if args.long_listing:
         select += ['modetotxt(mode)',
                    'printf("%{0}d", nlink)'.format(args.nlink_width),
-                   'uidtouser(uid, {0})'.format(args.user_width)]
+                   'uidtouser(uid)']
         if not args.no_group:
-            select += ['gidtogroup(gid, {0})'.format(args.group_width)]
+            select += ['gidtogroup(gid)']
 
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence

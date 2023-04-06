@@ -67,5 +67,5 @@ QUERYDBS=$DIR/../src/querydbs
 
 echo "query to create db insert recs from entry query into out db user file space hog use user summary"
 rm -f outdb*
-$BFQ -E "insert into sumsum select uidtouser(uid, 0), totfiles, totsize from vsummaryuser;" -n $2 -O outdb -I "create table sumsum (username text, totfiles int64, totsize int64);" $1
+$BFQ -E "insert into sumsum select uidtouser(uid), totfiles, totsize from vsummaryuser;" -n $2 -O outdb -I "create table sumsum (username text, totfiles int64, totsize int64);" $1
 $QUERYDBS -NV outdb sumsum "select username, sum(totfiles), sum(totsize) from vsumsum group by username;" outdb.*
