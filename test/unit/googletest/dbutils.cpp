@@ -336,17 +336,17 @@ TEST(addqueryfuncs, blocksize) {
             char output[MAXPATH] = {};
             char expected[MAXPATH] = {};
 
-            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%c', 0)", iBinputs[j], SIZE[i]);
+            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%c')", iBinputs[j], SIZE[i]);
             ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
             SNPRINTF(expected, MAXPATH, "%c%c", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
 
-            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%cB', 0)", Binputs[j], SIZE[i]);
+            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%cB')", Binputs[j], SIZE[i]);
             ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
             SNPRINTF(expected, MAXPATH, "%c%cB", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
 
-            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%ciB', 0)", iBinputs[j], SIZE[i]);
+            SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%ciB')", iBinputs[j], SIZE[i]);
             ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
             SNPRINTF(expected, MAXPATH, "%c%ciB", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);

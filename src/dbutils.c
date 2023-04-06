@@ -958,7 +958,6 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
     const size_t size  = sqlite3_value_int64(argv[0]);
     const char  *unit  = (char *) sqlite3_value_text(argv[1]);
-    const int    align = sqlite3_value_int(argv[2]);
 
     const size_t len = strlen(unit);
 
@@ -989,13 +988,12 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
         }
     }
 
-    char fmt[MAXPATH];
-    SNPRINTF(fmt, sizeof(fmt), "%%%dzu%s", align, unit);
-
     char buf[MAXPATH];
-    snprintf(buf, sizeof(buf), fmt, size / unit_size + (!!(size % unit_size)));
+    const size_t buf_len = snprintf(buf, sizeof(buf), "%zu%s",
+                                    size / unit_size + (!!(size % unit_size)),
+                                    unit);
 
-    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
+    sqlite3_result_text(context, buf, buf_len, SQLITE_TRANSIENT);
 
     return;
 }
@@ -1096,7 +1094,7 @@ int addqueryfuncs_common(sqlite3 *db) {
                                       NULL,                       &modetotxt,           NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "strftime",            2,   SQLITE_UTF8,
                                       NULL,                       &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "blocksize",           3,   SQLITE_UTF8,
+             (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
                                       NULL,                       &blocksize,           NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "human_readable_size", 2,   SQLITE_UTF8,
                                       NULL,                       &human_readable_size, NULL, NULL) == SQLITE_OK) &&
