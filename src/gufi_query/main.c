@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 #include "SinglyLinkedList.h"
 #include "bf.h"
+#include "compress.h"
 #include "dbutils.h"
 #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
 #include "debug.h"
@@ -109,6 +110,10 @@ static const char ATTACH_NAME[] = "tree";
 
 /* additional data gufi_query needs */
 typedef struct gufi_query_work {
+    #if HAVE_ZLIB
+    compressed_t comp;
+    #endif
+
     struct work work;
 
     /*
@@ -136,7 +141,8 @@ static size_t descend2(QPTPool_t *ctx,
                        DIR *dir,
                        trie_t *skip_names,
                        QPTPoolFunc_t func,
-                       const size_t max_level
+                       const size_t max_level,
+                       const int comp
                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                        , sll_t *dts
                        #endif
@@ -232,8 +238,7 @@ static size_t descend2(QPTPool_t *ctx,
                 /* make a clone here so that the data can be pushed into the queue */
                 /* this is more efficient than malloc+free for every single entry */
                 descend_timestamp_start(dts, make_clone);
-                gqw_t *clone = (gqw_t *) malloc(sizeof(gqw_t));
-                memcpy(clone, &child, sizeof(gqw_t));
+                gqw_t *clone = compress_struct(comp, &child, sizeof(child));
                 descend_timestamp_end(make_clone);
 
                 /* push the subdirectory into the queue for processing */
@@ -269,7 +274,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct input *in = pa->in;
     ThreadArgs_t *ta = &(pa->ta[id]);
 
-    gqw_t *gqw = (gqw_t *) data;
+    gqw_t stack;
+    gqw_t *gqw = &stack;
+    decompress_struct(in->compress, data, (void **) &gqw, &stack, sizeof(stack));
 
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, MAXPATH, 2, gqw->sqlite3_name, gqw->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
@@ -381,7 +388,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
             const size_t pushed =
             #endif
-            descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level
+            descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level, in->compress
                      #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                      , ts.dts
                      #endif
@@ -465,7 +472,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     thread_timestamp_start(ts.tts, free_work);
     free(gqw->work.fullpath);
-    free(gqw);
+    free_struct(in->compress, gqw, &stack, 0);
     thread_timestamp_end(free_work);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -569,7 +576,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:M:", 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:M:" COMPRESS_OPT, 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -687,7 +694,7 @@ int main(int argc, char *argv[])
         const size_t parent_slash    = trailing_match_index(root->work.name, first_non_slash, "/", 1);
         root->work.basename_len      = root->work.name_len - (parent_slash + 1);
 
-        /* push the path onto the queue */
+        /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
     }
 
