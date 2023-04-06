@@ -48,7 +48,7 @@ unusual, name?#
 writable
 
 # Get relative paths of all directories and non-directories ascending names
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name, rollupscore) FROM summary;" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(name, rollupscore) FROM summary;" -E "INSERT INTO out SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
 prefix
 .hidden
 1KB
@@ -71,7 +71,7 @@ unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT path(name, rollupscore) FROM summary;" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(name, rollupscore) FROM summary;" -E "INSERT INTO out SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
 unusual#? directory ,/unusual, name?#
 unusual#? directory ,
 repeat_name
@@ -94,7 +94,7 @@ directory
 prefix
 
 # Get relative paths of all directories and non-directories ascending sizes (files only)
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
 empty_file
 directory/executable
 directory/readonly
@@ -110,7 +110,7 @@ unusual#? directory ,/unusual, name?#
 1MB
 
 # Get relative paths of all directories and non-directories descending sizes (files only)
-$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
+$ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
 1MB
 1KB
 unusual#? directory ,/unusual, name?#

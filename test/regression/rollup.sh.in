@@ -160,9 +160,9 @@ chmod 700 "${SRCDIR}/u"
 rm -r "${TMP}"
 
 do_tests() {
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary;\" \"${INDEXROOT}\" | wc -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(name, rollupscore) FROM summary\" -E \"SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore) FROM summary;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore) FROM summary\" -E \"SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
 
     run_no_sort "${GUFI_FIND} -type d | wc -l"
     run_no_sort "${GUFI_FIND} -type f | wc -l"

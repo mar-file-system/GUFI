@@ -85,7 +85,7 @@ OUTPUT="querydbs.out"
 
 (
 echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replace
-run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type=='f');\" \"${INDEXROOT}\""
+run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name, pentries.size FROM summary, pentries WHERE (summary.inode == pentries.pinode) AND (pentries.type=='f');\" \"${INDEXROOT}\""
 
 echo "# Query all per-thread result databse files at once"
 run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"

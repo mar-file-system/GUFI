@@ -789,16 +789,29 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     return 0;
 }
 
+/* return the basename of the directory you are currently in */
+static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    struct work *work = (struct work *) sqlite3_user_data(context);
+
+    sqlite3_result_text(context, work->name + work->name_len - work->basename_len,
+                        work->basename_len, SQLITE_STATIC);
+    return;
+}
+
 /*
- * path(summary.name, summary.rollupscore)
+ * Usage:
+ *     SELECT rpath(summary.name, summary.rollupscore) || "/" || pentries.name
+ *     FROM summary, pentries
+ *     WHERE summary.inode == pentries.pinode;
  *
- * path = work->name - work->root (prefix)
+ * rpath = work->name - work->root (prefix)
  * // rolled up
  * if summary.rollupscore != 0
  *     path += summary.name - common path (prefix)
  * return path
  */
-static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
+static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     /* work->name contains the current directory being operated on */
     struct work *work = (struct work *) sqlite3_user_data(context);
@@ -847,16 +860,6 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
         sqlite3_result_text(context, fullpath, fullpath_len, SQLITE_TRANSIENT);
     }
 
-    return;
-}
-
-/* return the basename of the directory you are currently in */
-static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    struct work *work = (struct work *) sqlite3_user_data(context);
-
-    sqlite3_result_text(context, work->name + work->name_len - work->basename_len,
-                        work->basename_len, SQLITE_STATIC);
     return;
 }
 
@@ -1081,10 +1084,10 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
     /* only available if work is valid */
     if (work) {
         void *lvl = (void *) (uintptr_t) work->level;
-        if (!((sqlite3_create_function(db,  "path",                2, SQLITE_UTF8,
-                                       work,                       &path,               NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "epath",               0, SQLITE_UTF8,
+        if (!((sqlite3_create_function(db,  "epath",               0, SQLITE_UTF8,
                                        work,                       &epath,              NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "rpath",               2, SQLITE_UTF8,
+                                       work,                       &rpath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
                                        (void *) work->root,        &starting_point,     NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,

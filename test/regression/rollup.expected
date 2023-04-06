@@ -51,13 +51,13 @@ Files/Links:    96
 Directories:    69 (21 empty)
 Total:          165
 Remaining Dirs: 17 (24.64%)
-$ gufi_query -d " " -S "SELECT path(name, rollupscore) FROM summary;" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(name, rollupscore) FROM summary;" "prefix" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "prefix" | wc -l
+$ gufi_query -d " " -E "SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "prefix" | wc -l
 96
 
-$ gufi_query -d " " -S "SELECT path(name, rollupscore) FROM summary" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(name, rollupscore) FROM summary" -E "SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "prefix" | wc -l
 165
 
 $ gufi_find -type d | wc -l
@@ -667,13 +667,13 @@ Files/Links:    96
 Directories:    69 (21 empty)
 Total:          165
 Remaining Dirs: 69 (100.00%)
-$ gufi_query -d " " -S "SELECT path(name, rollupscore) FROM summary;" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(name, rollupscore) FROM summary;" "prefix" | wc -l
 69
 
-$ gufi_query -d " " -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "prefix" | wc -l
+$ gufi_query -d " " -E "SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;" "prefix" | wc -l
 96
 
-$ gufi_query -d " " -S "SELECT path(name, rollupscore) FROM summary" -E "SELECT path(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "prefix" | wc -l
+$ gufi_query -d " " -S "SELECT rpath(name, rollupscore) FROM summary" -E "SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode" "prefix" | wc -l
 165
 
 $ gufi_find -type d | wc -l

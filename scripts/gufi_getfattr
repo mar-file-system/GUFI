@@ -82,9 +82,9 @@ def getfattr(args, config, dirname, nondirname):
         E_cols = ['xattr_value']
     else:
         # default to getting path and xattr name
-        S_cols = ['path(name, rollupscore)', 'xattr_name']
-        E_cols = ['path({0}.name, {0}.rollupscore) || \'/\' || {1}.name'.format(gufi_common.SUMMARY,
-                                                                                gufi_common.XPENTRIES),
+        S_cols = ['rpath(name, rollupscore)', 'xattr_name']
+        E_cols = ['rpath({0}.name, {0}.rollupscore) || \'/\' || {1}.name'.format(gufi_common.SUMMARY,
+                                                                                 gufi_common.XPENTRIES),
                   'xattr_name']
 
         # also get xattr value

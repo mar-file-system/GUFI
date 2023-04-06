@@ -99,38 +99,6 @@ TEST(set_db_pragmas, nullptr) {
     EXPECT_EQ(set_db_pragmas(nullptr), 1);
 }
 
-TEST(addqueryfuncs, path) {
-    // currently at this path
-    const char root[MAXPATH] = "index_root";
-    const size_t root_len = strlen(root);
-
-    const char dirname[MAXPATH] = "dirname";
-
-    struct work work;
-    memset(&work, 0, sizeof(work));
-    work.root = (char *) root;
-    work.root_len = root_len;
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
-
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
-    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
-
-    for(int rollupscore : {0, 1}) {
-        char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT path(\"%s\", %d);", dirname, rollupscore);
-
-        // the path returned by the query is the path without the index prefix
-        char output[MAXPATH] = {};
-        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
-
-        EXPECT_STREQ(output, dirname);
-    }
-
-    sqlite3_close(db);
-}
-
 TEST(addqueryfuncs, epath) {
     // currently at this path
     const char root[MAXPATH] = "index_root";
@@ -154,6 +122,38 @@ TEST(addqueryfuncs, epath) {
     EXPECT_EQ(sqlite3_exec(db, "SELECT epath();", str_output, output, nullptr), SQLITE_OK);
 
     EXPECT_STREQ(output, dirname);
+
+    sqlite3_close(db);
+}
+
+TEST(addqueryfuncs, rpath) {
+    // currently at this path
+    const char root[MAXPATH] = "index_root";
+    const size_t root_len = strlen(root);
+
+    const char dirname[MAXPATH] = "dirname";
+
+    struct work work;
+    memset(&work, 0, sizeof(work));
+    work.root = (char *) root;
+    work.root_len = root_len;
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+
+    for(int rollupscore : {0, 1}) {
+        char query[MAXSQL] = {};
+        SNPRINTF(query, MAXSQL, "SELECT rpath(\"%s\", %d);", dirname, rollupscore);
+
+        // the path returned by the query is the path without the index prefix
+        char output[MAXPATH] = {};
+        EXPECT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
+
+        EXPECT_STREQ(output, dirname);
+    }
 
     sqlite3_close(db);
 }
