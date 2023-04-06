@@ -189,14 +189,16 @@ static size_t descend2(QPTPool_t *ctx,
                 descend_timestamp_end(strncmp_branch);
             }
 
-            descend_timestamp_start(dts, snprintf_call);
             gqw_t child;
+            child.work.basename_len = len;
 
+            descend_timestamp_start(dts, snprintf_call);
             /* append entry name to directory */
             child.work.name_len = SNFORMAT_S(child.work.name, MAXPATH, 3,
                                              gqw->work.name, gqw->work.name_len,
                                              "/", (size_t) 1,
                                              entry->d_name, len);
+
             descend_timestamp_end(snprintf_call);
 
             descend_timestamp_start(dts, isdir_cmp);
@@ -671,6 +673,16 @@ int main(int argc, char *argv[])
         }
 
         root->work.root[root->work.root_len] = '\0';
+
+        root->work.basename_len = root->work.root_len;
+        while ((root->work.basename_len - 1) &&
+               (root->work.root[root->work.root_len - 1] == '/')) {
+            root->work.basename_len--;
+        }
+
+        const size_t first_non_slash = trailing_non_match_index(root->work.name, root->work.name_len, "/", 1);
+        const size_t parent_slash    = trailing_match_index(root->work.name, first_non_slash, "/", 1);
+        root->work.basename_len      = root->work.name_len - (parent_slash + 1);
 
         /* push the path onto the queue */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);

@@ -131,6 +131,33 @@ TEST(addqueryfuncs, path) {
     sqlite3_close(db);
 }
 
+TEST(addqueryfuncs, epath) {
+    // currently at this path
+    const char root[MAXPATH] = "index_root";
+    const size_t root_len = strlen(root);
+
+    const char dirname[MAXPATH] = "dirname";
+
+    struct work work;
+    memset(&work, 0, sizeof(work));
+    work.root = (char *) root;
+    work.root_len = root_len;
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
+    work.basename_len = strlen(dirname);
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+
+    char output[MAXPATH] = {};
+    EXPECT_EQ(sqlite3_exec(db, "SELECT epath();", str_output, output, nullptr), SQLITE_OK);
+
+    EXPECT_STREQ(output, dirname);
+
+    sqlite3_close(db);
+}
+
 TEST(addqueryfuncs, uidtouser) {
     // user caller's uid
     const uid_t uid = getuid();

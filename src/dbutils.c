@@ -850,6 +850,16 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+/* return the basename of the directory you are currently in */
+static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    struct work *work = (struct work *) sqlite3_user_data(context);
+
+    sqlite3_result_text(context, work->name + work->name_len - work->basename_len,
+                        work->basename_len, SQLITE_STATIC);
+    return;
+}
+
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc;
@@ -1073,6 +1083,8 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
         void *lvl = (void *) (uintptr_t) work->level;
         if (!((sqlite3_create_function(db,  "path",                2, SQLITE_UTF8,
                                        work,                       &path,               NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "epath",               0, SQLITE_UTF8,
+                                       work,                       &epath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
                                        (void *) work->root,        &starting_point,     NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,
