@@ -808,6 +808,21 @@ static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
+/* return the fullpath of the directory you are currently in */
+static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    struct work *work = (struct work *) sqlite3_user_data(context);
+
+    if (!work->fullpath) {
+        work->fullpath = realpath(work->name, NULL);
+        work->fullpath_len = strlen(work->fullpath);
+    }
+
+    sqlite3_result_text(context, work->fullpath, work->fullpath_len, SQLITE_STATIC);
+
+    return;
+}
+
 /*
  * Usage:
  *     SELECT rpath(summary.name, summary.rollupscore) || "/" || pentries.name
@@ -1097,6 +1112,8 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
                                        work,                       &path,               NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "epath",               0, SQLITE_UTF8,
                                        work,                       &epath,              NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "fpath",               0, SQLITE_UTF8,
+                                       work,                       &fpath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "rpath",               2, SQLITE_UTF8,
                                        work,                       &rpath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,

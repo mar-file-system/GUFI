@@ -191,6 +191,8 @@ static size_t descend2(QPTPool_t *ctx,
 
             gqw_t child;
             child.work.basename_len = len;
+            child.work.fullpath = NULL;
+            child.work.fullpath_len = 0;
 
             descend_timestamp_start(dts, snprintf_call);
             /* append entry name to directory */
@@ -462,6 +464,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ;
 
     thread_timestamp_start(ts.tts, free_work);
+    free(gqw->work.fullpath);
     free(gqw);
     thread_timestamp_end(free_work);
 

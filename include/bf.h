@@ -330,6 +330,10 @@ struct work {
    size_t        basename_len;           /* can usually get through readdir */
    long long int pinode;
    size_t        recursion_level;
+
+   /* probably shouldn't be here */
+   char *        fullpath;
+   size_t        fullpath_len;
 };
 
 /* extra data used by entries that does not depend on data from other directories */
