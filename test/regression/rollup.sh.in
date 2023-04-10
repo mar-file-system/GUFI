@@ -145,24 +145,24 @@ setup "${TMP}/u" 500 3            # Level 3 500 - 3 files
 
 mkdir -m 777 "${SRCDIR}"          # Level 0
 
-cp -R "${TMP}" "${SRCDIR}/o+rx"     # Level 1
+cp -R "${TMP}" "${SRCDIR}/o+rx"   # Level 1
 chmod 007 "${SRCDIR}/o+rx"
 
-cp -R "${TMP}" "${SRCDIR}/ugo"      # Level 1
+cp -R "${TMP}" "${SRCDIR}/ugo"    # Level 1
 chmod 777 "${SRCDIR}/ugo"
 
-cp -R "${TMP}" "${SRCDIR}/ug"       # Level 1
+cp -R "${TMP}" "${SRCDIR}/ug"     # Level 1
 chmod 770 "${SRCDIR}/ug"
 
-cp -R "${TMP}" "${SRCDIR}/u"        # Level 1
+cp -R "${TMP}" "${SRCDIR}/u"      # Level 1
 chmod 700 "${SRCDIR}/u"
 
 rm -r "${TMP}"
 
 do_tests() {
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore) FROM summary;\" \"${INDEXROOT}\" | wc -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode;\" \"${INDEXROOT}\" | wc -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(name, rollupscore) FROM summary\" -E \"SELECT rpath(summary.name, summary.rollupscore) || '/' || pentries.name FROM summary, pentries WHERE summary.inode == pentries.pinode\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
 
     run_no_sort "${GUFI_FIND} -type d | wc -l"
     run_no_sort "${GUFI_FIND} -type f | wc -l"
