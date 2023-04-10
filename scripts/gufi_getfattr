@@ -82,10 +82,8 @@ def getfattr(args, config, dirname, nondirname):
         E_cols = ['xattr_value']
     else:
         # default to getting path and xattr name
-        S_cols = ['rpath(name, rollupscore)', 'xattr_name']
-        E_cols = ['rpath({0}.name, {0}.rollupscore) || \'/\' || {1}.name'.format(gufi_common.SUMMARY,
-                                                                                 gufi_common.XPENTRIES),
-                  'xattr_name']
+        S_cols = ['rpath(sname, sroll)',                  'xattr_name']
+        E_cols = ['rpath(sname, sroll) || \'/\' || name', 'xattr_name']
 
         # also get xattr value
         if args.dump:
@@ -97,39 +95,33 @@ def getfattr(args, config, dirname, nondirname):
 
     if not args.recursive:
         # make sure name matches
-        S_where += [' OR '.join(['({0}.name REGEXP \'^{1}$\')'.format(gufi_common.XSUMMARY,
-                                                                      os.path.basename(dirname))])]
+        S_where += [' OR '.join(['(name REGEXP \'^{0}$\')'.format(os.path.basename(dirname))])]
 
         # only get the original summary
-        S_where += ['{0}.isroot == 1'.format(gufi_common.XSUMMARY)]
+        S_where += ['isroot == 1']
 
         if nondirname:
-            E_where += [' OR '.join(['({0}.name REGEXP \'^{1}$\')'.format(gufi_common.XPENTRIES,
-                                                                          nondirname)])]
+            E_where += [' OR '.join(['(name REGEXP \'^{0}$\')'.format(nondirname)])]
 
     if args.name:
         # name uses exact match
-        S_where += ['CAST({0}.xattr_name AS TEXT) == CAST(\'{1}\' AS TEXT)'.format(gufi_common.XSUMMARY,
-                                                                                   args.name)]
-        E_where += ['CAST({0}.xattr_name AS TEXT) == CAST(\'{1}\' AS TEXT)'.format(gufi_common.XPENTRIES,
-                                                                                   args.name)]
+        S_where += ['CAST(xattr_name AS TEXT) == CAST(\'{0}\' AS TEXT)'.format(args.name)]
+        E_where += ['CAST(xattr_name AS TEXT) == CAST(\'{0}\' AS TEXT)'.format(args.name)]
     else:
-        S_where += ['{0}.xattr_name REGEXP \'{1}\''.format(gufi_common.XSUMMARY,  args.pattern)]
-        E_where += ['{0}.xattr_name REGEXP \'{1}\''.format(gufi_common.XPENTRIES, args.pattern)]
+        S_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
+        E_where += ['xattr_name REGEXP \'{0}\''.format(args.pattern)]
 
     query_args = ['-x', '-a']
-
-    E_where += ['{0}.pinode == {1}.inode'.format(gufi_common.XPENTRIES, gufi_common.SUMMARY)]
 
     if args.recursive:
         # if input directory is not a directory, filter xattrs to those in the current directory
         if nondirname:
-            E_where += ['{0}.isroot == 1'.format(gufi_common.SUMMARY)]
+            E_where += ['atroot == 1']
 
         # if input path is a directory, get directory xattrs as well
         else:
             query_args += ['-S', gufi_common.build_query(S_cols,
-                                                         [gufi_common.XSUMMARY],
+                                                         [gufi_common.VRXSUMMARY],
                                                          S_where,
                                                          None,
                                                          None,
@@ -138,8 +130,7 @@ def getfattr(args, config, dirname, nondirname):
         # if input path is not a directory, get non directory xattrs
         # if input path is     a directory, get non directory xattrs
         query_args += ['-E', gufi_common.build_query(E_cols,
-                                                     [gufi_common.XPENTRIES,
-                                                      gufi_common.SUMMARY],
+                                                     [gufi_common.VRXPENTRIES],
                                                      E_where,
                                                      None,
                                                      None,
@@ -148,11 +139,10 @@ def getfattr(args, config, dirname, nondirname):
     else:
         # only get non directory xattrs
         if nondirname:
-            E_where += ['{0}.isroot == 1'.format(gufi_common.SUMMARY)]
+            E_where += ['atroot == 1']
 
             query_args += ['-E', gufi_common.build_query(E_cols,
-                                                         [gufi_common.XPENTRIES,
-                                                          gufi_common.SUMMARY],
+                                                         [gufi_common.VRXPENTRIES],
                                                          E_where,
                                                          None,
                                                          None,
@@ -160,7 +150,7 @@ def getfattr(args, config, dirname, nondirname):
             # only get directory xattrs
         else:
             query_args += ['-S', gufi_common.build_query(S_cols,
-                                                         [gufi_common.XSUMMARY],
+                                                         [gufi_common.VRXSUMMARY],
                                                          S_where,
                                                          None,
                                                          None,
