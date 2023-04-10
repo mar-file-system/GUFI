@@ -62,31 +62,28 @@ OF SUCH DAMAGE.
 
 
 
-#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
-#include <grp.h>
-#include <pthread.h>
-#include <pwd.h>
-#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/xattr.h>
 #include <unistd.h>
 #include <utime.h>
-
-#include <pwd.h>
-#include <grp.h>
 
 #include "bf.h"
 #include "utils.h"
 #include "dbutils.h"
 #include "QueuePerThreadPool.h"
 
-static int create_tables(const char *name, sqlite3 *db, void * args) {
+struct PoolArgs {
+    struct input in;
+    trie_t *skip;
+    struct sum *sums;
+};
+
+static int create_tables(const char *name, sqlite3 *db, void *args) {
     struct input *in = (struct input *) args;
 
     printf("writetsum %d\n", in->writetsum);
@@ -100,69 +97,76 @@ static int create_tables(const char *name, sqlite3 *db, void * args) {
     return 0;
 }
 
-struct PoolArgs {
-    struct input in;
-    trie_t *skip;
-};
+static int treesummary_exists(void *args, int count, char **data, char **columns) {
+    int *trecs = (int *) args;
+    (*trecs)++;
+    return 0;
+}
 
-static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args)
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args)
 {
     struct work *passmywork = data;
     struct entry_data ed;
     char dbname[MAXPATH];
-    DIR *dir;
-    sqlite3 *db;
-    struct sum sumin;
-    int recs;
-    int trecs;
+    DIR *dir = NULL;
+    sqlite3 *db = NULL;
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
-    trie_t *skip = (trie_t *) pa->skip;
+    trie_t *skip = pa->skip;
+    memset(&ed, 0, sizeof(ed));
 
-    if (!(dir = opendir(passmywork->name)))
-       goto out_free;
+    if (!(dir = opendir(passmywork->name))) {
+        goto out_free;
+    }
 
     if (lstat(passmywork->name, &ed.statuso) != 0) {
         goto out_free;
     }
 
     if (in->printing || in->printdir) {
-        printits(in,passmywork,&ed,id);
+        ed.type = 'd';
+        printits(in, passmywork, &ed, id);
     }
 
-    // push subdirectories into the queue
-    //descend(passmywork, dir, in.max_level);
-
     SNPRINTF(dbname, MAXPATH, "%s/%s", passmywork->name, DBNAME);
-    if ((db=opendb(dbname, SQLITE_OPEN_READONLY, 1, 1
-                   , NULL, NULL
-                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                   , NULL, NULL
-                   , NULL, NULL
-                   #endif
-                   ))) {
-       zeroit(&sumin);
+    if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 1
+                     , NULL, NULL
+                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                     , NULL, NULL
+                     , NULL, NULL
+                     #endif
+             ))) {
+        int trecs = 0;
 
-       trecs=rawquerydb(passmywork->name, 0, db, "select name from sqlite_master where type=\'table\' and name=\'treesummary\';", in->output, in->delim, 0, 0, 0, id);
-       if (trecs<1) {
-         // push subdirectories into the queue
-         descend(ctx, id, pa,
-                 in, passmywork, ed.statuso.st_ino,
-                 dir, skip, 0, 0, processdir,
-                 NULL, NULL, NULL, NULL, NULL, NULL);
-         querytsdb(passmywork->name,&sumin,db,&recs,0);
-       } else {
-         querytsdb(passmywork->name,&sumin,db,&recs,1);
-       }
+        /* ignore errors */
+        sqlite3_exec(db, "SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'treesummary\';",
+                     treesummary_exists, &trecs, NULL);
 
-       tsumit(&sumin,&sumout);
+        struct sum sumin;
+        zeroit(&sumin);
+
+        if (trecs < 1) {
+            /*
+             * this directory does not have a tree summary
+             * table, so need to descend to collect
+             */
+            descend(ctx, id, pa,
+                    in, passmywork, ed.statuso.st_ino,
+                    dir, skip, 0, 0, processdir,
+                    NULL, NULL, NULL, NULL, NULL, NULL);
+            querytsdb(passmywork->name, &sumin, db, 0);
+        } else {
+            querytsdb(passmywork->name, &sumin, db, 1);
+        }
+
+        tsumit(&sumin, &pa->sums[id]);
     }
 
     closedb(db);
     closedir(dir);
 
- out_free:
+  out_free:
     if (passmywork->recursion_level == 0) {
         free(passmywork);
     }
@@ -170,147 +174,171 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
     return 0;
 }
 
-int processinit(struct input *in, QPTPool_t * ctx) {
+int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
+    struct work *mywork = calloc(1, sizeof(struct work));
+    struct stat st;
 
-     struct work * mywork = malloc(sizeof(struct work));
-     struct stat st;
+    /* process input directory and put it on the queue */
+    mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, pa->in.name, pa->in.name_len);
+    mywork->name_len = trailing_match_index(mywork->name, mywork->name_len, "/", 1);
 
-     // process input directory and put it on the queue
-     SNPRINTF(mywork->name,MAXPATH,"%s",in->name);
-     lstat(in->name,&st);
-     if (access(in->name, R_OK | X_OK)) {
+    lstat(pa->in.name, &st);
+    if (access(pa->in.name, R_OK | X_OK)) {
+        const int err = errno;
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in->name, strerror(errno));
+                pa->in.name, strerror(err));
+        free(mywork);
         return 1;
-     }
-     if (!S_ISDIR(st.st_mode)) {
-        fprintf(stderr,"input-dir '%s' is not a directory\n", in->name);
+    }
+    if (!S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "input-dir '%s' is not a directory\n", pa->in.name);
+        free(mywork);
         return 1;
-     }
+    }
 
-     /* push the path onto the queue */
-     QPTPool_enqueue(ctx, 0, processdir, mywork);
+    /* skip . and .. only */
+    setup_directory_skip(NULL, &pa->skip);
 
-     return 0;
+    pa->sums = calloc(pa->in.maxthreads, sizeof(struct sum));
+    for(int i = 0; i < pa->in.maxthreads; i++) {
+        zeroit(&pa->sums[i]);
+    }
+
+    /* push the path onto the queue */
+    QPTPool_enqueue(ctx, 0, processdir, mywork);
+
+    return 0;
 }
 
-int processfin(struct input *in) {
+int processfin(struct PoolArgs *pa) {
+    struct sum sumout;
+    zeroit(&sumout);
+    for(int i = 0; i < pa->in.maxthreads; i++) {
+        tsumit(&pa->sums[i], &sumout);
+        sumout.totsubdirs--; /* tsumit adds 1 to totsubdirs each time it's called */
+    }
+    sumout.totsubdirs--; /* subtract another 1 because starting directory is not a subdirectory of itself */
+    free(pa->sums);
 
-     sqlite3 *tdb;
-     struct stat smt;
-     int rc;
-     char dbpath[MAXPATH];
-     struct utimbuf utimeStruct;
+    trie_free(pa->skip);
 
-     SNPRINTF(dbpath,MAXPATH,"%s/%s",in->name,DBNAME);
-     rc=1;
-     rc=lstat(dbpath,&smt);
-     if (in->writetsum) {
-        if (! (tdb = opendb(dbpath, SQLITE_OPEN_READWRITE, 1, 1
-                            , create_tables, &in
-                            #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                            , NULL, NULL
-                            , NULL, NULL
-                            #endif
-                            )))
-           return -1;
-        inserttreesumdb(in->name,tdb,&sumout,0,0,0);
+    char dbpath[MAXPATH];
+    SNPRINTF(dbpath, MAXPATH, "%s/%s", pa->in.name, DBNAME);
+
+    struct stat st;
+    const int rc = lstat(dbpath, &st);
+
+    if (pa->in.writetsum) {
+        sqlite3 *tdb = NULL;
+        if (!(tdb = opendb(dbpath, SQLITE_OPEN_READWRITE, 1, 1,
+                           create_tables, &pa->in
+                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                           , NULL, NULL
+                           , NULL, NULL
+                           #endif
+                  )))
+            return -1;
+        inserttreesumdb(pa->in.name, tdb, &sumout, 0, 0, 0);
         closedb(tdb);
-     }
-     if (rc==0) {
-        utimeStruct.actime  = smt.st_atime;
-        utimeStruct.modtime = smt.st_mtime;
+    }
+
+    if (rc == 0) {
+        struct utimbuf utimeStruct;
+        utimeStruct.actime  = st.st_atime;
+        utimeStruct.modtime = st.st_mtime;
         if(utime(dbpath, &utimeStruct) != 0) {
-           fprintf(stderr,"ERROR: utime failed with error number: %d on %s\n", errno,dbpath);
-           exit(1);
+            const int err = errno;
+            fprintf(stderr, "ERROR: utime failed with error number: %d on %s\n", err, dbpath);
+            return 1;
         }
-     }
+    }
 
-     printf("totals: \n");
-     printf("totfiles %lld totlinks %lld\n",sumout.totfiles,sumout.totlinks);
-     printf("totsize %lld\n",sumout.totsize);
-     printf("minuid %lld maxuid %lld mingid %lld maxgid %lld\n",sumout.minuid,sumout.maxuid,sumout.mingid,sumout.maxgid);
-     printf("minsize %lld maxsize %lld\n",sumout.minsize,sumout.maxsize);
-     printf("totltk %lld totmtk %lld totltm %lld totmtm %lld totmtg %lld totmtt %lld\n",sumout.totltk,sumout.totmtk,sumout.totltm,sumout.totmtm,sumout.totmtg,sumout.totmtt);
-     printf("minctime %lld maxctime %lld\n",sumout.minctime,sumout.maxctime);
-     printf("minmtime %lld maxmtime %lld\n",sumout.minmtime,sumout.maxmtime);
-     printf("minatime %lld maxatime %lld\n",sumout.minatime,sumout.maxatime);
-     printf("minblocks %lld maxblocks %lld\n",sumout.minblocks,sumout.maxblocks);
-     printf("totxattr %lld\n",sumout.totxattr);
-     printf("mincrtime %lld maxcrtime %lld\n",sumout.mincrtime,sumout.maxcrtime);
-     printf("minossint1 %lld maxossint1 %lld totossint1 %lld\n",sumout.minossint1,sumout.maxossint1,sumout.totossint1);
-     printf("minossint2 %lld maxossint2 %lld totossint2 %lld\n",sumout.minossint2,sumout.maxossint2,sumout.totossint2);
-     printf("minossint3 %lld maxossint3 %lld totossint3 %lld\n",sumout.minossint3,sumout.maxossint3,sumout.totossint3);
-     printf("minossint4 %lld maxossint4 %lld totossint4 %lld\n",sumout.minossint4,sumout.maxossint4,sumout.totossint4);
-     printf("totsubdirs %lld maxsubdirfiles %lld maxsubdirlinks %lld maxsubdirsize %lld\n",sumout.totsubdirs,sumout.maxsubdirfiles,sumout.maxsubdirlinks,sumout.maxsubdirsize);
+    printf("totals:\n");
+    printf("totfiles %lld totlinks %lld\n",
+           sumout.totfiles, sumout.totlinks);
+    printf("totsize %lld\n",
+           sumout.totsize);
+    printf("minuid %lld maxuid %lld mingid %lld maxgid %lld\n",
+           sumout.minuid, sumout.maxuid, sumout.mingid, sumout.maxgid);
+    printf("minsize %lld maxsize %lld\n",
+           sumout.minsize, sumout.maxsize);
+    printf("totltk %lld totmtk %lld totltm %lld totmtm %lld totmtg %lld totmtt %lld\n",
+           sumout.totltk, sumout.totmtk, sumout.totltm, sumout.totmtm, sumout.totmtg, sumout.totmtt);
+    printf("minctime %lld maxctime %lld\n",
+           sumout.minctime, sumout.maxctime);
+    printf("minmtime %lld maxmtime %lld\n",
+           sumout.minmtime, sumout.maxmtime);
+    printf("minatime %lld maxatime %lld\n",
+           sumout.minatime, sumout.maxatime);
+    printf("minblocks %lld maxblocks %lld\n",
+           sumout.minblocks, sumout.maxblocks);
+    printf("totxattr %lld\n",
+           sumout.totxattr);
+    printf("mincrtime %lld maxcrtime %lld\n",
+           sumout.mincrtime, sumout.maxcrtime);
+    printf("minossint1 %lld maxossint1 %lld totossint1 %lld\n",
+           sumout.minossint1, sumout.maxossint1, sumout.totossint1);
+    printf("minossint2 %lld maxossint2 %lld totossint2 %lld\n",
+           sumout.minossint2, sumout.maxossint2, sumout.totossint2);
+    printf("minossint3 %lld maxossint3 %lld totossint3 %lld\n",
+           sumout.minossint3, sumout.maxossint3, sumout.totossint3);
+    printf("minossint4 %lld maxossint4 %lld totossint4 %lld\n",
+           sumout.minossint4, sumout.maxossint4, sumout.totossint4);
+    printf("totsubdirs %lld maxsubdirfiles %lld maxsubdirlinks %lld maxsubdirsize %lld\n",
+           sumout.totsubdirs, sumout.maxsubdirfiles, sumout.maxsubdirlinks, sumout.maxsubdirsize);
 
-     return 0;
-
+    return 0;
 }
-
-
 
 void sub_help() {
-   printf("GUFI_index        path to GUFI index\n");
-   printf("\n");
+    printf("GUFI_index        path to GUFI index\n");
+    printf("\n");
 }
 
-int validate_inputs(struct input *in) {
-   // not an error, but you might want to know ...
-   if (! in->writetsum)
-      fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
-
-   return 0;
-}
-
-
-int main(int argc, char *argv[])
-{
-     // process input args - all programs share the common 'struct input',
-     // but allow different fields to be filled at the command-line.
-     // Callers provide the options-string for get_opt(), which will
-     // control which options are parsed for each program.
-     struct PoolArgs pa;
-     int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_index", &pa.in);
-     if (pa.in.helped)
+int main(int argc, char *argv[]) {
+    /*
+     * process input args - all programs share the common 'struct input',
+     * but allow different fields to be filled at the command-line.
+     * Callers provide the options-string for get_opt(), which will
+     * control which options are parsed for each program.
+     */
+    struct PoolArgs pa;
+    int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_index", &pa.in);
+    if (pa.in.helped)
         sub_help();
-     if (idx < 0)
-        return -1;
-     else {
-        // parse positional args, following the options
+    if (idx < 0)
+        return 1;
+    else {
         int retval = 0;
         INSTALL_STR(pa.in.name, argv[idx++], MAXPATH, "GUFI_index");
+        pa.in.name_len = strlen(pa.in.name);
 
         if (retval)
-           return retval;
-     }
+            return retval;
+    }
 
-     // option-parsing can't tell that some options are required,
-     // or which combinations of options interact.
-     if (validate_inputs(&pa.in))
-        return -1;
+    /* not an error, but you might want to know ... */
+    if (!pa.in.writetsum) {
+        fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
+    }
 
-     if (setup_directory_skip(pa.in.skip, &pa.skip) != 0) {
-         return -1;
-     }
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , NULL
+                                   #endif
+        );
+    if (!pool) {
+        fprintf(stderr, "Failed to initialize thread pool\n");
+        return 1;
+    }
 
-     QPTPool_t * pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0
-                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                     , NULL
-                                     #endif
-         );
-     if (!pool) {
-         fprintf(stderr, "Failed to initialize thread pool\n");
-         return -1;
-     }
+    processinit(&pa, pool);
 
-     processinit(&pa.in, pool);
+    QPTPool_wait(pool);
 
-     QPTPool_wait(pool);
+    QPTPool_destroy(pool);
 
-     QPTPool_destroy(pool);
+    processfin(&pa);
 
-     processfin(&pa.in);
-
-     return 0;
+    return 0;
 }

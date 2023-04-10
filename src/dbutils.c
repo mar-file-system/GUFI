@@ -357,7 +357,7 @@ int rawquerydb(const char     *name,
     return(rec_count);
 }
 
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int ts)
+int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int ts)
 {
      static const char *ts_str[] = {
          "select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
@@ -417,10 +417,10 @@ int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs, int t
      sumin->totossint4 = sqlite3_column_int64(res, 37);
 
      if (ts) {
-       sumin->totsubdirs     = sqlite3_column_int64(res,38);
-       sumin->maxsubdirfiles = sqlite3_column_int64(res,39 );
-       sumin->maxsubdirlinks = sqlite3_column_int64(res,40 );
-       sumin->maxsubdirsize  = sqlite3_column_int64(res,41 );
+       sumin->totsubdirs     = sqlite3_column_int64(res, 38);
+       sumin->maxsubdirfiles = sqlite3_column_int64(res, 39);
+       sumin->maxsubdirlinks = sqlite3_column_int64(res, 40);
+       sumin->maxsubdirsize  = sqlite3_column_int64(res, 41);
      }
      else {
        sumin->totsubdirs     = 0;

@@ -77,10 +77,6 @@ OF SUCH DAMAGE.
 
 #include "utils.h"
 
-volatile int sumlock = 0;
-struct sum sumout;
-pthread_mutex_t sum_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 // global variable to hold per thread state
 struct globalthreadstate gts = {};
 
@@ -93,13 +89,13 @@ int printits(struct input *in, struct work *pwork, struct entry_data *ed, int pt
      out = gts.outfd[ptid];
 
   if (in->dodelim == 0) {
-    SNPRINTF(ffielddelim,2," ");
+    SNPRINTF(ffielddelim, 2, " ");
   }
   if (in->dodelim == 2) {
-    SNPRINTF(ffielddelim,2,"%s",fielddelim);
+    SNPRINTF(ffielddelim, 2, "%s", fielddelim);
   }
   if (in->dodelim == 1) {
-    SNPRINTF(ffielddelim,2,"%s",in->delim);
+    SNPRINTF(ffielddelim, 2, "%s", in->delim);
   }
 
   fprintf(out, "%s%s",             pwork->name,            ffielddelim);
@@ -134,7 +130,7 @@ int printits(struct input *in, struct work *pwork, struct entry_data *ed, int pt
   /* fwrite(ed->xattrs, sizeof(char), ed->xattrs_len, out); */
   fprintf(out,"%s",ffielddelim);
 
-  /* this one is for create tiem which posix doesnt have */
+  /* this one is for create time which posix doesnt have */
   fprintf(out,"%s", ffielddelim);
   /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
   fprintf(out, "%lld%s", pwork->pinode, ffielddelim);
@@ -278,17 +274,16 @@ int sumit(struct sum *summary, struct entry_data *ed) {
 }
 
 int tsumit(struct sum *sumin, struct sum *smout) {
-
-  pthread_mutex_lock(&sum_mutex);
+  /* count self as subdirectory because can't tell from here where treesummary descent started */
+  smout->totsubdirs++;
 
   /* if sumin totsubdirs is > 0 we are summing a treesummary not a dirsummary */
   if (sumin->totsubdirs > 0) {
-    smout->totsubdirs=smout->totsubdirs+sumin->totsubdirs;
+    smout->totsubdirs += sumin->totsubdirs;
     if (sumin->maxsubdirfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->maxsubdirfiles;
     if (sumin->maxsubdirlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->maxsubdirlinks;
     if (sumin->maxsubdirsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->maxsubdirsize;
   } else {
-    smout->totsubdirs++;
     if (sumin->totfiles > smout->maxsubdirfiles) smout->maxsubdirfiles = sumin->totfiles;
     if (sumin->totlinks > smout->maxsubdirlinks) smout->maxsubdirlinks = sumin->totlinks;
     if (sumin->totsize  > smout->maxsubdirsize)  smout->maxsubdirsize  = sumin->totsize;
@@ -367,8 +362,6 @@ int tsumit(struct sum *sumin, struct sum *smout) {
   smout->totossint2 += sumin->totossint2;
   smout->totossint3 += sumin->totossint3;
   smout->totossint4 += sumin->totossint4;
-
-  pthread_mutex_unlock(&sum_mutex);
 
   return 0;
 }

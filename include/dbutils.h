@@ -134,7 +134,7 @@ int rawquerydb(const char *name, int isdir, sqlite3 *db, char *sqlstmt,
                OutputMethod_t output, char *delim,
                int printpath, int printheader, int printing, int ptid);
 
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int *recs,int ts);
+int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int ts);
 
 int startdb(sqlite3 *db);
 

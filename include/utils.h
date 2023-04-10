@@ -93,8 +93,6 @@ struct globalthreadstate {
 };
 extern struct globalthreadstate gts;
 
-extern struct sum sumout;
-
 int printits(struct input *in, struct work *pwork, struct entry_data *data, int ptid);
 
 int zeroit(struct sum *summary);
