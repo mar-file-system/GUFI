@@ -93,6 +93,10 @@ extern const char ENTRIES_INSERT[];
 #define SUMMARY           "summary"
 extern const char SUMMARY_CREATE[];
 
+/* view of summary table with rollups */
+#define VRSUMMARY         "vrsummary"
+extern const char VRSUMMARY_CREATE[];
+
 /* pentries pulled from children */
 #define PENTRIES_ROLLUP   "pentries_rollup"
 extern const char PENTRIES_ROLLUP_CREATE[];
@@ -101,6 +105,10 @@ extern const char PENTRIES_ROLLUP_INSERT[];
 /* (entries + summary.inode) UNION pentries_rollup */
 #define PENTRIES          "pentries"
 extern const char PENTRIES_CREATE[];
+
+/* view of pentries view with rollups */
+#define VRPENTRIES        "vrpentries"
+extern const char VRPENTRIES_CREATE[];
 
 /* aggregate data of tree starting at current directory */
 #define TREESUMMARY       "treesummary"

@@ -97,6 +97,10 @@ const char SUMMARY_CREATE[] =
 static const char SUMMARY_INSERT[] =
     "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
 
+const char VRSUMMARY_CREATE[] =
+    DROP_VIEW(VRSUMMARY)
+    "CREATE VIEW " VRSUMMARY " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".* FROM " SUMMARY ";";
+
 const char PENTRIES_ROLLUP_CREATE[] =
     DROP_TABLE(PENTRIES_ROLLUP)
     "CREATE TABLE " PENTRIES_ROLLUP "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode INT64);";
@@ -107,6 +111,10 @@ const char PENTRIES_ROLLUP_INSERT[] =
 const char PENTRIES_CREATE[] =
     DROP_VIEW(PENTRIES)
     "CREATE VIEW " PENTRIES " AS SELECT " ENTRIES ".*, " SUMMARY ".inode AS pinode FROM " ENTRIES ", " SUMMARY " WHERE isroot == 1 UNION SELECT * FROM " PENTRIES_ROLLUP ";";
+
+const char VRPENTRIES_CREATE[] =
+    DROP_VIEW(VRPENTRIES)
+    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgidI, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
 
 const char tsql[] =
     DROP_TABLE(TREESUMMARY)
