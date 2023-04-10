@@ -67,10 +67,14 @@ import pwd
 import re
 
 # table names
-SUMMARY   = 'summary'
-PENTRIES  = 'pentries'
-XSUMMARY  = 'xsummary'
-XPENTRIES = 'xpentries'
+SUMMARY     = 'summary'
+PENTRIES    = 'pentries'
+XSUMMARY    = 'xsummary'
+XPENTRIES   = 'xpentries'
+VRSUMMARY   = 'vrsummary'
+VRPENTRIES  = 'vrpentries'
+VRXSUMMARY  = 'vrxsummary'
+VRXPENTRIES = 'vrxpentries'
 
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
