@@ -130,6 +130,10 @@ extern const char XATTR_GID_WO_READ_ATTACH_FORMAT[];
 #define XPENTRIES "xpentries"
 #define XSUMMARY  "xsummary"
 
+/* no vrxentries */
+#define VRXPENTRIES "vrxpentries"
+#define VRXSUMMARY  "vrxsummary"
+
 /* single xattr name-value pair */
 struct xattr {
     char   name[MAXXATTR];
