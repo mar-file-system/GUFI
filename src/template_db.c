@@ -174,6 +174,8 @@ static int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
         (create_table_wrapper(name, db, SUMMARY,             SUMMARY_CREATE)             != SQLITE_OK) ||
         (create_table_wrapper(name, db, PENTRIES_ROLLUP,     PENTRIES_ROLLUP_CREATE)     != SQLITE_OK) ||
         (create_table_wrapper(name, db, PENTRIES,            PENTRIES_CREATE)            != SQLITE_OK) ||
+        (create_table_wrapper(name, db, VRSUMMARY,           VRSUMMARY_CREATE)           != SQLITE_OK) ||
+        (create_table_wrapper(name, db, VRPENTRIES,          VRPENTRIES_CREATE)          != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vssqldir",          vssqldir)                   != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vssqluser",         vssqluser)                  != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vssqlgroup",        vssqlgroup)                 != SQLITE_OK) ||
