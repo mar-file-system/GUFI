@@ -1,0 +1,59 @@
+.Dd April 10, 2023
+.Dt querydbs
+.Os Linux
+.Sh NAME
+.Nm querydbs
+.Nd Query a set of database files
+.Sh SYNOPSIS
+.Nm
+.Op options
+attach_name
+table_name
+SQL
+DB_name
+[DB_name ...]
+
+.Sh DESCRIPTION
+Run an SQL query against output databases from gufi_query. Given output database file names, the program will union the tables from each of the database files into a view named v<table_name>.
+
+.Sh OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+help
+.It Fl H
+show assigned input values (debugging)
+.It Fl N
+print column-names (header) for DB results
+.It Fl V
+print column-names (header) for DB results
+.It Fl d\ <delim>
+print column-names (header) for DB results
+.It attach_name
+prefix of alias used to attach database files
+.It table_name
+name of table in database file to attach; also used for view table name: 'v<table_name>'
+.It SQL
+arbitrary SQL on each DB (unified into single view)
+.It DB_name
+path of source database file(s) to add to view
+.El
+
+.Sh EXIT STATUS
+.Bl -tag -width -indent
+.It 0 for SUCCESS, 1 for ERROR
+.El
+
+.Pp
+.Sh FILES
+.Bl -tag -width -compact
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/querydbs
+.El
+
+.\" .Sh BUGS
+
+.Sh EXAMPLE
+
+.\" .Sh FLOW
+
+.Sh SEE ALSO
+.Xr gufi_query 1

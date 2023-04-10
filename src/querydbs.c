@@ -71,9 +71,10 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 
 void sub_help() {
-   printf("attach_name              name to use when attaching database files\n");
-   printf("table_name               name of view table = 'v<table_name>'\n");
-   printf("SQL                      arbitrary SQL on each DB (unified into single view)\n");
+   printf("attach_name              prefix of alias used to attach database files\n");
+   printf("table_name               name of table in database file to attach; also used for view table name: 'v<table_name>'\n");
+   printf("SQL                      arbitrary SQL executed on view\n");
+   printf("DB_name                  path of source database file(s) to add to view");
    printf("\n");
 }
 
@@ -116,7 +117,7 @@ int main(int argc, char *argv[])
     int rc = 0;
 
     const char* pos_args = "attach_name table_name SQL DB_name [DB_name ...]";
-    int idx = parse_cmd_line(argc, argv, "hHNVpd:", 4, pos_args, &in);
+    int idx = parse_cmd_line(argc, argv, "hHNVd:", 4, pos_args, &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -136,7 +137,7 @@ int main(int argc, char *argv[])
                       #endif
               ))) {
         fprintf(stderr, "Error: Unable to open in-memory database.\n");
-        return -1;
+        return 1;
     }
 
    // add query funcs to get uidtouser() gidtogroup()

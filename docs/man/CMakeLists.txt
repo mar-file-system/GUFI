@@ -73,8 +73,7 @@ set(MAN_PAGES
   gufi_stat.1
   gufi_stats.1
   gufi_trace2index.1
-  querydb.1
-  querydbn.1
+  querydbs.1
 )
 
 foreach(MAN_PAGE ${MAN_PAGES})
