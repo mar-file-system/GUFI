@@ -105,8 +105,8 @@ def depth(_config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT']),
 
         '-S', 'INSERT INTO {0} {1} '.format(args.inmemory_name,
-                                            gufi_common.build_query(['rpath(name, rollupscore)'],
-                                                                    ['summary'],
+                                            gufi_common.build_query(['rpath(sname, sroll)'],
+                                                                    [gufi_common.VRSUMMARY],
                                                                     where,
                                                                     None,
                                                                     None,
@@ -152,11 +152,10 @@ def filesize(_config, args, where):
         '-I', build_create(args.inmemory_name, ['name TEXT', 'size INT64']),
 
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(summary.name, summary.rollupscore)',
-                                                                    'CAST(TOTAL(pentries.size) as INT64)'],
-                                                                   ['summary', 'pentries'],
-                                                                   where + ['summary.inode == pentries.pinode',
-                                                                            'pentries.type == "f"'],
+                                           gufi_common.build_query(['rpath(sname, sroll)',
+                                                                    'CAST(TOTAL(size) as INT64)'],
+                                                                   [gufi_common.VRPENTRIES],
+                                                                   where + ['type == "f"'],
                                                                    None,
                                                                    None,
                                                                    args.num_results,
@@ -196,22 +195,15 @@ def entries_count(_config, args, where, type): # pylint: disable=redefined-built
     using --recursive here will get the number of <type> in all subdirectories, without adding them
     '''
 
-    subquery = gufi_common.build_query(['COUNT(pentries.inode)'],
-                                       ['pentries'],
-                                       ['summary.inode == pentries.pinode',
-                                        'pentries.type == "{0}"'.format(type)],
-                                       None,
-                                       None,
-                                       None)
-
     queries = [
-        '-E', gufi_common.build_query((['rpath(summary.name, summary.rollupscore)'] if args.recursive else []) +
-                                      ['(' + subquery + ')'],
-                                      ['summary'],
+        '-E', gufi_common.build_query((['rpath({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)] if args.recursive else []) +
+                                      ['COUNT({0}.inode)'.format(gufi_common.PENTRIES)],
+                                      ['{0} LEFT JOIN {1} ON (({0}.inode == {1}.pinode) AND {1}.type == "{2}")'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, type)],
                                       where,
-                                      ['summary.inode'],
-                                      args.num_results,
-                                      None),
+                                      ['{0}.inode'.format(gufi_common.SUMMARY)],
+                                      None,
+                                      None,
+                                      None)
     ]
 
     if not args.recursive:
@@ -242,7 +234,7 @@ def total_filesize(_config, args, where):
 
             '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                                gufi_common.build_query(['NULL', 'totsize'],
-                                                                       ['summary'],
+                                                                       [gufi_common.VRSUMMARY],
                                                                        where,
                                                                        None,
                                                                        None,
@@ -282,7 +274,7 @@ def total_filesize(_config, args, where):
 
             '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                                gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
-                                                                       ['pentries'],
+                                                                       [gufi_common.VRPENTRIES],
                                                                        where + ['type == "f"'],
                                                                        group_by,
                                                                        order_by,
@@ -335,7 +327,7 @@ def total_entries_count(_config, args, where, type): # pylint: disable=redefined
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL', 'uid', 'pinode',
                                                                     'COUNT(inode) AS count'],
-                                                                   ['pentries'],
+                                                                   [gufi_common.VRPENTRIES],
                                                                    where + ['type == "{0}"'.format(type)],
                                                                    E_group_by,
                                                                    ['count {0}'.format(ORDER[args.order]),
@@ -394,8 +386,8 @@ def dircount(_config, args, where):
                            ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(name, rollupscore)', 'inode', 'pinode', 'level()'],
-                                                                   ['summary'],
+                                           gufi_common.build_query(['rpath(sname, sroll)', 'inode', 'pinode', 'level()'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    ([] if args.recursive else ['isroot == 1']) + where,
                                                                    None,
                                                                    None,
@@ -443,7 +435,7 @@ def total_dircount(_config, args, where):
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL', 'name', 'uid', '1 as count'],
-                                                                   ['summary'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where +
                                                                    [] if args.cumulative else [gufi_common.ROLLUP_SUMMARY_WHERE],
                                                                    group_by,
@@ -490,8 +482,8 @@ def leaf_dirs(_config, args, where):
                            ['name TEXT']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(name, rollupscore)'],
-                                                                   ['summary'],
+                                           gufi_common.build_query(['rpath(sname, sroll)'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -539,8 +531,8 @@ def leaf_depth(config, args, where):
                            ['name TEXT', 'level INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(name, rollupscore)', '0'],
-                                                                   ['summary'],
+                                           gufi_common.build_query(['rpath(sname, sroll)', '0'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -587,8 +579,8 @@ def leaf(_config, args, where, type): # pylint: disable=redefined-builtin
                            ['name TEXT', 'count INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(name, rollupscore)', '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)],
-                                                                   ['summary'],
+                                           gufi_common.build_query(['rpath(sname, sroll)', '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -643,7 +635,7 @@ def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type== "{0}") AS count'.format(type)],
-                                                                   ['summary'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    group_by,
                                                                    ['uid {0}'.format(ORDER[args.order]),
@@ -694,7 +686,7 @@ def median_leaf_files(_config, args, where):
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['uid',
                                                                     '(SELECT COUNT(*) FROM entries WHERE type == "f") AS count'],
-                                                                   ['summary'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -734,7 +726,7 @@ def average_leaf(_config, args, where, type): # pylint: disable=redefined-builti
     group_by = ['uid'] if args.cumulative else None
 
     count = gufi_common.build_query(['COUNT(*)'],
-                                    ['entries'],
+                                    [gufi_common.PENTRIES],
                                     ['type == "{0}"'.format(type)],
                                     group_by,
                                     None,
@@ -747,7 +739,7 @@ def average_leaf(_config, args, where, type): # pylint: disable=redefined-builti
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL', 'uid',
                                                                     '({0}) AS count'.format(count)],
-                                                                   ['summary'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -813,7 +805,7 @@ def per_level(config, args, where, type): # pylint: disable=redefined-builtin
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL'] + uid + ['level() + {0}'.format(starting_depth), count],
-                                                                   ['summary'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where,
                                                                    ['uid'],
                                                                    None,
@@ -864,9 +856,9 @@ def duplicate_names(_config, args, where):
                             'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['NULL', 'rpath(name, rollupscore)'] +
+                                           gufi_common.build_query(['NULL', 'rpath(sname, sroll)'] +
                                                                    columns,
-                                                                   ['summary'],
+                                                                   [gufi_common.VRSUMMARY],
                                                                    where,
                                                                    None,
                                                                    None,
@@ -874,10 +866,10 @@ def duplicate_names(_config, args, where):
                                                                    None)),
 
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['NULL', 'rpath(summary.name, summary.rollupscore)'] +
-                                                                   ['pentries.' + col for col in columns],
-                                                                   ['summary', 'pentries'],
-                                                                   where + ['summary.inode == pentries.pinode'],
+                                           gufi_common.build_query(['NULL', 'rpath(sname, sroll)'] +
+                                                                   columns,
+                                                                   [gufi_common.VRPENTRIES],
+                                                                   where,
                                                                    None,
                                                                    None,
                                                                    None,
