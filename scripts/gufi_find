@@ -149,122 +149,141 @@ def build_where(args, table, root_uid=0, root_gid=0):
     #     where += ['(uid == {0})'.format(os.getuid())]
 
     if args.amin is not None:
-        where += ['({0} - {1}.atime) / 60 {2} {3}'.format(now, table, amin[0], amin[1]) for amin in args.amin]
+        where += ['({0} - atime) / 60 {1} {2}'.format(now, amin[0], amin[1])
+                  for amin in args.amin]
 
     # if args.anewer is not None:
 
     if args.atime is not None:
-        where += ['({0} - {1}.atime) / {2} {3} {4} '.format(now, table, SECONDS_PER_DAY, atime[0], atime[1]) for atime in args.atime]
+        where += ['({0} - atime) / {1} {2} {3} '.format(now, SECONDS_PER_DAY, atime[0], atime[1])
+                  for atime in args.atime]
 
     if args.cmin is not None:
-        where += ['({0} - {1}.ctime) / 60 {2} {3}'.format(now, table, cmin[0], cmin[1]) for cmin in args.cmin]
+        where += ['({0} - ctime) / 60 {1} {2}'.format(now, cmin[0], cmin[1])
+                  for cmin in args.cmin]
 
     # if args.cnewer is not None:
 
     if args.ctime is not None:
-        where += ['({0} - {1}.ctime) / {2} {3} {4} '.format(now, table, SECONDS_PER_DAY, ctime[0], ctime[1]) for ctime in args.ctime]
+        where += ['({0} - ctime) / {1} {2} {3} '.format(now, SECONDS_PER_DAY, ctime[0], ctime[1])
+                  for ctime in args.ctime]
 
     if args.empty is True:
-        where += ['{0}.size == 0'.format(table), '({0}.type == \'f\') OR ({0}.type == \'d\')'.format(table)]
+        where += ['size == 0', '(type == \'f\') OR (type == \'d\')']
 
     if args.executable is True:
-        where += ['({0}.mode & 64) == 64'.format(table)] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     if args.false is True:
         where += ['0']
 
     if args.gid is not None:
-        where += ['{0}.gid {1} {2}'.format(table, gid[0], gid[1]) for gid in args.gid]
+        where += ['gid {0} {1}'.format(gid[0], gid[1])
+                  for gid in args.gid]
 
     if args.group is not None:
-        where += ['{0}.gid == {1}'.format(table, args.group)]
+        where += ['gid == {0}'.format(args.group)]
 
     # if args.ilname is not None:
 
     # matches on basename
     # GLOB is case sensitive, so using REGEX
     if args.iname is not None:
-        where += [' OR '.join(['{0}.name REGEXP \'(?i){1}\''.format(table, iname) for iname in args.iname])]
+        where += [' OR '.join(['name REGEXP \'(?i){0}\''.format(iname)
+                               for iname in args.iname])]
 
     if args.inum is not None:
-        where += ['{0}.inode {1} {2}'.format(table, inum[0], inum[1]) for inum in args.inum]
+        where += ['inode {0} {1}'.format(inum[0], inum[1])
+                  for inum in args.inum]
 
     # Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.
     # if args.ipath is not None:
 
     # matches on whole path
     if args.iregex is not None:
-        if table == gufi_common.SUMMARY:
-            where += [' OR '.join(['((rpath({0}.name, {0}.rollupscore)) REGEXP \'(?i){1}\')'.format(gufi_common.SUMMARY, iregex) for iregex in args.iregex])]
-        elif table == gufi_common.PENTRIES:
-            where += [' OR '.join(['((rpath({0}.name, {0}.rollupscore) || "/" || {1}.name) REGEXP \'(?i){2}\')'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, iregex) for iregex in args.iregex])]
+        if table == gufi_common.VRSUMMARY:
+            where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'(?i){0}\')'.format(iregex)
+                                   for iregex in args.iregex])]
+        elif table == gufi_common.VRPENTRIES:
+            where += [' OR '.join(['((rpath(sname, sroll) || "/" || name) REGEXP \'(?i){0}\')'.format(iregex)
+                                   for iregex in args.iregex])]
 
     # if args.iwholename is not None:
 
     if args.links is not None:
-        where += ['{0}.nlink {1} {2}'.format(table, links[0], links[1]) for links in args.links]
+        where += ['nlink {0} {1}'.format(links[0], links[1])
+                  for links in args.links]
 
     if args.lname is not None:
-        where += ['{0}.type == \'l\''.format(table),
-                  '{0}.name GLOB \'{1}\''.format(table, args.lname)]
+        where += ['type == \'l\'',
+                  'name GLOB \'{0}\''.format(args.lname)]
 
     if args.mmin is not None:
-        where += ['({0} - {1}.mtime) / 60 {2} {3}'.format(now, table, mmin[0], mmin[1]) for mmin in args.mmin]
+        where += ['({0} - mtime) / 60 {1} {2}'.format(now, mmin[0], mmin[1])
+                  for mmin in args.mmin]
 
     if args.mtime is not None:
-        where += ['({0} - {1}.mtime) / {2} {3} {4}'.format(now, table, SECONDS_PER_DAY, mtime[0], mtime[1]) for mtime in args.mtime]
+        where += ['({0} - mtime) / {1} {2} {3}'.format(now, SECONDS_PER_DAY, mtime[0], mtime[1])
+                  for mtime in args.mtime]
 
     # matches on basename
     if args.name is not None:
-        where += [' OR '.join(['({0}.name GLOB \'{1}\')'.format(table, name) for name in args.name])]
+        where += [' OR '.join(['(name GLOB \'{0}\')'.format(name)
+                               for name in args.name])]
 
     if args.newer is not None:
-        where += ['{0}.mtime > {1}'.format(table, args.newer.st_mtime)]
+        where += ['mtime > {0}'.format(args.newer.st_mtime)]
 
     # if args.newerXY is not None:
 
     # if args.nouser is True:
 
     if args.path is not None:
-        where += [' OR '.join(['(rpath({0}.name, {0}.rollupscore) GLOB \'{1}\')'.format(gufi_common.SUMMARY, path) for path in args.path])]
+        where += [' OR '.join(['(rpath(sname, sroll) GLOB \'{0}\')'.format(path)
+                               for path in args.path])]
 
     # if args.perm is not None:
 
     if args.readable is True:
-        where += ['({0}.mode & 256) == 256'.format(table)] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # matches on whole path
     if args.regex is not None:
-        if table == gufi_common.SUMMARY:
-            where += [' OR '.join(['((rpath({0}.name, {0}.rollupscore)) REGEXP \'{1}\')'.format(gufi_common.SUMMARY, regex) for regex in args.regex])]
-        elif table == gufi_common.PENTRIES:
-            where += [' OR '.join(['((rpath({0}.name, {0}.rollupscore) || "/" || {1}.name) REGEXP \'{2}\')'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, regex) for regex in args.regex])]
+        if table == gufi_common.VRSUMMARY:
+            where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'{0}\')'.format(regex)
+                                   for regex in args.regex])]
+        elif table == gufi_common.VRPENTRIES:
+            where += [' OR '.join(['((rpath(sname, sroll) || "/" || name) REGEXP \'{0}\')'.format(regex)
+                                   for regex in args.regex])]
 
     if args.samefile is not None:
-        where += ['{0}.inode == {1}'.format(table, args.samefile.st_ino)]
+        where += ['inode == {0}'.format(args.samefile.st_ino)]
 
     if args.size is not None:
-        where += ['{0}.size {1} {2}'.format(table, size[0], size[1]) for size in args.size]
+        where += ['size {0} {1}'.format(size[0], size[1])
+                  for size in args.size]
 
     if args.true is True:
         where += ['1']
 
     if args.type is not None:
         # multiple types uses OR instead of AND
-        where += [' OR '.join(['({0}.type == "{1}")'.format(table, t) for t in args.type])]
+        where += [' OR '.join(['(type == "{0}")'.format(t)
+                               for t in args.type])]
 
     if args.uid is not None:
-        where += ['{0}.uid {1} {2}'.format(table, uid[0], uid[1]) for uid in args.uid]
+        where += ['uid {0} {1}'.format(uid[0], uid[1]) for
+                  uid in args.uid]
 
     # if args.used is not None:
 
     if args.user is not None:
-        where += ['{0}.uid == {1}'.format(table, args.user)]
+        where += ['uid == {0}'.format(args.user)]
 
     # if args.wholename is not None:
 
     if args.writable is True:
-        where += ['({0}.mode & 128) == 128'.format(table)] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        where += ['(mode & 128) == 128'] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
 
     # if args.xtype is not None:
 
@@ -272,24 +291,24 @@ def build_where(args, table, root_uid=0, root_gid=0):
 
     return where
 
-def build_group_by(_args, _table):
+def build_group_by(_args):
     '''Build the GROUP BY clause'''
     group_by = []
 
     return group_by
 
-def build_order_by(args, table):
+def build_order_by(args):
     '''Build the ORDER BY clause'''
     order_by = []
 
     if args.smallest:
-        order_by += ['{0}.size ASC'.format(table)]
+        order_by += ['size ASC']
 
     if args.largest:
-        order_by += ['{0}.size DESC'.format(table)]
+        order_by += ['size DESC']
 
     # order by name last so it doesnt break user requested ordering
-    order_by += ['{0}.name ASC'.format(table)]
+    order_by += ['name ASC']
 
     return order_by
 
@@ -325,7 +344,7 @@ def parse_escape(fmt, i):
 
     return '"{0}"'.format(ret), i + 1
 
-def parse_directives(table, fmt, fmt_len, i, path):
+def parse_directives(fmt, fmt_len, i, path):
     # pylint: disable=too-many-branches,too-many-statements
     # unterminated directive prints ""; behavior is undefined in GNU find
     if i >= fmt_len:
@@ -354,57 +373,57 @@ def parse_directives(table, fmt, fmt_len, i, path):
     if ret == '%':
         ret = '\'%\''
     elif ret == 'a':
-        ret = 'printf("%{{0}}d", {0}.atime)'.format(table)
+        ret = 'printf("%{{0}}d", atime)'
     # elif ret == 'A':
     elif ret == 'b':
-        ret = 'printf("%{{0}}d", ({0}.blocks * {0}.blksize) / 512)'.format(table)
+        ret = 'printf("%{{0}}d", (blocks * blksize) / 512)'
     elif ret == 'c':
-        ret = 'printf("%{{0}}d", {0}.ctime)'.format(table)
+        ret = 'printf("%{{0}}d", ctime)'
     # elif ret == 'C':
     elif ret == 'd':
-        ret = 'printf("%{{0}}u", level() + (CASE {0}.type WHEN "d" THEN 0 ELSE 1 END))'.format(table)
+        ret = 'printf("%{0}u", level() + (CASE type WHEN "d" THEN 0 ELSE 1 END))'
     elif ret == 'D':
         ret = 'printf("%{0}s", "-")'
     elif ret == 'f':
-        ret = 'printf("%{{0}}s", {0}.name)'.format(table)
+        ret = 'printf("%{0}s", name)'
     # elif ret == 'F':
     elif ret == 'g':
-        ret = 'gidtogroup({0}.gid)'.format(table)
+        ret = 'gidtogroup(gid)'
     elif ret == 'G':
-        ret = 'printf("%{{0}}d", {0}.gid)'.format(table)
+        ret = 'printf("%{0}d", gid)'
     elif ret == 'h':
-        ret = 'printf("%{{0}}s", {0})'.format(path)
+        ret = 'printf("%{0}s", {0})'.format(path)
     elif ret == 'H':
         ret = 'printf("%(0}s", starting_point())'
     elif ret == 'i':
-        ret = 'printf("%{{0}}d", {0}.inode)'.format(table)
+        ret = 'printf("%{0}d", inode)'
     elif ret == 'k':
-        ret = 'printf("%{{0}}d", ({0}.blocks * {0}.blksize) / 1024)'.format(table)
+        ret = 'printf("%{0}d", (blocks * blksize) / 1024)'
     elif ret == 'l':
-        ret = 'printf("%{{0}}s", {0}.linkname)'.format(table)
+        ret = 'printf("%{0}s", linkname)'
     elif ret == 'm':
-        ret = 'printf("%{{0}}o", {0}.mode & 511)'.format(table) # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        ret = 'printf("%{0}o", mode & 511)' # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
     elif ret == 'M':
-        ret = 'printf("%{{0}}s", modetotxt({0}.mode))'.format(table)
+        ret = 'printf("%{0}s", modetotxt(mode))'
     elif ret == 'n':
-        ret = 'printf("%{{0}}d", {0}.nlink)'.format(table)
+        ret = 'printf("%{0}d", nlink)'
     elif ret == 'p':
-        ret = '{0} || (CASE {1}.type WHEN "d" THEN "" ELSE "/" || {1}.name END)'.format(path, table)
+        ret = '{0} || (CASE type WHEN "d" THEN "" ELSE "/" || name END)'.format(path)
     elif ret == 'P':
-        ret = 'printf("%{{0}}s", substr({0} || "/" || {1}.name, length(starting_point()) + 1))'.format(path, table)
+        ret = 'printf("%{0}s", substr({0} || "/" || name, length(starting_point()) + 1))'.format(path)
     elif ret == 's':
-        ret = 'printf("%{{0}}u", {0}.size)'.format(table)
+        ret = 'printf("%{0}u", size)'
     elif ret == 'S':
-        ret = 'printf("%{{0}}d", ({0}.blksize * {0}.blocks) / {0}.size)'.format(table)
+        ret = 'printf("%{0}d", (blksize * blocks) / size)'
     elif ret == 't':
-        ret = 'printf("%{{0}}d", {0}.mtime)'.format(table)
+        ret = 'printf("%{0}d", mtime)'
     # elif ret == 'T':
     elif ret == 'u':
-        ret = 'uidtouser({0}.uid)'.format(table)
+        ret = 'uidtouser(uid)'
     elif ret == 'U':
-        ret = 'printf("%{{0}}d", {0}.uid)'.format(table)
+        ret = 'printf("%{0}d", uid)'
     elif ret == 'y':
-        ret = 'printf("%{{0}}s", {0}.type)'.format(table)
+        ret = 'printf("%{0}s", type)'
     # elif ret == 'Y':
     # elif ret == 'Z':
     else:
@@ -417,11 +436,11 @@ def parse_directives(table, fmt, fmt_len, i, path):
 
     return ret.format(width), i + 1
 
-def build_output(args, table):
+def build_output(args):
     '''Build the output columns SELECT clause'''
     output = ''
 
-    path = 'rpath({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)
+    path = 'rpath(sname, sroll)'
 
     if args.printf:
         i = 0
@@ -434,14 +453,14 @@ def build_output(args, table):
                 column, i = parse_escape(fmt, i + 1)
                 cols += [column]
             elif fmt[i] == '%':
-                column, i = parse_directives(table, fmt, fmt_len, i + 1, path)
+                column, i = parse_directives(fmt, fmt_len, i + 1, path)
                 cols += [column]
             else:
                 cols += ['"{0}"'.format(fmt[i])]
                 i += 1
         output = ' || '.join(cols)
     else:
-        output = '{0} || (CASE {1}.type WHEN "d" THEN "" ELSE "/" || {1}.name END)'.format(path, table)
+        output = '{0} || (CASE type WHEN "d" THEN "" ELSE "/" || name END)'.format(path)
 
     return [output]
 
@@ -791,26 +810,25 @@ def run(argv, config_path):
         S = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
             gufi_common.build_query(['NULL',
-                                     'rpath({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)] +
-                                    ['{0}.{1}'.format(gufi_common.SUMMARY, column) for column in columns] +
-                                    build_output(args, gufi_common.SUMMARY),
-                                    [gufi_common.SUMMARY],
-                                    build_where(args, gufi_common.SUMMARY),
-                                    build_group_by(args, gufi_common.SUMMARY),
-                                    build_order_by(args, gufi_common.SUMMARY),
+                                     'rpath(sname, sroll)'] +
+                                    ['{0}'.format(column) for column in columns] +
+                                    build_output(args),
+                                    [gufi_common.VRSUMMARY],
+                                    build_where(args, gufi_common.VRSUMMARY),
+                                    build_group_by(args),
+                                    build_order_by(args),
                                     args.numresults))
 
         E = 'INSERT INTO {0} {1}'.format(
             args.inmemory_name,
             gufi_common.build_query(['NULL',
-                                     'rpath({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)] +
-                                    ['{0}.{1}'.format(gufi_common.PENTRIES, column) for column in columns] +
-                                    build_output(args, gufi_common.PENTRIES),
-                                    [gufi_common.SUMMARY, gufi_common.PENTRIES],
-                                    build_where(args, gufi_common.PENTRIES) +
-                                    ['{0}.inode == {1}.pinode'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)],
-                                    build_group_by(args, gufi_common.PENTRIES),
-                                    build_order_by(args, gufi_common.PENTRIES),
+                                     'rpath(sname, sroll) || "/" || name'] +
+                                    ['{0}'.format(column) for column in columns] +
+                                    build_output(args),
+                                    [gufi_common.VRPENTRIES],
+                                    build_where(args, gufi_common.VRPENTRIES),
+                                    build_group_by(args),
+                                    build_order_by(args),
                                     args.numresults))
 
         K = 'CREATE TABLE {0} ({1})'.format(
@@ -822,15 +840,15 @@ def run(argv, config_path):
             gufi_common.build_query(['NULL', 'name'] + columns + ['output'],
                                     [args.inmemory_name],
                                     build_where(args, args.inmemory_name),
-                                    build_group_by(args, args.inmemory_name),
-                                    build_order_by(args, args.inmemory_name),
+                                    build_group_by(args),
+                                    build_order_by(args),
                                     args.numresults))
 
         G = gufi_common.build_query(['output' if args.printf else 'name'],
                                     [args.aggregate_name],
                                     build_where(args, args.aggregate_name),
-                                    build_group_by(args, args.aggregate_name),
-                                    build_order_by(args, args.aggregate_name),
+                                    build_group_by(args),
+                                    build_order_by(args),
                                     args.numresults)
 
         query_cmd += ['-I', I,
@@ -840,19 +858,18 @@ def run(argv, config_path):
                       '-K', K,
                       '-G', G]
     else:
-        S = gufi_common.build_query(build_output(args, gufi_common.SUMMARY),
-                                    [gufi_common.SUMMARY],
-                                    build_where(args, gufi_common.SUMMARY),
-                                    build_group_by(args, gufi_common.SUMMARY),
-                                    build_order_by(args, gufi_common.SUMMARY),
+        S = gufi_common.build_query(build_output(args),
+                                    [gufi_common.VRSUMMARY],
+                                    build_where(args, gufi_common.VRSUMMARY),
+                                    build_group_by(args),
+                                    build_order_by(args),
                                     args.numresults)
 
-        E = gufi_common.build_query(build_output(args, gufi_common.PENTRIES),
-                                    [gufi_common.SUMMARY, gufi_common.PENTRIES],
-                                    build_where(args, gufi_common.PENTRIES) +
-                                    ['{0}.inode == {1}.pinode'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)],
-                                    build_group_by(args, gufi_common.PENTRIES),
-                                    build_order_by(args, gufi_common.PENTRIES),
+        E = gufi_common.build_query(build_output(args),
+                                    [gufi_common.VRPENTRIES],
+                                    build_where(args, gufi_common.VRPENTRIES),
+                                    build_group_by(args),
+                                    build_order_by(args),
                                     args.numresults)
         query_cmd += ['-S', S,
                       '-E', E]
