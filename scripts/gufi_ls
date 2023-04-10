@@ -152,18 +152,12 @@ def build_select(args):
 
     return select
 
-def build_where(args, table, name=None):
+def build_where(args, name=None):
     '''Build the WHERE portion of the query'''
     where = []
 
-    if not table:
-        table = ''
-
-    if table != '':
-        table += '.'
-
     if name:
-        where = ['{0}name REGEXP "^{1}$"'.format(table, name)]
+        where = ['name REGEXP "^{0}$"'.format(name)]
     else:
         # pylint: disable=anomalous-backslash-in-string
 
@@ -173,15 +167,15 @@ def build_where(args, table, name=None):
         else:
             # -A: ignore . and ..
             if args.almost_all:
-                where += ['{0}name <> "." AND {0}name <> ".."'.format(table)]
+                where += ['name <> "." AND name <> ".."']
 
             # everything that's not hidden
             else:
-                where += ['{0}name REGEXP "^(?![\.]).*$"'.format(table)]
+                where += ['name REGEXP "^(?![\.]).*$"']
 
         # -B: ignore files that end with ~
         if args.ignore_backups is True:
-            where += ['{0}name REGEXP "^.*(?<![\~])$"'.format(table)]
+            where += ['name REGEXP "^.*(?<![\~])$"']
 
     return where
 
@@ -356,28 +350,28 @@ def run(argv, config_path):
 
         I = 'CREATE TABLE {0} ({1});'.format(args.inmemory_name, create_table_cols)
 
-        S_where = build_where(args, None, match_name)
-        E_where = build_where(args, gufi_common.PENTRIES, match_name) + ['{0}.inode == {1}.pinode'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)]
+        S_where = build_where(args, match_name)
+        E_where = build_where(args, match_name)
 
         if args.recursive:
             S_where += ['level() > 0']
         else:
             S_where += [gufi_common.ROLLUP_SUMMARY_WHERE]
             # only get the pentries that were originally in this directory
-            E_where += ['{0}.isroot == 1'.format(gufi_common.SUMMARY), 'level() == 0']
+            E_where += ['atroot == 1', 'level() == 0']
 
         S = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['rpath({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY), 'basename(name)'] + columns[2:],
-                                                                 [gufi_common.SUMMARY],
+                                         gufi_common.build_query(['rpath(sname, sroll)', 'basename(name)'] + columns[2:],
+                                                                 [gufi_common.VRSUMMARY],
                                                                  S_where,
                                                                  None,
                                                                  None,
                                                                  None))
 
         E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['rpath({0}.name, {0}.rollupscore) || "/" || {1}.name'.format(gufi_common.SUMMARY, gufi_common.PENTRIES)] +
-                                                                 ['{0}.{1}'.format(gufi_common.PENTRIES, column) for column in ['name'] + columns[2:]],
-                                                                 [gufi_common.SUMMARY, gufi_common.PENTRIES],
+                                         gufi_common.build_query(['rpath(sname, sroll) || "/" || name'] +
+                                                                 ['name'] + columns[2:],
+                                                                 [gufi_common.VRPENTRIES],
                                                                  E_where,
                                                                  None,
                                                                  None,
