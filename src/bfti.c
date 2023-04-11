@@ -174,7 +174,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args)
     return 0;
 }
 
-int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
+struct work *processinit(struct PoolArgs *pa) {
     struct work *mywork = calloc(1, sizeof(struct work));
     struct stat st;
 
@@ -188,12 +188,12 @@ int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
                 pa->in.name, strerror(err));
         free(mywork);
-        return 1;
+        return NULL;
     }
     if (!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "input-dir '%s' is not a directory\n", pa->in.name);
         free(mywork);
-        return 1;
+        return NULL;
     }
 
     /* skip . and .. only */
@@ -204,10 +204,7 @@ int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
         zeroit(&pa->sums[i]);
     }
 
-    /* push the path onto the queue */
-    QPTPool_enqueue(ctx, 0, processdir, mywork);
-
-    return 0;
+    return mywork;
 }
 
 int processfin(struct PoolArgs *pa) {
@@ -322,6 +319,11 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
     }
 
+    struct work *root = processinit(&pa);
+    if (!root) {
+        return 1;
+    }
+
     QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
@@ -329,13 +331,12 @@ int main(int argc, char *argv[]) {
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
+        free(root);
         return 1;
     }
 
-    processinit(&pa, pool);
-
+    QPTPool_enqueue(pool, 0, processdir, root);
     QPTPool_wait(pool);
-
     QPTPool_destroy(pool);
 
     processfin(&pa);

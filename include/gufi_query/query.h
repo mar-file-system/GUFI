@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/PoolArgs.h"
 
 void querydb(const char *dbname, sqlite3 *db, const char *query,
-             PoolArgs_t *pa, int id, int *rc);
+             PoolArgs_t *pa, int id,
+             int (*callback)(void *, int, char **, char**), int *rc);
 
 #endif

@@ -81,6 +81,7 @@ OF SUCH DAMAGE.
 #include "debug.h"
 #endif
 #include "external.h"
+#include "print.h"
 #include "trie.h"
 #include "utils.h"
 
@@ -106,7 +107,7 @@ OF SUCH DAMAGE.
 #endif
 
 /* name doesn't matter, so long as it is not used by callers */
-static const char ATTACH_NAME[] = "tree";
+#define ATTACH_NAME "tree"
 
 /* additional data gufi_query needs */
 typedef struct gufi_query_work {
@@ -262,6 +263,16 @@ static size_t descend2(QPTPool_t *ctx,
     return pushed;
 }
 
+int count_rows(void *args, int count, char **data, char **columns) {
+    (void) count;
+    (void) data;
+    (void) columns;
+
+    PrintArgs_t *print = (PrintArgs_t *) args;
+    print->rows++;
+    return 0;
+}
+
 int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int recs;
     char shortname[MAXPATH];
@@ -346,8 +357,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (in->andor == 0) {      /* AND */
             /* make sure the treesummary table exists */
             thread_timestamp_start(ts.tts, sqltsumcheck);
-            querydb(dbname, db, "SELECT name FROM sqlite_master WHERE type=\'table\' AND name='treesummary';",
-                  pa, id, &recs);
+            querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master WHERE type=\'table\' AND name == 'treesummary';",
+                    pa, id, count_rows, &recs);
             thread_timestamp_end(sqltsumcheck);
             increment_query_count(ta);
             if (recs < 1) {
@@ -356,17 +367,17 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             else {
                 /* run in->sql.tsum */
                 thread_timestamp_start(ts.tts, sqltsum);
-                querydb(dbname, db, in->sql.tsum, pa, id, &recs);
+                querydb(dbname, db, in->sql.tsum, pa, id, print_parallel, &recs);
                 thread_timestamp_end(sqltsum);
                 increment_query_count(ta);
             }
         }
-      /* this is an OR or we got a record back. go on to summary/entries */
-      /* queries, if not done with this dir and all dirs below it */
-      /* this means that no tree table exists so assume we have to go on */
-      if (recs < 0) {
-        recs=1;
-      }
+        /* this is an OR or we got a record back. go on to summary/entries */
+        /* queries, if not done with this dir and all dirs below it */
+        /* this means that no tree table exists so assume we have to go on */
+        if (recs < 0) {
+            recs=1;
+        }
     }
     /* so we have to go on and query summary and entries possibly */
     if (recs > 0) {
@@ -412,7 +423,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
                     thread_timestamp_start(ts.tts, sqlsum);
-                    querydb(dbname, db, in->sql.sum, pa, id, &recs);
+                    querydb(dbname, db, in->sql.sum, pa, id, print_parallel, &recs);
                     thread_timestamp_end(sqlsum);
                     increment_query_count(ta);
                 } else {
@@ -424,9 +435,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
                     if (in->sql.ent_len > 1) {
-                        /* set the path so users can put path() in their queries */
                         thread_timestamp_start(ts.tts, sqlent);
-                        querydb(dbname, db, in->sql.ent, pa, id, &recs); /* recs is not used */
+                        querydb(dbname, db, in->sql.ent, pa, id, print_parallel, &recs); /* recs is not used */
                         thread_timestamp_end(sqlent);
                         increment_query_count(ta);
                     }

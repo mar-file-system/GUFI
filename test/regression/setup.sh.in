@@ -117,6 +117,7 @@ chmod 666 "${CONFIG}"
 
 # paths of all executables
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
+BFTI="@CMAKE_BINARY_DIR@/src/bfti"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_FIND="@CMAKE_CURRENT_BINARY_DIR@/gufi_find.py"
@@ -136,6 +137,7 @@ VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 replace() {
     @SED@ "
     s/${GENERATETREE//\//\\/}/generatetree/g;
+    s/${BFTI//\//\\/}/bfti/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
