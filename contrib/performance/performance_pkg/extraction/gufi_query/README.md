@@ -14,12 +14,12 @@ Below is a table (possibly not up to date) listing commit ranges grouped by form
 | 908c161..HEAD                      |        313+        |                                                                                           |
 | 61c0a9d..8060d30                   |          5         |                                                                                           |
 | 7cd35f8..4164985                   |         20         |                                                                                           |
-| a13a330..216ef5b                   |         52         | Last occurrence of segfault bug ([See notes](#select--or-certain-column-names-segfault))  |
+| a13a330..216ef5b                   |         52         | Last occurrence of segfault bug ([See notes](#missed-null-check))  |
 | 75e2c5b..00ba871                   |         14         |                                                                                           |
 | 093dc32..3235400                   |         75         |                                                                                           |
 | 941e8ca..97fabf7                   |         65         |                                                                                           |
 |     aad5b08                        |          1         |                                                                                           |
-| 90611bf..aaa5b89                   |        108         | First occurrence of segfault bug ([See notes](#select--or-certain-column-names-segfault)) |
+| 90611bf..aaa5b89                   |        108         | First occurrence of segfault bug ([See notes](#missed-null-check)) |
 | 5ec5386..a9a1ef7                   |         51         | Bugged commit ranges, Performance increase ([See notes](#8480cd1a9a1ef7))                 |
 | 2111dd1..7172479                   |        509         | UNDOCUMENTED                                                                              |
 
