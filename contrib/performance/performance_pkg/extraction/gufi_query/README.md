@@ -9,19 +9,19 @@ Below is a table (possibly not up to date) listing commit ranges grouped by form
 * **NOTE**: These ranges are all inclusive [start, end]
 
 
-|      Commits                       | Number of commits  |  Comments                                                                                 |
-| :--------------------------------: | :----------------: | :---------------------------------------------------------------------------------------: |
-| 908c161..HEAD                      |        313+        |                                                                                           |
-| 61c0a9d..8060d30                   |          5         |                                                                                           |
-| 7cd35f8..4164985                   |         20         |                                                                                           |
-| a13a330..216ef5b                   |         52         | Last occurrence of segfault bug ([See notes](#missed-null-check))  |
-| 75e2c5b..00ba871                   |         14         |                                                                                           |
-| 093dc32..3235400                   |         75         |                                                                                           |
-| 941e8ca..97fabf7                   |         65         |                                                                                           |
-|     aad5b08                        |          1         |                                                                                           |
-| 90611bf..aaa5b89                   |        108         | First occurrence of segfault bug ([See notes](#missed-null-check)) |
-| 5ec5386..a9a1ef7                   |         51         | Bugged commit ranges, Performance increase ([See notes](#8480cd1a9a1ef7))                 |
-| 2111dd1..7172479                   |        509         | UNDOCUMENTED                                                                              |
+|      Commits   | Number of commits  |  Comments  |
+| :------------: | :----------------: | :--------: |
+| [908c161](https://github.com/mar-file-system/GUFI/commit/908c161)..[HEAD](https://github.com/mar-file-system/GUFI/commit/HEAD) | 313+ | |
+| [61c0a9d](https://github.com/mar-file-system/GUFI/commit/61c0a9d)..[8060d30](https://github.com/mar-file-system/GUFI/commit/8060d30)| 5 | |
+| [7cd35f8](https://github.com/mar-file-system/GUFI/commit/7cd35f8)..[4164985](https://github.com/mar-file-system/GUFI/commit/4164985)| 20 | |
+| [a13a330](https://github.com/mar-file-system/GUFI/commit/a13a330)..[216ef5b](https://github.com/mar-file-system/GUFI/commit/216ef5b)| 52 | Last occurrence of segfault bug ([See notes](#missed-null-check)) |
+| [75e2c5b](https://github.com/mar-file-system/GUFI/commit/75e2c5b)..[00ba871](https://github.com/mar-file-system/GUFI/commit/00ba871)| 14 | |
+| [093dc32](https://github.com/mar-file-system/GUFI/commit/093dc32)..[3235400](https://github.com/mar-file-system/GUFI/commit/3235400)| 75 | |
+| [941e8ca](https://github.com/mar-file-system/GUFI/commit/941e8ca)..[97fabf7](https://github.com/mar-file-system/GUFI/commit/97fabf7)| 65 | |
+| [aad5b08](https://github.com/mar-file-system/GUFI/commit/aad5b08)| 1 | |
+| [90611bf](https://github.com/mar-file-system/GUFI/commit/90611bf)..[aaa5b89](https://github.com/mar-file-system/GUFI/commit/aaa5b89)| 108 | First occurrence of segfault bug ([See notes](#missed-null-check)) |
+| [5ec5386](https://github.com/mar-file-system/GUFI/commit/5ec5386)..[a9a1ef7](https://github.com/mar-file-system/GUFI/commit/a9a1ef7)| 51 | Bugged commit ranges, Performance increase ([See notes](#8480cd1a9a1ef7)) |
+| [2111dd1](https://github.com/mar-file-system/GUFI/commit/2111dd1)..[7172479](https://github.com/mar-file-system/GUFI/commit/7172479)| 509 | UNDOCUMENTED |
 
 ## Line format
 Each line of the cumulative_times output has the following format:
