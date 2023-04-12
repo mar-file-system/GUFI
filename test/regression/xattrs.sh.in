@@ -144,7 +144,7 @@ rm -r "${INDEXTARGET}"
 
 run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
 
-run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXTARGET}\" | tail -n 4 | head -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXTARGET}\" | @TAIL@ -n 4 | @HEAD@ -n 3"
 
 run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT rpath(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries;\" \"${INDEXROOT}\""
 

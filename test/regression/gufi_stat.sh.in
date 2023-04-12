@@ -95,7 +95,7 @@ variable_size=(
 echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
-    "${GUFI_STAT}" "${INDEXROOT}/${entry}" | head -n 1
+    "${GUFI_STAT}" "${INDEXROOT}/${entry}" | @HEAD@ -n 1
 done | remove_root
 echo
 
@@ -132,7 +132,7 @@ for c in "${nonprintable[@]}"
 do
     echo -n "\\${c} -> "
     # shellcheck disable=SC2016
-    "${GUFI_STAT}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
+    "${GUFI_STAT}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | @HEAD@ -n 1 | @AWK@ '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"

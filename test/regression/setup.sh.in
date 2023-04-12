@@ -133,6 +133,9 @@ UNROLLUP="@CMAKE_BINARY_DIR@/src/unrollup"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
+HEAD="@HEAD@"
+TAIL="@TAIL@"
+
 # common strings that need replacing
 replace() {
     @SED@ "
@@ -156,6 +159,9 @@ replace() {
     s/${INDEXTARGET//\//\\/}\\///g;
     s/${INDEXTARGET//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
+
+    s/${HEAD//\//\\/}/head/g;
+    s/${TAIL//\//\\/}/tail/g;
 
     s/[[:space:]]*$//g;
     "

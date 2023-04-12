@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="bfti.out"
 
 remove_bfti_extra() {
-    @GREP@ -v "totossint.*" | @GREP@ -Po "tot.* [0-9]*" | @SED@ 's/max.* [0-9]*//g; s/.*size.* [0-9]*//g' | replace | sort | tail -n +2
+    @GREP@ -v "totossint.*" | @GREP@ -Po "tot.* [0-9]*" | @SED@ 's/max.* [0-9]*//g; s/.*size.* [0-9]*//g' | replace | @SORT@ | @TAIL@ -n +2
 }
 
 (
@@ -81,7 +81,7 @@ echo
 
 echo "# Traversed paths (5)"
 #shellcheck disable=SC2016
-"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | head -n 5 | @AWK@ '{ print $1 " " $2 }'
+"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | @HEAD@ -n 5 | @AWK@ '{ print $1 " " $2 }'
 echo
 
 echo "# Still no treesummary table"
@@ -106,7 +106,7 @@ echo
 
 echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)" | replace
 #shellcheck disable=SC2016
-"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | @SED@ '/^$/d' | head -n 4 | @AWK@ '{ print $1 " " $2 }'
+"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | @SED@ '/^$/d' | @HEAD@ -n 4 | @AWK@ '{ print $1 " " $2 }'
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}" | replace

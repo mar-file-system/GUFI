@@ -69,8 +69,10 @@ endif()
 
 find_exec_dependency(DIFF colordiff diff)
 find_exec_dependency(FIND find)
+find_exec_dependency(HEAD head)
 find_exec_dependency(SED  sed)
 find_exec_dependency(SORT sort)
+find_exec_dependency(TAIL tail)
 find_exec_dependency(TEE  tee)
 
 if(APPLE)

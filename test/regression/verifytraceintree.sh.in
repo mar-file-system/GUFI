@@ -100,7 +100,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 cat "${TRACES[@]}" > "${TRACE}"
 
 echo "# generate the index"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\" | tail -n 4 | head -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\" | @TAIL@ -n 4 | @HEAD@ -n 3"
 
 echo "# generate the trace (single thread)"
 rm -rf "${TRACES[@]}"
@@ -130,7 +130,7 @@ echo "# second line bad delimiter (Fail)"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# first line is not a directory (Fail)"
-tail -n +2 "${TRACE}" > "${BADTRACE}"
+@TAIL@ -n +2 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 
 echo "# directory add trailing slashes (Pass)"
@@ -144,11 +144,11 @@ run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\
 echo "# path exists, but is not directory (Fail)"
 (
     # remove the first line and convert the second line into a directory
-    head -n 2 "${TRACE}" | tail -n 1 | @SED@ "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
-    tail -n +3 "${TRACE}"
+    @HEAD@ -n 2 "${TRACE}" | @TAIL@ -n 1 | @SED@ "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
+    @TAIL@ -n +3 "${TRACE}"
 ) > "${BADTRACE}"
 # shellcheck disable=SC2016
-filename=$(echo -n "${INDEXTARGET}/"; head -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
+filename=$(echo -n "${INDEXTARGET}/"; @HEAD@ -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
 touch "${filename}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${INDEXTARGET}\""
 rm "${filename}"

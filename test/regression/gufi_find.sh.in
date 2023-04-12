@@ -140,7 +140,7 @@ run_sort "${GUFI_FIND} -type d -type l -printf \"%% %d %D %f %m %M %n    %y\""
 run_sort "${GUFI_FIND} -type f         -printf \"%% %d %D %f %m %M %n %s %y\""
 
 # escape characters
-run_no_sort "${GUFI_FIND} -printf '\141 \142 \143 \d' | head -n 1"
+run_no_sort "${GUFI_FIND} -printf '\141 \142 \143 \d' | @HEAD@ -n 1"
 
 for n in {1..5}
 do
