@@ -75,7 +75,7 @@ OF SUCH DAMAGE.
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-char fielddelim[] = "\x1E";     // ASCII Record Separator
+const char fielddelim = '\x1E';     /* ASCII Record Separator */
 
 void print_help(const char* prog_name,
                 const char* getopt_str,
@@ -101,7 +101,7 @@ void print_help(const char* prog_name,
       case 'b': printf("  -b                     build GUFI index tree"); break;
       case 'a': printf("  -a                     AND/OR (SQL query combination)"); break;
       case 'n': printf("  -n <threads>           number of threads"); break;
-      case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim[0]); break;
+      case 'd': printf("  -d <delim>             delimiter (one char)  [use 'x' for 0x%02X]", (uint8_t)fielddelim); break;
       case 'i': printf("  -i <input_dir>         input directory path"); break;
       case 't': printf("  -t <to_dir>            build GUFI index (under) here"); break;
       case 'o': printf("  -o <out_fname>         output file (one-per-thread, with thread-id suffix)"); break;
@@ -155,8 +155,7 @@ void show_input(struct input* in, int retval) {
    printf("in.writetsum                = %d\n",            in->writetsum);
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %d\n",            in->maxthreads);
-   printf("in.dodelim                  = %d\n",            in->dodelim);
-   printf("in.delim                    = '%s'\n",          in->delim);
+   printf("in.delim                    = '%c'\n",          in->delim);
    printf("in.name                     = '%s'\n",          in->name);
    printf("in.name_len                 = '%zu'\n",         in->name_len);
    printf("in.nameto                   = '%s'\n",          in->nameto);
@@ -221,7 +220,7 @@ int parse_cmd_line(int         argc,
                    struct input *in) {
    memset(in, 0, sizeof(*in));
    in->maxthreads              = 1;                      // don't default to zero threads
-   SNPRINTF(in->delim, sizeof(in->delim), fielddelim);
+   in->delim                   = fielddelim;
    in->max_level               = -1;                     // default to all the way down
    in->nobody.uid              = 65534;
    in->nobody.gid              = 65534;
@@ -292,12 +291,10 @@ int parse_cmd_line(int         argc,
 
       case 'd':
          if (optarg[0] == 'x') {
-             in->dodelim = 2;
-             in->delim[0] = fielddelim[0];
+             in->delim = fielddelim;
          }
          else {
-             in->dodelim = 1;
-             in->delim[0] = optarg[0];
+             in->delim = optarg[0];
          }
          break;
 

@@ -77,7 +77,7 @@ extern "C" {
 
 }
 
-static const char delim[] = "\x1e";
+static const char delim = '\x1e';
 
 static const struct xattr EXPECTED_XATTR[] = {
     {
@@ -146,20 +146,20 @@ static int to_string(char *line, const size_t size, struct work *work, struct en
                                "%ld%c"
                                "%ld%c"
                                "%s%c",
-                               work->name,             delim[0],
-                               ed->type,               delim[0],
-                               ed->statuso.st_ino,     delim[0],
-                               ed->statuso.st_mode,    delim[0],
-                               ed->statuso.st_nlink,   delim[0],
-                               ed->statuso.st_uid,     delim[0],
-                               ed->statuso.st_gid,     delim[0],
-                               ed->statuso.st_size,    delim[0],
-                               ed->statuso.st_blksize, delim[0],
-                               ed->statuso.st_blocks,  delim[0],
-                               ed->statuso.st_atime,   delim[0],
-                               ed->statuso.st_mtime,   delim[0],
-                               ed->statuso.st_ctime,   delim[0],
-                               ed->linkname,           delim[0]);
+                               work->name,             delim,
+                               ed->type,               delim,
+                               ed->statuso.st_ino,     delim,
+                               ed->statuso.st_mode,    delim,
+                               ed->statuso.st_nlink,   delim,
+                               ed->statuso.st_uid,     delim,
+                               ed->statuso.st_gid,     delim,
+                               ed->statuso.st_size,    delim,
+                               ed->statuso.st_blksize, delim,
+                               ed->statuso.st_blocks,  delim,
+                               ed->statuso.st_atime,   delim,
+                               ed->statuso.st_mtime,   delim,
+                               ed->statuso.st_ctime,   delim,
+                               ed->linkname,           delim);
 
     line += part1;
 
@@ -177,15 +177,15 @@ static int to_string(char *line, const size_t size, struct work *work, struct en
                                "%s%c"
                                "%lld%c"
                                "\n",
-                                             delim[0],
-                               ed->crtime,   delim[0],
-                               ed->ossint1,  delim[0],
-                               ed->ossint2,  delim[0],
-                               ed->ossint3,  delim[0],
-                               ed->ossint4,  delim[0],
-                               ed->osstext1, delim[0],
-                               ed->osstext2, delim[0],
-                               work->pinode, delim[0]);
+                                             delim,
+                               ed->crtime,   delim,
+                               ed->ossint1,  delim,
+                               ed->ossint2,  delim,
+                               ed->ossint3,  delim,
+                               ed->ossint4,  delim,
+                               ed->osstext1, delim,
+                               ed->osstext2, delim,
+                               work->pinode, delim);
 
     line += part2;
     *line = '\0';

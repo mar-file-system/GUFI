@@ -121,7 +121,7 @@ static int callback(void *arg, int, char **data, char **) {
 struct CheckStanzaArgs {
     CheckStanzaArgs(const std::size_t threads,
                     std::atomic_bool & correct,
-                    char *delim,
+                    const char delim,
                     const std::string & tree)
         : threads(threads),
           correct(correct),
@@ -138,7 +138,7 @@ struct CheckStanzaArgs {
 
     const std::size_t threads;
     std::atomic_bool & correct;
-    char *delim;
+    const char delim;
     const std::string & tree;
     std::vector <std::istream *> traces;
 };
@@ -254,7 +254,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         }
 
         // can't get npos here
-        const std::string::size_type first_delim = line.find(csa->delim[0]);
+        const std::string::size_type first_delim = line.find(csa->delim);
 
         // stop when a directory is encountered (new stanza)
         if (line[first_delim + 1] == 'd') {
@@ -367,7 +367,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         }
     }
 
-    if (parsefirst(csa->delim[0], curr) == std::string::npos) {
+    if (parsefirst(csa->delim, curr) == std::string::npos) {
         std::cerr << "Could not find delimiter of first line" << std::endl;
         delete curr;
         return 1;
@@ -395,7 +395,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         struct StanzaStart *next = new struct StanzaStart();
         next->line = std::move(line);
 
-        if (parsefirst(csa->delim[0], next) == std::string::npos) {
+        if (parsefirst(csa->delim, next) == std::string::npos) {
             std::cerr << "Could not find delimiter of next line" << std::endl;
             delete curr;
             delete next;
@@ -440,7 +440,7 @@ int main(int argc, char *argv[]) {
     }
 
     char *trace = argv[1];
-    char *delim = argv[2];
+    const char delim = argv[2][0];
     const std::string GUFI_tree = argv[3];
 
     std::size_t threads = 1;

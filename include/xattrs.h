@@ -97,7 +97,7 @@ extern "C" {
 #endif
 
 #define MAXXATTR            1024
-extern const char XATTRDELIM[];
+extern const char XATTRDELIM;
 
 /* each db.db, per-user db, and per-group db will have a table with this name */
 /* this table contains xattrs that are local to the current directory */
@@ -159,11 +159,11 @@ void xattrs_cleanup(struct xattrs *xattrs);
 
 /* filesystem xattr interactions */
 int xattrs_get(const char *path, struct xattrs *xattrs);
-ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, const char *delim);
+ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, const char delim);
 
 /* GUFI trace functions */
-int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char *delim);
-int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char *delim);
+int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim);
+int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim);
 
 #ifdef __cplusplus
 }

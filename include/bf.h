@@ -176,8 +176,7 @@ struct input {
    int  printheader;
    int  printrows;
    int  helped;               /* support parsing of per-app sub-options */
-   int  dodelim;
-   char delim[2];
+   char delim;
    int  buildindex;
    int  maxthreads;
    int  writetsum;
@@ -354,7 +353,6 @@ struct entry_data {
    int           suspect;  // added for bfwreaddirplus2db for suspect
 };
 
-extern char fielddelim[];
-
+extern const char fielddelim;
 
 #endif

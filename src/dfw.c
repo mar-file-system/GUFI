@@ -111,27 +111,27 @@ static int printit(const char *name, const struct stat *status, char *type, char
 static int printload(struct input *in, const char *name, const struct stat *status,
                      char *type, char *linkname, struct xattrs *xattrs, long long pinode,
                      char *sortf, FILE *of) {
-  fprintf(of,"%s%s",             name,in->delim);
-  fprintf(of,"%c%s",             type[0],in->delim);
-  fprintf(of,"%"STAT_ino"%s",    status->st_ino,in->delim);
-  //fprintf(of,"%lld%s", pinode,in->delim);
-  fprintf(of,"%d%s",             status->st_mode,in->delim);
-  fprintf(of,"%"STAT_nlink"%s",  status->st_nlink,in->delim);
-  fprintf(of,"%d%s",             status->st_uid,in->delim);
-  fprintf(of,"%d%s",             status->st_gid,in->delim);
-  fprintf(of,"%"STAT_size"%s",   status->st_size,in->delim);
-  fprintf(of,"%"STAT_bsize"%s",  status->st_blksize,in->delim);
-  fprintf(of,"%"STAT_blocks"%s", status->st_blocks,in->delim);
-  fprintf(of,"%ld%s",            status->st_atime,in->delim);
-  fprintf(of,"%ld%s",            status->st_mtime,in->delim);
-  fprintf(of,"%ld%s",            status->st_ctime,in->delim);
-  fprintf(of,"%s%s",             linkname,in->delim);
+  fprintf(of,"%s%c",             name,in->delim);
+  fprintf(of,"%c%c",             type[0],in->delim);
+  fprintf(of,"%"STAT_ino"%c",    status->st_ino,in->delim);
+  //fprintf(of,"%lld%c", pinode,in->delim);
+  fprintf(of,"%d%c",             status->st_mode,in->delim);
+  fprintf(of,"%"STAT_nlink"%c",  status->st_nlink,in->delim);
+  fprintf(of,"%d%c",             status->st_uid,in->delim);
+  fprintf(of,"%d%c",             status->st_gid,in->delim);
+  fprintf(of,"%"STAT_size"%c",   status->st_size,in->delim);
+  fprintf(of,"%"STAT_bsize"%c",  status->st_blksize,in->delim);
+  fprintf(of,"%"STAT_blocks"%c", status->st_blocks,in->delim);
+  fprintf(of,"%ld%c",            status->st_atime,in->delim);
+  fprintf(of,"%ld%c",            status->st_mtime,in->delim);
+  fprintf(of,"%ld%c",            status->st_ctime,in->delim);
+  fprintf(of,"%s%c",             linkname,in->delim);
   for(size_t i = 0; i < xattrs->count; i++) {
       fprintf(of, "%s\\0", xattrs->pairs[i].name);
   }
-  fprintf(of,"%s",in->delim);
+  fprintf(of,"%c",in->delim);
   /* this one is for create time which posix doenst have */
-  fprintf(of,"%s",in->delim);
+  fprintf(of,"%c",in->delim);
   /* sort field at the end not required */
   if (strlen(sortf) > 0) fprintf(of,"%s",sortf);
 
@@ -274,7 +274,7 @@ void helpme() {
     fprintf (stderr, "syntax dfw -s -x -h -d -l directorytowalk\n");
     fprintf (stderr, "-s stat everything - otherwise this is just a readdirplus walk \n");
     fprintf (stderr, "-x get xattrs \n");
-    fprintf (stderr, "-d delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim[0]);
+    fprintf (stderr, "-d delimiter (one char)  [use 'x' for 0x%02X]\n", (uint8_t)fielddelim);
     fprintf (stderr, "-D dont traverse/descend the tree, just stat this directory or file\n");
     fprintf (stderr, "-l print in loader format (only works if -x and -s are provided \n");
     fprintf (stderr, "-h help \n");
@@ -313,10 +313,10 @@ int main(int argc, char **argv)
           break;
         case 'd':
           if (optarg[0] == 'x') {
-            in.delim[0] = fielddelim[0];
+            in.delim = fielddelim;
           }
           else {
-            in.delim[0] = optarg[0];
+            in.delim = optarg[0];
           }
           break;
         case 'D':

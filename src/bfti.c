@@ -120,7 +120,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     if (pa->in.printing || pa->in.printdir) {
         ed.type = 'd';
-        printits(&pa->in, passmywork, &ed, id);
+        printits(&pa->in, passmywork, &ed, stdout);
     }
 
     char dbname[MAXPATH];

@@ -161,7 +161,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
     if ((in->output != OUTDB) || in->sql.agg_len) {
         PrintArgs_t pa;
         pa.output_buffer = &aggregate->ob;
-        pa.delim = in->delim[0];
+        pa.delim = in->delim;
         pa.mutex = NULL;
         pa.outfile = aggregate->outfile;
         pa.rows = 0;

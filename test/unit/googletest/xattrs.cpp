@@ -159,7 +159,7 @@ TEST(xattrs, from_line) {
     EXPECT_EQ(line_len, EXPECTED_XATTRS.len + 2 * EXPECTED_XATTRS.count);
 
     struct xattrs xattrs;
-    EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, "\x1F"),
+    EXPECT_EQ(xattrs_from_line(line, line + line_len, &xattrs, '\x1F'),
               (int) EXPECTED_XATTRS.count);
 
     check_contents(xattrs);

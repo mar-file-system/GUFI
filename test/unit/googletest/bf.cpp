@@ -169,7 +169,7 @@ static void check_input(struct input *in, const bool helped,
 
     if (options) {
         EXPECT_EQ(in->maxthreads,           1);
-        EXPECT_EQ(in->delim[0],             '|');
+        EXPECT_EQ(in->delim,                '|');
         EXPECT_EQ(in->nameto,               t_arg.c_str());
         EXPECT_EQ(in->nameto_len,           t_arg.size());
         EXPECT_EQ(in->name,                 i_arg.c_str());
@@ -205,7 +205,7 @@ static void check_input(struct input *in, const bool helped,
     }
     else {
         EXPECT_EQ(in->maxthreads,          1);
-        EXPECT_EQ(in->delim[0],            fielddelim[0]);
+        EXPECT_EQ(in->delim,               fielddelim);
         EXPECT_EQ(in->nameto,              nullptr);
         EXPECT_EQ(in->nameto_len,          (std::size_t) 0);
         EXPECT_EQ(in->name,                nullptr);
@@ -410,7 +410,7 @@ TEST(parse_cmd_line, delimiter) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.delim[0], fielddelim[0]);
+        EXPECT_EQ(in.delim, fielddelim);
     }
 
     // others
@@ -426,7 +426,7 @@ TEST(parse_cmd_line, delimiter) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.delim[0], dpipe[0]);
+        EXPECT_EQ(in.delim, dpipe[0]);
     }
 }
 

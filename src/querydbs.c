@@ -89,7 +89,7 @@ int print_callback(void *args, int count, char **data, char **columns) {
     if (!ca->rows) {
         if (ca->in->printheader) {
             for(int i = 0; i < count; i++) {
-                fprintf(stdout, "%s%c", columns[i], ca->in->delim[0]);
+                fprintf(stdout, "%s%c", columns[i], ca->in->delim);
             }
             fprintf(stdout, "\n");
         }
@@ -97,7 +97,7 @@ int print_callback(void *args, int count, char **data, char **columns) {
 
     if (ca->in->printrows) {
         for(int i = 0; i < count; i++) {
-            fprintf(stdout, "%s%c", data[i], ca->in->delim[0]);
+            fprintf(stdout, "%s%c", data[i], ca->in->delim);
         }
         fprintf(stdout, "\n");
     }

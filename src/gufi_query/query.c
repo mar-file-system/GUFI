@@ -71,7 +71,7 @@ void querydb(const char *dbname, sqlite3 *db, const char *query,
     ThreadArgs_t *ta = &pa->ta[id];
     PrintArgs_t args;
     args.output_buffer = &ta->output_buffer;
-    args.delim = pa->in->delim[0];
+    args.delim = pa->in->delim;
     args.mutex = pa->stdout_mutex;
     args.outfile = ta->outfile;
     args.rows = 0;

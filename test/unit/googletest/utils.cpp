@@ -741,19 +741,19 @@ TEST(split, delims) {
     char *curr = nullptr;
     char *next = line;
 
-    curr = next; next = split(curr, delims, end);
+    curr = next; next = split(curr, delims, 2, end);
     EXPECT_STREQ(curr, "a");
 
-    curr = next; next = split(curr, delims, end);
+    curr = next; next = split(curr, delims, 2, end);
     EXPECT_STREQ(curr, "b");
 
-    curr = next; next = split(curr, delims, end);
+    curr = next; next = split(curr, delims, 2, end);
     EXPECT_STREQ(curr, "");
 
-    curr = next; next = split(curr, delims, end);
+    curr = next; next = split(curr, delims, 2, end);
     EXPECT_STREQ(curr, "c");
 
-    curr = next; next = split(curr, delims, end);
+    curr = next; next = split(curr, delims, 2, end);
     EXPECT_EQ(curr, nullptr);
     EXPECT_EQ(next, nullptr);
 }

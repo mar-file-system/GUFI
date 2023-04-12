@@ -80,61 +80,44 @@ OF SUCH DAMAGE.
 // global variable to hold per thread state
 struct globalthreadstate gts = {};
 
-int printits(struct input *in, struct work *pwork, struct entry_data *ed, int ptid) {
-  char  ffielddelim[2];
-  FILE *out;
-
-  out = stdout;
-  if (in->output == OUTFILE)
-     out = gts.outfd[ptid];
-
-  if (in->dodelim == 0) {
-    SNPRINTF(ffielddelim, 2, " ");
-  }
-  if (in->dodelim == 2) {
-    SNPRINTF(ffielddelim, 2, "%s", fielddelim);
-  }
-  if (in->dodelim == 1) {
-    SNPRINTF(ffielddelim, 2, "%s", in->delim);
-  }
-
-  fprintf(out, "%s%s",             pwork->name,            ffielddelim);
-  fprintf(out, "%c%s",             ed->type,               ffielddelim);
-  fprintf(out, "%"STAT_ino"%s",    ed->statuso.st_ino,     ffielddelim);
-  fprintf(out, "%d%s",             ed->statuso.st_mode,    ffielddelim);
-  fprintf(out, "%"STAT_nlink"%s",  ed->statuso.st_nlink,   ffielddelim);
-  fprintf(out, "%d%s",             ed->statuso.st_uid,     ffielddelim);
-  fprintf(out, "%d%s",             ed->statuso.st_gid,     ffielddelim);
-  fprintf(out, "%"STAT_size"%s",   ed->statuso.st_size,    ffielddelim);
-  fprintf(out, "%"STAT_bsize"%s",  ed->statuso.st_blksize, ffielddelim);
-  fprintf(out, "%"STAT_blocks"%s", ed->statuso.st_blocks,  ffielddelim);
-  fprintf(out, "%ld%s",            ed->statuso.st_atime,   ffielddelim);
-  fprintf(out, "%ld%s",            ed->statuso.st_mtime,   ffielddelim);
-  fprintf(out, "%ld%s",            ed->statuso.st_ctime,   ffielddelim);
+int printits(struct input *in, struct work *pwork, struct entry_data *ed, FILE *out) {
+  fprintf(out, "%s%c",             pwork->name,            in->delim);
+  fprintf(out, "%c%c",             ed->type,               in->delim);
+  fprintf(out, "%"STAT_ino"%c",    ed->statuso.st_ino,     in->delim);
+  fprintf(out, "%d%c",             ed->statuso.st_mode,    in->delim);
+  fprintf(out, "%"STAT_nlink"%c",  ed->statuso.st_nlink,   in->delim);
+  fprintf(out, "%d%c",             ed->statuso.st_uid,     in->delim);
+  fprintf(out, "%d%c",             ed->statuso.st_gid,     in->delim);
+  fprintf(out, "%"STAT_size"%c",   ed->statuso.st_size,    in->delim);
+  fprintf(out, "%"STAT_bsize"%c",  ed->statuso.st_blksize, in->delim);
+  fprintf(out, "%"STAT_blocks"%c", ed->statuso.st_blocks,  in->delim);
+  fprintf(out, "%ld%c",            ed->statuso.st_atime,   in->delim);
+  fprintf(out, "%ld%c",            ed->statuso.st_mtime,   in->delim);
+  fprintf(out, "%ld%c",            ed->statuso.st_ctime,   in->delim);
 
 /* we need this field even if its not populated for gufi_trace2index */
 /*
   if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s%s", ed->linkname,ffielddelim);
+    fprintf(out, "%s%c", ed->linkname,in->delim);
   }
 */
-  fprintf(out, "%s%s", ed->linkname,ffielddelim);
+  fprintf(out, "%s%c", ed->linkname,in->delim);
 
 /* we need this field even if its not populated for gufi_trace2index */
 /*
   if (ed->xattrs > 0) {
     //printf("xattr: ");
-    fprintf(out,"%s%s",ed->xattr,ffielddelim);
+    fprintf(out,"%s%c",ed->xattr,in->delim);
   }
 */
   /* fwrite(ed->xattrs, sizeof(char), ed->xattrs_len, out); */
-  fprintf(out,"%s",ffielddelim);
+  fprintf(out,"%c",in->delim);
 
   /* this one is for create time which posix doesnt have */
-  fprintf(out,"%s", ffielddelim);
+  fprintf(out,"%c", in->delim);
   /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
-  fprintf(out, "%lld%s", pwork->pinode, ffielddelim);
-  fprintf(out, "%d%s", ed->suspect, ffielddelim);
+  fprintf(out, "%lld%c", pwork->pinode, in->delim);
+  fprintf(out, "%d%c", ed->suspect, in->delim);
   fprintf(out,"\n");
   return 0;
 }
@@ -787,14 +770,14 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
 /* strstr/strtok replacement */
 /* does not terminate on NULL character */
 /* does not skip to the next non-empty column */
-char *split(char *src, const char *delim, const char *end) {
+char *split(char *src, const char *delim, const size_t delim_len, const char *end) {
     if (!src || !delim || !end || (src > end)) {
         return NULL;
     }
 
     while (src < end) {
-        for(const char *d = delim; *d; d++) {
-            if (*src == *d) {
+        for(size_t i = 0; i < delim_len; i++) {
+            if (*src == delim[i]) {
                 *src = '\x00';
                 return src + 1;
             }

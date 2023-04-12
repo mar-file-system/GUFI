@@ -399,7 +399,12 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
       //fprintf(stderr,"threadd %d inode %lld file %d\n",id,passmywork->statuso.st_ino,tooutfile);
       /* only directories are here so sortf is set to the directory full pathname */
       SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
-      fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%c%s%s%s\n",passmywork->name,in->delim,ed.statuso.st_ino,in->delim,passmywork->pinode,in->delim,ed.type,in->delim,sortf,in->delim);
+      fprintf(gts.outfd[tooutfile], "%s%c%"STAT_ino"%c%lld%c%c%c%s%c\n",
+                      passmywork->name,   in->delim,
+                      ed.statuso.st_ino,  in->delim,
+                      passmywork->pinode, in->delim,
+                      ed.type,            in->delim,
+                      sortf,              in->delim);
       if (in->stride > 0) {
         pthread_mutex_unlock(&outfile_mutex[todb]);
       }
@@ -501,7 +506,12 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
             //fprintf(stderr,"threadf %d inode %lld file %d\n",id,qwork.statuso.st_ino,tooutfile);
             /* since this is a file or link, we need the path to the file or link without the name as the sortf */
             SNPRINTF(sortf,MAXPATH,"%s",passmywork->name);
-            fprintf(gts.outfd[tooutfile],"%s%s%"STAT_ino"%s%lld%s%c%s%s%s\n",qwork.name,in->delim,qwork_ed.statuso.st_ino,in->delim,qwork.pinode,in->delim,qwork_ed.type,in->delim,sortf,in->delim);
+            fprintf(gts.outfd[tooutfile], "%s%c%"STAT_ino"%c%lld%c%c%c%s%c\n",
+                      qwork.name,              in->delim,
+                      qwork_ed.statuso.st_ino, in->delim,
+                      qwork.pinode,            in->delim,
+                      qwork_ed.type,           in->delim,
+                      sortf,                   in->delim);
             if (in->stride > 0) {
               pthread_mutex_unlock(&outfile_mutex[todb]);
             }

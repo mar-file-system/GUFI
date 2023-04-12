@@ -98,7 +98,7 @@ TEST(gufi_query, aggregate) {
     struct input in;
     in.output             = STDOUT;
     in.maxthreads         = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
-    in.delim[0]           = ' ';
+    in.delim              = ' ';
     in.sql.init           = I.c_str(); in.sql.init_len = strlen(in.sql.init);
     in.sql.ent            = E.c_str(); in.sql.ent_len = strlen(in.sql.ent);
     in.sql.init_agg       = K.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);

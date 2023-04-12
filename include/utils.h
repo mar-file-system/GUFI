@@ -93,7 +93,7 @@ struct globalthreadstate {
 };
 extern struct globalthreadstate gts;
 
-int printits(struct input *in, struct work *pwork, struct entry_data *data, int ptid);
+int printits(struct input *in, struct work *pwork, struct entry_data *data, FILE *out);
 
 int zeroit(struct sum *summary);
 
@@ -144,6 +144,6 @@ size_t dirname_len(const char *path, size_t len);
 int setup_directory_skip(const char *filename, trie_t **skip);
 
 /* strstr/strtok replacement */
-char *split(char *src, const char *delim, const char *end);
+char *split(char *src, const char *delim, const size_t delim_len, const char *end);
 
 #endif

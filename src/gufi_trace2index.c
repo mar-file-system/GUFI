@@ -543,7 +543,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     }
 
     /* find a delimiter */
-    size_t first_delim = parsefirst(line, len, in->delim[0]);
+    size_t first_delim = parsefirst(line, len, in->delim);
     if (first_delim == (size_t) -1) {
         free(line);
         fclose(trace);
@@ -575,7 +575,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     line = NULL;
     len = 0;
     while (getline(&line, &len, trace) != -1) {
-        first_delim = parsefirst(line, len, in->delim[0]);
+        first_delim = parsefirst(line, len, in->delim);
 
         /* bad line */
         if (first_delim == (size_t) -1) {

@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-const char XATTRDELIM[] = "\x1F";     // ASCII Unit Separator
+const char XATTRDELIM = '\x1F';     // ASCII Unit Separator
 
 const char XATTRS_PWD_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_PWD ";"
                                  "CREATE TABLE " XATTRS_PWD "(inode INT64, name TEXT, value TEXT);";
@@ -226,7 +226,7 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
 /*
  * Combine all xattr names into a xattrdelim delimited string.
  */
-ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, const char *delim) {
+ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, const char delim) {
     if (!xattrs || ((xattrs->name_len + xattrs->count) > buf_len)) {
         return -1;
     }
@@ -236,7 +236,7 @@ ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, 
         struct xattr *xattr = &xattrs->pairs[i];
         offset += SNFORMAT_S(buf + offset, buf_len - offset, 2,
                              xattr->name, xattr->name_len,
-                             delim, 1);
+                             &delim, 1);
     }
 
     return offset;
@@ -251,7 +251,7 @@ ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, 
  *
  * <name>\x1F<value>\x1F ...
  */
-int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char *delim) {
+int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
     if (!xattrs || !xattrs->pairs) {
         return 0;
     }
@@ -260,16 +260,16 @@ int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char *delim) {
     for(size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
         written += fwrite(xattr->name, 1, xattr->name_len, file);
-        written += fwrite(delim, 1, 1, file);
+        written += fwrite(&delim, 1, 1, file);
         written += fwrite(xattr->value, 1, xattr->value_len, file);
-        written += fwrite(delim, 1, 1, file);
+        written += fwrite(&delim, 1, 1, file);
     }
 
     return written;
 }
 
 /* parse serialized xattrs */
-int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char *delim) {
+int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim) {
     if (!xattrs) {
         return 0;
     }
@@ -278,7 +278,7 @@ int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const 
 
     /* count NULL terminators */
     for(char *curr = start; curr != end; curr++) {
-        if (*curr == delim[0]) {
+        if (*curr == delim) {
             xattrs->count++;
         }
     }
@@ -287,15 +287,15 @@ int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const 
     xattrs_alloc(xattrs);
 
     /* extract pairs */
-    char *next = split(start, delim, end);
+    char *next = split(start, &delim, 1, end);
     for(size_t i = 0; i < xattrs->count; i++) {
         struct xattr *xattr = &xattrs->pairs[i];
 
         xattr->name_len = SNPRINTF(xattr->name, sizeof(xattr->name), "%s", start);
-        start = next; next = split(start, delim, end);
+        start = next; next = split(start, &delim, 1, end);
 
         xattr->value_len = SNPRINTF(xattr->value, sizeof(xattr->value), "%s", start);
-        start = next; next = split(start, delim, end);
+        start = next; next = split(start, &delim, 1, end);
 
         xattrs->name_len += xattr->name_len;
         xattrs->len += xattr->name_len + xattr->value_len;
