@@ -47,8 +47,11 @@ gufi_dir2trace <src_dir> <trace_file_prefix>
 cat <trace_file_prefix>.* > <trace_file>
 gufi_trace2index <trace_file> <index_dir>
 
+# post-process the index
+bfti/rollup
+
 # use the index
-gufi_query/gufi_stat/bfti/querydbs
+gufi_query/gufi_stat/querydbs
 
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
