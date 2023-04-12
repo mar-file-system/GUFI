@@ -72,43 +72,61 @@ remove_bfti_extra() {
 
 (
 echo "# Start with no treesummary tables"
-run_no_sort "${GUFI_QUERY} -E \"SELECT name FROM tree.sqlite_master\" ${INDEXROOT}" | @GREP@ "treesummary" || true
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
 echo
 
-echo "# Dry Run (7 xattrs because directory xattrs are not counted in the summary)"
-run_no_sort "${BFTI} ${INDEXROOT}" | remove_bfti_extra
+echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
+"${BFTI}" -P -d " " "${INDEXROOT}" 2>&1 | remove_bfti_extra
+echo
+
+echo "# Traversed paths (5)"
+#shellcheck disable=SC2016
+"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | head -n 5 | @AWK@ '{ print $1 " " $2 }'
 echo
 
 echo "# Still no treesummary table"
-run_no_sort "${GUFI_QUERY} -E \"SELECT name FROM tree.sqlite_master\" ${INDEXROOT}" | @GREP@ "treesummary" || true
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
 echo
 
-echo "# Generate treesummary table in ${INDEXROOT}/leaf_directory" | replace
-run_no_sort "${BFTI} -s ${INDEXROOT}/leaf_directory" | remove_bfti_extra
+echo "# Generate treesummary table in ${INDEXROOT}/directory" | replace
+run_no_sort "${BFTI} -s ${INDEXROOT}/directory" | remove_bfti_extra
 echo
 
 echo "# One treesummary table"
-run_no_sort "${GUFI_QUERY} -E \"SELECT name FROM tree.sqlite_master\" ${INDEXROOT}" | @GREP@ "treesummary" || true
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
 echo
 
-echo "# Generate treesummary table in ${INDEXROOT}" | replace
-run_no_sort "${BFTI} -s ${INDEXROOT}" | remove_bfti_extra
+echo "# Generate treesummary table in ${INDEXROOT}/leaf_directory" | replace
+"${BFTI}" -s "${INDEXROOT}/leaf_directory" | remove_bfti_extra
 echo
 
 echo "# Two treesummary tables"
-run_no_sort "${GUFI_QUERY} -E \"SELECT name FROM tree.sqlite_master\" ${INDEXROOT}" | @GREP@ "treesummary" || true
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+echo
+
+echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)" | replace
+#shellcheck disable=SC2016
+"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | @SED@ '/^$/d' | head -n 4 | @AWK@ '{ print $1 " " $2 }'
+echo
+
+echo "# Generate treesummary table in ${INDEXROOT}" | replace
+"${BFTI}" -s "${INDEXROOT}" | remove_bfti_extra
+echo
+
+echo "# Three treesummary tables"
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
 echo
 
 echo "# Find file sizes in range"
-run_sort "${GUFI_QUERY} -d ' ' -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) AND (10 < maxsize);\" -E \"SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10);\" ${INDEXROOT}"
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}"
 echo
 
 echo "# Find directories that have xattrs"
-run_no_sort "${GUFI_QUERY} -d ' ' -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT path(), totxattr FROM summary WHERE totxattr > 0;\" ${INDEXROOT}"
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT path(), totxattr FROM summary WHERE totxattr > 0;\" ${INDEXROOT}"
 echo
 
 echo "# Walk this tree if it does not have xattrs"
-run_no_sort "${GUFI_QUERY} -d ' ' -T \"SELECT '' FROM tree.treesummary WHERE totxattr == 0;\" -S \"SELECT path(), totxattr FROM summary;\" ${INDEXROOT}"
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr == 0;\" -S \"SELECT path(), totxattr FROM summary;\" ${INDEXROOT}"
 echo
 ) |& @TEE@ "${OUTPUT}"
 

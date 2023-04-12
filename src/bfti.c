@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHPn:s", 1, "GUFI_index", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHPn:d:s", 1, "GUFI_index", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)

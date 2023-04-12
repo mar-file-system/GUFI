@@ -1,12 +1,31 @@
 # Start with no treesummary tables
+$ gufi_query -d " " -E "SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';" prefix
 
-# Dry Run (7 xattrs because directory xattrs are not counted in the summary)
+# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)
 totfiles 13 totlinks 2
 totltk 12 totmtk 1 totltm 13 totmtm 0 totmtg 0 totmtt 0
 totsubdirs 4
 totxattr 7
 
+# Traversed paths (5)
+prefix d
+prefix/directory d
+prefix/leaf_directory d
+prefix/unusual#? directory
+prefix/directory/subdirectory d
+
 # Still no treesummary table
+$ gufi_query -d " " -E "SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';" prefix
+
+# Generate treesummary table in prefix/directory
+totfiles 4 totlinks 1
+totltk 4 totmtk 0 totltm 4 totmtm 0 totmtg 0 totmtt 0
+totsubdirs 1
+totxattr 0
+
+# One treesummary table
+$ gufi_query -d " " -E "SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';" prefix
+prefix/directory
 
 # Generate treesummary table in prefix/leaf_directory
 totfiles 2 totlinks 0
@@ -14,8 +33,16 @@ totltk 2 totmtk 0 totltm 2 totmtm 0 totmtg 0 totmtt 0
 totsubdirs 0
 totxattr 6
 
-# One treesummary table
-treesummary
+# Two treesummary tables
+$ gufi_query -d " " -E "SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';" prefix
+prefix/directory
+prefix/leaf_directory
+
+# Traversed paths (4 - prefix/directory/subdirectory is not walked again)
+search/prefix d
+search/prefix/directory d
+search/prefix/leaf_directory d
+search/prefix/unusual#? directory
 
 # Generate treesummary table in prefix
 totfiles 13 totlinks 2
@@ -23,26 +50,24 @@ totltk 12 totmtk 1 totltm 13 totmtm 0 totmtg 0 totmtt 0
 totsubdirs 4
 totxattr 7
 
-# Two treesummary tables
-treesummary
-treesummary
+# Three treesummary tables
+$ gufi_query -d " " -E "SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';" prefix
+prefix
+prefix/directory
+prefix/leaf_directory
 
 # Find file sizes in range
-$ gufi_query -d ' ' -T "SELECT '' FROM tree.treesummary WHERE (minsize <= 0) AND (10 < maxsize);" -E "SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10);" prefix
+$ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);" -E "SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;" prefix
 
-prefix/.hidden 5
-prefix/directory/executable 1
-prefix/directory/readonly 2
-prefix/directory/subdirectory/repeat_name 4
-prefix/directory/writable 3
 prefix/empty_file 0
-prefix/old_file 8
 prefix/repeat_name 4
+prefix/.hidden 5
+prefix/old_file 8
 prefix/unusual#? directory ,/unusual, name?# 9
 
 
 # Find directories that have xattrs
-$ gufi_query -d ' ' -T "SELECT '' FROM tree.treesummary WHERE totxattr >  0;" -S "SELECT path(), totxattr FROM summary WHERE totxattr > 0;" prefix
+$ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE totxattr >  0;" -S "SELECT path(), totxattr FROM summary WHERE totxattr > 0;" prefix
 
 prefix 1
 
@@ -50,6 +75,6 @@ prefix/leaf_directory 6
 
 
 # Walk this tree if it does not have xattrs
-$ gufi_query -d ' ' -T "SELECT '' FROM tree.treesummary WHERE totxattr == 0;" -S "SELECT path(), totxattr FROM summary;" prefix
+$ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE totxattr == 0;" -S "SELECT path(), totxattr FROM summary;" prefix
 
 
