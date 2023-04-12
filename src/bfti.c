@@ -79,8 +79,8 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    trie_t *skip;
-    struct sum *sums;
+    trie_t *skip;     /* paths to skip during descent (only . and ..) */
+    struct sum *sums; /* per thread summary data */
 };
 
 static int create_tables(const char *name, sqlite3 *db, void *args) {
@@ -103,40 +103,39 @@ static int treesummary_exists(void *args, int count, char **data, char **columns
     return 0;
 }
 
-static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args)
-{
-    struct work *passmywork = data;
-    struct entry_data ed;
-    char dbname[MAXPATH];
-    DIR *dir = NULL;
-    sqlite3 *db = NULL;
-
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PoolArgs *pa = (struct PoolArgs *) args;
-    struct input *in = &pa->in;
-    trie_t *skip = pa->skip;
+    struct work *passmywork = (struct work *) data;
+
+    struct entry_data ed;
     memset(&ed, 0, sizeof(ed));
-
-    if (!(dir = opendir(passmywork->name))) {
-        goto out_free;
-    }
-
     if (lstat(passmywork->name, &ed.statuso) != 0) {
         goto out_free;
     }
 
-    if (in->printing || in->printdir) {
-        ed.type = 'd';
-        printits(in, passmywork, &ed, id);
+    DIR *dir = opendir(passmywork->name);
+    if (!dir) {
+        goto out_free;
     }
 
-    SNPRINTF(dbname, MAXPATH, "%s/%s", passmywork->name, DBNAME);
-    if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 1
-                     , NULL, NULL
-                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                     , NULL, NULL
-                     , NULL, NULL
-                     #endif
-             ))) {
+    if (pa->in.printing || pa->in.printdir) {
+        ed.type = 'd';
+        printits(&pa->in, passmywork, &ed, id);
+    }
+
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 2,
+               passmywork->name, passmywork->name_len,
+               "/" DBNAME, DBNAME_LEN + 1);
+
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 1
+                         , NULL, NULL
+                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , NULL, NULL
+                         , NULL, NULL
+                         #endif
+        );
+    if (db) {
         int trecs = 0;
 
         /* ignore errors */
@@ -146,15 +145,21 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args)
         struct sum sumin;
         zeroit(&sumin);
 
-        if (trecs < 1) {
+        /*
+         * force descent at level 0 so that if the root directory
+         * already has a treesummary table, the existing data is
+         * not used to generate the new treesummary table
+         */
+        if ((trecs < 1) || (passmywork->level == 0)) {
             /*
-             * this directory does not have a tree summary
+             * this directory does not have a treesummary
              * table, so need to descend to collect
              */
             descend(ctx, id, pa,
-                    in, passmywork, ed.statuso.st_ino,
-                    dir, skip, 0, 0, processdir,
+                    &pa->in, passmywork, ed.statuso.st_ino,
+                    dir, pa->skip, 0, 0, processdir,
                     NULL, NULL, NULL, NULL, NULL, NULL);
+
             querytsdb(passmywork->name, &sumin, db, 0);
         } else {
             querytsdb(passmywork->name, &sumin, db, 1);
@@ -167,75 +172,43 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args)
     closedir(dir);
 
   out_free:
-    if (passmywork->recursion_level == 0) {
-        free(passmywork);
-    }
+    free(passmywork);
 
     return 0;
 }
 
-struct work *processinit(struct PoolArgs *pa) {
-    struct work *mywork = calloc(1, sizeof(struct work));
-    struct stat st;
-
-    /* process input directory and put it on the queue */
-    mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, pa->in.name, pa->in.name_len);
-    mywork->name_len = trailing_match_index(mywork->name, mywork->name_len, "/", 1);
-
-    lstat(pa->in.name, &st);
-    if (access(pa->in.name, R_OK | X_OK)) {
-        const int err = errno;
-        fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                pa->in.name, strerror(err));
-        free(mywork);
-        return NULL;
-    }
-    if (!S_ISDIR(st.st_mode)) {
-        fprintf(stderr, "input-dir '%s' is not a directory\n", pa->in.name);
-        free(mywork);
-        return NULL;
-    }
-
-    /* skip . and .. only */
-    setup_directory_skip(NULL, &pa->skip);
-
-    pa->sums = calloc(pa->in.maxthreads, sizeof(struct sum));
-    for(int i = 0; i < pa->in.maxthreads; i++) {
-        zeroit(&pa->sums[i]);
-    }
-
-    return mywork;
-}
-
-int processfin(struct PoolArgs *pa) {
+int compute_treesummary(struct PoolArgs *pa) {
     struct sum sumout;
     zeroit(&sumout);
     for(int i = 0; i < pa->in.maxthreads; i++) {
         tsumit(&pa->sums[i], &sumout);
         sumout.totsubdirs--; /* tsumit adds 1 to totsubdirs each time it's called */
     }
-    sumout.totsubdirs--; /* subtract another 1 because starting directory is not a subdirectory of itself */
-    free(pa->sums);
+    sumout.totsubdirs--;     /* subtract another 1 because starting directory is not a subdirectory of itself */
 
-    trie_free(pa->skip);
-
-    char dbpath[MAXPATH];
-    SNPRINTF(dbpath, MAXPATH, "%s/%s", pa->in.name, DBNAME);
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 2,
+               pa->in.name, pa->in.name_len,
+               "/" DBNAME, DBNAME_LEN + 1);
 
     struct stat st;
-    const int rc = lstat(dbpath, &st);
+    int rc = lstat(dbname, &st);
 
     if (pa->in.writetsum) {
-        sqlite3 *tdb = NULL;
-        if (!(tdb = opendb(dbpath, SQLITE_OPEN_READWRITE, 1, 1,
-                           create_tables, &pa->in
-                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                           , NULL, NULL
-                           , NULL, NULL
-                           #endif
-                  )))
-            return -1;
-        inserttreesumdb(pa->in.name, tdb, &sumout, 0, 0, 0);
+        sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 1,
+                              create_tables, &pa->in
+                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                              , NULL, NULL
+                              , NULL, NULL
+                              #endif
+            );
+        if (tdb) {
+            inserttreesumdb(pa->in.name, tdb, &sumout, 0, 0, 0);
+        }
+        else {
+            rc = 1;
+        }
+
         closedb(tdb);
     }
 
@@ -243,9 +216,9 @@ int processfin(struct PoolArgs *pa) {
         struct utimbuf utimeStruct;
         utimeStruct.actime  = st.st_atime;
         utimeStruct.modtime = st.st_mtime;
-        if(utime(dbpath, &utimeStruct) != 0) {
+        if(utime(dbname, &utimeStruct) != 0) {
             const int err = errno;
-            fprintf(stderr, "ERROR: utime failed with error number: %d on %s\n", err, dbpath);
+            fprintf(stderr, "ERROR: utime failed with error number: %d on %s\n", err, dbname);
             return 1;
         }
     }
@@ -319,9 +292,12 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
     }
 
-    struct work *root = processinit(&pa);
-    if (!root) {
-        return 1;
+    /* skip . and .. only */
+    setup_directory_skip(NULL, &pa.skip);
+
+    pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
+    for(int i = 0; i < pa.in.maxthreads; i++) {
+        zeroit(&pa.sums[i]);
     }
 
     QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0
@@ -331,15 +307,22 @@ int main(int argc, char *argv[]) {
         );
     if (!pool) {
         fprintf(stderr, "Failed to initialize thread pool\n");
-        free(root);
+        free(pa.sums);
+        trie_free(pa.skip);
         return 1;
     }
+
+    struct work *root = calloc(1, sizeof(struct work));
+    root->name_len = SNFORMAT_S(root->name, sizeof(root->name), 1, pa.in.name, pa.in.name_len);
+    root->name_len = trailing_match_index(root->name, root->name_len, "/", 1);
 
     QPTPool_enqueue(pool, 0, processdir, root);
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
-    processfin(&pa);
+    compute_treesummary(&pa);
+    free(pa.sums);
+    trie_free(pa.skip);
 
     return 0;
 }
