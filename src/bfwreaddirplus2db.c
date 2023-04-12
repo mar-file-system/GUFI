@@ -85,6 +85,12 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
+// global variable to hold per thread state goes here
+struct {
+   FILE*    outfd[MAXPTHREAD];
+   sqlite3* outdbd[MAXPTHREAD];
+} gts = {};
+
 pthread_mutex_t outdb_mutex[MAXPTHREAD];
 pthread_mutex_t outfile_mutex[MAXPTHREAD];
 sqlite3_stmt *global_res[MAXPTHREAD];

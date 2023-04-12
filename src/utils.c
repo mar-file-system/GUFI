@@ -77,9 +77,6 @@ OF SUCH DAMAGE.
 
 #include "utils.h"
 
-// global variable to hold per thread state
-struct globalthreadstate gts = {};
-
 int printits(struct input *in, struct work *pwork, struct entry_data *ed, FILE *out) {
   fprintf(out, "%s%c",             pwork->name,            in->delim);
   fprintf(out, "%c%c",             ed->type,               in->delim);

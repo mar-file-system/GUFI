@@ -82,7 +82,6 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <sqlite3.h>
 
 #include <bf.h>
 #include <dbutils.h>
@@ -99,7 +98,6 @@ struct stat globalst;
 int att(sqlite3 *indb) {
         sqlite3 *db = NULL;
         int i;
-        char indbname[MAXPATH];
         char qat[MAXSQL];
         int rc;
         char *err_msg = 0;
@@ -130,7 +128,7 @@ int att(sqlite3 *indb) {
         strcat(sqlu,";");
 
         //fprintf(stderr,"sqlu: %s\n",sqlu);
-        rawquerydb(indbname, 0, indb, sqlu, STDOUT, "|", 0, 0, 0, 0);
+        sqlite3_exec(indb, sqlu, NULL, NULL, NULL);
         return 0;
 }
 
