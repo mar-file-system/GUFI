@@ -12,6 +12,8 @@ Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider,
 `docs/latex/pdfs` if building them was enabled with the CMake
 configuration `-DBUILD_LATEX_DOCS=On`.
 
+[GUFI-SQL.docx](GUFI-SQL.docx) provides guidance on GUFI's SQL schema, functions, and usage.
+
 ## Directory Structure
 - [config](/config)     - Example GUFI wrapper script configuration files
 - [contrib](/contrib)   - Contains support files (cmake package finders, CI scripts, etc.)
@@ -56,6 +58,4 @@ configuration `-DBUILD_LATEX_DOCS=On`.
 
 ## Extra Information
 - [Configuration Files](config)
-- [SQL Schemas](SQLSchemas)
-- [SQL Functions](SQLFunctions)
 - [Tests](tests)
