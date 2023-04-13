@@ -185,10 +185,10 @@ void listdir(struct input *in, const char *name, long long int level,
       }
       if (loader>0) {
         if (S_ISDIR(st.st_mode)) {
-          SNPRINTF(sortf,MAXPATH,"%s%s%s",name,in->delim,type);
+          SNPRINTF(sortf,MAXPATH,"%s%c%s",name,in->delim,type);
         } else {
           shortpath(name,beginpath,endpath);
-          SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in->delim,type);
+          SNPRINTF(sortf,MAXPATH,"%s%c%s",beginpath,in->delim,type);
         }
         printload(in,name,&st,type,lpath,&xattrs,pin,sortf,stdout);
       } else {
@@ -250,10 +250,10 @@ void listdir(struct input *in, const char *name, long long int level,
               //printf("readlink %s %s\n",path,lpath);
               if (loader>0) {
                 if (S_ISDIR(st.st_mode)) {
-                  SNPRINTF(sortf,MAXPATH,"%s%s%s",path,in->delim,type);
+                  SNPRINTF(sortf,MAXPATH,"%s%c%s",path,in->delim,type);
                 } else {
                   shortpath(path,beginpath,endpath);
-                  SNPRINTF(sortf,MAXPATH,"%s%s%s",beginpath,in->delim,type);
+                  SNPRINTF(sortf,MAXPATH,"%s%c%s",beginpath,in->delim,type);
                 }
                 printload(in,path,&st,type,lpath,&xattrs,pin,sortf,stdout);
               } else {
