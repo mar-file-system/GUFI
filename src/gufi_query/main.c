@@ -687,22 +687,9 @@ int main(int argc, char *argv[])
 
         /* parent of input path */
         root->work.root = argv[i];
-        root->work.root_len = root->work.name_len;
-        while (root->work.root_len && (root->work.root[root->work.root_len - 1] != '/')) {
-            root->work.root_len--;
-        }
-
+        root->work.root_len = trailing_non_match_index(root->work.root, root->work.name_len, "/", 1);
         root->work.root[root->work.root_len] = '\0';
-
-        root->work.basename_len = root->work.root_len;
-        while ((root->work.basename_len - 1) &&
-               (root->work.root[root->work.root_len - 1] == '/')) {
-            root->work.basename_len--;
-        }
-
-        const size_t first_non_slash = trailing_non_match_index(root->work.name, root->work.name_len, "/", 1);
-        const size_t parent_slash    = trailing_match_index(root->work.name, first_non_slash, "/", 1);
-        root->work.basename_len      = root->work.name_len - (parent_slash + 1);
+        root->work.basename_len = trailing_match_index(root->work.root, root->work.root_len, "/", 1);
 
         /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);

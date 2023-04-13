@@ -992,22 +992,15 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
 
     const size_t path_len = strlen(path);
 
-    /* remove trailing '/' */
-    size_t trimmed_len = path_len;
-    while (trimmed_len && (path[trimmed_len - 1] == '/')) {
-        trimmed_len--;
-    }
-
+    /* remove trailing slashes */
+    const size_t trimmed_len = trailing_match_index(path, path_len, "/", 1);
     if (!trimmed_len) {
         sqlite3_result_text(context, "/", 1, SQLITE_TRANSIENT);
         return;
     }
 
     /* basename(work->name) will be the same as the first part of the input path, so remove it */
-    size_t offset = trimmed_len;
-    while (offset && (path[offset - 1] != '/')) {
-        offset--;
-    }
+    const size_t offset = trailing_non_match_index(path, trimmed_len, "/", 1);
 
     const size_t bn_len = trimmed_len - offset;
     char *bn = path + offset;

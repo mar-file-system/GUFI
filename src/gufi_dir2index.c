@@ -460,11 +460,7 @@ int main(int argc, char *argv[]) {
          * manually get basename of provided path since
          * there is no source for the basenames
          */
-        root.basename_len = 0;
-        while ((root.basename_len < root.name_len) &&
-               (root.name[root.name_len - root.basename_len - 1] != '/')) {
-            root.basename_len++;
-        }
+        root.basename_len = root.name_len - trailing_non_match_index(root.name, root.name_len, "/", 1);
 
         struct work *copy = compress_struct(pa.in.compress, &root, sizeof(root));
         QPTPool_enqueue(pool, 0, processdir, copy);

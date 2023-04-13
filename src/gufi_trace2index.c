@@ -405,10 +405,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         /* find the basename of this path */
         w->line[w->first_delim] = '\x00';
-        size_t basename_start = w->first_delim;
-        while (basename_start && (w->line[basename_start - 1] != '/')) {
-            basename_start--;
-        }
+        const size_t basename_start = trailing_non_match_index(w->line, w->first_delim, "/", 1);
 
         insertsumdb(db, w->line + basename_start, &dir, &ed, &summary);
         xattrs_cleanup(&ed.xattrs);
