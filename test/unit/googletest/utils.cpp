@@ -756,4 +756,20 @@ TEST(split, delims) {
     curr = next; next = split(curr, delims, 2, end);
     EXPECT_EQ(curr, nullptr);
     EXPECT_EQ(next, nullptr);
+
+    /* input checks */
+    next = split(nullptr, delims, 2, end);
+    EXPECT_EQ(next, nullptr);
+
+    next = split(line, nullptr, 2, end);
+    EXPECT_EQ(next, nullptr);
+
+    next = split(line, delims, 0, end);
+    EXPECT_EQ(next, nullptr);
+
+    next = split(line, delims, 2, nullptr);
+    EXPECT_EQ(next, nullptr);
+
+    next = split((char *) end + 1, delims, 2, end);
+    EXPECT_EQ(next, nullptr);
 }

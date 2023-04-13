@@ -768,7 +768,7 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
 /* does not terminate on NULL character */
 /* does not skip to the next non-empty column */
 char *split(char *src, const char *delim, const size_t delim_len, const char *end) {
-    if (!src || !delim || !end || (src > end)) {
+    if (!src || !delim || !delim_len || !end || (src > end)) {
         return NULL;
     }
 
