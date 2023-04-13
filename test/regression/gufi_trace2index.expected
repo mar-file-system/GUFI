@@ -1,11 +1,18 @@
 $ generatetree prefix
 
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          5
+Total Files:         15
 
-$ gufi_trace2index -d "|" trace.0 trace.1 "prefix" | tail -n 4 | head -n 3
-Files: 15
-Dirs:  5 (0 empty)
-Total: 20
+$ gufi_trace2index -d "|" trace.0 trace.1 "prefix"
+Creating GUFI Index prefix with 1 threads
+Dirs:                5 (0 empty)
+Files:               15
+Total:               20
+
+Total Dirs:          5
+Total Files:         15
 
 Source Directory:
     prefix
@@ -57,22 +64,45 @@ Could not open "": No such file or directory (2)
 Failed to open trace file for each thread
 
 # bad index path
-$ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB"
-Dirs:  5 (0 empty)
+$ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB" 2> >(/usr/bin/sort)
+Creating GUFI Index prefix/1KB with 2 threads
+Dirs:                5 (0 empty)
+Files:               15
+Total:               20
+
+Total Dirs:          0
+Total Files:         0
 Dupdir failure: "prefix/1KB/prefix": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/directory": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/directory/subdirectory": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/leaf_directory": Not a directory (20)
+Dupdir failure: "prefix/1KB/prefix/unusual#? directory ,": Not a directory (20)
+
 
 # empty trace
 $ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
 Could not get the first line of the trace
+Creating GUFI Index prefix with 2 threads
+
+Total Dirs:          0
+Total Files:         0
+
 
 # cannot find delimiter of first line
 $ gufi_trace2index -d "?" -n "2" "trace" "prefix"
 Could not find the specified delimiter
+Creating GUFI Index prefix with 2 threads
+
+Total Dirs:          0
+Total Files:         0
+
 
 # first line does not start with a directory
 $ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
 First line of trace is not a directory
+Creating GUFI Index prefix with 2 threads
+
+Total Dirs:          0
+Total Files:         0
+
 

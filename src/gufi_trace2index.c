@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -100,6 +101,8 @@ struct PoolArgs {
     struct input in;
     struct template_db db;
     struct template_db xattr;
+
+    uint64_t *total_files;
 };
 
 /* Data stored during first pass of input file */
@@ -158,7 +161,6 @@ uint64_t total_insertdbfin      = 0;
 uint64_t total_insertsumdb      = 0;
 uint64_t total_closedb          = 0;
 uint64_t total_row_destroy      = 0;
-size_t total_files              = 0;
 #endif
 
 #endif
@@ -189,7 +191,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     uint64_t thread_insertsumdb      = 0;
     uint64_t thread_closedb          = 0;
     uint64_t thread_row_destroy      = 0;
-    size_t   thread_files            = 0;
     #endif
     #endif
 
@@ -355,6 +356,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 #endif
                 #endif
 
+                pa->total_files[id] += row_count;
                 row_count = 0;
             }
 
@@ -416,6 +418,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         closedb(db); /* don't set to nullptr */
         timestamp_set_end(closedb);
 
+        pa->total_files[id] += row_count;
+
         #ifdef DEBUG
         timestamp_create_start(print_timestamps);
         timestamp_print(ctx->buffers, id, "zero_summary", zero_summary);
@@ -440,7 +444,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         thread_insertdbfin  += timestamp_elapsed(insertdbfin);
         thread_insertsumdb  += timestamp_elapsed(insertsumdb);
         thread_closedb      += timestamp_elapsed(closedb);
-        thread_files        += row_count;
         #endif
 
         timestamp_print(ctx->buffers, id, "print_timestamps", print_timestamps);
@@ -493,7 +496,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     total_insertsumdb      += thread_insertsumdb;
     total_closedb          += thread_closedb;
     total_row_destroy      += thread_row_destroy;
-    total_files            += thread_files;
     pthread_mutex_unlock(&print_mutex);
     #endif
     timestamp_print(ctx->buffers, id, "print_timestamps", print_timestamps);
@@ -635,9 +637,9 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     /* print here to print as early as possible instead of after thread pool completes */
     if ((*sa->remaining) == 0) {
         fprintf(stdout, "Scouts took total of %.2Lf seconds\n", sec(*sa->time));
-        fprintf(stdout, "Files: %zu\n", *sa->files);
-        fprintf(stdout, "Dirs:  %zu (%zu empty)\n", *sa->dirs, *sa->empty);
-        fprintf(stdout, "Total: %zu\n", *sa->files + *sa->dirs);
+        fprintf(stdout, "Dirs:                %zu (%zu empty)\n", *sa->dirs, *sa->empty);
+        fprintf(stdout, "Files:               %zu\n", *sa->files);
+        fprintf(stdout, "Total:               %zu\n", *sa->files + *sa->dirs);
     }
     pthread_mutex_unlock(&print_mutex);
 
@@ -768,6 +770,9 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+    pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
+
     /* parse the trace files */
     size_t remaining = trace_count;
     uint64_t scout_time = 0;
@@ -790,9 +795,13 @@ int main(int argc, char *argv[]) {
     }
 
     QPTPool_wait(pool);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    const size_t completed = QPTPool_threads_completed(pool);
-    #endif
+
+    uint64_t thread_count = QPTPool_threads_completed(pool);
+    if (thread_count) {
+        /* don't count scout functions */
+        thread_count -= trace_count;
+    }
+
     QPTPool_destroy(pool);
 
     close_template_db(&pa.xattr);
@@ -809,6 +818,14 @@ int main(int argc, char *argv[]) {
 
     /* have to call clock_gettime explicitly to get end time */
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);
+    const long double processtime = sec(nsec(&main_func));
+
+    uint64_t total_files = 0;
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+        total_files += pa.total_files[i];
+    }
+
+    free(pa.total_files);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     fprintf(stderr, "Handle args:               %.2Lfs\n", sec(total_handle_args));
@@ -834,11 +851,14 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "closedb:                   %.2Lfs\n", sec(total_closedb));
     fprintf(stderr, "cleanup:                   %.2Lfs\n", sec(total_row_destroy));
     fprintf(stderr, "\n");
-    fprintf(stderr, "Directories created:       %zu\n", completed);
-    fprintf(stderr, "Files inserted:            %zu\n", total_files);
     #endif
 
-    fprintf(stdout, "main completed in %.2Lf seconds\n", sec(nsec(&main_func)));
+    fprintf(stdout, "\n");
+    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
+    fprintf(stdout, "Total Files:         %" PRIu64 "\n", total_files);
+    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
+    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
+    fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
     return 0;
 }

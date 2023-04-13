@@ -100,7 +100,7 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 cat "${TRACES[@]}" > "${TRACE}"
 
 echo "# generate the index"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\" | @TAIL@ -n 4 | @HEAD@ -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" \"${TRACE}\" \"${INDEXTARGET}\""
 
 echo "# generate the trace (single thread)"
 rm -rf "${TRACES[@]}"
@@ -199,7 +199,7 @@ echo "# empty line (Pass)"
     echo
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${INDEXTARGET}\""
-) |& @SED@ '/qptpool.*/d' |@TEE@ "${OUTPUT}"
+) |& remove_indexing_time | @SED@ '/qptpool.*/d' | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -153,7 +153,7 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${COPY}"
 
 echo "# directory bad pinode"
 # shellcheck disable=SC2016
-@HEAD@ -n 1 "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{$23="bad_pinode"; print}' > "${BADTRACE}"
+@HEAD@ -n 1 "${TRACE}" | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $23="bad_pinode"; print }' > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
 echo "# directory duplicate path"
@@ -198,7 +198,7 @@ run_no_sort "${VERIFYTRACE} \"${DELIM}\" ${BADTRACE}"
 echo "# directory followed by non-directory not in directory"
 dir_line=$(@GREP@ "${DELIM}d${DELIM}" "${TRACE}" | @SORT@ | @TAIL@ -n 1)
 # shellcheck disable=SC2016
-dir_name=$(echo "${dir_line}" | @AWK@ -F "${DELIM}" '{print $1}')
+dir_name=$(echo "${dir_line}" | @AWK@ -F "${DELIM}" '{ print $1 }')
 bad_name="${dir_name}/non-existant_dir/file${DELIM}${without_name}"
 (echo "${dir_line}"; echo "${bad_name}") > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
@@ -207,7 +207,7 @@ echo "# non-directory bad pinode"
 (
     @HEAD@ -n 1 "${TRACE}"
     # shellcheck disable=SC2016
-    echo "${file_line}"| @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{$23="1234"; print}'
+    echo "${file_line}"| @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $23="1234"; print }'
 ) > "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
 
@@ -228,12 +228,12 @@ echo "# bad parent pinode"
     dirs=$(@GREP@ "${DELIM}d${DELIM}" "${TRACE}" | @SORT@ -t "${DELIM}" -k 1,1 | @HEAD@ -n 2)
     echo "${dirs}" | @HEAD@ -n 1
     # shellcheck disable=SC2016
-    echo "${dirs}" | @TAIL@ -n 1 | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{$23="1234"; print}'
+    echo "${dirs}" | @TAIL@ -n 1 | @AWK@ -F "${DELIM}" -v OFS="${DELIM}" '{ $23="1234"; print }'
 ) > "${BADTRACE}"
 
 cat "${BADTRACE}"
 run_no_sort "${VERIFYTRACE} \"${DELIM}\" \"${BADTRACE}\""
-) |& @TEE@ "${OUTPUT}"
+) |& remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytrace.expected "${OUTPUT}"
 rm "${OUTPUT}"

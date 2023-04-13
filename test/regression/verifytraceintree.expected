@@ -3,15 +3,25 @@ $ generatetree "prefix"
 
 # generate the trace (multiple threads)
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          5
+Total Files:         15
 
 # generate the index
-$ gufi_trace2index -d "|" "trace" "prefix" | tail -n 4 | head -n 3
-Files: 15
-Dirs:  5 (0 empty)
-Total: 20
+$ gufi_trace2index -d "|" "trace" "prefix"
+Creating GUFI Index prefix with 1 threads
+Dirs:                5 (0 empty)
+Files:               15
+Total:               20
+
+Total Dirs:          5
+Total Files:         15
 
 # generate the trace (single thread)
 $ gufi_dir2trace -d "|" -n 1 -x "prefix" "trace"
+Creating GUFI Traces trace with 1 threads
+Total Dirs:          5
+Total Files:         15
 
 # missing trace (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
@@ -28,8 +38,8 @@ Error: Bad thread count: threads
 
 # verify that all entries in the trace can be found in the GUFI tree (Pass)
 $ verifytraceintree "trace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 trace Pass
 
@@ -41,8 +51,8 @@ badtrace Fail
 # second line bad delimiter (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Could not find delimiter of next line
-Files: 0
 Dirs:  1 (0 empty)
+Files: 0
 Total: 1
 badtrace Fail
 
@@ -53,55 +63,55 @@ badtrace Fail
 
 # directory add trailing slashes (Pass)
 $ verifytraceintree "trace.copy" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 trace.copy Pass
 
 # directory does not exist (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 Source path listed in trace doesn't exist: prefix/directory/subdir
 badtrace Fail
 
 # path exists, but is not directory (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 14
 Dirs:  5 (0 empty)
+Files: 14
 Total: 19
 Source path listed in trace is not a directory: prefix/.hidden
 badtrace Fail
 
 # directory permission mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 Permission mismatch on directory: prefix
 badtrace Fail
 
 # directory uid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 UID mismatch on directory: prefix
 badtrace Fail
 
 # directory gid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 GID mismatch on directory: prefix
 badtrace Fail
 
 # missing db.db (Fail)
 $ verifytraceintree "trace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 Could not open database file: prefix/db.db
 trace Fail
@@ -117,8 +127,8 @@ badtrace Fail
 
 # non-directory permissions mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 Permission mismatch on entry ".hidden" in prefix/db.db
 Permission mismatch on entry "1KB" in prefix/db.db
@@ -159,8 +169,8 @@ badtrace Fail
 
 # empty line (Pass)
 $ verifytraceintree "trace.copy" "|" "prefix"
-Files: 15
 Dirs:  5 (0 empty)
+Files: 15
 Total: 20
 trace.copy Pass
 

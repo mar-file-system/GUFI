@@ -73,7 +73,8 @@ OUTPUT="gufi_dir2index.out"
     rm -rf "${INDEXTARGET}"
 
     # generate the index
-    ${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}"
+    # shellcheck disable=SC2016
+    out=$(${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}" | @AWK@ '{ print "    " $0 }')
 
     src=$(@FIND@ "${SRCDIR}" | @SORT@)
 
@@ -83,6 +84,8 @@ OUTPUT="gufi_dir2index.out"
     echo "    Source Directory:"
     # shellcheck disable=SC2016
     echo "${src}" | @AWK@ '{ printf "        " $0 "\n" }'
+    echo
+    echo "${out}"
     echo
     echo "    GUFI Index:"
     # shellcheck disable=SC2016
@@ -97,7 +100,8 @@ do
     rm -rf "${INDEXTARGET}"
 
     # generate the index
-    ${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXTARGET}"
+    # shellcheck disable=SC2016
+    out=$(${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXTARGET}" | @AWK@ '{ print "    " $0 }')
 
     src=$(@FIND@ "${SRCDIR}" -maxdepth ${level} | @SORT@)
 
@@ -107,6 +111,8 @@ do
     echo "    Source Directory:"
     # shellcheck disable=SC2016
     echo "${src}" | @AWK@ '{ printf "        " $0 "\n" }'
+    echo
+    echo "${out}"
     echo
     echo "    GUFI Index:"
     # shellcheck disable=SC2016
@@ -130,7 +136,7 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${INDEXTARGET}\" -k \"${TRACE}\""
-) | replace | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

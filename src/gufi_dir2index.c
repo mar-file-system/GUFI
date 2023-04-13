@@ -86,9 +86,7 @@ struct PoolArgs {
     struct template_db db;
     struct template_db xattr;
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     uint64_t *total_files;
-    #endif
 };
 
 struct NonDirArgs {
@@ -295,9 +293,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     free_struct(in->compress, nda.work, &work_src, nda.work->recursion_level);
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     pa->total_files[id] += nondirs_processed;
-    #endif
 
     return rc;
 }
@@ -435,15 +431,12 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    fprintf(stderr, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
 
     pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
 
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
-    #endif
-
 
     const size_t root_count = argc - idx - 1;
     char **roots = calloc(root_count, sizeof(char *));
@@ -480,9 +473,7 @@ int main(int argc, char *argv[]) {
 
     QPTPool_wait(pool);
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     const uint64_t thread_count = QPTPool_threads_completed(pool);
-    #endif
 
     QPTPool_destroy(pool);
 
@@ -494,7 +485,6 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.db);
     trie_free(pa.skip);
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));
 
@@ -506,12 +496,11 @@ int main(int argc, char *argv[]) {
 
     free(pa.total_files);
 
-    fprintf(stderr, "Total Dirs:            %zu\n",    thread_count);
-    fprintf(stderr, "Total Files:           %zu\n",    total_files);
-    fprintf(stderr, "Time Spent Indexing:   %.2Lfs\n", processtime);
-    fprintf(stderr, "Dirs/Sec:              %.2Lf\n",  thread_count / processtime);
-    fprintf(stderr, "Files/Sec:             %.2Lf\n",  total_files / processtime);
-    #endif
+    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
+    fprintf(stdout, "Total Files:         %" PRIu64 "\n", total_files);
+    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
+    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
+    fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
     return 0;
 }

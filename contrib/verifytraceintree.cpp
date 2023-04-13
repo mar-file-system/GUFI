@@ -426,8 +426,8 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         QPTPool_enqueue(ctx, id, check_stanza, curr);
     }
 
-    std::cerr << "Files: " << file_count << std::endl
-              << "Dirs:  " << dir_count << " (" << empty << " empty)" << std::endl
+    std::cerr << "Dirs:  " << dir_count << " (" << empty << " empty)" << std::endl
+              << "Files: " << file_count << std::endl
               << "Total: " << file_count + dir_count << std::endl;
 
     return 0;

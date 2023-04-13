@@ -74,7 +74,7 @@ run_no_sort "${GENERATETREE} ${SRCDIR}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # generate the index
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${TRACES[@]}" "\"${INDEXTARGET}\" | @TAIL@ -n 4 | @HEAD@ -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${TRACES[@]}" "\"${INDEXTARGET}\""
 
 # compare contents
 src_contents=$(@FIND@ "${SRCDIR}" | @SORT@)
@@ -95,23 +95,23 @@ echo "# bad trace path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"\" \"${INDEXTARGET}\""
 
 echo "# bad index path"
-run_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SRCDIR}/1KB\"" | @HEAD@ -n 6
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(@SORT@)"
 echo
 
 echo "# empty trace"
 true > "${BADTRACE}"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${INDEXTARGET}\"" | @HEAD@ -n 2
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${INDEXTARGET}\""
 echo
 
 echo "# cannot find delimiter of first line"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${INDEXTARGET}\"" | @HEAD@ -n 2
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${INDEXTARGET}\""
 echo
 
 echo "# first line does not start with a directory"
 @TAIL@ -n -1 "${TRACE}" > "${BADTRACE}"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${INDEXTARGET}\"" | @HEAD@ -n 2
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${INDEXTARGET}\""
 echo
-) | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

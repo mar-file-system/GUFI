@@ -199,11 +199,15 @@ order_tracefile() {
     @GREP@ "^${SRCDIR}/unusual.*${DELIM}"    "$1"
 }
 
+remove_indexing_time() {
+    @GREP@ -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
+}
+
 if [[ "${GENERATE_INDEX}" == "1" ]]
 then
     # generate the tree
     "${GENERATETREE}" "${SRCDIR}"
 
     # generate the index
-    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${INDEXTARGET}"
+    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${INDEXTARGET}" > /dev/null
 fi

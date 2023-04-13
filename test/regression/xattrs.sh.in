@@ -144,14 +144,14 @@ rm -r "${INDEXTARGET}"
 
 run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
 
-run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXTARGET}\" | @TAIL@ -n 4 | @HEAD@ -n 3"
+run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXTARGET}\""
 
 run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT rpath(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries;\" \"${INDEXROOT}\""
 
 run_no_sort "${ROLLUP} ${INDEXROOT}" 2>&1 | @SED@ '/Ran /d' | @SED@ '/Took /d'
 
 run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(name, rollupscore), type, xattr_name, xattr_value FROM xsummary;\" -E \"SELECT rpath(xsummary.name, xsummary.rollupscore) || '/' || xpentries.name, xpentries.type, xpentries.xattr_name, xpentries.xattr_value FROM xsummary, xpentries WHERE xsummary.inode == xpentries.pinode;\" \"${INDEXROOT}\""
-) | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${OUTPUT}"
 rm "${OUTPUT}"

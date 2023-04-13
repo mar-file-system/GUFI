@@ -202,16 +202,16 @@ do_tests() {
 }
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
-"${ROLLUP}" "${INDEXROOT}" | replace
+"${ROLLUP}" "${INDEXROOT}"
 do_tests
 
 rm -r "${INDEXTARGET}"
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
-"${ROLLUP}" -L 3 "${INDEXROOT}" | replace
+"${ROLLUP}" -L 3 "${INDEXROOT}"
 do_tests
 
-) | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/rollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

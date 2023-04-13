@@ -1,3 +1,6 @@
+Creating GUFI Index prefix with 1 threads
+Total Dirs:          69
+Total Files:         96
 Roots:
     prefix
 
@@ -609,6 +612,9 @@ root 5
 $ gufi_stats -c total-dircount
 69
 
+Creating GUFI Index prefix with 1 threads
+Total Dirs:          69
+Total Files:         96
 Roots:
     prefix
 

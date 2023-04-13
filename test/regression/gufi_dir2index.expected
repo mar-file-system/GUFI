@@ -21,6 +21,10 @@ Index Everything:
         prefix/unusual#? directory ,
         prefix/unusual#? directory ,/unusual, name?#
 
+    Creating GUFI Index prefix with 1 threads
+    Total Dirs:          5
+    Total Files:         15
+
     GUFI Index:
         prefix
         prefix/.hidden
@@ -47,6 +51,10 @@ Index up to level 0:
     Source Directory:
         prefix
 
+    Creating GUFI Index prefix with 1 threads
+    Total Dirs:          1
+    Total Files:         0
+
     GUFI Index:
         prefix
 
@@ -63,6 +71,10 @@ Index up to level 1:
         prefix/old_file
         prefix/repeat_name
         prefix/unusual#? directory ,
+
+    Creating GUFI Index prefix with 1 threads
+    Total Dirs:          4
+    Total Files:         7
 
     GUFI Index:
         prefix
@@ -97,6 +109,10 @@ Index up to level 2:
         prefix/repeat_name
         prefix/unusual#? directory ,
         prefix/unusual#? directory ,/unusual, name?#
+
+    Creating GUFI Index prefix with 1 threads
+    Total Dirs:          5
+    Total Files:         13
 
     GUFI Index:
         prefix
@@ -141,6 +157,10 @@ Index up to level 3:
         prefix/unusual#? directory ,
         prefix/unusual#? directory ,/unusual, name?#
 
+    Creating GUFI Index prefix with 1 threads
+    Total Dirs:          5
+    Total Files:         15
+
     GUFI Index:
         prefix
         prefix/.hidden
@@ -172,12 +192,21 @@ Destination path is not a directory "prefix/1KB"
 # source path is file
 $ gufi_dir2index -n 2 "prefix/1KB" "prefix"
 Source path is not a directory "prefix/1KB"
+Creating GUFI Index prefix with 2 threads
+Total Dirs:          0
+Total Files:         0
 
 # empty source path
 $ gufi_dir2index -n 2 "" "trace"
 Could not resolve path "": No such file or directory (2)
+Creating GUFI Index trace with 2 threads
+Total Dirs:          0
+Total Files:         0
 
 # bad skip file
 $ gufi_dir2index -n 2 "prefix" "prefix" -k "trace"
 "prefix" Already exists!
+Creating GUFI Index prefix with 2 threads
+Total Dirs:          5
+Total Files:         15
 

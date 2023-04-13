@@ -3,9 +3,15 @@ $ generatetree "prefix"
 
 # generate the trace (multiple threads)
 $ gufi_dir2trace -d "|" -n 2 "prefix" "trace"
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          5
+Total Files:         15
 
 # generate the trace (single thread)
 $ gufi_dir2trace -d "|" -n 1 "prefix" "trace"
+Creating GUFI Traces trace with 1 threads
+Total Dirs:          5
+Total Files:         15
 
 # not enough argumnets 
 $ verifytrace
