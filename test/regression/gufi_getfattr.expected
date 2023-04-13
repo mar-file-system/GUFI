@@ -132,6 +132,20 @@ value4
 value5
 value6
 
+# 11 xattrs
+$ gufi_getfattr --recursive .
+./1MB user.size
+./directory/subdirectory user.name
+./directory/subdirectory user.type
+./leaf_directory user.name
+./leaf_directory user.type
+./leaf_directory/leaf_file1 user.name1
+./leaf_directory/leaf_file1 user.name2
+./leaf_directory/leaf_file1 user.name3
+./leaf_directory/leaf_file2 user.name4
+./leaf_directory/leaf_file2 user.name5
+./leaf_directory/leaf_file2 user.name6
+
 # 1 xattr - ignore --recursive because path is a file
 $ gufi_getfattr --recursive 1MB
 1MB user.size
@@ -357,6 +371,20 @@ $ gufi_getfattr --only-values leaf_directory/leaf_file2
 value4
 value5
 value6
+
+# 11 xattrs
+$ gufi_getfattr --recursive .
+./1MB user.size
+./directory/subdirectory user.name
+./directory/subdirectory user.type
+./leaf_directory user.name
+./leaf_directory user.type
+./leaf_directory/leaf_file1 user.name1
+./leaf_directory/leaf_file1 user.name2
+./leaf_directory/leaf_file1 user.name3
+./leaf_directory/leaf_file2 user.name4
+./leaf_directory/leaf_file2 user.name5
+./leaf_directory/leaf_file2 user.name6
 
 # 1 xattr - ignore --recursive because path is a file
 $ gufi_getfattr --recursive 1MB
