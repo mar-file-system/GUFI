@@ -104,9 +104,6 @@ run_no_sort "${GUFI_QUERY} -o outfile                                       -K \
 echo "# Missing -I (aggregating, outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb                                         -K \"create;\"              \"${INDEXROOT}\""
 
-echo "# Missing -T/-S/-E"
-run_no_sort "${GUFI_QUERY} \"${INDEXROOT}\""
-
 echo "# Missing -J (aggregate, stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -G \"query;\"  \"${INDEXROOT}\""
 

@@ -537,12 +537,6 @@ int validate_inputs(struct input *in) {
         }
     }
 
-    /* -T, -S, -E (at least 1) */
-    if ((in->sql.tsum_len + in->sql.sum_len + in->sql.ent_len) == 0) {
-        fprintf(stderr, "Error: Need at least one of -T, -S, or -E\n");
-        return -1;
-    }
-
     /* not aggregating */
     if (!in->sql.init_agg_len) {
         if (in->sql.intermediate_len) {

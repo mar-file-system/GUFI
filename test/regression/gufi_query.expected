@@ -144,10 +144,6 @@ Error: Missing -I
 $ gufi_query -O outdb                                         -K "create;"              "prefix"
 Error: Missing -I
 
-# Missing -T/-S/-E
-$ gufi_query "prefix"
-Error: Need at least one of -T, -S, or -E
-
 # Missing -J (aggregate, stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;" -K "create;" -G "query;"  "prefix"
 Error: Missing -J
