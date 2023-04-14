@@ -118,7 +118,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto out_free;
     }
 
-    if (pa->in.printing || pa->in.printdir) {
+    if (pa->in.printdir) {
         ed.type = 'd';
         printits(&pa->in, passmywork, &ed, stdout);
     }
