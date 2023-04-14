@@ -136,6 +136,7 @@ VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 HEAD="@HEAD@"
 TAIL="@TAIL@"
+WC="@WC@"
 
 # common strings that need replacing
 replace() {
@@ -164,6 +165,7 @@ replace() {
 
     s/${HEAD//\//\\/}/head/g;
     s/${TAIL//\//\\/}/tail/g;
+    s/${WC//\//\\/}/wc/g;
 
     s/[[:space:]]*$//g;
     "

@@ -89,7 +89,7 @@ content_lines=$(echo "${contents}" | wc -l | @AWK@ '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
-columns=$(@SED@ "s/[^${DELIM}]//g" "${TRACES[@]}" | @AWK@ '{ print length }' | @SORT@ | uniq)
+columns=$(@SED@ "s/[^${DELIM}]//g" "${TRACES[@]}" | @AWK@ '{ print length }' | @SORT@ | @UNIQ@)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names

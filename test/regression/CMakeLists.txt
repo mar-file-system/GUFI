@@ -74,6 +74,8 @@ find_exec_dependency(SED  sed)
 find_exec_dependency(SORT sort)
 find_exec_dependency(TAIL tail)
 find_exec_dependency(TEE  tee)
+find_exec_dependency(UNIQ uniq)
+find_exec_dependency(WC   wc)
 
 if(APPLE)
   find_exec_dependency(XATTR xattr)
