@@ -56,6 +56,21 @@ prefix
 prefix/directory
 prefix/leaf_directory
 
+# Add 100 files to summary.totfiles in prefix/unusual#? directory ,
+$ sqlite3 "prefix/unusual#? directory ,/db.db" "UPDATE summary SET totfiles = 100;"
+
+# Regenerate treesummary table in prefix
+totfiles 112 totlinks 2
+totltk 12 totmtk 1 totltm 13 totmtm 0 totmtg 0 totmtt 0
+totsubdirs 4
+totxattr 7
+
+# Still three treesummary tables
+$ gufi_query -d " " -E "SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';" prefix
+prefix
+prefix/directory
+prefix/leaf_directory
+
 # Find file sizes in range
 $ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);" -E "SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;" prefix
 
@@ -77,4 +92,11 @@ prefix/leaf_directory 6
 # Walk this tree if it does not have xattrs
 $ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE totxattr == 0;" -S "SELECT path(), totxattr FROM summary;" prefix
 
+
+# Bad path
+Cannot open database: search/prefix/1KB/db.db unable to open database file rc 14
+totfiles 0 totlinks 0
+totltk 0 totmtk 0 totltm 0 totmtm 0 totmtg 0 totmtt 0
+totsubdirs 0
+totxattr 0
 

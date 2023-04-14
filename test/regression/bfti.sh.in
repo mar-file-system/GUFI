@@ -117,6 +117,17 @@ echo "# Three treesummary tables"
 run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
 echo
 
+echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? directory ," | replace
+run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 100;\"" | replace
+
+echo "# Regenerate treesummary table in ${INDEXROOT}" | replace
+"${BFTI}" -s "${INDEXROOT}" | remove_bfti_extra
+echo
+
+echo "# Still three treesummary tables"
+run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+echo
+
 echo "# Find file sizes in range"
 run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}"
 echo
@@ -127,6 +138,10 @@ echo
 
 echo "# Walk this tree if it does not have xattrs"
 run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr == 0;\" -S \"SELECT path(), totxattr FROM summary;\" ${INDEXROOT}"
+echo
+
+echo "# Bad path"
+"${BFTI}" -s "${INDEXROOT}/1KB" | remove_bfti_extra
 echo
 ) |& @TEE@ "${OUTPUT}"
 

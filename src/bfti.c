@@ -184,7 +184,9 @@ int compute_treesummary(struct PoolArgs *pa) {
         tsumit(&pa->sums[i], &sumout);
         sumout.totsubdirs--; /* tsumit adds 1 to totsubdirs each time it's called */
     }
-    sumout.totsubdirs--;     /* subtract another 1 because starting directory is not a subdirectory of itself */
+    if (sumout.totsubdirs) {
+        sumout.totsubdirs--; /* subtract another 1 because starting directory is not a subdirectory of itself */
+    }
 
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, sizeof(dbname), 2,

@@ -116,6 +116,7 @@ CONFIG="$(realpath $(@PYTHON_INTERPRETER@ -c 'import common; print(common.CONFIG
 chmod 666 "${CONFIG}"
 
 # paths of all executables
+SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
 BFTI="@CMAKE_BINARY_DIR@/src/bfti"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
@@ -139,6 +140,7 @@ TAIL="@TAIL@"
 # common strings that need replacing
 replace() {
     @SED@ "
+    s/${SQLITE3//\//\\/}/sqlite3/g;
     s/${GENERATETREE//\//\\/}/generatetree/g;
     s/${BFTI//\//\\/}/bfti/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
