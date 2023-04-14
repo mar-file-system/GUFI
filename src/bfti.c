@@ -295,7 +295,9 @@ int main(int argc, char *argv[]) {
     }
 
     /* skip . and .. only */
-    setup_directory_skip(NULL, &pa.skip);
+    if (setup_directory_skip(NULL, &pa.skip) != 0) {
+        return -1;
+    }
 
     pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
     for(int i = 0; i < pa.in.maxthreads; i++) {
