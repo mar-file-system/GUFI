@@ -151,6 +151,8 @@ if (SUDO)
 
   set(ENABLE_SUDO_TESTS Off CACHE BOOL "Whether or not to enable tests that need sudo")
   if (ENABLE_SUDO_TESTS)
+    configure_file("rollup_tree.sh.in" "rollup_tree.sh" @ONLY)
+
     # .sh and .expected
     set(NEED_SUDO
       rollup

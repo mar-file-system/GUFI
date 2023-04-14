@@ -62,13 +62,12 @@
 
 
 set -e
-source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
+source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
 
-TMP="tmp"
 OUTPUT="rollup.out"
 
 cleanup() {
-    rm -rf "${TMP}"
+    rollup_tree_cleanup
 }
 
 cleanup_exit() {
@@ -81,84 +80,6 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-# Level 0                 prefix/
-#       Total 1 directory
-#
-# Level 1  007 o+rx | ugo 777   | ug 770    | 700 u
-#          fail     | success   | fail      | fail
-#
-#       Total 4 directories; 1 will roll up
-#
-# Level 2
-#          o+rx 007 | o+rx 007  | o+rx 007  | o+rx 007
-#          ugo  777 | ugo  777  | ugo  777  | ugo  777
-#          ug   770 | ug   770  | ug   770  | ug   770
-#          u    700 | u    700  | u    700  | u    700
-#
-#       Total 4 x 4 = 16 directories
-#       All directories should roll up
-#
-# Level 3
-#       Total 4 x 4 x      3      = 48 directories
-#       Total 4 x 4 x (1 + 2 + 3) = 96 files
-#
-# Total     = 1 + 4 + 16 + 48 = 69 directories
-# Rolled up =     1 +  4 + 48 = 53 directories (52 subdirectories)
-# Remaining = 1 + 3 + 12      = 16 directories
-#
-
-setup() {
-    parent="$1"
-    perms="$2"
-    count="$3"
-
-    dir="${parent}/dir${count}"
-
-    mkdir -m "${perms}" "${dir}"
-    for (( i = 1; i <= count; i++ ))
-    do
-        touch "${dir}/file${i}"
-    done
-}
-
-mkdir "${TMP}"                    # Level 1
-
-mkdir -m 007 "${TMP}/o+rx"        # Level 2 007
-setup "${TMP}/o+rx" 777 1         # Level 3 777 - 1 file
-setup "${TMP}/o+rx" 077 2         # Level 3 077 - 2 files
-setup "${TMP}/o+rx" 007 3         # Level 3 007 - 3 files
-
-mkdir -m 777 "${TMP}/ugo"         # Level 2 777
-setup "${TMP}/ugo" 577 1          # Level 3 577 - 1 file
-setup "${TMP}/ugo" 757 2          # Level 3 757 - 2 files
-setup "${TMP}/ugo" 775 3          # Level 3 775 - 3 files
-
-mkdir -m 770 "${TMP}/ug"          # Level 2 770
-setup "${TMP}/ug" 777 1           # Level 3 577 - 1 file
-setup "${TMP}/ug" 770 2           # Level 3 757 - 2 files
-setup "${TMP}/ug" 750 3           # Level 3 775 - 3 files
-
-mkdir -m 700 "${TMP}/u"           # Level 2 700
-setup "${TMP}/u" 777 1            # Level 3 777 - 1 file
-setup "${TMP}/u" 700 2            # Level 3 700 - 2 files
-setup "${TMP}/u" 500 3            # Level 3 500 - 3 files
-
-mkdir -m 777 "${SRCDIR}"          # Level 0
-
-cp -R "${TMP}" "${SRCDIR}/o+rx"   # Level 1
-chmod 007 "${SRCDIR}/o+rx"
-
-cp -R "${TMP}" "${SRCDIR}/ugo"    # Level 1
-chmod 777 "${SRCDIR}/ugo"
-
-cp -R "${TMP}" "${SRCDIR}/ug"     # Level 1
-chmod 770 "${SRCDIR}/ug"
-
-cp -R "${TMP}" "${SRCDIR}/u"      # Level 1
-chmod 700 "${SRCDIR}/u"
-
-rm -r "${TMP}"
-
 do_tests() {
     run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${INDEXROOT}\" | wc -l"
     run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
@@ -210,7 +131,6 @@ rm -r "${INDEXTARGET}"
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
 "${ROLLUP}" -L 3 "${INDEXROOT}"
 do_tests
-
 ) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/rollup.expected "${OUTPUT}"
