@@ -80,6 +80,7 @@ TEST(print, parallel) {
         A.c_str(),
         BC.c_str(),
         D.c_str(),
+        nullptr,
     };
 
     const std::string ABC  = A + SEP + BC + SEP;
@@ -89,8 +90,8 @@ TEST(print, parallel) {
     struct OutputBuffer ob;
     EXPECT_EQ(OutputBuffer_init(&ob, OUTPUTBUFFER_CAP), &ob);
 
-    char *buf = new char[ABCD.size() + 1]();
-    FILE *file = fmemopen(buf, ABCD.size() + 1, "w+b");
+    char *buf = new char[ABCD.size() + SEP.size() + 1]();
+    FILE *file = fmemopen(buf, ABCD.size() + SEP.size() + 1, "w+b");
     ASSERT_NE(file, nullptr);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -139,6 +140,17 @@ TEST(print, parallel) {
         EXPECT_EQ(pa.rows, (std::size_t) 3);
         EXPECT_EQ(strlen(buf), ABCD.size());
         EXPECT_STREQ(buf, ABCD.c_str());
+    }
+
+    // print NULL data
+    {
+        EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 3, nullptr), 0);
+        EXPECT_EQ(ob.filled, SEP.size());
+        EXPECT_EQ(OutputBuffer_flush(&ob, file), SEP.size());
+        EXPECT_EQ(fflush(file), 0);
+        EXPECT_EQ(pa.rows, (std::size_t) 4);
+        EXPECT_EQ(strlen(buf), ABCD.size() + SEP.size());
+        EXPECT_STREQ(buf, (ABCD + SEP).c_str());
     }
 
     fclose(file);

@@ -217,6 +217,10 @@ TEST(trace, worktofile) {
     ASSERT_LT(rc, (int) sizeof(line));
 
     EXPECT_STREQ(buf, line);
+
+    EXPECT_EQ(worktofile(NULL, delim, 0, &work, &ed),  -1);
+    EXPECT_EQ(worktofile(file, delim, 0, NULL,  &ed),  -1);
+    EXPECT_EQ(worktofile(file, delim, 0, &work, NULL), -1);
 }
 
 #define COMPARE(src, src_ed, dst, dst_ed)                               \
@@ -267,4 +271,8 @@ TEST(trace, linetowork) {
     EXPECT_STREQ(ed.xattrs.pairs[1].value, EXPECTED_XATTRS.pairs[1].value);
 
     xattrs_cleanup(&ed.xattrs);
+
+    EXPECT_EQ(linetowork(NULL, rc, delim, &work, &ed),  -1);
+    EXPECT_EQ(linetowork(line, rc, delim, NULL,  &ed),  -1);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, NULL), -1);
 }

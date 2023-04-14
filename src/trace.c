@@ -72,7 +72,7 @@ OF SUCH DAMAGE.
 #include "xattrs.h"
 
 int worktofile(FILE *file, const char delim, const size_t prefix_len, struct work *work, struct entry_data *ed) {
-    if (!file || !delim || !work) {
+    if (!file || !work || !ed) {
         return -1;
     }
 
@@ -109,7 +109,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 }
 
 int linetowork(char *line, const size_t len, const char delim, struct work *work, struct entry_data *ed) {
-    if (!line || !delim || !work) {
+    if (!line || !work || !ed) {
         return -1;
     }
 
