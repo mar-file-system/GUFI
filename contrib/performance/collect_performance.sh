@@ -335,4 +335,5 @@ do
         # shellcheck disable=SC2069
         bash -c "${SUDO} ${gufi_cmd}" 2>&1 >/dev/null | "${EXTRACT}" "${HASHES_DB}" "${RAW_DATA_HASH}" "${RAW_DATA_DB}" --commit "${commit}" || break
     done
+    make -C "${GUFI}" clean
 done

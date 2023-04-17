@@ -123,7 +123,6 @@ COLUMN_FORMATS = [
     # Added: Threads run
     # Renamed: Rows returned -> Rows printed to stdout or outfiles, Real time -> Real time (main)
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -176,7 +175,6 @@ COLUMN_FORMATS = [
     # commit 7cd35f8 "xattrprep from Gary" -> commit 4164985 "change querydb macro into a function"
     # Added: xattrprep, get_rollupscore
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -228,7 +226,6 @@ COLUMN_FORMATS = [
     # commit a13a330 "gufi_query does not need a modifydb timer" -> commit 216ef5b "accidentally added argument to -w flag"
     # Removed: create tables
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -276,9 +273,8 @@ COLUMN_FORMATS = [
     },
 
     # commit 75e2c5b "update tsum to use sqlite3_exec instead of rawquerydb" -> commit 00ba871 "remove --delim option from gufi_find"
-    # Added check if treesummary table exists, sqltsum
+    # Added: check if treesummary table exists, sqltsum
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -329,7 +325,6 @@ COLUMN_FORMATS = [
     # commit 093dc32 "Added total time spent in threads to cumulative times output" -> commit "3235400 also print git branch name"
     # Added: Total Thread Time (not including main)
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -378,7 +373,6 @@ COLUMN_FORMATS = [
     # commit 941e8ca "use per-executable wrappers around timestamp macros" -> 97fabf7 "dirents not of type d, f, or l are ignored"
     # Removed: clean up intermediate databases
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -427,7 +421,6 @@ COLUMN_FORMATS = [
     # Added: sqlsum, sqlent
     # Removed: sqlite3_exec
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -476,7 +469,6 @@ COLUMN_FORMATS = [
     # commit 90611bf "more DRY timestamp printing" -> commit aaa5b89 "remove travis user in docker"
     # Added: output timestamps
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -521,9 +513,9 @@ COLUMN_FORMATS = [
         'Real time':                                  float,
     },
 
-    # 8480cd1 "Fix tests" -> ea4c148 "gufi_stats needs to aggregate results" AND 86d3d0e "gufi_query updates" -> commit a9a1ef7 "update scripts Makefile"
+    # commit 5ec5386 "load pcre extension manually instead of using sqlite3_auto_extension" -> commit a9a1ef7 "update scripts Makefile"
+    # Added: load extensions
     {
-
         'set up globals':                             float,
         'set up intermediate databases':              float,
         'thread pool':                                float,
@@ -532,7 +524,7 @@ COLUMN_FORMATS = [
         'sqlite3_open_v2':                            float,
         'create tables':                              float,
         'set pragmas':                                float,
-        'load extensions':                            float,
+        'load extensions':                            float, # New
         'addqueryfuncs':                              float,
         'descend':                                    float,
         'check args':                                 float,
@@ -562,6 +554,176 @@ COLUMN_FORMATS = [
         'clean up intermediate databases':            float,
         'print aggregated results':                   float,
         'clean up globals':                           float,
+        'Rows returned':                                int,
+        'Queries performed':                            int,
+        'Real time':                                  float,
+    },
+
+    # commit 7172479 "time branches"
+    # Added: check level <= max_level branch, while true,
+    #        readdir != null branch, strncmp!= . or .., isdir branch
+    {
+        'set up globals':                             float,
+        'set up intermediate databases':              float,
+        'thread pool':                                float,
+        'open directories':                           float,
+        'open databases':                             float,
+        'sqlite3_open_v2':                            float,
+        'create tables':                              float,
+        'set pragmas':                                float,
+        'addqueryfuncs':                              float,
+        'descend':                                    float,
+        'check args':                                 float,
+        'check level':                                float,
+        'check level <= max_level branch':            float, # New
+        'while true':                                 float, # New
+        'readdir':                                    float,
+        'readdir != null branch':                     float, # New
+        'strncmp':                                    float,
+        'strncmp != . or ..':                         float, # New
+        'snprintf':                                   float,
+        'lstat':                                      float,
+        'isdir':                                      float,
+        'isdir branch':                               float, # New
+        'access':                                     float,
+        'set':                                        float,
+        'clone':                                      float,
+        'pushdir':                                    float,
+        'attach intermediate databases':              float,
+        'sqlite3_exec':                               float,
+        'detach intermediate databases':              float,
+        'close databases':                            float,
+        'close directories':                          float,
+        'restore timestamps':                         float,
+        'free work':                                  float,
+        'aggregate into final databases':             float,
+        'clean up intermediate databases':            float,
+        'print aggregated results':                   float,
+        'clean up globals':                           float,
+        'Rows returned':                                int,
+        'Queries performed':                            int,
+        'Real time':                                  float,
+    },
+
+    # commit 7acefa5 "more timers" -> commit 466e9e8 "moved SNFORMAT_S into utils and added test"
+    # Added: restore timestamps, free work
+    {
+        'set up globals':                             float,
+        'set up intermediate databases':              float,
+        'thread pool':                                float,
+        'open directories':                           float,
+        'open databases':                             float,
+        'sqlite3_open_v2':                            float,
+        'create tables':                              float,
+        'set pragmas':                                float,
+        'addqueryfuncs':                              float,
+        'descend':                                    float,
+        'check args':                                 float,
+        'check level':                                float,
+        'readdir':                                    float,
+        'strncmp':                                    float,
+        'snprintf':                                   float,
+        'lstat':                                      float,
+        'isdir':                                      float,
+        'access':                                     float,
+        'set':                                        float,
+        'clone':                                      float,
+        'pushdir':                                    float,
+        'attach intermediate databases':              float,
+        'sqlite3_exec':                               float,
+        'detach intermediate databases':              float,
+        'close databases':                            float,
+        'close directories':                          float,
+        'restore timestamps':                         float, # New
+        'free work':                                  float, # New
+        'aggregate into final databases':             float,
+        'clean up intermediate databases':            float,
+        'print aggregated results':                   float,
+        'clean up globals':                           float,
+        'Rows returned':                                int,
+        'Queries performed':                            int,
+        'Real time':                                  float,
+    },
+
+    # 54bfc53 "Different macros enable different debug output" -> commit 90b21bc "reduce unnecessary checks"
+    {
+        'set up globals':                             float, # New
+        'set up intermediate databases':              float, # New
+        'thread pool':                                float, # New
+        'open directories':                           float, # Renamed
+        'open databases':                             float, # Renamed
+        'sqlite3_open_v2':                            float, # New
+        'create tables':                              float, # Renamed
+        'set pragmas':                                float, # New
+        'addqueryfuncs':                              float, # New
+        'descend':                                    float, # Renamed
+        'check args':                                 float, # New
+        'check level':                                float, # New
+        'readdir':                                    float, # New
+        'strncmp':                                    float, # New
+        'snprintf':                                   float, # New
+        'lstat':                                      float, # New
+        'isdir':                                      float, # New
+        'access':                                     float, # New
+        'set':                                        float, # New
+        'clone':                                      float, # Renamed
+        'pushdir':                                    float, # Renamed
+        'attach intermediate databases':              float, # Renamed
+        'sqlite3_exec':                               float, # Renamed
+        'detach intermediate databases':              float, # Renamed
+        'close databases':                            float, # Renamed
+        'close directories':                          float, # Renamed
+        'aggregate into final databases':             float, # Renamed
+        'clean up intermediate databases':            float, # New
+        'print aggregated results':                   float, # Renamed
+        'clean up globals':                           float, # New
+        'Rows returned':                                int,
+        'Queries performed':                            int,
+        'Real time':                                  float,
+    },
+
+    # commit 4823587 "fixes" -> commit a6631c4 "timelines and histogram"
+    # Renamed Time to descend -> Time to descend (w/o readdir + pushdir)
+    {
+
+        'Time to do main work':                       float,
+        'Time to open directories':                   float,
+        'Time to open databases':                     float,
+        'Time to create tables':                      float,
+        'Time to load extensions':                    float,
+        'Time to attach intermediate databases':      float,
+        'Time to descend (w/o readdir + pushdir)':    float, # Renamed
+        'Time to readdir':                            float,
+        'Time to pushdir':                            float,
+        'Time to sqlite3_exec (query and insert)':    float,
+        'Time to detach intermediate databases':      float,
+        'Time to close databases':                    float,
+        'Time to close directories':                  float,
+        'Time to aggregate into final databases':     float,
+        'Time to print':                              float,
+        'Rows returned':                                int,
+        'Queries performed':                            int,
+        'Real time':                                  float,
+    },
+
+    # e266f65 Merge remote-tracking branch 'origin' into bfwi_ingest -> commit b8c156c "Convert gufi_trace2index to C"
+    # NOTE after e266f65, a bug occurs with google test, this format can definitely extend further back
+    {
+        'Time to do main work':                       float,
+        'Time to open directories':                   float,
+        'Time to open databases':                     float,
+        'Time to create tables':                      float,
+        'Time to load extensions':                    float,
+        'Time to attach intermediate databases':      float,
+        'Time to descend':                            float,
+        'Time to readdir':                            float,
+        'Time to pushdir':                            float,
+        'Time to sqlite3_exec (query and insert)':    float,
+        'Time to detach intermediate databases':      float,
+        'Time to close databases':                    float,
+        'Time to close directories':                  float,
+        'Time to aggregate into final databases':     float,
+        'Time to print':                              float,
         'Rows returned':                                int,
         'Queries performed':                            int,
         'Real time':                                  float,
