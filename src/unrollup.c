@@ -124,7 +124,7 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
         if (sqlite3_exec(db,
                          "DELETE FROM " XATTRS_ROLLUP ";"
                          "SELECT COUNT(*) FROM " XATTRS_PWD ";",
-                         count_pwd, &count, &err_msg) == SQLITE_OK) {
+                         count_pwd, &xattr_count, &err_msg) == SQLITE_OK) {
              /* remove empty per-user/per-group xattr db files */
              if (xattr_count == 0) {
                  if (remove(fullpath) != 0) {
@@ -183,7 +183,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /*
      * if parent of this directory was rolled up, all children are rolled up, so skip this check
-     * if parent of this direcotry was not rolled up, this directory might be
+     * if parent of this directory was not rolled up, this directory might be
      */
     if (db && !rolledup) {
         /* get whether or not the current directory was rolled up */
