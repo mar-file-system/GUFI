@@ -115,6 +115,10 @@ create() {
     )
 }
 
+query() {
+    run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+}
+
 (
     # shellcheck disable=SC2174
     mkdir -p -m 555 "${SRCDIR}"
@@ -136,21 +140,34 @@ create() {
 )
 
 (
-run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""
+set +e
 
-run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, type, xattr_name,xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+# query index created directly from source tree
+run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""
+orig="$(query)"
+echo -e "${orig}\n"
 
 rm -r "${INDEXTARGET}"
 
+# query index created from traces
+# shellcheck disable=SC2153
 run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
-
 run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXTARGET}\""
+trace="$(query)"
+echo -e "${trace}\n"
+@DIFF@ <(echo -e "${orig}") <(echo -e "${trace}")
 
-run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+# query rolled up index
+run_no_sort "${ROLLUP} \"${INDEXROOT}\"" 2>&1 | @SED@ '/Ran /d' | @SED@ '/Took /d'
+rolled="$(query)"
+echo -e "${rolled}\n"
+@DIFF@ <(echo -e "${orig}") <(echo -e "${rolled}")
 
-run_no_sort "${ROLLUP} ${INDEXROOT}" 2>&1 | @SED@ '/Ran /d' | @SED@ '/Took /d'
-
-run_sort "${GUFI_QUERY} -d \" \" -x -S \"SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;\" \"${INDEXROOT}\""
+# query unrolled index
+run_no_sort "${UNROLLUP} \"${INDEXROOT}\""
+unrolled="$(query)"
+echo -e "${unrolled}\n"
+@DIFF@ <(echo -e "${orig}") <(echo -e "${unrolled}")
 ) | remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/xattrs.expected "${OUTPUT}"
