@@ -471,7 +471,7 @@ def build_output(args, name):
 
     if args.ls:
         output = ['inode',
-                  '(size / 1024) + ((size - ((size / 1024) * 1024)) != 0)',
+                  '(size / 1024) + ((size % 1024) != 0) != 0)',
                   'modetotxt(mode)',
                   'nlink',
                   'uidtouser(uid)',
