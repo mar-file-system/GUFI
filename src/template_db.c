@@ -160,7 +160,7 @@ static int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
     return 0;
 }
 
-static int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
+int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
     if ((create_table_wrapper(name, db, ENTRIES,             ENTRIES_CREATE)             != SQLITE_OK) ||
         (create_table_wrapper(name, db, SUMMARY,             SUMMARY_CREATE)             != SQLITE_OK) ||
         (create_table_wrapper(name, db, VRSUMMARY,           VRSUMMARY_CREATE)           != SQLITE_OK) ||

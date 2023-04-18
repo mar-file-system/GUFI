@@ -603,39 +603,6 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
     return 0;
 }
 
-int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *res)
-{
-    int rc = 0;
-    char *zname = sqlite3_mprintf("%q", pwork->name);
-    char *ztype = sqlite3_mprintf("%q", ed->type);
-    int error = sqlite3_bind_text(res, 1, zname, -1, SQLITE_TRANSIENT);
-    if (error != SQLITE_OK) {
-        fprintf(stderr,  "SQL insertdbgor bind name: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-        goto cleanup;
-    }
-    sqlite3_bind_text(res,  2, ztype, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(res, 3, ed->statuso.st_ino);
-    sqlite3_bind_int64(res, 4, pwork->pinode);
-    sqlite3_bind_int64(res, 5, ed->suspect);
-
-    error = sqlite3_step(res);
-    if (error != SQLITE_DONE) {
-        fprintf(stderr,  "SQL insertdbgor step: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-    }
-
-  cleanup:
-    sqlite3_free(zname);
-    sqlite3_free(ztype);
-    sqlite3_reset(res);
-    sqlite3_clear_bindings(res);
-
-    return rc;
-}
-
 int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *ed, struct sum *su)
 {
     sqlite3_stmt *res = insertdbprep(sdb, SUMMARY_INSERT);

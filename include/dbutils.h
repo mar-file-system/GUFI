@@ -183,7 +183,6 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *dat
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);
-int insertdbgor(struct work *pwork, struct entry_data *data, sqlite3_stmt *res);
 
 int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *data, struct sum *su);
 

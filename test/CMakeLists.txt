@@ -95,21 +95,16 @@ foreach(TEST
     runuidgidummary
     runuserfilespacehog
     runuserfilespacehogusesummary
-    runtests
-    testdir.tar)
+    runtests)
   # copy the script into the build directory for easy access
   configure_file("${TEST}" "${TEST}" @ONLY)
 endforeach()
-
-# don't modify the tarball
-configure_file("testdir.tar" "testdir.tar" COPYONLY)
 
 # allow for the test working directory to be moved
 set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
 execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")
 
-# create an empty directory and extract testdir.tar into it for runtests
-set(TESTTAR "${CMAKE_CURRENT_BINARY_DIR}/testdir.tar")
+set(TESTTAR "${CMAKE_CURRENT_SOURCE_DIR}/testdir.tar")
 set(TESTDIR "${TEST_WORKING_DIRECTORY}/testdir")
 set(TESTDST "${TEST_WORKING_DIRECTORY}/gary")
 

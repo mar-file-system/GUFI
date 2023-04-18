@@ -348,7 +348,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'A':
-         INSTALL_INT(&in->suspectmethod, optarg, 1, 4, "-A", &retval);
+         INSTALL_INT(&in->suspectmethod, optarg, 0, 3, "-A", &retval);
          break;
 
       case 'g':

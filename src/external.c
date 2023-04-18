@@ -76,6 +76,7 @@ const char EXTERNAL_DBS_PWD_INSERT[] =
     "INSERT INTO " EXTERNAL_DBS_PWD " VALUES (@filename, @attachname, @mode, @uid, @gid);";
 
 const char EXTERNAL_DBS_ROLLUP_CREATE[] =
+    "DROP TABLE IF EXISTS " EXTERNAL_DBS_ROLLUP ";"
     "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(filename, attachname));";
 
 const char EXTERNAL_DBS_ROLLUP_INSERT[] =

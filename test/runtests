@@ -62,8 +62,10 @@
 
 
 
+set -e
+
 TESTS="$(dirname ${BASH_SOURCE[0]})" # Must be at the top
-set -x
+
 usage() {
     echo "Usage: $0 tar dir GUFI_tree"
 }
@@ -95,7 +97,7 @@ ${TESTS}/runbfwi                ${TREE} ${TARGET}
 ${TESTS}/runbfti                        ${INDEX}
 ${TESTS}/runbfq                         ${INDEX}
 ${TESTS}/runquerydbs                    ${INDEX} 2
-${TESTS}/runbfwreaddirplus2db           ${INDEX}
+${TESTS}/runbfwreaddirplus2db   ${TREE}
 ${TESTS}/rundfw                         ${INDEX}
 
 # other tests
