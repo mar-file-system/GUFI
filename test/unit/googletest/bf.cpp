@@ -235,7 +235,7 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->sql.agg,             nullptr);
         EXPECT_EQ(in->output_buffer_size,  (std::size_t) 4096);
         EXPECT_EQ(in->format,              nullptr);
-        EXPECT_EQ(in->max_in_dir,          (std::size_t) -1);
+        EXPECT_EQ(in->max_in_dir,          (std::size_t) 0);
         EXPECT_EQ(in->skip,                nullptr);
     }
 }

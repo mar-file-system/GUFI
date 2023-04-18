@@ -521,7 +521,7 @@ int can_rollup(struct input *in,
     timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "nondir_count", nondir_count);
 
     /* the current directory has too many immediate files/links, don't roll up */
-    if (ds->subnondir_count > in->max_in_dir) {
+    if (in->max_in_dir && (ds->subnondir_count > in->max_in_dir)) {
         ds->too_many_before = ds->subnondir_count;
         goto end_can_rollup;
     }
@@ -569,7 +569,7 @@ int can_rollup(struct input *in,
      */
     if (legal) {
         const size_t total_pentries = ds->subnondir_count + total_child_entries;
-        if (total_pentries > in->max_in_dir) {
+        if (in->max_in_dir && (total_pentries > in->max_in_dir)) {
             ds->too_many_after = total_pentries;
             legal = 0;
         }

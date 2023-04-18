@@ -8,7 +8,7 @@ Roots:
     prefix
 
 Thread Pool Size:            1
-Files/Links Limit:          -1
+Files/Links Limit:           0
 
 Not Processed:               0
 Cannot Roll Up:              4

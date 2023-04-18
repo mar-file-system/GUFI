@@ -232,7 +232,6 @@ int parse_cmd_line(int         argc,
    in->output                  = STDOUT;
    in->output_buffer_size      = 4096;
    in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
-   in->max_in_dir              = (size_t) -1;
 
    int show                    = 0;
    int retval                  = 0;
