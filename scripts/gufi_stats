@@ -847,6 +847,40 @@ def links_per_level(config, args, where):
 def dirs_per_level(config, args, where):
     return per_level(config, args, where, 'd')
 
+def extensions(_config, args, where):
+    queries = [
+        '-I', build_create(args.inmemory_name, ['ext TEXT', 'count INTEGER']),
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(['REPLACE(name, RTRIM(name, REPLACE(name, ".", "")), "") AS ext', 'COUNT(inode)'],
+                                                                   [gufi_common.VRPENTRIES],
+                                                                   where,
+                                                                   ['ext'],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(args.aggregate_name, ['ext TEXT', 'count INTEGER']),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(['ext', 'SUM(count)'],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   ['ext'],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(['ext', 'SUM(count)'],
+                                      [args.aggregate_name],
+                                      None,
+                                      ['ext'],
+                                      None,
+                                      None,
+                                      None),
+    ]
+
+    if args.cumulative is False:
+        queries += ['-z', '0']
+
+    return queries
+
 def duplicate_names(_config, args, where):
     columns = ['name', 'type', 'inode', 'mode', 'size']
 
@@ -924,6 +958,7 @@ CUMULATIVE = {
     'dirs-per-level'     : dirs_per_level,
     'average-leaf-files' : average_leaf_files,
     'average-leaf-links' : average_leaf_links,
+    'extensions'         : extensions,
 }
 
 # does not use either

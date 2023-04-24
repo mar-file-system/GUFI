@@ -101,6 +101,31 @@ $ gufi_stats -c dirs-per-level
 1 3
 2 1
 
+$ gufi_stats    extensions
+1KB 1
+1MB 1
+empty_file 1
+file_symlink 1
+hidden 1
+old_file 1
+repeat_name 1
+
+$ gufi_stats -c extensions
+1KB 1
+1MB 1
+directory_symlink 1
+empty_file 1
+executable 1
+file_symlink 1
+hidden 1
+leaf_file1 1
+leaf_file2 1
+old_file 1
+readonly 1
+repeat_name 2
+unusual, name?# 1
+writable 1
+
 $ gufi_stats    duplicate-names
 repeat_name prefix
 repeat_name directory/subdirectory

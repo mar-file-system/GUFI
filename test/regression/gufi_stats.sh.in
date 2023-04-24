@@ -107,6 +107,9 @@ run "${GUFI_STATS} -c links-per-level"
 run "${GUFI_STATS}    dirs-per-level"
 run "${GUFI_STATS} -c dirs-per-level"
 
+run "${GUFI_STATS}    extensions"
+run "${GUFI_STATS} -c extensions"
+
 run "${GUFI_STATS}    duplicate-names"
 
 if [[ "$(uname)" != "Darwin" ]]
