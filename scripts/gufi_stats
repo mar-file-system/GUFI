@@ -909,6 +909,10 @@ def duplicate_names(_config, args, where):
                                                                    None,
                                                                    None)),
 
+        '-K', build_create(args.aggregate_name,
+                           ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT',
+                            'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
+
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
                                            gufi_common.build_query(['NULL', 'path'] +
                                                                    columns,
@@ -919,11 +923,7 @@ def duplicate_names(_config, args, where):
                                                                    None,
                                                                    None)),
 
-        '-K', build_create(args.aggregate_name,
-                           ['id INTEGER PRIMARY KEY', 'path TEXT', 'name TEXT',
-                            'type TEXT', 'inode INT64', 'mode INT64', 'size INT64']),
-
-        '-G', 'SELECT lhs.name, lhs.path FROM {0} as lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {1} GROUP BY name, type, size HAVING COUNT(*) > 1) as rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(args.aggregate_name, args.aggregate_name) + ('LIMIT {0}'.format(args.num_results) if args.num_results else '')
+        '-G', 'SELECT lhs.name, lhs.path FROM {0} AS lhs INNER JOIN (SELECT DISTINCT name, type, size FROM {1} GROUP BY name, type, size HAVING COUNT(*) > 1) AS rhs ON ((lhs.name == rhs.name) AND (lhs.type == rhs.type) AND (lhs.size == rhs.size)) ORDER BY lhs.name'.format(args.aggregate_name, args.aggregate_name) + ('LIMIT {0}'.format(args.num_results) if args.num_results else '')
 
     ]
 
