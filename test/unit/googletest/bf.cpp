@@ -82,7 +82,6 @@ static const std::string p = "-p";
 static const std::string P = "-P";
 static const std::string N = "-N";
 static const std::string V = "-V";
-static const std::string s = "-s";
 static const std::string b = "-b";
 static const std::string a = "-a";
 static const std::string n = "-n"; static const std::string n_arg = "1";
@@ -137,7 +136,6 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->printdir,                1);
         EXPECT_EQ(in->printheader,             1);
         EXPECT_EQ(in->printrows,               1);
-        EXPECT_EQ(in->writetsum,               1);
         EXPECT_EQ(in->buildindex,              1);
         EXPECT_EQ(in->andor,                   1);
         EXPECT_EQ(in->insertfl,                1);
@@ -160,7 +158,6 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->printdir,                0);
         EXPECT_EQ(in->printheader,             0);
         EXPECT_EQ(in->printrows,               0);
-        EXPECT_EQ(in->writetsum,               0);
         EXPECT_EQ(in->buildindex,              0);
         EXPECT_EQ(in->andor,                   0);
         EXPECT_EQ(in->insertfl,                0);
@@ -279,7 +276,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVsban:d:i:t:o:O:I:T:S:E:F:rRDYZW:A:g:c:uy:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
+    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRDYZW:A:g:c:uy:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
 
     const char *argv[] = {
         exec.c_str(),
@@ -289,7 +286,6 @@ TEST(parse_cmd_line, debug) {
         P.c_str(),
         N.c_str(),
         V.c_str(),
-        s.c_str(),
         b.c_str(),
         a.c_str(),
         n.c_str(), n_arg.c_str(),
@@ -347,7 +343,7 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xpPNVsbarRDYZumwjX" COMPRESS_OPT;
+    const char opts[] = "xpPNVbarRDYZumwjX" COMPRESS_OPT;
 
     const char *argv[] = {
         exec.c_str(),
@@ -356,7 +352,6 @@ TEST(parse_cmd_line, flags) {
         P.c_str(),
         N.c_str(),
         V.c_str(),
-        s.c_str(),
         b.c_str(),
         a.c_str(),
         r.c_str(),

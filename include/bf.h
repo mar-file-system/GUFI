@@ -179,7 +179,6 @@ struct input {
    char delim;
    int  buildindex;
    int  maxthreads;
-   int  writetsum;
    int  andor;
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
@@ -195,6 +194,7 @@ struct input {
    int infile;                    // added for gufi_query to be able to read input file to get dir/inode info
    size_t min_level;              // minimum level of recursion to reach before running queries
    size_t max_level;              // maximum level of recursion to run queries on
+   int dry_run;
 
    OutputMethod_t output;
    const char *outname;
@@ -213,7 +213,6 @@ struct input {
    const char *format;
 
    /* only used by rollup */
-   int dry_run;
    size_t max_in_dir;
 
    /* filename containing strings to skip during tree traversal */

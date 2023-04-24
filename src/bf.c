@@ -97,7 +97,6 @@ void print_help(const char* prog_name,
       case 'P': printf("  -P                     print directories as they are encountered"); break;
       case 'N': printf("  -N                     print column-names (header) for DB results"); break;
       case 'V': printf("  -V                     print column-values (rows) for DB results"); break;
-      case 's': printf("  -s                     generate tree-summary table (in top-level DB)"); break;
       case 'b': printf("  -b                     build GUFI index tree"); break;
       case 'a': printf("  -a                     AND/OR (SQL query combination)"); break;
       case 'n': printf("  -n <threads>           number of threads"); break;
@@ -152,7 +151,6 @@ void show_input(struct input* in, int retval) {
    printf("in.printdir                 = %d\n",            in->printdir);
    printf("in.printheader              = %d\n",            in->printheader);
    printf("in.printrows                = %d\n",            in->printrows);
-   printf("in.writetsum                = %d\n",            in->writetsum);
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %d\n",            in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
@@ -269,10 +267,6 @@ int parse_cmd_line(int         argc,
 
       case 'V':               // print DB-result row-values?
          in->printrows = 1;
-         break;
-
-      case 's':               // generate tree-summary table?
-         in->writetsum = 1;
          break;
 
       case 'b':               // build index?

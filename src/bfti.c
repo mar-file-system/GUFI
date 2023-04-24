@@ -86,7 +86,7 @@ struct PoolArgs {
 static int create_tables(const char *name, sqlite3 *db, void *args) {
     struct input *in = (struct input *) args;
 
-    printf("writetsum %d\n", in->writetsum);
+    printf("writetsum %d\n", !in->dry_run);
     if ((create_table_wrapper(name, db, "tsql",        tsql)        != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)   != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)  != SQLITE_OK) ||
@@ -196,7 +196,7 @@ int compute_treesummary(struct PoolArgs *pa) {
     struct stat st;
     int rc = lstat(dbname, &st);
 
-    if (pa->in.writetsum) {
+    if (!pa->in.dry_run) {
         sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 1,
                               create_tables, &pa->in
                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -263,7 +263,7 @@ int compute_treesummary(struct PoolArgs *pa) {
 }
 
 void sub_help() {
-    printf("GUFI_index        path to GUFI index\n");
+    printf("GUFI_index               path to GUFI index\n");
     printf("\n");
 }
 
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
      * control which options are parsed for each program.
      */
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHPn:d:s", 1, "GUFI_index", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHPn:d:X", 1, "GUFI_index", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
@@ -290,8 +290,8 @@ int main(int argc, char *argv[]) {
     }
 
     /* not an error, but you might want to know ... */
-    if (!pa.in.writetsum) {
-        fprintf(stderr, "WARNING: Not [re]generating tree-summary table without '-s'\n");
+    if (pa.in.dry_run) {
+        fprintf(stderr, "WARNING: Not [re]generating tree-summary table with '-X'\n");
     }
 
     /* skip . and .. only */

@@ -76,12 +76,12 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHER
 echo
 
 echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
-"${BFTI}" -P -d " " "${INDEXROOT}" 2>&1 | remove_bfti_extra
+"${BFTI}" -P -X -d " " "${INDEXROOT}" 2>&1 | remove_bfti_extra
 echo
 
 echo "# Traversed paths (5)"
 #shellcheck disable=SC2016
-"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | @HEAD@ -n 5 | @AWK@ '{ print $1 " " $2 }'
+"${BFTI}" -P -X -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | @HEAD@ -n 5 | @AWK@ '{ print $1 " " $2 }'
 echo
 
 echo "# Still no treesummary table"
@@ -89,7 +89,7 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHER
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}/directory" | replace
-run_no_sort "${BFTI} -s ${INDEXROOT}/directory" | remove_bfti_extra
+run_no_sort "${BFTI} ${INDEXROOT}/directory" | remove_bfti_extra
 echo
 
 echo "# One treesummary table"
@@ -97,7 +97,7 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHER
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}/leaf_directory" | replace
-"${BFTI}" -s "${INDEXROOT}/leaf_directory" | remove_bfti_extra
+"${BFTI}" "${INDEXROOT}/leaf_directory" | remove_bfti_extra
 echo
 
 echo "# Two treesummary tables"
@@ -110,7 +110,7 @@ echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked a
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}" | replace
-"${BFTI}" -s "${INDEXROOT}" | remove_bfti_extra
+"${BFTI}" "${INDEXROOT}" | remove_bfti_extra
 echo
 
 echo "# Three treesummary tables"
@@ -121,7 +121,7 @@ echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? directory ,"
 run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 100;\"" | replace
 
 echo "# Regenerate treesummary table in ${INDEXROOT}" | replace
-"${BFTI}" -s "${INDEXROOT}" | remove_bfti_extra
+"${BFTI}" "${INDEXROOT}" | remove_bfti_extra
 echo
 
 echo "# Still three treesummary tables"
@@ -141,7 +141,7 @@ run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE t
 echo
 
 echo "# Bad path"
-"${BFTI}" -s "${INDEXROOT}/1KB" | remove_bfti_extra
+"${BFTI}" "${INDEXROOT}/1KB" | remove_bfti_extra
 echo
 ) |& @TEE@ "${OUTPUT}"
 
