@@ -931,6 +931,82 @@ def duplicate_names(_config, args, where):
 
     return queries
 
+def uidgid_size(args, uidgid, where):
+    '''
+    Sort files by size, grouped by uid or gid.
+
+    Links are not included because they change size depending on
+    filesystem.
+
+    This function always recurses down the entire input path, but is
+    neither recursive or cumulative because it creates partitions on
+    the resulting data instead of processing each row of data
+    independently or aggregating the data.
+    '''
+
+    columns = [uidgid, 'size', 'name']
+
+    if args.num_results:
+        where += ['rownum <= {0}'.format(args.num_results)]
+
+    def partition(table):
+        return gufi_common.build_query(columns +
+                                       ['row_number() OVER (PARTITION BY {0} ORDER BY size {1}) AS rownum'.format(uidgid, args.order)],
+                                       [table],
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None)
+
+    queries = [
+        '-I', build_create(args.inmemory_name, ['{0} INTEGER'.format(uidgid), 'size INTEGER', 'name TEXT']),
+
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query([uidgid, 'size', 'fullpath'],
+                                                                   ['({0})'.format(gufi_common.build_query([uidgid, 'size',
+                                                                                                            'rpath(sname, sroll) || "/" || name AS fullpath',
+                                                                                                            'row_number() OVER (PARTITION BY {0} ORDER BY size {1}) AS rownum'.format(uidgid, args.order)],
+                                                                                                           [gufi_common.VRPENTRIES],
+                                                                                                           ['type == "f"'],
+                                                                                                           None,
+                                                                                                           None,
+                                                                                                           None,
+                                                                                                           None))],
+                                                                   where,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+
+        '-K', build_create(args.aggregate_name, ['{0} INTEGER'.format(uidgid), 'size INTEGER', 'name TEXT']),
+
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(columns,
+                                                                   ['({0})'.format(partition(args.inmemory_name))],
+                                                                   where,
+                                                                   None,
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+
+        '-G', gufi_common.build_query(columns,
+                                      ['({0})'.format(partition(args.aggregate_name))],
+                                      where,
+                                      None,
+                                      None,
+                                      None,
+                                      None),
+    ]
+
+    return queries
+
+def uid_size(_config, args, where):
+    return uidgid_size(args, 'uid', where)
+
+def gid_size(_config, args, where):
+    return uidgid_size(args, 'gid', where)
+
 # mapping of desired statistics to functions
 # uses --recursive
 RECURSIVE = {
@@ -965,6 +1041,8 @@ CUMULATIVE = {
 OTHERS = {
     'median-leaf-files'  : median_leaf_files,
     'duplicate-names'    : duplicate_names,
+    'uid-size'           : uid_size,
+    'gid-size'           : gid_size,
 }
 
 # argv[0] should be the command name

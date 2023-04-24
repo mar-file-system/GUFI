@@ -70,6 +70,12 @@ run() {
     run_no_sort "$@" | @SED@ "s/$(id -un)/1001/g" | @SORT@
 }
 
+run_uidgid_size() {
+    echo "$" "$@"                             |& replace
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | awk '{ $1 = 1001 ; print }'
+    echo
+}
+
 (
 run "${GUFI_STATS}    depth"
 run "${GUFI_STATS} -r depth"
@@ -111,6 +117,16 @@ run "${GUFI_STATS}    extensions"
 run "${GUFI_STATS} -c extensions"
 
 run "${GUFI_STATS}    duplicate-names"
+echo
+
+run_uidgid_size "${GUFI_STATS} uid-size --order ASC"
+run_uidgid_size "${GUFI_STATS} uid-size --num-results 6 --order ASC"
+run_uidgid_size "${GUFI_STATS} uid-size --order DESC"
+run_uidgid_size "${GUFI_STATS} uid-size --num-results 6 --order DESC"
+run_uidgid_size "${GUFI_STATS} gid-size --order ASC"
+run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order ASC"
+run_uidgid_size "${GUFI_STATS} gid-size --order DESC"
+run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order DESC"
 
 if [[ "$(uname)" != "Darwin" ]]
 then

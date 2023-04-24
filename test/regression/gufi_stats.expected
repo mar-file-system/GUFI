@@ -130,6 +130,99 @@ $ gufi_stats    duplicate-names
 repeat_name prefix
 repeat_name directory/subdirectory
 
+$ gufi_stats uid-size --order ASC
+1001 0 empty_file
+1001 1 directory/executable
+1001 2 directory/readonly
+1001 3 directory/writable
+1001 4 repeat_name
+1001 4 directory/subdirectory/repeat_name
+1001 5 .hidden
+1001 6 leaf_directory/leaf_file1
+1001 7 leaf_directory/leaf_file2
+1001 8 old_file
+1001 9 unusual#? directory ,/unusual, name?#
+1001 1024 1KB
+1001 1048576 1MB
+
+$ gufi_stats uid-size --num-results 6 --order ASC
+1001 0 empty_file
+1001 1 directory/executable
+1001 2 directory/readonly
+1001 3 directory/writable
+1001 4 repeat_name
+1001 4 directory/subdirectory/repeat_name
+
+$ gufi_stats uid-size --order DESC
+1001 1048576 1MB
+1001 1024 1KB
+1001 9 unusual#? directory ,/unusual, name?#
+1001 8 old_file
+1001 7 leaf_directory/leaf_file2
+1001 6 leaf_directory/leaf_file1
+1001 5 .hidden
+1001 4 repeat_name
+1001 4 directory/subdirectory/repeat_name
+1001 3 directory/writable
+1001 2 directory/readonly
+1001 1 directory/executable
+1001 0 empty_file
+
+$ gufi_stats uid-size --num-results 6 --order DESC
+1001 1048576 1MB
+1001 1024 1KB
+1001 9 unusual#? directory ,/unusual, name?#
+1001 8 old_file
+1001 7 leaf_directory/leaf_file2
+1001 6 leaf_directory/leaf_file1
+
+$ gufi_stats gid-size --order ASC
+1001 0 empty_file
+1001 1 directory/executable
+1001 2 directory/readonly
+1001 3 directory/writable
+1001 4 repeat_name
+1001 4 directory/subdirectory/repeat_name
+1001 5 .hidden
+1001 6 leaf_directory/leaf_file1
+1001 7 leaf_directory/leaf_file2
+1001 8 old_file
+1001 9 unusual#? directory ,/unusual, name?#
+1001 1024 1KB
+1001 1048576 1MB
+
+$ gufi_stats gid-size --num-results 6 --order ASC
+1001 0 empty_file
+1001 1 directory/executable
+1001 2 directory/readonly
+1001 3 directory/writable
+1001 4 repeat_name
+1001 4 directory/subdirectory/repeat_name
+
+$ gufi_stats gid-size --order DESC
+1001 1048576 1MB
+1001 1024 1KB
+1001 9 unusual#? directory ,/unusual, name?#
+1001 8 old_file
+1001 7 leaf_directory/leaf_file2
+1001 6 leaf_directory/leaf_file1
+1001 5 .hidden
+1001 4 repeat_name
+1001 4 directory/subdirectory/repeat_name
+1001 3 directory/writable
+1001 2 directory/readonly
+1001 1 directory/executable
+1001 0 empty_file
+
+$ gufi_stats gid-size --num-results 6 --order DESC
+1001 1048576 1MB
+1001 1024 1KB
+1001 9 unusual#? directory ,/unusual, name?#
+1001 8 old_file
+1001 7 leaf_directory/leaf_file2
+1001 6 leaf_directory/leaf_file1
+
+
 $ gufi_stats    leaf-dirs
 leaf_directory
 unusual#? directory ,
