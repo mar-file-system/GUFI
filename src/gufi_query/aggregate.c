@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/aggregate.h"
 
 /* must have shared cache */
-static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared&vfs=" GUFI_SQLITE_VFS;
+static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
 /* users should never use this name */
 static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate";
 

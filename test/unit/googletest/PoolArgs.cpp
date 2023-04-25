@@ -79,7 +79,7 @@ extern "C" {
 }
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // not const
-static const char DBNAME_FORMAT[] = "file:memory%zu?mode=memory&cache=shared&vfs=" GUFI_SQLITE_VFS;
+static const char DBNAME_FORMAT[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
 static const size_t OB_SIZE = 4096;
 static const std::string TABLE_NAME = "test_table";
 

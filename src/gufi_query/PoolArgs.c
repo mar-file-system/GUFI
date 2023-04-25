@@ -94,7 +94,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             SNPRINTF(ta->dbname, MAXPATH, "%s.%zu", in->outname, i);
         }
         else {
-            SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared&vfs=" GUFI_SQLITE_VFS, i);
+            SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
         }
 
         ta->outdb = opendb(ta->dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1, NULL, NULL

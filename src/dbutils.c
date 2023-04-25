@@ -139,7 +139,7 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
   /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
   char attach[MAXSQL];
   if (flags & SQLITE_OPEN_READONLY) {
-      sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro&vfs=" GUFI_SQLITE_VFS "' AS %Q", name, dbn);
+      sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro" GUFI_SQLITE_VFS_URI "' AS %Q", name, dbn);
   }
   else if (flags & SQLITE_OPEN_READWRITE) {
       sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn);
