@@ -198,7 +198,12 @@ def build_where(args, table, root_uid=0, root_gid=0):
                   for ctime in args.ctime]
 
     if args.empty is True:
-        where += ['size == 0', '(type == \'f\') OR (type == \'d\')']
+        if table in gufi_common.SUMMARY_NAMES:
+            # this is slightly wrong: the number of subdirs should be
+            # counted, but that value is not immediately available
+            where += ['(type == "d") AND ((totfiles + totlinks) == 0)']
+        elif table in gufi_common.ENTRIES_NAMES:
+            where += ['(type == "f") AND (size == 0)']
 
     if args.executable is True:
         where += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
@@ -230,10 +235,10 @@ def build_where(args, table, root_uid=0, root_gid=0):
 
     # matches on whole path
     if args.iregex is not None:
-        if table == gufi_common.VRSUMMARY:
+        if table in gufi_common.SUMMARY_NAMES:
             where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'(?i){0}\')'.format(iregex)
                                    for iregex in args.iregex])]
-        elif table == gufi_common.VRPENTRIES:
+        elif table in gufi_common.ENTRIES_NAMES:
             where += [' OR '.join(['((rpath(sname, sroll) || "/" || name) REGEXP \'(?i){0}\')'.format(iregex)
                                    for iregex in args.iregex])]
 
@@ -278,10 +283,10 @@ def build_where(args, table, root_uid=0, root_gid=0):
 
     # matches on whole path
     if args.regex is not None:
-        if table == gufi_common.VRSUMMARY:
+        if table in gufi_common.SUMMARY_NAMES:
             where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'{0}\')'.format(regex)
                                    for regex in args.regex])]
-        elif table == gufi_common.VRPENTRIES:
+        elif table in gufi_common.ENTRIES_NAMES:
             where += [' OR '.join(['((rpath(sname, sroll) || "/" || name) REGEXP \'{0}\')'.format(regex)
                                    for regex in args.regex])]
 

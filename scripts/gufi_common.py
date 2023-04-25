@@ -76,6 +76,21 @@ VRPENTRIES  = 'vrpentries'
 VRXSUMMARY  = 'vrxsummary'
 VRXPENTRIES = 'vrxpentries'
 
+SUMMARY_NAMES = [
+    SUMMARY,
+    XSUMMARY,
+    VRSUMMARY,
+    VRXSUMMARY,
+]
+
+ENTRIES_NAMES = [
+    'entries',
+    PENTRIES,
+    XPENTRIES,
+    VRPENTRIES,
+    VRXPENTRIES,
+]
+
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
 # to make sure input fits certain criteria
