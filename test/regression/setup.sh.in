@@ -118,7 +118,7 @@ chmod 666 "${CONFIG}"
 # paths of all executables
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
-BFTI="@CMAKE_BINARY_DIR@/src/bfti"
+GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_FIND="@CMAKE_CURRENT_BINARY_DIR@/gufi_find.py"
@@ -144,7 +144,6 @@ replace() {
     @SED@ "
     s/${SQLITE3//\//\\/}/sqlite3/g;
     s/${GENERATETREE//\//\\/}/generatetree/g;
-    s/${BFTI//\//\\/}/bfti/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
@@ -154,6 +153,7 @@ replace() {
     s/${GUFI_STAT//\//\\/}/gufi_stat/g
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
+    s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${ROLLUP//\//\\/}/rollup/g;
     s/${UNROLLUP//\//\\/}/unrollup/g;

@@ -1,9 +1,9 @@
 .Dd Feb 24, 2020
-.Dt bfti
+.Dt gufi_treesummary
 .Os Linux
 .Sh NAME
-.Nm bfti
-.Nd Summary GUFI index directories
+.Nm gufi_treesummary
+.Nd Summary of GUFI index subtree
 .Sh SYNOPSIS
 .Nm
 .Op options
@@ -36,7 +36,7 @@ path to GUFI index
 .Pp
 .Sh FILES
 .Bl -tag -width -compact
-.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/bfti
+.It Pa @CMAKE_INSTALL_PREFIX@/@BIN@/gufi_treesummary
 .El
 
 .Sh NOTES

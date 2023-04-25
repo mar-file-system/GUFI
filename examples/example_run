@@ -24,7 +24,7 @@ run ./bfwi -t test/out -n 2 -P -b  $IN
 
 
 # generate tree-summary, as well
-run ./bfti -P -n 2 -s  $OUT/$IN
+run ./gufi_treesummary -P -n 2 $OUT/$IN
 
 
 # Run some queries in the tree ...

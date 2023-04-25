@@ -64,9 +64,9 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-OUTPUT="bfti.out"
+OUTPUT="gufi_treesummary.out"
 
-remove_bfti_extra() {
+remove_gufi_treesummary_extra() {
     @GREP@ -v "totossint.*" | @GREP@ -Po "tot.* [0-9]*" | @SED@ 's/max.* [0-9]*//g; s/.*size.* [0-9]*//g' | replace | @SORT@ | @TAIL@ -n +2
 }
 
@@ -76,12 +76,12 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHER
 echo
 
 echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
-"${BFTI}" -P -X -d " " "${INDEXROOT}" 2>&1 | remove_bfti_extra
+"${GUFI_TREESUMMARY}" -P -X -d " " "${INDEXROOT}" 2>&1 | remove_gufi_treesummary_extra
 echo
 
 echo "# Traversed paths (5)"
 #shellcheck disable=SC2016
-"${BFTI}" -P -X -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | @HEAD@ -n 5 | @AWK@ '{ print $1 " " $2 }'
+"${GUFI_TREESUMMARY}" -P -X -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | @HEAD@ -n 5 | @AWK@ '{ print $1 " " $2 }'
 echo
 
 echo "# Still no treesummary table"
@@ -89,7 +89,7 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHER
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}/directory" | replace
-run_no_sort "${BFTI} ${INDEXROOT}/directory" | remove_bfti_extra
+run_no_sort "${GUFI_TREESUMMARY} ${INDEXROOT}/directory" | remove_gufi_treesummary_extra
 echo
 
 echo "# One treesummary table"
@@ -97,7 +97,7 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHER
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}/leaf_directory" | replace
-"${BFTI}" "${INDEXROOT}/leaf_directory" | remove_bfti_extra
+"${GUFI_TREESUMMARY}" "${INDEXROOT}/leaf_directory" | remove_gufi_treesummary_extra
 echo
 
 echo "# Two treesummary tables"
@@ -106,11 +106,11 @@ echo
 
 echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)" | replace
 #shellcheck disable=SC2016
-"${BFTI}" -P -d " " "${INDEXROOT}" 2> /dev/null | @SED@ '/^$/d' | @HEAD@ -n 4 | @AWK@ '{ print $1 " " $2 }'
+"${GUFI_TREESUMMARY}" -P -d " " "${INDEXROOT}" 2> /dev/null | @SED@ '/^$/d' | @HEAD@ -n 4 | @AWK@ '{ print $1 " " $2 }'
 echo
 
 echo "# Generate treesummary table in ${INDEXROOT}" | replace
-"${BFTI}" "${INDEXROOT}" | remove_bfti_extra
+"${GUFI_TREESUMMARY}" "${INDEXROOT}" | remove_gufi_treesummary_extra
 echo
 
 echo "# Three treesummary tables"
@@ -121,7 +121,7 @@ echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? directory ,"
 run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 100;\"" | replace
 
 echo "# Regenerate treesummary table in ${INDEXROOT}" | replace
-"${BFTI}" "${INDEXROOT}" | remove_bfti_extra
+"${GUFI_TREESUMMARY}" "${INDEXROOT}" | remove_gufi_treesummary_extra
 echo
 
 echo "# Still three treesummary tables"
@@ -141,9 +141,9 @@ run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE t
 echo
 
 echo "# Bad path"
-"${BFTI}" "${INDEXROOT}/1KB" | remove_bfti_extra
+"${GUFI_TREESUMMARY}" "${INDEXROOT}/1KB" | remove_gufi_treesummary_extra
 echo
 ) |& @TEE@ "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/bfti.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

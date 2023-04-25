@@ -92,11 +92,11 @@ set(CORE
 
 # .sh and .expected
 set(SH_AND_EXPECTED
-  bfti
   completions
   gufi_dir2index
   gufi_dir2trace
   gufi_trace2index
+  gufi_treesummary
   gufi_query
   querydbs
 )
