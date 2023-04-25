@@ -1,9 +1,9 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "compress.h"
 
 #if HAVE_ZLIB
-
-#include <stdlib.h>
-#include <string.h>
 #include <zlib.h>
 
 /* starting offset of actual data */
