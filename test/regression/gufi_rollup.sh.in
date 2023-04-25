@@ -64,7 +64,7 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/rollup_tree.sh
 
-OUTPUT="rollup.out"
+OUTPUT="gufi_rollup.out"
 
 cleanup() {
     rollup_tree_cleanup
@@ -123,15 +123,15 @@ do_tests() {
 }
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
-"${ROLLUP}" "${INDEXROOT}"
+"${GUFI_ROLLUP}" "${INDEXROOT}"
 do_tests
 
 rm -r "${INDEXTARGET}"
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
-"${ROLLUP}" -L 3 "${INDEXROOT}"
+"${GUFI_ROLLUP}" -L 3 "${INDEXROOT}"
 do_tests
 ) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/rollup.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

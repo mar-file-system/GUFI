@@ -158,13 +158,13 @@ echo -e "${trace}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${trace}")
 
 # query rolled up index
-run_no_sort "${ROLLUP} \"${INDEXROOT}\"" 2>&1 | @SED@ '/Ran /d; /Took /d;'
+run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" 2>&1 | @SED@ '/Ran /d; /Took /d;'
 rolled="$(query)"
 echo -e "${rolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${rolled}")
 
 # query unrolled index
-run_no_sort "${UNROLLUP} \"${INDEXROOT}\""
+run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}\""
 unrolled="$(query)"
 echo -e "${unrolled}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${unrolled}")

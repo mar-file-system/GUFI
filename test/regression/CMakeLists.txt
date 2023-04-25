@@ -157,8 +157,8 @@ if (SUDO)
 
     # .sh and .expected
     set(NEED_SUDO
-      rollup
-      unrollup
+      gufi_rollup
+      gufi_unrollup
       xattrs
       )
 

@@ -118,7 +118,7 @@ allowed to roll up without limit, some databases will become
 significantly larger than others, causing large amounts of tail
 latency.
 
-The \rollup executable has the \texttt{-L} flag that limits the number
+The \gufirollup executable has the \texttt{-L} flag that limits the number
 of entries that may be found within a single directory.
 
 \subsubsection{Steps}
@@ -155,7 +155,7 @@ time whereas the implemented method of rolling up allows for queries
 starting at any point in the index to take advantage of rollups.
 
 The rollup operation can take some time, and so indicies are not
-rolled up automatically. The \rollup executable must be called
+rolled up automatically. The \gufirollup executable must be called
 manually.
 
 \subsubsection{Extended Attributes}
@@ -179,20 +179,20 @@ will have been updated extensively and should always be used when
 querying rolled up indicies. Querying the \entries table will return
 only the entries found in the directories that were processed.
 
-\subsubsection{\rollup executable}
-In order to apply rollup to an index, run the \rollup executable:
+\subsubsection{\gufirollup executable}
+In order to apply rollup to an index, run the \gufirollup executable:
 \\\\
-\indent \rollup \texttt{index\_root}
+\indent \gufirollup \texttt{index\_root}
 \\\\
-Figure~\ref{fig:rollupworkflow} shows the overall structure of the \rollup
-executable. The \rollup executable uses the BottomUp code (see
+Figure~\ref{fig:rollupworkflow} shows the overall structure of the \gufirollup
+executable. The \gufirollup executable uses the BottomUp code (see
 Subsection~\ref{sec:bottomup}) to recursively descend the original index and only
 perform the rollup operation once all children have been processed as
 shown in Figure~\ref{fig:rollupfunction}.
 
 \begin{sidewaysfigure} [!htb]
   \centering \includegraphics[width=\textwidth]{images/rollup.png}
-  \caption{\rollup Workflow}
+  \caption{\gufirollup Workflow}
   \label{fig:rollupworkflow}
 \end{sidewaysfigure}
 
@@ -204,6 +204,6 @@ shown in Figure~\ref{fig:rollupfunction}.
 \end{figure}
 
 \subsubsection{Undoing a rollup}
-To remove rollup data from an index, run the \unrollup executable:
+To remove rollup data from an index, run the \gufiunrollup executable:
 \\\\
-\indent \unrollup \texttt{index\_root}
+\indent \gufiunrollup \texttt{index\_root}

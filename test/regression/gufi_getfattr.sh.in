@@ -206,8 +206,8 @@ do_tests() {
 
 (
 do_tests
-echo "$ ${ROLLUP} \"${INDEXROOT}\""
-${ROLLUP} "${INDEXROOT}" 2> /dev/null
+echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\""
+"${GUFI_ROLLUP}" "${INDEXROOT}" 2> /dev/null
 echo
 do_tests
 ) | replace | remove_root | @TEE@ "${OUTPUT}"

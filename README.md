@@ -48,7 +48,7 @@ cat <trace_file_prefix>.* > <trace_file>
 gufi_trace2index <trace_file> <index_dir>
 
 # post-process the index
-gufi_treesummary/rollup
+gufi_treesummary/gufi_rollup
 
 # use the index
 gufi_query/gufi_stat/querydbs

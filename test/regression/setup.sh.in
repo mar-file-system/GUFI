@@ -129,8 +129,8 @@ GUFI_STAT="@CMAKE_BINARY_DIR@/src/gufi_stat"
 GUFI_STATS="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.py"
 GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
 QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
-ROLLUP="@CMAKE_BINARY_DIR@/src/rollup"
-UNROLLUP="@CMAKE_BINARY_DIR@/src/unrollup"
+GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
+GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
@@ -155,8 +155,8 @@ replace() {
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
-    s/${ROLLUP//\//\\/}/rollup/g;
-    s/${UNROLLUP//\//\\/}/unrollup/g;
+    s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
+    s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 

@@ -3,7 +3,7 @@ Creating GUFI Index prefix with 1 threads
 Total Dirs:          69
 Total Files:         96
 
-$ rollup "prefix"
+$ gufi_rollup "prefix"
 Roots:
     prefix
 
@@ -78,7 +78,7 @@ ug/ug 1 6
 ug/ugo 1 6
 ugo 1 24
 
-$ unrollup "prefix"
+$ gufi_unrollup "prefix"
 
 # level, COUNT(entries), COUNT(pentries_rollup), directory
 $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC" "prefix"

@@ -168,13 +168,13 @@ set(C_SOURCES
   dfw.c
   gufi_dir2index.c
   gufi_dir2trace.c
+  gufi_rollup.c
+  gufi_stat.c
   gufi_trace2index.c
   gufi_treesummary.c
-  gufi_stat.c
+  gufi_unrollup.c
   parallel_rmr.c
   querydbs.c
-  rollup.c
-  unrollup.c
 )
 
 # build the C executables

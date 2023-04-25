@@ -83,7 +83,7 @@ prefix/ugo+rw/u f user.u 600
 prefix/ugo+rw/ug f user.ug 660
 prefix/ugo+rw/ugo f user.ugo 666
 
-$ rollup "prefix"
+$ gufi_rollup "prefix"
 Roots:
     prefix
 
@@ -151,7 +151,7 @@ prefix/ugo+rw/u f user.u 600
 prefix/ugo+rw/ug f user.ug 660
 prefix/ugo+rw/ugo f user.ugo 666
 
-$ unrollup "prefix"
+$ gufi_unrollup "prefix"
 
 $ gufi_query -d " " -x -S "SELECT rpath(sname, sroll), type, xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, type, xattr_name, xattr_value FROM vrxpentries;" "prefix"
 prefix d
