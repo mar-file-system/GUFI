@@ -123,6 +123,7 @@ echo "#####################################"
 echo "# Extra Inputs                      #"
 echo "#####################################"
 
+(
 echo "# Have -J even though not aggregating (stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\"              -J \"insert;\" \"${INDEXROOT}\""
 
@@ -140,6 +141,7 @@ run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\
 
 echo "# Have -G even though not aggregating (outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
+) | @SED@ 's/&vfs=.*//g'
 ) |& @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"

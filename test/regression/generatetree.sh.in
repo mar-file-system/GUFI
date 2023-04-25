@@ -66,7 +66,7 @@
 #
 # ${DIR}/
 # |---- 1KB
-# |---- 1MB                        (user.type=file)
+# |---- 1MB                        (user.size=1MB)
 # |---- directory/
 #       |---- executable
 #       |---- readonly

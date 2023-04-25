@@ -135,6 +135,7 @@ VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 HEAD="@HEAD@"
+SORT="@SORT@"
 TAIL="@TAIL@"
 WC="@WC@"
 
@@ -164,6 +165,7 @@ replace() {
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
 
     s/${HEAD//\//\\/}/head/g;
+    s/${SORT//\//\\/}/sort/g;
     s/${TAIL//\//\\/}/tail/g;
     s/${WC//\//\\/}/wc/g;
 

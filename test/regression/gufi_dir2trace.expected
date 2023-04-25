@@ -75,6 +75,6 @@ Total Dirs:          0
 Total Files:         0
 
 # bad skip file
-$ gufi_dir2trace -d "|" -n 2 "prefix" "trace" -k "trace"
+$ gufi_dir2trace -d "|" -n 2 -k "trace" "prefix" "trace"
 Error: Cannot open skip file "trace"
 

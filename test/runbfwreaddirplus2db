@@ -185,7 +185,7 @@ echo ""
 # run querydbs to union all the db's together into one table
 echo " run querydbs to union all the db's together into one table"
 echo ""
-$QUERYDBS -N -V -p bfwreaddirplusdb 2 "select * from vreaddirplus" readdirplus
+$QUERYDBS -N -V bfwreaddirplusdb 2 "select * from vreaddirplus" readdirplus
 
 # run to create output db
 echo

@@ -170,12 +170,12 @@ Error: Missing -G
 # Have -J even though not aggregating (stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;"              -J "insert;" "prefix"
 Warning: Got -J even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared&vfs=unix-none
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
 
 # Have -J even though not aggregating (outfile)
 $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;"              -J "insert;" "prefix"
 Warning: Got -J even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared&vfs=unix-none
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
 
 # Have -J even though not aggregating (outdb)
 $ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;"              -J "insert;" "prefix"
@@ -185,12 +185,12 @@ Error: Could not run SQL Init "create" on outdb.0
 # Have -G even though not aggregating (stdout)
 $ gufi_query            -I "create" -S "insert;" -E "insert;"              -G "query;"  "prefix"
 Warning: Got -G even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared&vfs=unix-none
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
 
 # Have -G even though not aggregating (outfile)
 $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;"              -G "query;"  "prefix"
 Warning: Got -G even though not aggregating. Ignoring
-Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared&vfs=unix-none
+Error: Could not run SQL Init "create" on file:memory0?mode=memory&cache=shared
 
 # Have -G even though not aggregating (outdb)
 $ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;"              -G "query;"  "prefix"

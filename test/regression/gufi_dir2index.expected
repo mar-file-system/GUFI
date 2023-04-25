@@ -204,7 +204,7 @@ Total Dirs:          0
 Total Files:         0
 
 # bad skip file
-$ gufi_dir2index -n 2 "prefix" "prefix" -k "trace"
+$ gufi_dir2index -n 2 -k "trace" "prefix" "prefix"
 "prefix" Already exists!
 Creating GUFI Index prefix with 2 threads
 Total Dirs:          5

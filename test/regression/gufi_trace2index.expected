@@ -64,7 +64,7 @@ Could not open "": No such file or directory (2)
 Failed to open trace file for each thread
 
 # bad index path
-$ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB" 2> >(/usr/bin/sort)
+$ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB" 2> >(sort)
 Creating GUFI Index prefix/1KB with 2 threads
 Dirs:                5 (0 empty)
 Files:               15

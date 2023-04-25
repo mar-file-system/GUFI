@@ -263,7 +263,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -user gufi_test
+$ gufi_find -user "gufi_test"
 prefix
 .hidden
 1KB
@@ -307,7 +307,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -group gufi_test
+$ gufi_find -group "gufi_test"
 prefix
 .hidden
 1KB
@@ -329,14 +329,14 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -type d -type l -printf "%% %d %D %f %m %M %n    %y"
-% 0 - prefix 775 drwxrwxr-x 5    d
-% 1 - directory 775 drwxrwxr-x 3    d
-% 1 - file_symlink 777 lrwxrwxrwx 1    l
-% 1 - leaf_directory 775 drwxrwxr-x 2    d
-% 1 - unusual#? directory , 775 drwxrwxr-x 2    d
-% 2 - subdirectory 775 drwxrwxr-x 2    d
-% 3 - directory_symlink 777 lrwxrwxrwx 1    l
+$ gufi_find -type d -type l -printf "%% %d %D %f %m %M       %y"
+% 0 - prefix 775 drwxrwxr-x       d
+% 1 - directory 775 drwxrwxr-x       d
+% 1 - file_symlink 777 lrwxrwxrwx       l
+% 1 - leaf_directory 775 drwxrwxr-x       d
+% 1 - unusual#? directory , 775 drwxrwxr-x       d
+% 2 - subdirectory 775 drwxrwxr-x       d
+% 3 - directory_symlink 777 lrwxrwxrwx       l
 
 $ gufi_find -type f         -printf "%% %d %D %f %m %M %n %s %y"
 % 1 - .hidden 664 -rw-rw-r-- 1 5 f
@@ -356,35 +356,20 @@ $ gufi_find -type f         -printf "%% %d %D %f %m %M %n %s %y"
 $ gufi_find -printf '\141 \142 \143 \d' | head -n 1
 abcd
 
-$ gufi_find -links 1
+$ gufi_find -type f -links 1
 .hidden
 1KB
 1MB
 directory/executable
 directory/readonly
-directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
-file_symlink
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
 unusual#? directory ,/unusual, name?#
-
-$ gufi_find -links 2
-directory/subdirectory
-leaf_directory
-unusual#? directory ,
-
-$ gufi_find -links 3
-directory
-
-$ gufi_find -links 4
-
-$ gufi_find -links 5
-prefix
 
 $ gufi_find --numresults 5
 prefix

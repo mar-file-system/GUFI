@@ -125,27 +125,25 @@ run_sort "${GUFI_FIND} -false"
 
 (
     run_sort "${GUFI_FIND} -user $(id -u)"
-    run_sort "${GUFI_FIND} -user $(id -un)"
+    run_sort "${GUFI_FIND} -user \"$(id -un)\""
     run_sort "${GUFI_FIND} -group $(id -g)"
-    run_sort "${GUFI_FIND} -group $(id -gn)"
+    run_sort "${GUFI_FIND} -group \"$(id -gn)\""
 ) | @SED@ "
     s/ $(id -u)/ ${TEST_ID}/g;
-    s/ $(id -un)/ ${TEST_NAME}/g;
+    s/ \"$(id -un)\"/ \"${TEST_NAME}\"/g;
     s/ $(id -g)/ ${TEST_ID}/g;
-    s/ $(id -gn)/ ${TEST_NAME}/g;
+    s/ \"$(id -gn)\"/ \"${TEST_NAME}\"/g;
     "
 
-# don't print sizes for directories and links
-run_sort "${GUFI_FIND} -type d -type l -printf \"%% %d %D %f %m %M %n    %y\""
+# don't print sizes and link counts for directories and symlinks
+run_sort "${GUFI_FIND} -type d -type l -printf \"%% %d %D %f %m %M       %y\""
 run_sort "${GUFI_FIND} -type f         -printf \"%% %d %D %f %m %M %n %s %y\""
 
 # escape characters
 run_no_sort "${GUFI_FIND} -printf '\141 \142 \143 \d' | @HEAD@ -n 1"
 
-for n in {1..5}
-do
-    run_sort "${GUFI_FIND} -links ${n}"
-done
+# file links only - directory and symlinks change depending on filesystem
+run_sort "${GUFI_FIND} -type f -links 1"
 
 # GUFI specific flags
 run_no_sort "${GUFI_FIND} --numresults 5"

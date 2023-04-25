@@ -1,4 +1,3 @@
-
 $ gufi_stats    depth
 0
 
@@ -222,7 +221,6 @@ $ gufi_stats gid-size --num-results 6 --order DESC
 1001 7 leaf_directory/leaf_file2
 1001 6 leaf_directory/leaf_file1
 
-
 $ gufi_stats    leaf-dirs
 leaf_directory
 unusual#? directory ,
@@ -258,3 +256,4 @@ $ gufi_stats -c total-leaf-files
 
 $ gufi_stats    median-leaf-files
 1.0
+

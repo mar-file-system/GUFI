@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_stats.out"
 
 run() {
-    run_no_sort "$@" | @SED@ "s/$(id -un)/1001/g" | @SORT@
+    run_sort "$@" | @SED@ "s/$(id -un)/1001/g"
 }
 
 run_uidgid_size() {
@@ -117,7 +117,6 @@ run "${GUFI_STATS}    extensions"
 run "${GUFI_STATS} -c extensions"
 
 run "${GUFI_STATS}    duplicate-names"
-echo
 
 run_uidgid_size "${GUFI_STATS} uid-size --order ASC"
 run_uidgid_size "${GUFI_STATS} uid-size --num-results 6 --order ASC"
@@ -128,7 +127,8 @@ run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order ASC"
 run_uidgid_size "${GUFI_STATS} gid-size --order DESC"
 run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order DESC"
 
-if [[ "$(uname)" != "Darwin" ]]
+# shellcheck disable=SC2050
+if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE" ]]
 then
     run "${GUFI_STATS}    leaf-dirs"
     run "${GUFI_STATS} -r leaf-dirs"
@@ -149,7 +149,8 @@ fi
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 COPY="${EXPECTED}.copy"
 
-if [[ "$(uname)" == "Darwin" ]]
+# shellcheck disable=SC2050
+if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]]
 then
     # shellcheck disable=SC2016
     @SED@ '/leaf-/,$d' "${EXPECTED}" > "${COPY}"
