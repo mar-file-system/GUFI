@@ -62,6 +62,8 @@ OF SUCH DAMAGE.
 
 
 
+#include <pthread.h> // macOS doesn't seem to like std::mutex
+
 #include <gtest/gtest.h>
 
 #include "QueuePerThreadPool.h"
@@ -312,4 +314,46 @@ TEST(QueuePerThreadPool, custom_next) {
 
     QPTPool_destroy(pool);
     delete [] values;
+}
+
+TEST(QueuePerThreadPool, deferred) {
+    QPTPool_t *pool = QPTPool_init(1, nullptr, nullptr, nullptr, 1
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , nullptr
+                                   #endif
+                                   );
+
+    // macOS doesn't seem to like std::mutex
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&mutex);
+
+    // prevent thread from completing
+    EXPECT_EQ(QPTPool_enqueue(pool, 0,
+                              [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                                  pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(data);
+                                  pthread_mutex_lock(mutex);
+                                  pthread_mutex_unlock(mutex);
+                                  return 0;
+                              }, &mutex), QPTPool_enqueue_WAIT);
+
+    // fill up wait queue
+    EXPECT_EQ(QPTPool_enqueue(pool, 0,
+                              [](QPTPool_t *, const size_t, void *, void *) -> int {
+                                  return 0;
+                              }, nullptr), QPTPool_enqueue_WAIT);
+
+    // forced to enqueue in deferred queue
+    EXPECT_EQ(QPTPool_enqueue(pool, 0,
+                              [](QPTPool_t *, const size_t, void *, void *) -> int {
+                                  return 0;
+                              }, nullptr), QPTPool_enqueue_DEFERRED);
+
+    pthread_mutex_unlock(&mutex);
+
+    QPTPool_wait(pool);
+
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 3);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 3);
+
+    QPTPool_destroy(pool);
 }

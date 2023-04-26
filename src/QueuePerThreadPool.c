@@ -310,7 +310,7 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
 }
 
 /* id selects the next_queue variable to use, not where the work will be placed */
-void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
+QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work) {
     /* Not checking arguments */
 
     struct queue_item *qi = malloc(sizeof(struct queue_item));
@@ -320,12 +320,16 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
     QPTPoolThreadData_t *data = &ctx->data[id];
     QPTPoolThreadData_t *next = &ctx->data[data->next_queue];
 
+    QPTPool_enqueue_dst_t ret = QPTPool_enqueue_ERROR;
+
     pthread_mutex_lock(&next->mutex);
-    if (!ctx->queue_limit || (next->queue.size > ctx->queue_limit)) {
+    if (ctx->queue_limit && (next->queue.size > ctx->queue_limit)) {
         sll_push(&next->deferred, qi);
+        ret = QPTPool_enqueue_DEFERRED;
     }
     else {
         sll_push(&next->queue, qi);
+        ret = QPTPool_enqueue_WAIT;
     }
 
     pthread_mutex_lock(&ctx->mutex);
@@ -337,6 +341,8 @@ void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *
 
     data->next_queue = ctx->next(id, data->next_queue, ctx->nthreads,
                                  new_work, ctx->next_args);
+
+    return ret;
 }
 
 void QPTPool_wait(QPTPool_t *ctx) {

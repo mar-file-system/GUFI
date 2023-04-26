@@ -133,9 +133,16 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
  */
 typedef int (*QPTPoolFunc_t)(QPTPool_t *ctx, const size_t id, void *data, void *args);
 
+/* which queue a new work item will be placed in */
+typedef enum QPTPool_enqueue_dst {
+    QPTPool_enqueue_ERROR,
+    QPTPool_enqueue_WAIT,
+    QPTPool_enqueue_DEFERRED,
+} QPTPool_enqueue_dst_t;
+
 /* enqueue data and a function to process the data */
 /* id will push to the thread's next scheduled queue, rather than directly onto queue[id] */
-void QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work);
+QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work);
 
 /*
  * wait for all work to be processed and join threads
