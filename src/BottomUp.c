@@ -93,6 +93,7 @@ struct UserArgs {
     BU_f descend;
     BU_f ascend;
     int track_non_dirs;
+    int generate_alt_name;
     trie_t *skip;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -170,13 +171,18 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     return 0;
 }
 
-static struct BottomUp *track(const char *name, const size_t name_len,
+static struct BottomUp *track(struct BottomUp *src,
                               const size_t user_struct_size, sll_t *sll,
-                              const size_t level) {
+                              const size_t level, const int generate_alt_name) {
     struct BottomUp *copy = malloc(user_struct_size);
 
-    memcpy(copy->name, name, name_len + 1); /* NULL terminate */
-    copy->name_len = name_len;
+    memcpy(copy->name, src->name, src->name_len + 1); /* NULL terminate */
+    copy->name_len = src->name_len;
+
+    if (generate_alt_name) {
+        memcpy(copy->alt_name, src->alt_name, src->alt_name_len + 1); /* NULL terminate */
+        copy->alt_name_len = src->alt_name_len;
+    }
 
     copy->level = level;
 
@@ -225,16 +231,27 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
             break;
         }
 
-        const size_t name_len = strlen(entry->d_name);
+        size_t name_len = strlen(entry->d_name);
         if (trie_search(ua->skip, entry->d_name, name_len) == 1) {
             continue;
         }
 
         struct BottomUp new_work;
-        new_work.name_len = SNFORMAT_S(new_work.name, MAXPATH, 3,
+        new_work.name_len = SNFORMAT_S(new_work.name, sizeof(new_work.name), 3,
                                        bu->name, bu->name_len,
                                        "/", (size_t) 1,
                                        entry->d_name, name_len);
+
+        if (ua->generate_alt_name) {
+            /* append converted entry name to converted directory */
+            new_work.alt_name_len = SNFORMAT_S(new_work.alt_name, sizeof(new_work.alt_name), 2,
+                                               bu->alt_name, bu->alt_name_len,
+                                               "/", (size_t) 1);
+
+            new_work.alt_name_len += sqlite_uri_path(new_work.alt_name + new_work.alt_name_len,
+                                                     sizeof(new_work.alt_name) - new_work.alt_name_len,
+                                                     entry->d_name, &name_len);
+        }
 
         timestamp_create_start(lstat_entry);
         const int rc = lstat(new_work.name, &new_work.st);
@@ -247,18 +264,18 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
 
         timestamp_create_start(track_entry);
         if (S_ISDIR(new_work.st.st_mode)) {
-            track(new_work.name, new_work.name_len,
+            track(&new_work,
                   ua->user_struct_size, &bu->subdirs,
-                  next_level);
+                  next_level, ua->generate_alt_name);
 
             /* count how many subdirectories this directory has */
             bu->subdir_count++;
         }
         else {
             if (ua->track_non_dirs) {
-                track(new_work.name, new_work.name_len,
+                track(&new_work,
                       ua->user_struct_size, &bu->subnondirs,
-                      next_level);
+                      next_level, ua->generate_alt_name);
             }
             bu->subnondir_count++;
         }
@@ -321,6 +338,7 @@ int parallel_bottomup(char **root_names, size_t root_count,
                       const size_t user_struct_size,
                       BU_f descend, BU_f ascend,
                       const int track_non_dirs,
+                      const int generate_alt_name,
                       void *extra_args
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
                       , struct OutputBuffers *timestamp_buffers
@@ -337,6 +355,7 @@ int parallel_bottomup(char **root_names, size_t root_count,
     ua.descend = descend?descend:noop;
     ua.ascend = ascend?ascend:noop;
     ua.track_non_dirs = track_non_dirs;
+    ua.generate_alt_name = generate_alt_name;
 
     /* only skip . and .. */
     if (setup_directory_skip(NULL, &ua.skip)) {
@@ -373,6 +392,17 @@ int parallel_bottomup(char **root_names, size_t root_count,
         if (!S_ISDIR(root->st.st_mode)) {
             fprintf(stderr, "%s is not a directory\n", root->name);
             continue;
+        }
+
+        if (generate_alt_name) {
+            size_t name_len = root->name_len;
+            root->alt_name_len = sqlite_uri_path(root->alt_name, sizeof(root->alt_name),
+                                                 root->name, &name_len);
+
+            if (name_len != root->name_len) {
+                fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
+                continue;
+            }
         }
 
         root->parent = NULL;

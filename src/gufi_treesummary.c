@@ -136,36 +136,54 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                          #endif
         );
     if (db) {
-        int trecs = 0;
+        struct sum sum;
+        zeroit(&sum);
 
-        /* ignore errors */
-        sqlite3_exec(db, "SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'treesummary\';",
-                     treesummary_exists, &trecs, NULL);
-
-        struct sum sumin;
-        zeroit(&sumin);
-
-        /*
-         * force descent at level 0 so that if the root directory
-         * already has a treesummary table, the existing data is
-         * not used to generate the new treesummary table
-         */
-        if ((trecs < 1) || (passmywork->level == 0)) {
+        int rollupscore = 0;
+        get_rollupscore(db, &rollupscore);                      /* should not error */
+        if (rollupscore != 0) {
             /*
-             * this directory does not have a treesummary
-             * table, so need to descend to collect
+             * this directory has been rolled up, so all information is
+             * available here: sum it all up, no need to go further down
+             *
+             * no need to handle level == 0, since this collects data
+             * from all summary tables, including the one at level 0
+             *
+             * this ignores all treesummary tables since all summary
+             * tables are immediately available
+             *
+             * -1 because a directory is not a subdirectory of itself
              */
-            descend(ctx, id, pa,
-                    &pa->in, passmywork, ed.statuso.st_ino,
-                    dir, pa->skip, 0, 0, processdir,
-                    NULL, NULL, NULL, NULL, NULL, NULL);
+            sum.totsubdirs = querytsdb(passmywork->name, &sum, db, 0) - 1;
+        }
+        else {
+            int trecs = 0;
+            sqlite3_exec(db, "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
+                         treesummary_exists, &trecs, NULL);     /* should not error */
 
-            querytsdb(passmywork->name, &sumin, db, 0);
-        } else {
-            querytsdb(passmywork->name, &sumin, db, 1);
+            if ((trecs < 1) || (passmywork->level == 0)) {
+                /*
+                 * this directory does not have a treesummary table,
+                 * so need to descend to collect from summary table
+                 *
+                 * force descent at level 0 so that if the root directory
+                 * already has a treesummary table, the existing data is
+                 * not used to generate the new treesummary table
+                 */
+                descend(ctx, id, pa,
+                        &pa->in, passmywork, ed.statuso.st_ino,
+                        dir, pa->skip, 0, 0, processdir,
+                        NULL, NULL, NULL, NULL, NULL, NULL);
+
+                /* add summary data from this directory */
+                querytsdb(passmywork->name, &sum, db, 0);
+            } else {
+                /* add treesummary data from this directory and don't descend */
+                querytsdb(passmywork->name, &sum, db, 1);
+            }
         }
 
-        tsumit(&sumin, &pa->sums[id]);
+        tsumit(&sum, &pa->sums[id]);
     }
 
     closedb(db);

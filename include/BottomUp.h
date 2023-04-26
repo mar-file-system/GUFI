@@ -100,6 +100,8 @@ OF SUCH DAMAGE.
 struct BottomUp {
     char name[MAXPATH];
     size_t name_len;
+    char alt_name[MAXPATH];
+    size_t alt_name_len;
     struct stat st;
     struct {
         pthread_mutex_t mutex;
@@ -137,6 +139,7 @@ int parallel_bottomup(char **root_names, size_t root_count,
                       const size_t user_struct_size,
                       BU_f descend, BU_f ascend,
                       const int track_non_dirs,
+                      const int generate_alt_name,
                       void *extra_args
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
                       , struct OutputBuffers *debug_buffers

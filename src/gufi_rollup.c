@@ -406,7 +406,10 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
         struct RollUp *child = (struct RollUp *) sll_node_data(node);
 
         char dbname[MAXPATH] = {0};
-        SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, child->data.name);
+        SNFORMAT_S(dbname, MAXPATH, 3,
+                   child->data.name, child->data.name_len,
+                   "/", (size_t) 1,
+                   DBNAME, DBNAME_LEN);
 
         timestamp_create_start(open_child_db);
         sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
@@ -730,7 +733,10 @@ int do_rollup(struct RollUp *rollup,
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
         char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, MAXPATH, 3, child->name, child->name_len, "/", 1, DBNAME, DBNAME_LEN);
+        SNFORMAT_S(child_dbname, MAXPATH, 3,
+                   child->alt_name, child->alt_name_len,
+                   "/", (size_t) 1,
+                   DBNAME, DBNAME_LEN);
 
         /* attach subdir database file as 'SUBDIR_ATTACH_NAME' */
         rc = !attachdb(child_dbname, dst, SUBDIR_ATTACH_NAME, SQLITE_OPEN_READONLY, 1);
@@ -920,6 +926,7 @@ int main(int argc, char *argv[]) {
                                      sizeof(struct RollUp),
                                      NULL, rollup,
                                      0,
+                                     1,
                                      &pa
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , timestamp_buffers

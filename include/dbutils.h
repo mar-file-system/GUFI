@@ -139,7 +139,7 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
                 #endif
     );
 
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int ts);
+int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts);
 
 int startdb(sqlite3 *db);
 
@@ -206,5 +206,7 @@ int xattr_create_views(sqlite3 *db
 /* convert characters in sqlite URI paths */
 size_t sqlite_uri_path(char *dst, size_t dst_size,
                        const char *src, size_t *src_len);
+
+int get_rollupscore(sqlite3 *db, int *rollupscore);
 
 #endif

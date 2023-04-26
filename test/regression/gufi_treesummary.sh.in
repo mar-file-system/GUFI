@@ -66,84 +66,135 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_treesummary.out"
 
-remove_gufi_treesummary_extra() {
-    @GREP@ -v "totossint.*" | @GREP@ -Po "tot.* [0-9]*" | @SED@ 's/max.* [0-9]*//g; s/.*size.* [0-9]*//g' | replace | @SORT@ | @TAIL@ -n +2
+remove_extra() {
+    run_no_sort "$@" | @SED@ '/.*int.*/d; /min.*/d; /max.*/d; /^$/d;'
+}
+
+keep_paths() {
+    # use | for delimiter
+    (
+        echo "$" "$@"
+        # shellcheck disable=SC2016
+        eval "$@" | @SED@ '/^$/d; /tot.*/d; /min.*/d;' | @AWK@ -F "|" '{ print $1 "|" $2 }' | @SORT@
+    ) |& replace
+}
+
+query_path() {
+    path="$1"
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');\" -E \"SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;\" \"${path}\"" | @SED@ '/^$/d'
+}
+
+query() {
+    query_path "${INDEXROOT}"
 }
 
 (
 echo "# Start with no treesummary tables"
-run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+query
 echo
 
 echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
-"${GUFI_TREESUMMARY}" -P -X -d " " "${INDEXROOT}" 2>&1 | remove_gufi_treesummary_extra
+remove_extra "${GUFI_TREESUMMARY} -X -d \" \" \"${INDEXROOT}\""
 echo
 
 echo "# Traversed paths (5)"
-#shellcheck disable=SC2016
-"${GUFI_TREESUMMARY}" -P -X -d " " "${INDEXROOT}" 2> /dev/null | replace | @SED@ '/^$/d' | @HEAD@ -n 5 | @AWK@ '{ print $1 " " $2 }'
+keep_paths "${GUFI_TREESUMMARY} -P -X -d \"|\" \"${INDEXROOT}\""
 echo
 
 echo "# Still no treesummary table"
-run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+query
 echo
 
-echo "# Generate treesummary table in ${INDEXROOT}/directory" | replace
-run_no_sort "${GUFI_TREESUMMARY} ${INDEXROOT}/directory" | remove_gufi_treesummary_extra
+echo "# Generate treesummary table in ${INDEXROOT}/directory"
+remove_extra "${GUFI_TREESUMMARY} ${INDEXROOT}/directory"
 echo
 
 echo "# One treesummary table"
-run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+query
 echo
 
-echo "# Generate treesummary table in ${INDEXROOT}/leaf_directory" | replace
-"${GUFI_TREESUMMARY}" "${INDEXROOT}/leaf_directory" | remove_gufi_treesummary_extra
+echo "# Generate treesummary table in ${INDEXROOT}/leaf_directory"
+remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}/leaf_directory\""
 echo
 
 echo "# Two treesummary tables"
-run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+query
 echo
 
-echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)" | replace
+echo "# Traversed paths (4 - ${INDEXROOT}/directory/subdirectory is not walked again)"
 #shellcheck disable=SC2016
-"${GUFI_TREESUMMARY}" -P -d " " "${INDEXROOT}" 2> /dev/null | @SED@ '/^$/d' | @HEAD@ -n 4 | @AWK@ '{ print $1 " " $2 }'
+keep_paths "${GUFI_TREESUMMARY} -P -X -d \"|\" \"${INDEXROOT}\""
 echo
 
-echo "# Generate treesummary table in ${INDEXROOT}" | replace
-"${GUFI_TREESUMMARY}" "${INDEXROOT}" | remove_gufi_treesummary_extra
+echo "# Generate treesummary table in ${INDEXROOT}"
+remove_extra "${GUFI_TREESUMMARY}" "${INDEXROOT}"
 echo
 
 echo "# Three treesummary tables"
-run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+query
 echo
 
-echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? directory ," | replace
-run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 100;\"" | replace
+echo "# Add 100 files to summary.totfiles in ${INDEXROOT}/unusual#? directory ,"
+run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 100;\""
 
 echo "# Regenerate treesummary table in ${INDEXROOT}" | replace
-"${GUFI_TREESUMMARY}" "${INDEXROOT}" | remove_gufi_treesummary_extra
+remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}\""
 echo
 
 echo "# Still three treesummary tables"
-run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT path() FROM tree.sqlite_master WHERE name == 'treesummary';\" ${INDEXROOT}" | @SED@ '/^$/d'
+query
 echo
 
 echo "# Find file sizes in range"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT path() || '/' || name, size FROM pentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}"
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);\" -E \"SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Find directories that have xattrs"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT path(), totxattr FROM summary WHERE totxattr > 0;\" ${INDEXROOT}"
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary WHERE totxattr > 0;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
-echo "# Walk this tree if it does not have xattrs"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr == 0;\" -S \"SELECT path(), totxattr FROM summary;\" ${INDEXROOT}"
+echo "# Walk this tree if it has xattrs"
+run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr != 0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Bad path"
-"${GUFI_TREESUMMARY}" "${INDEXROOT}/1KB" | remove_gufi_treesummary_extra
+remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}/1KB\""
 echo
-) |& @TEE@ "${OUTPUT}"
+
+# undo changes
+run_no_sort "${GUFI_QUERY} -w -T \"DROP TABLE treesummary;\" \"${INDEXROOT}\""
+run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 1;\""
+
+# rollup index
+run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | @SED@ '/Ran.*/d; /Took.*/d;'
+
+echo "# Start with no treesummary tables"
+query
+echo
+
+echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
+remove_extra "${GUFI_TREESUMMARY} -X -d \" \" \"${INDEXROOT}\""
+echo
+
+echo "# Traversed paths (1)"
+keep_paths "${GUFI_TREESUMMARY} -P -X -d \"|\" \"${INDEXROOT}\""
+echo
+
+echo "# Still no treesummary table"
+query
+echo
+
+@FIND@ "${INDEXROOT}" -type d | @SORT@ | while read -r path
+do
+    echo "# Generate treesummary table in \"${path}\""
+    remove_extra "${GUFI_TREESUMMARY} \"${path}\""
+    echo
+
+    echo "# Treesummary table is in \"${path}\""
+    query_path "${path}"
+    echo
+done
+) |& replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

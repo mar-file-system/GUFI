@@ -122,6 +122,7 @@ int main(int argc, char * argv[]) {
                                      sizeof(struct BottomUp),
                                      NULL, rm_dir,
                                      1,
+                                     0,
                                      NULL
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , timestamp_buffers

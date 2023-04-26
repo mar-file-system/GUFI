@@ -294,81 +294,88 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
     return db;
 }
 
-int querytsdb(const char *name, struct sum *sumin, sqlite3 *db, int ts)
-{
-     static const char *ts_str[] = {
-         "select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4 "
-         "from summary where rectype=0;",
-         "select totfiles,totlinks,minuid,maxuid,mingid,maxgid,minsize,maxsize,totltk,totmtk,totltm,totmtm,totmtg,totmtt,totsize,minctime,maxctime,minmtime,maxmtime,minatime,maxatime,minblocks,maxblocks,totxattr,mincrtime,maxcrtime,minossint1,maxossint1,totossint1,minossint2,maxossint2,totossint2,minossint3,maxossint3,totossint3,minossint4,maxossint4,totossint4,totsubdirs,maxsubdirfiles,maxsubdirlinks,maxsubdirsize "
-         "from treesummary where rectype=0;"
-     };
+int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
+    static const char *ts_str[] = {
+        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 "
+        "FROM summary WHERE rectype == 0;",
+        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, totsubdirs, maxsubdirfiles, maxsubdirlinks, maxsubdirsize "
+        "FROM treesummary WHERE rectype == 0;",
+    };
 
-     const char *sqlstmt = ts_str[ts];
-     sqlite3_stmt *res = NULL;
-     if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, NULL) != SQLITE_OK) {
-          fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
-                  sqlstmt,name,sqlite3_errmsg(db));
-          return -1;
-     }
+    const char *sqlstmt = ts_str[ts];
+    sqlite3_stmt *res = NULL;
+    if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, NULL) != SQLITE_OK) {
+        fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
+                sqlstmt,name,sqlite3_errmsg(db));
+        return -1;
+    }
 
-     sqlite3_step(res);
+    int rows = 0;
+    while (sqlite3_step(res) != SQLITE_DONE) {
+        struct sum curr;
+        zeroit(&curr);
 
-     sumin->totfiles   = sqlite3_column_int64(res, 0);
-     sumin->totlinks   = sqlite3_column_int64(res, 1);
-     sumin->minuid     = sqlite3_column_int64(res, 2);
-     sumin->maxuid     = sqlite3_column_int64(res, 3);
-     sumin->mingid     = sqlite3_column_int64(res, 4);
-     sumin->maxgid     = sqlite3_column_int64(res, 5);
-     sumin->minsize    = sqlite3_column_int64(res, 6);
-     sumin->maxsize    = sqlite3_column_int64(res, 7);
-     sumin->totltk     = sqlite3_column_int64(res, 8);
-     sumin->totmtk     = sqlite3_column_int64(res, 9);
-     sumin->totltm     = sqlite3_column_int64(res, 10);
-     sumin->totmtm     = sqlite3_column_int64(res, 11);
-     sumin->totmtg     = sqlite3_column_int64(res, 12);
-     sumin->totmtt     = sqlite3_column_int64(res, 13);
-     sumin->totsize    = sqlite3_column_int64(res, 14);
-     sumin->minctime   = sqlite3_column_int64(res, 15);
-     sumin->maxctime   = sqlite3_column_int64(res, 16);
-     sumin->minmtime   = sqlite3_column_int64(res, 17);
-     sumin->maxmtime   = sqlite3_column_int64(res, 18);
-     sumin->minatime   = sqlite3_column_int64(res, 19);
-     sumin->maxatime   = sqlite3_column_int64(res, 20);
-     sumin->minblocks  = sqlite3_column_int64(res, 21);
-     sumin->maxblocks  = sqlite3_column_int64(res, 22);
-     sumin->totxattr   = sqlite3_column_int64(res, 23);
+        curr.totfiles   = sqlite3_column_int64(res, 0);
+        curr.totlinks   = sqlite3_column_int64(res, 1);
+        curr.minuid     = sqlite3_column_int64(res, 2);
+        curr.maxuid     = sqlite3_column_int64(res, 3);
+        curr.mingid     = sqlite3_column_int64(res, 4);
+        curr.maxgid     = sqlite3_column_int64(res, 5);
+        curr.minsize    = sqlite3_column_int64(res, 6);
+        curr.maxsize    = sqlite3_column_int64(res, 7);
+        curr.totltk     = sqlite3_column_int64(res, 8);
+        curr.totmtk     = sqlite3_column_int64(res, 9);
+        curr.totltm     = sqlite3_column_int64(res, 10);
+        curr.totmtm     = sqlite3_column_int64(res, 11);
+        curr.totmtg     = sqlite3_column_int64(res, 12);
+        curr.totmtt     = sqlite3_column_int64(res, 13);
+        curr.totsize    = sqlite3_column_int64(res, 14);
+        curr.minctime   = sqlite3_column_int64(res, 15);
+        curr.maxctime   = sqlite3_column_int64(res, 16);
+        curr.minmtime   = sqlite3_column_int64(res, 17);
+        curr.maxmtime   = sqlite3_column_int64(res, 18);
+        curr.minatime   = sqlite3_column_int64(res, 19);
+        curr.maxatime   = sqlite3_column_int64(res, 20);
+        curr.minblocks  = sqlite3_column_int64(res, 21);
+        curr.maxblocks  = sqlite3_column_int64(res, 22);
+        curr.totxattr   = sqlite3_column_int64(res, 23);
 
-     sumin->mincrtime  = sqlite3_column_int64(res, 24);
-     sumin->maxcrtime  = sqlite3_column_int64(res, 25);
-     sumin->minossint1 = sqlite3_column_int64(res, 26);
-     sumin->maxossint1 = sqlite3_column_int64(res, 27);
-     sumin->totossint1 = sqlite3_column_int64(res, 28);
-     sumin->minossint2 = sqlite3_column_int64(res, 29);
-     sumin->maxossint2 = sqlite3_column_int64(res, 30);
-     sumin->totossint2 = sqlite3_column_int64(res, 31);
-     sumin->minossint3 = sqlite3_column_int64(res, 32);
-     sumin->maxossint3 = sqlite3_column_int64(res, 33);
-     sumin->totossint3 = sqlite3_column_int64(res, 34);
-     sumin->minossint4 = sqlite3_column_int64(res, 35);
-     sumin->maxossint4 = sqlite3_column_int64(res, 36);
-     sumin->totossint4 = sqlite3_column_int64(res, 37);
+        curr.mincrtime  = sqlite3_column_int64(res, 24);
+        curr.maxcrtime  = sqlite3_column_int64(res, 25);
+        curr.minossint1 = sqlite3_column_int64(res, 26);
+        curr.maxossint1 = sqlite3_column_int64(res, 27);
+        curr.totossint1 = sqlite3_column_int64(res, 28);
+        curr.minossint2 = sqlite3_column_int64(res, 29);
+        curr.maxossint2 = sqlite3_column_int64(res, 30);
+        curr.totossint2 = sqlite3_column_int64(res, 31);
+        curr.minossint3 = sqlite3_column_int64(res, 32);
+        curr.maxossint3 = sqlite3_column_int64(res, 33);
+        curr.totossint3 = sqlite3_column_int64(res, 34);
+        curr.minossint4 = sqlite3_column_int64(res, 35);
+        curr.maxossint4 = sqlite3_column_int64(res, 36);
+        curr.totossint4 = sqlite3_column_int64(res, 37);
 
-     if (ts) {
-       sumin->totsubdirs     = sqlite3_column_int64(res, 38);
-       sumin->maxsubdirfiles = sqlite3_column_int64(res, 39);
-       sumin->maxsubdirlinks = sqlite3_column_int64(res, 40);
-       sumin->maxsubdirsize  = sqlite3_column_int64(res, 41);
-     }
-     else {
-       sumin->totsubdirs     = 0;
-       sumin->maxsubdirfiles = 0;
-       sumin->maxsubdirlinks = 0;
-       sumin->maxsubdirsize  = 0;
-     }
+        if (ts) {
+            curr.totsubdirs     = sqlite3_column_int64(res, 38);
+            curr.maxsubdirfiles = sqlite3_column_int64(res, 39);
+            curr.maxsubdirlinks = sqlite3_column_int64(res, 40);
+            curr.maxsubdirsize  = sqlite3_column_int64(res, 41);
+        }
+        else {
+            curr.totsubdirs     = 0;
+            curr.maxsubdirfiles = 0;
+            curr.maxsubdirlinks = 0;
+            curr.maxsubdirsize  = 0;
+        }
 
-     sqlite3_finalize(res);
+        tsumit(&curr, sum);
+        sum->totsubdirs--;
+        rows++;
+    }
 
-     return 0;
+    sqlite3_finalize(res);
+
+    return rows;
 }
 
 int startdb(sqlite3 *db)
@@ -1207,4 +1214,23 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
 
     *src_len = s;
     return d;
+}
+
+static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
+    int *rollupscore = (int *) args;
+    *rollupscore = atoi(data[0]);
+    return 0;
+}
+
+int get_rollupscore(sqlite3 *db, int *rollupscore) {
+    char *err = NULL;
+    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
+                     get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
+        sqlite3_free(err);
+        return -1;
+    }
+
+    return 0;
 }

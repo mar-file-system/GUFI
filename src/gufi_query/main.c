@@ -86,7 +86,6 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 #include "gufi_query/aggregate.h"
-#include "gufi_query/rollup.h"
 #include "gufi_query/query.h"
 #include "gufi_query/timers.h"
 
