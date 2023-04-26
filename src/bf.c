@@ -157,7 +157,7 @@ void show_input(struct input* in, int retval) {
    printf("in.name                     = '%s'\n",          in->name);
    printf("in.name_len                 = '%zu'\n",         in->name_len);
    printf("in.nameto                   = '%s'\n",          in->nameto);
-   printf("in.andor                    = %d\n",            in->andor);
+   printf("in.andor                    = %d\n",            (int) in->andor);
    printf("in.external_enabled         = %d\n",            in->external_enabled);
    printf("in.nobody.uid               = %d\n",            (int) in->nobody.uid);
    printf("in.nobody.gid               = %d\n",            (int) in->nobody.gid);
@@ -219,6 +219,7 @@ int parse_cmd_line(int         argc,
    memset(in, 0, sizeof(*in));
    in->maxthreads              = 1;                      // don't default to zero threads
    in->delim                   = fielddelim;
+   in->andor                   = AND;
    in->max_level               = -1;                     // default to all the way down
    in->nobody.uid              = 65534;
    in->nobody.gid              = 65534;
@@ -274,7 +275,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'a':               // and/or
-         in->andor = 1;
+         in->andor = OR;
          break;
 
       case 'n':

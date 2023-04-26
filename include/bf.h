@@ -125,6 +125,11 @@ struct sum {
   long long int totossint4;
 };
 
+typedef enum AndOr {
+    AND,
+    OR,
+} AndOr_t;
+
 typedef enum OutputMethod {
     STDOUT,    /* default */
     OUTFILE,   /* -o */
@@ -179,7 +184,7 @@ struct input {
    char delim;
    int  buildindex;
    int  maxthreads;
-   int  andor;
+   AndOr_t andor;
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
    int  dontdescend;              // added to allow single level directory operations

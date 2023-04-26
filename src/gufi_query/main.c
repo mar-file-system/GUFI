@@ -353,10 +353,11 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
     /* if this is OR, as well as no-sql-to-run, skip this query */
     if (in->sql.tsum_len > 1) {
-        if (in->andor == 0) {      /* AND */
+        if (in->andor == AND) {
             /* make sure the treesummary table exists */
             thread_timestamp_start(ts.tts, sqltsumcheck);
-            querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master WHERE type=\'table\' AND name == 'treesummary';",
+            querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                                "WHERE (type == 'table') AND (name == 'treesummary');",
                     pa, id, count_rows, &recs);
             thread_timestamp_end(sqltsumcheck);
             increment_query_count(ta);
@@ -428,7 +429,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 } else {
                     recs = 1;
                 }
-                if (in->andor > 0) {
+                if (in->andor == OR) {
                     recs = 1;
                 }
                 /* if we have recs (or are running an OR) query the entries table */
