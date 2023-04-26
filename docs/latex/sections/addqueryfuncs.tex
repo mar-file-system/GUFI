@@ -66,54 +66,57 @@ opened for querying.
 
 \begin{table}[htb]
   \centering
+  \caption{SQLite functions that are always available.}
   \begin{tabular}{| l | l |}
     \hline
     Function Name & Purpose \\
     \hline
-    uidtouser & Converts a UID to a username \\
+    \texttt{uidtouser} & Converts a UID to a username \\
     \hline
-    gidtogroup & Converts a GID to a username \\
+    \texttt{gidtogroup} & Converts a GID to a username \\
     \hline
-    modetotxt & Converts numerical permission bits to text \\
+    \texttt{modetotxt} & Converts numerical permission bits to text \\
     \hline
-    strftime & \texttt{strftime(3)} \\
+    \texttt{strftime} & \texttt{strftime(3)} \\
     \hline
-    blocksize & Converts a size to number of blocks \\
+    \texttt{blocksize} & Converts a size to number of blocks \\
     \hline
-    human\_readable\_size & Converts a size to a human readable value \\
+    \texttt{human\_readable\_size} & Converts a size to a human readable value \\
     \hline
   \end{tabular}
-  \caption{SQLite functions that are always available.}
 \end{table}
 
 \begin{table}[htb]
   \centering
+  \caption{\label{tab:sqlwcontext}SQLite functions that require the context of an index (only
+    available in \gufiquery).}
   \begin{tabular}{| l | l |}
     \hline
     Function Name & Purpose \\
     \hline
-    path & Current directory relative to path passed into executable \\
+    \texttt{path} & Current directory relative to path passed into executable \\
     \hline
-    epath & Current directory basename \\
+    \texttt{epath} & Current directory basename \\
     \hline
-    fpath & Full path of current directory \\
+    \texttt{fpath} & Full path of current directory \\
     \hline
-    rpath & Current directory relative to path passed into executable \\
-          & taking into account the rolled up name in summary table \\
-          & and rollup score \\
-          & \\
-          & Usage: \\
-          & \ \ \ \ \texttt{SELECT rpath(summary.name, summary.rollupscore)} \\
-          & \ \ \ \ \texttt{\ \ \ \ \ \ \ || "/" || pentries.name} \\
-          & \ \ \ \ \texttt{FROM summary, pentries} \\
-          & \ \ \ \ \texttt{WHERE summary.inodes == pentries.pinode;} \\
+    \rpath & Current directory relative to path passed into executable \\
+           & taking into account the rolled up name in summary table \\
+           & and rollup score. Should only be used with the \texttt{sname} \\
+           & and \texttt{sroll} columns of the \vrpentries, \vrsummary, \\
+           & \vrxpentries, and \vrxsummary views. \\
+           & \\
+           & Usage: \\
+           & \ \ \ \ \texttt{SELECT rpath(sname, sroll)} \\
+           & \ \ \ \ \texttt{FROM} \vrsummary /\vrxsummary; \\
+           & \\
+           & \ \ \ \ \texttt{SELECT rpath(sname, sroll) || "/" || name} \\
+           & \ \ \ \ \texttt{FROM} \vrpentries /\vrxpentries; \\
     \hline
-    level & Depth of the current directory from the starting directory \\
+    \texttt{level} & Depth of the current directory from the starting directory \\
     \hline
-    starting\_point & Path of the starting directory \\
+    \texttt{starting\_point} & Path of the starting directory \\
     \hline
   \end{tabular}
-  \caption{SQLite functions that require the context of an index (only
-    available in \gufiquery).}
 \end{table}
 \clearpage

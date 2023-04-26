@@ -142,7 +142,7 @@ queries passed into \gufiquery run on directories in parallel.
   \caption{\label{tab:widgets} \gufiquery Flags and Arguments}
 \end{table}
 
-\subsubsection{Short Circuiting}
+\subsubsection{Short Circuiting with Compound Queries}
 Although each table/view has a specific flag that they are associated
 with, there is no need to use them with the flag. Queries are
 free-form text, so there is no reliable way to limit their usage to a
@@ -172,12 +172,12 @@ xattrs. \texttt{UNION} removes duplicate entries that showed up in
 multiple external databases, leaving a unique set of xattrs accessible
 by the caller.
 
-The \xentries, \xpentries, \xsummary views are convenience views
-generated so that users do not have to perform joins themselves. They
-are \entries, \pentries, and \summary enhanced with the
-\texttt{xattr\_name} and \texttt{xattr\_value} columns. Like the
-\xattrs view, these views are also dropped at the end of directory
-processing.
+The \xentries, \xpentries, \xsummary, \vrxpentries, and \vrxsummary
+views are convenience views generated so that users do not have to
+perform joins themselves. They are \entries, \pentries, \summary,
+\vrpentries, and \vrsummary enhanced with the \texttt{xattr\_name} and
+\texttt{xattr\_value} columns. Like the \xattrs view, these views are
+also dropped at the end of directory processing.
 
 Note that entries with multiple extended attributes will return
 multiple times in this view.
@@ -223,19 +223,19 @@ further processing.
 
 \noindent Parallel Results:
 \\\\
-\indent \gufiquery \texttt{-S "SELECT * FROM summary"
+\indent \gufiquery \texttt{-S "SELECT * FROM vrsummary"
   ~/directory\_of\_root\_index}
 \\\\
-\indent \gufiquery \texttt{-E "SELECT * FROM pentries"
+\indent \gufiquery \texttt{-E "SELECT * FROM vrpentries"
   ~/directory\_of\_root\_index}
 \\\\
 \noindent Aggregate Results:
 \\\\
-\indent \gufiquery \texttt{\textbackslash} \\
-\indent \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);" \textbackslash} \\
-\indent \texttt{-E "INSERT INTO intermediate SELECT name, size FROM pentries;" \textbackslash} \\
-\indent \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);" \textbackslash} \\
-\indent \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;" \textbackslash} \\
+\indent \gufiquery~\texttt{\textbackslash} \\
+\indent \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);"~\textbackslash} \\
+\indent \texttt{-E "INSERT INTO intermediate SELECT name, size FROM vrpentries;"~\textbackslash} \\
+\indent \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);"~\textbackslash} \\
+\indent \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;"~\textbackslash} \\
 \indent \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
 
 \subsubsection{Visualizing the Workflow}

@@ -61,18 +61,22 @@
 
 
 \subsection{Generate \treesummary Tables}
-As mentioned in Section~\ref{sec:schema_treesummary}, the \treesummary
-table is an optional table in db.db. Generating \treesummary tables
-can take a long time, so they are not created or filled in
-automatically. Querying first checks for the existence of the
+\label{sec:treesummary}
+The \treesummary table is an optional table that is placed into
+db.db. \gufitreesummary recursively collects data from the \summary
+table of each child directory database (or the \treesummary table if
+it is available). Generating \treesummary tables for each directory
+can take a long time, so they are not created automatically.
+
+\gufiquery \texttt{-T} first checks for the existence of the
 \treesummary table in the directory being processed before performing
-the query.
+the user query.
 
-\treesummary tables should be manually generated at optimal
-points within the index. For example, if the index is on a home
-directory, it may be useful to generate \treesummary tables at each
-user's home directory.
+\treesummary tables should be generated at optimal points within the
+index. For example, if the index is on a home directory, it may be
+useful to generate \treesummary tables at each user's home directory.
 
-The \gufitreesummary executable is used to generate \treesummary tables:
+The \gufitreesummary executable is used to generate \treesummary
+tables:
 \\\\
 \indent \gufitreesummary \texttt{index\_root}
