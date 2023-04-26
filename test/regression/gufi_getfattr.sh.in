@@ -205,12 +205,15 @@ do_tests() {
 }
 
 (
-do_tests
-echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\""
-"${GUFI_ROLLUP}" "${INDEXROOT}" 2> /dev/null
-echo
-do_tests
-) | replace | remove_root | @TEE@ "${OUTPUT}"
+    set -e
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
+    do_tests | replace | remove_root | @TEE@ "${OUTPUT}"
+    @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
+
+    run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\""
+
+    do_tests | replace | remove_root | @TEE@ "${OUTPUT}"
+    @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
+)
+
 rm "${OUTPUT}"
