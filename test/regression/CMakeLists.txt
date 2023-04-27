@@ -90,9 +90,11 @@ set(CORE
   setup.sh
 )
 
-# .sh and .expected
-set(SH_AND_EXPECTED
-  completions
+foreach(NAME ${CORE})
+  configure_file("${NAME}.in" "${NAME}" @ONLY)
+endforeach()
+
+set(BINARIES
   gufi_dir2index
   gufi_dir2trace
   gufi_trace2index
@@ -101,29 +103,27 @@ set(SH_AND_EXPECTED
   querydbs
 )
 
-# .sh, .py, and .expected
-set(SH_PY_AND_EXPECTED
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stats
+if (NOT APPLE)
+  list(APPEND BINARIES
+    gufi_stat)
+endif()
+
+set(OTHERS
+  completions
 )
 
 if (CMAKE_CXX_COMPILER)
-  list(APPEND SH_AND_EXPECTED
+  list(APPEND OTHERS
     verifytrace
     verifytraceintree
   )
 endif()
 
-if (NOT APPLE)
-  list(APPEND SH_AND_EXPECTED
-    gufi_stat)
-endif()
-
-foreach(NAME ${CORE})
-  configure_file("${NAME}.in" "${NAME}" @ONLY)
-endforeach()
+# .sh and .expected
+set(SH_AND_EXPECTED
+  ${BINARIES}
+  ${OTHERS}
+)
 
 foreach(NAME ${SH_AND_EXPECTED})
   configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
@@ -131,8 +131,27 @@ foreach(NAME ${SH_AND_EXPECTED})
 
   add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
+endforeach()
+
+foreach(NAME ${BINARIES})
+  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;binary")
+endforeach()
+
+foreach(NAME ${OTHERS})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
 endforeach()
+
+set(PYTHON
+  gufi_find
+  gufi_getfattr
+  gufi_ls
+  gufi_stats
+)
+
+# .sh, .py, and .expected
+set(SH_PY_AND_EXPECTED
+  ${PYTHON}
+)
 
 foreach(NAME ${SH_PY_AND_EXPECTED})
   configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
@@ -141,8 +160,11 @@ foreach(NAME ${SH_PY_AND_EXPECTED})
 
   add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
     WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
   set_tests_properties("${NAME}" PROPERTIES ENVIRONMENT PYTHONPATH="${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_BINARY_DIR}/scripts:$ENV{PYTHONPATH}")
+endforeach()
+
+foreach(NAME ${PYTHON})
+  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;python")
 endforeach()
 
 find_program(SUDO sudo)
@@ -155,12 +177,20 @@ if (SUDO)
   if (ENABLE_SUDO_TESTS)
     configure_file("rollup_tree.sh.in" "rollup_tree.sh" @ONLY)
 
-    # .sh and .expected
-    set(NEED_SUDO
+    set(SUDO_BINARIES
       gufi_rollup
       gufi_unrollup
+    )
+
+    set(SUDO_OTHERS
       xattrs
-      )
+    )
+
+    # .sh and .expected
+    set(NEED_SUDO
+      ${SUDO_BINARIES}
+      ${SUDO_OTHERS}
+    )
 
     foreach(NAME ${NEED_SUDO})
       configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
@@ -168,8 +198,16 @@ if (SUDO)
 
       add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
         WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-      set_tests_properties("${NAME}" PROPERTIES LABELS "sudo")
     endforeach()
+
+    foreach(NAME ${SUDO_BINARIES})
+      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo;binary")
+    endforeach()
+
+    foreach(NAME ${SUDO_OTHERS})
+      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo")
+    endforeach()
+
   endif()
 else()
   message(STATUS "sudo executable not found. Not running tests requiring sudo.")
