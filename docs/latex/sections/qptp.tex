@@ -67,37 +67,52 @@ a handful of threads. GUFI can run on hundreds of threads, and thus
 required a more performant thread pool. The solution to this was
 \qptp.
 
-\qptp is named so because a work queue (and lock) are
-maintained for each thread in the thread pool.
+\qptp is named so because work queues (and a lock) are maintained for
+each thread in the thread pool.
 
 \subsubsection{Adding Work}
-Work is added to threads in a round robin fashion in order to
-distribute work evenly and to attempt to prevent, or at least reduce
-the amount of, contention experienced by any one work queue.
+By default, Work is added to threads in a round robin fashion in order
+to distribute work evenly and to attempt to prevent, or at least
+reduce the amount of, contention experienced by any one work queue.
+
+This function can be changed during \qptp initialization.
 
 \subsubsection{Processing Queued Work}
-When a thread pops off work for processing, {\bf all} work items
-currently enqueued for that thread are removed. This further reduces
-the contention the work queues would experience if each work item were
-popped off one at a time. All work is processed before the thread
-returns to the work queue to find more work.
+Because work items are enqueued in parallel while work items are
+processed, popping off work items one at a time results in one lock
+per removal that might experience contention while the queue is being
+modified. In \qptp, when a thread pops off work for processing, {\bf
+ all} work items in the queue are removed, resulting in the removal
+of multiple work items with only a single lock that might experience
+contention. All work is processed before the thread returns to the
+work queue to find more work.
 
 There exists a second work queue, called the deferred work queue, that
 is pushed to if the thread pool is initialized with a non-zero
 \texttt{queue\_limit}. Work items are placed in the deferred work
 queue when the normal work queue has more than \texttt{queue\_limit}
-items enqueued. The deferred work queue is only processed if the
-normal work queue is empty when the worker thread goes to look for
-more work. The normal work queue may still be pushed to if the work
-queue was recently moved to the worker thread for processing. This
-changes the order that work is processed, allowing for work to drain,
-reducing memory pressure, while still continuously processing work
-when there is work present.
+items enqueued. The deferred work queue is only processed if the work
+queue is empty when the worker thread goes to look for more work. The
+work queue may still be pushed to if it was recently moved for
+processing (since the work queue now has as size of 0). This changes
+the order that work is processed, allowing for work to drain, reducing
+memory pressure, while still continuously
+processing work when there is work present.
+
+If a thread discovers that it does not have work items in either queue
+but the thread pool still has outstanding work, it will search for
+more work in other threads. If work items are found, the thread will
+steal some of them, causing the stolen work items to experience less
+latency between enqueuing and processing. Note that when work items
+are stolen, the work queue is searched first, and if nothing is found,
+the deferred queue is searched next, instead of the next thread's work
+queue.
 
 \subsubsection{Usage}
 \begin{enumerate}
 \item Create a thread pool: \\ \texttt{QPTPool\_t *pool =
-  QPTPool\_init(nthreads, args, next, next\_args, queue\_limit);}
+  QPTPool\_init(nthreads, args, next, next\_args, queue\_limit,
+  steal\_num, steal\_denom);}
 
   The \texttt{args} argument will be accessible by all threads that
   are run.
@@ -111,6 +126,15 @@ when there is work present.
   instead of at \texttt{QPTPool\_enqueue} in order to not require a
   branch to figure out whether or not the provided function pointer is
   valid.
+
+  The \texttt{queue\_limit} argument causes work items to be pushed
+  into the deferred work queue as described above.
+
+  The \texttt{steal\_num} and \texttt{steal\_denom} arguments are used
+  when work items are being stolen from other threads. For the first
+  queue where \texttt{queue.size * steal\_num / steal\_denom} results
+  in at least 1 work item, that many work items will be taken from
+  the front of the queue.
 
 \item Add work: \\ \texttt{QPTPool\_enqueue(pool, 0, function,
   work);} \\ The function passed into \texttt{QPTPool\_enqueue} must

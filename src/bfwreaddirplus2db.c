@@ -807,7 +807,7 @@ int main(int argc, char *argv[])
 
      if (in.buildinindir == 1) gltodirmode=1;
 
-     QPTPool_t * pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL, 0
+     QPTPool_t * pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL, 0, 0, 0
                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                      , NULL
                                      #endif

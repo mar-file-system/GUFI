@@ -96,7 +96,11 @@ typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const si
 typedef struct QPTPool {
     QPTPoolThreadData_t *data;
     size_t nthreads;
-    uint64_t queue_limit;
+    uint64_t queue_limit;    /* if the waiting queue reaches this size, push to the deferred queue instead */
+    struct {
+        uint64_t num;        /* if there is work to steal from a queue, take */
+        uint64_t denom;      /* (queue.size * num / denom) items from the front */
+    } steal;
 
     void *args;
 
@@ -117,7 +121,9 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
                         void *args,
                         QPTPoolNextFunc_t next,
                         void *next_args,
-                        const uint64_t queue_limit
+                        const uint64_t queue_limit,
+                        const uint64_t steal_num,
+                        const uint64_t steal_denom
                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                         , struct OutputBuffers *buffers
                         #endif

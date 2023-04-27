@@ -638,7 +638,7 @@ int main(int argc, char *argv[])
 
     /* provide a function to print if PRINT is set */
     const uint64_t queue_depth = in.target_memory_footprint / sizeof(struct work) / in.maxthreads;
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &pa, NULL, NULL, queue_depth
+    QPTPool_t *pool = QPTPool_init(in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , timestamp_buffers
                                    #endif

@@ -73,11 +73,12 @@ OF SUCH DAMAGE.
 
 /* The context for a single thread in QPTPool */
 struct QPTPoolThreadData {
-    sll_t queue;        /* generally push into this queue */
-    sll_t deferred;     /* push into here if queue is too big; pop when queue is empty */
+    sll_t waiting;         /* generally push into this queue */
+    sll_t deferred;        /* push into here if waiting queue is too big; pop when waiting queue is empty */
     pthread_mutex_t mutex;
     pthread_cond_t cv;
-    size_t next_queue;
+    size_t next_queue;     /* push to this thread when enqueuing */
+    size_t steal_from;     /* start search at this thread */
     pthread_t thread;
     uint64_t threads_started;
     uint64_t threads_successful;
@@ -95,6 +96,43 @@ struct queue_item {
     void *work;
 };
 
+/* loop through neighbors, look for work, take some portion of a queue */
+static uint64_t steal_work(QPTPool_t *ctx, const size_t id,
+                           const size_t start, const size_t end) {
+    QPTPoolThreadData_t *tw = &ctx->data[id];
+
+    for(size_t i = start; i < end; i++) {
+        if (i == id) {
+            continue;
+        }
+
+        QPTPoolThreadData_t *target = &ctx->data[i];
+
+        if (pthread_mutex_trylock(&target->mutex) == 0) {
+            if (target->waiting.size) {
+                const uint64_t waiting = target->waiting.size * ctx->steal.num / ctx->steal.denom;
+                if (waiting) {
+                    sll_move_first(&tw->waiting, &target->waiting, waiting);
+                    pthread_mutex_unlock(&target->mutex);
+                    return waiting;
+                }
+            }
+
+            if (target->deferred.size) {
+                const uint64_t deferred = target->deferred.size * ctx->steal.num / ctx->steal.denom;
+                if (deferred) {
+                    sll_move_first(&tw->waiting, &target->deferred, deferred);
+                    pthread_mutex_unlock(&target->mutex);
+                    return deferred;
+                }
+            }
+            pthread_mutex_unlock(&target->mutex);
+        }
+    }
+
+    return 0;
+}
+
 static void *worker_function(void *args) {
     timestamp_create_start(wf);
 
@@ -109,7 +147,7 @@ static void *worker_function(void *args) {
 
     while (1) {
         timestamp_create_start(wf_sll_init);
-        sll_t work; /* don't bother initializing */
+        sll_t being_processed; /* don't bother initializing */
         timestamp_set_end(wf_sll_init);
 
         timestamp_create_start(wf_tw_mutex_lock);
@@ -119,6 +157,21 @@ static void *worker_function(void *args) {
         timestamp_create_start(wf_ctx_mutex_lock);
         pthread_mutex_lock(&ctx->mutex);
         timestamp_set_end(wf_ctx_mutex_lock);
+
+        /*
+         * if there's nothing waiting in this thread's work queues but
+         * there is still work to complete, try to steal some work
+         * from other threads
+         */
+        if (ctx->steal.num && (ctx->nthreads > 1) &&
+            !tw->waiting.size && !tw->deferred.size &&
+            ctx->incomplete) {
+            if (steal_work(ctx, id, tw->steal_from, ctx->nthreads) == 0) {
+                steal_work(ctx, id, 0, tw->steal_from);
+            }
+
+            tw->steal_from = (tw->steal_from + 1) % ctx->nthreads;
+        }
 
         /* wait for work */
         timestamp_create_start(wf_wait);
@@ -130,7 +183,7 @@ static void *worker_function(void *args) {
              * other threads, just not this one
              */
             (!ctx->running && ctx->incomplete &&
-             !tw->queue.size && !tw->deferred.size)
+             !tw->waiting.size && !tw->deferred.size)
             ) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_cond_wait(&tw->cv, &tw->mutex);
@@ -138,20 +191,20 @@ static void *worker_function(void *args) {
         }
         timestamp_set_end(wf_wait);
 
-        if (!ctx->running && !ctx->incomplete && !tw->queue.head && !tw->deferred.size) {
+        if (!ctx->running && !ctx->incomplete && !tw->waiting.head && !tw->deferred.size) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_mutex_unlock(&tw->mutex);
             break;
         }
 
-        /* moves entire queue into work and clears out queue */
+        /* move entire queue into work and clear out queue */
         timestamp_create_start(wf_move_queue);
-        if (tw->queue.size) {
+        if (tw->waiting.size) {
             pthread_mutex_unlock(&ctx->mutex);
-            sll_move(&work, &tw->queue);
+            sll_move(&being_processed, &tw->waiting);
         }
         else {
-            sll_move(&work, &tw->deferred);
+            sll_move(&being_processed, &tw->deferred);
             pthread_mutex_unlock(&ctx->mutex);
         }
         timestamp_set_end(wf_move_queue);
@@ -159,7 +212,7 @@ static void *worker_function(void *args) {
         #if defined(DEBUG) && defined (QPTPOOL_QUEUE_SIZE)
         pthread_mutex_lock(&ctx->mutex);
         pthread_mutex_lock(&print_mutex);
-        tw->queue.size = work.size;
+        tw->waiting.size = being_processed.size;
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
@@ -167,13 +220,13 @@ static void *worker_function(void *args) {
 
         size_t sum = 0;
         for(size_t i = 0; i < ctx->nthreads; i++) {
-            fprintf(stderr, "%zu ", ctx->data[i].queue.size);
-            sum += ctx->data[i].queue.size;
+            fprintf(stderr, "%zu ", ctx->data[i].waiting.size);
+            sum += ctx->data[i].waiting.size;
             fprintf(stderr, "%zu ", ctx->data[i].deferred.size);
             sum += ctx->data[i].deferred.size;
         }
         fprintf(stderr, "%zu\n", sum);
-        tw->queue.size = 0;
+        tw->waiting.size = 0;
         pthread_mutex_unlock(&print_mutex);
         pthread_mutex_unlock(&ctx->mutex);
         #endif
@@ -186,7 +239,7 @@ static void *worker_function(void *args) {
         size_t work_count = 0;
 
         timestamp_create_start(wf_get_queue_head);
-        sll_node_t *w = sll_head_node(&work);
+        sll_node_t *w = sll_head_node(&being_processed);
         timestamp_end_print(ctx->buffers, id, "wf_get_queue_head", wf_get_queue_head);
 
         while (w) {
@@ -206,7 +259,7 @@ static void *worker_function(void *args) {
         timestamp_set_end(wf_process_queue);
 
         timestamp_create_start(wf_cleanup);
-        sll_destroy(&work, free);
+        sll_destroy(&being_processed, free);
         tw->threads_started += work_count;
 
         pthread_mutex_lock(&ctx->mutex);
@@ -252,7 +305,9 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
                         void *args,
                         QPTPoolNextFunc_t next,
                         void *next_args,
-                        const uint64_t queue_limit
+                        const uint64_t queue_limit,
+                        const uint64_t steal_num,
+                        const uint64_t steal_denom
                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                         , struct OutputBuffers *buffers
                         #endif
@@ -267,6 +322,8 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
 
     ctx->nthreads = nthreads;
     ctx->queue_limit = queue_limit;
+    ctx->steal.num = steal_num;
+    ctx->steal.denom = steal_denom;
     ctx->args = args;
     ctx->next = QPTPool_round_robin;
     ctx->next_args = NULL;
@@ -285,12 +342,12 @@ QPTPool_t *QPTPool_init(const size_t nthreads,
     size_t started = 0;
     for(size_t i = 0; i < nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
-        sll_init(&data->queue);
+        sll_init(&data->waiting);
         sll_init(&data->deferred);
         pthread_mutex_init(&data->mutex, NULL);
         pthread_cond_init(&data->cv, NULL);
         data->next_queue = i;
-        data->thread = 0;
+        data->steal_from = i;
         data->threads_started = 0;
         data->threads_successful = 0;
 
@@ -323,12 +380,12 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
     QPTPool_enqueue_dst_t ret = QPTPool_enqueue_ERROR;
 
     pthread_mutex_lock(&next->mutex);
-    if (ctx->queue_limit && (next->queue.size > ctx->queue_limit)) {
+    if (ctx->queue_limit && (next->waiting.size > ctx->queue_limit)) {
         sll_push(&next->deferred, qi);
         ret = QPTPool_enqueue_DEFERRED;
     }
     else {
-        sll_push(&next->queue, qi);
+        sll_push(&next->waiting, qi);
         ret = QPTPool_enqueue_WAIT;
     }
 
@@ -374,7 +431,7 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         pthread_cond_destroy(&data->cv);
         pthread_mutex_destroy(&data->mutex);
         sll_destroy(&data->deferred, NULL);
-        sll_destroy(&data->queue, NULL);
+        sll_destroy(&data->waiting, NULL);
     }
 
     pthread_mutex_destroy(&ctx->mutex);

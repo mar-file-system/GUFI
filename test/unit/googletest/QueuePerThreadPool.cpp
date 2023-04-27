@@ -69,9 +69,9 @@ OF SUCH DAMAGE.
 #include "QueuePerThreadPool.h"
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, 0, nullptr)
+#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, 0, 0, 0, nullptr)
 #else
-#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, 0)
+#define INIT_QPTPOOL(nthreads, args) QPTPool_t *pool = QPTPool_init((nthreads), (args), nullptr, nullptr, 0, 0, 0)
 #endif
 
 static const     size_t THREADS = 5;
@@ -272,7 +272,7 @@ TEST(QueuePerThreadPool, custom_next) {
                                            void *, void *) -> size_t {
                                             return (prev?prev:threads) - 1;
                                         }, nullptr,
-                                        0
+                                        0, 0, 0
                                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                         , nullptr
                                         #endif
@@ -317,7 +317,7 @@ TEST(QueuePerThreadPool, custom_next) {
 }
 
 TEST(QueuePerThreadPool, deferred) {
-    QPTPool_t *pool = QPTPool_init(1, nullptr, nullptr, nullptr, 1
+    QPTPool_t *pool = QPTPool_init(1, nullptr, nullptr, nullptr, 1, 0, 0
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , nullptr
                                    #endif
@@ -354,6 +354,66 @@ TEST(QueuePerThreadPool, deferred) {
 
     EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 3);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 3);
+
+    QPTPool_destroy(pool);
+}
+
+TEST(QueuePerThreadPool, steal) {
+    // macOS doesn't seem to like std::mutex
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    size_t counter = 0;
+
+    QPTPool_t *pool = QPTPool_init(2, &mutex, nullptr, nullptr, 0, 1, 2
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , nullptr
+#endif
+        );
+
+    // prevent thread 0 from completing
+    pthread_mutex_lock(&mutex);
+    EXPECT_EQ(QPTPool_enqueue(pool, 0,
+                              [](QPTPool_t *, const size_t, void *data, void *args) -> int {
+                                  size_t *counter = static_cast<size_t *>(data);
+                                  (*counter)++;
+
+                                  pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
+                                  pthread_mutex_lock(mutex);
+                                  pthread_mutex_unlock(mutex);
+                                  return 0;
+                              }, &counter), QPTPool_enqueue_WAIT);
+
+    // need to make sure only this work item got popped off
+    while (!counter) {
+        sched_yield();
+    }
+
+    counter = 0;
+
+    // i == 0 and i == 2 will go to thread 1
+    // i == 1 and i == 3 will go to thread 0
+    for(size_t i = 0; i < 4; i++) {
+        EXPECT_EQ(QPTPool_enqueue(pool, 0,
+                                  [](QPTPool_t *, const size_t id, void *data, void *) -> int {
+                                      size_t *counter = static_cast<size_t *>(data);
+                                      (*counter)++;
+                                      return 0;
+                                  }, &counter), QPTPool_enqueue_WAIT);
+    }
+
+    // wait for thread 1 to run its work and at least one stolen work item
+    while (counter < (size_t) 3) {
+        sched_yield();
+    }
+
+    // unlock thread 0 so that it can complete
+    pthread_mutex_unlock(&mutex);
+
+    QPTPool_wait(pool);
+
+    EXPECT_EQ(counter, (size_t) 4);
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 5);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 5);
 
     QPTPool_destroy(pool);
 }

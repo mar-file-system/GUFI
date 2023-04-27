@@ -1032,7 +1032,7 @@ int main(int argc, char *argv[]) {
     }
 
     // start up thread pool
-    QPTPool_t * pool = QPTPool_init(settings.threads, nullptr, nullptr, nullptr, 0
+    QPTPool_t * pool = QPTPool_init(settings.threads, nullptr, nullptr, nullptr, 0, 0, 0
                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                     , nullptr
                                     #endif

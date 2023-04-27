@@ -454,7 +454,7 @@ int main(int argc, char *argv[]) {
     std::atomic_bool correct(false);
     struct CheckStanzaArgs csa(threads, correct, delim, GUFI_tree);
 
-    QPTPool_t *ctx = QPTPool_init(threads, &csa, nullptr, nullptr, 0
+    QPTPool_t *ctx = QPTPool_init(threads, &csa, nullptr, nullptr, 0, 0, 0
                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                   , nullptr
                                   #endif

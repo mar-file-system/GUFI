@@ -322,7 +322,7 @@ int main(int argc, char *argv[]) {
         zeroit(&pa.sums[i]);
     }
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0, 0, 0
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , NULL
                                    #endif

@@ -84,8 +84,9 @@ typedef struct SinglyLinkedList sll_t;
 
 sll_t *sll_init(sll_t *sll);
 sll_t *sll_push(sll_t *sll, void *data);
-sll_t *sll_move(sll_t *dst, sll_t *src);
-sll_t *sll_move_append(sll_t *dst, sll_t *src);
+sll_t *sll_move_first(sll_t *dst, sll_t *src, const uint64_t n);  /* move first n from src to dst, replacing dst */
+sll_t *sll_move(sll_t *dst, sll_t *src);                          /* move all of src to dst, replacing dst */
+sll_t *sll_move_append(sll_t *dst, sll_t *src);                   /* move all from src to dst, appending to dst */
 uint64_t sll_get_size(sll_t *sll);
 
 /* functions for looping over a sll */
@@ -95,7 +96,7 @@ void *sll_node_data(sll_node_t *node);
 
 /* convenience macro */
 #define sll_loop(sll, name)                         \
-    for(sll_node_t *(name) = sll_head_node((sll)); \
+    for(sll_node_t *name = sll_head_node((sll));    \
         (name);                                     \
         (name) = sll_next_node((name)))             \
 

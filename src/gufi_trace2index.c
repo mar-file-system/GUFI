@@ -754,7 +754,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                    , &debug_output_buffers
                                    #endif

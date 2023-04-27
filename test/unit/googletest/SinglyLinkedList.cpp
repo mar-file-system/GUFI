@@ -104,6 +104,40 @@ TEST(SinglyLinkedList, push) {
     sll_destroy(&sll, nullptr);
 }
 
+TEST(SinglyLinkedList, move_first) {
+    for(uint64_t i = 0; i < 5; i++) {
+        /* push 3 items into src */
+        sll_t src;
+        EXPECT_EQ(&src, sll_init(&src));
+        for(uint64_t val = 0; val < 3; val++) {
+            EXPECT_EQ(&src, sll_push(&src, (void *) (uintptr_t) val));
+        }
+
+        sll_t dst;
+        EXPECT_EQ(&dst, sll_init(&dst));
+
+        /* move some of src to dst */
+        EXPECT_EQ(&dst, sll_move_first(&dst, &src, i));
+
+        const uint64_t moved = (i > 3)?3:i;
+        EXPECT_EQ(dst.size, moved);
+
+        uint64_t val = 0;
+        sll_loop(&dst, node) {
+            EXPECT_EQ(sll_node_data(node), (void *) (uintptr_t) val);
+            val++;
+        }
+
+        sll_loop(&src, node) {
+            EXPECT_EQ(sll_node_data(node), (void *) (uintptr_t) val);
+            val++;
+        }
+
+        sll_destroy(&dst, nullptr);
+        sll_destroy(&src, nullptr);
+    }
+}
+
 TEST(SinglyLinkedList, move) {
     // create sll with 2 items
     sll_t sll_src;
