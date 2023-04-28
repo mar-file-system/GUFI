@@ -366,14 +366,20 @@ int parallel_bottomup(char **root_names, size_t root_count,
     ua.timestamp_buffers = timestamp_buffers;
     #endif
 
-    QPTPool_t *pool = QPTPool_init(thread_count, &ua, NULL, NULL, 0, 1, 2
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , timestamp_buffers
-                                   #endif
+    QPTPool_t *pool = QPTPool_init_with_props(thread_count, &ua, NULL, NULL, 0, 1, 2
+                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                              , timestamp_buffers
+                                              #endif
         );
-
     if (!pool) {
         fprintf(stderr, "Error: Failed to initialize thread pool\n");
+        return -1;
+    }
+
+    if (QPTPool_start(pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        QPTPool_wait(pool);
+        QPTPool_destroy(pool);
         return -1;
     }
 

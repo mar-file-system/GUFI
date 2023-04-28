@@ -807,13 +807,16 @@ int main(int argc, char *argv[])
 
      if (in.buildinindir == 1) gltodirmode=1;
 
-     QPTPool_t * pool = QPTPool_init(in.maxthreads, NULL, NULL, NULL, 0, 0, 0
-                                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                     , NULL
-                                     #endif
-         );
+     QPTPool_t *pool = QPTPool_init(in.maxthreads, NULL);
      if (!pool) {
-         fprintf(stderr, "Failed to initialize thread pool\n");
+         fprintf(stderr, "Error: Failed to initialize thread pool\n");
+         return -1;
+     }
+
+     if (QPTPool_start(pool) != 0) {
+         fprintf(stderr, "Error: Failed to start thread pool\n");
+         QPTPool_wait(pool);
+         QPTPool_destroy(pool);
          return -1;
      }
 

@@ -418,13 +418,23 @@ int main(int argc, char *argv[]) {
     }
 
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , NULL
-                                   #endif
+    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
+                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                              , NULL
+                                              #endif
         );
     if (!pool) {
-        fprintf(stderr, "Failed to initialize thread pool\n");
+        fprintf(stderr, "Error: Failed to initialize thread pool\n");
+        close_template_db(&pa.xattr);
+        close_template_db(&pa.db);
+        trie_free(pa.skip);
+        return -1;
+    }
+
+    if (QPTPool_start(pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        QPTPool_wait(pool);
+        QPTPool_destroy(pool);
         close_template_db(&pa.xattr);
         close_template_db(&pa.db);
         trie_free(pa.skip);

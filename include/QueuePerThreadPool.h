@@ -76,60 +76,68 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-typedef struct QPTPoolThreadData QPTPoolThreadData_t;
+/* The Queue Per Thread Pool context */
+typedef struct QPTPool QPTPool_t;
+
+/* initialize a QPTPool context - call QPTPool_start to start threads */
+QPTPool_t *QPTPool_init(const size_t nthreads, void *args);
 
 /*
  * User defined function to select the thread to pass new work to.
- * If NULL is passed into QPTPool_init, round robin is used.
  *
  * @param id       the id of this thread
  * @param prev     the previous thread id that this thread pushed work to
  * @param threads  the total number of threads in this pool
  * @param data     the data the function is operating on
- * @param args     next_args from QPTPool_init
+ * @param args     external value available for the next function to use
  * @return work queue to push to next in the range [0, threads)
  */
 typedef size_t (*QPTPoolNextFunc_t)(const size_t id, const size_t prev, const size_t threads,
                                     void *data, void *args);
 
-/* The Queue Per Thread Pool context */
-typedef struct QPTPool {
-    QPTPoolThreadData_t *data;
-    size_t nthreads;
-    uint64_t queue_limit;    /* if the waiting queue reaches this size, push to the deferred queue instead */
-    struct {
-        uint64_t num;        /* if there is work to steal from a queue, take */
-        uint64_t denom;      /* (queue.size * num / denom) items from the front */
-    } steal;
+/*
+ * Set QPTPool context properties
+ * Call these functions before calling QPTPool_start
+ *
+ * @return 0 if successful, non-zero if not
+ */
+int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args);
+int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit);
+int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom);
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffers);
+#endif
 
-    void *args;
+/* Get QPTPool context properties */
+int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args);
+int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit);
+int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom);
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffers);
+#endif
 
-    QPTPoolNextFunc_t next;
-    void *next_args;
+/* calls QPTPool_init and QPTPool_set_* functions */
+QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
+                                   void *args,
+                                   QPTPoolNextFunc_t next_func,
+                                   void *next_args,
+                                   const uint64_t queue_limit,
+                                   const uint64_t steal_num,
+                                   const uint64_t steal_denom
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , struct OutputBuffers *debug_buffers
+                                   #endif
+    );
 
-    pthread_mutex_t mutex;
-    int running;
-    uint64_t incomplete;
+/*
+ * QPTPool_init only allocates memory - call this to start threads
+ *
+ * @return 0 if successful, non-zero if not
+ */
+int QPTPool_start(QPTPool_t *ctx);
 
-    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    struct OutputBuffers *buffers;
-    #endif
-} QPTPool_t;
-
-/* initialize a QPTPool context and start threads */
-QPTPool_t *QPTPool_init(const size_t nthreads,
-                        void *args,
-                        QPTPoolNextFunc_t next,
-                        void *next_args,
-                        const uint64_t queue_limit,
-                        const uint64_t steal_num,
-                        const uint64_t steal_denom
-                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                        , struct OutputBuffers *buffers
-                        #endif
-        );
-
-/* User defined function to pass into QPTPool_enqueue
+/*
+ * User defined function to pass into QPTPool_enqueue
  *
  * @param ctx      the pool context the function is running in
  * @param id       the id of the thread enqueuing work
@@ -146,8 +154,12 @@ typedef enum QPTPool_enqueue_dst {
     QPTPool_enqueue_DEFERRED,
 } QPTPool_enqueue_dst_t;
 
-/* enqueue data and a function to process the data */
-/* id will push to the thread's next scheduled queue, rather than directly onto queue[id] */
+/*
+ * Enqueue data and a function to process the data
+ * id will push to the thread's next scheduled queue, rather than directly onto queue[id]
+ *
+ * This function can be called before starting the thread pool
+ */
 QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work);
 
 /*

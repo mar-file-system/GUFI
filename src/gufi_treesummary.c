@@ -322,13 +322,22 @@ int main(int argc, char *argv[]) {
         zeroit(&pa.sums[i]);
     }
 
-    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa, NULL, NULL, 0, 0, 0
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , NULL
-                                   #endif
+    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, 0, 0, 0
+                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                              , NULL
+                                              #endif
         );
     if (!pool) {
-        fprintf(stderr, "Failed to initialize thread pool\n");
+        fprintf(stderr, "Error: Failed to initialize thread pool\n");
+        free(pa.sums);
+        trie_free(pa.skip);
+        return 1;
+    }
+
+    if (QPTPool_start(pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        QPTPool_wait(pool);
+        QPTPool_destroy(pool);
         free(pa.sums);
         trie_free(pa.skip);
         return 1;

@@ -486,7 +486,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_end(free_work);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-    timestamps_print(ctx->buffers, id, &ts, dir, db);
+    struct OutputBuffers *debug_buffers = NULL;
+    QPTPool_get_debug_buffers(ctx, &debug_buffers);
+    timestamps_print(debug_buffers, id, &ts, dir, db);
     #endif
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamps_sum(&pa->tt, &ts);
@@ -638,14 +640,22 @@ int main(int argc, char *argv[])
 
     /* provide a function to print if PRINT is set */
     const uint64_t queue_depth = in.target_memory_footprint / sizeof(struct work) / in.maxthreads;
-    QPTPool_t *pool = QPTPool_init(in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , timestamp_buffers
-                                   #endif
+    QPTPool_t *pool = QPTPool_init_with_props(in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
+                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                              , timestamp_buffers
+                                              #endif
         );
-
     if (!pool) {
-        fprintf(stderr, "Failed to initialize thread pool\n");
+        fprintf(stderr, "Error: Failed to initialize thread pool\n");
+        aggregate_fin(&aggregate, &in);
+        PoolArgs_fin(&pa, in.maxthreads);
+        return -1;
+    }
+
+    if (QPTPool_start(pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        QPTPool_wait(pool);
+        QPTPool_destroy(pool);
         aggregate_fin(&aggregate, &in);
         PoolArgs_fin(&pa, in.maxthreads);
         return -1;
