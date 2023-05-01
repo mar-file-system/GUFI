@@ -284,7 +284,9 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, data[3]);
                     break;
                 case 'C': /* SELinux security context string */
-                    fprintf(out, line, data[13] + (strlen(data[13])?16:0)); /* offset by "security.selinux" */
+                    if (data[13]) {
+                        fprintf(out, line, data[13] + (strlen(data[13])?16:0)); /* offset by "security.selinux" */
+                    }
                     break;
                 case 'd': /* device number in decimal */
                     fprintf(out, line, " ");
