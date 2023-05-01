@@ -84,8 +84,8 @@ def select_size(args, name):
     # here, --human-readable has precedence
     if args.human_readable:
         column = 'human_readable_size({{0}}, {0})'.format(args.size_width)
-    elif args.blocksize:
-        column = 'blocksize({{0}}, "{0}", {1})'.format(args.blocksize, args.size_width)
+    elif args.block_size:
+        column = 'blocksize({{0}}, "{0}")'.format(args.block_size, args.size_width)
     else:
         column = 'printf("%{0}d", {{0}})'.format(args.size_width)
 

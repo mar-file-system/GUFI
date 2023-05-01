@@ -908,7 +908,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
     size_t unit_size = 1;
     if (len) {
         if ((len > 1) && (unit[len - 1] != 'B')) {
-            sqlite3_result_error(context, "Bad blocksize unit", 0);
+            sqlite3_result_error(context, "Bad blocksize unit", -1);
             return;
         }
 
@@ -919,16 +919,23 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
         if (len == 3) {
             if (unit[1] != 'i') {
-                sqlite3_result_error(context, "Bad blocksize unit", 0);
+                sqlite3_result_error(context, "Bad blocksize unit", -1);
                 return;
             }
         }
 
+        int found = 0;
         for(size_t i = 0; i < sizeof(SIZE); i++) {
             unit_size *= multiplier;
             if (unit[0] == SIZE[i]) {
+                found = 1;
                 break;
             }
+        }
+
+        if (!found) {
+            sqlite3_result_error(context, "Bad blocksize unit", -1);
+            return;
         }
     }
 
