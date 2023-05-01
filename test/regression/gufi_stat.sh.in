@@ -100,7 +100,7 @@ done | remove_root
 echo
 
 echo "# first two columns of terse format"
-for entry in "${fixed_size[@]}" "${variable_size[@]}"
+for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
     "${GUFI_STAT}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
