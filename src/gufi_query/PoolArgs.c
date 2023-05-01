@@ -72,7 +72,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     memset(pa, 0, sizeof(*pa));
     pa->in = in;
 
-    if (setup_directory_skip(in->skip, &pa->skip)) {
+    if (setup_directory_skip(in->skip.data, &pa->skip)) {
         fprintf(stderr, "Error: Bad input skip list\n");
         return 1;
     }
@@ -90,8 +90,8 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         ThreadArgs_t *ta = &pa->ta[i];
 
         /* only create per-thread db files when not aggregating and outputting to OUTDB */
-        if (!in->sql.init_agg_len && (in->output == OUTDB)) {
-            SNPRINTF(ta->dbname, MAXPATH, "%s.%zu", in->outname, i);
+        if (!in->sql.init_agg.len && (in->output == OUTDB)) {
+            SNPRINTF(ta->dbname, MAXPATH, "%s.%zu", in->outname.data, i);
         }
         else {
             SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
@@ -116,9 +116,10 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         #endif
 
         /* run -I */
-        if (in->sql.init_len) {
-            if (sqlite3_exec(ta->outdb, in->sql.init, NULL, NULL, NULL) != SQLITE_OK) {
-                fprintf(stderr, "Error: Could not run SQL Init \"%s\" on %s\n", in->sql.init, ta->dbname);
+        if (in->sql.init.len) {
+            if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, NULL) != SQLITE_OK) {
+                fprintf(stderr, "Error: Could not run SQL Init \"%s\" on %s\n",
+                        in->sql.init.data, ta->dbname);
                 break;
             }
         }
@@ -127,9 +128,9 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         /* write to per-thread files during walk - aggregation is handled outside */
         if (in->output == OUTFILE) {
-            if (!in->sql.init_agg_len) {
+            if (!in->sql.init_agg.len) {
                 char outname[MAXPATH];
-                SNPRINTF(outname, MAXPATH, "%s.%zu", in->outname, i);
+                SNPRINTF(outname, MAXPATH, "%s.%zu", in->outname.data, i);
                 ta->outfile = fopen(outname, "w");
                 if (!ta->outfile) {
                     fprintf(stderr, "Error: Could not open output file");
@@ -139,7 +140,8 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
 
         if (!OutputBuffer_init(&ta->output_buffer, in->output_buffer_size)) {
-            fprintf(stderr, "Error: Failed to initialize output buffer with size %zu\n", in->output_buffer_size);
+            fprintf(stderr, "Error: Failed to initialize output buffer with size %zu\n",
+                    in->output_buffer_size);
             break;
         }
     }

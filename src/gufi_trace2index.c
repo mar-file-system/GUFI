@@ -226,7 +226,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_start(dupdir);
     char topath[MAXPATH];
     const size_t topath_len = SNFORMAT_S(topath, MAXPATH, 3,
-                                         in->nameto, in->nameto_len,
+                                         in->nameto.data, in->nameto.len,
                                          "/", (size_t) 1,
                                          w->line, w->first_delim);
 
@@ -722,12 +722,10 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(pa.in.nameto, argv[argc - 1], MAXPATH, "output_dir");
+        INSTALL_STR(pa.in.nameto, argv[argc - 1]);
 
         if (retval)
             return retval;
-
-        pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
     /* open trace files for threads to jump around in */
@@ -782,7 +780,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto.data, pa.in.maxthreads);
     pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
 
     /* parse the trace files */
@@ -826,7 +824,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     /* set top level permissions */
-    chmod(pa.in.nameto, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    chmod(pa.in.nameto.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     /* have to call clock_gettime explicitly to get end time */
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);

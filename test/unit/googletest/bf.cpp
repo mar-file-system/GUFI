@@ -126,6 +126,18 @@ static const std::string e = "-e";
 
 #define UNUSED ";"
 
+static bool operator==(const refstr_t &refstr, const std::string &str) {
+    if (refstr.len != str.size()) {
+        return false;
+    }
+
+    if (!refstr.len && !refstr.data) {
+        return true;
+    }
+
+    return (str.compare(0, refstr.len, refstr.data, refstr.len) == 0);
+}
+
 static void check_input(struct input *in, const bool helped,
                         const bool flags, const bool options) {
     EXPECT_EQ(in->helped,                      static_cast<int>(helped));
@@ -178,75 +190,59 @@ static void check_input(struct input *in, const bool helped,
     if (options) {
         EXPECT_EQ(in->maxthreads,              1);
         EXPECT_EQ(in->delim,                   '|');
-        EXPECT_EQ(in->nameto,                  t_arg.c_str());
-        EXPECT_EQ(in->nameto_len,              t_arg.size());
-        EXPECT_EQ(in->name,                    i_arg.c_str());
-        EXPECT_EQ(in->name_len,                i_arg.size());
+        EXPECT_EQ(in->nameto,                  t_arg);
+        EXPECT_EQ(in->name,                    i_arg);
         // not checking -o and -O here
-        EXPECT_EQ(in->sql.init,                I_arg.c_str());
-        EXPECT_EQ(in->sql.init_len,            I_arg.size());
-        EXPECT_EQ(in->sql.tsum,                T_arg.c_str());
-        EXPECT_EQ(in->sql.tsum_len,            T_arg.size());
-        EXPECT_EQ(in->sql.sum,                 S_arg.c_str());
-        EXPECT_EQ(in->sql.sum_len,             S_arg.size());
-        EXPECT_EQ(in->sql.ent,                 E_arg.c_str());
-        EXPECT_EQ(in->sql.ent_len,             E_arg.size());
-        EXPECT_EQ(in->sql.fin,                 F_arg.c_str());
-        EXPECT_EQ(in->sql.fin_len,             F_arg.size());
-        EXPECT_EQ(in->insuspect,               W_arg.c_str());
+        EXPECT_EQ(in->sql.init,                I_arg);
+        EXPECT_EQ(in->sql.tsum,                T_arg);
+        EXPECT_EQ(in->sql.sum,                 S_arg);
+        EXPECT_EQ(in->sql.ent,                 E_arg);
+        EXPECT_EQ(in->sql.fin,                 F_arg);
+        EXPECT_EQ(in->insuspect.data,          W_arg.c_str());
         EXPECT_EQ(in->suspectfile,             1);
         EXPECT_EQ(in->suspectmethod,           1);
         EXPECT_EQ(in->stride,                  1);
         EXPECT_EQ(in->suspecttime,             1);
         EXPECT_EQ(in->min_level,               (std::size_t) 1);
         EXPECT_EQ(in->max_level,               (std::size_t) 1);
-        EXPECT_EQ(in->sql.intermediate,        J_arg.c_str());
-        EXPECT_EQ(in->sql.intermediate_len,    J_arg.size());
-        EXPECT_EQ(in->sql.init_agg,            K_arg.c_str());
-        EXPECT_EQ(in->sql.init_agg_len,        K_arg.size());
-        EXPECT_EQ(in->sql.agg,                 G_arg.c_str());
-        EXPECT_EQ(in->sql.agg_len,             G_arg.size());
+        EXPECT_EQ(in->sql.intermediate,        J_arg);
+        EXPECT_EQ(in->sql.init_agg,            K_arg);
+        EXPECT_EQ(in->sql.agg,                 G_arg);
         EXPECT_EQ(in->output_buffer_size,      (std::size_t) 1);
-        EXPECT_EQ(in->format,                  f_arg.c_str());
+        EXPECT_EQ(in->format,                  f_arg);
         EXPECT_EQ(in->max_in_dir,              (std::size_t) 1);
-        EXPECT_EQ(in->skip,                    k_arg.c_str());
+        EXPECT_EQ(in->skip,                    k_arg);
         EXPECT_EQ(in->target_memory_footprint, (std::size_t) 1);
         EXPECT_EQ(in->subdir_limit,            (std::size_t) 1);
     }
     else {
+        const std::string empty = "";
+
         EXPECT_EQ(in->maxthreads,              1);
         EXPECT_EQ(in->delim,                   fielddelim);
-        EXPECT_EQ(in->nameto,                  nullptr);
-        EXPECT_EQ(in->nameto_len,              (std::size_t) 0);
-        EXPECT_EQ(in->name,                    nullptr);
-        EXPECT_EQ(in->name_len,                (std::size_t) 0);
+        EXPECT_EQ(in->nameto,                  empty);
+        EXPECT_EQ(in->name,                    empty);
         EXPECT_EQ(in->output,                  STDOUT);
-        EXPECT_EQ(in->outname,                 nullptr);
-        EXPECT_EQ(in->outname_len,             (std::size_t) 0);
-        EXPECT_EQ(in->sql.init,                nullptr);
-        EXPECT_EQ(in->sql.init_len,            (std::size_t) 0);
-        EXPECT_EQ(in->sql.tsum,                nullptr);
-        EXPECT_EQ(in->sql.tsum_len,            (std::size_t) 0);
-        EXPECT_EQ(in->sql.sum,                 nullptr);
-        EXPECT_EQ(in->sql.sum_len,             (std::size_t) 0);
-        EXPECT_EQ(in->sql.ent,                 nullptr);
-        EXPECT_EQ(in->sql.ent_len,             (std::size_t) 0);
-        EXPECT_EQ(in->sql.fin,                 nullptr);
-        EXPECT_EQ(in->sql.fin_len,             (std::size_t) 0);
-        EXPECT_EQ(in->insuspect,               nullptr);
+        EXPECT_EQ(in->outname,                 empty);
+        EXPECT_EQ(in->sql.init,                empty);
+        EXPECT_EQ(in->sql.tsum,                empty);
+        EXPECT_EQ(in->sql.sum,                 empty);
+        EXPECT_EQ(in->sql.ent,                 empty);
+        EXPECT_EQ(in->sql.fin,                 empty);
+        EXPECT_EQ(in->insuspect.data,          nullptr);
         EXPECT_EQ(in->suspectfile,             0);
         EXPECT_EQ(in->suspectmethod,           0);
         EXPECT_EQ(in->stride,                  0);
         EXPECT_EQ(in->suspecttime,             0);
         EXPECT_EQ(in->min_level,               (std::size_t) 0);
         EXPECT_EQ(in->max_level,               (std::size_t) -1);
-        EXPECT_EQ(in->sql.intermediate,        nullptr);
-        EXPECT_EQ(in->sql.init_agg,            nullptr);
-        EXPECT_EQ(in->sql.agg,                 nullptr);
+        EXPECT_EQ(in->sql.intermediate,        empty);
+        EXPECT_EQ(in->sql.init_agg,            empty);
+        EXPECT_EQ(in->sql.agg,                 empty);
         EXPECT_EQ(in->output_buffer_size,      (std::size_t) 4096);
-        EXPECT_EQ(in->format,                  nullptr);
+        EXPECT_EQ(in->format,                  empty);
         EXPECT_EQ(in->max_in_dir,              (std::size_t) 0);
-        EXPECT_EQ(in->skip,                    nullptr);
+        EXPECT_EQ(in->skip,                    empty);
         EXPECT_EQ(in->target_memory_footprint, (std::size_t) 0);
         EXPECT_EQ(in->subdir_limit,            (std::size_t) 0);
     }
@@ -463,7 +459,7 @@ TEST(parse_cmd_line, output_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.output,      STDOUT);
+        EXPECT_EQ(in.output, STDOUT);
     }
 
     // -o
@@ -477,9 +473,8 @@ TEST(parse_cmd_line, output_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.output,      OUTFILE);
-        EXPECT_EQ(in.outname,     o_arg.c_str());
-        EXPECT_EQ(in.outname_len, o_arg.size());
+        EXPECT_EQ(in.output,  OUTFILE);
+        EXPECT_EQ(in.outname, o_arg);
     }
 
     // -O
@@ -493,9 +488,8 @@ TEST(parse_cmd_line, output_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.output,      OUTDB);
-        EXPECT_EQ(in.outname,     O_arg.c_str());
-        EXPECT_EQ(in.outname_len, O_arg.size());
+        EXPECT_EQ(in.output,  OUTDB);
+        EXPECT_EQ(in.outname, O_arg);
     }
 
     // -o then -O
@@ -510,9 +504,8 @@ TEST(parse_cmd_line, output_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.output,      OUTDB);
-        EXPECT_EQ(in.outname,     O_arg.c_str());
-        EXPECT_EQ(in.outname_len, O_arg.size());
+        EXPECT_EQ(in.output,  OUTDB);
+        EXPECT_EQ(in.outname, O_arg);
     }
 
     // -O then -o
@@ -527,9 +520,8 @@ TEST(parse_cmd_line, output_arguments) {
 
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
-        EXPECT_EQ(in.output,      OUTFILE);
-        EXPECT_EQ(in.outname,     o_arg.c_str());
-        EXPECT_EQ(in.outname_len, o_arg.size());
+        EXPECT_EQ(in.output,  OUTFILE);
+        EXPECT_EQ(in.outname, o_arg);
     }
 }
 
@@ -568,22 +560,13 @@ TEST(parse_cmd_line, invalid) {
     check_input(&in, true, false, false);
 }
 
-TEST(INSTALL_STR, good) {
+TEST(INSTALL_STR, base_case) {
     int retval = 0;
-    const char SOURCE[] = "INSTALL_STR good test";
-    char *dst = nullptr;
-    INSTALL_STR(dst, SOURCE, MAXPATH, SOURCE);
+    const std::string SOURCE = "INSTALL_STR";
+    refstr_t dst;
+    INSTALL_STR(dst, SOURCE.c_str());
     EXPECT_EQ(retval, 0);
-    EXPECT_STREQ(SOURCE, dst);
-}
-
-TEST(INSTALL_STR, bad) {
-    int retval = 0;
-    const char SOURCE[] = "INSTALL_STR bad test";
-    char *dst = nullptr;
-    INSTALL_STR(dst, SOURCE, 1, SOURCE);
-    EXPECT_EQ(retval, -1);
-    EXPECT_STRNE(SOURCE, dst);
+    EXPECT_EQ(dst, SOURCE);
 }
 
 TEST(INSTALL_INT, good) {

@@ -208,7 +208,7 @@ int compute_treesummary(struct PoolArgs *pa) {
 
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, sizeof(dbname), 2,
-               pa->in.name, pa->in.name_len,
+               pa->in.name.data, pa->in.name.len,
                "/" DBNAME, DBNAME_LEN + 1);
 
     struct stat st;
@@ -223,7 +223,7 @@ int compute_treesummary(struct PoolArgs *pa) {
                               #endif
             );
         if (tdb) {
-            inserttreesumdb(pa->in.name, tdb, &sumout, 0, 0, 0);
+            inserttreesumdb(pa->in.name.data, tdb, &sumout, 0, 0, 0);
         }
         else {
             rc = 1;
@@ -300,8 +300,7 @@ int main(int argc, char *argv[]) {
         return 1;
     else {
         int retval = 0;
-        INSTALL_STR(pa.in.name, argv[idx++], MAXPATH, "GUFI_index");
-        pa.in.name_len = strlen(pa.in.name);
+        INSTALL_STR(pa.in.name, argv[idx++]);
 
         if (retval)
             return retval;
@@ -344,7 +343,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct work *root = calloc(1, sizeof(struct work));
-    root->name_len = SNFORMAT_S(root->name, sizeof(root->name), 1, pa.in.name, pa.in.name_len);
+    root->name_len = SNFORMAT_S(root->name, sizeof(root->name), 1, pa.in.name.data, pa.in.name.len);
     root->name_len = trailing_match_index(root->name, root->name_len, "/", 1);
 
     QPTPool_enqueue(pool, 0, processdir, root);

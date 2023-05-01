@@ -517,7 +517,7 @@ int main(int argc, char *argv[])
 
     /* the print format has precedence over the terse format */
     if (in.format_set) {
-        format = in.format;
+        format = in.format.data;
     }
     else if (in.terse) {
         format = terse_format;

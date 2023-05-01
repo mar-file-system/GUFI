@@ -197,11 +197,11 @@ int reprocessdir(struct input *in, void * passv, DIR *dir)
 
 
     //open the gufi db for this directory into the parking lot directory the name as the inode of the dir
-    SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in->nameto,ed.statuso.st_ino);
+    SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in->nameto.data,ed.statuso.st_ino);
     if (in->buildinindir == 1) {
       SNPRINTF(dbpath,MAXPATH,"%s/%s",passmywork->name,DBNAME);
     } else {
-        SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in->nameto,ed.statuso.st_ino);
+        SNPRINTF(dbpath,MAXPATH,"%s/%"STAT_ino"",in->nameto.data,ed.statuso.st_ino);
     }
 
     /* if we are building a gufi in the src tree and the suspect mode is not zero then we need to wipe it out first */
@@ -589,9 +589,9 @@ int processinit(struct input *in, QPTPool_t * ctx) {
      char outfn[MAXPATH];
 
      if (in->suspectfile > 0) {
-       if( (isf = fopen(in->insuspect, "r")) == NULL)
+       if( (isf = fopen(in->insuspect.data, "r")) == NULL)
        {
-          fprintf(stderr,"Cant open input suspect file %s\n",in->insuspect);
+          fprintf(stderr,"Cant open input suspect file %s\n",in->insuspect.data);
           exit(1);
        }
        cntfl=0;
@@ -645,7 +645,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
      if (in->output == OUTDB) {
        i=0;
        while (i < in->maxthreads) {
-           SNPRINTF(outdbn,MAXPATH,"%s.%d",in->outname,i);
+           SNPRINTF(outdbn,MAXPATH,"%s.%d",in->outname.data,i);
            gts.outdbd[i]=opendb(outdbn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
                                 , create_readdirplus_tables, NULL
                                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -667,7 +667,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
      if (in->output == OUTFILE) {
        i=0;
        while (i < in->maxthreads) {
-         SNPRINTF(outfn,MAXPATH,"%s.%d",in->outname,i);
+         SNPRINTF(outfn,MAXPATH,"%s.%d",in->outname.data,i);
          //fprintf(stderr,"init opening %s.%d",in.outname,i);
          gts.outfd[i]=fopen(outfn,"w");
          if (in->stride > 0) {
@@ -680,16 +680,16 @@ int processinit(struct input *in, QPTPool_t * ctx) {
      }
 
      // process input directory and put it on the queue
-     SNPRINTF(mywork->name,MAXPATH,"%s",in->name);
-     if (access(in->name, R_OK | X_OK)) {
+     SNPRINTF(mywork->name,MAXPATH,"%s",in->name.data);
+     if (access(in->name.data, R_OK | X_OK)) {
         fprintf(stderr, "couldn't access input dir '%s': %s\n",
-                in->name, strerror(errno));
+                in->name.data, strerror(errno));
          return 1;
      }
      struct stat st;
-     lstat(in->name, &st);
+     lstat(in->name.data, &st);
      if (!S_ISDIR(st.st_mode) ) {
-        fprintf(stderr,"input-dir '%s' is not a directory\n", in->name);
+        fprintf(stderr,"input-dir '%s' is not a directory\n", in->name.data);
         return 1;
      }
 
@@ -735,7 +735,7 @@ int i;
 
 // This app allows users to do a readdirplus walk and optionally print dirs, print links/files, create outputdb
 int validate_inputs(struct input *in) {
-   if (in->buildindex && in->nameto[0]) {
+   if (in->buildindex && in->nameto.data[0]) {
       fprintf(stderr, "In bfwreaddirplus2db building an index '-b' the index must go into the src tree\n");
       fprintf(stderr, "and -t means you are specifying a parking lot directory for gufi directory db's to be put under their znumber\n");
       fprintf(stderr, "for incremental operations by inode\n");
@@ -746,7 +746,6 @@ int validate_inputs(struct input *in) {
      fprintf(stderr,"You are putting the index dbs in input directory\n");
      in->buildinindir = 1;
      in->nameto = in->name;
-     in->nameto_len = in->name_len;
    }
    return 0;
 
@@ -778,7 +777,7 @@ int main(int argc, char *argv[])
      else {
         // parse positional args, following the options
         int retval = 0;
-        INSTALL_STR(in.name,   argv[idx++], MAXPATH, "input_dir");
+        INSTALL_STR(in.name,   argv[idx++]);
 
         if (retval)
            return retval;
@@ -791,12 +790,12 @@ int main(int argc, char *argv[])
      /* check the output directory for the gufi dbs for suspect dirs if provided */
      gltodirmode=0;
      rc=1;
-     if (strlen(in.nameto) > 0) {
+     if (strlen(in.nameto.data) > 0) {
        gltodirmode=1;
        /*make sure the directory to put the gufi dbs into exists and we can write to it */
-       rc=lstat(in.nameto,&st);
+       rc=lstat(in.nameto.data,&st);
        if (rc != 0) {
-         fprintf(stdout,"directory to place gufi dbs problem for %s\n",in.nameto);
+         fprintf(stdout,"directory to place gufi dbs problem for %s\n",in.nameto.data);
          return -1;
        }
        if (!S_ISDIR(st.st_mode) ) {

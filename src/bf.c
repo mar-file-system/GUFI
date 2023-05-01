@@ -154,24 +154,24 @@ void show_input(struct input* in, int retval) {
    printf("in.buildindex               = %d\n",            in->buildindex);
    printf("in.maxthreads               = %d\n",            in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
-   printf("in.name                     = '%s'\n",          in->name);
-   printf("in.name_len                 = '%zu'\n",         in->name_len);
-   printf("in.nameto                   = '%s'\n",          in->nameto);
+   printf("in.name                     = '%s'\n",          in->name.data);
+   printf("in.name_len                 = '%zu'\n",         in->name.len);
+   printf("in.nameto                   = '%s'\n",          in->nameto.data);
    printf("in.andor                    = %d\n",            (int) in->andor);
    printf("in.external_enabled         = %d\n",            in->external_enabled);
    printf("in.nobody.uid               = %d\n",            (int) in->nobody.uid);
    printf("in.nobody.gid               = %d\n",            (int) in->nobody.gid);
-   printf("in.sql.init                 = '%s'\n",          in->sql.init);
-   printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum);
-   printf("in.sql.sum                  = '%s'\n",          in->sql.sum);
-   printf("in.sql.ent                  = '%s'\n",          in->sql.ent);
-   printf("in.sql.fin                  = '%s'\n",          in->sql.fin);
+   printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
+   printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum.data);
+   printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);
+   printf("in.sql.ent                  = '%s'\n",          in->sql.ent.data);
+   printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
    printf("in.insertdir                = '%d'\n",          in->insertdir);
    printf("in.insertfl                 = '%d'\n",          in->insertfl);
    printf("in.dontdescend              = '%d'\n",          in->dontdescend);
    printf("in.suspectd                 = '%d'\n",          in->suspectd);
    printf("in.suspectfl                = '%d'\n",          in->suspectfl);
-   printf("in.insuspect                = '%s'\n",          in->insuspect);
+   printf("in.insuspect                = '%s'\n",          in->insuspect.data);
    printf("in.suspectfile              = '%d'\n",          in->suspectfile);
    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
@@ -179,18 +179,18 @@ void show_input(struct input* in, int retval) {
    printf("in.infile                   = '%d'\n",          in->infile);
    printf("in.min_level                = %zu\n",           in->min_level);
    printf("in.max_level                = %zu\n",           in->max_level);
-   printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate);
-   printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg);
-   printf("in.sql.agg                  = '%s'\n",          in->sql.agg);
+   printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
+   printf("in.sql.init_agg             = '%s'\n",          in->sql.init_agg.data);
+   printf("in.sql.agg                  = '%s'\n",          in->sql.agg.data);
    printf("in.keep_matime              = %d\n",            in->keep_matime);
    printf("in.output_buffer_size       = %zu\n",           in->output_buffer_size);
    printf("in.open_flags               = %d\n",            in->open_flags);
    printf("in.format_set               = %d\n",            in->format_set);
-   printf("in.format                   = '%s'\n",          in->format);
+   printf("in.format                   = '%s'\n",          in->format.data);
    printf("in.terse                    = %d\n",            in->terse);
    printf("in.dry_run                  = %d\n",            in->dry_run);
    printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
-   printf("in.skip                     = %s\n",            in->skip);
+   printf("in.skip                     = %s\n",            in->skip.data);
    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
    printf("in.compress                 = %d\n",            in->compress);
@@ -292,50 +292,41 @@ int parse_cmd_line(int         argc,
          break;
 
       case 't':
-         INSTALL_STR(in->nameto, optarg, MAXPATH, "-t");
-         in->nameto_len = strlen(in->nameto);
+         INSTALL_STR(in->nameto, optarg);
          break;
 
       case 'i':
-         INSTALL_STR(in->name, optarg, MAXPATH, "-i");
-         in->name_len = strlen(in->name);
+         INSTALL_STR(in->name, optarg);
          break;
 
       case 'o':
          in->output = OUTFILE;
-         INSTALL_STR(in->outname, optarg, MAXPATH, "-o");
-         in->outname_len = strlen(in->outname);
+         INSTALL_STR(in->outname, optarg);
          break;
 
       case 'O':
          in->output = OUTDB;
-         INSTALL_STR(in->outname, optarg, MAXPATH, "-O");
-         in->outname_len = strlen(in->outname);
+         INSTALL_STR(in->outname, optarg);
          break;
 
       case 'I':               // SQL initializations
-         INSTALL_STR(in->sql.init, optarg, MAXSQL, "-I");
-         in->sql.init_len = strlen(in->sql.init);
+         INSTALL_STR(in->sql.init, optarg);
          break;
 
       case 'T':               // SQL for tree-summary
-         INSTALL_STR(in->sql.tsum, optarg, MAXSQL, "-T");
-         in->sql.tsum_len = strlen(in->sql.tsum);
+         INSTALL_STR(in->sql.tsum, optarg);
          break;
 
       case 'S':               // SQL for summary
-         INSTALL_STR(in->sql.sum, optarg, MAXSQL, "-S");
-         in->sql.sum_len = strlen(in->sql.sum);
+         INSTALL_STR(in->sql.sum, optarg);
          break;
 
       case 'E':               // SQL for entries
-         INSTALL_STR(in->sql.ent, optarg, MAXSQL, "-E");
-         in->sql.ent_len = strlen(in->sql.ent);
+         INSTALL_STR(in->sql.ent, optarg);
          break;
 
       case 'F':               // SQL clean-up
-         INSTALL_STR(in->sql.fin, optarg, MAXSQL, "-F");
-         in->sql.fin_len = strlen(in->sql.fin);
+         INSTALL_STR(in->sql.fin, optarg);
          break;
 
       case 'r':               // insert files and links into db for bfwreaddirplus2db
@@ -359,7 +350,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'W':               // SQL clean-up
-         INSTALL_STR(in->insuspect, optarg, MAXPATH, "-W");
+         INSTALL_STR(in->insuspect, optarg);
          in->suspectfile = 1;
          break;
 
@@ -388,18 +379,15 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'J':
-         INSTALL_STR(in->sql.intermediate, optarg, MAXSQL, "-J");
-         in->sql.intermediate_len = strlen(in->sql.intermediate);
+         INSTALL_STR(in->sql.intermediate, optarg);
          break;
 
       case 'K':
-         INSTALL_STR(in->sql.init_agg, optarg, MAXSQL, "-K");
-         in->sql.init_agg_len = strlen(in->sql.init_agg);
+         INSTALL_STR(in->sql.init_agg, optarg);
          break;
 
       case 'G':
-         INSTALL_STR(in->sql.agg, optarg, MAXSQL, "-G");
-         in->sql.agg_len = strlen(in->sql.agg);
+         INSTALL_STR(in->sql.agg, optarg);
          break;
 
       case 'm':
@@ -415,7 +403,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'f':
-          INSTALL_STR(in->format, optarg, MAXPATH, "-f");
+          INSTALL_STR(in->format, optarg);
           in->format_set = 1;
           break;
 
@@ -432,7 +420,7 @@ int parse_cmd_line(int         argc,
           break;
 
       case 'k':
-          INSTALL_STR(in->skip, optarg, MAXPATH, "-k");
+          INSTALL_STR(in->skip, optarg);
           break;
 
       case 'M':

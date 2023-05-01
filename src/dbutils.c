@@ -785,44 +785,44 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     struct work *work = (struct work *) sqlite3_user_data(context);
     const int rollupscore = sqlite3_value_int(argv[1]);
 
-    char *dirname = work->name;
-    size_t dirname_len = work->name_len;
+    refstr_t dirname;
 
     /* remove parent from current directory name */
-    dirname += work->root_len;
-    dirname_len -= work->root_len;
-    while (dirname_len && (dirname[0] == '/')) {
-        dirname++;
-        dirname_len--;
+    dirname.data = work->name + work->root.len;
+    dirname.len  = work->name_len - work->root.len;
+    while (dirname.len && (dirname.data[0] == '/')) {
+        dirname.data++;
+        dirname.len--;
     }
 
     if (rollupscore == 0) {
-        sqlite3_result_text(context, dirname, dirname_len, SQLITE_STATIC);
+        sqlite3_result_text(context, dirname.data, dirname.len, SQLITE_STATIC);
     }
     else {
         char fullpath[MAXPATH];
         size_t fullpath_len = SNFORMAT_S(fullpath, MAXPATH, 1,
             dirname, dirname_len);
 
-        const char *input = (char *) sqlite3_value_text(argv[0]);
-        const size_t input_len = strlen(input);
+        refstr_t input;
+        input.data = (char *) sqlite3_value_text(argv[0]);
+        input.len  = strlen(input.data);
         size_t input_offset = 0;
 
         /* remove first path segment, including / */
-        while ((input_offset < input_len) &&
-               (input[input_offset] != '/')) {
+        while ((input_offset < input.len) &&
+               (input.data[input_offset] != '/')) {
             input_offset++;
         }
 
-        while ((input_offset < input_len) &&
-               (input[input_offset] == '/')) {
+        while ((input_offset < input.len) &&
+               (input.data[input_offset] == '/')) {
             input_offset++;
         }
 
-        const size_t input_remaining = input_len - input_offset;
+        const size_t input_remaining = input.len - input_offset;
         if (input_remaining) {
             fullpath_len += SNFORMAT_S(fullpath + fullpath_len, MAXPATH, 2,
-                "/", 1, input + input_offset, input_remaining);
+                "/", 1, input.data + input_offset, input_remaining);
         }
 
         sqlite3_result_text(context, fullpath, fullpath_len, SQLITE_TRANSIENT);
@@ -1054,7 +1054,7 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
               (sqlite3_create_function(db,  "rpath",               2, SQLITE_UTF8,
                                        work,                       &rpath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
-                                       (void *) work->root,        &starting_point,     NULL, NULL) == SQLITE_OK) &&
+                                       (void *) work->root.data,   &starting_point,     NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,
                                        lvl,                        &relative_level,     NULL, NULL) == SQLITE_OK))) {
             return 1;

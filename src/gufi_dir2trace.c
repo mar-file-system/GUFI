@@ -100,7 +100,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         if (ed->type == 'l') {
             readlink(entry->name, ed->linkname, MAXPATH);
         }
-        worktofile(nda->fp, nda->in->delim, entry->root_len, entry, ed);
+        worktofile(nda->fp, nda->in->delim, entry->root.len, entry, ed);
     }
     return 0;
 }
@@ -142,7 +142,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ed.type = 'd';
 
     /* write start of stanza */
-    worktofile(pa->outfiles[id], in->delim, work->root_len, work, &ed);
+    worktofile(pa->outfiles[id], in->delim, work->root.len, work, &ed);
 
     if (in->external_enabled) {
         xattrs_cleanup(&ed.xattrs);
@@ -211,7 +211,7 @@ static FILE **outfiles_init(const char *prefix, const size_t count) {
     return files;
 }
 
-static int validate_source(char *path, struct work *work) {
+static int validate_source(const char *path, struct work *work) {
     memset(work, 0, sizeof(*work));
 
     /* get input path metadata */
@@ -228,8 +228,8 @@ static int validate_source(char *path, struct work *work) {
     }
 
     work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
-    work->root = path;
-    work->root_len = dirname_len(path, work->name_len);
+    work->root.data = path;
+    work->root.len = dirname_len(path, work->name_len);
 
     return 0;
 }
@@ -250,19 +250,17 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(pa.in.nameto, argv[argc - 1], MAXPATH, "output_prefix");
+        INSTALL_STR(pa.in.nameto, argv[argc - 1]);
 
         if (retval)
             return retval;
 
-        if (setup_directory_skip(pa.in.skip, &pa.skip) != 0) {
+        if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
             return -1;
         }
-
-        pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
-    pa.outfiles = outfiles_init(pa.in.nameto, pa.in.maxthreads);
+    pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
     if (!pa.outfiles) {
         trie_free(pa.skip);
         return -1;
@@ -290,7 +288,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    fprintf(stdout, "Creating GUFI Traces %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI Traces %s with %d threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
     pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
 

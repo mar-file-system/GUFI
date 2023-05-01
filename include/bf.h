@@ -136,11 +136,14 @@ typedef enum OutputMethod {
     OUTDB,     /* -O */
 } OutputMethod_t;
 
+typedef struct refstring {
+    const char *data;
+    size_t len;
+} refstr_t;
+
 struct input {
-   const char *name;
-   size_t      name_len;
-   const char *nameto;
-   size_t nameto_len;
+   refstr_t  name;
+   refstr_t  nameto;
    int external_enabled;
    struct {
        uid_t uid;
@@ -149,31 +152,23 @@ struct input {
 
    struct {
        /* set up per-thread intermidate tables */
-       const char *init;
-       size_t init_len;
+       refstr_t init;
 
-       /* set up final aggregation table */
-       const char *init_agg;
-       size_t init_agg_len;
-
-       const char *tsum;
-       size_t tsum_len;
-       const char *sum;
-       size_t sum_len;
-       const char *ent;
-       size_t ent_len;
+       refstr_t tsum;
+       refstr_t sum;
+       refstr_t ent;
 
        /* if not aggregating, output results */
        /* if aggregating, insert into aggregate table */
-       const char *intermediate;
-       size_t intermediate_len;
+       refstr_t intermediate;
+
+       /* set up final aggregation table */
+       refstr_t init_agg;
 
        /* query table containing aggregated results */
-       const char *agg;
-       size_t agg_len;
+       refstr_t agg;
 
-       const char *fin;
-       size_t fin_len;
+       refstr_t fin;
    } sql;
 
    int  printdir;
@@ -191,7 +186,7 @@ struct input {
    int  buildinindir;             // added to notice when writing index dbs into the input dir
    int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
    int  suspectfl;                // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect
-   const char *insuspect;         // added for bfwreaddirplus2db input path for suspects file
+   refstr_t insuspect;            // added for bfwreaddirplus2db input path for suspects file
    int  suspectfile;              // added for bfwreaddirplus2db flag for if we are processing suspects file
    int  suspectmethod;            // added for bfwreaddirplus2db flag for if we are processing suspects what method do we use
    int  stride;                   // added for bfwreaddirplus2db stride size control striping inodes to output dbs default 0(nostriping)
@@ -202,8 +197,7 @@ struct input {
    int dry_run;
 
    OutputMethod_t output;
-   const char *outname;
-   size_t outname_len;
+   refstr_t outname;
 
    int keep_matime;
 
@@ -215,13 +209,13 @@ struct input {
 
    /* only used by gufi_stat */
    int format_set;
-   const char *format;
+   refstr_t format;
 
    /* only used by rollup */
    size_t max_in_dir;
 
    /* filename containing strings to skip during tree traversal */
-   const char *skip;
+   refstr_t skip;
 
    /* attempt to drain QPTPool work items until this memory footprint is reached */
    uint64_t target_memory_footprint;
@@ -257,18 +251,10 @@ int parse_cmd_line(int         argc,
 
 /* help for parsing a cmd-line string-argument into a fixed-size array. */
 /* NOTE: This assumes you have a variable <retval> in scope. */
-#define INSTALL_STR(VAR, SOURCE, MAX, ARG_NAME)                             \
+#define INSTALL_STR(VAR, SOURCE)                                            \
    do {                                                                     \
-      char *src = (char *) (SOURCE); /* might be "argv[idx++]" */           \
-      const size_t src_len = strlen(src);                                   \
-      if (src_len >= (MAX)) {                                               \
-          fprintf(stderr, "argument '%s' exceeds max allowed (%zu): %zu\n", \
-                  (ARG_NAME), (size_t) (MAX), src_len);                     \
-         retval = -1;                                                       \
-      }                                                                     \
-      else {                                                                \
-          (VAR) = src;                                                      \
-      }                                                                     \
+       (VAR).data = (const char *) (SOURCE);                                \
+       (VAR).len = strlen((VAR).data);                                      \
    } while (0)
 
 
@@ -325,8 +311,7 @@ struct work {
    compressed_t  compressed;
 #endif
 
-   char*         root;                   /* parent of the the top level directory */
-   size_t        root_len;
+   refstr_t      root;                   /* parent of the the top level directory */
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;

@@ -221,7 +221,6 @@ static size_t descend2(QPTPool_t *ctx,
 
                 child.work.level = next_level;
                 child.work.root = gqw->work.root;
-                child.work.root_len = gqw->work.root_len;
 
                 /* append converted entry name to converted directory */
                 child.sqlite3_name_len = SNFORMAT_S(child.sqlite3_name, MAXPATH, 2,
@@ -352,7 +351,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
     /* if this is OR, as well as no-sql-to-run, skip this query */
-    if (in->sql.tsum_len > 1) {
+    if (in->sql.tsum.len > 1) {
         if (in->andor == AND) {
             /* make sure the treesummary table exists */
             thread_timestamp_start(ts.tts, sqltsumcheck);
@@ -367,7 +366,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             else {
                 /* run in->sql.tsum */
                 thread_timestamp_start(ts.tts, sqltsum);
-                querydb(dbname, db, in->sql.tsum, pa, id, print_parallel, &recs);
+                querydb(dbname, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
                 thread_timestamp_end(sqltsum);
                 increment_query_count(ta);
             }
@@ -419,11 +418,11 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* and we are doing AND, skip querying the entries db */
                 shortpath(gqw->work.name,shortname,endname);
 
-                if (in->sql.sum_len > 1) {
+                if (in->sql.sum.len > 1) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
                     thread_timestamp_start(ts.tts, sqlsum);
-                    querydb(dbname, db, in->sql.sum, pa, id, print_parallel, &recs);
+                    querydb(dbname, db, in->sql.sum.data, pa, id, print_parallel, &recs);
                     thread_timestamp_end(sqlsum);
                     increment_query_count(ta);
                 } else {
@@ -434,9 +433,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 }
                 /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
-                    if (in->sql.ent_len > 1) {
+                    if (in->sql.ent.len > 1) {
                         thread_timestamp_start(ts.tts, sqlent);
-                        querydb(dbname, db, in->sql.ent, pa, id, print_parallel, &recs); /* recs is not used */
+                        querydb(dbname, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
                         thread_timestamp_end(sqlent);
                         increment_query_count(ta);
                     }
@@ -531,35 +530,35 @@ int validate_inputs(struct input *in) {
      * outfile     stdout                                 | Get final results
      *                                                    | -G SELECT * FROM <aggregate name>
      */
-     if ((in->output == OUTDB) || in->sql.init_agg_len) {
+     if ((in->output == OUTDB) || in->sql.init_agg.len) {
         /* -I (required) */
-        if (!in->sql.init_len) {
+        if (!in->sql.init.len) {
             fprintf(stderr, "Error: Missing -I\n");
             return -1;
         }
     }
 
     /* not aggregating */
-    if (!in->sql.init_agg_len) {
-        if (in->sql.intermediate_len) {
+    if (!in->sql.init_agg.len) {
+        if (in->sql.intermediate.len) {
             fprintf(stderr, "Warning: Got -J even though not aggregating. Ignoring\n");
         }
 
-        if (in->sql.agg_len) {
+        if (in->sql.agg.len) {
             fprintf(stderr, "Warning: Got -G even though not aggregating. Ignoring\n");
         }
     }
     /* aggregating */
     else {
         /* need -J to write to aggregate db */
-        if (!in->sql.intermediate_len) {
+        if (!in->sql.intermediate.len) {
             fprintf(stderr, "Error: Missing -J\n");
             return -1;
         }
 
         if ((in->output == STDOUT) || (in->output == OUTFILE)) {
             /* need -G to write out results */
-            if (!in->sql.agg_len) {
+            if (!in->sql.agg.len) {
                 fprintf(stderr, "Error: Missing -G\n");
                 return -1;
             }
@@ -620,7 +619,7 @@ int main(int argc, char *argv[])
 
     Aggregate_t aggregate;
     memset(&aggregate, 0, sizeof(aggregate));
-    if (in.sql.init_agg_len) {
+    if (in.sql.init_agg.len) {
         if (!aggregate_init(&aggregate, &in)) {
             PoolArgs_fin(&pa, in.maxthreads);
             return -1;
@@ -690,10 +689,10 @@ int main(int argc, char *argv[])
         root->sqlite3_name_len = sqlite_uri_path(root->sqlite3_name, MAXPATH, argv[i], &len);
 
         /* parent of input path */
-        root->work.root = argv[i];
-        root->work.root_len = trailing_non_match_index(root->work.root, root->work.name_len, "/", 1);
-        root->work.root[root->work.root_len] = '\0';
-        root->work.basename_len = trailing_match_index(root->work.root, root->work.root_len, "/", 1);
+        root->work.root.data = argv[i];
+        root->work.root.len  = trailing_non_match_index(root->work.root.data, root->work.name_len, "/", 1);
+        ((char *) root->work.root.data)[root->work.root.len] = '\0';
+        root->work.basename_len = trailing_match_index(root->work.root.data, root->work.root.len, "/", 1);
 
         /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
@@ -721,7 +720,7 @@ int main(int argc, char *argv[])
     #endif
 
     int rc = 0;
-    if (in.sql.init_agg_len) {
+    if (in.sql.init_agg.len) {
         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_create_start(aggregation);
         #endif

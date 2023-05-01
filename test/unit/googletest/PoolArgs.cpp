@@ -92,8 +92,8 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
 
     memset(in, 0, sizeof(*in));
     in->maxthreads = dist(gen);
-    in->sql.init = I.c_str(); in->sql.init_len = strlen(in->sql.init);
-    in->sql.init_agg_len = aggregate;
+    in->sql.init.data = I.c_str(); in->sql.init.len = strlen(in->sql.init.data);
+    in->sql.init_agg.len = aggregate;
     in->output = om;
     in->output_buffer_size = OB_SIZE;
 }
@@ -178,12 +178,12 @@ TEST(PoolArgs, OUTFILE) {
     setup_input(&in, OUTFILE, false);
 
     char outname[MAXPATH];
-    in.outname = outname;
-    in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.data = outname;
+    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
-    EXPECT_EQ(remove(in.outname), 0);
+    EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
@@ -209,7 +209,7 @@ TEST(PoolArgs, OUTFILE) {
     // delete the files here since the filenames are not available in the previous loop
     for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
         char filename[MAXPATH];
-        snprintf(filename, sizeof(filename), "%s.%zu", in.outname, i);
+        snprintf(filename, sizeof(filename), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(remove(filename), 0);
     }
 }
@@ -219,12 +219,12 @@ TEST(PoolArgs, OUTFILE_aggregate) {
     setup_input(&in, OUTFILE, true);
 
     char outname[MAXPATH];
-    in.outname = outname;
-    in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.data = outname;
+    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
-    EXPECT_EQ(remove(in.outname), 0);
+    EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
@@ -250,7 +250,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
     // per-thread files are not created
     for(size_t i = 0; i < (size_t) in.maxthreads; i++) {
         char filename[MAXPATH];
-        snprintf(filename, sizeof(filename), "%s.%zu", in.outname, i);
+        snprintf(filename, sizeof(filename), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(remove(filename), -1);
     }
 
@@ -262,12 +262,12 @@ TEST(PoolArgs, OUTDB) {
     setup_input(&in, OUTDB, false);
 
     char outname[MAXPATH];
-    in.outname = outname;
-    in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.data = outname;
+    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
-    EXPECT_EQ(remove(in.outname), 0);
+    EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
@@ -280,7 +280,7 @@ TEST(PoolArgs, OUTDB) {
 
         // the per-thread database files are in the filesystem
         char dbname[MAXPATH];
-        const size_t dbname_len = snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname, i);
+        const size_t dbname_len = snprintf(dbname, sizeof(dbname), "%s.%zu", in.outname.data, i);
         EXPECT_EQ(strlen(ta->dbname), dbname_len);
         EXPECT_EQ(memcmp(ta->dbname, dbname, dbname_len), 0);
 
@@ -299,12 +299,12 @@ TEST(PoolArgs, OUTDB_aggregate) {
     setup_input(&in, OUTDB, true);
 
     char outname[MAXPATH];
-    in.outname = outname;
-    in.outname_len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.data = outname;
+    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
-    EXPECT_EQ(remove(in.outname), 0);
+    EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);

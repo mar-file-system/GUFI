@@ -100,17 +100,13 @@ TEST(set_db_pragmas, nullptr) {
 }
 
 TEST(addqueryfuncs, path) {
-    // currently at this path
-    const char root[MAXPATH] = "index_root";
-    const size_t root_len = strlen(root);
-
     const char dirname[MAXPATH] = "dirname";
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = (char *) root;
-    work.root_len = root_len;
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
+    work.root.data = "index_root";     // currently at this path
+    work.root.len = strlen(work.root.data);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root.data, dirname);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
@@ -126,17 +122,13 @@ TEST(addqueryfuncs, path) {
 }
 
 TEST(addqueryfuncs, epath) {
-    // currently at this path
-    const char root[MAXPATH] = "index_root";
-    const size_t root_len = strlen(root);
-
     const char dirname[MAXPATH] = "dirname";
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = (char *) root;
-    work.root_len = root_len;
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
+    work.root.data = "index_root";     // currently at this path
+    work.root.len = strlen(work.root.data);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root.data, dirname);
     work.basename_len = strlen(dirname);
 
     sqlite3 *db = nullptr;
@@ -153,17 +145,13 @@ TEST(addqueryfuncs, epath) {
 }
 
 TEST(addqueryfuncs, rpath) {
-    // currently at this path
-    const char root[MAXPATH] = "index_root";
-    const size_t root_len = strlen(root);
-
     const char dirname[MAXPATH] = "dirname";
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = (char *) root;
-    work.root_len = root_len;
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", root, dirname);
+    work.root.data = "index_root";     // currently at this path
+    work.root.len = strlen(work.root.data);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root.data, dirname);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
@@ -411,10 +399,9 @@ TEST(addqueryfuncs, level) {
 }
 
 TEST(addqueryfuncs, starting_point) {
-    const char root[] = "/index_root";
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root = (char *) root;
+    work.root.data = "/index_root";
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
@@ -425,7 +412,7 @@ TEST(addqueryfuncs, starting_point) {
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, NULL), SQLITE_OK);
 
-    EXPECT_STREQ(output, work.root);
+    EXPECT_STREQ(output, work.root.data);
 
     sqlite3_close(db);
 }

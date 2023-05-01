@@ -140,7 +140,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* get entry relative path (use extra buffer to prevent memcpy overlap) */
     char relpath[MAXPATH];
     const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1,
-                                          entry->name + entry->root_len + 1, entry->name_len - entry->root_len - 1);
+                                          entry->name + entry->root.len + 1, entry->name_len - entry->root.len - 1);
 
     /* overwrite full path with relative path */
     /* e.name_len = */ SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
@@ -190,9 +190,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* offset by work->root_len to remove prefix */
     nda.topath_len = SNFORMAT_S(nda.topath, MAXPATH, 3,
-                                in->nameto, in->nameto_len,
+                                in->nameto.data, in->nameto.len,
                                 "/", (size_t) 1,
-                                nda.work->name + nda.work->root_len, nda.work->name_len - nda.work->root_len);
+                                nda.work->name + nda.work->root.len, nda.work->name_len - nda.work->root.len);
 
     /* don't need recursion because parent is guaranteed to exist */
     if (mkdir(nda.topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
@@ -332,7 +332,7 @@ static int setup_dst(const char *nameto) {
     return 0;
 }
 
-int validate_source(struct input *in, char *path, struct work *work) {
+int validate_source(struct input *in, const char *path, struct work *work) {
     memset(work, 0, sizeof(*work));
 
     /* get input path metadata */
@@ -349,16 +349,16 @@ int validate_source(struct input *in, char *path, struct work *work) {
     }
 
     work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
-    work->root = path;
-    work->root_len = dirname_len(path, work->name_len);
+    work->root.data = path;
+    work->root.len = dirname_len(path, work->name_len);
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto, work->root + work->root_len);
+    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto.data, work->root.data + work->root.len);
     realpath(expathtst, expathout);
-    realpath(work->root, expathin);
+    realpath(work->root.data, expathin);
 
     if (!strcmp(expathin, expathout)) {
         fprintf(stderr,"You are putting the index dbs in input directory\n");
@@ -385,19 +385,17 @@ int main(int argc, char *argv[]) {
         int retval = 0;
 
         /* does not have to be canonicalized */
-        INSTALL_STR(pa.in.nameto, argv[argc - 1], MAXPATH, "output_dir");
+        INSTALL_STR(pa.in.nameto, argv[argc - 1]);
 
         if (retval)
             return retval;
 
-        if (setup_directory_skip(pa.in.skip, &pa.skip) != 0) {
+        if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
             return -1;
         }
-
-        pa.in.nameto_len = strlen(pa.in.nameto);
     }
 
-    if (setup_dst(pa.in.nameto) != 0) {
+    if (setup_dst(pa.in.nameto.data) != 0) {
         trie_free(pa.skip);
         return -1;
     }
@@ -441,7 +439,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
     pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
 

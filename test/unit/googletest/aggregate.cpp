@@ -96,16 +96,16 @@ TEST(gufi_query, aggregate) {
     const size_t row_count = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
 
     struct input in;
-    in.output             = STDOUT;
-    in.maxthreads         = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
-    in.delim              = ' ';
-    in.sql.init           = I.c_str(); in.sql.init_len = strlen(in.sql.init);
-    in.sql.ent            = E.c_str(); in.sql.ent_len = strlen(in.sql.ent);
-    in.sql.init_agg       = K.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);
-    in.sql.intermediate   = J.c_str(); in.sql.intermediate_len = strlen(in.sql.intermediate);
-    in.sql.agg            = G.c_str(); in.sql.agg_len = strlen(in.sql.agg);
-    in.output_buffer_size = 0;
-    in.skip               = nullptr;
+    in.output                = STDOUT;
+    in.maxthreads            = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
+    in.delim                 = ' ';
+    in.sql.init.data         = I.c_str(); in.sql.init.len = strlen(in.sql.init.data);
+    in.sql.ent.data          = E.c_str(); in.sql.ent.len = strlen(in.sql.ent.data);
+    in.sql.init_agg.data     = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
+    in.sql.intermediate.data = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
+    in.sql.agg.data          = G.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
+    in.output_buffer_size    = 0;
+    in.skip.data             = nullptr;
 
     PoolArgs_t pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, nullptr), 0);
@@ -132,18 +132,18 @@ TEST(gufi_query, aggregate) {
         }
 
         // run query and place results into intermediate table
-        EXPECT_EQ(sqlite3_exec(ta->outdb, in.sql.ent, nullptr, nullptr, nullptr), SQLITE_OK);
+        EXPECT_EQ(sqlite3_exec(ta->outdb, in.sql.ent.data, nullptr, nullptr, nullptr), SQLITE_OK);
     }
 
     // set up the aggregation table
     Aggregate_t aggregate;
 
     // init with bad SQL statement
-    in.sql.init_agg = BAD_SQL.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);
+    in.sql.init_agg.data = BAD_SQL.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
     ASSERT_EQ(aggregate_init(&aggregate, &in), nullptr);
 
     // init with good SQL statement
-    in.sql.init_agg = K.c_str(); in.sql.init_agg_len = strlen(in.sql.init_agg);
+    in.sql.init_agg.data = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
     ASSERT_NE(aggregate_init(&aggregate, &in), nullptr);
 
     // replace stdout with in-memory file
@@ -152,18 +152,18 @@ TEST(gufi_query, aggregate) {
     ASSERT_NE(aggregate.outfile, nullptr);
 
     // run bad intermediate SQL statement
-    in.sql.intermediate = BAD_SQL.c_str(); in.sql.intermediate_len = strlen(in.sql.intermediate);
+    in.sql.intermediate.data = BAD_SQL.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
     EXPECT_NO_THROW(aggregate_intermediate(&aggregate, &pa, &in));
 
     // run intermediate SQL statement to move data into aggregate table
-    in.sql.intermediate = J.c_str(); in.sql.intermediate_len = strlen(in.sql.intermediate);
+    in.sql.intermediate.data = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
     EXPECT_NO_THROW(aggregate_intermediate(&aggregate, &pa, &in));
 
     // run aggregate SQL to get final result
     EXPECT_EQ(aggregate_process(&aggregate, &in), 0);
 
     // run a bad aggregate SQL statement
-    in.sql.agg = BAD_SQL.c_str(); in.sql.agg_len = strlen(in.sql.agg);
+    in.sql.agg.data = BAD_SQL.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
     EXPECT_EQ(aggregate_process(&aggregate, &in), -1);
 
     // cleanup

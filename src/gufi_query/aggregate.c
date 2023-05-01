@@ -108,9 +108,9 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 
         /* only open a final file if OUTFILE */
         if (in->output == OUTFILE) {
-            aggregate->outfile = fopen(in->outname, "w");
+            aggregate->outfile = fopen(in->outname.data, "w");
             if (!aggregate->outfile) {
-                fprintf(stderr, "Error: Could not open output file %s\n", in->outname);
+                fprintf(stderr, "Error: Could not open output file %s\n", in->outname.data);
                 aggregate_fin(aggregate, in);
                 return NULL;
             }
@@ -123,11 +123,11 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
         }
     }
     else if (in->output == OUTDB) {
-        SNFORMAT_S(dbname, MAXPATH, 1, in->outname, in->outname_len);
+        SNFORMAT_S(dbname, MAXPATH, 1, in->outname.data, in->outname.len);
     }
 
     /* always open an aggregate db */
-    if (!(aggregate->db = aggregate_setup(dbname, in->sql.init_agg))) {
+    if (!(aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data))) {
         aggregate_fin(aggregate, in);
         return NULL;
     }
@@ -142,8 +142,8 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
         ThreadArgs_t *ta = &(pa->ta[i]);
         if (attachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1)) {
             char *err = NULL;
-            if ((sqlite3_exec(aggregate->db, in->sql.intermediate, NULL, NULL, &err) != SQLITE_OK)) {
-                fprintf(stderr, "Error: Cannot aggregate intermediate databases with \"%s\": %s\n", in->sql.intermediate, err);
+            if ((sqlite3_exec(aggregate->db, in->sql.intermediate.data, NULL, NULL, &err) != SQLITE_OK)) {
+                fprintf(stderr, "Error: Cannot aggregate intermediate databases with \"%s\": %s\n", in->sql.intermediate.data, err);
             }
             sqlite3_free(err);
         }
@@ -158,7 +158,7 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
     int rc = 0;
 
     /* normally expect STDOUT/OUTFILE to have SQL to run, but OUTDB can have SQL to run as well */
-    if ((in->output != OUTDB) || in->sql.agg_len) {
+    if ((in->output != OUTDB) || in->sql.agg.len) {
         PrintArgs_t pa;
         pa.output_buffer = &aggregate->ob;
         pa.delim = in->delim;
@@ -167,8 +167,8 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
         pa.rows = 0;
 
         char *err = NULL;
-        if (sqlite3_exec(aggregate->db, in->sql.agg, print_parallel, &pa, &err) != SQLITE_OK) {
-            fprintf(stderr, "Final aggregation error: \"%s\": %s\n", in->sql.agg, err);
+        if (sqlite3_exec(aggregate->db, in->sql.agg.data, print_parallel, &pa, &err) != SQLITE_OK) {
+            fprintf(stderr, "Final aggregation error: \"%s\": %s\n", in->sql.agg.data, err);
             rc = -1;
         }
 
