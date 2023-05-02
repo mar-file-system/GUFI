@@ -85,18 +85,19 @@ TEST(QueuePerThreadPool, no_start_stop) {
     QPTPool_destroy(pool);
 }
 
-TEST(QueuePerThreadPool, start_null) {
+TEST(QueuePerThreadPool, zero_threads) {
+    EXPECT_EQ(QPTPool_init(0, nullptr), nullptr);
+}
+
+TEST(QueuePerThreadPool, bad_start) {
+    // bad context
     EXPECT_EQ(QPTPool_start(nullptr), 1);
 
+    // already started
     setup_pool(THREADS, nullptr);
     EXPECT_EQ(QPTPool_start(pool), 1);
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
-}
-
-TEST(QueuePerThreadPool, zero_threads) {
-    QPTPool_t *pool = QPTPool_init(0, nullptr);
-    EXPECT_EQ(pool, nullptr);
 }
 
 // start threads without work
@@ -465,10 +466,10 @@ TEST(QueuePerThreadPool, steal_deferred) {
 
     counter = 0;
 
-    EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);     // thread 1
-    EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);     // thread 0
-    EXPECT_NE(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_ERROR);    // thread 1
-    EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_DEFERRED); // thread 0
+    EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);  // thread 1
+    EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);  // thread 0
+    EXPECT_NE(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_ERROR); // thread 1
+    EXPECT_NE(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_ERROR); // thread 0
 
     // wait for thread 1 to run its work and at least one stolen work item
     while (counter < (size_t) 4) {
