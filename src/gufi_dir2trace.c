@@ -281,7 +281,6 @@ int main(int argc, char *argv[]) {
 
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_wait(pool);
         QPTPool_destroy(pool);
         outfiles_fin(pa.outfiles, pa.in.maxthreads);
         trie_free(pa.skip);

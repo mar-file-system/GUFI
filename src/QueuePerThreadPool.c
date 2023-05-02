@@ -534,9 +534,16 @@ int QPTPool_start(QPTPool_t *ctx) {
 
         started += !pthread_create(&data->thread, NULL, worker_function, wf_args);
     }
+
+    if (started != ctx->nthreads) {
+        pthread_mutex_unlock(&ctx->mutex);
+        QPTPool_wait(ctx);
+        return 1;
+    }
+
     pthread_mutex_unlock(&ctx->mutex);
 
-    return (started != ctx->nthreads);
+    return 0;
 }
 
 /* id selects the next_queue variable to use, not where the work will be placed */
