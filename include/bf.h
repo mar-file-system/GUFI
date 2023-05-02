@@ -182,7 +182,6 @@ struct input {
    AndOr_t andor;
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
-   int  dontdescend;              // added to allow single level directory operations
    int  buildinindir;             // added to notice when writing index dbs into the input dir
    int  suspectd;                 // added for bfwreaddirplus2db for how to default suspect directories 0 - not supsect 1 - suspect
    int  suspectfl;                // added for bfwreaddirplus2db for how to default suspect file/link 0 - not suspect 1 - suspect

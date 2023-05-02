@@ -156,13 +156,13 @@ void listdir(struct input *in, const char *name, long long int level,
     //printf("inlistdir name %s\n",name);
     if (statit) {
       lstat(name,&st);
-      if (in->dontdescend == 0) {
+      if (in->max_level != 0) {
         if (S_ISDIR(st.st_mode)) {
            dir = opendir(name);
         }
       }
     } else {
-      if (in->dontdescend == 0) {
+      if (in->max_level != 0) {
         if (!(dir = opendir(name)))
           return;
       }
@@ -202,7 +202,7 @@ void listdir(struct input *in, const char *name, long long int level,
       if (!S_ISDIR(st.st_mode)) {
          return;
       }
-      if (in->dontdescend==1) {
+      if (in->max_level == 0) {
          return;
       }
     }
@@ -295,7 +295,7 @@ int main(int argc, char **argv)
     xattrit=0;
     numops=0;
     loader=0;
-    in.dontdescend=0;
+    in.max_level=-1;
     while ((c = getopt (argc, argv, "sxlhDd:")) != -1)
       switch (c)
         {
@@ -320,7 +320,7 @@ int main(int argc, char **argv)
           }
           break;
         case 'D':
-          in.dontdescend=1;
+          in.max_level=0;
           numops++;
           break;
         case 'h':
@@ -332,7 +332,7 @@ int main(int argc, char **argv)
       helpme();
       exit(-1);
     }
-    if ((in.dontdescend==1) && (statit<1)) {
+    if ((in.max_level==0) && (statit<1)) {
       fprintf(stderr,"-D must also have -s\n");
       exit(-1);
     }

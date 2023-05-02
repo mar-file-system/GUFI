@@ -97,7 +97,6 @@ static const std::string E = "-E"; static const std::string E_arg = "E arg";
 static const std::string F = "-F"; static const std::string F_arg = "F arg";
 static const std::string r = "-r";
 static const std::string R = "-R";
-static const std::string D = "-D";
 static const std::string Y = "-Y";
 static const std::string Z = "-Z";
 static const std::string W = "-W"; static const std::string W_arg = "W arg";
@@ -152,7 +151,6 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->andor,                   1);
         EXPECT_EQ(in->insertfl,                1);
         EXPECT_EQ(in->insertdir,               1);
-        EXPECT_EQ(in->dontdescend,             1);
         EXPECT_EQ(in->suspectd,                1);
         EXPECT_EQ(in->suspectfl,               1);
         EXPECT_EQ(in->infile,                  1);
@@ -174,7 +172,6 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->andor,                   0);
         EXPECT_EQ(in->insertfl,                0);
         EXPECT_EQ(in->insertdir,               0);
-        EXPECT_EQ(in->dontdescend,             0);
         EXPECT_EQ(in->suspectd,                0);
         EXPECT_EQ(in->suspectfl,               0);
         EXPECT_EQ(in->infile,                  0);
@@ -272,7 +269,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRDYZW:A:g:c:uy:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
+    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:uy:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
 
     const char *argv[] = {
         exec.c_str(),
@@ -295,7 +292,6 @@ TEST(parse_cmd_line, debug) {
         F.c_str(), F_arg.c_str(),
         r.c_str(),
         R.c_str(),
-        D.c_str(),
         Y.c_str(),
         Z.c_str(),
         W.c_str(), W_arg.c_str(),
@@ -339,7 +335,7 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xpPNVbarRDYZumwjX" COMPRESS_OPT;
+    const char opts[] = "xpPNVbarRYZumwjX" COMPRESS_OPT;
 
     const char *argv[] = {
         exec.c_str(),
@@ -352,7 +348,6 @@ TEST(parse_cmd_line, flags) {
         a.c_str(),
         r.c_str(),
         R.c_str(),
-        D.c_str(),
         Y.c_str(),
         Z.c_str(),
         u.c_str(),

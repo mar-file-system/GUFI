@@ -168,7 +168,6 @@ void show_input(struct input* in, int retval) {
    printf("in.sql.fin                  = '%s'\n",          in->sql.fin.data);
    printf("in.insertdir                = '%d'\n",          in->insertdir);
    printf("in.insertfl                 = '%d'\n",          in->insertfl);
-   printf("in.dontdescend              = '%d'\n",          in->dontdescend);
    printf("in.suspectd                 = '%d'\n",          in->suspectd);
    printf("in.suspectfl                = '%d'\n",          in->suspectfl);
    printf("in.insuspect                = '%s'\n",          in->insuspect.data);
@@ -335,10 +334,6 @@ int parse_cmd_line(int         argc,
 
       case 'R':               // insert dirs into db for bfwreaddirplus2db
          in->insertdir = 1;
-         break;
-
-      case 'D':               // default is 0
-         in->dontdescend = 1;
          break;
 
       case 'Y':               // default is 0
