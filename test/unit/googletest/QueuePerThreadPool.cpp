@@ -68,14 +68,20 @@ OF SUCH DAMAGE.
 
 #include "QueuePerThreadPool.h"
 
-static const     size_t THREADS = 5;
-static constexpr size_t WORK_COUNT = 2 * THREADS + 1;
+static const     std::size_t THREADS = 5;
+static constexpr std::size_t WORK_COUNT = 2 * THREADS + 1;
 
 #define setup_pool(nthreads, args)                                      \
     QPTPool_t *pool = QPTPool_init(nthreads, args);                     \
     ASSERT_NE(pool, nullptr);                                           \
     /* don't bother cleaning up */                                      \
     ASSERT_EQ(QPTPool_start(pool), 0)
+
+static int increment_counter(QPTPool_t *, const std::size_t, void *data, void *) {
+    std::size_t *counter = static_cast<std::size_t *>(data);
+    (*counter)++;
+    return 0;
+}
 
 // QPTPool_init followed by QPTPool_destroy - threads are not started
 // should not leak memory
@@ -158,67 +164,40 @@ TEST(QueuePerThreadPool, no_work) {
     }
 }
 
-TEST(QueuePerThreadPool, provide_function) {
-    int vals[] = {0, 0, 0};
-    const int default_value  = 1234;
-    const int function_value = 5678;
+TEST(QueuePerThreadPool, restart) {
+    std::size_t counter = 0;
 
-    setup_pool(THREADS, vals);
+    QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
+    ASSERT_NE(pool, nullptr);
 
-    // this thread should set vals[0] = default_value
-    QPTPool_enqueue(pool,
-                    0,
-                    [](QPTPool_t *, const size_t id, void *, void *args) -> int {
-                        ((int *) args)[id] = default_value;
-                        return 0;
-                    },
-                    nullptr);
-
-    // this thread should set vals[1] = function_value
-    QPTPool_enqueue(pool,
-                    1,
-                    [](QPTPool_t *, const size_t id, void *, void *args) -> int {
-                        ((int *) args)[id] = function_value;
-                        return 0;
-                    },
-                    nullptr);
-
-    // this thread should set vals[2] = default_value
-    QPTPool_enqueue(pool,
-                    2,
-                    [](QPTPool_t *, const size_t id, void *, void *args) -> int {
-                        ((int *) args)[id] = default_value;
-                        return 0;
-                    },
-                    nullptr);
-
-    QPTPool_wait(pool);
-
-    EXPECT_EQ(vals[0], default_value);
-    EXPECT_EQ(vals[1], function_value);
-    EXPECT_EQ(vals[2], default_value);
+    for(std::size_t i = 0; i < 3; i++) {
+        ASSERT_EQ(QPTPool_start(pool), 0);
+        EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
+        QPTPool_wait(pool);
+        EXPECT_EQ(counter, (i + 1));
+    }
 
     QPTPool_destroy(pool);
 }
 
 // push work onto queues from the outside
 TEST(QueuePerThreadPool, enqueue_external) {
-    size_t *values = new size_t[WORK_COUNT]();
+    std::size_t *values = new std::size_t[WORK_COUNT]();
 
     struct test_work {
-        size_t *value;
-        size_t counter;
+        std::size_t *value;
+        std::size_t counter;
     };
 
     setup_pool(THREADS, nullptr);
 
-    for(size_t i = 0; i < WORK_COUNT; i++) {
+    for(std::size_t i = 0; i < WORK_COUNT; i++) {
         struct test_work *work = (struct test_work *) calloc(1, sizeof(struct test_work));
         work->value = &values[i];
         work->counter = i;
 
         QPTPool_enqueue(pool, i % THREADS,
-                        [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                        [](QPTPool_t *, const std::size_t, void *data, void *) -> int {
                             struct test_work *work = (struct test_work *) data;
                             *(work->value) = work->counter;
                             free(work);
@@ -228,7 +207,7 @@ TEST(QueuePerThreadPool, enqueue_external) {
 
     QPTPool_wait(pool);
 
-    for(size_t i = 0; i < WORK_COUNT; i++) {
+    for(std::size_t i = 0; i < WORK_COUNT; i++) {
         EXPECT_EQ(values[i], i);
     }
     EXPECT_EQ(QPTPool_threads_completed(pool), WORK_COUNT);
@@ -238,13 +217,13 @@ TEST(QueuePerThreadPool, enqueue_external) {
 }
 
 struct test_work {
-    size_t index;
-    size_t *values;
+    std::size_t index;
+    std::size_t *values;
 };
 
-static int recursive(QPTPool_t *pool, const size_t id, void *data, void *args) {
+static int recursive(QPTPool_t *pool, const std::size_t id, void *data, void *args) {
     struct test_work *work = (struct test_work *) data;
-    const size_t work_count = * (size_t *) args;
+    const std::size_t work_count = * (std::size_t *) args;
 
     if (work->index >= work_count) {
         free(work);
@@ -265,7 +244,7 @@ static int recursive(QPTPool_t *pool, const size_t id, void *data, void *args) {
 
 // push work onto queues from within the queue function
 TEST(QueuePerThreadPool, enqueue_internal) {
-    size_t *values = new size_t[WORK_COUNT]();
+    std::size_t *values = new std::size_t[WORK_COUNT]();
 
     setup_pool(THREADS, (void *) &WORK_COUNT);
 
@@ -278,7 +257,7 @@ TEST(QueuePerThreadPool, enqueue_internal) {
     QPTPool_enqueue(pool, 0, recursive, zero);
     QPTPool_wait(pool);
 
-    for(size_t i = 0; i < WORK_COUNT; i++) {
+    for(std::size_t i = 0; i < WORK_COUNT; i++) {
         EXPECT_EQ(values[i], i);
     }
     EXPECT_EQ(QPTPool_threads_completed(pool), WORK_COUNT);
@@ -290,9 +269,9 @@ TEST(QueuePerThreadPool, enqueue_internal) {
 TEST(QueuePerThreadPool, threads_started) {
     setup_pool(THREADS, nullptr);
 
-    for(size_t i = 0; i < WORK_COUNT; i++) {
+    for(std::size_t i = 0; i < WORK_COUNT; i++) {
         QPTPool_enqueue(pool, i % THREADS,
-                        [](QPTPool_t *, const size_t, void *, void *) -> int {
+                        [](QPTPool_t *, const std::size_t, void *, void *) -> int {
                             return 0;
                         },
                         nullptr);
@@ -308,9 +287,9 @@ TEST(QueuePerThreadPool, threads_started) {
 TEST(QueuePerThreadPool, threads_completed) {
     setup_pool(THREADS, nullptr);
 
-    for(size_t i = 0; i < WORK_COUNT; i++) {
+    for(std::size_t i = 0; i < WORK_COUNT; i++) {
         QPTPool_enqueue(pool, i % THREADS,
-                        [](QPTPool_t *, const size_t, void *, void *) -> int {
+                        [](QPTPool_t *, const std::size_t, void *, void *) -> int {
                             return 0;
                         }, nullptr);
     }
@@ -323,25 +302,25 @@ TEST(QueuePerThreadPool, threads_completed) {
 }
 
 TEST(QueuePerThreadPool, custom_next) {
-    size_t *values = new size_t[WORK_COUNT]();
+    std::size_t *values = new std::size_t[WORK_COUNT]();
 
     QPTPool_t *pool = QPTPool_init(THREADS, values);
     ASSERT_NE(pool, nullptr);
     ASSERT_EQ(QPTPool_set_next(pool,
-                               [](const size_t, const size_t prev, const size_t threads,
-                                  void *, void *) -> size_t {
+                               [](const std::size_t, const std::size_t prev, const std::size_t threads,
+                                  void *, void *) -> std::size_t {
                                    return (prev?prev:threads) - 1;
                                }, nullptr), 0);
     ASSERT_EQ(QPTPool_start(pool), 0);
 
-    for(size_t i = 0; i < WORK_COUNT; i++) {
+    for(std::size_t i = 0; i < WORK_COUNT; i++) {
         struct test_work *work = (struct test_work *) calloc(1, sizeof(struct test_work));
         work->index = i;
         work->values = nullptr;
 
         QPTPool_enqueue(pool, i % THREADS,
-                        [](QPTPool_t *, const size_t id, void *data, void *args) -> int {
-                            size_t *values = (size_t *) args;
+                        [](QPTPool_t *, const std::size_t id, void *data, void *args) -> int {
+                            std::size_t *values = (std::size_t *) args;
                             struct test_work *work = (struct test_work *) data;
                             values[work->index] = id;
                             free(work);
@@ -355,12 +334,12 @@ TEST(QueuePerThreadPool, custom_next) {
     EXPECT_EQ(QPTPool_threads_started(pool), WORK_COUNT);
 
     // first set of work was pushed to the original threads
-    for(size_t i = 0; i < THREADS; i++) {
+    for(std::size_t i = 0; i < THREADS; i++) {
         EXPECT_EQ(values[i], i);
     }
 
     // second set of work was pushed to previous threads
-    for(size_t i = THREADS; i < (2 * THREADS); i++) {
+    for(std::size_t i = THREADS; i < (2 * THREADS); i++) {
         EXPECT_EQ(values[i], (i - 1) % THREADS);
     }
 
@@ -381,12 +360,12 @@ TEST(QueuePerThreadPool, deferred) {
     ASSERT_EQ(QPTPool_set_queue_limit(pool, 1), 0);
     ASSERT_EQ(QPTPool_start(pool), 0);
 
-    size_t counter = 0;
+    std::size_t counter = 0;
 
     // prevent thread from completing
     EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const size_t, void *data, void *args) -> int {
-                                  size_t *counter = static_cast<size_t *>(data);
+                              [](QPTPool_t *, const std::size_t, void *data, void *args) -> int {
+                                  std::size_t *counter = static_cast<std::size_t *>(data);
                                   (*counter)++;
 
                                   pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
@@ -402,13 +381,13 @@ TEST(QueuePerThreadPool, deferred) {
 
     // fill up wait queue
     EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const size_t, void *, void *) -> int {
+                              [](QPTPool_t *, const std::size_t, void *, void *) -> int {
                                   return 0;
                               }, nullptr), QPTPool_enqueue_WAIT);
 
     // forced to enqueue in deferred queue
     EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const size_t, void *, void *) -> int {
+                              [](QPTPool_t *, const std::size_t, void *, void *) -> int {
                                   return 0;
                               }, nullptr), QPTPool_enqueue_DEFERRED);
 
@@ -416,21 +395,15 @@ TEST(QueuePerThreadPool, deferred) {
 
     QPTPool_wait(pool);
 
-    EXPECT_EQ(counter,                         (size_t)   1);
+    EXPECT_EQ(counter,                         (std::size_t)   1);
     EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 3);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 3);
 
     QPTPool_destroy(pool);
 }
 
-static int increment_counter(QPTPool_t *, const size_t, void *data, void *) {
-    size_t *counter = static_cast<size_t *>(data);
-    (*counter)++;
-    return 0;
-}
-
 TEST(QueuePerThreadPool, steal_waiting) {
-    size_t counter = 0;
+    std::size_t counter = 0;
 
     // macOS doesn't seem to like std::mutex
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -443,8 +416,8 @@ TEST(QueuePerThreadPool, steal_waiting) {
     // prevent thread 0 from completing
     pthread_mutex_lock(&mutex);
     EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const size_t, void *data, void *args) -> int {
-                                  size_t *counter = static_cast<size_t *>(data);
+                              [](QPTPool_t *, const std::size_t, void *data, void *args) -> int {
+                                  std::size_t *counter = static_cast<std::size_t *>(data);
                                   (*counter)++;
 
                                   pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
@@ -464,12 +437,12 @@ TEST(QueuePerThreadPool, steal_waiting) {
     // i == 1 thread 0
     // i == 2 thread 1
     // i == 3 thread 0
-    for(size_t i = 0; i < 4; i++) {
+    for(std::size_t i = 0; i < 4; i++) {
         EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
     }
 
     // wait for thread 1 to run its work and at least one stolen work item
-    while (counter < (size_t) 3) {
+    while (counter < (std::size_t) 3) {
         sched_yield();
     }
 
@@ -478,7 +451,7 @@ TEST(QueuePerThreadPool, steal_waiting) {
 
     QPTPool_wait(pool);
 
-    EXPECT_EQ(counter, (size_t) 4);
+    EXPECT_EQ(counter, (std::size_t) 4);
     EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 5);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 5);
 
@@ -486,7 +459,7 @@ TEST(QueuePerThreadPool, steal_waiting) {
 }
 
 TEST(QueuePerThreadPool, steal_deferred) {
-    size_t counter = 0;
+    std::size_t counter = 0;
 
     // macOS doesn't seem to like std::mutex
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -500,8 +473,8 @@ TEST(QueuePerThreadPool, steal_deferred) {
     // prevent thread 0 from completing
     pthread_mutex_lock(&mutex);
     EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const size_t, void *data, void *args) -> int {
-                                  size_t *counter = static_cast<size_t *>(data);
+                              [](QPTPool_t *, const std::size_t, void *data, void *args) -> int {
+                                  std::size_t *counter = static_cast<std::size_t *>(data);
                                   (*counter)++;
 
                                   pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
@@ -523,7 +496,7 @@ TEST(QueuePerThreadPool, steal_deferred) {
     EXPECT_NE(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_ERROR); // thread 0
 
     // wait for thread 1 to run its work and at least one stolen work item
-    while (counter < (size_t) 4) {
+    while (counter < (std::size_t) 4) {
         sched_yield();
     }
 
@@ -532,14 +505,15 @@ TEST(QueuePerThreadPool, steal_deferred) {
 
     QPTPool_wait(pool);
 
-    EXPECT_EQ(counter, (size_t) 4);
+    EXPECT_EQ(counter, (std::size_t) 4);
     EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 5);
     EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 5);
 
     QPTPool_destroy(pool);
 }
 
-static size_t test_next_func(const size_t, const size_t, const size_t, void *, void *) {
+static std::size_t test_next_func(const std::size_t, const std::size_t,
+                                  const std::size_t, void *, void *) {
     return 0;
 }
 

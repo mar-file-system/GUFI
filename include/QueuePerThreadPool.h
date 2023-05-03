@@ -170,9 +170,6 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
  */
 void QPTPool_wait(QPTPool_t *ctx);
 
-/* clean up QPTPool context data */
-void QPTPool_destroy(QPTPool_t *ctx);
-
 /* utility functions */
 
 /* get the number of threads that were started by the QPTPool */
@@ -180,6 +177,9 @@ uint64_t QPTPool_threads_started(QPTPool_t *ctx);
 
 /* get the number of started threads that completed successfully */
 uint64_t QPTPool_threads_completed(QPTPool_t *ctx);
+
+/* clean up QPTPool context data */
+void QPTPool_destroy(QPTPool_t *ctx);
 
 #ifdef __cplusplus
 }

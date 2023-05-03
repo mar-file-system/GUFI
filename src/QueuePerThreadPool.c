@@ -472,8 +472,10 @@ int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffers) {
-    /* Not checking arguments */
-    *debug_buffers = ctx->debug_buffers;
+    if (debug_buffers) {
+        *debug_buffers = ctx->debug_buffers;
+    }
+
     return 0;
 }
 #endif
@@ -490,17 +492,13 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
                                    , struct OutputBuffers *debug_buffers
                                    #endif
     ) {
-    if (!nthreads) {
-        return NULL;
-    }
-
     QPTPool_t *ctx = QPTPool_init(nthreads, args);
     if (ctx){
         if ((next_func && QPTPool_set_next(ctx, next_func, next_args)) ||
-            (queue_limit && QPTPool_set_queue_limit(ctx, queue_limit)) ||
-            (steal_num && QPTPool_set_steal(ctx, steal_num, steal_denom))
+            QPTPool_set_queue_limit(ctx, queue_limit) ||
+            QPTPool_set_steal(ctx, steal_num, steal_denom)
             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            || (debug_buffers && QPTPool_set_debug_buffers(ctx, debug_buffers))
+            || QPTPool_set_debug_buffers(ctx, debug_buffers)
             #endif
             ) {
                 QPTPool_destroy(ctx);
@@ -517,7 +515,7 @@ int QPTPool_start(QPTPool_t *ctx) {
     }
 
     pthread_mutex_lock(&ctx->mutex);
-    if (ctx->state != INITIALIZED) {
+    if (ctx->state == RUNNING) {
         pthread_mutex_unlock(&ctx->mutex);
         return 1;
     }
@@ -528,20 +526,17 @@ int QPTPool_start(QPTPool_t *ctx) {
     for(size_t i = 0; i < ctx->nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];
 
-        struct worker_function_args *wf_args = calloc(1, sizeof(struct worker_function_args));
+        struct worker_function_args *wf_args = malloc(sizeof(struct worker_function_args));
         wf_args->ctx = ctx;
         wf_args->id = i;
-
         started += !pthread_create(&data->thread, NULL, worker_function, wf_args);
     }
+    pthread_mutex_unlock(&ctx->mutex);
 
     if (started != ctx->nthreads) {
-        pthread_mutex_unlock(&ctx->mutex);
         QPTPool_wait(ctx);
         return 1;
     }
-
-    pthread_mutex_unlock(&ctx->mutex);
 
     return 0;
 }
@@ -605,6 +600,26 @@ void QPTPool_wait(QPTPool_t *ctx) {
     }
 }
 
+uint64_t QPTPool_threads_started(QPTPool_t *ctx) {
+    /* Not checking arguments */
+
+    uint64_t sum = 0;
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        sum += ctx->data[i].threads_started;
+    }
+    return sum;
+}
+
+uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
+    /* Not checking arguments */
+
+    uint64_t sum = 0;
+    for(size_t i = 0; i < ctx->nthreads; i++) {
+        sum += ctx->data[i].threads_successful;
+    }
+    return sum;
+}
+
 void QPTPool_destroy(QPTPool_t *ctx) {
     /* Not checking arguments */
 
@@ -629,24 +644,4 @@ void QPTPool_destroy(QPTPool_t *ctx) {
     pthread_mutex_destroy(&ctx->mutex);
     free(ctx->data);
     free(ctx);
-}
-
-uint64_t QPTPool_threads_started(QPTPool_t *ctx) {
-    /* Not checking arguments */
-
-    uint64_t sum = 0;
-    for(size_t i = 0; i < ctx->nthreads; i++) {
-        sum += ctx->data[i].threads_started;
-    }
-    return sum;
-}
-
-uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
-    /* Not checking arguments */
-
-    uint64_t sum = 0;
-    for(size_t i = 0; i < ctx->nthreads; i++) {
-        sum += ctx->data[i].threads_successful;
-    }
-    return sum;
 }
