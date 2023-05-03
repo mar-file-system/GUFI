@@ -1,3 +1,7 @@
+# verifytrace help
+$ verifytrace
+Syntax: verifytrace delim [trace ...]
+
 # generate the tree
 $ generatetree "prefix"
 

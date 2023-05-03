@@ -61,6 +61,7 @@
 
 
 
+from collections import OrderedDict
 import argparse
 import os
 import subprocess
@@ -1009,48 +1010,45 @@ def gid_size(_config, args, where):
 
 # mapping of desired statistics to functions
 # uses --recursive
-RECURSIVE = {
-    'depth'              : depth,
-    'filesize'           : filesize,
-    'filecount'          : filecount,
-    'linkcount'          : linkcount,
-    'dircount'           : dircount,
-    'leaf-dirs'          : leaf_dirs,
-    'leaf-depth'         : leaf_depth,
-    'leaf-files'         : leaf_files,
-    'leaf-links'         : leaf_links,
-}
+RECURSIVE = [
+    ['depth',               depth],
+    ['filesize',            filesize],
+    ['filecount',           filecount],
+    ['linkcount',           linkcount],
+    ['dircount',            dircount],
+    ['leaf-dirs',           leaf_dirs],
+    ['leaf-depth',          leaf_depth],
+    ['leaf-files',          leaf_files],
+    ['leaf-links',          leaf_links],
+]
 
 # uses --cumulative
-CUMULATIVE = {
-    'total-filesize'     : total_filesize,
-    'total-filecount'    : total_filecount,
-    'total-linkcount'    : total_linkcount,
-    'total-dircount'     : total_dircount,
-    'total-leaf-files'   : total_leaf_files,
-    'total-leaf-links'   : total_leaf_links,
-    'files-per-level'    : files_per_level,
-    'links-per-level'    : links_per_level,
-    'dirs-per-level'     : dirs_per_level,
-    'average-leaf-files' : average_leaf_files,
-    'average-leaf-links' : average_leaf_links,
-    'extensions'         : extensions,
-}
+CUMULATIVE = [
+    ['total-filesize',      total_filesize],
+    ['total-filecount',     total_filecount],
+    ['total-linkcount',     total_linkcount],
+    ['total-dircount',      total_dircount],
+    ['total-leaf-files',    total_leaf_files],
+    ['total-leaf-links',    total_leaf_links],
+    ['files-per-level',     files_per_level],
+    ['links-per-level',     links_per_level],
+    ['dirs-per-level',      dirs_per_level],
+    ['average-leaf-files',  average_leaf_files],
+    ['average-leaf-links',  average_leaf_links],
+    ['extensions',          extensions],
+]
 
 # does not use either
-OTHERS = {
-    'median-leaf-files'  : median_leaf_files,
-    'duplicate-names'    : duplicate_names,
-    'uid-size'           : uid_size,
-    'gid-size'           : gid_size,
-}
+OTHERS = [
+    ['median-leaf-files',   median_leaf_files],
+    ['duplicate-names',     duplicate_names],
+    ['uid-size',            uid_size],
+    ['gid-size',            gid_size],
+]
 
 # argv[0] should be the command name
 def run(argv, config_path):
-    stats = {}
-    stats.update(RECURSIVE)
-    stats.update(CUMULATIVE)
-    stats.update(OTHERS)
+    stats = OrderedDict(RECURSIVE + CUMULATIVE + OTHERS)
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -1067,10 +1065,10 @@ def run(argv, config_path):
                         version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
     parser.add_argument('--recursive', '-r',
                         action='store_true',
-                        help='run command recursively ({0})'.format(', '.join(RECURSIVE.keys())))
+                        help='run command recursively ({0})'.format(', '.join([key for key, _ in RECURSIVE])))
     parser.add_argument('--cumulative', '-c',
                         action='store_true',
-                        help='return cumulative values ({0})'.format(', '.join(CUMULATIVE.keys())))
+                        help='return cumulative values ({0})'.format(', '.join([key for key, _ in CUMULATIVE])))
     parser.add_argument('--order',
                         metavar='order',
                         choices=ORDER.keys(),

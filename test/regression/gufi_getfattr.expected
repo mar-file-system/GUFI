@@ -1,3 +1,42 @@
+$ gufi_getfattr --help
+usage: gufi_getfattr.py [--help] [--version] [--name NAME] [--dump]
+                        [--match PATTERN] [--only-values] [--recursive]
+                        [--delim c] [--in-memory-name name]
+                        [--aggregate-name name] [--skip-file filename]
+                        path [path ...]
+
+GUFI version of getfattr
+
+Note: --no-dereference/-h is always set
+
+positional arguments:
+  path
+
+optional arguments:
+  --help                show this help message and exit
+  --version, -v         show program's version number and exit
+  --name NAME, -n NAME  Dump the values of the named extended attribute
+  --dump, -d            Dump the values of all extended attributes associated
+                        with pathname.
+  --match PATTERN, -m PATTERN
+                        Only include attributes with names matching the
+                        regular expression pattern. The default value for
+                        pattern is "^user\.", which includes all the
+                        attributes in the user namespace. Specify "-" for
+                        including all attributes". Refer to attr(5) for a more
+                        detailed discussion of namespaces.
+  --only-values         Dump out the raw extended attribute value(s) without
+                        encoding them.
+  --recursive, -R       List the atttributes of all files and directories
+                        recursively.
+  --delim c             delimiter separating output columns
+  --in-memory-name name
+                        Name of in-memory database when aggregation is
+                        performed
+  --aggregate-name name
+                        Name of final database when aggregation is performed
+  --skip-file filename  Name of file containing directory basenames to skip
+
 # 0 xattrs
 $ gufi_getfattr .
 

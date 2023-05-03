@@ -1,3 +1,7 @@
+# verifytraceintree help
+$ verifytraceintree
+Syntax: verifytraceintree trace delim GUFI_tree [threads]
+
 # generate the tree
 $ generatetree "prefix"
 

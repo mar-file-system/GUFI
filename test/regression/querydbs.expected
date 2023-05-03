@@ -1,3 +1,18 @@
+# querydbs help
+$ querydbs
+usage: querydbs [options] attach_name table_name SQL DB_name [DB_name ...]
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -N                     print column-names (header) for DB results
+  -V                     print column-values (rows) for DB results
+  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+
+attach_name              prefix of alias used to attach database files
+table_name               name of table in database file to attach; also used for view table name: 'v<table_name>'
+SQL                      arbitrary SQL executed on view
+DB_name                  path of source database file(s) to add to view
+
 # Use gufi_query to generate per-thread result database files
 $ gufi_query -n 2 -O "outdb" -I "CREATE TABLE out(name TEXT, size INT64)" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');" "prefix"
 

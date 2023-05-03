@@ -84,6 +84,9 @@ cleanup
 OUTPUT="querydbs.out"
 
 (
+echo "# ${QUERYDBS} help" | replace
+run_no_sort "${QUERYDBS}"
+
 echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replace
 run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');\" \"${INDEXROOT}\""
 

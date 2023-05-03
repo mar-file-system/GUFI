@@ -87,6 +87,8 @@ TEST_ID=1001
 TEST_NAME="gufi_test"
 
 (
+run_no_sort "${GUFI_FIND} --help"
+
 run_sort "${GUFI_FIND}"
 run_sort "${GUFI_FIND} -empty"
 run_sort "${GUFI_FIND} -type d"

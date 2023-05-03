@@ -1,3 +1,15 @@
+# gufi_stat help
+$ gufi_stat
+usage: gufi_stat [options] path ...
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
+  -j                     print the information in terse form
+
+path                 path to stat
+
+
 # first line of default print
   File: '.hidden'
   File: '1KB'

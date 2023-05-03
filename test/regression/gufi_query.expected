@@ -1,3 +1,36 @@
+# gufi_query help
+$ gufi_query
+usage: gufi_query [options] GUFI_index ...
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -T <SQL_tsum>          SQL for tree-summary table
+  -S <SQL_sum>           SQL for summary table
+  -E <SQL_ent>           SQL for entries table
+  -a                     AND/OR (SQL query combination)
+  -n <threads>           number of threads
+  -j                     print the information in terse form
+  -o <out_fname>         output file (one-per-thread, with thread-id suffix)
+  -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
+  -O <out_DB>            output DB
+  -I <SQL_init>          SQL init
+  -F <SQL_fin>           SQL cleanup
+  -y <min level>         minimum level to go down
+  -z <max level>         maximum level to go down
+  -J <SQL_interm>        SQL for intermediate results
+  -K <create aggregate>  SQL to create the final aggregation table
+  -G <SQL_aggregate>     SQL for aggregated results
+  -m                     Keep mtime and atime same on the database files
+  -B <buffer size>       size of each thread's output buffer in bytes
+  -w                     open the database files in read-write mode instead of read only mode
+  -x                     enable external database processing
+  -k <filename>          file containing directory names to skip
+  -M <bytes>             target memory footprint
+  -e                     compress work items
+
+GUFI_index        find GUFI index here
+
+
 # Get only directories
 $ gufi_query -d " " -S "SELECT name FROM vrsummary;" "prefix"
 directory

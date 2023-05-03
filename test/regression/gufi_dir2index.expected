@@ -1,3 +1,21 @@
+# gufi_dir2index help
+$ gufi_dir2index
+usage: gufi_dir2index [options] input_dir... output_dir
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+  -x                     enable external database processing
+  -z <max level>         maximum level to go down
+  -k <filename>          file containing directory names to skip
+  -M <bytes>             target memory footprint
+  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
+  -e                     compress work items
+
+input_dir...      walk one or more trees to produce GUFI index
+output_dir        build GUFI index here
+
+
 Index Everything:
     Source Directory:
         prefix

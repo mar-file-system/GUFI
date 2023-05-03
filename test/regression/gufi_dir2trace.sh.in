@@ -70,6 +70,9 @@ DELIM="|"
 OUTPUT="gufi_dir2trace.out"
 
 (
+echo "# ${GUFI_DIR2TRACE} help" | replace
+run_no_sort "${GUFI_DIR2TRACE}"
+
 # generate the tree
 @CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"
 

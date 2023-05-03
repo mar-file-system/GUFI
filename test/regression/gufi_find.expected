@@ -1,3 +1,25 @@
+$ gufi_find --help
+Usage: gufi_find [-P] [path...] [expression]
+
+default path is the index root directory specified in the configuration file
+expression may consist of:
+
+    amin atime cmin ctime empty
+    executable false fprint gid group
+    help iname inum iregex links
+    lname ls maxdepth mindepth mmin
+    mtime name newer path printf
+    readable regex samefile size true
+    type uid user writable
+
+GUFI Specific Flags (--):
+
+    numresults largest smallest
+
+Report (and track progress on fixing) bugs to the GitHub Issues
+page at https://github.com/mar-file-system/GUFI/issues
+
+
 $ gufi_find
 prefix
 .hidden

@@ -80,6 +80,9 @@ trap cleanup_exit EXIT
 cleanup
 
 (
+echo "# ${GUFI_ROLLUP} help" | replace
+run_no_sort "${GUFI_ROLLUP}"
+
 do_tests() {
     run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${INDEXROOT}\" | @WC@ -l"
     run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | @WC@ -l"

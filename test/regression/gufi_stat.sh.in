@@ -67,6 +67,9 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_stat.out"
 
 (
+echo "# gufi_stat help"
+run_no_sort "${GUFI_STAT}"
+
 # entries in the index with a fixed size
 fixed_size=(
     ".hidden"

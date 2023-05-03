@@ -67,6 +67,9 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 OUTPUT="gufi_trace2index.out"
 
 (
+echo "# ${GUFI_TRACE2INDEX} help" | replace
+run_no_sort "${GUFI_TRACE2INDEX}"
+
 # generate the tree
 run_no_sort "${GENERATETREE} ${SRCDIR}"
 

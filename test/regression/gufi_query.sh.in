@@ -67,6 +67,9 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_query.out"
 
 (
+echo "# ${GUFI_QUERY} help" | replace
+run_no_sort "${GUFI_QUERY}"
+
 echo "# Get only directories"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM vrsummary;\" \"${INDEXROOT}\""
 

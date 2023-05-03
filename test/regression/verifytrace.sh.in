@@ -82,6 +82,9 @@ cleanup
 OUTPUT="verifytrace.out"
 
 (
+echo "# ${VERIFYTRACE} help" | replace
+run_no_sort "${VERIFYTRACE}"
+
 echo "# generate the tree"
 run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 

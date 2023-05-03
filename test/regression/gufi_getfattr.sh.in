@@ -67,6 +67,8 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_getfattr.out"
 
 do_tests() {
+    run_no_sort "${GUFI_GETFATTR} --help"
+
     # no flags
     echo "# 0 xattrs"
     run_sort "${GUFI_GETFATTR} ."

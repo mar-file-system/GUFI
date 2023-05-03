@@ -77,6 +77,8 @@ run_uidgid_size() {
 }
 
 (
+run_no_sort "${GUFI_STATS} --help" | @SED@ '/^$/d;'
+
 run "${GUFI_STATS}    depth"
 run "${GUFI_STATS} -r depth"
 
