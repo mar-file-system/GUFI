@@ -137,6 +137,10 @@ TEST(xattrs, get_names) {
     EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, names, MAXXATTR, XATTRDELIM),
               (ssize_t) EXPECTED_STR_LEN);
     EXPECT_EQ(memcmp(names, EXPECTED_STR, EXPECTED_STR_LEN), 0);
+
+    // not enough buffer space
+    EXPECT_EQ(xattr_get_names(&EXPECTED_XATTRS, names, 0, XATTRDELIM),
+              (ssize_t) -1);
 }
 
 TEST(xattrs, to_file) {
@@ -145,6 +149,11 @@ TEST(xattrs, to_file) {
 
     char line[MAXXATTR];
     FILE *file = fmemopen(line, MAXXATTR, "wb");
+
+    // bad xattrs struct
+    struct xattrs bad_xattrs = EXPECTED_XATTRS;
+    bad_xattrs.pairs = nullptr;
+    EXPECT_EQ(xattrs_to_file(file, &bad_xattrs, XATTRDELIM), 0);
 
     EXPECT_EQ(xattrs_to_file(file, &EXPECTED_XATTRS, XATTRDELIM), (int) EXPECTED_STR_LEN);
     fflush(file);

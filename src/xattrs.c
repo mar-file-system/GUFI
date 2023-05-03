@@ -65,7 +65,6 @@ OF SUCH DAMAGE.
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "utils.h"
 #include "xattrs.h"
@@ -162,13 +161,13 @@ void xattrs_cleanup(struct xattrs *xattrs) {
 
 /* caller should zero xattrs since this function isn't always called on a struct xattrs */
 int xattrs_get(const char *path, struct xattrs *xattrs) {
+    /* Not checking pointers */
+
     char name_list[MAXXATTR];
     const ssize_t name_list_len = LISTXATTR(path, name_list, sizeof(name_list));
     if (name_list_len < 0) {
         const int err = errno;
-        char buf[MAXXATTR];
-        getcwd(buf, sizeof(buf));
-        fprintf(stderr, "Error: Could not list xattrs for %s: %s (%d) %s\n", path, strerror(err), err, buf);
+        fprintf(stderr, "Error: Could not list xattrs for %s: %s (%d)\n", path, strerror(err), err);
         return -1;
     }
 
@@ -227,7 +226,9 @@ int xattrs_get(const char *path, struct xattrs *xattrs) {
  * Combine all xattr names into a xattrdelim delimited string.
  */
 ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, const char delim) {
-    if (!xattrs || ((xattrs->name_len + xattrs->count) > buf_len)) {
+    /* Not checking pointers */
+
+    if ((xattrs->name_len + xattrs->count) > buf_len) {
         return -1;
     }
 
@@ -252,7 +253,7 @@ ssize_t xattr_get_names(const struct xattrs *xattrs, char *buf, size_t buf_len, 
  * <name>\x1F<value>\x1F ...
  */
 int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
-    if (!xattrs || !xattrs->pairs) {
+    if (!xattrs->pairs) {
         return 0;
     }
 
@@ -270,9 +271,7 @@ int xattrs_to_file(FILE *file, const struct xattrs *xattrs, const char delim) {
 
 /* parse serialized xattrs */
 int xattrs_from_line(char *start, const char *end, struct xattrs *xattrs, const char delim) {
-    if (!xattrs) {
-        return 0;
-    }
+    /* Not checking arguments */
 
     xattrs_setup(xattrs);
 
