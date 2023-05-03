@@ -100,11 +100,62 @@ TEST(QueuePerThreadPool, bad_start) {
     QPTPool_destroy(pool);
 }
 
+// not starting up QPTPool even though there
+// is work queued should not leak memory
+TEST(QueuePerThreadPool, no_start) {
+    void *work = ::operator new(1);
+
+    // not calling QPTPool_wait
+    {
+        QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
+
+        // the QPTPool should not leak memory
+        EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_WAIT);
+
+        // the QPTPool should not leak memory, but the allocation will leak
+        EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, work), QPTPool_enqueue_WAIT);
+
+        QPTPool_destroy(pool);
+    }
+
+    // calling QPTPool_wait
+    {
+        QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
+
+        // the QPTPool should not leak memory
+        EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_WAIT);
+
+        // the QPTPool should not leak memory, but the allocation will leak
+        EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, work), QPTPool_enqueue_WAIT);
+
+        // wait even though start was not called
+        // should not cause invalid thread joins
+        QPTPool_wait(pool);
+
+        // calling wait more times does not hurt
+        QPTPool_wait(pool);
+
+        QPTPool_destroy(pool);
+    }
+
+    ::operator delete(work);
+}
+
 // start threads without work
 TEST(QueuePerThreadPool, no_work) {
-    setup_pool(THREADS, nullptr);
-    QPTPool_wait(pool);
-    QPTPool_destroy(pool);
+    {
+        setup_pool(THREADS, nullptr);
+        QPTPool_wait(pool);
+        QPTPool_destroy(pool);
+    }
+
+    // calling wait more times does not hurt
+    {
+        setup_pool(THREADS, nullptr);
+        QPTPool_wait(pool);
+        QPTPool_wait(pool);
+        QPTPool_destroy(pool);
+    }
 }
 
 TEST(QueuePerThreadPool, provide_function) {

@@ -107,7 +107,7 @@ struct QPTPool {
     } next;
 
     pthread_mutex_t mutex;
-    QPTPoolState_t running;
+    QPTPoolState_t state;
     uint64_t incomplete;
 
     QPTPoolThreadData_t *data;
@@ -210,12 +210,12 @@ static void *worker_function(void *args) {
         timestamp_create_start(wf_wait);
         while (
             /* running, but no work in pool */
-            ((ctx->running == RUNNING) && !ctx->incomplete) ||
+            ((ctx->state == RUNNING) && !ctx->incomplete) ||
             /*
              * not running and still have work in
              * other threads, just not this one
              */
-            ((ctx->running == STOPPING) && ctx->incomplete &&
+            ((ctx->state == STOPPING) && ctx->incomplete &&
              !tw->waiting.size && !tw->deferred.size)
             ) {
             pthread_mutex_unlock(&ctx->mutex);
@@ -224,7 +224,7 @@ static void *worker_function(void *args) {
         }
         timestamp_set_end(wf_wait);
 
-        if ((ctx->running == STOPPING) && !ctx->incomplete &&
+        if ((ctx->state == STOPPING) && !ctx->incomplete &&
             !tw->waiting.head && !tw->deferred.size) {
             pthread_mutex_unlock(&ctx->mutex);
             pthread_mutex_unlock(&tw->mutex);
@@ -350,7 +350,7 @@ QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
     ctx->next.func = QPTPool_round_robin;
     ctx->next.args = NULL;
     pthread_mutex_init(&ctx->mutex, NULL);
-    ctx->running = INITIALIZED;
+    ctx->state = INITIALIZED;
     ctx->incomplete = 0;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -381,7 +381,7 @@ int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args) {
     }
 
     pthread_mutex_lock(&ctx->mutex);
-    if (ctx->running != INITIALIZED) {
+    if (ctx->state != INITIALIZED) {
         pthread_mutex_unlock(&ctx->mutex);
         return 1;
     }
@@ -396,7 +396,7 @@ int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit) {
     /* Not checking arguments */
 
     pthread_mutex_lock(&ctx->mutex);
-    if (ctx->running != INITIALIZED) {
+    if (ctx->state != INITIALIZED) {
         pthread_mutex_unlock(&ctx->mutex);
         return 1;
     }
@@ -410,7 +410,7 @@ int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom) 
     /* Not checking arguments */
 
     pthread_mutex_lock(&ctx->mutex);
-    if (ctx->running != INITIALIZED) {
+    if (ctx->state != INITIALIZED) {
         pthread_mutex_unlock(&ctx->mutex);
         return 1;
     }
@@ -426,7 +426,7 @@ int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffer
     /* Not checking arguments */
 
     pthread_mutex_lock(&ctx->mutex);
-    if (ctx->running != INITIALIZED) {
+    if (ctx->state != INITIALIZED) {
         pthread_mutex_unlock(&ctx->mutex);
         return 1;
     }
@@ -517,12 +517,12 @@ int QPTPool_start(QPTPool_t *ctx) {
     }
 
     pthread_mutex_lock(&ctx->mutex);
-    if (ctx->running != INITIALIZED) {
+    if (ctx->state != INITIALIZED) {
         pthread_mutex_unlock(&ctx->mutex);
         return 1;
     }
 
-    ctx->running = RUNNING;
+    ctx->state = RUNNING;
 
     size_t started = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
@@ -587,17 +587,21 @@ void QPTPool_wait(QPTPool_t *ctx) {
     /* Not checking arguments */
 
     pthread_mutex_lock(&ctx->mutex);
-    ctx->running = STOPPING;
+    const QPTPoolState_t prev = ctx->state;
+    ctx->state = STOPPING;
     pthread_mutex_unlock(&ctx->mutex);
-    for(size_t i = 0; i < ctx->nthreads; i++) {
-        QPTPoolThreadData_t *data = &ctx->data[i];
-        pthread_mutex_lock(&data->mutex);
-        pthread_cond_broadcast(&data->cv);
-        pthread_mutex_unlock(&data->mutex);
-    }
 
-    for(size_t i = 0; i < ctx->nthreads; i++) {
-        pthread_join(ctx->data[i].thread, NULL);
+    if (prev == RUNNING) {
+        for(size_t i = 0; i < ctx->nthreads; i++) {
+            QPTPoolThreadData_t *data = &ctx->data[i];
+            pthread_mutex_lock(&data->mutex);
+            pthread_cond_broadcast(&data->cv);
+            pthread_mutex_unlock(&data->mutex);
+        }
+
+        for(size_t i = 0; i < ctx->nthreads; i++) {
+            pthread_join(ctx->data[i].thread, NULL);
+        }
     }
 }
 
@@ -611,8 +615,15 @@ void QPTPool_destroy(QPTPool_t *ctx) {
         data->thread = 0;
         pthread_cond_destroy(&data->cv);
         pthread_mutex_destroy(&data->mutex);
-        sll_destroy(&data->deferred, NULL);
-        sll_destroy(&data->waiting, NULL);
+        /*
+         * If QPTPool_start is called, queues will be empty at this point
+         *
+         * If QPTPool_start is not called, queues might not be empty since
+         * enqueuing work without starting the worker threads is allowed,
+         * so free() is called to clear out any unprocessed work items
+         */
+        sll_destroy(&data->deferred, free);
+        sll_destroy(&data->waiting, free);
     }
 
     pthread_mutex_destroy(&ctx->mutex);
