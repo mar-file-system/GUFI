@@ -348,6 +348,16 @@ else()
   message(STATUS "DB2 not found")
 endif()
 
+# Find minio-cpp
+pkg_search_module(MINIOCPP miniocpp)
+if (MINIOCPP_FOUND)
+  message(STATUS "minio-cpp headers located in ${MINIOCPP_INCLUDEDIR}")
+  message(STATUS "minio-cpp libraries located in ${MINIOCPP_LIBDIR}")
+  set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}, miniocpp")
+else()
+  message(STATUS "minio-cpp not found.")
+endif()
+
 # everyone includes (-I) these paths, whether or not they need them
 set(COMMON_INCLUDES
   ${CMAKE_SOURCE_DIR}/include

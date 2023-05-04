@@ -226,3 +226,37 @@ if (DB2_FOUND AND DB2_BUILD)
   string(REPLACE ";" " " DB2_CFLAGS "${DB2_CFLAGS}")
   string(REPLACE ";" " " DB2_LDFLAGS "${DB2_LDFLAGS}")
 endif()
+
+if (MINIOCPP_FOUND)
+  set(CMAKE_CXX_STANDARD 17)
+
+  set(MINIO_LIBS
+    "${MINIOCPP_LIBDIR}/libminiocpp.a"
+    "${MINIOCPP_LIBDIR}/libcurlpp.a"
+    "${MINIOCPP_LIBDIR}/libcurl.a"
+    "${MINIOCPP_LIBDIR}/libssl.a"
+    "${MINIOCPP_LIBDIR}/libcrypto.a"
+    "${MINIOCPP_LIBDIR}/libinih.a"
+    "${MINIOCPP_LIBDIR}/libz.a"
+    "${MINIOCPP_LIBDIR}/libpugixml.a"
+  )
+
+  add_executable(gufi_minio2index
+    gufi_minio2index/descend.cpp
+    gufi_minio2index/main.cpp
+    gufi_minio2index/policies.cpp
+    gufi_minio2index/processbucket.cpp
+    gufi_minio2index/processdir.cpp
+    gufi_minio2index/processobject.cpp
+    gufi_minio2index/processroot.cpp
+  )
+  target_include_directories(gufi_minio2index SYSTEM PUBLIC "${MINIOCPP_INCLUDEDIR}/include")
+  target_link_libraries(gufi_minio2index ${MINIO_LIBS} ${COMMON_LIBRARIES})
+
+  option(PRINT_MINIO_TYPES "Print MinIO types" Off)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if (PRINT_MINIO_TYPES)
+      target_compile_definitions(gufi_minio2index PUBLIC -DPRINT_MINIO_TYPES=1)
+    endif()
+  endif()
+endif()
