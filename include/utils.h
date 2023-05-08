@@ -77,6 +77,10 @@ OF SUCH DAMAGE.
 #include "trie.h"
 #include "xattrs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Wrapper around snprintf to catch issues and print them to stderr */
 int SNPRINTF(char *str, size_t size, const char *format, ...);
 
@@ -138,5 +142,9 @@ int setup_directory_skip(const char *filename, trie_t **skip);
 
 /* strstr/strtok replacement */
 char *split(char *src, const char *delim, const size_t delim_len, const char *end);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -65,6 +65,10 @@ OF SUCH DAMAGE.
 #ifndef TRIE_H
 #define TRIE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct trie
 {
     int isLeaf;    // 1 when node is a leaf node
@@ -76,5 +80,9 @@ void trie_insert(trie_t *head, const char* str, const size_t len);
 int trie_search(trie_t *head, const char* str, const size_t len);
 int trie_delete(trie_t *head, const char* str, const size_t len);
 void trie_free(trie_t *head);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

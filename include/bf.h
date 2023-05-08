@@ -71,6 +71,10 @@ OF SUCH DAMAGE.
 #include "compress.h"
 #include "xattrs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAXPATH 4096
 #define MAXSQL 2048
 #define MAXRECS 100000
@@ -342,5 +346,9 @@ struct entry_data {
 };
 
 extern const char fielddelim;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -73,6 +73,10 @@ OF SUCH DAMAGE.
 
 #include "OutputBuffers.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern pthread_mutex_t print_mutex;
 extern uint64_t epoch;
 
@@ -184,5 +188,9 @@ int print_timer(struct OutputBuffers *obufs, const size_t id,
 #define timestamp_print_destroy(obs)
 
 #endif /* PER_THREAD_STATS */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GUFI_DEBUG_H */

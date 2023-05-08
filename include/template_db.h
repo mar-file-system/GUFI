@@ -67,6 +67,10 @@ OF SUCH DAMAGE.
 
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct template_db {
     int fd;
     off_t size;
@@ -78,5 +82,9 @@ int create_dbdb_template(struct template_db *tdb);
 int close_template_db(struct template_db *tdb);
 
 int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

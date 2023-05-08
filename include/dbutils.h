@@ -77,6 +77,10 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GUFI_SQLITE_VFS       "unix-none"
 #define GUFI_SQLITE_VFS_URI   "&vfs=" GUFI_SQLITE_VFS
 
@@ -208,5 +212,9 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
                        const char *src, size_t *src_len);
 
 int get_rollupscore(sqlite3 *db, int *rollupscore);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
