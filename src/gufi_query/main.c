@@ -691,7 +691,7 @@ int main(int argc, char *argv[])
         root->work.root.data = argv[i];
         root->work.root.len  = trailing_non_match_index(root->work.root.data, root->work.name_len, "/", 1);
         ((char *) root->work.root.data)[root->work.root.len] = '\0';
-        root->work.basename_len = trailing_match_index(root->work.root.data, root->work.root.len, "/", 1);
+        root->work.basename_len = root->work.name_len - root->work.root.len;
 
         /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
