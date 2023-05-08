@@ -69,6 +69,12 @@ OF SUCH DAMAGE.
 
 #include "trie.h"
 
+struct trie
+{
+    int isLeaf;    // 1 when node is a leaf node
+    struct trie *character[256];
+};
+
 // Function that returns a new Trie node
 trie_t *trie_alloc()
 {

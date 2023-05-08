@@ -69,11 +69,7 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-typedef struct trie
-{
-    int isLeaf;    // 1 when node is a leaf node
-    struct trie *character[256];
-} trie_t;
+typedef struct trie  trie_t;
 
 trie_t *trie_alloc();
 void trie_insert(trie_t *head, const char* str, const size_t len);
