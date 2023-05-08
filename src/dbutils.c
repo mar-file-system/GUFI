@@ -788,8 +788,8 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     refstr_t dirname;
 
     /* remove parent from current directory name */
-    dirname.data = work->name + work->root.len;
-    dirname.len  = work->name_len - work->root.len;
+    dirname.data = work->name + work->root_parent.len;
+    dirname.len  = work->name_len - work->root_parent.len;
     while (dirname.len && (dirname.data[0] == '/')) {
         dirname.data++;
         dirname.len--;
@@ -1045,18 +1045,18 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
     /* only available if work is valid */
     if (work) {
         void *lvl = (void *) (uintptr_t) work->level;
-        if (!((sqlite3_create_function(db,  "path",                0, SQLITE_UTF8,
-                                       work,                       &path,               NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "epath",               0, SQLITE_UTF8,
-                                       work,                       &epath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "fpath",               0, SQLITE_UTF8,
-                                       work,                       &fpath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "rpath",               2, SQLITE_UTF8,
-                                       work,                       &rpath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "starting_point",      0,  SQLITE_UTF8,
-                                       (void *) work->root.data,   &starting_point,     NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "level",               0,  SQLITE_UTF8,
-                                       lvl,                        &relative_level,     NULL, NULL) == SQLITE_OK))) {
+        if (!((sqlite3_create_function(db,  "path",                     0, SQLITE_UTF8,
+                                       work,                            &path,               NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "epath",                    0, SQLITE_UTF8,
+                                       work,                            &epath,              NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "fpath",                    0, SQLITE_UTF8,
+                                       work,                            &fpath,              NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "rpath",                    2, SQLITE_UTF8,
+                                       work,                            &rpath,              NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "starting_point",           0,  SQLITE_UTF8,
+                                       (void *) work->root_parent.data, &starting_point,     NULL, NULL) == SQLITE_OK) &&
+              (sqlite3_create_function(db,  "level",                    0,  SQLITE_UTF8,
+                                       lvl,                             &relative_level,     NULL, NULL) == SQLITE_OK))) {
             return 1;
         }
     }

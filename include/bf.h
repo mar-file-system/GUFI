@@ -314,7 +314,7 @@ struct work {
    compressed_t  compressed;
 #endif
 
-   refstr_t      root;                   /* parent of the the top level directory */
+   refstr_t      root_parent;            /* parent of the the top level directory */
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;

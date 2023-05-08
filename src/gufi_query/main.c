@@ -220,7 +220,7 @@ static size_t descend2(QPTPool_t *ctx,
                 descend_timestamp_start(dts, set);
 
                 child.work.level = next_level;
-                child.work.root = gqw->work.root;
+                child.work.root_parent = gqw->work.root_parent;
 
                 /* append converted entry name to converted directory */
                 child.sqlite3_name_len = SNFORMAT_S(child.sqlite3_name, MAXPATH, 2,
@@ -688,10 +688,10 @@ int main(int argc, char *argv[])
         root->sqlite3_name_len = sqlite_uri_path(root->sqlite3_name, MAXPATH, argv[i], &len);
 
         /* parent of input path */
-        root->work.root.data = argv[i];
-        root->work.root.len  = trailing_non_match_index(root->work.root.data, root->work.name_len, "/", 1);
-        ((char *) root->work.root.data)[root->work.root.len] = '\0';
-        root->work.basename_len = root->work.name_len - root->work.root.len;
+        root->work.root_parent.data = argv[i];
+        root->work.root_parent.len  = trailing_non_match_index(root->work.root_parent.data, root->work.name_len, "/", 1);
+        ((char *) root->work.root_parent.data)[root->work.root_parent.len] = '\0';
+        root->work.basename_len = root->work.name_len - root->work.root_parent.len;
 
         /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);

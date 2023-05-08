@@ -523,7 +523,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                                         dir_child->d_name, len);
             child.basename_len = len;
             child.level = next_level;
-            child.root = work->root;
+            child.root_parent = work->root_parent;
             child.pinode = inode;
 
             if (stat_entries) {

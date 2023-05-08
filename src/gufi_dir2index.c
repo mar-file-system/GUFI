@@ -140,7 +140,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* get entry relative path (use extra buffer to prevent memcpy overlap) */
     char relpath[MAXPATH];
     const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1,
-                                          entry->name + entry->root.len + 1, entry->name_len - entry->root.len - 1);
+                                          entry->name + entry->root_parent.len + 1, entry->name_len - entry->root_parent.len - 1);
 
     /* overwrite full path with relative path */
     /* e.name_len = */ SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
@@ -192,7 +192,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.topath_len = SNFORMAT_S(nda.topath, MAXPATH, 3,
                                 in->nameto.data, in->nameto.len,
                                 "/", (size_t) 1,
-                                nda.work->name + nda.work->root.len, nda.work->name_len - nda.work->root.len);
+                                nda.work->name + nda.work->root_parent.len, nda.work->name_len - nda.work->root_parent.len);
 
     /* don't need recursion because parent is guaranteed to exist */
     if (mkdir(nda.topath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
@@ -349,16 +349,16 @@ int validate_source(struct input *in, const char *path, struct work *work) {
     }
 
     work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
-    work->root.data = path;
-    work->root.len = dirname_len(path, work->name_len);
+    work->root_parent.data = path;
+    work->root_parent.len = dirname_len(path, work->name_len);
 
     char expathin[MAXPATH];
     char expathout[MAXPATH];
     char expathtst[MAXPATH];
 
-    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto.data, work->root.data + work->root.len);
+    SNPRINTF(expathtst, MAXPATH,"%s/%s", in->nameto.data, work->root_parent.data + work->root_parent.len);
     realpath(expathtst, expathout);
-    realpath(work->root.data, expathin);
+    realpath(work->root_parent.data, expathin);
 
     if (!strcmp(expathin, expathout)) {
         fprintf(stderr,"You are putting the index dbs in input directory\n");
@@ -467,7 +467,7 @@ int main(int argc, char *argv[]) {
          * manually get basename of provided path since
          * there is no source for the basenames
          */
-        root.basename_len = root.name_len - root.root.len;
+        root.basename_len = root.name_len - root.root_parent.len;
 
         struct work *copy = compress_struct(pa.in.compress, &root, sizeof(root));
         QPTPool_enqueue(pool, 0, processdir, copy);

@@ -104,9 +104,9 @@ TEST(addqueryfuncs, path) {
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root.data = "index_root";     // currently at this path
-    work.root.len = strlen(work.root.data);
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root.data, dirname);
+    work.root_parent.data = "index_root";     // currently at this path
+    work.root_parent.len = strlen(work.root_parent.data);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root_parent.data, dirname);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
@@ -126,9 +126,9 @@ TEST(addqueryfuncs, epath) {
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root.data = "index_root";     // currently at this path
-    work.root.len = strlen(work.root.data);
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root.data, dirname);
+    work.root_parent.data = "index_root";     // currently at this path
+    work.root_parent.len = strlen(work.root_parent.data);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root_parent.data, dirname);
     work.basename_len = strlen(dirname);
 
     sqlite3 *db = nullptr;
@@ -149,9 +149,9 @@ TEST(addqueryfuncs, rpath) {
 
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root.data = "index_root";     // currently at this path
-    work.root.len = strlen(work.root.data);
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root.data, dirname);
+    work.root_parent.data = "index_root";     // currently at this path
+    work.root_parent.len = strlen(work.root_parent.data);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root_parent.data, dirname);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
@@ -401,7 +401,7 @@ TEST(addqueryfuncs, level) {
 TEST(addqueryfuncs, starting_point) {
     struct work work;
     memset(&work, 0, sizeof(work));
-    work.root.data = "/index_root";
+    work.root_parent.data = "/index_root";
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
@@ -412,7 +412,7 @@ TEST(addqueryfuncs, starting_point) {
     char output[MAXPATH] = {};
     ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, NULL), SQLITE_OK);
 
-    EXPECT_STREQ(output, work.root.data);
+    EXPECT_STREQ(output, work.root_parent.data);
 
     sqlite3_close(db);
 }

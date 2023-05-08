@@ -100,7 +100,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         if (ed->type == 'l') {
             readlink(entry->name, ed->linkname, MAXPATH);
         }
-        worktofile(nda->fp, nda->in->delim, entry->root.len, entry, ed);
+        worktofile(nda->fp, nda->in->delim, entry->root_parent.len, entry, ed);
     }
     return 0;
 }
@@ -142,7 +142,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     ed.type = 'd';
 
     /* write start of stanza */
-    worktofile(pa->outfiles[id], in->delim, work->root.len, work, &ed);
+    worktofile(pa->outfiles[id], in->delim, work->root_parent.len, work, &ed);
 
     if (in->external_enabled) {
         xattrs_cleanup(&ed.xattrs);
@@ -228,8 +228,8 @@ static int validate_source(const char *path, struct work *work) {
     }
 
     work->name_len = SNFORMAT_S(work->name, MAXPATH, 1, path, strlen(path));
-    work->root.data = path;
-    work->root.len = dirname_len(path, work->name_len);
+    work->root_parent.data = path;
+    work->root_parent.len = dirname_len(path, work->name_len);
 
     return 0;
 }
