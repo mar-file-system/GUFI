@@ -476,6 +476,11 @@ int main(int argc, char *argv[]) {
 
     QPTPool_wait(pool);
 
+    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
+    const long double processtime = sec(nsec(&after_init));
+
+    /* don't count as part of processtime */
+
     const uint64_t thread_count = QPTPool_threads_completed(pool);
 
     QPTPool_destroy(pool);
@@ -488,10 +493,6 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.db);
     trie_free(pa.skip);
 
-    clock_gettime(CLOCK_MONOTONIC, &after_init.end);
-    const long double processtime = sec(nsec(&after_init));
-
-    /* don't count as part of processtime */
     uint64_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         total_files += pa.total_files[i];

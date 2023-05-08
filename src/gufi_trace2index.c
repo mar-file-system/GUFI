@@ -805,6 +805,11 @@ int main(int argc, char *argv[]) {
 
     QPTPool_wait(pool);
 
+    clock_gettime(CLOCK_MONOTONIC, &main_func.end);
+    const long double processtime = sec(nsec(&main_func));
+
+    /* don't count as part of processtime */
+
     uint64_t thread_count = QPTPool_threads_completed(pool);
     if (thread_count) {
         /* don't count scout functions */
@@ -824,10 +829,6 @@ int main(int argc, char *argv[]) {
 
     /* set top level permissions */
     chmod(pa.in.nameto.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
-    /* have to call clock_gettime explicitly to get end time */
-    clock_gettime(CLOCK_MONOTONIC, &main_func.end);
-    const long double processtime = sec(nsec(&main_func));
 
     uint64_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
