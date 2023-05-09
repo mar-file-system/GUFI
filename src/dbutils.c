@@ -649,7 +649,7 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  12, ed->statuso.st_mtime);
     sqlite3_bind_int64(res,  13, ed->statuso.st_ctime);
     sqlite3_bind_text(res,   14, zlinkname, -1, SQLITE_STATIC);
-    sqlite3_bind_blob64(res, 15, zxattrnames, -1, SQLITE_STATIC);
+    sqlite3_bind_blob64(res, 15, zxattrnames, strlen(zxattrnames), SQLITE_STATIC);
     sqlite3_bind_int64(res,  16, su->totfiles);
     sqlite3_bind_int64(res,  17, su->totlinks);
     sqlite3_bind_int64(res,  18, su->minuid);
