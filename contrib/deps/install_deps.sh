@@ -151,7 +151,7 @@ if [[ "${JEMALLOC}" == "true" ]]; then
     source "${SCRIPT_PATH}/jemalloc.sh"
 fi
 
-CMAKE_VERSION=$(cmake --version | grep -Po '(?<=version )[^;]+')
+CMAKE_VERSION=$(cmake --version | head -n 1 | awk '{ print $3 }' )
 ACCEPTABLE_VERSION=3.5
 HIGHEST_VERSION=$( (echo "${CMAKE_VERSION}"; echo "${ACCEPTABLE_VERSION}") | sort -rV | head -1)
 
