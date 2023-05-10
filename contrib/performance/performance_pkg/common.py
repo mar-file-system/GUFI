@@ -78,10 +78,11 @@ TYPE_TO_SQLITE = {
     None : 'INTEGER PRIMARY KEY',
 }
 
-def run_get_stdout(command):
+def run_get_stdout(command, cwd=None):
     # pylint: disable=consider-using-with
     process = subprocess.Popen(command,
                                stdout=subprocess.PIPE,
-                               stderr=DEVNULL)
+                               stderr=DEVNULL,
+                               cwd=cwd)
     out, _ = process.communicate()
     return out.decode('ascii')

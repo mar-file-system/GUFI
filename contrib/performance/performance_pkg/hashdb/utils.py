@@ -68,7 +68,7 @@ import sys
 from hashes import Hashes # not part of performance_pkg
 
 from performance_pkg import common
-from performance_pkg.hashdb import machine, gufi, raw_data
+from performance_pkg.hashdb import commits, machine, gufi, raw_data
 
 def check_exists(path):
     if not os.path.exists(path):
@@ -89,6 +89,8 @@ def create_tables(con):
     # always the first column
     hash_col = [['hash', None, str]]
 
+    commits_col_str= ', '.join('{0} {1}'.format(
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in commits.COLS)
     machine_col_str = ', '.join('{0} {1}'.format(
         name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + machine.COLS)
     gufi_col_str = ', '.join('{0} {1}'.format(
@@ -96,6 +98,12 @@ def create_tables(con):
     raw_data_col_str = ', '.join('{0} {1}'.format(
         name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + raw_data.COLS)
 
+    # commits table gets created and filled
+    con.execute('CREATE TABLE [{0}] ({1}, PRIMARY KEY ([commit]));'.format(
+        commits.TABLE_NAME, commits_col_str))
+    commits.fill_table(con)
+
+    # other tables only created
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
         machine.TABLE_NAME, machine_col_str))
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
