@@ -211,23 +211,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
-    /* copy the template file */
-    if (copy_template(nda.temp_db, dbname, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid)) {
-        rc = 1;
-        goto cleanup;
-    }
-
-    /*
-     * don't need to convert dbname because sqlite3_open_v2
-     * does not interpret strings as SQL statements
-     */
-    nda.db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
-                    , NULL, NULL
-                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                    , NULL, NULL
-                    , NULL, NULL
-                    #endif
-        );
+    nda.db = template_to_db(nda.temp_db, dbname, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
     if (!nda.db) {
         rc = 1;
         goto cleanup;

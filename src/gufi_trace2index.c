@@ -143,8 +143,7 @@ uint64_t total_handle_args      = 0;
 uint64_t total_memset_work      = 0;
 uint64_t total_dir_linetowork   = 0;
 uint64_t total_dupdir           = 0;
-uint64_t total_copy_template    = 0;
-uint64_t total_opendb           = 0;
+uint64_t total_template_to_db   = 0;
 uint64_t total_zero_summary     = 0;
 uint64_t total_insertdbprep     = 0;
 uint64_t total_startdb          = 0;
@@ -173,8 +172,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     uint64_t thread_memset_work      = 0;
     uint64_t thread_dir_linetowork   = 0;
     uint64_t thread_dupdir           = 0;
-    uint64_t thread_copy_template    = 0;
-    uint64_t thread_opendb           = 0;
+    uint64_t thread_template_to_db   = 0;
     uint64_t thread_zero_summary     = 0;
     uint64_t thread_insertdbprep     = 0;
     uint64_t thread_startdb          = 0;
@@ -239,7 +237,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
     timestamp_set_end(dupdir);
 
-    timestamp_create_start(copy_template);
+    timestamp_create_start(template_to_db);
 
     /* create the database name */
     char dbname[MAXPATH];
@@ -247,28 +245,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                topath, topath_len,
                "/" DBNAME, (size_t) (DBNAME_LEN + 1));
 
-    /* copy the template file */
-    if (copy_template(&pa->db, dbname, ed.statuso.st_uid, ed.statuso.st_gid)) {
-        row_destroy(w);
-        return 1;
-    }
-
-    timestamp_set_end(copy_template);
-
-    /* process the work */
-    timestamp_create_start(opendb);
-    /*
-     * don't need to convert dbname because sqlite3_open_v2
-     * does not interpret strings as SQL statements
-     */
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
-                          , NULL, NULL
-                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                          , NULL, NULL
-                          , NULL, NULL
-                          #endif
-                          );
-    timestamp_set_end(opendb);
+    sqlite3 *db = template_to_db(&pa->db, dbname, ed.statuso.st_uid, ed.statuso.st_gid);
+    timestamp_set_end(template_to_db);
 
     if (db) {
         timestamp_create_start(zero_summary);
@@ -458,21 +436,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     #ifdef DEBUG
     timestamp_create_start(print_timestamps);
-    timestamp_print(debug_buffers, id, "handle_args",      handle_args);
-    timestamp_print(debug_buffers, id, "memset_work",      memset_work);
-    timestamp_print(debug_buffers, id, "dir_linetowork",   dir_linetowork);
-    timestamp_print(debug_buffers, id, "dupdir",           dupdir);
-    timestamp_print(debug_buffers, id, "copy_template",    copy_template);
-    timestamp_print(debug_buffers, id, "opendb",           opendb);
-    timestamp_print(debug_buffers, id, "row_destroy",      row_destroy);
+    timestamp_print(debug_buffers, id, "handle_args",    handle_args);
+    timestamp_print(debug_buffers, id, "memset_work",    memset_work);
+    timestamp_print(debug_buffers, id, "dir_linetowork", dir_linetowork);
+    timestamp_print(debug_buffers, id, "dupdir",         dupdir);
+    timestamp_print(debug_buffers, id, "template_to_db", template_to_db);
+    timestamp_print(debug_buffers, id, "row_destroy",    row_destroy);
     timestamp_set_end(print_timestamps);
     #ifdef CUMULATIVE_TIMES
     thread_handle_args     += timestamp_elapsed(handle_args);
     thread_memset_work     += timestamp_elapsed(memset_work);
     thread_dir_linetowork  += timestamp_elapsed(dir_linetowork);
     thread_dupdir          += timestamp_elapsed(dupdir);
-    thread_copy_template   += timestamp_elapsed(copy_template);
-    thread_opendb          += timestamp_elapsed(opendb);
+    thread_template_to_db  += timestamp_elapsed(template_to_db);
     thread_row_destroy     += timestamp_elapsed(row_destroy);
 
     pthread_mutex_lock(&print_mutex);
@@ -480,8 +456,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     total_memset_work      += thread_memset_work;
     total_dir_linetowork   += thread_dir_linetowork;
     total_dupdir           += thread_dupdir;
-    total_copy_template    += thread_copy_template;
-    total_opendb           += thread_opendb;
+    total_template_to_db   += thread_template_to_db;
     total_zero_summary     += thread_zero_summary;
     total_insertdbprep     += thread_insertdbprep;
     total_startdb          += thread_startdb;
@@ -842,8 +817,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "memset(work):              %.2Lfs\n", sec(total_memset_work));
     fprintf(stderr, "Parse directory line:      %.2Lfs\n", sec(total_dir_linetowork));
     fprintf(stderr, "dupdir:                    %.2Lfs\n", sec(total_dupdir));
-    fprintf(stderr, "copy_template:             %.2Lfs\n", sec(total_copy_template));
-    fprintf(stderr, "opendb:                    %.2Lfs\n", sec(total_opendb));
+    fprintf(stderr, "template_to_db:            %.2Lfs\n", sec(total_template_to_db));
     fprintf(stderr, "Zero summary struct:       %.2Lfs\n", sec(total_zero_summary));
     fprintf(stderr, "insertdbprep:              %.2Lfs\n", sec(total_insertdbprep));
     fprintf(stderr, "startdb:                   %.2Lfs\n", sec(total_startdb));

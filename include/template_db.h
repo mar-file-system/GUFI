@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #ifndef TEMPLATE_DB_H
 #define TEMPLATE_DB_H
 
+#include <sqlite3.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -77,11 +78,14 @@ struct template_db {
 };
 
 int init_template_db(struct template_db *tdb);
+int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
+                    const char *name);
 int create_xattrs_template(struct template_db *tdb);
 int create_dbdb_template(struct template_db *tdb);
 int close_template_db(struct template_db *tdb);
 
 int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gid);
+sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid);
 
 #ifdef __cplusplus
 }

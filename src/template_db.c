@@ -196,8 +196,8 @@ int close_template_db(struct template_db *tdb) {
 }
 
 /* create the database file to copy from */
-static int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
-                           const char *name) {
+int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
+                    const char *name) {
     /* Not checking arguments */
 
     sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
@@ -260,4 +260,18 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     }
 
     return 0;
+}
+
+sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
+    if (copy_template(tdb, dst, uid, gid)) {
+        return NULL;
+    }
+
+    return opendb(dst, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
+                  , NULL, NULL
+                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                  , NULL, NULL
+                  , NULL, NULL
+                  #endif
+        );
 }
