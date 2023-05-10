@@ -1,3 +1,4 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -59,21 +60,32 @@
 # OF SUCH DAMAGE.
 
 
+from performance_pkg import common
+# table schema
+TABLE_NAME = 'commits'
 
-cmake_minimum_required(VERSION 3.1.0)
+# arg attr, sql column name, column type
 
-set(HASHDB
-  __init__.py # needed for python2
+COLS = [
+    ['[commit]',     None, str],
+    ['timestamp',    None, int],
+]
 
-  # schema
-  commits.py
-  gufi.py
-  machine.py
-  raw_data.py
+def fill_table(con):
+    ''' This table only needs'''
+    # Current working directory for commands
+    cwd = '@CMAKE_SOURCE_DIR@'
 
-  utils.py
-)
+    # Run command to get all available commits in a list
+    command=["git", "rev-list", "HEAD"]
+    commits = common.run_get_stdout(command, cwd)[:-1]
+    commits = commits.split()
 
-foreach(SCRIPT ${HASHDB})
-  configure_file("${SCRIPT}" "${SCRIPT}" @ONLY)
-endforeach()
+    # get commit, timestamp pair and insert into database
+    vals = []
+    for commit in commits:
+        command = ["git", "show", "-s", "--format=%ct", commit]
+        timestamp = common.run_get_stdout(command, cwd)[:-1]
+        vals = ['"{0}"'.format(commit), str(timestamp)]
+        sql = 'INSERT INTO {0} ([commit], timestamp) VALUES ({1});'.format(TABLE_NAME, ', '.join(vals))
+        con.execute(sql)
