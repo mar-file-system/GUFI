@@ -125,13 +125,18 @@ typedef struct gufi_query_work {
 } gqw_t;
 
 /* prepend the current directory to the database filenamee */
-size_t xattr_modify_filename(char *dst, const size_t dst_size,
+size_t xattr_modify_filename(char **dst, const size_t dst_size,
                              const char *src, const size_t src_len,
                              struct work *work) {
-    return SNFORMAT_S(dst, dst_size, 3,
+    if (src[0] == '/') {
+        *dst = (char *) src;
+        return src_len;
+    }
+
+    return SNFORMAT_S(*dst, dst_size, 3,
                       work->name, work->name_len,
                       "/", (size_t) 1,
-                      src, src_len + 1); /* NULL terminate */
+                      src, src_len);
 }
 
 /* Push the subdirectories in the current directory onto the queue */

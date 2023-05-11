@@ -91,7 +91,7 @@ int external_loop(struct work *work, sqlite3 *db,
                   const char *viewname, const size_t viewname_len,
                   const char *select, const size_t select_len,
                   const char *tablename, const size_t tablename_len,
-                  size_t (*modify_filename)(char *dst, const size_t dst_size,
+                  size_t (*modify_filename)(char **dst, const size_t dst_size,
                                             const char *src, const size_t src_len,
                                             struct work *work)
                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -126,13 +126,13 @@ int external_loop(struct work *work, sqlite3 *db,
          * the full path might have been removed to not store the
          * same prefix repeatedly
          */
-        const char *attfile = src_filename;
+        char *attfile = (char *) src_filename;
         char dst_filename[MAXSQL];
         if (modify_filename) {
-            modify_filename(dst_filename, sizeof(dst_filename),
+            attfile = dst_filename;
+            modify_filename(&attfile, sizeof(dst_filename),
                             src_filename, strlen(src_filename),
                             work);
-            attfile = dst_filename;
         }
 
         /* if attach fails, you don't have access to the database - just continue */
