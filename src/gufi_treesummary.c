@@ -98,6 +98,7 @@ static int create_tables(const char *name, sqlite3 *db, void *args) {
 }
 
 static int treesummary_exists(void *args, int count, char **data, char **columns) {
+    (void) count; (void) data; (void) columns;
     int *trecs = (int *) args;
     (*trecs)++;
     return 0;
@@ -198,7 +199,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 int compute_treesummary(struct PoolArgs *pa) {
     struct sum sumout;
     zeroit(&sumout);
-    for(int i = 0; i < pa->in.maxthreads; i++) {
+    for(size_t i = 0; i < pa->in.maxthreads; i++) {
         tsumit(&pa->sums[i], &sumout);
         sumout.totsubdirs--; /* tsumit adds 1 to totsubdirs each time it's called */
     }
@@ -300,7 +301,7 @@ int main(int argc, char *argv[]) {
         return 1;
     else {
         int retval = 0;
-        INSTALL_STR(pa.in.name, argv[idx++]);
+        INSTALL_STR(&pa.in.name, argv[idx++]);
 
         if (retval)
             return retval;
@@ -317,7 +318,7 @@ int main(int argc, char *argv[]) {
     }
 
     pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
-    for(int i = 0; i < pa.in.maxthreads; i++) {
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
         zeroit(&pa.sums[i]);
     }
 

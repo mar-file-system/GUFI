@@ -185,7 +185,7 @@ static void check_input(struct input *in, const bool helped,
     }
 
     if (options) {
-        EXPECT_EQ(in->maxthreads,              1);
+        EXPECT_EQ(in->maxthreads,              (std::size_t) 1);
         EXPECT_EQ(in->delim,                   '|');
         EXPECT_EQ(in->nameto,                  t_arg);
         EXPECT_EQ(in->name,                    i_arg);
@@ -215,7 +215,7 @@ static void check_input(struct input *in, const bool helped,
     else {
         const std::string empty = "";
 
-        EXPECT_EQ(in->maxthreads,              1);
+        EXPECT_EQ(in->maxthreads,              (std::size_t) 1);
         EXPECT_EQ(in->delim,                   fielddelim);
         EXPECT_EQ(in->nameto,                  empty);
         EXPECT_EQ(in->name,                    empty);
@@ -555,81 +555,60 @@ TEST(parse_cmd_line, invalid) {
     check_input(&in, true, false, false);
 }
 
-TEST(INSTALL_STR, base_case) {
-    int retval = 0;
+TEST(INSTALL, STR) {
     const std::string SOURCE = "INSTALL_STR";
     refstr_t dst;
-    INSTALL_STR(dst, SOURCE.c_str());
-    EXPECT_EQ(retval, 0);
+    EXPECT_EQ(INSTALL_STR(&dst, SOURCE.c_str()), 0);
     EXPECT_EQ(dst, SOURCE);
+
+    EXPECT_EQ(INSTALL_STR(&dst, nullptr), -1);
 }
 
-TEST(INSTALL_INT, good) {
-    int retval = 0;
-    int src = 123;
-    int dst = 0;
-
+template <typename T>
+void test_install_number(const std::string &name, const char *fmt,
+                         void (* func)(T *, const char *, const T, const T, const char *, int *),
+                         const T min, const T max,
+                         const T test_ok, const T test_too_small, const T test_too_big) {
+    T dst = 0;
     char buf[10];
-    snprintf(buf, 10, "%d", src);
-    INSTALL_INT(dst, buf, -1024, 1024, "INSTALL_INT good test");
+    int retval = 0;
+    const std::string fullname = "INSTALL_" + name;
+
+    snprintf(buf, sizeof(buf), fmt, test_ok);
+    func(&dst, buf, min, max, (fullname + " good test").c_str(), &retval);
     EXPECT_EQ(retval, 0);
-    EXPECT_EQ(src, dst);
-}
+    EXPECT_EQ(dst, test_ok);
 
-TEST(INSTALL_INT, too_small) {
-    int retval = 0;
-    int src = -1234;
-    int dst = 0;
+    snprintf(buf, sizeof(buf), fmt, "");
+    retval = 0;
+    func(&dst, buf, min, max, (fullname + " bad input").c_str(), &retval);
+    EXPECT_EQ(retval, -1);
 
-    char buf[10];
-    snprintf(buf, 10, "%d", src);
-    INSTALL_INT(dst, buf, -1024, 1024, "INSTALL_INT too small test");
+    snprintf(buf, sizeof(buf), fmt, test_too_small);
+    retval = 0;
+    func(&dst, buf, min, max, (fullname + " too small test").c_str(), &retval);
+    EXPECT_EQ(retval, -1);
+
+    snprintf(buf, sizeof(buf), fmt, test_too_big);
+    retval = 0;
+    func(&dst, buf, min, max, (fullname + " too big test").c_str(), &retval);
     EXPECT_EQ(retval, -1);
 }
 
-TEST(INSTALL_INT, too_big) {
-    int retval = 0;
-    int src = 1234;
-    int dst = 0;
-
-    char buf[10];
-    snprintf(buf, 10, "%d", src);
-    INSTALL_INT(dst, buf, -1024, 1024, "INSTALL_INT too big test");
-    EXPECT_EQ(retval, -1);
+TEST(INSTALL, INT) {
+    test_install_number <int> ("INT", "%d", INSTALL_INT,
+                               -1024, 1024,
+                               123, -1234, 1234);
 }
 
-TEST(INSTALL_UINT, good) {
-    int retval = 0;
-    std::size_t src = 123;
-    std::size_t dst = 0;
-
-    char buf[10];
-    snprintf(buf, 10, "%zu", src);
-    INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT good test");
-    EXPECT_EQ(retval, 0);
-    EXPECT_EQ(src, dst);
+TEST(INSTALL, SIZE) {
+    test_install_number <std::size_t> ("SIZE", "%zu", INSTALL_SIZE,
+                                       1, 1024,
+                                       123, 0, 1234);
 }
 
-TEST(INSTALL_UINT, too_small) {
-    int retval = 0;
-    std::size_t src = 0;
-    std::size_t dst = 0;
-
-    char buf[10];
-    snprintf(buf, 10, "%zu", src);
-    INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT too small test");
-    EXPECT_EQ(retval, -1);
-    EXPECT_EQ(dst, (std::size_t) 0);
-}
-
-TEST(INSTALL_UINT, too_big) {
-    int retval = 0;
-    std::size_t src = 1234;
-    std::size_t dst = 0;
-
-    char buf[10];
-    snprintf(buf, 10, "%zu", src);
-    INSTALL_UINT(dst, buf, (std::size_t) 1, (std::size_t) 1024, "INSTALL_UINT too big test");
-    EXPECT_EQ(retval, -1);
-    EXPECT_EQ(src, dst);
+TEST(INSTALL, UINT64) {
+    test_install_number <uint64_t> ("UINT64", "%" PRIu64, INSTALL_UINT64,
+                                    1, 1024,
+                                    123, 0, 1234);
 }

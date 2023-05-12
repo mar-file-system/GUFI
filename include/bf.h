@@ -182,7 +182,7 @@ struct input {
    int  helped;               /* support parsing of per-app sub-options */
    char delim;
    int  buildindex;
-   int  maxthreads;
+   size_t maxthreads;
    AndOr_t andor;
    int  insertdir;                // added for bfwreaddirplus2db
    int  insertfl;                 // added for bfwreaddirplus2db
@@ -252,56 +252,18 @@ int parse_cmd_line(int         argc,
                    const char *positional_args_help_str,
                    struct input *in);
 
-/* help for parsing a cmd-line string-argument into a fixed-size array. */
-/* NOTE: This assumes you have a variable <retval> in scope. */
-#define INSTALL_STR(VAR, SOURCE)                                            \
-   do {                                                                     \
-       (VAR).data = (const char *) (SOURCE);                                \
-       (VAR).len = strlen((VAR).data);                                      \
-   } while (0)
+int INSTALL_STR(refstr_t *VAR, const char *SOURCE);
 
+/* parse a cmd-line string-argument */
+#define INSTALL_NUMBER_PROTOTYPE(name, type, fmt)            \
+    void INSTALL_##name(type *dst, const char *argv,         \
+                        const type min, const type max,      \
+                        const char *arg_name, int *retval)
 
-#define INSTALL_INT(VAR, SOURCE, MIN, MAX, ARG_NAME)                        \
-   do {                                                                     \
-      if (sscanf((SOURCE), "%d", &(VAR)) != 1) {                            \
-        retval = -1;                                                        \
-        break;                                                              \
-      }                                                                     \
-      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                             \
-         fprintf(stderr, "argument '%s' not in range [%d,%d]\n",            \
-                 (ARG_NAME), (MIN), (MAX));                                 \
-         retval = -1;                                                       \
-      }                                                                     \
-   } while (0)
+INSTALL_NUMBER_PROTOTYPE(INT, int, "%d");
+INSTALL_NUMBER_PROTOTYPE(SIZE, size_t, "%zu");
+INSTALL_NUMBER_PROTOTYPE(UINT64, uint64_t, "%" PRIu64);
 
-#define INSTALL_UINT(VAR, SOURCE, MIN, MAX, ARG_NAME)                       \
-   do {                                                                     \
-      if (sscanf((SOURCE), "%lu", &(VAR)) != 1) {                           \
-        retval = -1;                                                        \
-        break;                                                              \
-      }                                                                     \
-      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                             \
-         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",          \
-                 (ARG_NAME), (MIN), (MAX));                                 \
-         retval = -1;                                                       \
-      }                                                                     \
-   } while (0)
-
-#define INSTALL_UINT64(VAR, SOURCE, MIN, MAX, ARG_NAME)                     \
-   do {                                                                     \
-      if (sscanf((SOURCE), "%" PRIu64 "", &(VAR)) != 1) {                   \
-        retval = -1;                                                        \
-        break;                                                              \
-      }                                                                     \
-      if (((VAR) < (MIN)) || ((VAR) > (MAX))) {                             \
-         fprintf(stderr, "argument '%s' not in range [%zu,%zu]\n",          \
-                 (ARG_NAME), (MIN), (MAX));                                 \
-         retval = -1;                                                       \
-      }                                                                     \
-   } while (0)
-
-// TBD: this would replace gotos
-// local impls of processdir() could use this to manage clean-up tasks.
 typedef enum {
    DO_FREE   = 0x01,
    CLOSE_DIR = 0x02,

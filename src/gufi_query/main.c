@@ -469,7 +469,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_start(ts.tts, utime_call);
     if (db) {
         if (in->keep_matime) {
-            struct utimbuf dbtime = {};
+            struct utimbuf dbtime;
             dbtime.actime  = st.st_atime;
             dbtime.modtime = st.st_mtime;
             utime(dbname, &dbtime);
@@ -769,7 +769,7 @@ int main(int argc, char *argv[])
     #endif
 
     /* clear out buffered data */
-    for(int i = 0; i < in.maxthreads; i++) {
+    for(size_t i = 0; i < in.maxthreads; i++) {
         ThreadArgs_t *ta = &(pa.ta[i]);
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);
 

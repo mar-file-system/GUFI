@@ -697,7 +697,7 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         int retval = 0;
-        INSTALL_STR(pa.in.nameto, argv[argc - 1]);
+        INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
 
         if (retval)
             return retval;
@@ -754,7 +754,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    fprintf(stdout, "Creating GUFI Index %s with %d threads\n", pa.in.nameto.data, pa.in.maxthreads);
+    fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
     pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
 
     /* parse the trace files */

@@ -578,7 +578,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
 int processinit(struct input *in, QPTPool_t * ctx) {
 
      struct work * mywork = malloc(sizeof(struct work));
-     int i;
+     size_t i;
      char outdbn[MAXPATH];
      FILE *isf = NULL;
      char incsuspect[24];
@@ -656,7 +656,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
          global_res[i]=insertdbprep(gts.outdbd[i], READDIRPLUS_INSERT);
          if (in->stride > 0) {
            if (pthread_mutex_init(&outdb_mutex[i], NULL) != 0) {
-             fprintf(stderr,"\n mutex %d init failed\n",i);
+             fprintf(stderr,"\n mutex %zu init failed\n", i);
            }
          }
          i++;
@@ -672,7 +672,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
          gts.outfd[i]=fopen(outfn,"w");
          if (in->stride > 0) {
            if (pthread_mutex_init(&outfile_mutex[i], NULL) != 0) {
-             fprintf(stderr,"\n mutex %d init failed\n",i);
+             fprintf(stderr,"\n mutex %zu init failed\n", i);
            }
          }
          i++;
@@ -700,7 +700,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
 }
 
 int processfin(struct input *in) {
-int i;
+     size_t i;
 
      // close output dbs here
      if (in->output == OUTDB) {
@@ -777,7 +777,7 @@ int main(int argc, char *argv[])
      else {
         // parse positional args, following the options
         int retval = 0;
-        INSTALL_STR(in.name,   argv[idx++]);
+        INSTALL_STR(&in.name,   argv[idx++]);
 
         if (retval)
            return retval;

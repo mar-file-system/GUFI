@@ -152,7 +152,7 @@ void show_input(struct input* in, int retval) {
    printf("in.printheader              = %d\n",            in->printheader);
    printf("in.printrows                = %d\n",            in->printrows);
    printf("in.buildindex               = %d\n",            in->buildindex);
-   printf("in.maxthreads               = %d\n",            in->maxthreads);
+   printf("in.maxthreads               = %zu\n",           in->maxthreads);
    printf("in.delim                    = '%c'\n",          in->delim);
    printf("in.name                     = '%s'\n",          in->name.data);
    printf("in.name_len                 = '%zu'\n",         in->name.len);
@@ -278,7 +278,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'n':
-         INSTALL_INT(in->maxthreads, optarg, 1, MAXPTHREAD, "-n");
+         INSTALL_SIZE(&in->maxthreads, optarg, 1, MAXPTHREAD, "-n", &retval);
          break;
 
       case 'd':
@@ -291,41 +291,41 @@ int parse_cmd_line(int         argc,
          break;
 
       case 't':
-         INSTALL_STR(in->nameto, optarg);
+         INSTALL_STR(&in->nameto, optarg);
          break;
 
       case 'i':
-         INSTALL_STR(in->name, optarg);
+         INSTALL_STR(&in->name, optarg);
          break;
 
       case 'o':
          in->output = OUTFILE;
-         INSTALL_STR(in->outname, optarg);
+         INSTALL_STR(&in->outname, optarg);
          break;
 
       case 'O':
          in->output = OUTDB;
-         INSTALL_STR(in->outname, optarg);
+         INSTALL_STR(&in->outname, optarg);
          break;
 
       case 'I':               // SQL initializations
-         INSTALL_STR(in->sql.init, optarg);
+         INSTALL_STR(&in->sql.init, optarg);
          break;
 
       case 'T':               // SQL for tree-summary
-         INSTALL_STR(in->sql.tsum, optarg);
+         INSTALL_STR(&in->sql.tsum, optarg);
          break;
 
       case 'S':               // SQL for summary
-         INSTALL_STR(in->sql.sum, optarg);
+         INSTALL_STR(&in->sql.sum, optarg);
          break;
 
       case 'E':               // SQL for entries
-         INSTALL_STR(in->sql.ent, optarg);
+         INSTALL_STR(&in->sql.ent, optarg);
          break;
 
       case 'F':               // SQL clean-up
-         INSTALL_STR(in->sql.fin, optarg);
+         INSTALL_STR(&in->sql.fin, optarg);
          break;
 
       case 'r':               // insert files and links into db for bfwreaddirplus2db
@@ -345,20 +345,20 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'W':               // SQL clean-up
-         INSTALL_STR(in->insuspect, optarg);
+         INSTALL_STR(&in->insuspect, optarg);
          in->suspectfile = 1;
          break;
 
       case 'A':
-         INSTALL_INT(in->suspectmethod, optarg, 1, 4, "-A");
+         INSTALL_INT(&in->suspectmethod, optarg, 1, 4, "-A", &retval);
          break;
 
       case 'g':
-         INSTALL_INT(in->stride, optarg, 1, MAXSTRIDE, "-g");
+         INSTALL_INT(&in->stride, optarg, 1, MAXSTRIDE, "-g", &retval);
          break;
 
       case 'c':
-         INSTALL_INT(in->suspecttime, optarg, 1, 2147483646, "-c");
+         INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
          break;
 
       case 'u':
@@ -366,23 +366,23 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'y':
-         INSTALL_UINT(in->min_level, optarg, (size_t) 0, (size_t) -1, "-y");
+         INSTALL_SIZE(&in->min_level, optarg, (size_t) 0, (size_t) -1, "-y", &retval);
          break;
 
       case 'z':
-         INSTALL_UINT(in->max_level, optarg, (size_t) 0, (size_t) -1, "-z");
+         INSTALL_SIZE(&in->max_level, optarg, (size_t) 0, (size_t) -1, "-z", &retval);
          break;
 
       case 'J':
-         INSTALL_STR(in->sql.intermediate, optarg);
+         INSTALL_STR(&in->sql.intermediate, optarg);
          break;
 
       case 'K':
-         INSTALL_STR(in->sql.init_agg, optarg);
+         INSTALL_STR(&in->sql.init_agg, optarg);
          break;
 
       case 'G':
-         INSTALL_STR(in->sql.agg, optarg);
+         INSTALL_STR(&in->sql.agg, optarg);
          break;
 
       case 'm':
@@ -390,7 +390,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'B':
-         INSTALL_UINT(in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-z");
+         INSTALL_SIZE(&in->output_buffer_size, optarg, (size_t) 0, (size_t) -1, "-z", &retval);
          break;
 
       case 'w':
@@ -398,7 +398,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'f':
-          INSTALL_STR(in->format, optarg);
+          INSTALL_STR(&in->format, optarg);
           in->format_set = 1;
           break;
 
@@ -411,19 +411,19 @@ int parse_cmd_line(int         argc,
           break;
 
       case 'L':
-          INSTALL_UINT(in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L");
+          INSTALL_SIZE(&in->max_in_dir, optarg, (size_t) 0, (size_t) -1, "-L", &retval);
           break;
 
       case 'k':
-          INSTALL_STR(in->skip, optarg);
+          INSTALL_STR(&in->skip, optarg);
           break;
 
       case 'M':
-          INSTALL_UINT64(in->target_memory_footprint, optarg, (uint64_t) 0, (uint64_t) -1, "-M");
+          INSTALL_UINT64(&in->target_memory_footprint, optarg, (uint64_t) 0, (uint64_t) -1, "-M", &retval);
           break;
 
       case 'C':
-          INSTALL_UINT(in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C");
+          INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C", &retval);
           break;
 
 #if HAVE_ZLIB
@@ -470,3 +470,31 @@ int parse_cmd_line(int         argc,
 
    return (retval ? retval : optind);
 }
+
+int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
+    if (!SOURCE) {
+        return -1;
+    }
+    VAR->data = (const char *) (SOURCE);
+    VAR->len = strlen(VAR->data);
+    return 0;
+}
+
+#define INSTALL_NUMBER(name, type, fmt)                                        \
+    void INSTALL_##name(type *dst, const char *argv,                           \
+                       const type min, const type max,                         \
+                       const char *arg_name, int *retval) {                    \
+        if (sscanf(argv, fmt, dst) != 1) {                                     \
+            fprintf(stderr, "could not parse %s with format %s\n", argv, fmt); \
+            *retval = -1;                                                      \
+        }                                                                      \
+        if ((*dst < min) || (*dst > max)) {                                    \
+            fprintf(stderr, "argument '%s' not in range [" fmt ", " fmt "]\n", \
+                    arg_name, min, max);                                       \
+            *retval = -1;                                                      \
+        }                                                                      \
+    }
+
+INSTALL_NUMBER(INT, int, "%d");
+INSTALL_NUMBER(SIZE, size_t, "%zu");
+INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64);

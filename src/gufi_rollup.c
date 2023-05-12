@@ -232,8 +232,8 @@ void print_stats(char **paths, const int path_count,
         fprintf(stdout, "    %s\n", paths[i]);
     }
     fprintf(stdout, "\n");
-    fprintf(stdout, "Thread Pool Size: %12d\n",  in->maxthreads);
-    fprintf(stdout, "Files/Links Limit: %11d\n", (int) in->max_in_dir);
+    fprintf(stdout, "Thread Pool Size: %12zu\n",  in->maxthreads);
+    fprintf(stdout, "Files/Links Limit: %11zu\n", in->max_in_dir);
     fprintf(stdout, "\n");
 
     /* per-thread stats together */
@@ -248,7 +248,7 @@ void print_stats(char **paths, const int path_count,
 
     size_t remaining = 0;
 
-    for(int i = 0; i < in->maxthreads; i++) {
+    for(size_t i = 0; i < in->maxthreads; i++) {
         sll_move_append(&not_processed, &stats[i].not_processed);
         sll_move_append(&not_rolled_up, &stats[i].not_rolled_up);
         sll_move_append(&rolled_up,     &stats[i].rolled_up);
@@ -902,7 +902,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     pa.stats = calloc(pa.in.maxthreads, sizeof(struct RollUpStats));
-    for(int i = 0; i < pa.in.maxthreads; i++) {
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
         sll_init(&pa.stats[i].not_processed);
         sll_init(&pa.stats[i].not_rolled_up);
         sll_init(&pa.stats[i].rolled_up);
@@ -913,7 +913,7 @@ int main(int argc, char *argv[]) {
     struct OutputBuffers print_buffers;
     OutputBuffers_init(&print_buffers, pa.in.maxthreads, 1024 * 1024, &print_mutex);
 
-    for(int i = 0; i < pa.in.maxthreads; i++) {
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
         pa.stats[i].print_buffers = &print_buffers;
     }
     #endif
@@ -945,7 +945,7 @@ int main(int argc, char *argv[]) {
 
     print_stats(argv, argc, &pa.in, pa.stats);
 
-    for(int i = 0; i < pa.in.maxthreads; i++) {
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
         #ifdef DEBUG
         pa.stats[i].print_buffers = NULL;
         #endif
