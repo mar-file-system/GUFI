@@ -801,7 +801,7 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     else {
         char fullpath[MAXPATH];
         size_t fullpath_len = SNFORMAT_S(fullpath, MAXPATH, 1,
-            dirname, dirname_len);
+            dirname.data, dirname.len);
 
         refstr_t input;
         input.data = (char *) sqlite3_value_text(argv[0]);
