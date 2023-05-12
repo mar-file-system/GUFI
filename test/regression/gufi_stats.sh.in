@@ -155,7 +155,7 @@ COPY="${EXPECTED}.copy"
 if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]]
 then
     # shellcheck disable=SC2016
-    @SED@ '/leaf-/,$d' "${EXPECTED}" > "${COPY}"
+    @SED@ '/^\$ gufi_stats    leaf-dirs$/Q' "${EXPECTED}" > "${COPY}"
 else
     cp "${EXPECTED}" "${COPY}"
 fi
