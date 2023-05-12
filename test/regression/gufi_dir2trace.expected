@@ -10,7 +10,7 @@ options:
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
-  -e                     compress work items
+
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)

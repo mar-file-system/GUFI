@@ -160,6 +160,8 @@ replace() {
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 
+    s/^ *-e                     compress work items$//g;
+
     s/${INDEXTARGET//\//\\/}\\///g;
     s/${INDEXTARGET//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;

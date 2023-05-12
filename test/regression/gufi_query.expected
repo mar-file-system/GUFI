@@ -26,7 +26,7 @@ options:
   -x                     enable external database processing
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
-  -e                     compress work items
+
 
 GUFI_index        find GUFI index here
 
