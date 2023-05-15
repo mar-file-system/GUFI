@@ -86,11 +86,9 @@ def check_not_exists(path):
 
 # set up tables
 def create_tables(con):
-    # always the first column
+    # first column for machine, gufi and raw_data tables
     hash_col = [['hash', None, str]]
 
-    commits_col_str= ', '.join('{0} {1}'.format(
-        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in commits.COLS)
     machine_col_str = ', '.join('{0} {1}'.format(
         name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + machine.COLS)
     gufi_col_str = ', '.join('{0} {1}'.format(
@@ -98,18 +96,22 @@ def create_tables(con):
     raw_data_col_str = ', '.join('{0} {1}'.format(
         name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in hash_col + raw_data.COLS)
 
-    # commits table gets created and filled
-    con.execute('CREATE TABLE [{0}] ({1}, PRIMARY KEY ([commit]));'.format(
-        commits.TABLE_NAME, commits_col_str))
-    commits.fill_table(con)
-
-    # other tables only created
+    # create machine, gufi, and raw_data tables
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
         machine.TABLE_NAME, machine_col_str))
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
         gufi.TABLE_NAME, gufi_col_str))
     con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY (hash));'.format(
         raw_data.TABLE_NAME, raw_data_col_str))
+
+    # commits table is different, gets created and filled
+    commits_col_str= ', '.join('{0} {1}'.format(
+        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in commits.COLS)
+
+    con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY ("commit"));'.format(
+        commits.TABLE_NAME, commits_col_str))
+    commits.fill_table(con)
+
 
 # hash a configuration, not configure the hash algorithm
 def hash_config(alg, data):

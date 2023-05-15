@@ -60,32 +60,37 @@
 # OF SUCH DAMAGE.
 
 
+
 from performance_pkg import common
+
 # table schema
 TABLE_NAME = 'commits'
 
 # arg attr, sql column name, column type
 
 COLS = [
-    ['[commit]',     None, str],
+    ['"commit"',     None, str],
     ['timestamp',    None, int],
 ]
 
+
 def fill_table(con):
-    ''' This table only needs'''
+    ''' Fill table with all available commits and their respective timestamps'''
     # Current working directory for commands
     cwd = '@CMAKE_SOURCE_DIR@'
 
-    # Run command to get all available commits in a list
-    command=["git", "rev-list", "HEAD"]
-    commits = common.run_get_stdout(command, cwd)[:-1]
-    commits = commits.split()
+    # Get all available commits in a list
+    command = ["git", "rev-list", "HEAD"]
+    commits = common.run_get_stdout(command, cwd)[:-1].split()
 
-    # get commit, timestamp pair and insert into database
-    vals = []
+    # insert commit and corresponding timestamp into table
     for commit in commits:
         command = ["git", "show", "-s", "--format=%ct", commit]
         timestamp = common.run_get_stdout(command, cwd)[:-1]
-        vals = ['"{0}"'.format(commit), str(timestamp)]
-        sql = 'INSERT INTO {0} ([commit], timestamp) VALUES ({1});'.format(TABLE_NAME, ', '.join(vals))
+        sql = 'INSERT INTO {0} ("commit", timestamp) VALUES ("{1}",{2});'.format(
+            TABLE_NAME,
+            commit,
+            timestamp
+        )
+
         con.execute(sql)

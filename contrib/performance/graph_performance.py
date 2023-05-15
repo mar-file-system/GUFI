@@ -125,30 +125,62 @@ def expand_git_identifiers(identifiers, git_path='@CMAKE_SOURCE_DIR@'):
 
     return commits
 
-def gather_raw_numbers(dbname, table_name, columns, commits, plot_full_x_range):
+def create_timestamps_view(con, table_name, hash_db, columns):
+    '''
+    Create a view of the table that includes timestamps stored in
+    the hashes database in the commits table
+
+    Parameters
+    ----------
+
+    con: SQLite3 Connection
+        Connection to the database containing the table to create the view for
+
+    table_name: str
+        name of table to create view for
+
+    hash_db: str
+        path to the database containg the commits table
+
+    columns: list
+        list of columns user wants to graph
+
+    '''
+
+    # Attach hashes database
+    con.execute('ATTACH "{0}" AS hashes;'.format(hash_db))
+
+    # Create view [commit, (columns user wants to graph), timestamp]
+    temp_view = '''
+    CREATE TEMP VIEW timestamp_view AS
+    SELECT {0}."commit", {1}, hashes.commits."timestamp"
+    FROM {0}
+    JOIN hashes.commits ON {0}."commit" == hashes.commits."commit";
+    '''.format( table_name,','.join('{0}."{1}"'.format(table_name, column) for column in columns))
+
+    con.execute(temp_view)
+
+def gather_raw_numbers(con, view_name, columns, commits, plot_full_x_range):
     raw_numbers = [] # raw numbers grouped by commit
 
-    # extract raw values from database
-    hashdb.check_exists(dbname)
-    with sqlite3.connect(dbname) as con:
-        # convert columns into SELECT clause
-        col_str = ', '.join('"{0}"'.format(col) for col in columns)
+    # convert columns into SELECT clause
+    col_str = ', '.join('"{0}"'.format(col) for col in columns)
 
-        # get raw numbers grouped by commit
-        for commit in commits[:]:
-            query = 'SELECT {0} FROM {1} WHERE "commit" == "{2}";'.format(
-                col_str, table_name, commit
-            )
-            cur = con.execute(query)
-            raw_commit = cur.fetchall()
+    # get raw numbers grouped by commit
+    for commit in commits[:]:
+        query = 'SELECT {0} FROM {1} WHERE "commit" == "{2}";'.format(
+            col_str, view_name, commit
+        )
+        cur = con.execute(query)
+        raw_commit = cur.fetchall()
 
-            # Skip empty commits if not plotting the full range
-            if len(raw_commit) == 0:
-                if not plot_full_x_range:
-                    commits.remove(commit)
-                    continue
+        # Skip empty commits if not plotting the full range
+        if len(raw_commit) == 0:
+            if not plot_full_x_range:
+                commits.remove(commit)
+                continue
 
-            raw_numbers += [raw_commit]
+        raw_numbers += [raw_commit]
 
     return raw_numbers
 
@@ -178,9 +210,16 @@ def run(argv):
     columns = raw_data[config.RAW_DATA_COLUMNS]
     plot_full_x_range = conf[config.AXES][config.AXES_X_FULL_RANGE]
 
-    # get raw data
-    raw_numbers = gather_raw_numbers(args.raw_data_db, debug_print.TABLE_NAME,
-                                     columns, commits, plot_full_x_range)
+    hashdb.check_exists(args.raw_data_db)
+    with sqlite3.connect(args.raw_data_db) as con:
+
+        # Create view that sorts commits by timestamps and contains user columns
+        create_timestamps_view(con, debug_print.TABLE_NAME, args.database, columns)
+        view_name = 'timestamp_view'
+
+        # get raw data
+        raw_numbers = gather_raw_numbers(con, view_name,
+                                         columns, commits, plot_full_x_range)
 
     # generate lines from raw data
     lines = stats.generate_lines(conf, commits, columns, raw_numbers, args.verbose)
