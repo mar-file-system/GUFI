@@ -73,6 +73,8 @@ import raw_data_hash
 import setup_hashdb
 import setup_raw_data_db
 
+from performance_pkg.hashdb import commits
+
 OVERRIDE = 'override'
 
 class TestHashing(unittest.TestCase):
@@ -178,11 +180,12 @@ class IntegrationTest(unittest.TestCase): # pylint: disable=too-many-instance-at
                 # make sure tables exist
                 cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
                 res = cur.fetchall()
-                self.assertEqual(len(res), 3)
+                self.assertEqual(len(res), 4)
                 for table_name in res:
                     self.assertIn(table_name[0], [machine_hash.machine.TABLE_NAME,
                                                   gufi_hash.gufi.TABLE_NAME,
-                                                  raw_data_hash.raw_data.TABLE_NAME])
+                                                  raw_data_hash.raw_data.TABLE_NAME,
+                                                  commits.TABLE_NAME])
             except Exception as err: # pylint: disable=broad-except
                 self.fail('Testing setup_hashdb raised: {0}'.format(err))
 

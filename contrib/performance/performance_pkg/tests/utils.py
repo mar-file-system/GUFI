@@ -65,7 +65,7 @@ import os
 import sqlite3
 import unittest
 
-from performance_pkg.hashdb import gufi, machine, raw_data, utils as hashdb
+from performance_pkg.hashdb import commits, gufi, machine, raw_data, utils as hashdb
 
 class TestExistence(unittest.TestCase):
     def test_check_exists(self):
@@ -101,8 +101,8 @@ class TestDBFuncs(unittest.TestCase):
 
                 # check that columns are correct
                 rows = [row[0] for row in cur.fetchall()]
-                self.assertEqual(3, len(rows))
-                for table_name in [gufi.TABLE_NAME, machine.TABLE_NAME, raw_data.TABLE_NAME]:
+                self.assertEqual(4, len(rows))
+                for table_name in [gufi.TABLE_NAME, machine.TABLE_NAME, raw_data.TABLE_NAME, commits.TABLE_NAME]:
                     self.assertIn(table_name, rows)
 
             except Exception as err: # pylint: disable=broad-except
