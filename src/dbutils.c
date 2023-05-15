@@ -522,7 +522,7 @@ int insertdbgo_xattrs_avail(struct entry_data *ed, sqlite3_stmt *res)
     return error;
 }
 
-int insertdbgo_xattrs(struct input *in, struct stat *dir, struct work *entry, struct entry_data *ed,
+int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res) {
@@ -736,6 +736,7 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
 /* return the directory you are currently in */
 static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
 
     sqlite3_result_text(context, work->name, work->name_len, SQLITE_STATIC);
@@ -745,6 +746,7 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 /* return the basename of the directory you are currently in */
 static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
 
     sqlite3_result_text(context, work->name + work->name_len - work->basename_len,
@@ -755,6 +757,7 @@ static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 /* return the fullpath of the directory you are currently in */
 static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
 
     if (!work->fullpath) {
@@ -781,6 +784,8 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
  */
 static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc;
+
     /* work->name contains the current directory being operated on */
     struct work *work = (struct work *) sqlite3_user_data(context);
     const int rollupscore = sqlite3_value_int(argv[1]);
@@ -1065,6 +1070,7 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
 }
 
 int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
+    (void) id;
     return !((addqueryfuncs_common(db) == 0) &&
              (addqueryfuncs_with_context(db, work) == 0));
 }

@@ -161,7 +161,7 @@ int insertdbgo(struct work *pwork, struct entry_data *data,
 /* insert directly into xattrs_avail in the associated db */
 int insertdbgo_xattrs_avail(struct entry_data *data, sqlite3_stmt *res);
 /* figure out where the xattr should go and insert it there */
-int insertdbgo_xattrs(struct input *in, struct stat *dir, struct work *entry, struct entry_data *data,
+int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *data,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);

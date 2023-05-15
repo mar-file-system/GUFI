@@ -309,7 +309,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             /* add row to bulk insert */
             timestamp_create_start(insertdbgo);
             insertdbgo(&row, &row_ed, db, entries_res);
-            insertdbgo_xattrs(in, &ed.statuso, &row, &row_ed,
+            insertdbgo_xattrs(in, &ed.statuso, &row_ed,
                               &xattr_db_list, &pa->xattr,
                               topath, topath_len,
                               xattrs_res, xattr_files_res);

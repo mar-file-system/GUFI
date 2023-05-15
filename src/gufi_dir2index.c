@@ -131,7 +131,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     }
 
     if (in->external_enabled) {
-        insertdbgo_xattrs(in, &nda->ed.statuso, entry, ed,
+        insertdbgo_xattrs(in, &nda->ed.statuso, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);

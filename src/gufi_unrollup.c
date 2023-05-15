@@ -101,7 +101,7 @@ int count_pwd(void *args, int count, char **data, char **columns) {
 
 /* Delete all entries in each file found in the XATTR_FILES_ROLLUP table */
 int process_xattrs(void *args, int count, char **data, char **columns) {
-    (void) columns;
+    (void) count; (void) columns;
 
     char *dir = (char *) args;
     char *relpath = data[0];

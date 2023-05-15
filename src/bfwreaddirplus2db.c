@@ -645,7 +645,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
      if (in->output == OUTDB) {
        i=0;
        while (i < in->maxthreads) {
-           SNPRINTF(outdbn,MAXPATH,"%s.%d",in->outname.data,i);
+           SNPRINTF(outdbn,MAXPATH,"%s.%zu",in->outname.data,i);
            gts.outdbd[i]=opendb(outdbn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
                                 , create_readdirplus_tables, NULL
                                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -667,7 +667,7 @@ int processinit(struct input *in, QPTPool_t * ctx) {
      if (in->output == OUTFILE) {
        i=0;
        while (i < in->maxthreads) {
-         SNPRINTF(outfn,MAXPATH,"%s.%d",in->outname.data,i);
+         SNPRINTF(outfn,MAXPATH,"%s.%zu",in->outname.data,i);
          //fprintf(stderr,"init opening %s.%d",in.outname,i);
          gts.outfd[i]=fopen(outfn,"w");
          if (in->stride > 0) {
