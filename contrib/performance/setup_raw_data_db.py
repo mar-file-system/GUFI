@@ -87,12 +87,9 @@ def run(argv):
     print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
 
     hashdb.check_not_exists(args.raw_data_db)
-    try:
-        con = sqlite3.connect(args.raw_data_db)
+    with sqlite3.connect(args.raw_data_db) as con:
         DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name].create_table(con)
         con.commit()
-    finally:
-        con.close()
 
 if __name__ == '__main__':
     run(sys.argv[1:])

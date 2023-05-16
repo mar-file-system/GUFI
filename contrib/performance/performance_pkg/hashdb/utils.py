@@ -172,10 +172,7 @@ def get_config(hashdb_name, user_raw_data_hash):
 
     # verify that the hash db exists and contains the configuration
     check_exists(hashdb_name)
-    try:
-        hashdb = sqlite3.connect(hashdb_name)
+    with sqlite3.connect(hashdb_name) as hashdb:
         gufi_cmd, debug_name = get_config_with_con(hashdb, user_raw_data_hash)
-    finally:
-        hashdb.close()
 
     return gufi_cmd, debug_name

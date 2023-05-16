@@ -130,9 +130,7 @@ def gather_raw_numbers(dbname, table_name, columns, commits, plot_full_x_range):
 
     # extract raw values from database
     hashdb.check_exists(dbname)
-    try:
-        con = sqlite3.connect(dbname)
-
+    with sqlite3.connect(dbname) as con:
         # convert columns into SELECT clause
         col_str = ', '.join('"{0}"'.format(col) for col in columns)
 
@@ -151,8 +149,6 @@ def gather_raw_numbers(dbname, table_name, columns, commits, plot_full_x_range):
                     continue
 
             raw_numbers += [raw_commit]
-    finally:
-        con.close()
 
     return raw_numbers
 

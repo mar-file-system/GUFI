@@ -76,12 +76,9 @@ def run(argv):
     args = parse_args(argv)
 
     hashdb.check_not_exists(args.database)
-    try:
-        con = sqlite3.connect(args.database)
+    with sqlite3.connect(args.database) as con:
         hashdb.create_tables(con)
         con.commit()
-    finally:
-        con.close()
 
 if __name__ == '__main__':
     run(sys.argv[1:])

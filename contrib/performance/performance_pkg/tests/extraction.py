@@ -138,14 +138,12 @@ class TestCommon(unittest.TestCase):
             'int' : 0,
         }
 
-        try:
-            db = sqlite3.connect(":memory:")
-            common.create_table(db, table_name, columns)
-            common.insert(db, parsed, table_name, columns)
-        except Exception as err: # pylint: disable=broad-except
-            self.fail('Testing extraction common functions raised: {0}'.format(err))
-        finally:
-            db.close()
+        with sqlite3.connect(':memory:') as db:
+            try:
+                common.create_table(db, table_name, columns)
+                common.insert(db, parsed, table_name, columns)
+            except Exception as err: # pylint: disable=broad-except
+                self.fail('Testing extraction common functions raised: {0}'.format(err))
 
 if __name__ == '__main__':
     unittest.main()

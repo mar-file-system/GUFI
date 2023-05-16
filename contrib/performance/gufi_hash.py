@@ -301,9 +301,7 @@ def run(argv):
     if args.database:
         hashdb.check_exists(args.database)
 
-        try:
-            con = sqlite3.connect(args.database)
-
+        with sqlite3.connect(args.database) as con:
             if args.delete:
                 con.execute('DELETE FROM {0} WHERE hash == "{1}";'.format(
                     gufi.TABLE_NAME, gufi_hash))
@@ -314,8 +312,6 @@ def run(argv):
                               gufi.COLS_NOT_HASHED)
 
             con.commit()
-        finally:
-            con.close()
 
 if __name__ == '__main__':
     run(sys.argv[1:])

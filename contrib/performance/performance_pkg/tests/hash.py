@@ -147,26 +147,18 @@ class IntegrationTest(unittest.TestCase): # pylint: disable=too-many-instance-at
         self.gufi_hash = 'gufi_hash'
         self.raw_data_hash = 'raw_data_hash'
 
-    def opendb(self):
-        # file:name?mode=ro doesn't work in Python2
-        setup_hashdb.hashdb.check_exists(self.hashes_name)
-        return sqlite3.connect(self.hashes_name)
-
     def check_table(self, table_name, expected_hash, test_name):
-        try:
-            db = self.opendb()
-
-            cur = db.execute('SELECT hash FROM {0};'.format(table_name))
-            res = cur.fetchall()
-            if expected_hash is None:
-                self.assertEqual(len(res), 0)
-            else:
-                self.assertEqual(len(res), 1)
-                self.assertEqual(res[0][0], expected_hash)
-        except Exception as err: # pylint: disable=broad-except
-            self.fail('Testing {0} raised: {1}'.format(test_name, err))
-        finally:
-            db.close()
+        with sqlite3.connect(self.hashes_name) as db:
+            try:
+                cur = db.execute('SELECT hash FROM {0};'.format(table_name))
+                res = cur.fetchall()
+                if expected_hash is None:
+                    self.assertEqual(len(res), 0)
+                else:
+                    self.assertEqual(len(res), 1)
+                    self.assertEqual(res[0][0], expected_hash)
+            except Exception as err: # pylint: disable=broad-except
+                self.fail('Testing {0} raised: {1}'.format(test_name, err))
 
     # see the Setup section in the README for descriptions
 
@@ -175,20 +167,24 @@ class IntegrationTest(unittest.TestCase): # pylint: disable=too-many-instance-at
     def step2(self):
         setup_hashdb.run([self.hashes_name])
 
-        db = self.opendb()
+        # file:name?mode=ro doesn't work in Python2
         try:
-            # make sure tables exist
-            cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
-            res = cur.fetchall()
-            self.assertEqual(len(res), 3)
-            for table_name in res:
-                self.assertIn(table_name[0], [machine_hash.machine.TABLE_NAME,
-                                              gufi_hash.gufi.TABLE_NAME,
-                                              raw_data_hash.raw_data.TABLE_NAME])
-        except Exception as err: # pylint: disable=broad-except
-            self.fail('Testing setup_hashdb raised: {0}'.format(err))
-        finally:
-            db.close()
+            setup_hashdb.hashdb.check_exists(self.hashes_name)
+        except SystemExit:
+            self.fail('setup_hashes_db did not create a database file')
+
+        with sqlite3.connect(self.hashes_name) as db:
+            try:
+                # make sure tables exist
+                cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
+                res = cur.fetchall()
+                self.assertEqual(len(res), 3)
+                for table_name in res:
+                    self.assertIn(table_name[0], [machine_hash.machine.TABLE_NAME,
+                                                  gufi_hash.gufi.TABLE_NAME,
+                                                  raw_data_hash.raw_data.TABLE_NAME])
+            except Exception as err: # pylint: disable=broad-except
+                self.fail('Testing setup_hashdb raised: {0}'.format(err))
 
     def step3(self):
         machine_hash.run(['--override', self.machine_hash,
@@ -221,17 +217,16 @@ class IntegrationTest(unittest.TestCase): # pylint: disable=too-many-instance-at
         except SystemExit:
             self.fail('setup_raw_data_db did not create a database file')
 
-        db = sqlite3.connect(raw_data_db_name)
-        try:
-            cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
-            res = cur.fetchall()
-            self.assertEqual(len(res), 1)
-            self.assertEqual(res[0][0], self.debug_name)
-        except Exception as err: # pylint: disable=broad-except
-            self.fail('Testing setup_raw_data_db raised: {0}'.format(err))
-        finally:
-            db.close()
-            os.remove(raw_data_db_name)
+        with sqlite3.connect(raw_data_db_name) as db:
+            try:
+                cur = db.execute('SELECT name FROM sqlite_master WHERE type == "table";')
+                res = cur.fetchall()
+                self.assertEqual(len(res), 1)
+                self.assertEqual(res[0][0], self.debug_name)
+            except Exception as err: # pylint: disable=broad-except
+                self.fail('Testing setup_raw_data_db raised: {0}'.format(err))
+
+        os.remove(raw_data_db_name)
 
     # raw_data_hash --delete
     def delete5(self):
