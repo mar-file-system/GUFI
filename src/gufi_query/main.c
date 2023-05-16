@@ -763,7 +763,7 @@ int main(int argc, char *argv[])
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     /* aggregate per thread query counts */
     size_t query_count = 0;
-    for(int i = 0; i < in.maxthreads; i++) {
+    for(size_t i = 0; i < in.maxthreads; i++) {
         query_count += pa.ta[i].queries;
     }
     #endif

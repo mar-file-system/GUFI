@@ -86,7 +86,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     pa->ta = calloc(in->maxthreads, sizeof(ThreadArgs_t));
 
     size_t i = 0;
-    for(; i < (size_t) in->maxthreads; i++) {
+    for(; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
 
         /* only create per-thread db files when not aggregating and outputting to OUTDB */
@@ -146,7 +146,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
     }
 
-    if (i != (size_t) in->maxthreads) {
+    if (i != in->maxthreads) {
         PoolArgs_fin(pa, i + 1);
         return 1;
     }

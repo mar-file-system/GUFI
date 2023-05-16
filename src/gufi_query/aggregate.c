@@ -138,7 +138,7 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input *in) {
     /* Not checking arguments */
 
-    for(size_t i = 0; i < (size_t) in->maxthreads; i++) {
+    for(size_t i = 0; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &(pa->ta[i]);
         if (attachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1)) {
             char *err = NULL;
