@@ -276,6 +276,16 @@ int count_rows(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
+#if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
+static void subdirs_walked(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc; (void) argv;
+    size_t *subdirs_walked_count = (size_t *) sqlite3_user_data(context);
+
+    sqlite3_result_int64(context, *subdirs_walked_count);
+    return;
+}
+#endif
+
 int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int recs;
     char shortname[MAXPATH];
@@ -398,10 +408,13 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         thread_timestamp_end(get_rollupscore_call);
 
         /* push subdirectories into the queue */
+        #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
+        size_t subdirs_walked_count = 0;
+        #endif
         if (rollupscore == 0) {
             thread_timestamp_start(ts.tts, descend_call);
             #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
-            const size_t pushed =
+            subdirs_walked_count =
             #endif
             descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level, in->compress
                      #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
@@ -411,12 +424,21 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             thread_timestamp_end(descend_call);
             #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
             pthread_mutex_lock(&print_mutex);
-            fprintf(stderr, "%s %zu\n", gqw->work.name, pushed);
+            fprintf(stderr, "%s %zu\n", gqw->work.name, subdirs_walked_count);
             pthread_mutex_unlock(&print_mutex);
             #endif
         }
 
         if (db) {
+            #if defined(DEBUG) && defined(SUBDIRECTORY_COUNTS)
+            if (sqlite3_create_function(db, "subdirs_walked", 0, SQLITE_UTF8,
+                                        &subdirs_walked_count, &subdirs_walked,
+                                        NULL, NULL) != SQLITE_OK) {
+                fprintf(stderr, "Warning: Could not create subdirs_walked function: %s (%d)\n",
+                        sqlite3_errmsg(db), sqlite3_errcode(db));
+            }
+            #endif
+
             /* only query this level if the min_level has been reached */
             if (gqw->work.level >= in->min_level) {
                 /* run query on summary, print it if printing is needed, if returns none */
