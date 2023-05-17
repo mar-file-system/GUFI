@@ -78,6 +78,7 @@ if (CMAKE_CXX_COMPILER)
     dbutils.cpp
     debug.cpp
     print.cpp
+    template_db.cpp
     trace.cpp
     trie.cpp
     utils.cpp

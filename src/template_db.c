@@ -198,7 +198,10 @@ int close_template_db(struct template_db *tdb) {
 /* create the database file to copy from */
 int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
                     const char *name) {
-    /* Not checking arguments */
+    if (!tdb || (tdb->fd != -1) ||
+        !create_tables || !name) {
+        return -1;
+    }
 
     sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
                          , create_tables, NULL
@@ -209,14 +212,15 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
                          );
 
     sqlite3_close(db);
-
-    if ((tdb->fd = open(name, O_RDONLY)) == -1) {
-        fprintf(stderr, "Could not open template file\n");
-        return -1;
-    }
+    tdb->fd = open(name, O_RDONLY);
 
     /* no need for the file to remain on the filesystem */
     remove(name);
+
+    if (tdb->fd == -1) {
+        fprintf(stderr, "Could not open template file\n");
+        return -1;
+    }
 
     tdb->size = lseek(tdb->fd, 0, SEEK_END);
     return !tdb->size;
@@ -256,6 +260,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     if (sf == -1) {
         fprintf(stderr, "Could not copy template file (%d) to %s (%d): %s (%d)\n",
                 src_db, dst, dst_db, strerror(err), err);
+        remove(dst);
         return -1;
     }
 
