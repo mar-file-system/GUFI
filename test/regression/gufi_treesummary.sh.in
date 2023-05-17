@@ -153,11 +153,11 @@ run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE (
 echo
 
 echo "# Find directories that have xattrs"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary WHERE totxattr > 0;\" ${INDEXROOT}" | @SED@ '/^$/d;'
+run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr >  0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary WHERE totxattr > 0;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Walk this tree if it has xattrs"
-run_no_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr != 0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary;\" ${INDEXROOT}" | @SED@ '/^$/d;'
+run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT '' FROM tree.treesummary WHERE totxattr != 0;\" -S \"SELECT rpath(sname, sroll), totxattr FROM vrsummary;\" ${INDEXROOT}" | @SED@ '/^$/d;'
 echo
 
 echo "# Bad path"
