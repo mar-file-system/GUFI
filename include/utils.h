@@ -143,6 +143,8 @@ int setup_directory_skip(const char *filename, trie_t **skip);
 /* strstr/strtok replacement */
 char *split(char *src, const char *delim, const size_t delim_len, const char *end);
 
+ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size);
+
 #ifdef __cplusplus
 }
 #endif

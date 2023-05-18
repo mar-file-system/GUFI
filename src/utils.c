@@ -70,7 +70,6 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #if HAVE_ZLIB
 #include <zlib.h>
 #endif
@@ -783,4 +782,64 @@ char *split(char *src, const char *delim, const size_t delim_len, const char *en
     }
 
     return NULL;
+}
+
+/* should work similarly to getline(3) */
+ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_t default_size) {
+    if (!lineptr || !n || (fd < 0) || !offset || (default_size < 1)) {
+        return -EINVAL;
+    }
+
+    size_t read = 0;
+    size_t size = *n; /* allocation size, not line size */
+    ssize_t rc = 0;
+
+    if (!*lineptr || !size) {
+        size = default_size;
+
+        void *new_alloc = realloc(*lineptr, size);
+        if (!new_alloc) {
+            return -ENOMEM;
+        }
+
+        *lineptr = new_alloc;
+    }
+
+    int found = 0;
+    while (!found) {
+        if (read >= size) {
+            size *= 2;
+            void *new_alloc = realloc(*lineptr, size);
+            if (!new_alloc) {
+                return -ENOMEM;
+            }
+
+            *lineptr = new_alloc;
+        }
+
+        char *start = *lineptr + read;
+        rc = pread(fd, start, size - read, *offset + read);
+        if (rc < 1) {
+            break;
+        }
+
+        char *newline = memchr(start, '\n', rc);
+        if (newline) {
+            *newline = '\0';
+            read += newline - start;
+            found = 1;
+        }
+        else {
+            read += rc;
+        }
+    }
+
+    if (rc < 0) {
+        return -errno;
+    }
+
+    *offset += read + found; /* remove newlne if it was read */
+    *n = read;
+
+    return read;
 }

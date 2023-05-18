@@ -63,17 +63,14 @@ OF SUCH DAMAGE.
 
 
 #include <climits>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <random>
 
 #include <gtest/gtest.h>
 
-extern "C" {
-
 #include "utils.h"
-
-}
 
 TEST(SNFORMAT_S, concatenate) {
     char buf[1024];
@@ -772,4 +769,69 @@ TEST(split, delims) {
 
     next = split((char *) end + 1, delims, 2, end);
     EXPECT_EQ(next, nullptr);
+}
+
+TEST(getline, fd) {
+    const size_t default_size = 1024;
+    const size_t LINE_LEN = 1025;
+    char LINE[LINE_LEN] = "";
+
+    memset(LINE, 'X', LINE_LEN);
+
+    char name[7];
+    snprintf(name, sizeof(name), "XXXXXX");
+    const int fd = mkstemp(name);
+    ASSERT_GT(fd, -1);
+    EXPECT_EQ(remove(name), 0);
+
+    EXPECT_EQ(write(fd, LINE, LINE_LEN), (ssize_t) LINE_LEN);
+    EXPECT_EQ(write(fd, "\n", 1),        (ssize_t) 1);
+    EXPECT_EQ(write(fd, "\n", 1),        (ssize_t) 1);
+
+    char *line = nullptr;
+    size_t len = 0;
+    off_t offset = 0;
+
+    /* read line */
+    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) LINE_LEN);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_EQ(len,    LINE_LEN);
+    EXPECT_EQ(offset, (off_t) (LINE_LEN + 1));
+    free(line);
+    line = nullptr;
+
+    /* empty line */
+    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
+    free(line);
+    line = nullptr;
+
+    /* end of file */
+    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
+    free(line);
+    line = nullptr;
+
+    /* past end of file */
+    const off_t past = LINE_LEN * 5;
+    offset = past;
+    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_EQ(offset, past);
+    free(line);
+    line = nullptr;
+
+    /* bad inputs */
+    EXPECT_EQ(getline_fd(nullptr, &len,    fd, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   nullptr, fd, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &len,    -1, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &len,    fd, nullptr, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &len,    fd, &offset, 0),            -EINVAL);
+
+    EXPECT_EQ(close(fd), 0);
 }
