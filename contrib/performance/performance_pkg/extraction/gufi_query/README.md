@@ -14,18 +14,19 @@ Below is a table (possibly not up to date) listing commit ranges grouped by form
 | [908c161](https://github.com/mar-file-system/GUFI/commit/908c161), [HEAD](https://github.com/mar-file-system/GUFI/commit/HEAD) | 313+ | |
 | [61c0a9d](https://github.com/mar-file-system/GUFI/commit/61c0a9d), [8060d30](https://github.com/mar-file-system/GUFI/commit/8060d30)| 5 | |
 | [7cd35f8](https://github.com/mar-file-system/GUFI/commit/7cd35f8), [4164985](https://github.com/mar-file-system/GUFI/commit/4164985)| 20 | |
-| [a13a330](https://github.com/mar-file-system/GUFI/commit/a13a330), [216ef5b](https://github.com/mar-file-system/GUFI/commit/216ef5b)| 52 | Last occurrence of Missed NULL bug ([See notes](#missed-null-check)) |
-| [75e2c5b](https://github.com/mar-file-system/GUFI/commit/75e2c5b), [00ba871](https://github.com/mar-file-system/GUFI/commit/00ba871)| 14 | |
+| [a13a330](https://github.com/mar-file-system/GUFI/commit/a13a330), [216ef5b](https://github.com/mar-file-system/GUFI/commit/216ef5b)| 52 | Performance increase, Last occurrence of Missed NULL bug ([See notes](#a13a330-216ef5b)) |
+| [75e2c5b](https://github.com/mar-file-system/GUFI/commit/75e2c5b), [00ba871](https://github.com/mar-file-system/GUFI/commit/00ba871)| 14 | Performance decrease ([See notes](#75e2c5b-00ba871))|
 | [093dc32](https://github.com/mar-file-system/GUFI/commit/093dc32), [3235400](https://github.com/mar-file-system/GUFI/commit/3235400)| 75 | |
 | [941e8ca](https://github.com/mar-file-system/GUFI/commit/941e8ca), [97fabf7](https://github.com/mar-file-system/GUFI/commit/97fabf7)| 65 | |
 | [aad5b08](https://github.com/mar-file-system/GUFI/commit/aad5b08)| 1 | |
-| [90611bf](https://github.com/mar-file-system/GUFI/commit/90611bf), [aaa5b89](https://github.com/mar-file-system/GUFI/commit/aaa5b89)| 108 | First occurrence of Missed NULL bug ([See notes](#missed-null-check)) |
+| [90611bf](https://github.com/mar-file-system/GUFI/commit/90611bf), [aaa5b89](https://github.com/mar-file-system/GUFI/commit/aaa5b89)| 108 | Performance increase, First occurrence of Missed NULL bug ([See notes](#90611bf-aaa5b89)) |
 | [5ec5386](https://github.com/mar-file-system/GUFI/commit/5ec5386), [a9a1ef7](https://github.com/mar-file-system/GUFI/commit/a9a1ef7)| 51 | Bugged commit ranges, Performance increase ([See notes](#5ec5386-a9a1ef7)) |
 | [7172479](https://github.com/mar-file-system/GUFI/commit/7172479) | 1 | |
 | [7acefa5](https://github.com/mar-file-system/GUFI/commit/7acefa5), [466e9e8](https://github.com/mar-file-system/GUFI/commit/466e9e8)| 8 | |
 | [54bfc53](https://github.com/mar-file-system/GUFI/commit/54bfc53), [90b21bc](https://github.com/mar-file-system/GUFI/commit/90b21bc)| 15 | 54bfc53 contains multiple bugs ([See notes](#54bfc53-90b21bc))|
 | [4823587](https://github.com/mar-file-system/GUFI/commit/4823587), [a6631c4](https://github.com/mar-file-system/GUFI/commit/a6631c4)| 18 | Bugged commits and ranges ([See notes](#4823587-a6631c4))|
-| [ce61cb7](https://github.com/mar-file-system/GUFI/commit/ce61cb7), [b8c156c](https://github.com/mar-file-system/GUFI/commit/b8c156c)| 16 | Bugged commits and ranges ([See notes](#ce61cb7-b8c156c))|
+| [046f533](https://github.com/mar-file-system/GUFI/commit/046f533), [b8c156c](https://github.com/mar-file-system/GUFI/commit/b8c156c)| 4 | Bugged commits and ranges ([See notes](#046f533-b8c156c))|
+| [ce61cb7](https://github.com/mar-file-system/GUFI/commit/ce61cb7), [f5e755a](https://github.com/mar-file-system/GUFI/commit/f5e755a)| 12 | Performance increase ([See notes](#cf62851-f5e755a))|
 | [2111dd1](https://github.com/mar-file-system/GUFI/commit/2111dd1), [cf62851](https://github.com/mar-file-system/GUFI/commit/cf62851)| 451 | gufi_query does not exist; still called bfq |
 
 ## Line format
@@ -52,8 +53,25 @@ Each line of the cumulative_times output has the following format:
 
 ### Ranges
 
-#### 5ec5386, a9a1ef7
+#### a13a330, 216ef5b
+* On commit [`216ef5b`](https://github.com/mar-file-system/GUFI/commit/216ef5b)
+    * Last occurrence of [`Missed NULL Check`](#missed-null-check)
 
+* On commit [`557aa5e`](https://github.com/mar-file-system/GUFI/commit/557aa5e)
+    * Performance increase likely caused by the changes made to the `print_callback` function
+
+#### 75e2c5b, 00ba871
+* On commit [`b4bb77d`](https://github.com/mar-file-system/GUFI/commit/b4bb77d)
+    * Performance reduction likely caused by the ordering being done in the `print_callback` function
+
+#### 90611bf, aaa5b89
+* On commit [`b393254`](https://github.com/mar-file-system/GUFI/commit/b393254)
+    * First ocuurence of [`Missed NULL Check`](#missed-null-check)
+
+* On commit [`d74a2cc`](https://github.com/mar-file-system/GUFI/commit/d74a2cc)
+    * Performance increase caused by changes in the `print_callback` function
+
+#### 5ec5386, a9a1ef7
 * Sub range `86d3d0e, a9a1ef7`
     * Functions normally
 
@@ -67,55 +85,68 @@ Each line of the cumulative_times output has the following format:
 * Sub range `5ec5386, 1a95766`
     * `entries` table required for -E query ([See `Aggregation Error`](#aggregation-error))
 
-* On commit `d6ec34f`
-    * Last instance of epoch bug ([See `Epoch Error`](#multiple-definitions-of-epoch))
+* On commit [`d6ec34f`](https://github.com/mar-file-system/GUFI/commit/d6ec34f) 
+    * Last instance of [`Epoch Error`](#multiple-definitions-of-epoch)
 
 #### 54bfc53, 90b21bc
-
-* On commit `54bfc53`
-    * Last instance of `fill-queues.c` bug [See `Missing fill_queues.c`](#missing-fill_queuesc)
-    * First instance of epoch bug [See `Multiple definitions of epoch`](#multiple-definitions-of-epoch)
+* On commit [`54bfc53`](https://github.com/mar-file-system/GUFI/commit/54bfc53)
+    * Last instance of [`Missing fill_queues.c`](#missing-fill_queuesc)
+    * First instance of [`Multiple definitions of epoch`](#multiple-definitions-of-epoch)
 
 #### 4823587, a6631c4
-
-* On commit `a6631c4`
-    * First instance of `fill-queues.c` bug [See `Missing fill_queues.c`](#missing-fill_queuesc)
-* On commit `dd9d284`
+* On commit [`a6631c4`](https://github.com/mar-file-system/GUFI/commit/a6631c4)
+    * First instance of [`Missing fill_queues.c`](#missing-fill_queuesc)
+* On commit [`dd9d284`](https://github.com/mar-file-system/GUFI/commit/dd9d284)
     * Debug mode does not work, cumulative times debug values not printed.
 * Sub range `977bc6b, 64a511d`
     * Functions normally
-* On commit `428398f`
-    * Last instance of errno bug [See `Errno bug`](#Errno-bug)
+* On commit [`428398f`](https://github.com/mar-file-system/GUFI/commit/428398f)
+    * Last instance of [`Errno bug`](#Errno-bug)
 
-#### ce61cb7, b8c156c
+#### 046f533, b8c156c
+* On commit [`a4c5fd1`](https://github.com/mar-file-system/GUFI/commit/a4c5fd1)
+    * First instance of [`Errno bug`](#Errno-bug)
 
-* On commit `a4c5fd1`
-    * First instance of errno bug [See `Errno bug`](#Errno-bug)
+#### cf62851, f5e755a
+* On commit [`f5e755a`](https://github.com/mar-file-system/GUFI/commit/f5e755a)
+    * Performance increase caused by switching to QPTPool, reducing contention
 
 ### Known bugs
 
 #### Missed NULL Check
-* In the commit range `b393254, 216ef5b` (254 total commits), there exists a bug in which `NULL` values are not handled correctly. If a selected column contains a value that sqlite passes to the print callback as `NULL`, `gufi_query` will segfault.
+* In commit range `b393254, 216ef5b` (254 total commits), there exists a bug in which `NULL` values are not handled correctly. If a selected column contains a value that sqlite passes to the print callback as `NULL`, `gufi_query` will segfault.
+
+* Fixed on [`7cd35f8`](https://github.com/mar-file-system/GUFI/commit/7cd35f8)
 
 #### Thread count > 48 segfaults
-* In the commit range `831705f, 6bde154` (3 commits) there is a hardcoded value of 48 that prevents `gufi_query` from being run at thread counts greater than 48.
+* In commit range `831705f, 6bde154` (3 commits) there is a hardcoded value of 48 that prevents `gufi_query` from being run at thread counts greater than 48.
 
 * If you need to run in this commit range with a higher thread count, change the 48 in `struct descend_timers global_timers[48];` in [gufi_query.c](https://github.com/mar-file-system/GUFI/blob/831705f1e0d69e4f322c4108e4bf512fbaebda9b/src/gufi_query.c#L165) to the number of threads you wish to use.
 
+* Fixed on [`86d3d0e`](https://github.com/mar-file-system/GUFI/commit/86d3d0e)
+
 #### Aggregation Error
-* In the commit range `5ec5386, 1a95766` (20 commits, possibly even further back), trying to use the pentries table will produce the message `failed to create result aggregation database file:aggregate-1?mode=memory&cache=shared: no such table: pentries:`.
+* In commit range `5ec5386, 1a95766` (20 commits, possibly even further back), trying to use the pentries table will produce the message `failed to create result aggregation database file:aggregate-1?mode=memory&cache=shared: no such table: pentries:`.
 
 * The pentries table **does** exist at this point in commit history. The issue is due to errors in the aggregation code.
+
+* Fixed on [`8480cd1`](https://github.com/mar-file-system/GUFI/commit/8480cd1)
 
 #### Multiple definitions of epoch
 * In commit range `54bfc53, d6ec34f` (33 commits) epoch is defined multiple times.
 
 * Some versions of gcc such as 7.3.1 from `devtoolset-7` (CentOS 7 SCL) miss this bug which means it is possible to build these commits.
 
+* Fixed on [`831fe76`](https://github.com/mar-file-system/GUFI/commit/831fe76)
+
 #### Missing fill_queues.c
 * On commit `a6631c4`, `fillqueues.c` is referenced in contrib/CMakeLists.txt, but this file does not exist.
 
-* This bug occurs only on commits `a6631c4` and `54bfc53`. It is then fixed on commit `69213c6`.
+* This bug occurs only on commits `a6631c4` and `54bfc53`.
+
+* Fixed on [`69213c6`](https://github.com/mar-file-system/GUFI/commit/69213c6)
 
 #### Errno bug
 * In commit range `a4c5fd1, 428398f` (10 commits) errno is not included in `gufi_dir2trace.c` despite being referenced. Will not build.
+
+* Fixed on [`7202174`](https://github.com/mar-file-system/GUFI/commit/7202174)
