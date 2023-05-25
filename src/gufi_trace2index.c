@@ -101,8 +101,6 @@ struct PoolArgs {
     struct input in;
     struct template_db db;
     struct template_db xattr;
-
-    uint64_t *total_files;
 };
 
 /* Data stored during first pass of input file */
@@ -152,9 +150,9 @@ uint64_t total_read_entries     = 0;
 uint64_t total_getline          = 0;
 uint64_t total_memset_row       = 0;
 uint64_t total_entry_linetowork = 0;
-uint64_t total_free             = 0;
 uint64_t total_sumit            = 0;
 uint64_t total_insertdbgo       = 0;
+uint64_t total_free             = 0;
 uint64_t total_stopdb           = 0;
 uint64_t total_insertdbfin      = 0;
 uint64_t total_insertsumdb      = 0;
@@ -181,9 +179,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     uint64_t thread_getline          = 0;
     uint64_t thread_memset_row       = 0;
     uint64_t thread_entry_linetowork = 0;
-    uint64_t thread_free             = 0;
     uint64_t thread_sumit            = 0;
     uint64_t thread_insertdbgo       = 0;
+    uint64_t thread_free             = 0;
     uint64_t thread_stopdb           = 0;
     uint64_t thread_insertdbfin      = 0;
     uint64_t thread_insertsumdb      = 0;
@@ -275,12 +273,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         timestamp_create_start(read_entries);
         size_t row_count = 0;
+        char *line = NULL;
+        size_t len = 0;
         for(size_t i = 0; i < w->entries; i++) {
             timestamp_create_start(getline);
-            char *line = NULL;
-            size_t len = 0;
             if (getline(&line, &len, trace) == -1) {
-                free(line);
                 break;
             }
             timestamp_set_end(getline);
@@ -293,10 +290,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_create_start(entry_linetowork);
             linetowork(line, len, in->delim, &row, &row_ed);
             timestamp_set_end(entry_linetowork);
-
-            timestamp_create_start(free);
-            free(line);
-            timestamp_set_end(free);
 
             /* update summary table */
             timestamp_create_start(sumit);
@@ -339,7 +332,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 #endif
                 #endif
 
-                pa->total_files[id] += row_count;
                 row_count = 0;
             }
 
@@ -348,7 +340,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_print    (debug_buffers, id, "getline",          getline);
             timestamp_print    (debug_buffers, id, "memset_row",       memset_row);
             timestamp_print    (debug_buffers, id, "entry_linetowork", entry_linetowork);
-            timestamp_print    (debug_buffers, id, "free",             free);
             timestamp_print    (debug_buffers, id, "sumit",            sumit);
             timestamp_print    (debug_buffers, id, "insertdbgo",       insertdbgo);
             timestamp_end_print(debug_buffers, id, "print_timestamps", print_timestamps);
@@ -357,7 +348,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             thread_getline          += timestamp_elapsed(getline);
             thread_memset_row       += timestamp_elapsed(memset_row);
             thread_entry_linetowork += timestamp_elapsed(entry_linetowork);
-            thread_free             += timestamp_elapsed(free);
             thread_sumit            += timestamp_elapsed(sumit);
             thread_insertdbgo       += timestamp_elapsed(insertdbgo);
             #endif
@@ -365,6 +355,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             #endif
         }
 
+        timestamp_create_start(free);
+        free(line);
+        timestamp_set_end(free);
         timestamp_set_end(read_entries);
 
         timestamp_create_start(stopdb);
@@ -398,8 +391,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         closedb(db); /* don't set to nullptr */
         timestamp_set_end(closedb);
 
-        pa->total_files[id] += row_count;
-
         #ifdef DEBUG
         timestamp_create_start(print_timestamps);
         timestamp_print(debug_buffers, id, "zero_summary", zero_summary);
@@ -408,6 +399,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         timestamp_print(debug_buffers, id, "fseek",        fseek);
         timestamp_print(debug_buffers, id, "read_entries", read_entries);
         timestamp_print(debug_buffers, id, "read_entries", read_entries);
+        timestamp_print(debug_buffers, id, "free",         free);
         timestamp_print(debug_buffers, id, "stopdb",       stopdb);
         timestamp_print(debug_buffers, id, "insertdbfin",  insertdbfin);
         timestamp_print(debug_buffers, id, "insertsumdb",  insertsumdb);
@@ -420,6 +412,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         thread_startdb      += timestamp_elapsed(startdb);
         thread_fseek        += timestamp_elapsed(fseek);
         thread_read_entries += timestamp_elapsed(read_entries);
+        thread_free         += timestamp_elapsed(free);
         thread_stopdb       += timestamp_elapsed(stopdb);
         thread_insertdbfin  += timestamp_elapsed(insertdbfin);
         thread_insertsumdb  += timestamp_elapsed(insertsumdb);
@@ -465,9 +458,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     total_getline          += thread_getline;
     total_memset_row       += thread_memset_row;
     total_entry_linetowork += thread_entry_linetowork;
-    total_free             += thread_free;
     total_sumit            += thread_sumit;
     total_insertdbgo       += thread_insertdbgo;
+    total_free             += thread_free;
     total_stopdb           += thread_stopdb;
     total_insertdbfin      += thread_insertdbfin;
     total_insertsumdb      += thread_insertsumdb;
@@ -755,7 +748,6 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
-    pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
 
     /* parse the trace files */
     size_t remaining = trace_count;
@@ -784,13 +776,6 @@ int main(int argc, char *argv[]) {
     const long double processtime = sec(nsec(&main_func));
 
     /* don't count as part of processtime */
-
-    uint64_t thread_count = QPTPool_threads_completed(pool);
-    if (thread_count) {
-        /* don't count scout functions */
-        thread_count -= trace_count;
-    }
-
     QPTPool_destroy(pool);
 
     close_template_db(&pa.xattr);
@@ -804,13 +789,6 @@ int main(int argc, char *argv[]) {
 
     /* set top level permissions */
     chmod(pa.in.nameto.data, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
-    uint64_t total_files = 0;
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        total_files += pa.total_files[i];
-    }
-
-    free(pa.total_files);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     fprintf(stderr, "Handle args:               %.2Lfs\n", sec(total_handle_args));
@@ -826,9 +804,9 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "    getline:               %.2Lfs\n", sec(total_getline));
     fprintf(stderr, "    memset(entry struct):  %.2Lfs\n", sec(total_memset_row));
     fprintf(stderr, "    Parse entry line:      %.2Lfs\n", sec(total_entry_linetowork));
-    fprintf(stderr, "    free(entry line):      %.2Lfs\n", sec(total_free));
     fprintf(stderr, "    sumit:                 %.2Lfs\n", sec(total_sumit));
     fprintf(stderr, "    insertdbgo:            %.2Lfs\n", sec(total_insertdbgo));
+    fprintf(stderr, "free(entry line):          %.2Lfs\n", sec(total_free));
     fprintf(stderr, "stopdb:                    %.2Lfs\n", sec(total_stopdb));
     fprintf(stderr, "insertdbfin:               %.2Lfs\n", sec(total_insertdbfin));
     fprintf(stderr, "insertsumdb:               %.2Lfs\n", sec(total_insertsumdb));
@@ -838,11 +816,11 @@ int main(int argc, char *argv[]) {
     #endif
 
     fprintf(stdout, "\n");
-    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
-    fprintf(stdout, "Total Files:         %" PRIu64 "\n", total_files);
+    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", dirs);
+    fprintf(stdout, "Total Files:         %" PRIu64 "\n", files);
     fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
-    fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
+    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       dirs / processtime);
+    fprintf(stdout, "Files/Sec:           %.2Lf\n",       files / processtime);
 
     return 0;
 }

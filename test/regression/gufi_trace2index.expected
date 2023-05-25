@@ -84,8 +84,8 @@ Dirs:                5 (0 empty)
 Files:               15
 Total:               20
 
-Total Dirs:          0
-Total Files:         0
+Total Dirs:          5
+Total Files:         15
 Dupdir failure: "prefix/1KB/prefix": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/directory": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/directory/subdirectory": Not a directory (20)
