@@ -706,8 +706,8 @@ COLUMN_FORMATS = [
         'Real time':                                  float,
     },
 
-    # e266f65 Merge remote-tracking branch 'origin' into bfwi_ingest -> commit b8c156c "Convert gufi_trace2index to C"
-    # NOTE after e266f65, a bug occurs with google test, this format can definitely extend further back
+    # commit 046f533 "QueuePerThread interface update" -> commit b8c156c "Convert gufi_trace2index to C"
+    # Added: Time to readdir
     {
         'Time to do main work':                       float,
         'Time to open directories':                   float,
@@ -716,7 +716,28 @@ COLUMN_FORMATS = [
         'Time to load extensions':                    float,
         'Time to attach intermediate databases':      float,
         'Time to descend':                            float,
-        'Time to readdir':                            float,
+        'Time to readdir':                            float,  # New
+        'Time to pushdir':                            float,
+        'Time to sqlite3_exec (query and insert)':    float,
+        'Time to detach intermediate databases':      float,
+        'Time to close databases':                    float,
+        'Time to close directories':                  float,
+        'Time to aggregate into final databases':     float,
+        'Time to print':                              float,
+        'Rows returned':                                int,
+        'Queries performed':                            int,
+        'Real time':                                  float,
+    },
+
+    # commit ce61cb7 "gufi_query" -> commit f5e755a "cannot use path() in sqlite"
+    {
+        'Time to do main work':                       float,
+        'Time to open directories':                   float,
+        'Time to open databases':                     float,
+        'Time to create tables':                      float,
+        'Time to load extensions':                    float,
+        'Time to attach intermediate databases':      float,
+        'Time to descend':                            float,
         'Time to pushdir':                            float,
         'Time to sqlite3_exec (query and insert)':    float,
         'Time to detach intermediate databases':      float,
