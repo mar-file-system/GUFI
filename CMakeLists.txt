@@ -163,10 +163,6 @@ else()
   message(STATUS "Not compiling C++ sources")
 endif()
 
-# Re-link installed executables to use the installed libraries
-set(CMAKE_SKIP_BUILD_RPATH TRUE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
 # Python is required
 if (CMAKE_VERSION VERSION_GREATER "3.12.0")
   find_package(Python REQUIRED COMPONENTS Interpreter)
