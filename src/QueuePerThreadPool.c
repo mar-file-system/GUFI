@@ -61,9 +61,6 @@ OF SUCH DAMAGE.
 */
 
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
 
 #include <stdlib.h>
 
@@ -437,7 +434,6 @@ int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffer
 }
 #endif
 
-
 int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args) {
     if (func) {
         *func = ctx->next.func;
@@ -479,7 +475,6 @@ int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffe
     return 0;
 }
 #endif
-
 
 QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
                                    void *args,
