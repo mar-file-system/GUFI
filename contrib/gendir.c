@@ -244,12 +244,6 @@ int main(int argc, char * argv[]) {
 
     // start up threads and push root into the queue for processing
     QPTPool_t *pool = QPTPool_init(threads, &settings);
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        free(root);
-        return -1;
-    }
-
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);

@@ -338,6 +338,9 @@ QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
     }
 
     QPTPool_t *ctx = malloc(sizeof(QPTPool_t));
+    if (!ctx) {
+        return NULL;
+    }
 
     ctx->nthreads = nthreads;
     ctx->queue_limit = 0;
@@ -355,6 +358,10 @@ QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
     #endif
 
     ctx->data = calloc(nthreads, sizeof(QPTPoolThreadData_t));
+    if (!ctx->data) {
+        free(ctx);
+        return NULL;
+    }
 
     /* set up thread data, but not threads */
     for(size_t i = 0; i < nthreads; i++) {
@@ -373,7 +380,7 @@ QPTPool_t *QPTPool_init(const size_t nthreads, void *args) {
 }
 
 int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args) {
-    if (!func) {
+    if (!ctx || !func) {
         return 1;
     }
 
@@ -390,7 +397,9 @@ int QPTPool_set_next(QPTPool_t *ctx, QPTPoolNextFunc_t func, void *args) {
 }
 
 int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return 1;
+    }
 
     pthread_mutex_lock(&ctx->mutex);
     if (ctx->state != INITIALIZED) {
@@ -404,7 +413,9 @@ int QPTPool_set_queue_limit(QPTPool_t *ctx, const uint64_t queue_limit) {
 }
 
 int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return 1;
+    }
 
     pthread_mutex_lock(&ctx->mutex);
     if (ctx->state != INITIALIZED) {
@@ -420,7 +431,9 @@ int QPTPool_set_steal(QPTPool_t *ctx, const uint64_t num, const uint64_t denom) 
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffers) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return 1;
+    }
 
     pthread_mutex_lock(&ctx->mutex);
     if (ctx->state != INITIALIZED) {
@@ -435,6 +448,10 @@ int QPTPool_set_debug_buffers(QPTPool_t *ctx, struct OutputBuffers *debug_buffer
 #endif
 
 int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args) {
+    if (!ctx) {
+        return 1;
+    }
+
     if (func) {
         *func = ctx->next.func;
     }
@@ -447,6 +464,10 @@ int QPTPool_get_next(QPTPool_t *ctx, QPTPoolNextFunc_t *func, void **args) {
 }
 
 int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit) {
+    if (!ctx) {
+        return 1;
+    }
+
     if (queue_limit) {
         *queue_limit = ctx->queue_limit;
     }
@@ -455,6 +476,10 @@ int QPTPool_get_queue_limit(QPTPool_t *ctx, uint64_t *queue_limit) {
 }
 
 int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
+    if (!ctx) {
+        return 1;
+    }
+
     if (num) {
         *num = ctx->steal.num;
     }
@@ -468,6 +493,10 @@ int QPTPool_get_steal(QPTPool_t *ctx, uint64_t *num, uint64_t *denom) {
 
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
 int QPTPool_get_debug_buffers(QPTPool_t *ctx, struct OutputBuffers **debug_buffers) {
+    if (!ctx) {
+        return 1;
+    }
+
     if (debug_buffers) {
         *debug_buffers = ctx->debug_buffers;
     }
@@ -488,17 +517,15 @@ QPTPool_t *QPTPool_init_with_props(const size_t nthreads,
                                    #endif
     ) {
     QPTPool_t *ctx = QPTPool_init(nthreads, args);
-    if (ctx){
-        if ((next_func && QPTPool_set_next(ctx, next_func, next_args)) ||
-            QPTPool_set_queue_limit(ctx, queue_limit) ||
-            QPTPool_set_steal(ctx, steal_num, steal_denom)
-            #if defined(DEBUG) && defined(PER_THREAD_STATS)
-            || QPTPool_set_debug_buffers(ctx, debug_buffers)
-            #endif
-            ) {
-                QPTPool_destroy(ctx);
-                ctx = NULL;
-        }
+    if ((next_func && QPTPool_set_next(ctx, next_func, next_args)) ||
+        QPTPool_set_queue_limit(ctx, queue_limit) ||
+        QPTPool_set_steal(ctx, steal_num, steal_denom)
+        #if defined(DEBUG) && defined(PER_THREAD_STATS)
+        || QPTPool_set_debug_buffers(ctx, debug_buffers)
+        #endif
+        ) {
+            QPTPool_destroy(ctx);
+            ctx = NULL;
     }
 
     return ctx;
@@ -574,7 +601,9 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
 }
 
 void QPTPool_wait(QPTPool_t *ctx) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return;
+    }
 
     pthread_mutex_lock(&ctx->mutex);
     const QPTPoolState_t prev = ctx->state;
@@ -596,7 +625,9 @@ void QPTPool_wait(QPTPool_t *ctx) {
 }
 
 uint64_t QPTPool_threads_started(QPTPool_t *ctx) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return 0;
+    }
 
     uint64_t sum = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
@@ -606,7 +637,9 @@ uint64_t QPTPool_threads_started(QPTPool_t *ctx) {
 }
 
 uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return 0;
+    }
 
     uint64_t sum = 0;
     for(size_t i = 0; i < ctx->nthreads; i++) {
@@ -616,7 +649,9 @@ uint64_t QPTPool_threads_completed(QPTPool_t *ctx) {
 }
 
 void QPTPool_destroy(QPTPool_t *ctx) {
-    /* Not checking arguments */
+    if (!ctx) {
+        return;
+    }
 
     for(size_t i = 0; i < ctx->nthreads; i++) {
         QPTPoolThreadData_t *data = &ctx->data[i];

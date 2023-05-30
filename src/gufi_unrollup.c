@@ -287,11 +287,6 @@ int main(int argc, char *argv[]) {
                                               , timestamp_buffers
                                               #endif
         );
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        return -1;
-    }
-
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_wait(pool);

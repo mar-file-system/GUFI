@@ -694,14 +694,6 @@ int main(int argc, char *argv[]) {
                                               , &debug_output_buffers
                                               #endif
         );
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        close_template_db(&pa.xattr);
-        close_template_db(&pa.db);
-        close_traces(traces, trace_count);
-        return -1;
-    }
-
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);

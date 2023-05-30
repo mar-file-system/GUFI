@@ -1033,11 +1033,6 @@ int main(int argc, char *argv[]) {
 
     // start up thread pool
     QPTPool_t *pool = QPTPool_init(settings.threads, nullptr);
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        return -1;
-    }
-
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);

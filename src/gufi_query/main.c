@@ -671,13 +671,6 @@ int main(int argc, char *argv[])
                                               , timestamp_buffers
                                               #endif
         );
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        aggregate_fin(&aggregate, &in);
-        PoolArgs_fin(&pa, in.maxthreads);
-        return -1;
-    }
-
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);

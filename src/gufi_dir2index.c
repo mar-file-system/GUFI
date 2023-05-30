@@ -405,14 +405,6 @@ int main(int argc, char *argv[]) {
                                               , NULL
                                               #endif
         );
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        close_template_db(&pa.xattr);
-        close_template_db(&pa.db);
-        trie_free(pa.skip);
-        return -1;
-    }
-
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);

@@ -317,29 +317,21 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
-    for(size_t i = 0; i < pa.in.maxthreads; i++) {
-        zeroit(&pa.sums[i]);
-    }
-
     QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, 0, 0, 0
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                               , NULL
                                               #endif
         );
-    if (!pool) {
-        fprintf(stderr, "Error: Failed to initialize thread pool\n");
-        free(pa.sums);
+    if (QPTPool_start(pool) != 0) {
+        fprintf(stderr, "Error: Failed to start thread pool\n");
+        QPTPool_destroy(pool);
         trie_free(pa.skip);
         return 1;
     }
 
-    if (QPTPool_start(pool) != 0) {
-        fprintf(stderr, "Error: Failed to start thread pool\n");
-        QPTPool_destroy(pool);
-        free(pa.sums);
-        trie_free(pa.skip);
-        return 1;
+    pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
+    for(size_t i = 0; i < pa.in.maxthreads; i++) {
+        zeroit(&pa.sums[i]);
     }
 
     struct work *root = calloc(1, sizeof(struct work));
