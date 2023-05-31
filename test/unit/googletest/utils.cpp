@@ -368,26 +368,28 @@ TEST(summary, tsumit) {
     EXPECT_EQ(in.maxossint4, out.maxossint4);
 }
 
-#define PATH "a/b/c/d"
-#define LAST "e"
-#define SRC PATH "/" LAST
+TEST(shortpath, split) {
+    #define PATH "a/b/c/d"
+    #define LAST "e"
+    #define SRC PATH "/" LAST
 
-TEST(shortpath, file) {
     char dst[MAXPATH];
     char endname[MAXPATH];
 
+    // path ending with basename
     EXPECT_EQ(shortpath(SRC, dst, endname), 0);
-    EXPECT_STREQ(PATH, dst);
-    EXPECT_STREQ(LAST, endname);
-}
+    EXPECT_STREQ(dst, PATH);
+    EXPECT_STREQ(endname, LAST);
 
-TEST(shortpath, directory) {
-    char dst[MAXPATH];
-    char endname[MAXPATH];
-
+    // path ending with slash
     EXPECT_EQ(shortpath(SRC "/", dst, endname), 0);
-    EXPECT_STREQ(SRC, dst);
-    EXPECT_STREQ("", endname);
+    EXPECT_STREQ(dst, SRC);
+    EXPECT_STREQ(endname, "");
+
+    // no slash
+    EXPECT_EQ(shortpath(LAST, dst, endname), 0);
+    EXPECT_STREQ(dst, "");
+    EXPECT_STREQ(endname, LAST);
 }
 
 TEST(dupdir, parentfirst) {
