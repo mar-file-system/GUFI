@@ -796,29 +796,29 @@ TEST(getline, fd) {
     EXPECT_EQ(write(fd, "\n", 1),        (ssize_t) 1);
 
     char *line = nullptr;
-    size_t len = 0;
+    size_t size = 0; // size of buffer, not length of string
     off_t offset = 0;
 
     /* read line */
-    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) LINE_LEN);
+    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) LINE_LEN);
     EXPECT_NE(line,   nullptr);
-    EXPECT_EQ(len,    LINE_LEN);
+    EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, (off_t) (LINE_LEN + 1));
     free(line);
     line = nullptr;
 
     /* empty line */
-    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
     free(line);
     line = nullptr;
 
     /* end of file */
-    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, (off_t) (LINE_LEN + 2));
     free(line);
     line = nullptr;
@@ -826,9 +826,9 @@ TEST(getline, fd) {
     /* past end of file */
     const off_t past = LINE_LEN * 5;
     offset = past;
-    EXPECT_EQ(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_EQ(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, past);
     free(line);
     line = nullptr;
@@ -837,25 +837,25 @@ TEST(getline, fd) {
 
     /* closed valid file */
     offset = 0;
-    EXPECT_LT(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_LT(getline_fd(&line, &size, fd, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, (off_t) 0);
     free(line);
     line = nullptr;
 
     /* read from stdout */
-    EXPECT_LT(getline_fd(&line, &len, STDOUT_FILENO, &offset, default_size), (ssize_t) 0);
+    EXPECT_LT(getline_fd(&line, &size, STDOUT_FILENO, &offset, default_size), (ssize_t) 0);
     EXPECT_NE(line,   nullptr);
-    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_NE(size,   (size_t) 0);
     EXPECT_EQ(offset, (off_t) 0);
     free(line);
     line = nullptr;
 
     /* bad inputs */
-    EXPECT_EQ(getline_fd(nullptr, &len,    fd, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(nullptr, &size,    fd, &offset, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   nullptr, fd, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &len,    -1, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &len,    fd, nullptr, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &len,    fd, &offset, 0),            -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &size,    -1, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &size,    fd, nullptr, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &size,    fd, &offset, 0),            -EINVAL);
 }

@@ -791,15 +791,14 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     }
 
     size_t read = 0;
-    size_t size = *n; /* allocation size, not line size */
     ssize_t rc = 0;
 
-    if (!size) {
-        size = default_size;
+    if (!*n) {
+        *n = default_size;
     }
 
     if (!*lineptr) {
-        void *new_alloc = realloc(*lineptr, size);
+        void *new_alloc = realloc(*lineptr, *n);
         if (!new_alloc) {
             return -ENOMEM;
         }
@@ -809,9 +808,9 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
 
     int found = 0;
     while (!found) {
-        if (read >= size) {
-            size *= 2;
-            void *new_alloc = realloc(*lineptr, size);
+        if (read >= *n) {
+            *n *= 2;
+            void *new_alloc = realloc(*lineptr, *n);
             if (!new_alloc) {
                 return -ENOMEM;
             }
@@ -820,7 +819,7 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
         }
 
         char *start = *lineptr + read;
-        rc = pread(fd, start, size - read, *offset + read);
+        rc = pread(fd, start, *n - read, *offset + read);
         if (rc < 1) {
             break;
         }
@@ -841,7 +840,6 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     }
 
     *offset += read + found; /* remove newlne if it was read */
-    *n = read;
 
     return read;
 }

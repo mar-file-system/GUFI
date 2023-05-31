@@ -271,10 +271,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         timestamp_create_start(read_entries);
         size_t row_count = 0;
         char *line = NULL;
-        size_t len = 0;
+        size_t size = 0;
         for(size_t i = 0; i < w->entries; i++) {
             timestamp_create_start(getline);
-            if (getline_fd(&line, &len, trace, &w->offset, GETLINE_DEFAULT_SIZE) < 1) {
+            const size_t len = getline_fd(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
+            if (len < 1) {
                 break;
             }
             timestamp_set_end(getline);
