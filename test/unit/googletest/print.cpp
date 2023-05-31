@@ -74,7 +74,8 @@ TEST(print, parallel) {
     const std::string A   = "A";
     const std::string BC  = "BC";
     const std::string D   = "D";
-    const std::string SEP = "|\n";
+    const std::string SEP = "|";
+    const std::string NL  = SEP + "\n";
 
     const char *DATA[] = {
         A.c_str(),
@@ -83,22 +84,23 @@ TEST(print, parallel) {
         nullptr,
     };
 
-    const std::string ABC  = A + SEP + BC + SEP;
-    const std::string ABCD = ABC + D + SEP;
-    const std::size_t OUTPUTBUFFER_CAP = A.size() + SEP.size(); // string + (delimiter + newline)
+    const std::string ABC  = A + NL + BC + NL;
+    const std::string ABCD = ABC + D + NL;
+    const std::size_t OUTPUTBUFFER_CAP = A.size() + NL.size(); // string + (delimiter + newline)
 
     struct OutputBuffer ob;
     EXPECT_EQ(OutputBuffer_init(&ob, OUTPUTBUFFER_CAP), &ob);
 
-    char *buf = new char[ABCD.size() + SEP.size() + 1]();
-    FILE *file = fmemopen(buf, ABCD.size() + SEP.size() + 1, "w+b");
+    const std::size_t buf_size = ABCD.size() + NL.size() + 1;
+    char *buf = new char[buf_size]();
+    FILE *file = fmemopen(buf, ABCD.size() + NL.size() + 1, "w+b");
     ASSERT_NE(file, nullptr);
 
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
     PrintArgs pa;
     pa.output_buffer = &ob;
-    pa.delim = SEP[0];
+    pa.delim = NL[0];
     pa.mutex = &mutex;
     pa.outfile = file;
     pa.rows = 0;
@@ -135,7 +137,7 @@ TEST(print, parallel) {
 
     // force the OutputBuffer to flush to get D
     {
-        EXPECT_EQ(OutputBuffer_flush(&ob, file), D.size() + SEP.size());
+        EXPECT_EQ(OutputBuffer_flush(&ob, file), D.size() + NL.size());
         EXPECT_EQ(fflush(file), 0);
         EXPECT_EQ(pa.rows, (std::size_t) 3);
         EXPECT_EQ(strlen(buf), ABCD.size());
@@ -145,12 +147,30 @@ TEST(print, parallel) {
     // print NULL data
     {
         EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 3, nullptr), 0);
-        EXPECT_EQ(ob.filled, SEP.size());
-        EXPECT_EQ(OutputBuffer_flush(&ob, file), SEP.size());
+        EXPECT_EQ(ob.filled, NL.size());
+        EXPECT_EQ(OutputBuffer_flush(&ob, file), NL.size());
         EXPECT_EQ(fflush(file), 0);
         EXPECT_EQ(pa.rows, (std::size_t) 4);
-        EXPECT_EQ(strlen(buf), ABCD.size() + SEP.size());
-        EXPECT_STREQ(buf, (ABCD + SEP).c_str());
+        EXPECT_EQ(strlen(buf), ABCD.size() + NL.size());
+        EXPECT_STREQ(buf, (ABCD + NL).c_str());
+    }
+
+    // print all data as one row, which is too big for the buffer, so it gets flushed immediately
+    {
+        const std::string ROW = A + SEP + BC + SEP + D + SEP + NL;
+
+        EXPECT_EQ(ob.filled, (std::size_t) 0);
+
+        // reset file
+        EXPECT_EQ(fseek(file, 0, SEEK_SET), 0);
+        memset(buf, 0, buf_size);
+
+        EXPECT_EQ(print_parallel(&pa, sizeof(DATA) / sizeof(DATA[0]), (char **) DATA, nullptr), 0);
+        EXPECT_EQ(ob.filled, (std::size_t) 0);
+        EXPECT_EQ(fflush(file), 0);
+        EXPECT_EQ(pa.rows, (std::size_t) 5);
+        EXPECT_EQ(strlen(buf), ROW.size());
+        EXPECT_STREQ(buf, ROW.c_str());
     }
 
     fclose(file);
