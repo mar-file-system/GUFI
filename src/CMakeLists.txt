@@ -221,8 +221,7 @@ if (MY_FUSE_FOUND)
 endif()
 
 # only build db2 sources if db2 is found
-pkg_search_module(DB2 db2)
-if (DB2_FOUND)
+if (DB2_FOUND AND DB2_BUILD)
   string(REPLACE ";" " " DB2_CFLAGS "${DB2_CFLAGS}")
   string(REPLACE ";" " " DB2_LDFLAGS "${DB2_LDFLAGS}")
 endif()
