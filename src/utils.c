@@ -735,7 +735,7 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
     trie_insert(*skip, "..", 2);
 
     /* add user defined directory names to skip */
-    if (filename && strlen(filename)) {
+    if (filename) {
         FILE *skipfile = fopen(filename, "r");
         if (!skipfile) {
             fprintf(stderr, "Error: Cannot open skip file \"%s\"\n", filename);
@@ -794,9 +794,11 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
     size_t size = *n; /* allocation size, not line size */
     ssize_t rc = 0;
 
-    if (!*lineptr || !size) {
+    if (!size) {
         size = default_size;
+    }
 
+    if (!*lineptr) {
         void *new_alloc = realloc(*lineptr, size);
         if (!new_alloc) {
             return -ENOMEM;

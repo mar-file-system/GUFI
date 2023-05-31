@@ -67,6 +67,7 @@ OF SUCH DAMAGE.
 #include <cstring>
 #include <fstream>
 #include <random>
+#include <unistd.h>
 
 #include <gtest/gtest.h>
 
@@ -681,6 +682,7 @@ TEST(setup_directory_skip, file) {
         std::ofstream skip_stream(skip_name);
         EXPECT_TRUE(skip_stream);
 
+        skip_stream << std::endl; // start with empty line
         for(std::string const & skip_dir : skip_dirs) {
             skip_stream << skip_dir << std::endl;
         }
@@ -707,6 +709,9 @@ TEST(setup_directory_skip, bad_file) {
 
     trie_t *skip = nullptr;
     EXPECT_EQ(setup_directory_skip(name, &skip), -1);
+    EXPECT_EQ(skip, nullptr);
+
+    EXPECT_EQ(setup_directory_skip("", &skip), -1);
     EXPECT_EQ(skip, nullptr);
 }
 
@@ -826,12 +831,29 @@ TEST(getline, fd) {
     free(line);
     line = nullptr;
 
+    EXPECT_EQ(close(fd), 0);
+
+    /* closed valid file */
+    offset = 0;
+    EXPECT_LT(getline_fd(&line, &len, fd, &offset, default_size), (ssize_t) 0);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_EQ(offset, (off_t) 0);
+    free(line);
+    line = nullptr;
+
+    /* read from stdout */
+    EXPECT_LT(getline_fd(&line, &len, STDOUT_FILENO, &offset, default_size), (ssize_t) 0);
+    EXPECT_NE(line,   nullptr);
+    EXPECT_EQ(len,    (size_t) 0);
+    EXPECT_EQ(offset, (off_t) 0);
+    free(line);
+    line = nullptr;
+
     /* bad inputs */
     EXPECT_EQ(getline_fd(nullptr, &len,    fd, &offset, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   nullptr, fd, &offset, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   &len,    -1, &offset, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   &len,    fd, nullptr, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   &len,    fd, &offset, 0),            -EINVAL);
-
-    EXPECT_EQ(close(fd), 0);
 }
