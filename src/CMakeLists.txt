@@ -120,7 +120,7 @@ add_library(GUFI STATIC ${GUFI_SOURCES})
 add_dependencies(GUFI install_dependencies)
 
 #If the GPFS library exists, build the gpfs scan tool
-if(GPFS_LIB)
+if (GPFS_LIB AND GPFS_BUILD)
   include_directories("/usr/lpp/mmfs/include")
   add_executable(gpfs-scan-tool gpfs-scan-tool.c)
   target_link_libraries(gpfs-scan-tool ${GPFS_LIB} ${COMMON_LIBRARIES})
