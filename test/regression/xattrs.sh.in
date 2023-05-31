@@ -143,16 +143,16 @@ query() {
 set +e
 
 # query index created directly from source tree
-run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""
+run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${SEARCH}\""
 orig="$(query)"
 echo -e "${orig}\n"
 
-rm -r "${INDEXTARGET}"
+rm -r "${SEARCH}"
 
 # query index created from traces
 # shellcheck disable=SC2153
 run_no_sort "${GUFI_DIR2TRACE} -x \"${SRCDIR}\" \"${TRACE}\""
-run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${INDEXTARGET}\""
+run_no_sort "${GUFI_TRACE2INDEX} \"${TRACE}.0\" \"${SEARCH}\""
 trace="$(query)"
 echo -e "${trace}\n"
 @DIFF@ <(echo -e "${orig}") <(echo -e "${trace}")

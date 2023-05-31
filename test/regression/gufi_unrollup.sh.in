@@ -84,7 +84,7 @@ echo "# ${GUFI_UNROLLUP} help" | replace
 run_no_sort "${GUFI_UNROLLUP}"
 
 # generate the index
-run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${INDEXTARGET}\""
+run_no_sort "${GUFI_DIR2INDEX} -x \"${SRCDIR}\" \"${SEARCH}\""
 
 # roll up the index
 echo "$ ${GUFI_ROLLUP} \"${INDEXROOT}\"" | replace

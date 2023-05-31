@@ -125,13 +125,13 @@ do_tests() {
     run_sort "${GUFI_STATS} -c total-dircount"
 }
 
-"${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
+"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_ROLLUP}" "${INDEXROOT}"
 do_tests
 
-rm -r "${INDEXTARGET}"
+rm -r "${SEARCH}"
 
-"${GUFI_DIR2INDEX}" "${SRCDIR}" "${INDEXTARGET}"
+"${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_ROLLUP}" -L 3 "${INDEXROOT}"
 do_tests
 ) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"

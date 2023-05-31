@@ -87,12 +87,12 @@ DELIM="|"
 # shellcheck disable=SC2034
 BADDELIM="?"
 
-INDEXTARGET="search"
-INDEXROOT="${INDEXTARGET}/$(basename ${SRCDIR})"
+SEARCH="search"
+INDEXROOT="${SEARCH}/$(basename ${SRCDIR})"
 
 # always clean up
 setup_cleanup() {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${INDEXTARGET}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}"
 }
 
 trap setup_cleanup EXIT
@@ -162,8 +162,8 @@ replace() {
 
     s/^ *-e                     compress work items$//g;
 
-    s/${INDEXTARGET//\//\\/}\\///g;
-    s/${INDEXTARGET//\//\\/}/${SRCDIR//\//\\/}/g;
+    s/${SEARCH//\//\\/}\\///g;
+    s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
 
     s/${HEAD//\//\\/}/head/g;
@@ -217,5 +217,5 @@ then
     "${GENERATETREE}" "${SRCDIR}"
 
     # generate the index
-    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${INDEXTARGET}" > /dev/null
+    "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" > /dev/null
 fi

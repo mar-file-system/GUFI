@@ -73,11 +73,11 @@ run_no_sort "${GUFI_DIR2INDEX}"
 # index everything
 (
     # remove preexisting indicies
-    rm -rf "${INDEXTARGET}"
+    rm -rf "${SEARCH}"
 
     # generate the index
     # shellcheck disable=SC2016
-    out=$(${GUFI_DIR2INDEX} -x "${SRCDIR}" "${INDEXTARGET}" | @AWK@ '{ print "    " $0 }')
+    out=$(${GUFI_DIR2INDEX} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
 
     src=$(@FIND@ "${SRCDIR}" | @SORT@)
 
@@ -100,11 +100,11 @@ run_no_sort "${GUFI_DIR2INDEX}"
 for level in 0 1 2 3
 do
     # remove preexisting indicies
-    rm -rf "${INDEXTARGET}"
+    rm -rf "${SEARCH}"
 
     # generate the index
     # shellcheck disable=SC2016
-    out=$(${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${INDEXTARGET}" | @AWK@ '{ print "    " $0 }')
+    out=$(${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
 
     src=$(@FIND@ "${SRCDIR}" -maxdepth ${level} | @SORT@)
 
@@ -124,7 +124,7 @@ do
 done
 echo
 
-rm -r "${INDEXTARGET}"
+rm -r "${SEARCH}"
 
 echo "# target is file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}/1KB\""
@@ -132,13 +132,13 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}/1KB\""
 echo "# source path is file"
 # shellcheck disable=SC2046,SC2086
 PARENT="$(dirname $(realpath ${SRCDIR}))"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${INDEXTARGET}\"" | @SED@ "s/${PARENT//\//\\/}\\///g;"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | @SED@ "s/${PARENT//\//\\/}\\///g;"
 
 echo "# empty source path"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
 
 echo "# bad skip file"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${TRACE}\" \"${SRCDIR}\" \"${INDEXTARGET}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${TRACE}\" \"${SRCDIR}\" \"${SEARCH}\""
 ) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
