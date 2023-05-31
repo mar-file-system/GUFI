@@ -83,13 +83,16 @@ def parse_args(argv):
 def run(argv):
     args = parse_args(argv)
 
-    gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
-    print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
-
+    hashdb.check_exists(args.database)
     hashdb.check_not_exists(args.raw_data_db)
-    with sqlite3.connect(args.raw_data_db) as con:
-        DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name].create_table(con)
-        con.commit()
+
+    with sqlite3.connect(args.database) as hashdb_con:
+        gufi_cmd, debug_name = hashdb.get_config(hashdb_con, args.raw_data_hash)
+        print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
+
+        with sqlite3.connect(args.raw_data_db) as raw_data_con:
+            DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name].create_table(raw_data_con)
+            raw_data_con.commit()
 
 if __name__ == '__main__':
     run(sys.argv[1:])

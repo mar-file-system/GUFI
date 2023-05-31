@@ -67,27 +67,31 @@ TABLE_NAME = 'commits'
 
 # arg attr, sql column name, column type
 COLS = [
-    ['commit',       None, str],
-    ['timestamp',    None, int],
+    ['id',        None, None],
+    ['commit',    None, str],
+    ['timestamp', None, int],
 ]
 
+INSERT_PREFIX = 'INSERT INTO {0} ({1}) VALUES (NULL, "{{0}}", {{1}});'.format(
+    TABLE_NAME,
+    ', '.join(['"{0}"'.format(col) for col, _, _ in COLS]),
+)
+
 def fill_table(con):
-    '''Fill table with all available commits and their respective timestamps'''
+    '''Fill table with commit hashes and timestamps, keeping track of order in history'''
     # Current working directory for commands
     cwd = '@CMAKE_SOURCE_DIR@'
 
     # Get all available commits in a list
-    command = ['git', 'rev-list', 'HEAD']
-    commits = common.run_get_stdout(command, cwd)[:-1].split()
+    # (assumes git history is linear)
+    command = ['@GIT_EXECUTABLE@', 'rev-list', 'HEAD']
+    commits = common.run_get_stdout(command, cwd).split()[::-1]
 
-    # insert commit and corresponding timestamp into table
+    # insert commits into table one at a time
+    #
+    # not inserting all at once because SQLite will
+    # complain that there are too many values
     for commit in commits:
-        command = ['git', 'show', '-s', '--format=%ct', commit]
-        timestamp = common.run_get_stdout(command, cwd)[:-1]
-        sql = 'INSERT INTO {0} ("commit", timestamp) VALUES ("{1}",{2});'.format(
-            TABLE_NAME,
-            commit,
-            timestamp
-        )
-
+        timestamp = common.run_get_stdout(['git', 'show', '-s', '--format=%ct', commit], cwd)[:-1]
+        sql = INSERT_PREFIX.format(commit, timestamp)
         con.execute(sql)

@@ -2,7 +2,6 @@
 
 Config files are used to define a graph's parameters. Each config file is divided up into sections based on how they affect the graph. The `configparser` Python library is used to parse these files.
 
-
 ## Sections and Keys
 
 Sections and Keys may change without an immediate adjustment to this readme, to see an exhaustive list of all available sections and keys, see [config.py](../performance_pkg/graph/config.py)
@@ -11,18 +10,17 @@ Sections and Keys may change without an immediate adjustment to this readme, to 
 
 ### [raw_data]
 
-#### commits 
+#### commits
 * Description: Commit hashes to plot
     * **NOTE**: A commit hash will not be plotted if it has no debug value data unless [`x_full_range`](#x_full_range) in the `axes` section is set to `True`
 * Data Type: List of commit hashes (strings)
     * Can be any [commit-ish or tree-ish identifier](https://stackoverflow.com/a/23303550) that `git` can convert into commit hashes:
     * Example: `b34561a, ce0751d..c8cdd6e`
 
-#### columns 
+#### columns
 * Description: Column names from a set of debug values stored in a raw data database. See [extraction](../performance_pkg/extraction/) folder and search the GUFI command subdirectories for names
 * Data Type: List of columns (strings)
     * Example: `Real Time (main)`
-
 
 ### [output]
 
@@ -31,17 +29,16 @@ Sections and Keys may change without an immediate adjustment to this readme, to 
 * Data Type: string
     * Example: `~/graph.png`
 
-#### graph_title 
+#### graph_title
 * Description: Title displayed at the top of the graph
 * Data Type: string
     * Example: `My Graph`
 
-#### graph_dimensions 
+#### graph_dimensions
 * Description: Dimensions of graph in inches
 * Data Type: `<width>`,`<height>` (**positive_float**,**positive_float**)
     * Examples: `12,6`
     * See [Matplotlib: Figure size](https://matplotlib.org/stable/gallery/subplots_axes_and_figures/figure_size_units.html)
-
 
 ### [lines]
 
@@ -65,7 +62,6 @@ Description: Line type/style corresponding to a column's line
 * Data Type: List of markers (strings)
     * Examples: `o,^`
     * See [Matplotlib: Markers](https://matplotlib.org/stable/api/markers_api.html) for a full list of supported markers
-
 
 ### [axes]
 
@@ -93,6 +89,11 @@ Description: Line type/style corresponding to a column's line
 
 #### x_full_range
 * Description: Plot all commits in the defined range, even if no data is present
+* Data Type: boolean
+    * Example `True`
+
+#### x_reorder
+* Description: Whether or not to reorder identifiers in `commits` to match git history order
 * Data Type: boolean
     * Example `True`
 
@@ -181,7 +182,6 @@ Description: Line type/style corresponding to a column's line
     * Examples: `blue, green`
     * See [Matplotlib: Specifying colors](https://matplotlib.org/stable/tutorials/colors/colors.html) for a full list of supported color values (Excluding tuples)
 
-
 ## Overrides
 
 Below is a full list of all available config key overrides when calling **graph_performance.py**:
@@ -205,6 +205,7 @@ Below is a full list of all available config key overrides when calling **graph_
 * --axes_x_label_size
 * --axes_x_label_rotation
 * --axes_x_full_range
+* --axes_x_reorder
 * --axes_y_label
 * --axes_y_stat
 * --axes_y_min

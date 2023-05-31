@@ -205,17 +205,17 @@ class TestGetConfig(unittest.TestCase):
 
     def test_not_found(self):
         with self.assertRaises(KeyError):
-            hashdb.get_config_with_con(self.db, str(self.row_count))
+            hashdb.get_config(self.db, str(self.row_count))
 
     def test_ok(self):
         for i in range(self.row_count):
-            gufi_cmd, debug_name = hashdb.get_config_with_con(self.db, self.raw_data_hash(i))
+            gufi_cmd, debug_name = hashdb.get_config(self.db, self.raw_data_hash(i))
             self.assertEqual(TestGetConfig.GUFI_CMD, gufi_cmd)
             self.assertEqual(TestGetConfig.DEBUG_NAME, debug_name)
 
     def test_multiple(self):
         with self.assertRaises(ValueError):
-            hashdb.get_config_with_con(self.db, TestGetConfig.RAW_PREFIX)
+            hashdb.get_config(self.db, TestGetConfig.RAW_PREFIX)
 
 if __name__ == '__main__':
     unittest.main()

@@ -62,7 +62,6 @@
 
 
 import os
-import sqlite3
 import sys
 
 from hashes import Hashes # not part of performance_pkg
@@ -108,7 +107,7 @@ def create_tables(con):
     commits_col_str = ', '.join('"{0}" {1}'.format(
         name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in commits.COLS)
 
-    con.execute('CREATE TABLE {0} ({1}, PRIMARY KEY ("commit"));'.format(
+    con.execute('CREATE TABLE {0} ({1});'.format(
         commits.TABLE_NAME, commits_col_str))
     commits.fill_table(con)
 
@@ -148,11 +147,11 @@ def insert(con, args, hash, table_name, cols_hashed, cols_not_hashed):
     con.execute(sql)
 
 # extract gufi command and debug name using provided hash
-def get_config_with_con(hashdb, user_raw_data_hash):
+def get_config(con, user_raw_data_hash):
     # figure out what configurations this hash points to
-    hashes_cur = hashdb.execute('SELECT hash, machine_hash, gufi_hash ' +
-                                'FROM {0} WHERE hash GLOB "*{1}*";'.format(
-                                    raw_data.TABLE_NAME, user_raw_data_hash))
+    hashes_cur = con.execute('SELECT hash, machine_hash, gufi_hash ' +
+                             'FROM {0} WHERE hash GLOB "*{1}*";'.format(
+                                 raw_data.TABLE_NAME, user_raw_data_hash))
     records = hashes_cur.fetchall()
     count = len(records)
 
@@ -168,20 +167,8 @@ def get_config_with_con(hashdb, user_raw_data_hash):
     _, _, gufi_hash = records[0]
 
     # figure out which gufi command and set of debug numbers this hash is associated with
-    info_cur = hashdb.execute('SELECT {0}, {1} FROM {2};'.format(
+    info_cur = con.execute('SELECT {0}, {1} FROM {2};'.format(
         gufi.COL_CMD, gufi.COL_DEBUG_NAME, gufi.TABLE_NAME))
     gufi_cmd, debug_name = info_cur.fetchall()[0]
-
-    return gufi_cmd, debug_name
-
-# wrapper function for get_config_with_con
-def get_config(hashdb_name, user_raw_data_hash):
-    gufi_cmd = None
-    debug_name = None
-
-    # verify that the hash db exists and contains the configuration
-    check_exists(hashdb_name)
-    with sqlite3.connect(hashdb_name) as hashdb:
-        gufi_cmd, debug_name = get_config_with_con(hashdb, user_raw_data_hash)
 
     return gufi_cmd, debug_name

@@ -89,6 +89,14 @@ STATS = {
     MAXIMUM : max,
 }
 
+# associate commit metadata with raw data
+class CommitData: # pylint: disable=too-few-public-methods
+    def __init__(self, idx, commit, timestamp):
+        self.idx = idx
+        self.commit = commit
+        self.timestamp = timestamp
+        self.raw_data = []
+
 def single_commit_stats(columns, rows, stat_names):
     '''
     Compute stats for a single set of rows
@@ -152,22 +160,18 @@ def single_commit_stats(columns, rows, stat_names):
 
     return stats
 
-def multiple_commit_stats(commits, columns, raw_numbers, stat_names, verbose):
+def multiple_commit_stats(columns, commitdata, stat_names, verbose):
     '''
     loop through each commit's rows and compute stats for each column
 
     Parameters
     ----------
-    commits: list of strings
-        git commit hashes in the same order as the sets of rows in raw_number
-        only used for printing
-
-    columns : list of strings
-        column names denoting what each column is
+    columns: list of strings
+        column names denoting what each column of data is
         only the length of the list is used
 
-    raw_numbers: a list of list of list of numbers
-        raw data, grouped and ordered by commit
+    commitdata: list of CommitData
+        contains raw benchmark data
 
     stat_names: list of strings
         what statitics should be computed
@@ -188,21 +192,21 @@ def multiple_commit_stats(commits, columns, raw_numbers, stat_names, verbose):
 
     col_count = len(columns)
     stats = []
-    for commit, raw in zip(commits, raw_numbers):
-        scs = single_commit_stats(columns, raw, stat_names)
+    for cd in commitdata:
+        scs = single_commit_stats(columns, cd.raw_data, stat_names)
         stats += [scs]
 
         if verbose:
             for col in range(col_count):
                 print('Commit {0}: Col: "{1}\": Rows: {2}, {3}'.format(
-                    commit, columns[col], len(raw),
+                    cd.commit, columns[col], len(cd.raw_data),
                     ', '.join(['{0}: {1}'.format(stat_name, scs[stat_name][col])
                                for stat_name in stat_names])
             ))
 
     return stats
 
-def generate_lines(conf, commits, columns, raw_numbers, verbose):
+def generate_lines(conf, columns, commitdata, verbose):
     '''
     Function for encapsulating raw data processing in preparation for graphing
 
@@ -211,15 +215,12 @@ def generate_lines(conf, commits, columns, raw_numbers, verbose):
     conf: dictionary
         configuration provided by user
 
-    commits: list of strings
-        git commit hashes in the same order as the sets of rows in raw_numbers
-
-    columns : list of strings
-        column names denoting what each column is
+    columns: list of strings
+        column names denoting what each column of data is
         only the length of the list is used
 
-    raw_numbers: a list of list of list of numbers
-        raw data, grouped and ordered by commit
+    commitdata: list of CommitData
+        contains raw benchmark data
 
     verbose: bool
         whether or not to print out stats as they are calculated
@@ -261,8 +262,7 @@ def generate_lines(conf, commits, columns, raw_numbers, verbose):
 
         stat_names += [stat_name]
 
-    stats = multiple_commit_stats(commits, columns, raw_numbers,
-                                  stat_names, verbose)
+    stats = multiple_commit_stats(columns, commitdata, stat_names, verbose)
 
     # for each line, generate lists for each statistic
     return {columns[c] : {stat_name : [commit_stats[stat_name][c]

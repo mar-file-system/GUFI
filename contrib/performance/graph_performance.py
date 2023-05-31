@@ -69,8 +69,7 @@ import sys
 from performance_pkg import common
 from performance_pkg.extraction import DebugPrints
 from performance_pkg.graph import config, graph, stats
-from performance_pkg.hashdb import commits as commits_table
-from performance_pkg.hashdb import utils as hashdb
+from performance_pkg.hashdb import commits as commits_table, utils as hashdb
 
 if sys.version_info.major < 3:
     # https://stackoverflow.com/a/4935945
@@ -126,69 +125,22 @@ def expand_git_identifiers(identifiers, git_path='@CMAKE_SOURCE_DIR@'):
 
     return commits
 
-def create_timestamps_view(con, view_name, table_name, hash_db, columns):
+def gather_raw_numbers(con, table, columns, commitdata):
     '''
-    Create a view of the table that includes timestamps stored in
-    the hashes database in the commits table
-
-    Parameters
-    ----------
-
-    con: SQLite3 Connection
-        Connection to the database containing the table to create the view for
-
-    view_name: str
-        name for the created view
-
-    table_name: str
-        name of table to create view for
-
-    hash_db: str
-        path to the database containing the commits table
-
-    columns: list
-        list of columns user wants to graph
+    Fills in commitdata[i].raw_data
     '''
 
-    # Attach hashes database
-    con.execute('ATTACH "{0}" AS hashes;'.format(hash_db))
-
-    # Create view [commit, timestamp, (columns user wants to graph)]
-    temp_view = '''
-    CREATE TEMP VIEW {0} AS
-    SELECT {1}."commit", hashes.{2}."timestamp", {3}
-    FROM {1}
-    JOIN hashes.{2} ON {1}."commit" == hashes.{2}."commit";
-    '''.format(view_name,
-               table_name,
-               commits_table.TABLE_NAME,
-               ','.join('{0}."{1}"'.format(table_name, column) for column in columns))
-
-    con.execute(temp_view)
-
-def gather_raw_numbers(con, view_name, columns, commits, plot_full_x_range):
-    raw_numbers = [] # raw numbers grouped by commit
-
-    # convert columns into SELECT clause
+    # prepare columns for use in SELECT clause
     col_str = ', '.join('"{0}"'.format(col) for col in columns)
 
     # get raw numbers grouped by commit
-    for commit in commits[:]:
-        query = 'SELECT {0} FROM {1} WHERE "commit" == "{2}";'.format(
-            col_str, view_name, commit
+    for cd in commitdata:
+        # get benchmark numbers
+        get_data_sql = 'SELECT {0} FROM {1} WHERE "commit" == "{2}";'.format(
+            col_str, table, cd.commit
         )
-        cur = con.execute(query)
-        raw_commit = cur.fetchall()
-
-        # Skip empty commits if not plotting the full range
-        if len(raw_commit) == 0:
-            if not plot_full_x_range:
-                commits.remove(commit)
-                continue
-
-        raw_numbers += [raw_commit]
-
-    return raw_numbers
+        cur = con.execute(get_data_sql)
+        cd.raw_data = list(cur.fetchall())
 
 def set_hash_len(hash, len): # pylint: disable=redefined-builtin
     if len > 0:
@@ -201,46 +153,64 @@ def run(argv):
     # pylint: disable=too-many-locals
     args = parse_args(argv)
 
-    # get table name where raw data is stored
-    gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
-
-    # will throw if not found
-    debug_print = DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name]
+    hashdb.check_exists(args.database)
+    hashdb.check_exists(args.raw_data_db)
 
     # process the user's config file
     conf = config.process(args.config, args)
 
-    # aliases
     raw_data = conf[config.RAW_DATA]
+    axes = conf[config.AXES]
+
     commits = expand_git_identifiers(raw_data[config.RAW_DATA_COMMITS], args.git_path)
     columns = raw_data[config.RAW_DATA_COLUMNS]
-    plot_full_x_range = conf[config.AXES][config.AXES_X_FULL_RANGE]
+    hash_len = axes[config.AXES_X_HASH_LEN]
+    plot_full_x_range = axes[config.AXES_X_FULL_RANGE]
+    reorder = axes[config.AXES_X_REORDER]
 
-    # Empty list used if connection below fails
-    raw_numbers = []
+    # collect data from hashes database
+    debug_name = None
+    ordered_commits = []
+    with sqlite3.connect(args.database) as con:
+        # make sure user provided configuration hash exists
+        gufi_cmd, debug_name = hashdb.get_config(con, args.raw_data_hash)
 
-    # Connect to database if it exists
-    hashdb.check_exists(args.raw_data_db)
+        # will throw if not found
+        DebugPrints.DEBUG_PRINTS[gufi_cmd][debug_name] # pylint: disable=pointless-statement
+
+        # collect commit metadata using user inputted order
+        for commit in commits:
+            # get id, commit, and timestamp from the commit metadata table
+            get_metadata_sql = 'SELECT * FROM {0} WHERE "commit" == "{1}";'.format(commits_table.TABLE_NAME, commit)
+            cur = con.execute(get_metadata_sql)
+            metadata = cur.fetchall()
+            if len(metadata) != 1:
+                raise ValueError('Expected 1 metadata row for commit {0}. Got {1}.'.format(commit, len(metadata)))
+
+            idx, commit, timestamp = metadata[0]
+            ordered_commits += [stats.CommitData(idx, commit, timestamp)]
+
+    # if user requested for the commits to be sorted in history order, sort them
+    # otherwise, use the user inputted order as is
+    if reorder is True:
+        ordered_commits.sort(key=lambda cd : cd.idx)
+
+    # get raw numbers and put them into ordered_commits
     with sqlite3.connect(args.raw_data_db) as con:
+        gather_raw_numbers(con, debug_name, columns, ordered_commits)
 
-        # Create view that sorts commits by timestamps and contains user columns
-        view_name = 'timestamp_view'
-        create_timestamps_view(con, view_name, debug_print.TABLE_NAME, args.database, columns)
-
-        # get raw data
-        raw_numbers = gather_raw_numbers(con, view_name,
-                                         columns, commits, plot_full_x_range)
+    # remove commits without data
+    if not plot_full_x_range:
+        ordered_commits = [oc for oc in ordered_commits if len(oc.raw_data) > 0]
 
     # generate lines from raw data
-    lines = stats.generate_lines(conf, commits, columns, raw_numbers, args.verbose)
-
-    # modify the commit list to length specified in the config
-    hash_len = conf[config.AXES][config.AXES_X_HASH_LEN]
-    commits = [set_hash_len(commit, hash_len)
-               for commit in commits]
+    lines = stats.generate_lines(conf, columns, ordered_commits, args.verbose)
 
     # plot stats and save to file
-    graph.generate(conf, commits, lines)
+    graph.generate(conf,
+                   [set_hash_len(oc.commit, hash_len)
+                    for oc in ordered_commits],
+                   lines)
 
 if __name__ == '__main__':
     run(sys.argv[1:])

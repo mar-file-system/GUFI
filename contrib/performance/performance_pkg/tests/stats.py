@@ -78,7 +78,11 @@ class TestStat(unittest.TestCase): # pylint: disable=too-many-instance-attribute
         self.stat_names = [stats.AVERAGE, stats.MEDIAN,
                            stats.MINIMUM, stats.MAXIMUM]
         self.commit_count = 2
-        self.commits = list(range(self.commit_count))
+        self.commits = []
+        for i in range(self.commit_count):
+            cd = stats.CommitData(i, i, 0)
+            cd.raw_data = self.single_commit_raw_numbers
+            self.commits += [cd]
 
     def test_average(self):
         self.assertEqual(stats.average(self.even), 1.5)
@@ -128,11 +132,8 @@ class TestStat(unittest.TestCase): # pylint: disable=too-many-instance-attribute
                                       self.stat_names)
 
     def test_multiple_commit_stats(self):
-        mcs = stats.multiple_commit_stats(self.commits,
-                                          self.columns,
-                                          [self.single_commit_raw_numbers] * self.commit_count,
-                                          self.stat_names,
-                                          True)
+        mcs = stats.multiple_commit_stats(self.columns, self.commits,
+                                          self.stat_names, True)
 
         self.assertEqual(len(mcs), self.commit_count)
         for scs in mcs:
@@ -149,9 +150,8 @@ class TestStat(unittest.TestCase): # pylint: disable=too-many-instance-attribute
             },
         }
 
-        lines = stats.generate_lines(conf, self.commits, self.columns,
-                                     [self.single_commit_raw_numbers] * self.commit_count,
-                                     True)
+        lines = stats.generate_lines(conf, self.columns,
+                                     self.commits, True)
 
         self.assertEqual(len(lines), self.col_count)
 
@@ -175,7 +175,7 @@ class TestStat(unittest.TestCase): # pylint: disable=too-many-instance-attribute
         }
 
         with self.assertRaises(ValueError):
-            stats.generate_lines(conf, self.commits, self.columns, [], True)
+            stats.generate_lines(conf, self.columns, self.commits, True)
 
 if __name__ == '__main__':
     unittest.main()
