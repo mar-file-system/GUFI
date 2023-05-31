@@ -654,11 +654,7 @@ int main(int argc, char *argv[]) {
         return -1;
     else {
         /* parse positional args, following the options */
-        int retval = 0;
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
-
-        if (retval)
-            return retval;
     }
 
     /* open trace files for threads to jump around in */

@@ -776,11 +776,7 @@ int main(int argc, char *argv[])
         return -1;
      else {
         // parse positional args, following the options
-        int retval = 0;
         INSTALL_STR(&in.name,   argv[idx++]);
-
-        if (retval)
-           return retval;
      }
      //fprintf(stderr,"in main after parse\n");
      if (validate_inputs(&in))

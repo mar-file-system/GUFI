@@ -300,11 +300,7 @@ int main(int argc, char *argv[]) {
     if (idx < 0)
         return 1;
     else {
-        int retval = 0;
         INSTALL_STR(&pa.in.name, argv[idx++]);
-
-        if (retval)
-            return retval;
     }
 
     /* not an error, but you might want to know ... */

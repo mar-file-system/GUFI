@@ -249,11 +249,7 @@ int main(int argc, char *argv[]) {
         return -1;
     else {
         /* parse positional args, following the options */
-        int retval = 0;
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
-
-        if (retval)
-            return retval;
 
         if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
             return -1;
