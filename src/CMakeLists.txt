@@ -201,7 +201,7 @@ set(MISC_SOURCES tsmtime2epoch.c tsmepoch2time.c)
 build_and_install(${BIN} FALSE ${MISC_SOURCES})
 
 # only build bffuse and bfresultfuse if FUSE is found
-if (MY_FUSE_FOUND)
+if (MY_FUSE_FOUND AND FUSE_BUILD)
   # remove the semicolons that get added
   string(REPLACE ";" " " MY_FUSE_CFLAGS "${MY_FUSE_CFLAGS}")
   string(REPLACE ";" " " MY_FUSE_LDFLAGS "${MY_FUSE_LDFLAGS}")
