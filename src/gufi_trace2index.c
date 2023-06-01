@@ -274,7 +274,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         size_t size = 0;
         for(size_t i = 0; i < w->entries; i++) {
             timestamp_create_start(getline);
-            const size_t len = getline_fd(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
+            const ssize_t len = getline_fd(&line, &size, trace, &w->offset, GETLINE_DEFAULT_SIZE);
             if (len < 1) {
                 break;
             }
@@ -493,15 +493,16 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     (void) id;
 
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len = 0;
+    off_t offset = 0;
+
     /* keep current directory while finding next directory */
     /* in order to find out whether or not the current */
     /* directory has files in it */
-    char *line = NULL;
-    size_t len = 0;
-    off_t offset = 0;
-
     /* empty trace */
-    if (getline_fd(&line, &len, sa->trace, &offset, GETLINE_DEFAULT_SIZE) < 1) {
+    if ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
         free(line);
         free(sa);
         fprintf(stderr, "Could not get the first line of the trace\n");
@@ -537,14 +538,16 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     /* have getline allocate a new buffer */
     line = NULL;
+    size = 0;
     len = 0;
-    while (getline_fd(&line, &len, sa->trace, &offset, GETLINE_DEFAULT_SIZE) > 0) {
+    while ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
         first_delim = parsefirst(line, len, in->delim);
 
         /* bad line */
         if (first_delim == (size_t) -1) {
             free(line);
             line = NULL;
+            size = 0;
             len = 0;
             fprintf(stderr, "Scout encountered bad line ending at offset %jd\n", (intmax_t) offset);
             continue;
@@ -574,6 +577,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
         /* have getline allocate a new buffer */
         line = NULL;
+        size = 0;
         len = 0;
     }
 
