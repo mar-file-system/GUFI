@@ -64,12 +64,11 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
-extern "C" {
-
-#include "bf.h"
 #include "trie.h"
 
-}
+const char str[] = "0123";
+const size_t str_len = strlen(str);
+const size_t sub_len = str_len / 2;
 
 TEST(trie, alloc_free) {
     trie_t *root = trie_alloc();
@@ -91,7 +90,7 @@ TEST(trie, insert_nullptr) {
 }
 
 TEST(trie, insert_empty) {
-    char buf[MAXPATH] = "";
+    const char buf[] = "";
 
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
@@ -104,25 +103,18 @@ TEST(trie, insert_empty) {
 }
 
 TEST(trie, search) {
-    char buf[MAXPATH] = "0123";
-
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, buf, 4);
+    trie_insert(root, str, 4);
 
-    EXPECT_EQ(trie_search(nullptr, buf, 0), 0);
-    EXPECT_EQ(trie_search(root, buf, 4),  1);
+    EXPECT_EQ(trie_search(nullptr, str, 0), 0);
+    EXPECT_EQ(trie_search(root, str, 4),  1);
 
     trie_free(root);
 }
 
 TEST(trie, delete) {
-    char sub[MAXPATH] = "01";
-    size_t sub_len = strlen(sub);
-    char str[MAXPATH] = "0123";
-    size_t str_len = strlen(str);
-
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
@@ -133,29 +125,29 @@ TEST(trie, delete) {
     {
         /* insert long string and sub string */
         trie_insert(root, str, str_len);
-        trie_insert(root, sub, sub_len);
+        trie_insert(root, str, sub_len);
         EXPECT_EQ(trie_search(root, str, str_len), 1);
-        EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+        EXPECT_EQ(trie_search(root, str, sub_len), 1);
 
         /* longer string is deleted, but the shorter string remains */
         EXPECT_EQ(trie_delete(root, str, str_len), 0);
         EXPECT_NE(root, nullptr);
         EXPECT_EQ(trie_search(root, str, str_len), 0);
-        EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+        EXPECT_EQ(trie_search(root, str, sub_len), 1);
     }
 
     {
         /* insert long string and sub string */
         trie_insert(root, str, str_len);
-        trie_insert(root, sub, sub_len);
+        trie_insert(root, str, sub_len);
         EXPECT_EQ(trie_search(root, str, str_len), 1);
-        EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+        EXPECT_EQ(trie_search(root, str, sub_len), 1);
 
         /* shorter string is deleted, but the longer string remains */
-        EXPECT_EQ(trie_delete(root, sub, sub_len), 0);
+        EXPECT_EQ(trie_delete(root, str, sub_len), 0);
         EXPECT_NE(root, nullptr);
         EXPECT_EQ(trie_search(root, str, str_len), 1);
-        EXPECT_EQ(trie_search(root, sub, sub_len), 0);
+        EXPECT_EQ(trie_search(root, str, sub_len), 0);
     }
 
     /* deleteing the remaining long string deletes the entire chain */
@@ -168,20 +160,15 @@ TEST(trie, delete) {
 }
 
 TEST(trie, substring) {
-    char sub[MAXPATH] = "01";
-    size_t sub_len = strlen(sub);
-    char str[MAXPATH] = "0123";
-    size_t str_len = strlen(str);
-
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, sub, sub_len);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+    trie_insert(root, str, sub_len);
+    EXPECT_EQ(trie_search(root, str, sub_len), 1);
     EXPECT_EQ(trie_search(root, str, str_len), 0);
 
     trie_insert(root, str, str_len);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+    EXPECT_EQ(trie_search(root, str, sub_len), 1);
     EXPECT_EQ(trie_search(root, str, str_len), 1);
 
     trie_free(root);
@@ -190,11 +177,11 @@ TEST(trie, substring) {
     ASSERT_NE(root, nullptr);
 
     trie_insert(root, str, str_len);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 0);
+    EXPECT_EQ(trie_search(root, str, sub_len), 0);
     EXPECT_EQ(trie_search(root, str, str_len), 1);
 
-    trie_insert(root, sub, sub_len);
-    EXPECT_EQ(trie_search(root, sub, sub_len), 1);
+    trie_insert(root, str, sub_len);
+    EXPECT_EQ(trie_search(root, str, sub_len), 1);
     EXPECT_EQ(trie_search(root, str, str_len), 1);
 
     trie_free(root);

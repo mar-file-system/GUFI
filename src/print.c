@@ -83,7 +83,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         }
     }
 
-    /* if a row cannot fit the buffer for whatever reason, flush the existing bufffer */
+    /* if a row cannot fit the buffer for whatever reason, flush the existing buffer */
     if ((ob->capacity - ob->filled) < row_len) {
         if (print->mutex) {
             pthread_mutex_lock(print->mutex);

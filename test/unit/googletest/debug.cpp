@@ -64,11 +64,7 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
-extern "C" {
-
 #include "debug.h"
-
-}
 
 static const uint64_t nsecs_per_sec = 1000000000ULL;
 

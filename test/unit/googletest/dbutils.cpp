@@ -70,11 +70,7 @@ OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
 
-extern "C" {
-
 #include "dbutils.h"
-
-}
 
 static int str_output(void *args, int, char **data, char **) {
     char *output = static_cast <char *> (args);

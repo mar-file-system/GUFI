@@ -112,14 +112,12 @@ void print_help(const char* prog_name,
       case 'F': printf("  -F <SQL_fin>           SQL cleanup"); break;
       case 'r': printf("  -r                     insert files and links into db (for bfwreaddirplus2db"); break;
       case 'R': printf("  -R                     insert dires into db (for bfwreaddirplus2db"); break;
-      case 'D': printf("  -D                     don't descend the tree"); break;
       case 'Y': printf("  -Y                     default to all directories suspect"); break;
       case 'Z': printf("  -Z                     default to all files/links suspect"); break;
       case 'W': printf("  -W <INSUSPECT>         suspect input file"); break;
       case 'A': printf("  -A <suspectmethod>     suspect method (0 no suspects, 1 suspect file_dfl, 2 suspect stat d and file_fl, 3 suspect stat_dfl"); break;
       case 'g': printf("  -g <stridesize>        stride size for striping inodes"); break;
       case 'c': printf("  -c <suspecttime>       time in seconds since epoch for suspect comparision"); break;
-      case 'u': printf("  -u                     input mode is from a file so input is a file not a dir"); break;
       case 'y': printf("  -y <min level>         minimum level to go down"); break;
       case 'z': printf("  -z <max level>         maximum level to go down"); break;
       case 'J': printf("  -J <SQL_interm>        SQL for intermediate results"); break;
@@ -175,7 +173,6 @@ void show_input(struct input* in, int retval) {
    printf("in.suspectmethod            = '%d'\n",          in->suspectmethod);
    printf("in.suspecttime              = '%d'\n",          in->suspecttime);
    printf("in.stride                   = '%d'\n",          in->stride);
-   printf("in.infile                   = '%d'\n",          in->infile);
    printf("in.min_level                = %zu\n",           in->min_level);
    printf("in.max_level                = %zu\n",           in->max_level);
    printf("in.sql.intermediate         = '%s'\n",          in->sql.intermediate.data);
@@ -359,10 +356,6 @@ int parse_cmd_line(int         argc,
 
       case 'c':
          INSTALL_INT(&in->suspecttime, optarg, 1, 2147483646, "-c", &retval);
-         break;
-
-      case 'u':
-         in->infile = 1;
          break;
 
       case 'y':

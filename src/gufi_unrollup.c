@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
 
         struct stat st;
         lstat(mywork->name, &st);
-        if (!S_ISDIR(st.st_mode) ) {
+        if (!S_ISDIR(st.st_mode)) {
             fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
             free(mywork);
             continue;

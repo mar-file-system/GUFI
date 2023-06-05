@@ -67,11 +67,7 @@ OF SUCH DAMAGE.
 #include <gtest/gtest.h>
 #include <sqlite3.h>
 
-extern "C" {
-
 #include "bf.h"
-
-}
 
 static const std::string exec = "exec"; // argv[0]
 
@@ -103,7 +99,6 @@ static const std::string W = "-W"; static const std::string W_arg = "W arg";
 static const std::string A = "-A"; static const std::string A_arg = "1";
 static const std::string g = "-g"; static const std::string g_arg = "1";
 static const std::string c = "-c"; static const std::string c_arg = "1";
-static const std::string u = "-u";
 static const std::string y = "-y"; static const std::string y_arg = "1";
 static const std::string z = "-z"; static const std::string z_arg = "1";
 static const std::string J = "-J"; static const std::string J_arg = "J arg";
@@ -153,7 +148,6 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->insertdir,               1);
         EXPECT_EQ(in->suspectd,                1);
         EXPECT_EQ(in->suspectfl,               1);
-        EXPECT_EQ(in->infile,                  1);
         EXPECT_EQ(in->keep_matime,             1);
         EXPECT_EQ(in->open_flags,              SQLITE_OPEN_READWRITE);
         EXPECT_EQ(in->terse,                   1);
@@ -174,7 +168,6 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->insertdir,               0);
         EXPECT_EQ(in->suspectd,                0);
         EXPECT_EQ(in->suspectfl,               0);
-        EXPECT_EQ(in->infile,                  0);
         EXPECT_EQ(in->keep_matime,             0);
         EXPECT_EQ(in->open_flags,              SQLITE_OPEN_READONLY);
         EXPECT_EQ(in->terse,                   0);
@@ -269,7 +262,7 @@ TEST(parse_cmd_line, help) {
 }
 
 TEST(parse_cmd_line, debug) {
-    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:uy:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
+    const char opts[] = "HxpPNVban:d:i:t:o:O:I:T:S:E:F:rRYZW:A:g:c:y:z:J:K:G:mB:wf:jXL:k:M:C:" COMPRESS_OPT;
 
     const char *argv[] = {
         exec.c_str(),
@@ -298,7 +291,6 @@ TEST(parse_cmd_line, debug) {
         A.c_str(), A_arg.c_str(),
         g.c_str(), g_arg.c_str(),
         c.c_str(), c_arg.c_str(),
-        u.c_str(),
         y.c_str(), y_arg.c_str(),
         z.c_str(), z_arg.c_str(),
         J.c_str(), J_arg.c_str(),
@@ -335,7 +327,7 @@ TEST(parse_cmd_line, debug) {
 }
 
 TEST(parse_cmd_line, flags) {
-    const char opts[] = "xpPNVbarRYZumwjX" COMPRESS_OPT;
+    const char opts[] = "xpPNVbarRYZmwjX" COMPRESS_OPT;
 
     const char *argv[] = {
         exec.c_str(),
@@ -350,7 +342,6 @@ TEST(parse_cmd_line, flags) {
         R.c_str(),
         Y.c_str(),
         Z.c_str(),
-        u.c_str(),
         m.c_str(),
         w.c_str(),
         j.c_str(),

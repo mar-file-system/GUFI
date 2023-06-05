@@ -70,12 +70,8 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 
-extern "C" {
-
 #include "config.h"
 #include "trace.h"
-
-}
 
 static const char delim = '\x1e';
 
