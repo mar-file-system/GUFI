@@ -396,12 +396,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DPER_THREAD_STATS=1)
   endif()
 
-  # print subdirectory counts
-  option(PRINT_SUBDIRECTORY_COUNTS "Print the number of subdirectories under each directory" Off)
-  if (PRINT_SUBDIRECTORY_COUNTS)
-    add_definitions(-DSUBDIRECTORY_COUNTS=1)
-  endif()
-
   option(PRINT_QPTPOOL_QUEUE_SIZE "Print the un-pulled work queue size of each thread" Off)
   if (PRINT_QPTPOOL_QUEUE_SIZE)
     add_definitions(-DQPTPOOL_QUEUE_SIZE=1)
