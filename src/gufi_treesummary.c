@@ -313,11 +313,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, 0, 0, 0
-                                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                              , NULL
-                                              #endif
-        );
+    QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
