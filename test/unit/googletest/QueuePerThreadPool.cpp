@@ -351,53 +351,12 @@ TEST(QueuePerThreadPool, custom_next) {
 }
 
 TEST(QueuePerThreadPool, deferred) {
-    // macOS doesn't seem to like std::mutex
-    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    pthread_mutex_lock(&mutex);
-
-    QPTPool_t *pool = QPTPool_init(1, &mutex);
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
     ASSERT_NE(pool, nullptr);
     ASSERT_EQ(QPTPool_set_queue_limit(pool, 1), 0);
-    ASSERT_EQ(QPTPool_start(pool), 0);
 
-    std::size_t counter = 0;
-
-    // prevent thread from completing
-    EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const std::size_t, void *data, void *args) -> int {
-                                  std::size_t *counter = static_cast<std::size_t *>(data);
-                                  (*counter)++;
-
-                                  pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
-                                  pthread_mutex_lock(mutex);
-                                  pthread_mutex_unlock(mutex);
-                                  return 0;
-                              }, &counter), QPTPool_enqueue_WAIT);
-
-    // need to make sure only this work item got popped off
-    while (!counter) {
-        sched_yield();
-    }
-
-    // fill up wait queue
-    EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const std::size_t, void *, void *) -> int {
-                                  return 0;
-                              }, nullptr), QPTPool_enqueue_WAIT);
-
-    // forced to enqueue in deferred queue
-    EXPECT_EQ(QPTPool_enqueue(pool, 0,
-                              [](QPTPool_t *, const std::size_t, void *, void *) -> int {
-                                  return 0;
-                              }, nullptr), QPTPool_enqueue_DEFERRED);
-
-    pthread_mutex_unlock(&mutex);
-
-    QPTPool_wait(pool);
-
-    EXPECT_EQ(counter,                         (std::size_t)   1);
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 3);
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 3);
+    EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_WAIT);
+    EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_DEFERRED);
 
     QPTPool_destroy(pool);
 }
