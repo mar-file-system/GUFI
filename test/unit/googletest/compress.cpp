@@ -74,119 +74,44 @@ typedef struct {
 
 static const size_t DATA_LEN = sizeof(data_t);
 
-#if HAVE_ZLIB
-
-extern "C" {
-void compress_zlib(void **dst, void *src, const size_t struct_len, const size_t max_len);
-void decompress_zlib(void **dst, void *src, void *data, const size_t struct_len);
-void free_zlib(void *heap, void *stack);
-}
-
-TEST(compress, zlib) {
-    data_t src;
-
-    // make sure src compresses well
-    memset(&src, 0, sizeof(src));
-
-    // compress successfully
-    {
-        data_t *comp = (data_t *) malloc(sizeof(data_t));
-
-        compress_zlib((void **) &comp, &src, DATA_LEN, DATA_LEN);
-        EXPECT_NE(comp, nullptr);              // realloc may or may not change addresses
-        EXPECT_EQ(comp->comp.yes, 1);
-        EXPECT_LT(comp->comp.len, DATA_LEN);
-
-        data_t stack;
-        data_t *decomp = nullptr;
-        decompress_zlib((void **) &decomp, &stack, comp, DATA_LEN); // comp was freed
-        EXPECT_NE(decomp, comp);
-        EXPECT_EQ(decomp, &stack);
-
-        EXPECT_EQ(memcmp(decomp->data, src.data, DATA_LEN - sizeof(compressed_t)), 0);
-
-        free_zlib(decomp, &stack);
-    }
-
-    // did not compress enough
-    {
-        data_t *comp = (data_t *) malloc(sizeof(data_t));
-        data_t *orig = comp;
-
-        compress_zlib((void **) &comp, &src, DATA_LEN, 0);
-        EXPECT_EQ(comp, orig);                 // no realloc
-        EXPECT_EQ(comp->comp.yes, 1);          // still compressed, but not enough
-        EXPECT_LT(comp->comp.len, DATA_LEN);
-
-        data_t stack;
-        data_t *decomp = nullptr;
-        decompress_zlib((void **) &decomp, &stack, comp, DATA_LEN); // comp was freed
-        EXPECT_EQ(decomp, &stack);
-
-        EXPECT_EQ(memcmp(decomp->data, src.data, DATA_LEN - sizeof(compressed_t)), 0);
-
-        free_zlib(decomp, &stack);
-    }
-
-    // src->compress.compressed == 0, so *dst = &src
-    {
-        data_t *dst = nullptr;
-        EXPECT_NO_THROW(decompress_zlib((void **) &dst, NULL, &src, DATA_LEN));
-        EXPECT_EQ(dst, &src);
-    }
-
-    // same address, so not freed
-    {
-        EXPECT_NO_THROW(free_zlib(&src, &src));
-    }
-}
-
-#endif
-
 TEST(compress, off) {
     data_t src;
-
-    // make sure src compresses well
     memset(&src, 0, sizeof(src));
 
     const int comp = 0;
 
-    {
-        void *compressed = compress_struct(comp, &src, DATA_LEN);
-        EXPECT_NE(compressed, nullptr);              // realloc may or may not change addresses
-        compressed_t *c = (compressed_t *) compressed;
-        EXPECT_EQ(c->yes, (int8_t) 0);
-        EXPECT_EQ(c->len, (size_t) 0);
+    void *compressed = compress_struct(comp, &src, DATA_LEN);
+    EXPECT_NE(compressed, nullptr);
 
-        data_t stack;
-        data_t *decompressed = nullptr;
-        decompress_struct(comp, compressed, (void **) &decompressed, &stack, DATA_LEN); // compressed was not freed
-        EXPECT_EQ(decompressed, compressed);
+    compressed_t *c = (compressed_t *) compressed;
+    EXPECT_EQ(c->yes, 0);
+    EXPECT_EQ(c->len, (size_t) 0);
 
-        free_struct(comp, decompressed, &stack, 0);
-    }
+    data_t *decompressed = nullptr;
+    EXPECT_EQ(decompress_struct((void **) &decompressed, compressed, DATA_LEN), 0);
+    EXPECT_EQ(decompressed, compressed);
+
+    free_struct(decompressed, compressed, 0);
 }
 
 TEST(compress, on) {
     data_t src;
-
-    // make sure src compresses well
     memset(&src, 0, sizeof(src));
 
     const int comp = 1;
 
-    {
-        void *compressed = compress_struct(comp, &src, DATA_LEN);
-        EXPECT_NE(compressed, nullptr);              // realloc may or may not change addresses
-        compressed_t *c = (compressed_t *) compressed;
-        EXPECT_EQ(c->yes, (int8_t) comp);
-        EXPECT_LE(c->len, DATA_LEN);
+    void *compressed = compress_struct(comp, &src, DATA_LEN);
+    EXPECT_NE(compressed, nullptr);
 
-        data_t stack;
-        data_t *decompressed = nullptr;
-        decompress_struct(comp, compressed, (void **) &decompressed, &stack, DATA_LEN); // compressed was not freed
-        EXPECT_NE(decompressed, compressed);
+    compressed_t *c = (compressed_t *) compressed;
+    EXPECT_EQ(c->yes, comp);
+    EXPECT_LE(c->len, DATA_LEN);
 
-        free_struct(comp, decompressed, &stack, 0);
-    }
+    data_t stack;
+    data_t *decompressed = &stack;
+    EXPECT_EQ(decompress_struct((void **) &decompressed, compressed, DATA_LEN), 0);
+    EXPECT_NE(decompressed, compressed);
+
+    /* compressed was freed, decompressed points to stack address */
+    free_struct(decompressed, compressed, 0);
 }

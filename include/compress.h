@@ -78,7 +78,7 @@ extern "C" {
  */
 typedef struct compressed {
     int8_t          yes;  /* is this struct compressed? */
-    size_t          len;  /* only meaningful if yes == 1 */
+    size_t          len;  /* includes self; only meaningful if yes == 1 */
 } compressed_t;
 
 #if HAVE_ZLIB /* or any other algorithm */
@@ -87,10 +87,16 @@ typedef struct compressed {
 #define COMPRESS_OPT
 #endif
 
-void *compress_struct(const int comp, void *stack, const size_t struct_len);
-int decompress_struct(const int comp, void *data,
-                      void **heap, void *stack, const size_t struct_len);
-int free_struct(const int comp, void *heap, void *stack, const size_t recursion_level);
+void *compress_struct(const int comp, void *src, const size_t struct_len);
+
+/* initialize dst with pointer to valid buffer */
+int decompress_struct(void **dst, void *src, const size_t struct_len);
+
+/*
+ * used is the struct that was used for operations (decompressed or original data)
+ * data is the original data received for processing, which may or may not have been used directly
+ */
+void free_struct(void *used, void *data, const size_t recursion_level);
 
 #ifdef __cplusplus
 }

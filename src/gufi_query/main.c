@@ -110,10 +110,6 @@ OF SUCH DAMAGE.
 
 /* additional data gufi_query needs */
 typedef struct gufi_query_work {
-    #if HAVE_ZLIB
-    compressed_t comp;
-    #endif
-
     struct work work;
 
     /*
@@ -201,6 +197,8 @@ static size_t descend2(QPTPool_t *ctx,
             }
 
             gqw_t child;
+            memset(&child, 0, sizeof(child)); /* zero padding */
+
             child.work.basename_len = len;
             child.work.fullpath = NULL;
             child.work.fullpath_len = 0;
@@ -298,7 +296,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     gqw_t stack;
     gqw_t *gqw = &stack;
-    decompress_struct(in->compress, data, (void **) &gqw, &stack, sizeof(stack));
+
+    decompress_struct((void **) &gqw, data, sizeof(stack));
 
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, MAXPATH, 2, gqw->sqlite3_name, gqw->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
@@ -495,7 +494,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     thread_timestamp_start(ts.tts, free_work);
     free(gqw->work.fullpath);
-    free_struct(in->compress, gqw, &stack, 0);
+    free_struct(gqw, data, 0);
     thread_timestamp_end(free_work);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)

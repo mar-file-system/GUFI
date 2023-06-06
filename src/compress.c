@@ -3,118 +3,86 @@
 
 #include "compress.h"
 
-#if HAVE_ZLIB
-#include <zlib.h>
-
 /* starting offset of actual data */
 static const size_t COMP_OFFSET = sizeof(compressed_t);
 
-/*
- * dst should be allocated by the caller
- *
- * it is a double pointer because it can be reallocated
- */
-void compress_zlib(void **dst, void *src, const size_t struct_len, const size_t max_len) {
-    /* Not checking arguments */
+#if HAVE_ZLIB
+#include <zlib.h>
 
-    compressed_t *comp = (compressed_t *) *dst;
-
-    /* compress work item */
-    comp->len = struct_len - COMP_OFFSET;
-    const int ret = compress(((unsigned char *) *dst) + COMP_OFFSET, &comp->len,
-                             ((unsigned char *) src)  + COMP_OFFSET, struct_len);
-    comp->yes = (ret == Z_OK);
-
-    /* if compressed enough, reallocate to reduce memory usage */
-    if (comp->yes && (comp->len < max_len)) {
-        void *r = realloc(*dst, COMP_OFFSET + comp->len);
-        if (r) {
-            *dst = r;
-        }
-        /* if realloc failed, dst can still be used */
-    }
+static int compress_zlib(void *dst, size_t *dst_len, void *src, const size_t src_len) {
+    return compress(dst, dst_len, src, src_len);
 }
 
-/* dst either points to src or data */
-void decompress_zlib(void **dst, void *src, void *data, const size_t struct_len) {
-    /* Not checking arguments */
-
-    compressed_t *comp = (compressed_t *) data;
-
-    if (comp->yes) {
-        compressed_t *src_comp = (compressed_t *) src;
-        memset(src_comp, 0, sizeof(*src_comp)); /* not strictly necessary */
-
-        size_t len = struct_len - COMP_OFFSET;
-        uncompress(((unsigned char *) src)  + COMP_OFFSET, &len,
-                   ((unsigned char *) data) + COMP_OFFSET, comp->len);
-        free(data);
-
-        *dst = src;
-    }
-    else {
-        *dst = data;
-    }
+static int decompress_zlib(void *dst, size_t *dst_len, void *src, const size_t src_len) {
+    return uncompress(dst, dst_len, src, src_len);
 }
-
-/* free if the data was not decompressed into the struct on the stack */
-void free_zlib(void *heap, void *stack) {
-    if (heap != stack) {
-        free(heap);
-    }
-}
-
 #endif
 
-void *compress_struct(const int comp, void *stack, const size_t struct_len) {
-    void *copy = malloc(struct_len);
+/* always return new address */
+void *compress_struct(const int comp, void *src, const size_t struct_len) {
+    compressed_t *dst = malloc(struct_len);
+    dst->yes = 0;
+    dst->len = 0;
 
-    #if HAVE_ZLIB
     if (comp) {
-        compress_zlib((void **) &copy, stack, struct_len, struct_len);
-        if (((compressed_t *) copy)->yes) {
-            return copy;
+        dst->len = struct_len - COMP_OFFSET;
+
+        #if HAVE_ZLIB
+        if (compress_zlib(((unsigned char *) dst) + COMP_OFFSET, &dst->len,
+                          ((unsigned char *) src) + COMP_OFFSET,  dst->len) == Z_OK) {
+            dst->yes = 1;
+            dst->len += COMP_OFFSET;
+        }
+        #endif
+
+        /* if compressed enough, reallocate to reduce memory usage */
+        if (dst->yes && (dst->len < struct_len)) {
+            void *r = realloc(dst, COMP_OFFSET + dst->len);
+            if (r) {
+                dst = r;
+            }
+
+            /* if realloc failed, dst can still be used */
+            return dst;
         }
     }
-    #else
-    (void) comp;
-    #endif
 
-    memcpy(copy, stack, struct_len);
+    /* if no compresseion or compression failed, copy src */
+    memcpy(dst, src, struct_len);
 
-    return copy;
+    return dst;
 }
 
-int decompress_struct(const int comp, void *data,
-                      void **heap, void *stack, const size_t struct_len) {
-    #if HAVE_ZLIB
-    if (comp) {
-        decompress_zlib((void **) heap, stack, data, struct_len);
+int decompress_struct(void **dst, void *src, const size_t struct_len) {
+    compressed_t *comp = (compressed_t *) src;
+    if (comp->yes) {
+        compressed_t *decomp = (compressed_t *) *dst;
+        decomp->len = struct_len - COMP_OFFSET;
+
+        #if HAVE_ZLIB
+        if (decompress_zlib(((unsigned char *) *dst) + COMP_OFFSET, &decomp->len,
+                            ((unsigned char *)  src) + COMP_OFFSET,    comp->len) != Z_OK) {
+            return 1;
+        }
+        #endif
+
+        free(src);
         return 0;
     }
-    #else
-    (void) comp;
-    (void) stack;
-    #endif
 
-    *heap = (void *) data;
+    /*
+     * compression not enabled or compression enabled but
+     * data was not compressed - use original pointer
+     */
+    *dst = src;
 
     return 0;
 }
 
-int free_struct(const int comp, void *heap, void *stack, const size_t recursion_level) {
-    #if HAVE_ZLIB
-    if (comp) {
-        free_zlib(heap, stack);
-        return 0;
+void free_struct(void *used, void *data, const size_t recursion_level) {
+    if (used == data) {              /* used received data directly */
+        if (recursion_level == 0) {  /* work was not from in-situ call, so data is dynamically allocated */
+            free(data);
+        }
     }
-    #else
-    (void) comp;
-    (void) stack;
-    #endif
-    if (recursion_level == 0) {
-        free(heap);
-    }
-
-    return 0;
 }

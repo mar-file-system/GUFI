@@ -169,11 +169,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.in         = &pa->in;
     nda.temp_db    = &pa->db;
     nda.temp_xattr = &pa->xattr;
-    nda.work       = &work_src;
+    nda.work       = (struct work *) data;
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.ed.type    = 'd';
 
-    decompress_struct(in->compress, data, (void **) &nda.work, &work_src, sizeof(work_src));
+    if (nda.work->compressed.yes) {
+        nda.work = &work_src;
+        decompress_struct((void **) &nda.work, data, sizeof(work_src));
+    }
 
     DIR *dir = opendir(nda.work->name);
     if (!dir) {
@@ -275,7 +278,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
   cleanup:
     closedir(dir);
 
-    free_struct(in->compress, nda.work, &work_src, nda.work->recursion_level);
+    free_struct(nda.work, data, nda.work->recursion_level);
 
     pa->total_files[id] += nondirs_processed;
 
