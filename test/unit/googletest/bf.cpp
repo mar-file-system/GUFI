@@ -118,8 +118,6 @@ static const std::string C = "-C"; static const std::string C_arg = "1";
 static const std::string e = "-e";
 #endif
 
-#define UNUSED ";"
-
 static bool operator==(const refstr_t &refstr, const std::string &str) {
     if (refstr.len != str.size()) {
         return false;
@@ -530,12 +528,32 @@ TEST(parse_cmd_line, positional) {
     check_input(&in, false, false, false);
 }
 
-TEST(parse_cmd_line, invalid) {
+TEST(parse_cmd_line, unused) {
+    #define UNUSED "0"
+
     const char opts[] = UNUSED;
 
     const char *argv[] = {
         exec.c_str(),
         "-" UNUSED,
+    };
+
+    int argc = sizeof(argv) / sizeof(argv[0]);
+
+    struct input in;
+    EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
+
+    check_input(&in, true, false, false);
+}
+
+TEST(parse_cmd_line, invalid) {
+    #define INVALID ";"
+
+    const char opts[] = INVALID;
+
+    const char *argv[] = {
+        exec.c_str(),
+        "-" INVALID,
     };
 
     int argc = sizeof(argv) / sizeof(argv[0]);
