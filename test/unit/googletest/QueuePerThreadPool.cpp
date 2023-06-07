@@ -83,6 +83,16 @@ static int increment_counter(QPTPool_t *, const std::size_t, void *data, void *)
     return 0;
 }
 
+TEST(QueuePerThreadPool, null) {
+    QPTPool_t *pool = QPTPool_init(0, nullptr);
+    EXPECT_EQ(pool, nullptr);
+    EXPECT_NO_THROW(QPTPool_start(pool));
+    EXPECT_NO_THROW(QPTPool_wait(pool));
+    EXPECT_EQ(QPTPool_threads_started(pool), (uint64_t) 0);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 0);
+    EXPECT_NO_THROW(QPTPool_destroy(pool));
+}
+
 // QPTPool_init followed by QPTPool_destroy - threads are not started
 // should not leak memory
 TEST(QueuePerThreadPool, no_start_stop) {
@@ -91,14 +101,7 @@ TEST(QueuePerThreadPool, no_start_stop) {
     QPTPool_destroy(pool);
 }
 
-TEST(QueuePerThreadPool, zero_threads) {
-    EXPECT_EQ(QPTPool_init(0, nullptr), nullptr);
-}
-
 TEST(QueuePerThreadPool, bad_start) {
-    // bad context
-    EXPECT_EQ(QPTPool_start(nullptr), 1);
-
     // already started
     setup_pool(THREADS, nullptr);
     EXPECT_EQ(QPTPool_start(pool), 1);
@@ -477,9 +480,6 @@ static std::size_t test_next_func(const std::size_t, const std::size_t,
 }
 
 TEST(QueuePerThreadPool, prop_next) {
-    // bad function
-    EXPECT_EQ(QPTPool_set_next(nullptr, nullptr, nullptr), 1);
-
     // bad state
     {
         setup_pool(THREADS, nullptr);
@@ -488,14 +488,18 @@ TEST(QueuePerThreadPool, prop_next) {
         QPTPool_destroy(pool);
     }
 
-    // good
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_next(pool, test_next_func, nullptr), 0);
+        EXPECT_EQ(QPTPool_set_next(nullptr, test_next_func, nullptr), 1);
+        EXPECT_EQ(QPTPool_set_next(pool,    nullptr,        nullptr), 1);
+        EXPECT_EQ(QPTPool_set_next(pool,    test_next_func, nullptr), 0);
 
         QPTPoolNextFunc_t get_next_func = nullptr;
         void *get_next_func_args = nullptr;
-        EXPECT_EQ(QPTPool_get_next(pool, &get_next_func, &get_next_func_args), 0);
+        EXPECT_EQ(QPTPool_get_next(nullptr, &get_next_func, &get_next_func_args), 1);
+        EXPECT_EQ(QPTPool_get_next(pool,    nullptr,        &get_next_func_args), 0);
+        EXPECT_EQ(QPTPool_get_next(pool,    &get_next_func, nullptr),             0);
+        EXPECT_EQ(QPTPool_get_next(pool,    &get_next_func, &get_next_func_args), 0);
         EXPECT_EQ(get_next_func, test_next_func);
         EXPECT_EQ(get_next_func_args, nullptr);
         QPTPool_destroy(pool);
@@ -508,17 +512,20 @@ TEST(QueuePerThreadPool, prop_queue_limit) {
     // bad state
     {
         setup_pool(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_queue_limit(pool, queue_limit), 1);
+        EXPECT_EQ(QPTPool_set_queue_limit(pool,    queue_limit), 1);
         QPTPool_wait(pool);
         QPTPool_destroy(pool);
     }
 
-    // good
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_queue_limit(pool, queue_limit), 0);
+        EXPECT_EQ(QPTPool_set_queue_limit(nullptr, queue_limit), 1);
+        EXPECT_EQ(QPTPool_set_queue_limit(pool,    queue_limit), 0);
+
         uint64_t get_queue_limit = 0;
-        EXPECT_EQ(QPTPool_get_queue_limit(pool, &get_queue_limit), 0);
+        EXPECT_EQ(QPTPool_get_queue_limit(nullptr, &get_queue_limit), 1);
+        EXPECT_EQ(QPTPool_get_queue_limit(pool,    nullptr),          0);
+        EXPECT_EQ(QPTPool_get_queue_limit(pool,    &get_queue_limit), 0);
         EXPECT_EQ(get_queue_limit, static_cast<std::size_t>(THREADS));
         QPTPool_destroy(pool);
     }
@@ -531,18 +538,22 @@ TEST(QueuePerThreadPool, prop_steal) {
     // bad state
     {
         setup_pool(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_steal(pool, num, denom), 1);
+        EXPECT_EQ(QPTPool_set_steal(pool,    num, denom), 1);
         QPTPool_wait(pool);
         QPTPool_destroy(pool);
     }
 
-    // good
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
-        EXPECT_EQ(QPTPool_set_steal(pool, num, denom), 0);
+        EXPECT_EQ(QPTPool_set_steal(nullptr, num, denom), 1);
+        EXPECT_EQ(QPTPool_set_steal(pool,    num, denom), 0);
+
         uint64_t get_num = 0;
         uint64_t get_denom = 0;
-        EXPECT_EQ(QPTPool_get_steal(pool, &get_num, &get_denom), 0);
+        EXPECT_EQ(QPTPool_get_steal(nullptr, &get_num, &get_denom), 1);
+        EXPECT_EQ(QPTPool_get_steal(pool,    nullptr,  &get_denom), 0);
+        EXPECT_EQ(QPTPool_get_steal(pool,    &get_num, nullptr),    0);
+        EXPECT_EQ(QPTPool_get_steal(pool,    &get_num, &get_denom), 0);
         EXPECT_EQ(get_num, num);
         EXPECT_EQ(get_denom, denom);
         QPTPool_destroy(pool);
@@ -559,13 +570,16 @@ TEST(QueuePerThreadPool, prop_debug_buffers) {
         QPTPool_destroy(pool);
     }
 
-    // good
     {
         QPTPool_t *pool = QPTPool_init(THREADS, nullptr);
         struct OutputBuffers *set_debug_buffers = reinterpret_cast<struct OutputBuffers *>(1);
-        EXPECT_EQ(QPTPool_set_debug_buffers(pool, set_debug_buffers), 0);
+        EXPECT_EQ(QPTPool_set_debug_buffers(nullptr, set_debug_buffers), 1);
+        EXPECT_EQ(QPTPool_set_debug_buffers(pool,    set_debug_buffers), 0);
+
         struct OutputBuffers *get_debug_buffers = nullptr;
-        EXPECT_EQ(QPTPool_get_debug_buffers(pool, &get_debug_buffers), 0);
+        EXPECT_EQ(QPTPool_get_debug_buffers(nullptr, &get_debug_buffers), 1);
+        EXPECT_EQ(QPTPool_get_debug_buffers(pool,    nullptr),            0);
+        EXPECT_EQ(QPTPool_get_debug_buffers(pool,    &get_debug_buffers), 0);
         EXPECT_EQ(get_debug_buffers, set_debug_buffers);
         QPTPool_destroy(pool);
     }
