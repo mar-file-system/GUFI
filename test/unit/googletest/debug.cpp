@@ -113,6 +113,9 @@ TEST(debug, print_timer) {
     };
 
     struct OutputBuffers obufs;
+    memset(&obufs, 0, sizeof(obufs));
+    EXPECT_EQ(print_timer(nullptr, 0, "", &se), -1);
+    EXPECT_EQ(print_timer(&obufs,  0, "", &se), -1);
 
     ASSERT_EQ(OutputBuffers_init(&obufs, 1, (std::size_t) 4096, nullptr), &obufs);
     EXPECT_EQ(obufs.mutex, nullptr);
