@@ -81,6 +81,7 @@ struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t c
 }
 
 size_t OutputBuffer_write(struct OutputBuffer *obuf, const void *buf, const size_t size, const int increment_count) {
+    /* Not checking arguments */
     if ((obuf->filled + size) > obuf->capacity) {
         return 0;
     }

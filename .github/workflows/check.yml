@@ -252,7 +252,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
+      run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
 
   ShellCheck:
     runs-on: ubuntu-20.04

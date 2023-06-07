@@ -115,6 +115,12 @@ TEST(OutputBuffer, use) {
     EXPECT_NO_THROW(OutputBuffer_destroy(nullptr));
 }
 
+TEST(OutputBuffer, bad) {
+    struct OutputBuffer ob;
+    EXPECT_EQ(OutputBuffer_init(nullptr,                1), nullptr);
+    EXPECT_EQ(OutputBuffer_init(&ob,     (std::size_t) -1), nullptr);
+}
+
 TEST(OutputBuffers, use) {
     EXPECT_EQ(OutputBuffers_init(nullptr, (std::size_t) 0, (std::size_t) 0, nullptr), nullptr);
 
@@ -193,4 +199,11 @@ TEST(OutputBuffers, use) {
     }
 
     EXPECT_EQ(pthread_mutex_destroy(&mutex), 0);
+}
+
+TEST(OutputBuffers, bad) {
+    struct OutputBuffers obs;
+    EXPECT_EQ(OutputBuffers_init(nullptr,                1,                1, nullptr), nullptr);
+    EXPECT_EQ(OutputBuffers_init(&obs,    (std::size_t) -1,                1, nullptr), nullptr);
+    EXPECT_EQ(OutputBuffers_init(&obs,                   1, (std::size_t) -1, nullptr), nullptr);
 }

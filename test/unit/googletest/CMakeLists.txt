@@ -66,6 +66,8 @@ cmake_minimum_required(VERSION 3.1.0)
 include(CheckLanguage)
 
 if (CMAKE_CXX_COMPILER)
+  configure_file(valgrind.suppressions valgrind.suppressions COPYONLY)
+
   include_directories(${DEP_INSTALL_PREFIX}/googletest/include)
   set(TEST_SRC
     OutputBuffers.cpp
