@@ -98,20 +98,12 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
     #define buf_size 40960 /* size of empty db.db */
     char buf[buf_size];
 
-    const off_t src_start = lseek(src_fd, 0, SEEK_CUR);
-    const off_t dst_start = lseek(dst_fd, 0, SEEK_CUR);
-
-    if (lseek(src_fd, 0, SEEK_SET) != 0) {
-        return -1;
-    }
-
-    if (lseek(dst_fd, 0, SEEK_SET) != 0) {
-        return -1;
-    }
+    off_t src_off = 0;
+    off_t dst_off = 0;
 
     ssize_t copied = 0;
     while ((size_t) copied < size) {
-        const ssize_t r = read(src_fd, buf, buf_size);
+        const ssize_t r = pread(src_fd, buf, buf_size, src_off);
         if (r == 0) {
             break;
         }
@@ -120,15 +112,18 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
             break;
         }
 
+        src_off += r;
+
         ssize_t written = 0;
         while (written < r) {
-            const ssize_t w = write(dst_fd, buf + written, buf_size - written);
+            const ssize_t w = pwrite(dst_fd, buf + written, r - written, dst_off);
             if (w < 1) {
                 copied = -1;
                 break;
             }
 
             written += w;
+            dst_off += w;
         }
 
         if (copied == -1) {
@@ -136,11 +131,6 @@ static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
         }
 
         copied += written;
-    }
-
-    if (copied == -1) {
-        lseek(src_fd, src_start, SEEK_SET);
-        lseek(dst_fd, dst_start, SEEK_SET);
     }
 
     return copied;
