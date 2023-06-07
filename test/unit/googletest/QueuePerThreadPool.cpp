@@ -101,6 +101,15 @@ TEST(QueuePerThreadPool, no_start_stop) {
     QPTPool_destroy(pool);
 }
 
+TEST(QueuePreThreadPool, bad_init) {
+    EXPECT_EQ(QPTPool_init(-1, nullptr), nullptr);
+    EXPECT_EQ(QPTPool_init_with_props(-1, nullptr, nullptr, nullptr, 0, 0, 0
+                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                      , nullptr
+                                      #endif
+                  ), nullptr);
+}
+
 TEST(QueuePerThreadPool, bad_start) {
     // already started
     setup_pool(THREADS, nullptr);
