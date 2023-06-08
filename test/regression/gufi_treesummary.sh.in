@@ -163,40 +163,6 @@ echo
 echo "# Bad path"
 remove_extra "${GUFI_TREESUMMARY} \"${INDEXROOT}/1KB\""
 echo
-
-# undo changes
-run_no_sort "${GUFI_QUERY} -w -T \"DROP TABLE treesummary;\" \"${INDEXROOT}\""
-run_no_sort "${SQLITE3} \"${INDEXROOT}/unusual#? directory ,/db.db\" \"UPDATE summary SET totfiles = 1;\""
-
-# rollup index
-run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | @SED@ '/Ran.*/d; /Took.*/d;'
-
-echo "# Start with no treesummary tables"
-query
-echo
-
-echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
-remove_extra "${GUFI_TREESUMMARY} -X -d \" \" \"${INDEXROOT}\""
-echo
-
-echo "# Traversed paths (1)"
-keep_paths "${GUFI_TREESUMMARY} -P -X -d \"|\" \"${INDEXROOT}\""
-echo
-
-echo "# Still no treesummary table"
-query
-echo
-
-@FIND@ "${INDEXROOT}" -type d | @SORT@ | while read -r path
-do
-    echo "# Generate treesummary table in \"${path}\""
-    remove_extra "${GUFI_TREESUMMARY} \"${path}\""
-    echo
-
-    echo "# Treesummary table is in \"${path}\""
-    query_path "${path}"
-    echo
-done
 ) |& replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_treesummary.expected "${OUTPUT}"

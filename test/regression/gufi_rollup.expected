@@ -76,6 +76,25 @@ $ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentrie
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | wc -l
 165
 
+$ gufi_query -d " " -T "SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1" "prefix"
+prefix/o+rx/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix/u/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix/ug/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix/ugo: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix: totalsubdirs: 68 maxsubdirfiles: 3 totfiles: 96
+
 $ gufi_find -type d | wc -l
 69
 
@@ -694,6 +713,77 @@ $ gufi_query -d " " -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentrie
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" | wc -l
 165
+
+$ gufi_query -d " " -T "SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1" "prefix"
+prefix/o+rx/o+rx/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/o+rx/o+rx/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/o+rx/o+rx/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/o+rx/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx/u/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/o+rx/u/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/o+rx/u/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/o+rx/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx/ug/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/o+rx/ug/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/o+rx/ug/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/o+rx/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx/ugo/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/o+rx/ugo/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/o+rx/ugo/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/o+rx/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/o+rx: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix/u/o+rx/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/u/o+rx/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/u/o+rx/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/u/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u/u/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/u/u/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/u/u/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/u/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u/ug/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/u/ug/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/u/ug/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/u/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u/ugo/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/u/ugo/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/u/ugo/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/u/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/u: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix/ug/o+rx/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ug/o+rx/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ug/o+rx/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ug/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug/u/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ug/u/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ug/u/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ug/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug/ug/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ug/ug/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ug/ug/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ug/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug/ugo/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ug/ugo/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ug/ugo/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ug/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ug: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix/ugo/o+rx/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ugo/o+rx/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ugo/o+rx/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ugo/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ugo/u/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ugo/u/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ugo/u/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ugo/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ugo/ug/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ugo/ug/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ugo/ug/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ugo/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ugo/ugo/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
+prefix/ugo/ugo/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
+prefix/ugo/ugo/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3
+prefix/ugo/ugo: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
+prefix/ugo: totalsubdirs: 16 maxsubdirfiles: 3 totfiles: 24
+prefix: totalsubdirs: 68 maxsubdirfiles: 3 totfiles: 96
 
 $ gufi_find -type d | wc -l
 69

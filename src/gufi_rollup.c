@@ -398,7 +398,7 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
     }
 
     struct Permissions *child_perms =
-        malloc(sizeof(struct Permissions) *sll_get_size(&rollup->data.subdirs));
+        malloc(sizeof(struct Permissions) * sll_get_size(&rollup->data.subdirs));
 
     /* get permissions of each child */
     size_t idx = 0;
@@ -597,6 +597,14 @@ static const char rollup_subdir[] =
     "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
     "SELECT filename, attachname, uid, gid FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";";
 
+/*
+ * generate treesummary table for rolled up directories since the
+ * data is immediately available
+ */
+static const char rollup_treesummary[] =
+    tsql
+    "INSERT INTO " TREESUMMARY " SELECT COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), TOTAL(rectype), TOTAL(uid), TOTAL(gid) FROM " SUMMARY ";";
+
 struct CallbackArgs {
     struct template_db *xattr;
     char *parent;
@@ -720,6 +728,7 @@ int do_rollup(struct RollUp *rollup,
 
     if (exec_rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to copy \"%s\" entries into pentries table: %s\n", rollup->data.name, err);
+        sqlite3_free(err);
         rc = -1;
         goto end_rollup;
     }
@@ -756,6 +765,7 @@ int do_rollup(struct RollUp *rollup,
             timestamp_end_print(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
             if (exec_rc != SQLITE_OK) {
                 fprintf(stderr, "Error: Failed to copy \"%s\" subdir pentries into pentries table: %s\n", child->name, err);
+                sqlite3_free(err);
             }
         }
 
@@ -769,13 +779,123 @@ int do_rollup(struct RollUp *rollup,
         }
     }
 
+    /* generate treesummary table */
+    if (!rc) {
+        timestamp_create_start(rollup_treesummary);
+        exec_rc = sqlite3_exec(dst, rollup_treesummary, NULL, NULL, &err);
+        timestamp_end_print(timestamp_buffers, id, "rollup_treesummary", rollup_treesummary);
+        if (exec_rc != SQLITE_OK) {
+            fprintf(stderr, "Error: Failed to generate tree summary table for \"%s\": %s\n", rollup->data.name, err);
+            sqlite3_free(err);
+        }
+    }
+
     timestamp_end_print(timestamp_buffers, id, "rollup_subdirs", rollup_subdirs);
 
 end_rollup:
-    sqlite3_free(err);
-
     timestamp_end_print(timestamp_buffers, id, "do_rollup", do_roll_up);
     return rc;
+}
+
+static int treesummary_exists(void *args, int count, char **data, char **columns) {
+    (void) count; (void) data; (void) columns;
+    int *trecs = (int *) args;
+    (*trecs)++;
+    return 0;
+}
+
+/*
+ * generate treesummary tables for directories that did not roll up
+ *
+ * every child is either
+ *     - a leaf, and thus all the data is available in the summary table, or
+ *     - has a treesummary table because BottomUp is comming back up
+ *
+ * reopen child dbs to collect data
+ *     - not super efficient, but should not happen too often
+ */
+static int collect_treesummary(sqlite3 *db, struct RollUp *rollup
+                               timestamp_sig) {
+    char *err = NULL;
+
+    #ifdef DEBUG
+    #ifdef PER_THREAD_STATS
+    const size_t id = rollup->data.tid.up;
+    #endif
+    #endif
+
+    /* drop existing treesummary table and create a new one */
+    timestamp_create_start(drop_treesummary);
+    int exec_rc = sqlite3_exec(db, tsql, NULL, NULL, &err);
+    timestamp_end_print(timestamp_buffers, id, "drop_treesummary", drop_treesummary);
+
+    if (exec_rc != SQLITE_OK) {
+            fprintf(stderr, "Warning: Failed to drop treesummary table from \"%s\": %s\n",
+                rollup->data.name, err);
+        sqlite3_free(err);
+        return 1;
+    }
+
+    struct sum sum;
+    struct sum tsum;
+    zeroit(&tsum);
+
+    sll_loop(&rollup->data.subdirs, node) {
+        struct RollUp *child = (struct RollUp *) sll_node_data(node);
+
+        char dbname[MAXPATH] = {0};
+        SNFORMAT_S(dbname, MAXPATH, 3,
+                   child->data.name, child->data.name_len,
+                   "/", (size_t) 1,
+                   DBNAME, DBNAME_LEN);
+
+        sqlite3 *child_db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 1
+                                   , NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , NULL, NULL
+                                   , NULL, NULL
+                                   #endif
+            );
+        if (child_db) {
+            int trecs = 0;
+            timestamp_create_start(find_child_treesummary);
+            exec_rc = sqlite3_exec(child_db, "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
+                                   treesummary_exists, &trecs, NULL);
+
+            timestamp_end_print(timestamp_buffers, id, "find_child_treesummary", find_child_treesummary);
+
+            if (exec_rc != SQLITE_OK) {
+                fprintf(stderr, "Warning: Failed to collect treesummary from child \"%s\" for \"%s\": %s\n",
+                        child->data.name, rollup->data.name, err);
+                sqlite3_free(err);
+                err = NULL;
+                closedb(child_db);
+                continue;
+            }
+
+            zeroit(&sum);
+            if (trecs < 1) {
+                /* leaf - add summary data from this child */
+                querytsdb(child->data.name, &sum, child_db, 0);
+            } else {
+                /* non-leaf add treesummary data from this child */
+                querytsdb(child->data.name, &sum, child_db, 1);
+            }
+
+            tsumit(&sum, &tsum);
+        }
+
+        closedb(child_db);
+    }
+
+    /* add summary data from this directory */
+    zeroit(&sum);
+    querytsdb(rollup->data.name, &tsum, db, 0);
+    tsumit(&sum, &tsum);
+    tsum.totsubdirs--;
+
+    inserttreesumdb(rollup->data.name, db, &tsum, 0, 0, 0);
+    return 0;
 }
 
 void rollup(void *args timestamp_sig) {
@@ -858,6 +978,8 @@ void rollup(void *args timestamp_sig) {
                     stats[id].remaining++;
                 }
             }
+
+            collect_treesummary(dst, dir timestamp_args);
         }
     }
     else {

@@ -84,6 +84,9 @@ extern "C" {
 #define GUFI_SQLITE_VFS       "unix-none"
 #define GUFI_SQLITE_VFS_URI   "&vfs=" GUFI_SQLITE_VFS
 
+#define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
+#define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
+
 #define READDIRPLUS       "readdirplus"
 extern const char READDIRPLUS_CREATE[];
 extern const char READDIRPLUS_INSERT[];
@@ -117,7 +120,9 @@ extern const char VRPENTRIES_CREATE[];
 
 /* aggregate data of tree starting at current directory */
 #define TREESUMMARY       "treesummary"
-extern const char tsql[];
+#define tsql                                                            \
+    DROP_TABLE(TREESUMMARY)                                             \
+    "CREATE TABLE " TREESUMMARY "(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);"
 
 extern const char vssqldir[];
 extern const char vssqluser[];

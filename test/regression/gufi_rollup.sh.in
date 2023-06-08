@@ -88,6 +88,8 @@ do_tests() {
     run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | @WC@ -l"
     run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | @WC@ -l"
 
+    run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1\" \"${INDEXROOT}\""
+
     run_no_sort "${GUFI_FIND} -type d | @WC@ -l"
     run_no_sort "${GUFI_FIND} -type f | @WC@ -l"
     run_no_sort "${GUFI_FIND} | @WC@ -l"

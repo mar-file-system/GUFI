@@ -243,6 +243,12 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                          "SELECT filename FROM " EXTERNAL_DBS_ROLLUP ";"
                          "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
                          "END TRANSACTION;"
+                         /*
+                          * not removing tree summary table since it is useful
+                          * and there's no way to tell if the tree summary table
+                          * existed before roll up (can add a column if necessary)
+                          * (maybe make removing the tree summary table optional?)
+                          */
                          "VACUUM;",
                          process_xattrs,
                          work->name,
