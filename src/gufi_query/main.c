@@ -759,22 +759,21 @@ int main(int argc, char *argv[])
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_create_start(cleanup_globals);
-    #endif
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    /* aggregate per thread query counts */
     size_t query_count = 0;
-    for(size_t i = 0; i < in.maxthreads; i++) {
-        query_count += pa.ta[i].queries;
-    }
     #endif
 
-    /* clear out buffered data */
     for(size_t i = 0; i < in.maxthreads; i++) {
         ThreadArgs_t *ta = &(pa.ta[i]);
+
+        /* clear out buffered data */
         OutputBuffer_flush(&ta->output_buffer, ta->outfile);
 
         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        /* aggregate per thread query counts */
+        query_count += ta->queries;
+
+        /* aggregate output row count */
         rows += ta->output_buffer.count;
         #endif
     }

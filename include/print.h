@@ -66,7 +66,6 @@ OF SUCH DAMAGE.
 #define GUFI_QUERY_PRINT_H
 
 #include <pthread.h>
-#include <sqlite3.h>
 #include <stddef.h>
 #include <stdio.h>
 
