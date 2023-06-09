@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 
 #include "pcre.h"
 
+#include "BottomUp.h"
 #include "dbutils.h"
 
 const char READDIRPLUS_CREATE[] =
@@ -112,6 +113,9 @@ const char PENTRIES_CREATE[] =
 const char VRPENTRIES_CREATE[] =
     DROP_VIEW(VRPENTRIES)
     "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgidI, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".isroot as atroot, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
+
+const char TREESUMMARY_EXISTS[] =
+    "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');";
 
 /* summary and tsummary views */
 #define vssql(name, value)                                                                           \
@@ -175,6 +179,17 @@ int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, co
         sqlite3_free(err_msg);
     }
     return rc;
+}
+
+int create_treesummary_tables(const char *name, sqlite3 *db, void *args) {
+    if ((create_table_wrapper(name, db, "tsql",        TREESUMMARY_CREATE) != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)          != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)         != SQLITE_OK) ||
+        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup)        != SQLITE_OK)) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int set_db_pragmas(sqlite3 *db) {
@@ -701,23 +716,17 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid)
 {
-    char *err_msg = 0;
-    char sqlstmt[MAXSQL];
-    int rc;
-    int depth;
-    size_t i;
-
-    depth=0;
-    i=0;
-    while (i < strlen(name)) {
-      if (!strncmp(name+i,"/",1)) depth++;
-      i++;
+    int depth = 0;
+    for(const char *c = name; *c; c++) {
+        depth += (*c == '/');
     }
-    SNPRINTF(sqlstmt,MAXSQL,"INSERT INTO treesummary VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+
+    char sqlstmt[MAXSQL];
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO treesummary VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
        su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
 
-    rc = sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg);
-    if (rc != SQLITE_OK ) {
+    char *err_msg = NULL;
+    if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg) != SQLITE_OK ) {
         fprintf(stderr, "SQL error on insert (treesummary): %s\n", err_msg);
         sqlite3_free(err_msg);
         return -1;
@@ -1236,6 +1245,126 @@ int get_rollupscore(sqlite3 *db, int *rollupscore) {
                      get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
         sqlite3_free(err);
         return -1;
+    }
+
+    return 0;
+}
+
+int treesummary_exists_callback(void *args, int count, char **data, char **columns) {
+    (void) count; (void) data; (void) columns;
+    int *trecs = (int *) args;
+    (*trecs)++;
+    return 0;
+}
+
+int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
+                                 const enum CheckRollupScore check_rollupscore) {
+    int rollupscore = 0;
+    switch(check_rollupscore) {
+        case ROLLUPSCORE_CHECK:
+            get_rollupscore(db, &rollupscore);
+            break;
+        case ROLLUPSCORE_KNOWN_YES:
+            rollupscore = 1;
+            break;
+        case ROLLUPSCORE_DONT_CHECK:
+        case ROLLUPSCORE_KNOWN_NO:
+        default:
+            break;
+    }
+
+    if (rollupscore != 0) {
+        /*
+         * this directory has been rolled up, so all information is
+         * available here: compute the treesummary, no need to go
+         * further down
+         *
+         * don't bother copying it out of sqlite only to put it back in
+         *
+         * this ignores all treesummary tables since all summary
+         * table rows are immediately available
+         *
+         * -1 because a directory is not a subdirectory of itself
+         */
+        static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
+            "INSERT INTO " TREESUMMARY " SELECT COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), rectype, uid, gid FROM " SUMMARY ";";
+
+        char *err = NULL;
+        if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
+            fprintf(stderr, "Error: Failed to compute treesummary for \"%s\": %s\n",
+                    dirname, err);
+            sqlite3_free(err);
+            return 1;
+        }
+    }
+    else {
+        /*
+         * this directory has not rolled up, so have to use child
+         * directories to get information
+         *
+         * every child is either
+         *     - a leaf, and thus all the data is available in the summary table, or
+         *     - has a treesummary table because BottomUp is comming back up
+         *
+         * reopen child dbs to collect data
+         *     - not super efficient, but should not happen too often
+         */
+
+        struct sum tsum;
+        zeroit(&tsum);
+
+        struct sum sum;
+        sll_loop(subdirs, node) {
+            struct BottomUp *subdir = (struct BottomUp *) sll_node_data(node);
+
+            char child_dbname[MAXPATH];
+            SNFORMAT_S(child_dbname, sizeof(child_dbname), 2,
+                       subdir->name, subdir->name_len,
+                       "/" DBNAME, DBNAME_LEN + 1);
+
+            sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL
+                                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                       , NULL, NULL
+                                       , NULL, NULL
+                                       #endif
+                );
+            if (!child_db) {
+                 continue;
+            }
+
+            char *err = NULL;
+            int trecs = 0;
+            if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
+                             treesummary_exists_callback,
+                             &trecs, &err) == SQLITE_OK) {
+                zeroit(&sum);
+                if (trecs < 1) {
+                    /* add summary data from this child */
+                    querytsdb(dirname, &sum, child_db, 0);
+                } else {
+                    /* add treesummary data from this child */
+                    querytsdb(dirname, &sum, child_db, 1);
+                }
+
+                /* aggregate subdirectory summaries */
+                tsumit(&sum, &tsum);
+            }
+            else {
+                fprintf(stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n",
+                        subdir->name, err);
+                sqlite3_free(err);
+            }
+
+            closedb(child_db);
+        }
+
+        /* add summary data from this directory */
+        zeroit(&sum);
+        querytsdb(dirname, &tsum, db, 0);
+        tsumit(&sum, &tsum);
+        tsum.totsubdirs--;
+
+        inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
     }
 
     return 0;

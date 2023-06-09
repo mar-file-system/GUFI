@@ -1,0 +1,26 @@
+# gufi_treesummary_all help
+$ gufi_treesummary_all
+usage: gufi_treesummary_all [options] GUFI_index
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+
+GUFI_index               path to GUFI index
+
+
+# Start with no treesummary tables
+$ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
+
+# Generate treesummary tables in all directories
+$ gufi_treesummary_all "prefix"
+
+# Query treesummary tables
+$ gufi_query -d " " -T "SELECT rpath(s.sname, s.sroll), t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.totfiles, t.totlinks FROM treesummary AS t, vrsummary as s;" "prefix"
+prefix 4 6 1 13 2
+prefix/directory 1 3 1 4 1
+prefix/directory/subdirectory 0 1 1 1 1
+prefix/leaf_directory 0 2 0 2 0
+prefix/unusual#? directory , 0 1 0 1 0
+
+

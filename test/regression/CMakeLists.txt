@@ -99,6 +99,7 @@ set(BINARIES
   gufi_dir2trace
   gufi_trace2index
   gufi_treesummary
+  gufi_treesummary_all
   gufi_query
   querydbs
 )

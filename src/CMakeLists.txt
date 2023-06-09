@@ -172,6 +172,7 @@ set(C_SOURCES
   gufi_stat.c
   gufi_trace2index.c
   gufi_treesummary.c
+  gufi_treesummary_all.c
   gufi_unrollup.c
   parallel_rmr.c
   querydbs.c

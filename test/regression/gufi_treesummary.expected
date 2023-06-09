@@ -38,7 +38,6 @@ $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table'
 
 # Generate treesummary table in prefix/directory
 $ gufi_treesummary prefix/directory
-writetsum 1
 totals:
 totfiles 4 totlinks 1
 totsize 10
@@ -51,7 +50,6 @@ prefix/directory
 
 # Generate treesummary table in prefix/leaf_directory
 $ gufi_treesummary "prefix/leaf_directory"
-writetsum 1
 totals:
 totfiles 2 totlinks 0
 totsize 13
@@ -73,7 +71,6 @@ prefix|d
 
 # Generate treesummary table in prefix
 $ gufi_treesummary prefix
-writetsum 1
 totals:
 totfiles 13 totlinks 2
 totsize 1049649
@@ -91,7 +88,6 @@ $ sqlite3 "prefix/unusual#? directory ,/db.db" "UPDATE summary SET totfiles = 10
 
 # Regenerate treesummary table in prefix
 $ gufi_treesummary "prefix"
-writetsum 1
 totals:
 totfiles 112 totlinks 2
 totsize 1049649

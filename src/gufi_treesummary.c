@@ -83,27 +83,6 @@ struct PoolArgs {
     struct sum *sums; /* per thread summary data */
 };
 
-static int create_tables(const char *name, sqlite3 *db, void *args) {
-    struct input *in = (struct input *) args;
-
-    printf("writetsum %d\n", !in->dry_run);
-    if ((create_table_wrapper(name, db, "tsql",        tsql)        != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)   != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)  != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup) != SQLITE_OK)) {
-        return -1;
-    }
-
-    return 0;
-}
-
-static int treesummary_exists(void *args, int count, char **data, char **columns) {
-    (void) count; (void) data; (void) columns;
-    int *trecs = (int *) args;
-    (*trecs)++;
-    return 0;
-}
-
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct work *passmywork = (struct work *) data;
@@ -129,7 +108,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                passmywork->name, passmywork->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 1
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
                          , NULL, NULL
                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                          , NULL, NULL
@@ -141,14 +120,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         zeroit(&sum);
 
         int rollupscore = 0;
-        get_rollupscore(db, &rollupscore);                      /* should not error */
+        get_rollupscore(db, &rollupscore);
         if (rollupscore != 0) {
             /*
              * this directory has been rolled up, so all information is
-             * available here: sum it all up, no need to go further down
+             * available here: compute the treesummary, no need to go
+             * further down
              *
-             * no need to handle level == 0, since this collects data
-             * from all summary tables, including the one at level 0
+             * cannot operate within sqlite since this function is
+             * aggregating into memory
              *
              * this ignores all treesummary tables since all summary
              * tables are immediately available
@@ -158,9 +138,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             sum.totsubdirs = querytsdb(passmywork->name, &sum, db, 0) - 1;
         }
         else {
+            /*
+             * should not error; if this does error,
+             * treat as no treesummary table
+             */
             int trecs = 0;
-            sqlite3_exec(db, "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
-                         treesummary_exists, &trecs, NULL);     /* should not error */
+            sqlite3_exec(db, TREESUMMARY_EXISTS,
+                         treesummary_exists_callback, &trecs, NULL);
 
             if ((trecs < 1) || (passmywork->level == 0)) {
                 /*
@@ -216,8 +200,8 @@ int compute_treesummary(struct PoolArgs *pa) {
     int rc = lstat(dbname, &st);
 
     if (!pa->in.dry_run) {
-        sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 1,
-                              create_tables, &pa->in
+        sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0,
+                              create_treesummary_tables, &pa->in
                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                               , NULL, NULL
                               , NULL, NULL

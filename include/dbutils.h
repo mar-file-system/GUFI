@@ -120,9 +120,11 @@ extern const char VRPENTRIES_CREATE[];
 
 /* aggregate data of tree starting at current directory */
 #define TREESUMMARY       "treesummary"
-#define tsql                                                            \
+#define TREESUMMARY_CREATE                                              \
     DROP_TABLE(TREESUMMARY)                                             \
     "CREATE TABLE " TREESUMMARY "(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);"
+
+extern const char TREESUMMARY_EXISTS[];
 
 extern const char vssqldir[];
 extern const char vssqluser[];
@@ -137,6 +139,7 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err);
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql);
+int create_treesummary_tables(const char *name, sqlite3 *db, void *args);
 
 int set_db_pragmas(sqlite3 *db);
 
@@ -217,6 +220,18 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
                        const char *src, size_t *src_len);
 
 int get_rollupscore(sqlite3 *db, int *rollupscore);
+
+int treesummary_exists_callback(void *args, int count, char **data, char **columns);
+
+enum CheckRollupScore {
+    ROLLUPSCORE_CHECK,
+    ROLLUPSCORE_DONT_CHECK,
+    ROLLUPSCORE_KNOWN_YES,
+    ROLLUPSCORE_KNOWN_NO,
+};
+
+int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
+                                 const enum CheckRollupScore check_rollupscore);
 
 #ifdef __cplusplus
 }

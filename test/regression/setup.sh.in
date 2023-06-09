@@ -118,19 +118,20 @@ chmod 666 "${CONFIG}"
 # paths of all executables
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
-GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_FIND="@CMAKE_CURRENT_BINARY_DIR@/gufi_find.py"
 GUFI_GETFATTR="@CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.py"
 GUFI_LS="@CMAKE_CURRENT_BINARY_DIR@/gufi_ls.py"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
+GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
 GUFI_STAT="@CMAKE_BINARY_DIR@/src/gufi_stat"
 GUFI_STATS="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.py"
 GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
-QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
-GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
+GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
+GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
 GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
+QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
@@ -150,13 +151,14 @@ replace() {
     s/${GUFI_GETFATTR//\//\\/}/gufi_getfattr/g;
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
+    s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
     s/${GUFI_STAT//\//\\/}/gufi_stat/g
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
-    s/${QUERYDBS//\//\\/}/querydbs/g;
-    s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
+    s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;
     s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
+    s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 
