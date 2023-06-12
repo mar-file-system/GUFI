@@ -193,8 +193,9 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
         return -1;
     }
 
-    sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0
-                         , create_tables, NULL
+    sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                         GUFI_SQLITE_BASE_VFS,
+                         0, 0, create_tables, NULL
                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                          , NULL, NULL
                          , NULL, NULL
@@ -262,8 +263,9 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
         return NULL;
     }
 
-    return opendb(dst, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0
-                  , NULL, NULL
+    return opendb(dst, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                  GUFI_SQLITE_BASE_VFS,
+                  1, 0, NULL, NULL
                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
                   , NULL, NULL
                   , NULL, NULL

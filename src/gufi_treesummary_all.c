@@ -77,8 +77,8 @@ static void treesummary(void *args timestamp_sig) {
                dir->name, dir->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0,
-                         create_treesummary_tables, NULL
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, GUFI_SQLITE_BASE_VFS,
+                         1, 0, create_treesummary_tables, NULL
                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                          , NULL, NULL
                          , NULL, NULL

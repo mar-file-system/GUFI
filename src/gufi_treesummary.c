@@ -108,8 +108,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                passmywork->name, passmywork->name_len,
                "/" DBNAME, DBNAME_LEN + 1);
 
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
-                         , NULL, NULL
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY,
+                         GUFI_SQLITE_BASE_VFS,
+                         1, 0, NULL, NULL
                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                          , NULL, NULL
                          , NULL, NULL
@@ -200,8 +201,8 @@ int compute_treesummary(struct PoolArgs *pa) {
     int rc = lstat(dbname, &st);
 
     if (!pa->in.dry_run) {
-        sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0,
-                              create_treesummary_tables, &pa->in
+        sqlite3 *tdb = opendb(dbname, SQLITE_OPEN_READWRITE, GUFI_SQLITE_BASE_VFS,
+                              1, 0, create_treesummary_tables, &pa->in
                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
                               , NULL, NULL
                               , NULL, NULL

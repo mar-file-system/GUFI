@@ -74,14 +74,12 @@ OF SUCH DAMAGE.
 #include "external.h"
 #include "template_db.h"
 #include "utils.h"
+#include "vfs.h"
 #include "xattrs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define GUFI_SQLITE_VFS       "unix-none"
-#define GUFI_SQLITE_VFS_URI   "&vfs=" GUFI_SQLITE_VFS
 
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"
 #define DROP_VIEW(name)  "DROP VIEW  IF EXISTS " #name ";"
@@ -142,7 +140,7 @@ int create_treesummary_tables(const char *name, sqlite3 *db, void *args);
 
 int set_db_pragmas(sqlite3 *db);
 
-sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
+sqlite3 *opendb(const char *name, int flags, const char *vfs, const int setpragmas, const int load_extensions,
                 int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
                 , struct start_end *sqlite3_open,   struct start_end *set_pragmas

@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 
 #include "gufi_query/PoolArgs.h"
 
-int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
+int PoolArgs_init(PoolArgs_t *pa, struct input *in, const char *vfs, pthread_mutex_t *global_mutex) {
     /* Not checking arguments */
 
     memset(pa, 0, sizeof(*pa));
@@ -94,10 +94,11 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             SNPRINTF(ta->dbname, MAXPATH, "%s.%zu", in->outname.data, i);
         }
         else {
-            SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
+            SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared", i);
         }
 
-        ta->outdb = opendb(ta->dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1, NULL, NULL
+        ta->outdb = opendb(ta->dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                           vfs, 1, 1, NULL, NULL
                            #if defined(DEBUG) && defined(PER_THREAD_STATS)
                            , NULL, NULL
                            , NULL, NULL

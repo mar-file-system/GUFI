@@ -67,16 +67,17 @@ OF SUCH DAMAGE.
 #include "print.h"
 
 /* must have shared cache */
-static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
+static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared";
 /* users should never use this name */
 static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate";
 
-static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                , NULL, NULL
-                                , NULL, NULL
-#endif
+static sqlite3 *aggregate_setup(char *dbname, const char *vfs, const char *init_agg) {
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                         vfs, 1, 1, NULL, NULL
+                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , NULL, NULL
+                         , NULL, NULL
+                         #endif
         );
     if (!db) {
         fprintf(stderr, "Could not open aggregation database\n");
@@ -98,7 +99,7 @@ static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
     return err?NULL:db;
 }
 
-Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
+Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in, const char *vfs) {
     /* Not checking arguments */
 
     aggregate->outfile = stdout;
@@ -128,7 +129,7 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
     }
 
     /* always open an aggregate db */
-    if (!(aggregate->db = aggregate_setup(dbname, in->sql.init_agg.data))) {
+    if (!(aggregate->db = aggregate_setup(dbname, vfs, in->sql.init_agg.data))) {
         aggregate_fin(aggregate, in);
         return NULL;
     }

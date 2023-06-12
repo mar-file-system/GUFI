@@ -462,8 +462,9 @@ int process_path(const char *path, FILE *out, const char *format) {
 
     int rc = 0;
     sqlite3 *db = NULL;
-    if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 1
-                     , NULL, NULL
+    if ((db = opendb(dbname, SQLITE_OPEN_READONLY,
+                     GUFI_SQLITE_BASE_VFS,
+                     0, 1, NULL, NULL
                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                      , NULL, NULL
                      , NULL, NULL

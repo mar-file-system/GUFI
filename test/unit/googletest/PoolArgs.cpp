@@ -75,11 +75,12 @@ extern "C" {
 
 #include "gufi_query/PoolArgs.h"
 #include "print.h"
+#include "vfs.h"
 
 }
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; // not const
-static const char DBNAME_FORMAT[] = "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
+static const char DBNAME_FORMAT[] = "file:memory%zu?mode=memory&cache=shared";
 static const size_t OB_SIZE = 4096;
 static const std::string TABLE_NAME = "test_table";
 
@@ -145,7 +146,7 @@ void poolargs_stdout(bool aggregate) {
     setup_input(&in, STDOUT, aggregate);
 
     PoolArgs pa;
-    ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
+    ASSERT_EQ(PoolArgs_init(&pa, &in, GUFI_SQLITE_BASE_VFS, &mutex), 0);
 
     test_common(&pa);
 
@@ -186,7 +187,7 @@ TEST(PoolArgs, OUTFILE) {
     EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
-    ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
+    ASSERT_EQ(PoolArgs_init(&pa, &in, GUFI_SQLITE_BASE_VFS, &mutex), 0);
 
     test_common(&pa);
 
@@ -227,7 +228,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
     EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
-    ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
+    ASSERT_EQ(PoolArgs_init(&pa, &in, GUFI_SQLITE_BASE_VFS, &mutex), 0);
 
     test_common(&pa);
 
@@ -270,7 +271,7 @@ TEST(PoolArgs, OUTDB) {
     EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
-    ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
+    ASSERT_EQ(PoolArgs_init(&pa, &in, GUFI_SQLITE_BASE_VFS, &mutex), 0);
 
     test_common(&pa);
 
@@ -307,7 +308,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
     EXPECT_EQ(remove(in.outname.data), 0);
 
     PoolArgs pa;
-    ASSERT_EQ(PoolArgs_init(&pa, &in, &mutex), 0);
+    ASSERT_EQ(PoolArgs_init(&pa, &in, GUFI_SQLITE_BASE_VFS, &mutex), 0);
 
     test_common(&pa);
 

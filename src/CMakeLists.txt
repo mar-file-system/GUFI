@@ -114,6 +114,7 @@ set(GUFI_SOURCES
   trace.c
   trie.c
   utils.c
+  vfs.c
   xattrs.c
 )
 add_library(GUFI STATIC ${GUFI_SOURCES})

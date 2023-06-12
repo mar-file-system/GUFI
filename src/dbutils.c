@@ -249,7 +249,7 @@ int set_db_pragmas(sqlite3 *db) {
 #define check_set_end(name)
 #endif
 
-sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
+sqlite3 *opendb(const char *name, int flags, const char *vfs, const int setpragmas, const int load_extensions,
                  int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
                  , struct start_end *sqlite3_open,   struct start_end *set_pragmas
@@ -259,7 +259,7 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
     sqlite3 *db = NULL;
 
     check_set_start(sqlite3_open);
-    if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
+    if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, vfs) != SQLITE_OK) {
         check_set_end(sqlite3_open);
         if (!(flags & SQLITE_OPEN_CREATE)) {
             fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
@@ -1141,8 +1141,9 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
         fprintf(stderr, "Warning: Unable to set permissions for %s: %d\n", filename, err);
     }
 
-    xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0
-                     , NULL, NULL
+    xdb->db = opendb(filename, SQLITE_OPEN_READWRITE,
+                     GUFI_SQLITE_BASE_VFS,
+                     0, 0, NULL, NULL
                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
                      , NULL, NULL
                      , NULL, NULL
@@ -1322,7 +1323,9 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
                        subdir->name, subdir->name_len,
                        "/" DBNAME, DBNAME_LEN + 1);
 
-            sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL
+            sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY,
+                                       GUFI_SQLITE_BASE_VFS,
+                                       1, 0, NULL, NULL
                                        #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                        , NULL, NULL
                                        , NULL, NULL

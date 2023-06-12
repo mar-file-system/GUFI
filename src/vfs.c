@@ -62,52 +62,38 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_POOL_ARGS_H
-#define GUFI_QUERY_POOL_ARGS_H
+#include <string.h>
 
-#include <pthread.h>
-#include <stddef.h>
-#include <stdio.h>
-#ifdef DEBUG
-#include <time.h>
-#endif
+#include "sqlite3.h"
 
-#include "OutputBuffers.h"
-#include "bf.h"
-#include "dbutils.h"
-#if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-#include "gufi_query/timers.h"
-#endif
-#include "trie.h"
+#include "vfs.h"
 
-typedef struct ThreadArgs {
-    char dbname[MAXPATH];
-    sqlite3 *outdb;                    /* either user named or in-memory */
-    FILE *outfile;                     /* always points to STDOUT or a user defined file */
-    struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
+static sqlite3_vfs *unix_none = NULL;
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    size_t queries;                    /* query count */
-    #endif
-} ThreadArgs_t;
+/* https://www.sqlite.org/src/doc/trunk/src/os_unix.c */
+static int gufiOpen(sqlite3_vfs *pVfs, const char *zPath,
+                    sqlite3_file *pFile, int flags, int *pOutFlags){
+    /*
+     * Check database file permissions here and call unix_none->xOpen
+     * if permissions pass.
+     */
+    return unix_none->xOpen(pVfs, zPath, pFile, flags, pOutFlags);
+}
 
-typedef struct PoolArgs {
-    struct input *in;                  /* save a reference here for convenience */
-    ThreadArgs_t *ta;
+int gufi_vfs_register() {
+    if (!unix_none) {
+        if (!(unix_none = sqlite3_vfs_find(GUFI_SQLITE_BASE_VFS))) {
+            return SQLITE_NOTFOUND;
+        }
+    }
 
-    trie_t *skip;
-    pthread_mutex_t *stdout_mutex;
+    /* clone unix-none and replace the name and xOpen function */
+    static sqlite3_vfs gufi_vfs;
+    memcpy(&gufi_vfs, unix_none, sizeof(*unix_none));
+    gufi_vfs.zName = GUFI_SQLITE_VFS;
+    gufi_vfs.xOpen = gufiOpen;
 
-    #if defined(DEBUG)
-    struct timespec start_time;
-    #endif
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    total_time_t tt;
-    #endif
-} PoolArgs_t;
-
-int PoolArgs_init(PoolArgs_t *pa, struct input *in, const char *vfs, pthread_mutex_t *global_mutex);
-void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated);
-
-#endif
+    const int rc = sqlite3_vfs_register(&gufi_vfs, 0);
+    sqlite3_vfs_register(unix_none, 0); /* need to re-register unix-none? */
+    return rc;
+}

@@ -110,8 +110,9 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
 
     int rc = 0;
 
-    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0
-                         , NULL, NULL
+    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE,
+                         GUFI_SQLITE_BASE_VFS,
+                         0, 0, NULL, NULL
                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                          , NULL, NULL
                          , NULL, NULL
@@ -166,8 +167,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 0, 0
-                         , NULL, NULL
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE,
+                         GUFI_SQLITE_BASE_VFS,
+                         0, 0, NULL, NULL
                          #if defined(DEBUG) && defined(PER_THREAD_STATS)
                          , NULL, NULL
                          , NULL, NULL

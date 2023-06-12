@@ -129,8 +129,9 @@ int main(int argc, char *argv[])
         rsqlstmt = argv[idx++];
     }
 
-    if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1,
-                      NULL, NULL
+    if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE,
+                      GUFI_SQLITE_BASE_VFS,
+                      1, 1, NULL, NULL
                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
                       , NULL, NULL
                       , NULL, NULL

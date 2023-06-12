@@ -78,7 +78,7 @@ typedef struct Aggregate {
     struct OutputBuffer ob;
 } Aggregate_t;
 
-Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in);
+Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in, const char *vfs);
 void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input *in);
 int  aggregate_process(Aggregate_t *aggregate, struct input *in);
 void aggregate_fin(Aggregate_t *aggregate, struct input *in);

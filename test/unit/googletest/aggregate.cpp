@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 extern "C" {
 
 #include "gufi_query/aggregate.h"
+#include "vfs.h"
 
 }
 
@@ -108,7 +109,7 @@ TEST(gufi_query, aggregate) {
     in.skip.data             = nullptr;
 
     PoolArgs_t pa;
-    ASSERT_EQ(PoolArgs_init(&pa, &in, nullptr), 0);
+    ASSERT_EQ(PoolArgs_init(&pa, &in, GUFI_SQLITE_BASE_VFS, nullptr), 0);
 
     std::uniform_int_distribution <uint32_t> dist(0, std::numeric_limits<uint32_t>::max());
 
@@ -140,11 +141,11 @@ TEST(gufi_query, aggregate) {
 
     // init with bad SQL statement
     in.sql.init_agg.data = BAD_SQL.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
-    ASSERT_EQ(aggregate_init(&aggregate, &in), nullptr);
+    ASSERT_EQ(aggregate_init(&aggregate, &in, GUFI_SQLITE_BASE_VFS), nullptr);
 
     // init with good SQL statement
     in.sql.init_agg.data = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
-    ASSERT_NE(aggregate_init(&aggregate, &in), nullptr);
+    ASSERT_NE(aggregate_init(&aggregate, &in, GUFI_SQLITE_BASE_VFS), nullptr);
 
     // replace stdout with in-memory file
     char db_sum_str[1024] = {0};

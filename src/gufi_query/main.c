@@ -608,10 +608,16 @@ int main(int argc, char *argv[])
     timestamp_create_start(setup_globals);
     #endif
 
+    int rc = 0;
+    if ((rc = gufi_vfs_register()) != SQLITE_OK) {
+        fprintf(stderr, "Error: Could not register GUFI vfs with SQLite: %d\n", rc);
+        return -1;
+    }
+
     /* mutex writing to stdout/stderr */
     pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
     PoolArgs_t pa;
-    if (PoolArgs_init(&pa, &in, &global_mutex) != 0) {
+    if (PoolArgs_init(&pa, &in, GUFI_SQLITE_VFS, &global_mutex) != 0) {
         return -1;
     }
 
@@ -633,7 +639,7 @@ int main(int argc, char *argv[])
     Aggregate_t aggregate;
     memset(&aggregate, 0, sizeof(aggregate));
     if (in.sql.init_agg.len) {
-        if (!aggregate_init(&aggregate, &in)) {
+        if (!aggregate_init(&aggregate, &in, GUFI_SQLITE_VFS)) {
             PoolArgs_fin(&pa, in.maxthreads);
             return -1;
         }
@@ -724,7 +730,6 @@ int main(int argc, char *argv[])
     size_t rows = 0;
     #endif
 
-    int rc = 0;
     if (in.sql.init_agg.len) {
         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_create_start(aggregation);

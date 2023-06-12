@@ -62,52 +62,16 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_POOL_ARGS_H
-#define GUFI_QUERY_POOL_ARGS_H
-
-#include <pthread.h>
-#include <stddef.h>
-#include <stdio.h>
-#ifdef DEBUG
-#include <time.h>
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#include "OutputBuffers.h"
-#include "bf.h"
-#include "dbutils.h"
-#if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-#include "gufi_query/timers.h"
-#endif
-#include "trie.h"
+#define GUFI_SQLITE_BASE_VFS "unix-none"
+#define GUFI_SQLITE_VFS      "gufi"
+#define GUFI_SQLITE_VFS_URI  "&vfs=" GUFI_SQLITE_BASE_VFS
 
-typedef struct ThreadArgs {
-    char dbname[MAXPATH];
-    sqlite3 *outdb;                    /* either user named or in-memory */
-    FILE *outfile;                     /* always points to STDOUT or a user defined file */
-    struct OutputBuffer output_buffer; /* only used when outputting to STDOUT or OUTFILE */
+int gufi_vfs_register();
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    size_t queries;                    /* query count */
-    #endif
-} ThreadArgs_t;
-
-typedef struct PoolArgs {
-    struct input *in;                  /* save a reference here for convenience */
-    ThreadArgs_t *ta;
-
-    trie_t *skip;
-    pthread_mutex_t *stdout_mutex;
-
-    #if defined(DEBUG)
-    struct timespec start_time;
-    #endif
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    total_time_t tt;
-    #endif
-} PoolArgs_t;
-
-int PoolArgs_init(PoolArgs_t *pa, struct input *in, const char *vfs, pthread_mutex_t *global_mutex);
-void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated);
-
+#ifdef __cplusplus
+}
 #endif
