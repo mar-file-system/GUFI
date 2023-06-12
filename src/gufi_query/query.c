@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include "gufi_query/query.h"
+#include "print.h"
 
 /* wrapper wround sqlite3_exec to pass arguments and check for errors */
 void querydb(const char *dbname, sqlite3 *db, const char *query,

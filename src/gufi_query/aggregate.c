@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "gufi_query/aggregate.h"
+#include "print.h"
 
 /* must have shared cache */
 static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI;
