@@ -5,6 +5,7 @@ options:
   -h                     help
   -H                     show assigned input values (debugging)
   -n <threads>           number of threads
+  -s <id>                unique identifier for this index (positive integer)
   -x                     enable external database processing
   -z <max level>         maximum level to go down
   -k <filename>          file containing directory names to skip

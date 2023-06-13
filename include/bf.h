@@ -233,6 +233,14 @@ struct input {
     */
    size_t subdir_limit;
 
+   /*
+    * unique id for joining against system information table
+    *
+    * if not set, will default to 0, which should be treated as an
+    * id that is valid, but does not point to any system information
+    */
+   uint64_t system_id;
+
    /* compress work items (if compression library was found) */
    int compress;
 };

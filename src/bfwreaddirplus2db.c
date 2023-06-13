@@ -294,7 +294,7 @@ int reprocessdir(struct input *in, void * passv, DIR *dir)
     insertdbfin(res);
 
     // this i believe has to be after we close off the entries transaction
-    insertsumdb(db, passmywork->name, passmywork, &ed, &summary);
+    insertsumdb(db, passmywork->name, passmywork, &ed, &summary, 0);
     xattrs_cleanup(&ed.xattrs);
     closedb(db);
 

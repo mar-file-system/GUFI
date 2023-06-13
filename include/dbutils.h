@@ -174,7 +174,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *dat
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);
 int insertdbgor(struct work *pwork, struct entry_data *data, sqlite3 *db, sqlite3_stmt *res);
 
-int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *data, struct sum *su);
+int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *data, struct sum *su, const uint64_t system_id);
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su, int rectype, int uid, int gid);
 

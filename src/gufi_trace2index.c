@@ -381,7 +381,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         w->line[w->first_delim] = '\x00';
         const size_t basename_start = trailing_non_match_index(w->line, w->first_delim, "/", 1);
 
-        insertsumdb(db, w->line + basename_start, &dir, &ed, &summary);
+        insertsumdb(db, w->line + basename_start, &dir, &ed, &summary, in->system_id);
         xattrs_cleanup(&ed.xattrs);
         timestamp_set_end(insertsumdb);
 
@@ -651,7 +651,7 @@ int main(int argc, char *argv[]) {
     epoch = since_epoch(&main_func.start);
 
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:d:M:", 2, "trace_file... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:s:d:M:", 2, "trace_file... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)

@@ -90,14 +90,14 @@ const char ENTRIES_INSERT[] =
 
 const char SUMMARY_CREATE[] =
     DROP_TABLE(SUMMARY)
-    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
+    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64, systemid INT64);";
 
 static const char SUMMARY_INSERT[] =
-    "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
+    "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore, @systemid);";
 
 const char VRSUMMARY_CREATE[] =
     DROP_VIEW(VRSUMMARY)
-    "CREATE VIEW " VRSUMMARY " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".* FROM " SUMMARY ";";
+    "CREATE VIEW " VRSUMMARY " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".systemid AS sysid, " SUMMARY ".* FROM " SUMMARY ";";
 
 const char PENTRIES_ROLLUP_CREATE[] =
     DROP_TABLE(PENTRIES_ROLLUP)
@@ -112,7 +112,7 @@ const char PENTRIES_CREATE[] =
 
 const char VRPENTRIES_CREATE[] =
     DROP_VIEW(VRPENTRIES)
-    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgidI, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".isroot as atroot, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
+    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, \"/\", \"\")), \"\") AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgidI, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".isroot AS atroot, " SUMMARY ".systemid AS sysid, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
 
 const char TREESUMMARY_EXISTS[] =
     "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');";
@@ -433,8 +433,7 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
     return reso;
 }
 
-int insertdbgo(struct work *pwork, struct entry_data *ed,
-               sqlite3 *db, sqlite3_stmt *res)
+int insertdbgo(struct work *pwork, struct entry_data *ed, sqlite3 *db, sqlite3_stmt *res)
 {
     int error;
     char *zname;
@@ -627,7 +626,7 @@ int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3 *db, sqlite3_
     return 0;
 }
 
-int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *ed, struct sum *su)
+int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *ed, struct sum *su, const uint64_t system_id)
 {
     sqlite3_stmt *res = insertdbprep(sdb, SUMMARY_INSERT);
     if (!res) {
@@ -701,6 +700,7 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  56, pwork->pinode);
     sqlite3_bind_int64(res,  57, 1); /* isroot */
     sqlite3_bind_int64(res,  58, 0); /* rollupscore */
+    sqlite3_bind_int64(res,  59, system_id);
 
     sqlite3_step(res);
     sqlite3_clear_bindings(res);

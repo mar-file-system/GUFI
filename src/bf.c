@@ -134,6 +134,7 @@ void print_help(const char* prog_name,
       case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
       case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
+      case 's': printf("  -s <id>                unique identifier for this index (positive integer)"); break;
 #if HAVE_ZLIB
       case 'e': printf("  -e                     compress work items"); break;
 #endif
@@ -191,6 +192,7 @@ void show_input(struct input* in, int retval) {
    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
    printf("in.compress                 = %d\n",            in->compress);
+   printf("in.system_id                = %" PRIu64 "\n",   in->system_id);
    printf("\n");
    printf("retval                      = %d\n",    retval);
    printf("\n");
@@ -418,6 +420,11 @@ int parse_cmd_line(int         argc,
 
       case 'C':
           INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C", &retval);
+          break;
+
+      case 's':
+          /* 0 is treated as not having an id */
+          INSTALL_UINT64(&in->system_id, optarg, (size_t) 1, (uint64_t) -1, "-s", &retval);
           break;
 
 #if HAVE_ZLIB

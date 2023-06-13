@@ -263,7 +263,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* insert this directory's summary data */
     /* the xattrs go into the xattrs_avail table in db.db */
     insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
-                nda.work, &nda.ed, &nda.summary);
+                nda.work, &nda.ed, &nda.summary, in->system_id);
     if (in->external_enabled) {
         xattrs_cleanup(&nda.ed.xattrs);
     }
@@ -362,7 +362,7 @@ void sub_help() {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:M:C:" COMPRESS_OPT, 2, "input_dir... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:s:xz:k:M:C:" COMPRESS_OPT, 2, "input_dir... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
