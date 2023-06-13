@@ -285,16 +285,16 @@ int main(int argc, char *argv[]) {
         return 1;
     else {
         INSTALL_STR(&pa.in.name, argv[idx++]);
+
+        /* skip . and .. only */
+        if (setup_directory_skip(NULL, &pa.skip) != 0) {
+            return -1;
+        }
     }
 
     /* not an error, but you might want to know ... */
     if (pa.in.dry_run) {
         fprintf(stderr, "WARNING: Not [re]generating tree-summary table with '-X'\n");
-    }
-
-    /* skip . and .. only */
-    if (setup_directory_skip(NULL, &pa.skip) != 0) {
-        return -1;
     }
 
     QPTPool_t *pool = QPTPool_init(pa.in.maxthreads, &pa);
