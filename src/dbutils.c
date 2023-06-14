@@ -872,13 +872,10 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     int fmode;
     char tmode[64];
-    if (argc == 1) {
-        fmode = sqlite3_value_int(argv[0]);
-        modetostr(tmode, sizeof(tmode), fmode);
-        sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
-        return;
-    }
-    sqlite3_result_null(context);
+    fmode = sqlite3_value_int(argv[0]);
+    modetostr(tmode, sizeof(tmode), fmode);
+    sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
+    return;
 }
 
 static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -907,8 +904,13 @@ static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
 static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
-    const size_t size  = sqlite3_value_int64(argv[0]);
-    const char  *unit  = (char *) sqlite3_value_text(argv[1]);
+    const char *size_s = (const char *) sqlite3_value_text(argv[0]);
+    const char *unit   = (const char *) sqlite3_value_text(argv[1]);
+    size_t size = 0;
+    if (sscanf(size_s, "%zu", &size) != 1) {
+        sqlite3_result_error(context, "Bad blocksize size", -1);
+        return;
+    }
 
     const size_t len = strlen(unit);
 
@@ -923,8 +925,7 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
         if (len == 2) {
             multiplier = 1000;
         }
-
-        if (len == 3) {
+        else if (len == 3) {
             if (unit[1] != 'i') {
                 sqlite3_result_error(context, "Bad blocksize unit", -1);
                 return;
@@ -962,23 +963,25 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
 
     char buf[MAXPATH];
 
-    double size = sqlite3_value_double(argv[0]);
-    if (size) {
-        size_t unit_index = 0;
-        while (size >= 1024) {
-            size /= 1024;
-            unit_index++;
-        }
+    const char *size_s = (const char *) sqlite3_value_text(argv[0]);
+    double size = 0;
 
-        if (unit_index == 0) {
-            snprintf(buf, sizeof(buf), "%.1f", size);
-        }
-        else {
-            snprintf(buf, sizeof(buf), "%.1f%c", size, SIZE[unit_index - 1]);
-        }
+    if (sscanf(size_s, "%lf", &size) != 1) {
+        sqlite3_result_error(context, "Bad size", -1);
+        return;
+    }
+
+    size_t unit_index = 0;
+    while (size >= 1024) {
+        size /= 1024;
+        unit_index++;
+    }
+
+    if (unit_index == 0) {
+        snprintf(buf, sizeof(buf), "%.1f", size);
     }
     else {
-        snprintf(buf, sizeof(buf), "0");
+        snprintf(buf, sizeof(buf), "%.1f%c", size, SIZE[unit_index - 1]);
     }
 
     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);

@@ -85,8 +85,8 @@ TEST(create_table_wrapper, nullptr) {
 }
 
 TEST(set_db_pragmas, good) {
-    sqlite3 *db = NULL;
-    ASSERT_EQ(sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, NULL), SQLITE_OK);
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, nullptr), SQLITE_OK);
     EXPECT_EQ(set_db_pragmas(db), 0);
     EXPECT_EQ(sqlite3_close(db), SQLITE_OK);
 }
@@ -140,6 +140,23 @@ TEST(addqueryfuncs, epath) {
     sqlite3_close(db);
 }
 
+TEST(addqueryfuncs, fpath) {
+    struct work work;
+    work.name_len = SNPRINTF(work.name, sizeof(work.name), "/");
+    work.fullpath = nullptr;
+
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+    ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
+    EXPECT_EQ(sqlite3_exec(db, "SELECT fpath();", str_output, &work, nullptr), SQLITE_OK);
+    EXPECT_NE(work.fullpath, nullptr);
+    EXPECT_GT(work.fullpath_len, (size_t) 0);
+
+    sqlite3_close(db);
+    free(work.fullpath);
+}
+
 TEST(addqueryfuncs, rpath) {
     const char dirname[MAXPATH] = "dirname";
 
@@ -173,7 +190,7 @@ TEST(addqueryfuncs, uidtouser) {
     const uid_t uid = getuid();
 
     struct passwd pwd;
-    struct passwd *result = NULL;
+    struct passwd *result = nullptr;
 
     char buf[MAXPATH] = {};
     ASSERT_EQ(getpwuid_r(uid, &pwd, buf, MAXPATH, &result), 0);
@@ -190,7 +207,7 @@ TEST(addqueryfuncs, uidtouser) {
     SNPRINTF(query, MAXSQL, "SELECT uidtouser('%d')", uid);
 
     char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
 
     EXPECT_STREQ(output, pwd.pw_name);
 
@@ -202,7 +219,7 @@ TEST(addqueryfuncs, gidtogroup) {
     const gid_t gid = getgid();
 
     struct group grp;
-    struct group *result = NULL;
+    struct group *result = nullptr;
 
     char buf[MAXPATH] = {};
     ASSERT_EQ(getgrgid_r(gid, &grp, buf, MAXPATH, &result), 0);
@@ -219,7 +236,7 @@ TEST(addqueryfuncs, gidtogroup) {
     SNPRINTF(query, MAXSQL, "SELECT gidtogroup('%d')", gid);
 
     char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
 
     EXPECT_STREQ(output, grp.gr_name);
 
@@ -240,12 +257,12 @@ TEST(addqueryfuncs, modetotxt) {
 
         // file
         SNPRINTF(query, MAXSQL, "SELECT modetotxt(%zu)", (size_t) perm);
-        ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, modetostr(expected, 11, perm));
 
         // directory
         SNPRINTF(query, MAXSQL, "SELECT modetotxt(%zu)", perm | S_IFDIR);
-        ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
         EXPECT_STREQ(output, modetostr(expected, 11, perm | S_IFDIR));
     }
 
@@ -267,7 +284,7 @@ TEST(addqueryfuncs, strftime) {
     SNPRINTF(query, MAXSQL, "SELECT strftime('%s', %d)", fmt, (int) now);
 
     char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
 
     char expected[MAXSQL] = {};
     struct tm tm;
@@ -321,21 +338,30 @@ TEST(addqueryfuncs, blocksize) {
             char expected[MAXPATH] = {};
 
             SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%c')", iBinputs[j], SIZE[i]);
-            ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+            ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
             SNPRINTF(expected, MAXPATH, "%c%c", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
 
             SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%cB')", Binputs[j], SIZE[i]);
-            ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+            ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
             SNPRINTF(expected, MAXPATH, "%c%cB", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
 
             SNPRINTF(query, MAXSQL, "SELECT blocksize(%zu, '%ciB')", iBinputs[j], SIZE[i]);
-            ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+            ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
             SNPRINTF(expected, MAXPATH, "%c%ciB", expecteds[j], SIZE[i]);
             EXPECT_STREQ(output, expected);
         }
     }
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize('', '')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* non-integer size argument */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', '')", str_output, nullptr, nullptr), SQLITE_ERROR); /* missing size argument */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'i')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* single bad character */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'iB')",   str_output, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'ij')",   str_output, nullptr, nullptr), SQLITE_ERROR); /* 2nd character isn't B */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'AiB')",  str_output, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'AjB')",  str_output, nullptr, nullptr), SQLITE_ERROR); /* 2nd character isn't i */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'Aij')",  str_output, nullptr, nullptr), SQLITE_ERROR); /* 3nd character isn't B */
 
     sqlite3_close(db);
 }
@@ -352,8 +378,8 @@ TEST(addqueryfuncs, human_readable_size) {
 
     size_t size = 1;
 
-    SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu)", size);
-    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+    SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu);", size);
+    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "1.0");
 
     // greater than 1K - has unit suffix
@@ -362,11 +388,14 @@ TEST(addqueryfuncs, human_readable_size) {
 
         size *= 1024;
 
-        SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu)", size + (size / 10));
-        ASSERT_EQ(sqlite3_exec(db, query, str_output, output, NULL), SQLITE_OK);
+        SNPRINTF(query, MAXSQL, "SELECT human_readable_size(%zu);", size + (size / 10));
+        ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
         SNPRINTF(expected, MAXPATH, "1.1%c", SIZE[i]);
         EXPECT_STREQ(output, expected);
     }
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT human_readable_size('');",    str_output, nullptr, nullptr), SQLITE_ERROR); /* empty input */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT human_readable_size('abc');", str_output, nullptr, nullptr), SQLITE_ERROR); /* non-integer input */
 
     sqlite3_close(db);
 }
@@ -383,7 +412,7 @@ TEST(addqueryfuncs, level) {
         ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
         char output[MAXPATH] = {};
-        ASSERT_EQ(sqlite3_exec(db, "SELECT level()", str_output, output, NULL), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "SELECT level()", str_output, output, nullptr), SQLITE_OK);
 
         char expected[MAXPATH] = {};
         SNPRINTF(expected, MAXPATH, "%zu", work.level);
@@ -406,7 +435,7 @@ TEST(addqueryfuncs, starting_point) {
     ASSERT_EQ(addqueryfuncs(db, 0, &work), 0);
 
     char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT starting_point()", str_output, output, nullptr), SQLITE_OK);
 
     EXPECT_STREQ(output, work.root_parent.data);
 
@@ -424,23 +453,25 @@ TEST(addqueryfuncs, basename) {
 
     /* from basename(3) manpage */
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/usr/lib')", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/usr/lib')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "lib");
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/usr/')", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/usr/')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "usr");
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('usr')", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('usr')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "usr");
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/')", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('/')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "/");
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('.')", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('.')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, ".");
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('..')", str_output, output, NULL), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename('..')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "..");
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename(None)", str_output, nullptr, nullptr), SQLITE_ERROR);
 
     sqlite3_close(db);
 }
