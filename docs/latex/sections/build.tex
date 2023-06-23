@@ -156,9 +156,6 @@ have effect.
   & Print size of work queues every time a work queue receives a new
   item or pops items off. \\
   \hline
-  \texttt{PRINT\_SUBDIRECTORY\_COUNTS=<On|Off>}
-  & Print the number of subdirectories under each directory. \\
-  \hline
   \texttt{GPROF=<On|Off>}
   & Compile with the \texttt{-pg} flag. \\
   \hline
@@ -195,6 +192,19 @@ Do not turn these off unless you know what you are doing.
   \hline
   \texttt{RUN\_SQL\_EXEC=<On|Off>}
   & Compile \gufiquery without calls to \texttt{sqlite3\_exec}. \\
+  \hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Docs}
+\begin{table}[h!]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
+  \hline
+  \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{LATEX\_BUILD=<On|Off>}
+  & Whether or not to build PDF documentation when \LaTeX is found \\
   \hline
 \end{tabularx}
 \end{table}
