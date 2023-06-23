@@ -878,25 +878,6 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
-static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
-{
-    (void) argc;
-
-    const char *fmt = (char *) sqlite3_value_text(argv[0]); /* format    */
-    const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
-
-    char buf[MAXPATH];
-    #if LOCALTIME_R
-    struct tm tm;
-    strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
-    #else
-    strftime(buf, sizeof(buf), fmt, localtime(&t));
-    #endif
-    sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
-
-    return;
-}
-
 static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
 
 /* Returns the number of blocks required to store a given size */
@@ -1041,8 +1022,6 @@ int addqueryfuncs_common(sqlite3 *db) {
                                       NULL,                       &gidtogroup,          NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "modetotxt",           1,   SQLITE_UTF8,
                                       NULL,                       &modetotxt,           NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "strftime",            2,   SQLITE_UTF8,
-                                      NULL,                       &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
                                       NULL,                       &blocksize,           NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,

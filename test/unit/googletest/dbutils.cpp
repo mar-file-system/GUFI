@@ -269,33 +269,6 @@ TEST(addqueryfuncs, modetotxt) {
     sqlite3_close(db);
 }
 
-TEST(addqueryfuncs, strftime) {
-    sqlite3 *db = nullptr;
-    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
-    ASSERT_NE(db, nullptr);
-
-    ASSERT_EQ(addqueryfuncs_common(db), 0);
-
-    const char fmt[] = "%a %A %b %B %c %C %d %D %e %F %g %G %h %H %I %j %m %M %n %p %r %R %S %t %T %u %U %V %w %W %x %X %y %Y %z %Z %%";
-
-    const time_t now = time(nullptr);
-
-    char query[MAXSQL] = {};
-    SNPRINTF(query, MAXSQL, "SELECT strftime('%s', %d)", fmt, (int) now);
-
-    char output[MAXPATH] = {};
-    ASSERT_EQ(sqlite3_exec(db, query, str_output, output, nullptr), SQLITE_OK);
-
-    char expected[MAXSQL] = {};
-    struct tm tm;
-    ASSERT_NE(localtime_r(&now, &tm), nullptr);
-    EXPECT_NE(strftime(expected, MAXSQL, fmt, &tm), (size_t) 0);
-
-    EXPECT_STREQ(output, expected);
-
-    sqlite3_close(db);
-}
-
 static const char SIZE[] = {'K',    // 10
                             'M',    // 20
                             'G',    // 30
