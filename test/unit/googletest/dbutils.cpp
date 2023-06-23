@@ -269,14 +269,13 @@ TEST(addqueryfuncs, modetotxt) {
     sqlite3_close(db);
 }
 
+// uint64_t goes up to E
 static const char SIZE[] = {'K',    // 10
                             'M',    // 20
                             'G',    // 30
                             'T',    // 40
                             'P',    // 50
                             'E',    // 60
-                            // 'Z', // 70
-                            // 'Y'  // 80
 };
 
 TEST(addqueryfuncs, blocksize) {

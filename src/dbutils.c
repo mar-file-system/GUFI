@@ -878,7 +878,8 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     return;
 }
 
-static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'};
+/* uint64_t goes up to E */
+static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E'};
 
 /* Returns the number of blocks required to store a given size */
 /* Unfilled blocks count as one full block (round up)          */
@@ -887,22 +888,22 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
 
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
     const char *unit   = (const char *) sqlite3_value_text(argv[1]);
-    size_t size = 0;
-    if (sscanf(size_s, "%zu", &size) != 1) {
+    uint64_t size = 0;
+    if (sscanf(size_s, "%" PRIu64, &size) != 1) {
         sqlite3_result_error(context, "Bad blocksize size", -1);
         return;
     }
 
     const size_t len = strlen(unit);
 
-    size_t unit_size = 1;
+    uint64_t unit_size = 1;
     if (len) {
         if ((len > 1) && (unit[len - 1] != 'B')) {
             sqlite3_result_error(context, "Bad blocksize unit", -1);
             return;
         }
 
-        size_t multiplier = 1024;
+        uint64_t multiplier = 1024;
         if (len == 2) {
             multiplier = 1000;
         }
@@ -929,8 +930,8 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
     }
 
     char buf[MAXPATH];
-    const size_t buf_len = snprintf(buf, sizeof(buf), "%zu%s",
-                                    size / unit_size + (!!(size % unit_size)),
+    const size_t buf_len = snprintf(buf, sizeof(buf), "%" PRIu64 "%s",
+                                    (size / unit_size) + (!!(size % unit_size)),
                                     unit);
 
     sqlite3_result_text(context, buf, buf_len, SQLITE_TRANSIENT);
