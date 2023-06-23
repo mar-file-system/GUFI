@@ -10,7 +10,7 @@ Dominic Manno, Jason Lee, Prajwal Challa, Qing Zheng, David Bonnie, Gary Grider,
 ## Guides
 [User, administrator, and developer guides](latex) will be placed into
 `docs/latex/pdfs` if building them was enabled with the CMake
-configuration `-DBUILD_LATEX_DOCS=On`.
+configuration `-DLATEX_BUILD=On`.
 
 [GUFI-SQL.docx](GUFI-SQL.docx) provides guidance on GUFI's SQL schema, functions, and usage.
 
