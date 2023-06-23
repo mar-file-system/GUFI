@@ -66,56 +66,63 @@ opened for querying.
 
 \begin{table}[htb]
   \centering
-  \caption{SQLite functions that are always available.}
+  \caption{SQLite functions that are available in \gufiquery and \querydbs.}
   \begin{tabular}{| l | l |}
     \hline
-    Function Name & Purpose \\
+    Function & Purpose \\
     \hline
-    \texttt{uidtouser} & Converts a UID to a username \\
+    \texttt{uidtouser(uid)} & Converts a UID to a user name \\
     \hline
-    \texttt{gidtogroup} & Converts a GID to a username \\
+    \texttt{gidtogroup(gid)} & Converts a GID to a group name \\
     \hline
-    \texttt{modetotxt} & Converts numerical permission bits to text \\
+    \texttt{modetotxt(mode)} & Converts numerical permission bits to text \\
     \hline
-    \texttt{strftime} & \texttt{strftime(3)} \\
+    \texttt{blocksize(bytes, unit)} & Converts a size to number of \texttt{unit}s where \texttt{unit} is the \\
+                                    & combination of a prefix and suffix: \\
+                                    & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}, \texttt{Z}, \texttt{Y} \\
+                                    & and \\
+                                    & Suffix (multiplier): \textit{no suffix} (1024), \texttt{B} (1000), \texttt{iB} (1024) \\
     \hline
-    \texttt{blocksize} & Converts a size to number of blocks \\
-    \hline
-    \texttt{human\_readable\_size} & Converts a size to a human readable value \\
+    \texttt{human\_readable\_size(bytes)} & Converts a size to a human readable value \\
     \hline
   \end{tabular}
 \end{table}
 
 \begin{table}[htb]
   \centering
-  \caption{\label{tab:sqlwcontext}SQLite functions that require the context of an index (only
-    available in \gufiquery).}
+  \caption{\label{tab:sqlwcontext}SQLite functions that require the context of an index and thus are only
+    available in \gufiquery.}
   \begin{tabular}{| l | l |}
     \hline
-    Function Name & Purpose \\
+    Function & Purpose \\
     \hline
-    \texttt{path} & Current directory relative to path passed into executable \\
+    \texttt{path()} & Current directory relative to path passed into executable \\
     \hline
-    \texttt{epath} & Current directory basename \\
+    \texttt{epath()} & Current directory basename \\
     \hline
-    \texttt{fpath} & Full path of current directory \\
+    \texttt{fpath()} & Full path of current directory \\
     \hline
-    \rpath & Current directory relative to path passed into executable \\
-           & taking into account the rolled up name in summary table \\
-           & and rollup score. Should only be used with the \texttt{sname} \\
-           & and \texttt{sroll} columns of the \vrpentries, \vrsummary, \\
-           & \vrxpentries, and \vrxsummary views. \\
-           & \\
-           & Usage: \\
-           & \ \ \ \ \texttt{SELECT rpath(sname, sroll)} \\
-           & \ \ \ \ \texttt{FROM} \vrsummary /\vrxsummary; \\
-           & \\
-           & \ \ \ \ \texttt{SELECT rpath(sname, sroll) || "/" || name} \\
-           & \ \ \ \ \texttt{FROM} \vrpentries /\vrxpentries; \\
+    \rpath(sname, sroll) & Current directory relative to path passed into executable \\
+                         & taking into account the rolled up name in summary table \\
+                         & and rollup score. Should only be used with the \texttt{sname} \\
+                         & and \texttt{sroll} columns of the \vrpentries, \vrsummary, \\
+                         & \vrxpentries, and \vrxsummary views. \\
+                         & \\
+                         & Usage: \\
+                         & \ \ \ \ \texttt{SELECT rpath(sname, sroll)} \\
+                         & \ \ \ \ \texttt{FROM} \vrsummary /\vrxsummary; \\
+                         & \\
+                         & \ \ \ \ \texttt{SELECT rpath(sname, sroll) || "/" || name} \\
+                         & \ \ \ \ \texttt{FROM} \vrpentries /\vrxpentries; \\
     \hline
-    \texttt{level} & Depth of the current directory from the starting directory \\
+    \texttt{level()} & Depth of the current directory from the starting directory \\
     \hline
-    \texttt{starting\_point} & Path of the starting directory \\
+    \texttt{starting\_point()} & Path of the starting directory \\
+    \hline
+    \texttt{subdirs\_walked()} & Number of subdirectories that were enqueued while processing \\
+                               & the current directory. This function will return 0 if the \\
+                               & current directory was rolled up. Only available in \texttt{-S} \\
+                               & and \texttt{-E}. \\
     \hline
   \end{tabular}
 \end{table}
