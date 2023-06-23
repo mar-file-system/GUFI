@@ -69,8 +69,6 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <sys/types.h>
 
-#include <sqlite3.h>
-
 #include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "config.h"

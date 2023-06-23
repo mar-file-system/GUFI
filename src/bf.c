@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <pwd.h>
+#include <sqlite3.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
