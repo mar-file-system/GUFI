@@ -572,6 +572,66 @@ TEST(mkpath, childfirst) {
     EXPECT_EQ(orig_child_stat.st_gid,            child_stat.st_gid);
 }
 
+TEST(descend, builddir) {
+    struct input in = {};
+
+    struct work work = {};
+    work.name_len = SNPRINTF(work.name, sizeof(work.name), "@CMAKE_BINARY_DIR@");
+
+    DIR *dir = opendir(work.name);
+    ASSERT_NE(dir, nullptr);
+
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    EXPECT_EQ(QPTPool_start(pool), 0);
+
+    size_t dir_count = 0;
+    size_t dirs_insitu = 0;
+    size_t nondir_count = 0;
+    size_t nondirs_processed = 0;
+
+    // bad work; rest of inputs don't matter
+    EXPECT_EQ(descend(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr,
+                      nullptr, 0, 0, nullptr, nullptr, nullptr,
+                      nullptr, nullptr, nullptr, nullptr), 1);
+
+    // work->level == in->max_level - not descending
+    {
+        EXPECT_EQ(descend(nullptr, 0, nullptr, &in, &work, 0, dir,
+                          nullptr, 0, 1, nullptr,
+                          nullptr, nullptr,
+                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+
+        EXPECT_EQ(dir_count,         (std::size_t) 0);
+        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
+        EXPECT_EQ(nondir_count,      (std::size_t) 0);
+        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+    }
+
+    // good descend
+    {
+        in.max_level = 1;
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir,
+                          nullptr, 0, 1,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              free(data);
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+
+        EXPECT_NE(dir_count,         (std::size_t) 0);
+        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(nondir_count,      (std::size_t) 0);
+        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+    }
+
+    QPTPool_wait(pool);
+    QPTPool_destroy(pool);
+
+    closedir(dir);
+}
+
 static char *another_modetostr(char *str, const mode_t mode) {
     static const char rwx[] = "rwx";
     snprintf(str, 11, "----------");
@@ -853,9 +913,9 @@ TEST(getline, fd) {
     line = nullptr;
 
     /* bad inputs */
-    EXPECT_EQ(getline_fd(nullptr, &size,    fd, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(nullptr, &size,   fd, &offset, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   nullptr, fd, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &size,    -1, &offset, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &size,    fd, nullptr, default_size), -EINVAL);
-    EXPECT_EQ(getline_fd(&line,   &size,    fd, &offset, 0),            -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &size,   -1, &offset, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &size,   fd, nullptr, default_size), -EINVAL);
+    EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, 0),            -EINVAL);
 }

@@ -86,6 +86,19 @@ if (CMAKE_CXX_COMPILER)
     utils.cpp
     xattrs.cpp
   )
+
+  # these test files use CMAKE_BINARY_PATH
+  set(NEED_PATH
+    BottomUp.cpp
+    utils.cpp
+    )
+  foreach(SRC ${NEED_PATH})
+    configure_file("${SRC}.in" "${SRC}" @ONLY)
+    list(APPEND TEST_SRC
+      "${CMAKE_CURRENT_BINARY_DIR}/${SRC}"
+      )
+  endforeach()
+
   add_executable(unit_tests ${TEST_SRC} $<TARGET_OBJECTS:gufi_query_lib>)
   target_link_libraries(unit_tests -L${DEP_INSTALL_PREFIX}/googletest/lib -L${DEP_INSTALL_PREFIX}/googletest/lib64 gtest gtest_main ${COMMON_LIBRARIES})
 

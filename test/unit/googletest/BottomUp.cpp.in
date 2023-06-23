@@ -62,96 +62,88 @@ OF SUCH DAMAGE.
 
 
 
-/*
-   This header provides an API for parallelized
-   bottom-up traversal of a directory tree.
-   Operations are performed on directories
-   during the upward portion of the traversal.
-*/
+#include <cstdio>
+#include <cstdlib>
+#include <unistd.h>
 
-#ifndef GUFI_BOTTOM_UP_H
-#define GUFI_BOTTOM_UP_H
+#include <gtest/gtest.h>
 
-#include <pthread.h>
+#include "BottomUp.h"
 
-#include "SinglyLinkedList.h"
-#include "bf.h"
-#include "debug.h"
+BU_f f = [](void *args timestamp_sig) -> void {};
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+TEST(BottomUp, builddir) {
+    const char *roots[] = {
+        "@CMAKE_BINARY_DIR@",
+    };
 
-/* extra AscendFunc_t argments */
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-    #include "OutputBuffers.h"
-    #define timestamp_sig  , struct OutputBuffers *timestamp_buffers
-    #define timestamp_args , timestamp_buffers
-#else
-    #define timestamp_sig
-    #define timestamp_args
-#endif
+    const size_t root_count = sizeof(roots) / sizeof(roots[0]);
 
-/*
-  Structure containing the necessary information
-  to traverse a tree upwards.
-
-  This struct should be wrapped by a user struct.
-
-  This struct will likely be directly used by
-  the user, so the imeplementation is not opaque.
-*/
-struct BottomUp {
-    char name[MAXPATH];
-    size_t name_len;
-    char alt_name[MAXPATH];
-    size_t alt_name_len;
-    struct stat st;
-    struct {
-        pthread_mutex_t mutex;
-        size_t remaining;
-    } refs;
-    size_t subdir_count;
-    size_t subnondir_count;
-    sll_t subdirs;
-    sll_t subnondirs;
-    struct BottomUp *parent;
-
-    /* extra arguments available at all times */
-    void *extra_args;
-
-    size_t level;
-    struct {
-        size_t down;
-        size_t up;
-    } tid;
-};
-
-/* Signature of function for processing */
-/* directories while traversing a tree */
-typedef void (*BU_f)(void *user_struct
-                     timestamp_sig);
-
-/*
- * Function user should call to walk an existing tree in parallel.
- *
- * Similar to descent, returning from the bottom upwards does
- * not happen until all subdirectories have been processed.
- */
-int parallel_bottomup(char **root_names, const size_t root_count,
-                      const size_t thread_count,
-                      const size_t user_struct_size,
-                      BU_f descend, BU_f ascend,
-                      const int track_non_dirs,
-                      const int generate_alt_name,
-                      void *extra_args
-                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                      , struct OutputBuffers *debug_buffers
-                      #endif
-);
-
-#ifdef __cplusplus
+    EXPECT_EQ(parallel_bottomup((char **) roots, root_count, 1,
+                                sizeof(struct BottomUp),
+                                f, f, 0, 0, nullptr
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                , nullptr
+                                #endif
+                  ), 0);
 }
-#endif
 
-#endif
+TEST(BottomUp, bad) {
+    // bad user struct size
+    EXPECT_EQ(parallel_bottomup(nullptr, 0, 1,
+                                sizeof(struct BottomUp) - 1,
+                                f, f, 0, 0, nullptr
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                , nullptr
+                                #endif
+                  ), -1);
+
+    // bad thread count
+    EXPECT_EQ(parallel_bottomup(nullptr, 0, 0,
+                                sizeof(struct BottomUp),
+                                f, f, 0, 0, nullptr
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                , nullptr
+                                #endif
+                  ), -1);
+
+    /* no root dirs */
+    EXPECT_EQ(parallel_bottomup(nullptr, 0, 1,
+                                sizeof(struct BottomUp),
+                                f, f, 0, 0, nullptr
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                , nullptr
+                                #endif
+                  ), 0);
+
+    char badfilename[] = "@CMAKE_BINARY_DIR@/XXXXXX";
+    int fd = mkstemp(badfilename);
+    ASSERT_NE(fd, -1);
+    EXPECT_EQ(close(fd), 0);
+
+    char *roots[] = {
+        badfilename,
+    };
+
+    const size_t root_count = sizeof(roots) / sizeof(roots[0]);
+
+    // root path is not directory
+    EXPECT_EQ(parallel_bottomup(roots, root_count, 1,
+                                sizeof(struct BottomUp),
+                                f, f, 0, 0, nullptr
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                , nullptr
+                                #endif
+                  ), 0);
+
+    EXPECT_EQ(remove(badfilename), 0);
+
+    // root path doesn't exist
+    EXPECT_EQ(parallel_bottomup(roots, root_count, 1,
+                                sizeof(struct BottomUp),
+                                f, f, 0, 0, nullptr
+                                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                , nullptr
+                                #endif
+                  ), 0);
+}

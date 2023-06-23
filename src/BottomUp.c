@@ -333,7 +333,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     return 0;
 }
 
-int parallel_bottomup(char **root_names, size_t root_count,
+int parallel_bottomup(char **root_names, const size_t root_count,
                       const size_t thread_count,
                       const size_t user_struct_size,
                       BU_f descend, BU_f ascend,
@@ -374,6 +374,7 @@ int parallel_bottomup(char **root_names, size_t root_count,
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
+        trie_free(ua.skip);
         return -1;
     }
 
