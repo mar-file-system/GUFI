@@ -48,10 +48,10 @@ cat <trace_file_prefix>.* > <trace_file>
 gufi_trace2index <trace_file> <index_dir>
 
 # post-process the index
-gufi_treesummary/gufi_rollup
+gufi_treesummary/gufi_treesummary_all/gufi_rollup
 
 # use the index
-gufi_query/gufi_stat/querydbs
+gufi_query/gufi_stat
 
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
