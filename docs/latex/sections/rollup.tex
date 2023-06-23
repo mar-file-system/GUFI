@@ -199,18 +199,18 @@ In order to apply rollup to an index, run the \gufirollup executable:
 \indent \gufirollup \texttt{index\_root}
 \\\\
 Figure~\ref{fig:rollupworkflow} shows the overall structure of the
-\gufirollup executable. The \gufirollup executable uses the BottomUp
-code (see Subsection~\ref{sec:bottomup}) to recursively descend the
-original index and only perform the rollup operation once all children
-have been processed as shown in Figure~\ref{fig:rollupfunction}.
+\gufirollup executable. \gufirollup recursively descends the index and
+performs the rollup operation on a directory once all of the
+directory's children have been processed as shown in
+Figure~\ref{fig:rollupfunction}.
 
-\begin{sidewaysfigure} [!htb]
+\begin{sidewaysfigure} [hp]
   \centering \includegraphics[width=\textwidth]{images/rollup.png}
   \caption{\gufirollup Workflow}
   \label{fig:rollupworkflow}
 \end{sidewaysfigure}
 
-\begin{figure} [!htb]
+\begin{figure} [hp]
   \centering
   \includegraphics[width=\textwidth]{images/rollup_function.png}
   \caption{Rollup Function Diagram}

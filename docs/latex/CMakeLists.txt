@@ -86,7 +86,7 @@ set(gufi_developer_inputs
     sections/gufi_trace2index.tex
     sections/postindexing.tex
     sections/rollup.tex
-    sections/gufi_treesummary.tex
+    sections/treesummary.tex
     sections/xattrs.tex
     sections/querying.tex
     sections/gufi_query.tex
@@ -113,7 +113,7 @@ set(gufi_administrator_inputs
     sections/gufi_trace2index.tex
     sections/postindexing.tex
     sections/rollup.tex
-    sections/gufi_treesummary.tex
+    sections/treesummary.tex
     sections/xattrs.tex
     sections/querying.tex
     sections/gufi_query.tex
