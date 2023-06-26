@@ -65,20 +65,29 @@
 The \treesummary table is an optional table that is placed into
 db.db. It contains a summary of the entire subtree starting at current
 directory using minimums, maximums, and totals of numerical values.
-The \treesummary table can be queried first, using (\texttt{-T}) to
-determine whether or not the subtree needs to be traversed and processed.
 
-Because \treesummary tables do not necessarily exist, \gufiquery
-\texttt{-T} first checks for the existence of the \treesummary table
-in the directory being processed before performing the user query.
+When a query is provided to \gufiquery \texttt{-T}, the \treesummary
+table is queried first. Because \treesummary tables do not necessarily
+exist, \gufiquery first checks for the existence of the \treesummary
+table in the directory being processed before performing the
+\texttt{-T} query. If the \texttt{-T} query returns no results, the
+entire subtree will be skipped.
 
 \subsubsection{\gufitreesummary}
-\gufitreesummary recursively collects data from the \summary table of
-each child directory database (or the \treesummary table if it is
-available). Generating \treesummary tables using a top-down approach
-for each directory can take a long time due to the need to recurse
-downwards, so they are not created automatically during index
-generation or with this tool.
+Starting from a directory provided in the command line,
+\gufitreesummary recursively traverses to the bottom of the tree,
+collecting data from the \summary table of each child directory
+database. If a \treesummary table is discovered in a subdirectory,
+descent down the tree is stopped as the \treesummary table contains
+all of the information about that directory as well as all
+subdirectories underneath it. Once all of the data has been collected,
+it is summarized and placed into the \treesummary table of the
+starting directory.
+
+Generating \treesummary tables for all directories using this top-down
+approach will take a long time due to the repeated traversals across
+the same directories. Because of this, \gufitreesummary generates the
+\treesummary table for the provided directory only.
 
 If generating \treesummary tables using \gufitreesummary, the tables
 should be generated at optimal points within the index. For example,
@@ -92,12 +101,16 @@ Example Call:
 \subsubsection{\gufitreesummaryall}
 \gufitreesummaryall generates \treesummary tables for all
 directories. This is done by walking to the bottom of the tree and
-generating \treesummary tables while walking back up. This guarantees
-that at any given directory, all immediate subdirectories have already
-generated their \treesummary tables and thus recursion beyond 1 level
-down is no longer necessary. Leaf directories, by definition, do not
-have subdirectories, so their \summary tables already contain their
-\treesummary table information.
+generating \treesummary tables while walking back up, which only
+occurs after all subdirectories have had their \treesummary tables
+generated. Leaf directories, by definition, do not have
+subdirectories, and further traversal down is unnecessary and
+impossible. Their \treesummary tables are thus duplicates of their
+\summary tables, providing the base case for the walk back up the
+tree. Directories above the leaves can then use the \treesummary data
+found in their immediate subdirectories, which are 1) guaranteed to
+exist and 2) guaranteed to summarize the entire subdirectory's
+subtree, to generate their own \treesummary tables.
 \\\\
 Example Call:
 \\\\
