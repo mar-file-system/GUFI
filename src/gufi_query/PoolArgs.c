@@ -105,7 +105,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             );
 
         if (!ta->outdb) {
-            fprintf(stderr, "Error: Could not open in-memory database file\n");
+            fprintf(stderr, "Error: Could not open per-thread database file \"%s\"\n", ta->dbname);
             break;
         }
 
@@ -117,9 +117,11 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
 
         /* run -I */
         if (in->sql.init.len) {
-            if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, NULL) != SQLITE_OK) {
-                fprintf(stderr, "Error: Could not run SQL Init \"%s\" on %s\n",
-                        in->sql.init.data, ta->dbname);
+            char *err = NULL;
+            if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
+                fprintf(stderr, "Error: Could not run SQL Init \"%s\" on %s: %s\n",
+                        in->sql.init.data, ta->dbname, err);
+                sqlite3_free(err);
                 break;
             }
         }
