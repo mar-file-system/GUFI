@@ -12,7 +12,7 @@ Note: --no-dereference/-h is always set
 positional arguments:
   path
 
-optional arguments:
+options:
   --help                show this help message and exit
   --version, -v         show program's version number and exit
   --name NAME, -n NAME  Dump the values of the named extended attribute

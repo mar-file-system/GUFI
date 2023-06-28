@@ -72,12 +72,13 @@ run() {
 
 run_uidgid_size() {
     echo "$" "$@"                             |& replace
+    # shellcheck disable=SC2294
     eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | awk '{ $1 = 1001 ; print }'
     echo
 }
 
 (
-run_no_sort "${GUFI_STATS} --help" | @SED@ '/^$/d;'
+run_no_sort "${GUFI_STATS} --help" | replace_argparse | @SED@ '/^$/d;'
 
 run "${GUFI_STATS}    depth"
 run "${GUFI_STATS} -r depth"

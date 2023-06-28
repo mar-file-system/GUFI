@@ -72,10 +72,10 @@ env:
 
 jobs:
   Linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04" ]
+        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04", "ubuntu:22.04" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}
@@ -99,8 +99,8 @@ jobs:
       if:  matrix.img == 'rockylinux:8'
       run: contrib/CI/rocky.sh
 
-    - name: Ubuntu 20.04 Prerequisites
-      if:  matrix.img == 'ubuntu:20.04'
+    - name: Ubuntu Prerequisites
+      if:  startsWith(matrix.img, 'ubuntu:')
       run: contrib/CI/ubuntu.sh
 
     - name: Configure CMake

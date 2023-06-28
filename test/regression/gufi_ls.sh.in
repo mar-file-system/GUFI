@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_ls.out"
 
 (
-run_no_sort "${GUFI_LS} --help"
+run_no_sort "${GUFI_LS} --help" | replace_argparse
 run_no_sort "${GUFI_LS}"
 run_no_sort "${GUFI_LS} -a"
 run_no_sort "${GUFI_LS} -h"

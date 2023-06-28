@@ -72,7 +72,7 @@ env:
 
 jobs:
   Older_CMake:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container:
       image: centos:7
     steps:
@@ -107,7 +107,7 @@ jobs:
       run: ctest --output-on-failure
 
   Python2:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
@@ -116,7 +116,7 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-debug-prints
 
-    - name: Ubuntu 20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run: sudo contrib/CI/ubuntu.sh
 
     - name: Install Python 2
@@ -151,7 +151,7 @@ jobs:
       run:  ctest --output-on-failure -L performance_pkg
 
   TestDirectory:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
@@ -160,7 +160,7 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-test-directory
 
-    - name: Ubuntu 20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run: sudo contrib/CI/ubuntu.sh
 
     - name: Configure CMake
@@ -174,7 +174,7 @@ jobs:
       run:  ctest --output-on-failure
 
   Pylint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
@@ -183,7 +183,7 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-pylint
 
-    - name: Ubuntu 20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run: sudo contrib/CI/ubuntu.sh
 
     - name: Install Extra Python Packages
@@ -201,7 +201,7 @@ jobs:
       run: contrib/CI/pylint.sh ${{ github.workspace }}/build
 
   DebugPrints:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         PRINT_CUMULATIVE_TIMES:    [ "On", "Off" ]
@@ -215,7 +215,7 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-debug-prints
 
-    - name: Ubuntu 20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run: sudo contrib/CI/ubuntu.sh
 
     - name: Configure CMake
@@ -229,7 +229,7 @@ jobs:
       run:  ctest --output-on-failure -L unit
 
   Memcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04 # Clang 14 defaults to DWARF5, which is not supported by valgrind yet
     steps:
     - uses: actions/checkout@v3
 
@@ -238,7 +238,7 @@ jobs:
         path: ${{ env.DEP_INSTALL_PREFIX }}
         key:  ${{ runner.os }}-memcheck
 
-    - name: Ubuntu 20.04 Prerequisites
+    - name: Ubuntu Prerequisites
       run: sudo contrib/CI/ubuntu.sh
 
     - name: Install Valgrind
@@ -250,12 +250,12 @@ jobs:
     - name: Build
       run:  cmake --build ${{ github.workspace }}/build -j
 
-    - name: Test
+    - name: Memcheck
       working-directory: ${{ github.workspace }}/build
       run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
 
   ShellCheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 

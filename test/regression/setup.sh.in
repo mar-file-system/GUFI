@@ -177,6 +177,11 @@ replace() {
     "
 }
 
+# argparse help output changes slightly between versions
+replace_argparse() {
+    @SED@ 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
+}
+
 remove_root() {
     REALSRCDIR="$(realpath ${SRCDIR})"
     @SED@ "s/${REALSRCDIR//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
@@ -184,12 +189,14 @@ remove_root() {
 
 run_sort() {
     echo "$" "$@"                             |& replace
+    # shellcheck disable=SC2294
     eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | @SORT@
     echo
 }
 
 run_no_sort() {
     echo "$" "$@"                             |& replace
+    # shellcheck disable=SC2294
     eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace
     echo
 }

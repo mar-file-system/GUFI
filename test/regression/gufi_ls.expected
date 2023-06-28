@@ -4,14 +4,14 @@ usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
                   [--time-style TIME_STYLE] [-t] [-U] [--delim c]
                   [--in-memory-name name] [--aggregate-name name]
                   [--skip-file filename]
-                  [paths [paths ...]]
+                  [paths ...]
 
 GUFI version of ls
 
 positional arguments:
   paths
 
-optional arguments:
+options:
   --help                show this help message and exit
   --version, -v         show program's version number and exit
   -a, --all             do not ignore entries starting with .

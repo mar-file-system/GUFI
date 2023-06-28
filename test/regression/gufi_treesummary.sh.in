@@ -74,7 +74,7 @@ keep_paths() {
     # use | for delimiter
     (
         echo "$" "$@"
-        # shellcheck disable=SC2016
+        # shellcheck disable=SC2016,SC2294
         eval "$@" | @SED@ '/^$/d; /tot.*/d; /min.*/d;' | @AWK@ -F "|" '{ print $1 "|" $2 }' | @SORT@
     ) |& replace
 }

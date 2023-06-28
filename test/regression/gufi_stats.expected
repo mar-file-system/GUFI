@@ -10,7 +10,7 @@ positional arguments:
   {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,average-leaf-files,average-leaf-links,extensions,median-leaf-files,duplicate-names,uid-size,gid-size}
                         statistic to get
   path
-optional arguments:
+options:
   --help                show this help message and exit
   --version, -v         show program's version number and exit
   --recursive, -r       run command recursively (depth, filesize, filecount,
