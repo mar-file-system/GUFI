@@ -71,7 +71,43 @@ env:
   COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On
 
 jobs:
+  ShellCheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install ShellCheck
+      run:  sudo apt -y install shellcheck
+
+    - name: Run ShellCheck
+      run:  shellcheck -s bash -e SC1090,SC1091,SC2086 $(find \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*")
+
+  Pylint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-pylint
+
+    - name: Ubuntu Prerequisites
+      run: sudo contrib/CI/ubuntu.sh
+
+    - name: Install Extra Python Packages
+      run: |
+           sudo apt -y install python3-pip python3-matplotlib
+           sudo pip3 install pylint
+
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On
+
+    - name: Run Python3 Pylint
+      run: contrib/CI/pylint.sh ${{ github.workspace }}/build
+
   Older_CMake:
+    needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     container:
       image: centos:7
@@ -107,6 +143,7 @@ jobs:
       run: ctest --output-on-failure
 
   Python2:
+    needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -151,6 +188,7 @@ jobs:
       run:  ctest --output-on-failure -L performance_pkg
 
   TestDirectory:
+    needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -173,34 +211,8 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run:  ctest --output-on-failure
 
-  Pylint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/cache@v3
-      with:
-        path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-pylint
-
-    - name: Ubuntu Prerequisites
-      run: sudo contrib/CI/ubuntu.sh
-
-    - name: Install Extra Python Packages
-      run: |
-           sudo apt -y install python3-pip python3-matplotlib
-           sudo pip3 install pylint
-
-    - name: Configure CMake
-      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On
-
-    - name: Build
-      run:  cmake --build ${{ github.workspace }}/build -j
-
-    - name: Run Python3 Pylint
-      run: contrib/CI/pylint.sh ${{ github.workspace }}/build
-
   DebugPrints:
+    needs: [ShellCheck, Pylint]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -229,6 +241,7 @@ jobs:
       run:  ctest --output-on-failure -L unit
 
   Memcheck:
+    needs: [ShellCheck, Pylint]
     runs-on: ubuntu-20.04 # Clang 14 defaults to DWARF5, which is not supported by valgrind yet
     steps:
     - uses: actions/checkout@v3
@@ -253,14 +266,3 @@ jobs:
     - name: Memcheck
       working-directory: ${{ github.workspace }}/build
       run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
-
-  ShellCheck:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install ShellCheck
-      run:  sudo apt -y install shellcheck
-
-    - name: Test
-      run:  shellcheck -s bash -e SC1090,SC1091,SC2086 $(find \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*")
