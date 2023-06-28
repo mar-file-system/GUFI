@@ -271,10 +271,7 @@ typedef enum {
 
 /* minimum data needs to be passed around between threads */
 struct work {
-#if HAVE_ZLIB
    compressed_t  compressed;
-#endif
-
    refstr_t      root_parent;            /* parent of the the top level directory */
    size_t        level;
    char          name[MAXPATH];
