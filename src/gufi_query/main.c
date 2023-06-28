@@ -361,14 +361,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* if it fails then this will be set to 1 and will go on */
 
-    /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
-    /* if this is OR, as well as no-sql-to-run, skip this query */
-    if (in->sql.tsum.len > 1) {
+    if (db && in->sql.tsum.len) {
+        /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
+        /* if this is OR, as well as no-sql-to-run, skip this query */
         if (in->andor == AND) {
             /* make sure the treesummary table exists */
             thread_timestamp_start(ts.tts, sqltsumcheck);
             querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
-                                "WHERE (type == 'table') AND (name == 'treesummary');",
+                                "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
                     pa, id, count_rows, &recs);
             thread_timestamp_end(sqltsumcheck);
             increment_query_count(ta);
@@ -431,7 +431,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* and we are doing AND, skip querying the entries db */
                 shortpath(gqw->work.name,shortname,endname);
 
-                if (in->sql.sum.len > 1) {
+                if (in->sql.sum.len) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
                     thread_timestamp_start(ts.tts, sqlsum);
@@ -446,7 +446,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 }
                 /* if we have recs (or are running an OR) query the entries table */
                 if (recs > 0) {
-                    if (in->sql.ent.len > 1) {
+                    if (in->sql.ent.len) {
                         thread_timestamp_start(ts.tts, sqlent);
                         querydb(dbname, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
                         thread_timestamp_end(sqlent);
