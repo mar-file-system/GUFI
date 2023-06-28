@@ -34,6 +34,14 @@ unusual#? directory ,/unusual, name?#|9|
 1MB|1048576|
 query returned 13 records
 
+# Query all per-thread result databse files at once without printing results
+$ querydbs -d '|' outdb "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
+query returned 13 records
+
+# Bad Query
+$ querydbs -d '|' outdb "out" "Bad Query" outdb.*
+Error: User query failed: near "Bad": syntax error
+
 # Attach too many database files
 $ querydbs -d '|' -NV outdb "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.* outdb.*
 Cannot attach database as "outdb125": too many attached databases - max 125

@@ -93,6 +93,12 @@ run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TAB
 echo "# Query all per-thread result databse files at once"
 run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
 
+echo "# Query all per-thread result databse files at once without printing results"
+run_no_sort "${QUERYDBS} -d '|' ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+
+echo "# Bad Query"
+run_no_sort "${QUERYDBS} -d '|' ${OUTDB} \"${TABLE}\" \"Bad Query\" outdb.*"
+
 echo "# Attach too many database files"
 too_many=""
 for (( i = 0; i < 126 / THREADS; i++))
