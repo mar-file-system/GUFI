@@ -106,7 +106,7 @@ export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test:${PYTHONPA
 
 # generate a fake config file
 # shellcheck disable=SC2046
-CONFIG="$(realpath $(@PYTHON_INTERPRETER@ -c 'import common; print(common.CONFIG_PATH)'))"
+CONFIG="$(@PYTHON_INTERPRETER@ -c 'import common, os; print(os.path.realpath(common.CONFIG_PATH))')"
 (
     echo "Threads=1"
     echo "Executable=@CMAKE_BINARY_DIR@/src/gufi_query"

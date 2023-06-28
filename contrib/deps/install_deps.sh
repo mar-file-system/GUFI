@@ -123,15 +123,15 @@ if [[ "$#" -lt 3 ]]; then
 fi
 
 # dependency download path
+mkdir -p "$1"
 DOWNLOAD_DIR=$(realpath "$1")
-mkdir -p "${DOWNLOAD_DIR}"
 
+mkdir -p "$2"
 BUILD_DIR=$(realpath "$2")
-mkdir -p "${BUILD_DIR}"
 
 # dependency install path
+mkdir -p "$3"
 INSTALL_DIR=$(realpath "$3")
-mkdir -p "${INSTALL_DIR}"
 
 export SCRIPT_PATH
 export DOWNLOAD_DIR
