@@ -78,7 +78,3 @@ brew install coreutils cmake pcre pkg-config python3 zlib
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew install --cask osxfuse || true # brew 4.0.0 switches to macfuse, but pkg-config can't find it
-
-# for performance history framework testing
-python3 -m pip install --upgrade pip
-python3 -m pip install matplotlib

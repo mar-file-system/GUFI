@@ -87,8 +87,3 @@ apt -y install \
     pkg-config \
     python3 \
     sudo
-
-# for performance history framework testing
-apt -y install python3-pip
-python3 -m pip install --upgrade pip
-python3 -m pip install matplotlib

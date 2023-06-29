@@ -93,18 +93,18 @@ jobs:
         key:  ${{ runner.os }}-pylint
 
     - name: Ubuntu Prerequisites
-      run: sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Extra Python Packages
-      run: |
-           sudo apt -y install python3-pip python3-matplotlib
-           sudo pip3 install pylint
+      run:  |
+            sudo apt -y install python3-pip python3-matplotlib
+            sudo pip3 install pylint
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On
 
     - name: Run Python3 Pylint
-      run: contrib/CI/pylint.sh ${{ github.workspace }}/build
+      run:  contrib/CI/pylint.sh ${{ github.workspace }}/build
 
   Older_CMake:
     needs: [ShellCheck, Pylint]
@@ -129,18 +129,18 @@ jobs:
       run:  cmake --version
 
     - name: Configure CMake
-      run: |
-           mkdir -p build
-           cd build
-           cmake .. ${{ env.COMMON_CONFIG }}
+      run:  |
+            mkdir -p build
+            cd build
+            cmake .. ${{ env.COMMON_CONFIG }}
 
     - name: Build
       working-directory: ${{ github.workspace }}/build
-      run: make -j
+      run:  make -j
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run: ctest --output-on-failure
+      run:  ctest --output-on-failure
 
   Python2:
     needs: [ShellCheck, Pylint]
@@ -154,18 +154,18 @@ jobs:
         key:  ${{ runner.os }}-debug-prints
 
     - name: Ubuntu Prerequisites
-      run: sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Python 2
-      run: sudo apt -y install python2
+      run:  sudo apt -y install python2
 
     - name: Install Matplotlib
-      run: |
-           sudo apt -y install curl
-           curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
-           sudo python2 get-pip.py
-           python2 -m pip install --upgrade pip
-           python2 -m pip install matplotlib
+      run:  |
+            sudo apt -y install curl
+            curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+            sudo python2 get-pip.py
+            python2 -m pip install --upgrade pip
+            python2 -m pip install matplotlib
 
     - name: Configure CMake For Core Tests
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DPYTHON_INTERPRETER=python2
@@ -199,7 +199,7 @@ jobs:
         key:  ${{ runner.os }}-test-directory
 
     - name: Ubuntu Prerequisites
-      run: sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DTEST_WORKING_DIRECTORY=/tmp
@@ -228,7 +228,13 @@ jobs:
         key:  ${{ runner.os }}-debug-prints
 
     - name: Ubuntu Prerequisites
-      run: sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Install matplotlib
+      if:   matrix.PRINT_CUMULATIVE_TIMES == 'On'
+      run:  |
+            sudo apt -y install python3-pip
+            python3 -m pip install matplotlib
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=${{ matrix.PRINT_CUMULATIVE_TIMES }} -DPRINT_PER_THREAD_STATS=${{ matrix.PRINT_PER_THREAD_STATS }} -DPRINT_QPTPOOL_QUEUE_SIZE=${{ matrix.PRINT_QPTPOOL_QUEUE_SIZE }}
@@ -252,10 +258,10 @@ jobs:
         key:  ${{ runner.os }}-memcheck
 
     - name: Ubuntu Prerequisites
-      run: sudo contrib/CI/ubuntu.sh
+      run:  sudo contrib/CI/ubuntu.sh
 
     - name: Install Valgrind
-      run: sudo apt -y install valgrind
+      run:  sudo apt -y install valgrind
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On -DPRINT_PER_THREAD_STATS=On -DPRINT_QPTPOOL_QUEUE_SIZE=On

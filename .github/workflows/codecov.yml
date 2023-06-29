@@ -85,12 +85,17 @@ jobs:
     - name: Ubuntu 20.04 Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
 
+    - name: Install matplotlib
+      run:  |
+            sudo apt -y install python3-pip
+            python3 -m pip install matplotlib
+
     - name: Coverage Prerequisites
       run:  |
             sudo apt install gcovr
             sudo apt install g++
-            pip install coverage
-            pip install pytest
+            python3 -m pip install coverage
+            python3 -m pip install pytest
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
