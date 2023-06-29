@@ -88,20 +88,20 @@ jobs:
         key:  ${{ runner.os }}-${{ matrix.img }}
 
     - name: CentOS 7 Prerequisites
-      if:  matrix.img == 'centos:7'
-      run: contrib/CI/centos7.sh
+      if:   matrix.img == 'centos:7'
+      run:  contrib/CI/centos7.sh
 
     - name: CentOS 8 Prerequisites
-      if:  matrix.img == 'centos:8'
-      run: contrib/CI/centos8.sh
+      if:   matrix.img == 'centos:8'
+      run:  contrib/CI/centos8.sh
 
     - name: Rocky Linux Prerequisites
-      if:  matrix.img == 'rockylinux:8'
-      run: contrib/CI/rocky.sh
+      if:   matrix.img == 'rockylinux:8'
+      run:  contrib/CI/rocky.sh
 
     - name: Ubuntu Prerequisites
-      if:  startsWith(matrix.img, 'ubuntu:')
-      run: contrib/CI/ubuntu.sh
+      if:   startsWith(matrix.img, 'ubuntu:')
+      run:  contrib/CI/ubuntu.sh
 
     - name: Configure CMake
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
@@ -131,15 +131,11 @@ jobs:
       run:  contrib/CI/osx.sh
 
     - name: Configure CMake
-      run: |
-           source ~/.bash_profile
-           cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }}
 
     - name: Build
-      run: |
-           source ~/.bash_profile
-           cmake --build ${{ github.workspace }}/build -j
+      run:  cmake --build ${{ github.workspace }}/build -j
 
     - name: Test
       working-directory: ${{ github.workspace }}/build
-      run: ctest --output-on-failure
+      run:  ctest --output-on-failure

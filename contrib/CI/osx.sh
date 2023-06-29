@@ -70,7 +70,7 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 brew install grep
 brew --prefix grep
 # shellcheck disable=SC2016
-echo 'export PATH="$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"' >> ~/.bash_profile
+echo "$(brew --prefix)/opt/grep/libexec/gnubin" >> "${GITHUB_PATH}"
 
 # install required packages
 brew install coreutils cmake pcre pkg-config python3 zlib
