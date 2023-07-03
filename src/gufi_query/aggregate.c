@@ -184,11 +184,13 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
 void aggregate_fin(Aggregate_t *aggregate, struct input *in) {
     /* Not checking arguments */
 
-    closedb(aggregate->db);
+    if (aggregate->db) {
+        closedb(aggregate->db);
+    }
 
     if ((in->output == STDOUT) || (in->output == OUTFILE)) {
         OutputBuffer_destroy(&aggregate->ob);
-        if (aggregate->outfile != stdout) {
+        if (aggregate->outfile && (aggregate->outfile != stdout)) {
             fclose(aggregate->outfile);
         }
     }

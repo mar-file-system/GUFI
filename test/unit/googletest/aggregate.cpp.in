@@ -175,3 +175,29 @@ TEST(gufi_query, aggregate) {
     const size_t sum_str_len = snprintf(sum_str, sizeof(sum_str), "%" PRIu64, sum);
     EXPECT_EQ(memcmp(db_sum_str, sum_str, sum_str_len), 0);
 }
+
+TEST(gufi_query, aggregate_outputs) {
+    struct input in;
+    Aggregate_t agg;
+    memset(&agg, 0, sizeof(agg));
+
+    in.output = STDOUT;
+    in.output_buffer_size = (std::size_t) -1;
+    EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* bad buffer size */
+
+    in.output = OUTFILE;
+    in.outname.data = "@CMAKE_BINARY_DIR@";
+    in.outname.len = strlen(in.outname.data);
+    EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
+
+    in.output = OUTDB;
+    in.outname.data = ":memory:";
+    in.outname.len = strlen(in.outname.data);
+    in.sql.init_agg.data = "CREATE TABLE aggregate();";
+    EXPECT_EQ(aggregate_init(&agg, &in), nullptr);
+    in.sql.init_agg.data = "CREATE TABLE aggregate(id INT);";
+    EXPECT_EQ(aggregate_init(&agg, &in), &agg);
+    EXPECT_NE(agg.db, nullptr);
+
+    aggregate_fin(&agg, &in);
+}
