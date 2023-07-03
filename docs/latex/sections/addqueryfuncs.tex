@@ -77,6 +77,8 @@ opened for querying.
     \hline
     \texttt{modetotxt(mode)} & Converts numerical permission bits to text \\
     \hline
+    \texttt{strftime(format, timestamp)} & Replaces \href{https://www.sqlite.org/lang_datefunc.html}{SQLite's custom \texttt{strftime}} with \texttt{strftime(3)} \\
+    \hline
     \texttt{blocksize(bytes, unit)} & Converts a size to number of \texttt{unit}s where \texttt{unit} is the \\
                                     & combination of a prefix and suffix: \\
                                     & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}\\
