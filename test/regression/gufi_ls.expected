@@ -1,8 +1,8 @@
 $ gufi_ls --help
 usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
                   [-B] [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
-                  [--time-style TIME_STYLE] [-t] [-U] [--delim c]
-                  [--in-memory-name name] [--aggregate-name name]
+                  [--time-style {full-iso,iso,locale,long-iso}] [-t] [-U]
+                  [--delim c] [--in-memory-name name] [--aggregate-name name]
                   [--skip-file filename]
                   [paths ...]
 
@@ -28,7 +28,7 @@ options:
   -R, --recursive       list subdirectories recursively
   -s, --size            print the allocated size of each file, in blocks
   -S                    sort by file size, largest first
-  --time-style TIME_STYLE
+  --time-style {full-iso,iso,locale,long-iso}
                         time/date format with -l
   -t                    sort by modification time, newest first
   -U                    do not sort; list entries in directory order
@@ -137,4 +137,125 @@ directory
 1MB
 1KB
 .hidden
+
+$ gufi_ls -S  | grep -v '.*directory.*'
+1MB
+1KB
+file_symlink
+old_file
+repeat_name
+empty_file
+
+$ gufi_ls -Sr | grep -v '.*directory.*'
+empty_file
+repeat_name
+old_file
+file_symlink
+1KB
+1MB
+
+$ sqlite3 "db.db" "INSERT INTO entries (name) VALUES ('backup~');"
+
+$ gufi_ls -B
+1KB
+1MB
+directory
+empty_file
+file_symlink
+leaf_directory
+old_file
+repeat_name
+unusual#? directory ,
+
+$ sqlite3 "db.db" "DELETE FROM entries WHERE name == 'backup~';"
+
+$ gufi_ls old_file --full-time
+-rw-rw-r-- 1 user group 8 1970-01-01 00:00:00 +0000 old_file
+
+$ gufi_ls old_file -l --time-style=full-iso
+-rw-rw-r-- 1 user group 8 1970-01-01 00:00:00 +0000 old_file
+
+$ gufi_ls old_file -l --time-style=long-iso
+-rw-rw-r-- 1 user group 8 1970-01-01 00:00:00 old_file
+
+$ gufi_ls old_file -l --time-style=iso
+-rw-rw-r-- 1 user group 8 01-01 00:00 old_file
+
+$ gufi_ls old_file -l --time-style=locale
+-rw-rw-r-- 1 user group 8 Jan   1 00:00 old_file
+
+$ gufi_ls old_file -l
+-rw-rw-r-- 1 user group 8 Jan   1 00:00 old_file
+
+$ gufi_ls old_file --time-style=full-iso
+old_file
+
+$ gufi_ls old_file --time-style=long-iso
+old_file
+
+$ gufi_ls old_file --time-style=iso
+old_file
+
+$ gufi_ls old_file --time-style=locale
+old_file
+
+$ gufi_ls -l --block-size=1000 1KB
+-rw-rw-r-- 1 user group 2 Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=1024 1KB
+-rw-rw-r-- 1 user group 1 Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=K    1KB
+-rw-rw-r-- 1 user group 1K Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=1K   1KB
+-rw-rw-r-- 1 user group 1 Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=KB   1KB
+-rw-rw-r-- 1 user group 2KB Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=1KB  1KB
+-rw-rw-r-- 1 user group 2 Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=KiB  1KB
+-rw-rw-r-- 1 user group 1KiB Jan   1 00:00 1KB
+
+$ gufi_ls -l --block-size=1KiB 1KB
+-rw-rw-r-- 1 user group 1 Jan   1 00:00 1KB
+
+$ gufi_ls --block-size=K    1KB
+1KB
+
+$ gufi_ls --block-size=1K   1KB
+1KB
+
+$ gufi_ls --block-size=KB   1KB
+1KB
+
+$ gufi_ls --block-size=1KB  1KB
+1KB
+
+$ gufi_ls --block-size=KiB  1KB
+1KB
+
+$ gufi_ls --block-size=1KiB 1KB
+1KB
+
+$ gufi_ls -lG old_file
+-rw-rw-r-- 1 user 8 Jan   1 00:00 old_file
+
+$ gufi_ls -G old_file
+old_file
+
+$ gufi_ls -lh 1KB
+-rw-rw-r-- 1 user group 1.0K Jan   1 00:00 1KB
+
+$ gufi_ls -lh 1MB
+-rw-rw-r-- 1 user group 1.0M Jan   1 00:00 1MB
+
+$ gufi_ls -h 1KB
+1KB
+
+$ gufi_ls -h 1MB
+1MB
 

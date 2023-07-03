@@ -900,22 +900,74 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
 /* uint64_t goes up to E */
 static const char SIZE[] = {'K', 'M', 'G', 'T', 'P', 'E'};
 
-/* Returns the number of blocks required to store a given size */
-/* Unfilled blocks count as one full block (round up)          */
+/*
+ * Returns the number of blocks required to store a given size
+ * Unfilled blocks count as one full block (round up)
+ *
+ * This function attempts to replicate ls output and is mainly
+ * intended for gufi_ls, so use with caution.
+ *
+ * blocksize(1024, "K")    -> 1K
+ * blocksize(1024, "1K")   -> 1
+ * blocksize(1024, "KB")   -> 2KB
+ * blocksize(1024, "1KB")  -> 2
+ * blocksize(1024, "KiB")  -> 1K
+ * blocksize(1024, "1KiB") -> 1
+ */
 static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc;
 
     const char *size_s = (const char *) sqlite3_value_text(argv[0]);
-    const char *unit   = (const char *) sqlite3_value_text(argv[1]);
+    const char *unit_s = (const char *) sqlite3_value_text(argv[1]);
+    const size_t unit_s_len = strlen(unit_s);
+
     uint64_t size = 0;
     if (sscanf(size_s, "%" PRIu64, &size) != 1) {
         sqlite3_result_error(context, "Bad blocksize size", -1);
         return;
     }
 
+    /* whether or not a coefficent was found - affects printing */
+    uint64_t unit_size = 0;
+    const int coefficient_found = sscanf(unit_s, "%" PRIu64, &unit_size);
+    if (coefficient_found == 1) {
+        if (unit_size == 0) {
+            sqlite3_result_error(context, "Bad blocksize unit", -1);
+            return;
+        }
+    }
+    else {
+        /* if there were no numbers, default to 1 */
+        unit_size = 1;
+    }
+
+    /*
+     * get block size suffix i.e. 1KB -> KB
+     */
+    const char *unit = unit_s;
+    {
+        /*
+         * find first non-numerical character
+         * decimal points are not accepted, and will break this loop
+         */
+        size_t offset = 0;
+        while ((offset < unit_s_len) &&
+               (('0' <= unit[offset]) && (unit[offset] <= '9'))) {
+            offset++;
+        }
+
+        unit += offset;
+    }
+
     const size_t len = strlen(unit);
 
-    uint64_t unit_size = 1;
+    /* suffix is too long */
+    if (len > 3) {
+        sqlite3_result_error(context, "Bad blocksize unit", -1);
+        return;
+    }
+
+    /* suffix is optional */
     if (len) {
         if ((len > 1) && (unit[len - 1] != 'B')) {
             sqlite3_result_error(context, "Bad blocksize unit", -1);
@@ -948,10 +1000,15 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
         }
     }
 
+    const uint64_t blocks = (size / unit_size) + (!!(size % unit_size));
+
     char buf[MAXPATH];
-    const size_t buf_len = snprintf(buf, sizeof(buf), "%" PRIu64 "%s",
-                                    (size / unit_size) + (!!(size % unit_size)),
-                                    unit);
+    size_t buf_len = snprintf(buf, sizeof(buf), "%" PRIu64, blocks);
+
+    /* add unit to block count */
+    if (!coefficient_found) {
+        buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "%s", unit);
+    }
 
     sqlite3_result_text(context, buf, buf_len, SQLITE_TRANSIENT);
 

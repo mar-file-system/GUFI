@@ -79,10 +79,43 @@ opened for querying.
     \hline
     \texttt{strftime(format, timestamp)} & Replaces \href{https://www.sqlite.org/lang_datefunc.html}{SQLite's custom \texttt{strftime}} with \texttt{strftime(3)} \\
     \hline
-    \texttt{blocksize(bytes, unit)} & Converts a size to number of \texttt{unit}s where \texttt{unit} is the \\
-                                    & combination of a prefix and suffix: \\
+    \texttt{blocksize(bytes, unit)} & Converts a size to a the number of blocks of size \texttt{unit} \\
+                                    & needed to store the first argument. \texttt{unit} is the \\
+                                    & combination of at least one integer and/or a prefix and \\
+                                    & a suffix: \\
+                                    & \\
                                     & Prefix: \texttt{K}, \texttt{M}, \texttt{G}, \texttt{T}, \texttt{P}, \texttt{E}\\
                                     & Suffix (multiplier): \textit{no suffix} (1024), \texttt{B} (1000), \texttt{iB} (1024) \\
+                                    & \\
+                                    & Return value is a string. \\
+                                    & \\
+                                    & Note that this function was implemented to replicate \\
+                                    & \texttt{ls} output and is meant for use with \gufils only, \\
+                                    & so use with caution. \\
+                                    & \\
+                                    & Examples: \\
+                                    & \begin{tabular}{| l | l |}
+                                        \hline
+                                        Call                    & Output \\
+                                        \hline
+                                        blocksize(1024, `1000') & 2 \\
+                                        \hline
+                                        blocksize(1024, `1024') & 1 \\
+                                        \hline
+                                        blocksize(1024, `K')    & 1K \\
+                                        \hline
+                                        blocksize(1024, `1K')   & 1 \\
+                                        \hline
+                                        blocksize(1024, `KB')   & 2KB \\
+                                        \hline
+                                        blocksize(1024, `1KB')  & 2 \\
+                                        \hline
+                                        blocksize(1024, `KiB')  & 1KiB \\
+                                        \hline
+                                        blocksize(1024, `1KiB') & 1 \\
+                                        \hline
+                                    \end{tabular} \\
+                                    & \\
     \hline
     \texttt{human\_readable\_size(bytes)} & Converts a size to a human readable string \\
     \hline

@@ -69,17 +69,24 @@ import sys
 import gufi_common
 import gufi_config
 
-#        1024  1000  1024
-SIZES = ['K',  'KB', 'KiB',
-         'M',  'MB', 'MiB',
-         'G',  'GB', 'GiB',
-         'T',  'TB', 'TiB',
-         'P',  'PB', 'PiB',
-         'E',  'EB', 'EiB',
-         'Z',  'ZB', 'ZiB',
-         'Y',  'YB', 'YiB']
+SIZES = [
+#   1024  1000  1024
+    'K',  'KB', 'KiB',
+    'M',  'MB', 'MiB',
+    'G',  'GB', 'GiB',
+    'T',  'TB', 'TiB',
+    'P',  'PB', 'PiB',
+    'E',  'EB', 'EiB',
+    # uint64_t can't go this high
+    # 'Z',  'ZB', 'ZiB',
+    # 'Y',  'YB', 'YiB',
+]
 
 def select_size(args, name):
+    # --full-time implies long listing
+    if not args.long_listing and not args.full_time:
+        return []
+
     # in GNU ls, order of arguments determines which one has precedence
     # here, --human-readable has precedence
     if args.human_readable:
@@ -91,24 +98,27 @@ def select_size(args, name):
 
     return [column.format(name)]
 
+FULL_TIME = 'full-iso'
+LOCALE = 'locale'
 TIME_STYLES = {
-    'full-iso' : '%F %T %z',
+    FULL_TIME  : '%F %T %z',
     'long-iso' : '%F %T',
     'iso'      : '%m-%d %R',
-    'locale'   : '%b  %e %H:%M',
+    LOCALE     : '%b  %e %H:%M',
 }
 
-def select_time(style, name):
-    if not style:
-        style = 'locale'
+def select_time(args, name):
+    # --full-time implies long listing
+    if not args.long_listing and not args.full_time:
+        return []
 
-    try:
-        column = 'strftime("{0}", {{0}})'.format(TIME_STYLES[style])
-    except:
-        # pylint: disable=raise-missing-from
-        raise ValueError('gufi_ls: invalid argument \'{0}\' for \'time style\''.format(style))
+    # --full-time takes precedence
+    if args.full_time:
+        style = FULL_TIME
+    else:
+        style = args.time_style if args.time_style else 'locale'
 
-    return [column.format(name)]
+    return ['strftime("{0}", {1})'.format(TIME_STYLES[style], name)]
 
 def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''
@@ -127,7 +137,7 @@ def build_select(args):
     else:
         display_name = 'name'
 
-    if args.long_listing:
+    if args.long_listing or args.full_time:
         select += ['modetotxt(mode)',
                    'printf("%d", nlink)',
                    'uidtouser(uid)']
@@ -136,7 +146,7 @@ def build_select(args):
 
         # in GNU ls, order of arguments determines which one has precedence
         # here, --human-readable has precedence
-        select += select_size(args, 'size') + select_time(args.time_style, 'mtime') + [
+        select += select_size(args, 'size') + select_time(args, 'mtime') + [
             '''(
                 CASE
                     WHEN (type == "l") THEN
@@ -189,13 +199,22 @@ def build_order_by(args):
     if args.mtime:
         order_by += ['mtime {0}'.format('ASC' if args.reverse else 'DESC')]
 
-    if len(order_by) == 0:
-        order_by += ['display_name COLLATE NOCASE {0}'.format('DESC' if args.reverse else 'ASC')]
+    order_by += ['display_name COLLATE NOCASE {0}'.format('DESC' if args.reverse else 'ASC')]
 
     if args.no_sort:
         order_by = []
 
     return order_by
+
+def get_blocksize(value):
+    '''Make sure the input is some combination of an optional integer and/or a valid optional unit.'''
+    if (value[-1:] not in SIZES) and (value[-2:] not in SIZES) and (value[-3:] not in SIZES):
+        try:
+            int(value)
+        except ValueError:
+            # pylint: disable=raise-missing-from
+            raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
+    return value
 
 # argv[0] should be the command name
 def run(argv, config_path):
@@ -203,17 +222,6 @@ def run(argv, config_path):
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
-
-    class FullTimeAction(argparse.Action): # pylint: disable=too-few-public-methods
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            # pylint: disable=super-with-arguments
-            super(FullTimeAction, self).__init__(option_strings, dest, 0, **kwargs)
-
-        def __call__(self, parser, namespace, values, option_string=None):
-            # --full-time
-            #        like -l --time-style=full-iso
-            setattr(namespace, 'long_listing', True)
-            setattr(namespace, 'time_style', 'full-iso')
 
     # parse the arguments
     parser = argparse.ArgumentParser(description='GUFI version of ls', add_help=False)
@@ -231,12 +239,13 @@ def run(argv, config_path):
                         action='store_true',
                         help='do not list implied . and ..')
     parser.add_argument('--block-size',
+                        type=get_blocksize,
                         help='with -l, scale sizes by SIZE when printing them')
     parser.add_argument('-B', '--ignore-backups',
                         action='store_true',
                         help='do not list implied entries ending with ~')
     parser.add_argument('--full-time',
-                        action=FullTimeAction,
+                        action='store_true',
                         help='like -l --time-style=full-iso')
     parser.add_argument('-G', '--no-group',
                         action='store_true',
@@ -265,7 +274,7 @@ def run(argv, config_path):
                         action='store_true',
                         help='sort by file size, largest first')
     parser.add_argument('--time-style',
-                        metavar='TIME_STYLE',
+                        choices=sorted(TIME_STYLES.keys()),
                         help='time/date format with -l')
     parser.add_argument('-t',
                         dest='mtime',

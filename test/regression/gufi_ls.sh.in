@@ -66,7 +66,12 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_ls.out"
 
+USER="$(id -un)"
+GROUP="$(id -gn)"
+BACKUP="backup~"
+
 (
+# short listing (no uids, gids, and timestamps)
 run_no_sort "${GUFI_LS} --help" | replace_argparse
 run_no_sort "${GUFI_LS}"
 run_no_sort "${GUFI_LS} -a"
@@ -75,6 +80,65 @@ run_no_sort "${GUFI_LS} -R"
 run_no_sort "${GUFI_LS} -r"
 run_no_sort "${GUFI_LS} -ar"
 run_no_sort "${GUFI_LS} -arR"
+run_no_sort "${GUFI_LS} -S  | @GREP@ -v '.*directory.*'"
+run_no_sort "${GUFI_LS} -Sr | @GREP@ -v '.*directory.*'"
+
+# remove backup files
+run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"INSERT INTO entries (name) VALUES ('${BACKUP}');\""
+run_no_sort "${GUFI_LS} -B"
+run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name == '${BACKUP}';\""
+
+# long listing (uids, gid, and timestamps)
+(
+    export TZ="<UTC>"
+
+    # handle timestamps in the entries table by changing all of them to 0
+    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE entries SET mtime=0;"
+
+    # timestamp formats
+    run_no_sort "${GUFI_LS} old_file --full-time" # implies -l
+    run_no_sort "${GUFI_LS} old_file -l --time-style=full-iso"
+    run_no_sort "${GUFI_LS} old_file -l --time-style=long-iso"
+    run_no_sort "${GUFI_LS} old_file -l --time-style=iso"
+    run_no_sort "${GUFI_LS} old_file -l --time-style=locale"
+    run_no_sort "${GUFI_LS} old_file -l"
+
+    # timestamp formats without -l (should only show name)
+    run_no_sort "${GUFI_LS} old_file --time-style=full-iso"
+    run_no_sort "${GUFI_LS} old_file --time-style=long-iso"
+    run_no_sort "${GUFI_LS} old_file --time-style=iso"
+    run_no_sort "${GUFI_LS} old_file --time-style=locale"
+
+    # minimum number of user provided blocks required to store this entry
+    run_no_sort "${GUFI_LS} -l --block-size=1000 1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=1024 1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=K    1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=1K   1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=KB   1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=1KB  1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=KiB  1KB"
+    run_no_sort "${GUFI_LS} -l --block-size=1KiB 1KB"
+
+    # --block-size without -l (should only show name)
+    run_no_sort "${GUFI_LS} --block-size=K    1KB"
+    run_no_sort "${GUFI_LS} --block-size=1K   1KB"
+    run_no_sort "${GUFI_LS} --block-size=KB   1KB"
+    run_no_sort "${GUFI_LS} --block-size=1KB  1KB"
+    run_no_sort "${GUFI_LS} --block-size=KiB  1KB"
+    run_no_sort "${GUFI_LS} --block-size=1KiB 1KB"
+
+    # no group
+    run_no_sort "${GUFI_LS} -lG old_file"
+    run_no_sort "${GUFI_LS} -G old_file"  # (should only show name)
+
+    # human readable sizes
+    run_no_sort "${GUFI_LS} -lh 1KB"
+    run_no_sort "${GUFI_LS} -lh 1MB"
+
+    # human readable sizes without -l (should only show name)
+    run_no_sort "${GUFI_LS} -h 1KB"
+    run_no_sort "${GUFI_LS} -h 1MB"
+) | @SED@ "s/${USER} ${GROUP}/user group/g; s/${USER}/user/g;"
 ) |& remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"
