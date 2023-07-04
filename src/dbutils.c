@@ -133,14 +133,17 @@ vssql(group, 2);
 
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err)
 {
-  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
-  char attach[MAXSQL];
+  char ow = '?';
   if (flags & SQLITE_OPEN_READONLY) {
-      sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=ro" GUFI_SQLITE_VFS_URI "' AS %Q", name, dbn);
+      ow = 'o';
   }
   else if (flags & SQLITE_OPEN_READWRITE) {
-      sqlite3_snprintf(MAXSQL, attach, "ATTACH %Q AS %Q", name, dbn);
+      ow = 'w';
   }
+
+  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
+  char attach[MAXSQL];
+  sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=r%c" GUFI_SQLITE_VFS_URI "' AS %Q", name, ow, dbn);
 
   char *err = NULL;
   if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {

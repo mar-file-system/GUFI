@@ -4,13 +4,14 @@ Usage: gufi_find [-P] [path...] [expression]
 default path is the index root directory specified in the configuration file
 expression may consist of:
 
-    amin atime cmin ctime empty
-    executable false fprint gid group
-    help iname inum iregex links
-    lname ls maxdepth mindepth mmin
-    mtime name newer path printf
-    readable regex samefile size true
-    type uid user writable
+    amin anewer atime cmin cnewer
+    ctime empty executable false fprint
+    gid group help iname inum
+    iregex links lname ls maxdepth
+    mindepth mmin mtime name newer
+    path printf readable regex samefile
+    size true type uid user
+    writable
 
 GUFI Specific Flags (--):
 
@@ -42,8 +43,257 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
+$ gufi_find -amin +1440
+old_file
+
+$ gufi_find -anewer not_as_old_file
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -atime +1
+old_file
+
+$ gufi_find -cmin +1440
+old_file
+
+$ gufi_find -cnewer not_as_old_file
+
+$ gufi_find -ctime +1
+old_file
+
 $ gufi_find -empty
 empty_file
+
+$ gufi_find -executable
+prefix
+directory
+directory/executable
+directory/subdirectory
+directory/subdirectory/directory_symlink
+file_symlink
+leaf_directory
+unusual#? directory ,
+
+$ gufi_find -false
+
+$ gufi_find -iname 'LEAF'
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+
+$ gufi_find -inum $(stat -c '%i' directory)
+directory
+
+$ gufi_find -inum $(stat -c '%i' empty_file)
+empty_file
+
+$ gufi_find -inum $(stat -c '%i' file_symlink)
+file_symlink
+
+$ gufi_find -iregex 'LEAF'
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+
+$ gufi_find -links 1 -type f
+.hidden
+1KB
+1MB
+directory/executable
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -lname 'directory*'
+directory/subdirectory/directory_symlink
+
+$ gufi_find -lname 'file*'
+file_symlink
+
+
+$ gufi_find -ls
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 .hidden
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 1KB
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 1MB
+0 0 drwxrwxr-x 3 user group 0 Jan 01 1970 directory
+0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 directory_symlink -> directory/subdirectory
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 empty_file
+0 0 -rwxrwxrwx 1 user group 0 Jan 01 1970 executable
+0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 file_symlink -> 1KB
+0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 leaf_directory
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 leaf_file1
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 leaf_file2
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 old_file
+0 0 drwxrwxr-x 5 user group 0 Jan 01 1970 prefix
+0 0 -r--r--r-- 1 user group 0 Jan 01 1970 readonly
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 repeat_name
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 repeat_name
+0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 subdirectory
+0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 unusual#? directory ,
+0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 unusual, name?#
+0 0 -rw-rw-rw- 1 user group 0 Jan 01 1970 writable
+
+$ gufi_find -maxdepth 0
+prefix
+.hidden
+1KB
+1MB
+empty_file
+file_symlink
+old_file
+repeat_name
+
+$ gufi_find -mindepth 2
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+
+$ gufi_find -mmin  +1440
+old_file
+
+$ gufi_find -mtime +1
+old_file
+
+$ gufi_find -name  'directory*'
+directory
+directory/subdirectory/directory_symlink
+
+$ gufi_find -name  'file*'
+file_symlink
+
+$ gufi_find -newer 'not_as_old_file'
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -readable
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -regex '.*/directory.*'
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+
+$ gufi_find -regex '.*/file.*'
+file_symlink
+
+$ gufi_find -samefile 'directory/subdirectory'
+directory/subdirectory
+
+$ gufi_find -samefile 'directory/subdirectory/repeat_name'
+directory/subdirectory/repeat_name
+
+$ gufi_find -size +1 -size=-3 -type f
+1KB
+
+$ gufi_find -size +1024c      -type f
+1MB
+
+$ gufi_find -size +1c         -type f
+.hidden
+1KB
+1MB
+directory/readonly
+directory/subdirectory/repeat_name
+directory/writable
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -size 1c          -type f
+directory/executable
+
+$ gufi_find -size 2048        -type f
+1MB
+
+$ gufi_find -size=-1c         -type f
+empty_file
+
+$ gufi_find -true
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
 
 $ gufi_find -type d
 prefix
@@ -71,28 +321,6 @@ $ gufi_find -type l
 directory/subdirectory/directory_symlink
 file_symlink
 
-$ gufi_find -readable
-prefix
-.hidden
-1KB
-1MB
-directory
-directory/executable
-directory/readonly
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-directory/writable
-empty_file
-file_symlink
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-old_file
-repeat_name
-unusual#? directory ,
-unusual#? directory ,/unusual, name?#
-
 $ gufi_find -writable
 prefix
 .hidden
@@ -114,156 +342,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -executable
-prefix
-directory
-directory/executable
-directory/subdirectory
-directory/subdirectory/directory_symlink
-file_symlink
-leaf_directory
-unusual#? directory ,
-
-$ gufi_find -mindepth 2
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-
-$ gufi_find -maxdepth 0
-prefix
-.hidden
-1KB
-1MB
-empty_file
-file_symlink
-old_file
-repeat_name
-
-$ gufi_find -type f -size 1c
-directory/executable
-
-$ gufi_find -type f -size=-1c
-empty_file
-
-$ gufi_find -type f -size +1c
-.hidden
-1KB
-1MB
-directory/readonly
-directory/subdirectory/repeat_name
-directory/writable
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-old_file
-repeat_name
-unusual#? directory ,/unusual, name?#
-
-$ gufi_find -type f -size +1024c
-1MB
-
-$ gufi_find -type f -size +1 -size=-3
-1KB
-
-$ gufi_find -type f -size 2048
-1MB
-
-$ gufi_find -iname 'LEAF'
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-
-$ gufi_find -iregex 'LEAF'
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-
-$ gufi_find -lname 'file*'
-file_symlink
-
-$ gufi_find -lname 'directory*'
-directory/subdirectory/directory_symlink
-
-$ gufi_find -inum $(stat -c '%i' directory)
-directory
-
-$ gufi_find -inum $(stat -c '%i' empty_file)
-empty_file
-
-$ gufi_find -inum $(stat -c '%i' file_symlink)
-file_symlink
-
-$ gufi_find -name  'file*'
-file_symlink
-
-$ gufi_find -name  'directory*'
-directory
-directory/subdirectory/directory_symlink
-
-# missing old_file
-$ gufi_find -newer 'not_as_old_file'
-prefix
-.hidden
-1KB
-1MB
-directory
-directory/executable
-directory/readonly
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-directory/writable
-empty_file
-file_symlink
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-repeat_name
-unusual#? directory ,
-unusual#? directory ,/unusual, name?#
-
-$ gufi_find -regex '.*/file.*'
-file_symlink
-
-$ gufi_find -regex '.*/directory.*'
-directory
-directory/executable
-directory/readonly
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-directory/writable
-
-$ gufi_find -samefile 'directory/subdirectory/repeat_name'
-directory/subdirectory/repeat_name
-
-$ gufi_find -samefile 'directory/subdirectory'
-directory/subdirectory
-
-$ gufi_find -true
-prefix
-.hidden
-1KB
-1MB
-directory
-directory/executable
-directory/readonly
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-directory/writable
-empty_file
-file_symlink
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-old_file
-repeat_name
-unusual#? directory ,
-unusual#? directory ,/unusual, name?#
-
-$ gufi_find -false
-
-$ gufi_find -user 1001
+$ gufi_find -uid 1001
 prefix
 .hidden
 1KB
@@ -307,7 +386,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -group 1001
+$ gufi_find -gid 1001
 prefix
 .hidden
 1KB
@@ -351,7 +430,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -type d -type l -printf "%% %d %D %f %m %M       %y"
+$ gufi_find -printf "%% %d %D %f %m %M       %y" -type d -type l
 % 0 - prefix 775 drwxrwxr-x       d
 % 1 - directory 775 drwxrwxr-x       d
 % 1 - file_symlink 777 lrwxrwxrwx       l
@@ -360,7 +439,7 @@ $ gufi_find -type d -type l -printf "%% %d %D %f %m %M       %y"
 % 2 - subdirectory 775 drwxrwxr-x       d
 % 3 - directory_symlink 777 lrwxrwxrwx       l
 
-$ gufi_find -type f         -printf "%% %d %D %f %m %M %n %s %y"
+$ gufi_find -printf "%% %d %D %f %m %M %n %s %y" -type f
 % 1 - .hidden 664 -rw-rw-r-- 1 5 f
 % 1 - 1KB 664 -rw-rw-r-- 1 1024 f
 % 1 - 1MB 664 -rw-rw-r-- 1 1048576 f
@@ -378,19 +457,48 @@ $ gufi_find -type f         -printf "%% %d %D %f %m %M %n %s %y"
 $ gufi_find -printf '\141 \142 \143 \d' | head -n 1
 abcd
 
-$ gufi_find -type f -links 1
+$ gufi_find -printf "%-22f %+22f"
+.hidden                               .hidden
+1KB                                       1KB
+1MB                                       1MB
+directory                           directory
+directory_symlink           directory_symlink
+empty_file                         empty_file
+executable                         executable
+file_symlink                     file_symlink
+leaf_directory                 leaf_directory
+leaf_file1                         leaf_file1
+leaf_file2                         leaf_file2
+old_file                             old_file
+prefix                                 prefix
+readonly                             readonly
+repeat_name                       repeat_name
+repeat_name                       repeat_name
+subdirectory                     subdirectory
+unusual#? directory ,   unusual#? directory ,
+unusual, name?#               unusual, name?#
+writable                             writable
+
+$ gufi_find -fprint gufi_query.fprint && cat gufi_query.fprint
+prefix
 .hidden
 1KB
 1MB
+directory
 directory/executable
 directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
 empty_file
+file_symlink
+leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
 repeat_name
+unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
 $ gufi_find --numresults 5
@@ -429,4 +537,39 @@ directory/writable
 directory/readonly
 directory/executable
 empty_file
+
+$ gufi_find directory leaf_directory
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+
+$ gufi_find -atime abc
+usage: gufi_find.py [-help] [-maxdepth levels] [-mindepth levels] [--version]
+                    [-amin n] [-anewer file] [-atime n] [-cmin n]
+                    [-cnewer file] [-ctime n] [-empty] [-executable] [-false]
+                    [-gid n] [-group gname] [-iname pattern] [-inum n]
+                    [-iregex pattern] [-links n] [-lname pattern] [-mmin n]
+                    [-mtime n] [-name pattern] [-newer file] [-path pattern]
+                    [-readable] [-regex pattern] [-samefile name] [-size n]
+                    [-true] [-type c] [-uid n] [-user uname] [-writable]
+                    [-fprint file] [-ls | -printf format] [--numresults n]
+                    [--smallest | --largest] [--delim c]
+                    [--in-memory-name name] [--aggregate-name name]
+                    [--skip-file filename]
+gufi_find.py: error: argument -atime: abc is not a valid numeric argument
+
+$ gufi_find -unknown-predicate
+Traceback (most recent call last):
+  File "gufi_find", line 71, in <module>
+    sys.exit(gufi_find.run(sys.argv, common.CONFIG_PATH))
+  File "scripts/gufi_find", line 805, in run
+    raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
+RuntimeError: gufi_find: unknown predicate `-unknown-predicate'
 

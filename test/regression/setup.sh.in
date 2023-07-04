@@ -100,6 +100,7 @@ trap setup_cleanup EXIT
 setup_cleanup
 
 umask 002
+export TZ=UTC
 export LC_ALL="C"
 export PATH="@CMAKE_BINARY_DIR@/scripts:${PATH}"
 export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test:${PYTHONPATH}"
@@ -229,4 +230,7 @@ then
 
     # generate the index
     "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" > /dev/null
+
+    # set all timestamps of old_file to epoch
+    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE entries SET atime = 0, ctime = 0, mtime = 0 WHERE name == 'old_file';"
 fi

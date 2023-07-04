@@ -90,8 +90,6 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
 
 # long listing (uids, gid, and timestamps)
 (
-    export TZ="<UTC>"
-
     # handle timestamps in the entries table by changing all of them to 0
     "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE entries SET mtime=0;"
 

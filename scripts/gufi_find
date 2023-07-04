@@ -84,15 +84,6 @@ FILESIZE = {'b' : 512,
             'M' : 1048576,
             'G' : 1073741824}
 
-def validate_args(args):
-    '''Validate known arguments here'''
-
-    # GUFI directories do not have source tree size/timestamps
-    if args.type:
-        if 'd' in args.type:
-            if args.size or args.atime or args.mtime or args.ctime:
-                raise RuntimeError('size, atime, mtime, and ctime cannot be used with -type d')
-
 # Used to parse all numeric arguments
 # From man 1 find:
 #
@@ -145,24 +136,6 @@ def build_aggregation_columns(args):
         for col in [('size', 'INT64'), ('type', 'TEXT')]:
             cols.add(col)
 
-    if args.ls or args.printf:
-        for col in [
-                ('type',     'TEXT'),
-                ('inode',    'INT64'),
-                ('mode',     'INT64'),
-                ('nlink',    'INT64'),
-                ('uid',      'INT64'),
-                ('gid',      'INT64'),
-                ('size',     'INT64'),
-                ('blksize',  'INT64'),
-                ('blocks',   'INT64'),
-                ('atime',    'INT64'),
-                ('mtime',    'INT64'),
-                ('ctime',    'INT64'),
-                ('linkname', 'TEXT')
-        ]:
-            cols.add(col)
-
     return list(cols)
 
 def build_where(args, table, root_uid=0, root_gid=0):
@@ -181,7 +154,8 @@ def build_where(args, table, root_uid=0, root_gid=0):
         where += ['({0} - atime) / 60 {1} {2}'.format(now, amin[0], amin[1])
                   for amin in args.amin]
 
-    # if args.anewer is not None:
+    if args.anewer is not None:
+        where += ['atime > {0}'.format(args.anewer.st_atime)]
 
     if args.atime is not None:
         where += ['({0} - atime) / {1} {2} {3} '.format(now, SECONDS_PER_DAY, atime[0], atime[1])
@@ -191,7 +165,8 @@ def build_where(args, table, root_uid=0, root_gid=0):
         where += ['({0} - ctime) / 60 {1} {2}'.format(now, cmin[0], cmin[1])
                   for cmin in args.cmin]
 
-    # if args.cnewer is not None:
+    if args.cnewer is not None:
+        where += ['ctime > {0}'.format(args.cnewer.st_ctime)]
 
     if args.ctime is not None:
         where += ['({0} - ctime) / {1} {2} {3} '.format(now, SECONDS_PER_DAY, ctime[0], ctime[1])
@@ -269,6 +244,8 @@ def build_where(args, table, root_uid=0, root_gid=0):
         where += ['mtime > {0}'.format(args.newer.st_mtime)]
 
     # if args.newerXY is not None:
+
+    # if args.nogroup is True:
 
     # if args.nouser is True:
 
@@ -387,9 +364,9 @@ def parse_directives(fmt, fmt_len, i, path):
     # check for width formatting
     width = 0
     if fmt[i].isdigit() or (fmt[i] == '-') or (fmt[i] == '+') or (fmt[i] == '.'):
-        j = i
+        j = i + 1
         decimal_point = 0
-        while fmt[j].isdigit() or (fmt[j] == '.'):
+        while (j < fmt_len) and (fmt[j].isdigit() or (fmt[j] == '.')):
             if fmt[j] == '.':
                 decimal_point += 1
             j += 1
@@ -476,14 +453,14 @@ def build_output(args, name):
 
     if args.ls:
         output = ['inode',
-                  '(size / 1024) + ((size % 1024) != 0) != 0)',
+                  '(size / 1024) + (not not (size % 1024))',
                   'modetotxt(mode)',
                   'nlink',
                   'uidtouser(uid)',
                   'gidtogroup(gid)',
                   'size',
                   'strftime("%b %d %Y", mtime)',
-                  'name || CASE type WHEN "l" THEN "->" || linkname ELSE "" END']
+                  'name || CASE type WHEN "l" THEN " -> " || linkname ELSE "" END']
     elif args.printf is not None:
         fmt = args.printf
         fmt_len = len(fmt)
@@ -563,10 +540,10 @@ def build_expression_parser():
                         type=numeric_arg,
                         action='append',
                         help='File was last accessed n minutes ago.')
-    # parser.add_argument('-anewer',
-    #                     metavar='file',
-    #                     type=gufi_common.get_non_negative,
-    #                     help='File was last accessed more recently than file was modified.')
+    parser.add_argument('-anewer',
+                        metavar='file',
+                        type=os.lstat,
+                        help='File was last accessed more recently than file was modified.')
     parser.add_argument('-atime',
                         metavar='n',
                         type=numeric_arg,
@@ -577,10 +554,10 @@ def build_expression_parser():
                         type=numeric_arg,
                         action='append',
                         help='File\'s status was last changed n minutes ago.')
-    # parser.add_argument('-cnewer',
-    #                     metavar='file',
-    #                     type=gufi_common.get_non_negative,
-    #                     help='File\'s status was last changed more recently than file was modified.')
+    parser.add_argument('-cnewer',
+                        metavar='file',
+                        type=os.lstat,
+                        help='File\'s status was last changed more recently than file was modified.')
     parser.add_argument('-ctime',
                         metavar='n',
                         type=numeric_arg,
@@ -826,8 +803,6 @@ def run(argv, config_path):
 
     if len(unknown) > 0:
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
-
-    validate_args(args)
 
     # create the query command
     query_cmd = [config.executable(),

@@ -66,10 +66,11 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_find.out"
 
-reference="not_as_old_file"
+FPRINT="gufi_query.fprint"
+REFERENCE="not_as_old_file"
 
 cleanup() {
-    rm -rf "${reference}"
+    rm -rf "${FPRINT}" "${REFERENCE}"
 }
 
 cleanup_exit() {
@@ -81,7 +82,7 @@ trap cleanup_exit EXIT
 
 cleanup
 
-TZ=UTC touch -amt 197001010001 "${reference}"
+touch -amt 197001010001 "${REFERENCE}"            # one minute after epoch
 
 TEST_ID=1001
 TEST_NAME="gufi_test"
@@ -90,45 +91,54 @@ TEST_NAME="gufi_test"
 run_no_sort "${GUFI_FIND} --help"
 
 run_sort "${GUFI_FIND}"
+run_sort "${GUFI_FIND} -amin +1440"               # more than 1 day
+run_sort "${GUFI_FIND} -anewer ${REFERENCE}"      # all
+run_sort "${GUFI_FIND} -atime +1"                 # more than 1 day
+run_sort "${GUFI_FIND} -cmin +1440"               # more than 1 day
+run_sort "${GUFI_FIND} -cnewer ${REFERENCE}"      # none
+run_sort "${GUFI_FIND} -ctime +1"                 # more than 1 day
 run_sort "${GUFI_FIND} -empty"
-run_sort "${GUFI_FIND} -type d"
-run_sort "${GUFI_FIND} -type f"
-run_sort "${GUFI_FIND} -type l"
-run_sort "${GUFI_FIND} -readable"
-run_sort "${GUFI_FIND} -writable"
 run_sort "${GUFI_FIND} -executable"
-run_sort "${GUFI_FIND} -mindepth 2"
-run_sort "${GUFI_FIND} -maxdepth 0"
-# don't include directories or links because their
-# sizes are not consistent across filesystems
-run_sort "${GUFI_FIND} -type f -size 1c"
-run_sort "${GUFI_FIND} -type f -size=-1c"
-run_sort "${GUFI_FIND} -type f -size +1c"
-run_sort "${GUFI_FIND} -type f -size +1024c"
-run_sort "${GUFI_FIND} -type f -size +1 -size=-3" # 512 < size < 1536
-run_sort "${GUFI_FIND} -type f -size 2048"        # 512 * 2048 = 1MB
+run_sort "${GUFI_FIND} -false"
 run_sort "${GUFI_FIND} -iname 'LEAF'"             # regex on file name (should be glob, but glob is case sensitive)
-run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
-run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
-run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/directory)"
 run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/empty_file)"
 run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/file_symlink)"
-run_sort "${GUFI_FIND} -name  'file*'"            # glob on file name
+run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
+run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks change depending on filesystem
+run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
+run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
+run_no_sort "${GUFI_FIND} -ls" | awk '{ if (NF > 10) { $1="0"; $2="0"; $5="user"; $6="group"; $7="0"; $8="Jan"; $9="01"; $10="1970" } print }' | sort -k 11; echo # replace fields that change
+run_sort "${GUFI_FIND} -maxdepth 0"
+run_sort "${GUFI_FIND} -mindepth 2"
+run_sort "${GUFI_FIND} -mmin  +1440"              # more than 1 day
+run_sort "${GUFI_FIND} -mtime +1"                 # more than 1 day
 run_sort "${GUFI_FIND} -name  'directory*'"       # glob on file name
-echo "# missing old_file"
-run_sort "${GUFI_FIND} -newer '${reference}'"
-run_sort "${GUFI_FIND} -regex '.*/file.*'"        # regex on whole path
+run_sort "${GUFI_FIND} -name  'file*'"            # glob on file name
+run_sort "${GUFI_FIND} -newer '${REFERENCE}'"     # missing old_file
+run_sort "${GUFI_FIND} -readable"
 run_sort "${GUFI_FIND} -regex '.*/directory.*'"   # regex on whole path
-run_sort "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory/repeat_name'"
+run_sort "${GUFI_FIND} -regex '.*/file.*'"        # regex on whole path
 run_sort "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory'"
+run_sort "${GUFI_FIND} -samefile '${SRCDIR}/directory/subdirectory/repeat_name'"
+# don't include directories or links because their
+# sizes are not consistent across filesystems
+run_sort "${GUFI_FIND} -size +1 -size=-3 -type f" # 512 < size < 1536
+run_sort "${GUFI_FIND} -size +1024c      -type f"
+run_sort "${GUFI_FIND} -size +1c         -type f"
+run_sort "${GUFI_FIND} -size 1c          -type f"
+run_sort "${GUFI_FIND} -size 2048        -type f"        # 512 * 2048 = 1MB
+run_sort "${GUFI_FIND} -size=-1c         -type f"
 run_sort "${GUFI_FIND} -true"
-run_sort "${GUFI_FIND} -false"
+run_sort "${GUFI_FIND} -type d"
+run_sort "${GUFI_FIND} -type f"
+run_sort "${GUFI_FIND} -type l"
+run_sort "${GUFI_FIND} -writable"
 
 (
-    run_sort "${GUFI_FIND} -user $(id -u)"
+    run_sort "${GUFI_FIND} -uid $(id -u)"
     run_sort "${GUFI_FIND} -user \"$(id -un)\""
-    run_sort "${GUFI_FIND} -group $(id -g)"
+    run_sort "${GUFI_FIND} -gid $(id -g)"
     run_sort "${GUFI_FIND} -group \"$(id -gn)\""
 ) | @SED@ "
     s/ $(id -u)/ ${TEST_ID}/g;
@@ -138,19 +148,32 @@ run_sort "${GUFI_FIND} -false"
     "
 
 # don't print sizes and link counts for directories and symlinks
-run_sort "${GUFI_FIND} -type d -type l -printf \"%% %d %D %f %m %M       %y\""
-run_sort "${GUFI_FIND} -type f         -printf \"%% %d %D %f %m %M %n %s %y\""
+run_sort "${GUFI_FIND} -printf \"%% %d %D %f %m %M       %y\" -type d -type l"
+run_sort "${GUFI_FIND} -printf \"%% %d %D %f %m %M %n %s %y\" -type f"
 
 # escape characters
 run_no_sort "${GUFI_FIND} -printf '\141 \142 \143 \d' | @HEAD@ -n 1"
 
-# file links only - directory and symlinks change depending on filesystem
-run_sort "${GUFI_FIND} -type f -links 1"
+# spacing
+run_sort "${GUFI_FIND} -printf \"%-22f %+22f\""
+
+# print results to file
+run_sort "${GUFI_FIND} -fprint ${FPRINT} && cat ${FPRINT}"
 
 # GUFI specific flags
 run_no_sort "${GUFI_FIND} --numresults 5"
 run_no_sort "${GUFI_FIND} -type f --smallest"
 run_no_sort "${GUFI_FIND} -type f --largest"
+
+# multiple input directories
+run_sort "${GUFI_FIND} directory leaf_directory"
+
+# bad numerical input
+run_no_sort "${GUFI_FIND} -atime abc"
+
+# unknown predicate
+run_no_sort "${GUFI_FIND} -unknown-predicate" | @SED@ 's+@CMAKE_BINARY_DIR@/++g;'
+
 ) | remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"

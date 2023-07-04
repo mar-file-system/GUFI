@@ -139,18 +139,28 @@ Aggregate_t *aggregate_init(Aggregate_t *aggregate, struct input *in) {
 void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input *in) {
     /* Not checking arguments */
 
+    /*
+     * attach intermediate databases to aggregate database
+     * not using attachdb because attachdb modifies the input path, which is not needed here
+     *
+     * failure to attach is not an error - the data is simply not accessible
+     */
     for(size_t i = 0; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &(pa->ta[i]);
-        if (attachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, SQLITE_OPEN_READWRITE, 1)) {
-            char *err = NULL;
+
+        char attach[MAXSQL];
+        SNPRINTF(attach, sizeof(attach), "ATTACH '%s' AS '%s';", ta->dbname, INTERMEDIATE_ATTACH_NAME);
+
+        char *err = NULL;
+        if (sqlite3_exec(aggregate->db, attach, NULL, NULL, &err) == SQLITE_OK) {
             if ((sqlite3_exec(aggregate->db, in->sql.intermediate.data, NULL, NULL, &err) != SQLITE_OK)) {
                 fprintf(stderr, "Error: Cannot aggregate intermediate databases with \"%s\": %s\n", in->sql.intermediate.data, err);
             }
-            sqlite3_free(err);
         }
         else {
-            fprintf(stderr, "Could not attach aggregate database to intermediate database\n");
+            fprintf(stderr, "Could not attach aggregate database to intermediate database: %s\n", err);
         }
+        sqlite3_free(err);
         detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1);
     }
 }
