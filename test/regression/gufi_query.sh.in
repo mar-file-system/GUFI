@@ -145,6 +145,22 @@ run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\
 echo "# Have -G even though not aggregating (outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
 ) | @SED@ 's/&vfs=.*//g'
+
+echo "#####################################"
+echo "# Modify Index                      #"
+echo "#####################################"
+
+echo "# Attempt to modify databases in read-only mode"
+run_sort "${GUFI_QUERY} -a -S \"UPDATE summary SET inode = 0;\" -E \"UPDATE entries SET inode = 0;\" \"${INDEXROOT}\""
+
+echo "# Use write mode to modify databases"
+run_sort "${GUFI_QUERY} -a -w -S \"UPDATE summary SET inode = 0;\" -E \"UPDATE entries SET inode = 0;\" \"${INDEXROOT}\""
+
+echo "# Negative check to see if changes have been applied"
+run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary where inode != 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;\" \"${INDEXROOT}\""
+
+echo "# Positive check to see if changes have been applied"
+run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary where inode = 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode = 0;\" \"${INDEXROOT}\""
 ) |& @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"

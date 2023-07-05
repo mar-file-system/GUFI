@@ -230,3 +230,48 @@ $ gufi_query -O outdb   -I "create" -S "insert;" -E "insert;"              -G "q
 Warning: Got -G even though not aggregating. Ignoring
 Error: Could not run SQL Init "create" on outdb.0: incomplete input
 
+#####################################
+# Modify Index                      #
+#####################################
+# Attempt to modify databases in read-only mode
+$ gufi_query -a -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
+Error: attempt to write a readonly database: prefix/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/db.db: "UPDATE summary SET inode = 0;"
+Error: attempt to write a readonly database: prefix/directory/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/directory/db.db: "UPDATE summary SET inode = 0;"
+Error: attempt to write a readonly database: prefix/directory/subdirectory/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/directory/subdirectory/db.db: "UPDATE summary SET inode = 0;"
+Error: attempt to write a readonly database: prefix/leaf_directory/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/leaf_directory/db.db: "UPDATE summary SET inode = 0;"
+Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db.db: "UPDATE summary SET inode = 0;"
+
+# Use write mode to modify databases
+$ gufi_query -a -w -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
+
+# Negative check to see if changes have been applied
+$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary where inode != 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;" "prefix"
+
+# Positive check to see if changes have been applied
+$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary where inode = 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode = 0;" "prefix"
+prefix 0
+prefix/.hidden 0
+prefix/1KB 0
+prefix/1MB 0
+prefix/directory 0
+prefix/directory/executable 0
+prefix/directory/readonly 0
+prefix/directory/subdirectory 0
+prefix/directory/subdirectory/directory_symlink 0
+prefix/directory/subdirectory/repeat_name 0
+prefix/directory/writable 0
+prefix/empty_file 0
+prefix/file_symlink 0
+prefix/leaf_directory 0
+prefix/leaf_directory/leaf_file1 0
+prefix/leaf_directory/leaf_file2 0
+prefix/old_file 0
+prefix/repeat_name 0
+prefix/unusual#? directory , 0
+prefix/unusual#? directory ,/unusual, name?# 0
+
