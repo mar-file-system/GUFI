@@ -1061,7 +1061,8 @@ static void relative_level(sqlite3_context *context, int argc, sqlite3_value **a
 static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
 
-    sqlite3_result_text(context, sqlite3_user_data(context), -1, SQLITE_TRANSIENT);
+    refstr_t *root = (refstr_t *) sqlite3_user_data(context);
+    sqlite3_result_text(context, root->data, root->len, SQLITE_STATIC);
     return;
 }
 
@@ -1125,7 +1126,7 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
               (sqlite3_create_function(db,  "rpath",                    2, SQLITE_UTF8,
                                        work,                            &rpath,              NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "starting_point",           0,  SQLITE_UTF8,
-                                       (void *) work->root_parent.data, &starting_point,     NULL, NULL) == SQLITE_OK) &&
+                                       (void *) &work->root_parent,     &starting_point,     NULL, NULL) == SQLITE_OK) &&
               (sqlite3_create_function(db,  "level",                    0,  SQLITE_UTF8,
                                        lvl,                             &relative_level,     NULL, NULL) == SQLITE_OK))) {
             return 1;

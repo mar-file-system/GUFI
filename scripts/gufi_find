@@ -376,6 +376,7 @@ def parse_directives(fmt, fmt_len, i, path):
             width = float(fmt[i:j])
         else:
             width = int(fmt[i:j])
+        width = fmt[i:j] # use the original string to prevent floating point rounding
 
         i = j
 
@@ -384,12 +385,12 @@ def parse_directives(fmt, fmt_len, i, path):
     if ret == '%':
         ret = '\'%\''
     elif ret == 'a':
-        ret = 'printf("%{{0}}d", atime)'
+        ret = 'printf("%{0}d", atime)'
     # elif ret == 'A':
     elif ret == 'b':
-        ret = 'printf("%{{0}}d", (blocks * blksize) / 512)'
+        ret = 'printf("%{0}d", (blocks * blksize) / 512)'
     elif ret == 'c':
-        ret = 'printf("%{{0}}d", ctime)'
+        ret = 'printf("%{0}d", ctime)'
     # elif ret == 'C':
     elif ret == 'd':
         ret = 'printf("%{0}u", level() + (CASE type WHEN "d" THEN 0 ELSE 1 END))'
@@ -403,9 +404,9 @@ def parse_directives(fmt, fmt_len, i, path):
     elif ret == 'G':
         ret = 'printf("%{0}d", gid)'
     elif ret == 'h':
-        ret = 'printf("%{0}s", {0})'.format(path)
+        ret = 'printf("%{{0}}s", {0})'.format(path)
     elif ret == 'H':
-        ret = 'printf("%(0}s", starting_point())'
+        ret = 'printf("%{0}s", starting_point())'
     elif ret == 'i':
         ret = 'printf("%{0}d", inode)'
     elif ret == 'k':
@@ -419,9 +420,9 @@ def parse_directives(fmt, fmt_len, i, path):
     elif ret == 'n':
         ret = 'printf("%{0}d", nlink)'
     elif ret == 'p':
-        ret = '{0} || (CASE type WHEN "d" THEN "" ELSE "/" || name END)'.format(path)
+        ret = path
     elif ret == 'P':
-        ret = 'printf("%{0}s", substr({0} || "/" || name, length(starting_point()) + 1))'.format(path)
+        ret = 'printf("%{{0}}s", substr({0}, length(starting_point()) + 1))'.format(path)
     elif ret == 's':
         ret = 'printf("%{0}u", size)'
     elif ret == 'S':
@@ -578,7 +579,7 @@ def build_expression_parser():
     #                     help='File is on a filesystem of type type.')
     parser.add_argument('-gid',
                         metavar='n',
-                        type=numeric_arg,
+                        type=lambda gid : numeric_arg(str(gufi_common.get_gid(gid))),
                         action='append',
                         help='File\'s numeric group ID is n.')
     parser.add_argument('-group',
@@ -683,7 +684,7 @@ def build_expression_parser():
                         help='File is of type c')
     parser.add_argument('-uid',
                         metavar='n',
-                        type=numeric_arg,
+                        type=lambda uid : numeric_arg(str(gufi_common.get_uid(uid))),
                         action='append',
                         help='File\'s numeric user ID is n.')
     # parser.add_argument('-used',

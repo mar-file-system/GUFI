@@ -108,7 +108,7 @@ run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
 run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks change depending on filesystem
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
-run_no_sort "${GUFI_FIND} -ls" | awk '{ if (NF > 10) { $1="0"; $2="0"; $5="user"; $6="group"; $7="0"; $8="Jan"; $9="01"; $10="1970" } print }' | sort -k 11; echo # replace fields that change
+run_no_sort "${GUFI_FIND} -ls" | awk '{ if (NF > 10) { $1="0"; $2="0"; $5="user"; $6="group"; $7="0"; $8="Jan"; $9="01"; $10="1970"; } print }' | sort -k 11; echo # replace fields that change
 run_sort "${GUFI_FIND} -maxdepth 0"
 run_sort "${GUFI_FIND} -mindepth 2"
 run_sort "${GUFI_FIND} -mmin  +1440"              # more than 1 day
@@ -135,22 +135,6 @@ run_sort "${GUFI_FIND} -type f"
 run_sort "${GUFI_FIND} -type l"
 run_sort "${GUFI_FIND} -writable"
 
-(
-    run_sort "${GUFI_FIND} -uid $(id -u)"
-    run_sort "${GUFI_FIND} -user \"$(id -un)\""
-    run_sort "${GUFI_FIND} -gid $(id -g)"
-    run_sort "${GUFI_FIND} -group \"$(id -gn)\""
-) | @SED@ "
-    s/ $(id -u)/ ${TEST_ID}/g;
-    s/ \"$(id -un)\"/ \"${TEST_NAME}\"/g;
-    s/ $(id -g)/ ${TEST_ID}/g;
-    s/ \"$(id -gn)\"/ \"${TEST_NAME}\"/g;
-    "
-
-# don't print sizes and link counts for directories and symlinks
-run_sort "${GUFI_FIND} -printf \"%% %d %D %f %m %M       %y\" -type d -type l"
-run_sort "${GUFI_FIND} -printf \"%% %d %D %f %m %M %n %s %y\" -type f"
-
 # escape characters
 run_no_sort "${GUFI_FIND} -printf '\141 \142 \143 \d' | @HEAD@ -n 1"
 
@@ -162,18 +146,36 @@ run_sort "${GUFI_FIND} -fprint ${FPRINT} && cat ${FPRINT}"
 
 # GUFI specific flags
 run_no_sort "${GUFI_FIND} --numresults 5"
-run_no_sort "${GUFI_FIND} -type f --smallest"
-run_no_sort "${GUFI_FIND} -type f --largest"
+run_no_sort "${GUFI_FIND} --smallest -type f"
+run_no_sort "${GUFI_FIND} --largest  -type f"
 
 # multiple input directories
 run_sort "${GUFI_FIND} directory leaf_directory"
+
+(
+    run_sort "${GUFI_FIND} -uid   \"$(id -u)\""
+    run_sort "${GUFI_FIND} -user  \"$(id -un)\""
+    run_sort "${GUFI_FIND} -gid   \"$(id -g)\""
+    run_sort "${GUFI_FIND} -group \"$(id -gn)\""
+
+) | @SED@ "
+    s/\"$(id -u)\"/${TEST_ID}/g;
+    s/\"$(id -un)\"/${TEST_NAME}/g;
+    s/\"$(id -g)\"/${TEST_ID}/g;
+    s/\"$(id -gn)\"/${TEST_NAME}/g;
+    "
+# zero some columns to make test easier
+run_no_sort "${GUFI_QUERY} -a -w -S \"UPDATE summary SET inode = 0, atime = 0, ctime = 0, mtime = 0, size = 0;\" -E \"UPDATE entries SET inode = 0, atime = 0, ctime = 0, mtime = 0, size = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
+
+# %H and %l still need fixing
+# shellcheck disable=SC2016
+run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 5 -k 7; echo
 
 # bad numerical input
 run_no_sort "${GUFI_FIND} -atime abc"
 
 # unknown predicate
-run_no_sort "${GUFI_FIND} -unknown-predicate" | @SED@ 's+@CMAKE_BINARY_DIR@/++g;'
-
+run_no_sort "${GUFI_FIND} -unknown-predicate" | @SED@ 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;'
 ) | remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"

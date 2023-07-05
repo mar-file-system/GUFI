@@ -426,6 +426,7 @@ TEST(addqueryfuncs, starting_point) {
     struct work work;
     memset(&work, 0, sizeof(work));
     work.root_parent.data = "/index_root";
+    work.root_parent.len = strlen(work.root_parent.data);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
