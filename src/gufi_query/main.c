@@ -409,10 +409,10 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (rollupscore == 0) {
             thread_timestamp_start(ts.tts, descend_call);
             subdirs_walked_count =
-            descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level, in->compress
-                     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                     , ts.dts
-                     #endif
+                descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level, in->compress
+                         #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                         , ts.dts
+                         #endif
                     );
             thread_timestamp_end(descend_call);
         }
