@@ -90,6 +90,12 @@ TEST_NAME="gufi_test"
 (
 run_no_sort "${GUFI_FIND} --help"
 
+run_no_sort "${GUFI_FIND} -H 2>&1 >/dev/null"
+run_no_sort "${GUFI_FIND} -L 2>&1 >/dev/null"
+run_no_sort "${GUFI_FIND} -P 2>&1 >/dev/null"
+run_no_sort "${GUFI_FIND} -D 2>&1 >/dev/null"
+run_no_sort "${GUFI_FIND} -O 2>&1 >/dev/null"
+
 run_sort "${GUFI_FIND}"
 run_sort "${GUFI_FIND} -amin +1440"               # more than 1 day
 run_sort "${GUFI_FIND} -anewer ${REFERENCE}"      # all
@@ -116,6 +122,7 @@ run_sort "${GUFI_FIND} -mtime +1"                 # more than 1 day
 run_sort "${GUFI_FIND} -name  'directory*'"       # glob on file name
 run_sort "${GUFI_FIND} -name  'file*'"            # glob on file name
 run_sort "${GUFI_FIND} -newer '${REFERENCE}'"     # missing old_file
+run_sort "${GUFI_FIND} -path  '*directory*'"
 run_sort "${GUFI_FIND} -readable"
 run_sort "${GUFI_FIND} -regex '.*/directory.*'"   # regex on whole path
 run_sort "${GUFI_FIND} -regex '.*/file.*'"        # regex on whole path
@@ -135,14 +142,22 @@ run_sort "${GUFI_FIND} -type f"
 run_sort "${GUFI_FIND} -type l"
 run_sort "${GUFI_FIND} -writable"
 
-# escape characters
-run_no_sort "${GUFI_FIND} -printf '\141 \142 \143 \d' | @HEAD@ -n 1"
+run_no_sort "${GUFI_FIND} -printf ''"
+
+# numerical escape characters
+run_no_sort "${GUFI_FIND} -printf '\141 \142 \143' | @HEAD@ -n 1"
+
+# print escape characters
+run_no_sort "${GUFI_FIND} -printf '[\\a][ \\b][\f][\\n][\\r][\\t][\v][\\\\\\\\]' -maxdepth 0 -type d"
 
 # spacing
-run_sort "${GUFI_FIND} -printf \"%-22f %+22f\""
+run_sort "${GUFI_FIND} -printf '%-22f %+22f'"
 
 # print results to file
 run_sort "${GUFI_FIND} -fprint ${FPRINT} && cat ${FPRINT}"
+
+# bad escapes and directives
+run_no_sort "${GUFI_FIND} -printf '%z %z \\z' -maxdepth 0 -type d"
 
 # GUFI specific flags
 run_no_sort "${GUFI_FIND} --numresults 5"
@@ -169,14 +184,17 @@ run_no_sort "${GUFI_QUERY} -a -w -S \"UPDATE summary SET inode = 0, atime = 0, c
 
 # %H and %l still need fixing
 # shellcheck disable=SC2016
-run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | sort -n -k 5 -k 7; echo
+run_no_sort "${GUFI_FIND} -printf \"%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y\" -type f" | @AWK@ '{ if ((NR > 1) && (NF > 8)) { $3=0; $6=0; $7=0; $8=0; } print }' | @SORT@ -n -k 5 -k 7; echo
+
+# path must come before expressions
+run_no_sort "${GUFI_FIND} -empty path_after_expression"
 
 # bad numerical input
 run_no_sort "${GUFI_FIND} -atime abc"
 
 # unknown predicate
-run_no_sort "${GUFI_FIND} -unknown-predicate" | @SED@ 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;'
-) | remove_root | @TEE@ "${OUTPUT}"
+run_no_sort "${GUFI_FIND} -unknown-predicate"
+) | remove_root | @SED@ 's+@CMAKE_BINARY_DIR@/++g; s/\,\ line\ [0-9]\+\,/, line n,/g;' | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_find.expected "${OUTPUT}"
 rm "${OUTPUT}"

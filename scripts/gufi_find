@@ -64,6 +64,7 @@
 import argparse
 import math
 import os
+import re
 import subprocess
 import sys
 import time
@@ -351,7 +352,7 @@ def parse_escape(fmt, i):
         ret = chr(int(fmt[i:i + 3], 8))
         i += 3
     else:
-        pass
+        ret = '\\{0}'.format(ret)
 
     return '"{0}"'.format(ret), i + 1
 
@@ -362,23 +363,12 @@ def parse_directives(fmt, fmt_len, i, path):
         return '""', i
 
     # check for width formatting
-    width = 0
-    if fmt[i].isdigit() or (fmt[i] == '-') or (fmt[i] == '+') or (fmt[i] == '.'):
-        j = i + 1
-        decimal_point = 0
-        while (j < fmt_len) and (fmt[j].isdigit() or (fmt[j] == '.')):
-            if fmt[j] == '.':
-                decimal_point += 1
-            j += 1
-
-        if decimal_point > 0:
-            # let float deal with multiple decimal points
-            width = float(fmt[i:j])
-        else:
-            width = int(fmt[i:j])
-        width = fmt[i:j] # use the original string to prevent floating point rounding
-
-        i = j
+    width = re.match('[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)', fmt[i:])
+    if width is not None:
+        width = width.group(0)
+        i += len(width)
+    else:
+        width = ''
 
     ret = fmt[i]
 
@@ -439,11 +429,14 @@ def parse_directives(fmt, fmt_len, i, path):
     # elif ret == 'Y':
     # elif ret == 'Z':
     else:
+        start = i # first character of bad directive
+
+        # find next escape or directive
         ret = ''
         while (i < fmt_len) and (fmt[i] != '%') and (fmt[i] != '\\'):
             ret += fmt[i]
             i += 1
-        ret = '"{0}"'.format(ret)
+        ret = '"{0}"'.format(fmt[start - len(width) - 1:i])
         i -= 1
 
     return ret.format(width), i + 1
@@ -752,37 +745,23 @@ def run(argv, config_path):
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
 
-    expression_parser = build_expression_parser()
-
-    at_expressions = False # whether or not the command line arguments started with expressions
-
     # parse 'real' options
-    real = {
-        # 'H': False,
-        # 'L': False,
-        'P': True,
-        # 'D': False, # don't even handle here
-        # 'O': False, # don't even handle here
-    }
-
+    # must be separate arguments
+    #
+    # results are ignored
+    real_handled = ['P']
+    real_not_handled = ['H', 'L', 'D', 'O']
     i = 1
     while (i < len(argv)) and (argv[i][0] == '-'):
-        # must be separate arguments
-        # if any flags are not H, L, or P, immediately treat
-        # the rest of the flags as expression flags
-        if argv[i][1:] not in ['H', 'L', 'P']:
-            at_expressions = True
+        if argv[i][1:] not in (real_handled + real_not_handled):
             break
 
-        if argv[i][1:] in ['H', 'L']:
+        if argv[i][1:] in real_not_handled:
             sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[i][1:]))
-        else:
-            real[argv[i][1:]] = True
 
         i += 1
 
-    if at_expressions and (sys.argv[i][0] != '-'):
-        raise RuntimeError('gufi_find: paths must preceed expression: {0}'.format(sys.argv[i - 1]))
+    # assume following arguments are paths until '-' is found
 
     # parse paths
     paths = []
@@ -792,10 +771,14 @@ def run(argv, config_path):
     if len(paths) == 0:
         paths = ['']
 
+    # all arguments afterwards are parsed as expressions
+
     # prepend the provided paths with the GUFI root path
-    paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path])) for path in paths]
+    paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path]))
+             for path in paths]
 
     # parse expressions without the 'real' and path arguments
+    expression_parser = build_expression_parser()
     args, unknown = expression_parser.parse_known_args(argv[i:])
 
     if args.help:
