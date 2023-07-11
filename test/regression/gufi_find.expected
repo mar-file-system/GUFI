@@ -57,10 +57,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -amin +1440
-old_file
-
-$ gufi_find -anewer not_as_old_file
+$ gufi_find -amin +0
 prefix
 .hidden
 1KB
@@ -77,20 +74,84 @@ file_symlink
 leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
+old_file
 repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -atime +1
-old_file
+$ gufi_find -anewer not_as_old_file
+prefix
+1KB
+1MB
+directory/subdirectory/directory_symlink
 
-$ gufi_find -cmin +1440
+$ gufi_find -atime +0
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
 old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -cmin +0
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
 
 $ gufi_find -cnewer not_as_old_file
 
-$ gufi_find -ctime +1
+$ gufi_find -ctime +0
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
 old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
 
 $ gufi_find -empty
 empty_file
@@ -185,20 +246,7 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 
-$ gufi_find -mmin  +1440
-old_file
-
-$ gufi_find -mtime +1
-old_file
-
-$ gufi_find -name  'directory*'
-directory
-directory/subdirectory/directory_symlink
-
-$ gufi_find -name  'file*'
-file_symlink
-
-$ gufi_find -newer 'not_as_old_file'
+$ gufi_find -mmin  +0
 prefix
 .hidden
 1KB
@@ -215,9 +263,45 @@ file_symlink
 leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
+old_file
 repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
+
+$ gufi_find -mtime +0
+prefix
+.hidden
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+empty_file
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find -name  'directory*'
+directory
+directory/subdirectory/directory_symlink
+
+$ gufi_find -name  'file*'
+file_symlink
+
+$ gufi_find -newer 'not_as_old_file'
+prefix
+1KB
+1MB
+directory/subdirectory/directory_symlink
 
 $ gufi_find -path  '*directory*'
 directory
@@ -563,24 +647,24 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_query -a -w -S "UPDATE summary SET inode = 0, atime = 0, ctime = 0, mtime = 0, size = 0;" -E "UPDATE entries SET inode = 0, atime = 0, ctime = 0, mtime = 0, size = 0, uid = 0, gid = 0;" "prefix"
+$ gufi_query -a -w -E "UPDATE entries SET inode = 0, ctime = mtime, uid = 0, gid = 0;" "prefix"
 Cannot attach database as "tree": unable to open database: file:db.db?mode=rw&vfs=unix-none
 
 
 $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y" -type f
-% 0 0 0 1 0 0 0 - .hidden 0 .hidden 0 664 -rw-rw-r-- 1 .hidden .hidden 0 0 0 f
-% 0 0 0 1 0 0 0 - 1KB 0 1KB 0 664 -rw-rw-r-- 1 1KB 1KB 0 0 0 f
-% 0 0 0 1 0 0 0 - 1MB 0 1MB 0 664 -rw-rw-r-- 1 1MB 1MB 0 0 0 f
-% 0 0 0 1 0 0 0 - empty_file 0 empty_file 0 664 -rw-rw-r-- 1 empty_file empty_file 0 0 0 f
-% 0 0 0 1 0 0 0 - old_file 0 old_file 0 664 -rw-rw-r-- 1 old_file old_file 0 0 0 f
-% 0 0 0 1 0 0 0 - repeat_name 0 repeat_name 0 664 -rw-rw-r-- 1 repeat_name repeat_name 0 0 0 f
-% 0 0 0 2 0 0 0 - executable 0 directory/executable 0 777 -rwxrwxrwx 1 directory/executable directory/executable 0 0 0 f
-% 0 0 0 2 0 0 0 - leaf_file1 0 leaf_directory/leaf_file1 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file1 leaf_directory/leaf_file1 0 0 0 f
-% 0 0 0 2 0 0 0 - leaf_file2 0 leaf_directory/leaf_file2 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file2 leaf_directory/leaf_file2 0 0 0 f
-% 0 0 0 2 0 0 0 - readonly 0 directory/readonly 0 444 -r--r--r-- 1 directory/readonly directory/readonly 0 0 0 f
-% 0 0 0 2 0 0 0 - unusual, name?# 0 unusual#? directory ,/unusual, name?# 0 664 -rw-rw-r-- 1 unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 0 0 0 f
-% 0 0 0 2 0 0 0 - writable 0 directory/writable 0 666 -rw-rw-rw- 1 directory/writable directory/writable 0 0 0 f
-% 0 0 0 3 0 0 0 - repeat_name 0 directory/subdirectory/repeat_name 0 664 -rw-rw-r-- 1 directory/subdirectory/repeat_name directory/subdirectory/repeat_name 0 0 0 f
+% 0 0 0 1 0 0 0 - old_file 0 old_file 0 664 -rw-rw-r-- 1 old_file old_file 8 0 0 f
+% 1 0 1 2 0 0 0 - executable 0 directory/executable 0 777 -rwxrwxrwx 1 directory/executable directory/executable 1 1 0 f
+% 2 0 2 2 0 0 0 - readonly 0 directory/readonly 0 444 -r--r--r-- 1 directory/readonly directory/readonly 2 2 0 f
+% 3 0 3 2 0 0 0 - writable 0 directory/writable 0 666 -rw-rw-rw- 1 directory/writable directory/writable 3 3 0 f
+% 4 0 4 3 0 0 0 - repeat_name 0 directory/subdirectory/repeat_name 0 664 -rw-rw-r-- 1 directory/subdirectory/repeat_name directory/subdirectory/repeat_name 4 4 0 f
+% 7 0 7 1 0 0 0 - empty_file 0 empty_file 0 664 -rw-rw-r-- 1 empty_file empty_file 0 7 0 f
+% 9 0 9 1 0 0 0 - .hidden 0 .hidden 0 664 -rw-rw-r-- 1 .hidden .hidden 5 9 0 f
+% 10 0 10 2 0 0 0 - leaf_file1 0 leaf_directory/leaf_file1 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file1 leaf_directory/leaf_file1 6 10 0 f
+% 11 0 11 2 0 0 0 - leaf_file2 0 leaf_directory/leaf_file2 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file2 leaf_directory/leaf_file2 7 11 0 f
+% 13 0 13 1 0 0 0 - repeat_name 0 repeat_name 0 664 -rw-rw-r-- 1 repeat_name repeat_name 4 13 0 f
+% 14 0 14 2 0 0 0 - unusual, name?# 0 unusual#? directory ,/unusual, name?# 0 664 -rw-rw-r-- 1 unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 9 14 0 f
+% 1024 0 1024 1 0 0 0 - 1KB 0 1KB 0 664 -rw-rw-r-- 1 1KB 1KB 1024 1024 0 f
+% 1048576 0 1048576 1 0 0 0 - 1MB 0 1MB 0 664 -rw-rw-r-- 1 1MB 1MB 1048576 1048576 0 f
 
 $ gufi_find -empty path_after_expression
 Traceback (most recent call last):

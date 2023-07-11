@@ -75,12 +75,16 @@ BACKUP="backup~"
 run_no_sort "${GUFI_LS} --help" | replace_argparse
 run_no_sort "${GUFI_LS}"
 run_no_sort "${GUFI_LS} -a"
+run_no_sort "${GUFI_LS} -A"
 run_no_sort "${GUFI_LS} -h"
+run_no_sort "${GUFI_LS} -i  | @AWK@ '{ print 0, \$2 }'"
 run_no_sort "${GUFI_LS} -R"
 run_no_sort "${GUFI_LS} -r"
+run_no_sort "${GUFI_LS} -s  | @GREP@ -v -e '.*directory.*' -e 'file_symlink'" # all 0s - files are all holes
+run_no_sort "${GUFI_LS} -S  | @GREP@ -v '.*directory.*'"
+run_no_sort "${GUFI_LS} -t"
 run_no_sort "${GUFI_LS} -ar"
 run_no_sort "${GUFI_LS} -arR"
-run_no_sort "${GUFI_LS} -S  | @GREP@ -v '.*directory.*'"
 run_no_sort "${GUFI_LS} -Sr | @GREP@ -v '.*directory.*'"
 
 # remove backup files
@@ -137,6 +141,14 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} -h 1KB"
     run_no_sort "${GUFI_LS} -h 1MB"
 ) | @SED@ "s/${USER} ${GROUP}/user group/g; s/${USER}/user/g;"
+
+(
+    # bad blocksizes
+    run_no_sort "${GUFI_LS} --block-size=YiB"
+    run_no_sort "${GUFI_LS} --block-size=-"
+    run_no_sort "${GUFI_LS} --block-size=-1GB"
+    run_no_sort "${GUFI_LS} --block-size=0GB"
+) | replace_argparse
 ) |& remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"

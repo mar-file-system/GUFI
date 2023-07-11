@@ -63,6 +63,7 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 
@@ -195,25 +196,20 @@ def build_order_by(args):
 
     if args.sort_largest:
         order_by += ['size {0}'.format('ASC' if args.reverse else 'DESC')]
-
-    if args.mtime:
+    elif args.mtime:
         order_by += ['mtime {0}'.format('ASC' if args.reverse else 'DESC')]
-
-    order_by += ['display_name COLLATE NOCASE {0}'.format('DESC' if args.reverse else 'ASC')]
-
-    if args.no_sort:
-        order_by = []
+    else:
+        order_by += ['display_name COLLATE NOCASE {0}'.format('DESC' if args.reverse else 'ASC')]
 
     return order_by
 
 def get_blocksize(value):
     '''Make sure the input is some combination of an optional integer and/or a valid optional unit.'''
-    if (value[-1:] not in SIZES) and (value[-2:] not in SIZES) and (value[-3:] not in SIZES):
-        try:
-            int(value)
-        except ValueError:
-            # pylint: disable=raise-missing-from
-            raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
+    blocksize = re.match(r'^(\+?[0-9]*)({0})?$'.format('|'.join(SIZES)), value)
+    if (blocksize is None) or ((blocksize.group(1) != '') and (int(blocksize.group(1)) == 0)):
+        raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
+
+
     return value
 
 # argv[0] should be the command name
@@ -280,10 +276,6 @@ def run(argv, config_path):
                         dest='mtime',
                         action='store_true',
                         help='sort by modification time, newest first')
-    parser.add_argument('-U',
-                        dest='no_sort',
-                        action='store_true',
-                        help='do not sort; list entries in directory order')
 
     parser.add_argument('paths',
                         type=str,
@@ -385,8 +377,8 @@ def run(argv, config_path):
         query_cmd += ['-I', I,
                       '-S', S,
                       '-E', E,
-                      '-J', J,
                       '-K', K,
+                      '-J', J,
                       '-G', G,
                       '-a',
                       '-B', str(config.outputbuffer())]

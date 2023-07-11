@@ -1,7 +1,7 @@
 $ gufi_ls --help
 usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
                   [-B] [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
-                  [--time-style {full-iso,iso,locale,long-iso}] [-t] [-U]
+                  [--time-style {full-iso,iso,locale,long-iso}] [-t]
                   [--delim c] [--in-memory-name name] [--aggregate-name name]
                   [--skip-file filename]
                   [paths ...]
@@ -31,7 +31,6 @@ options:
   --time-style {full-iso,iso,locale,long-iso}
                         time/date format with -l
   -t                    sort by modification time, newest first
-  -U                    do not sort; list entries in directory order
   --delim c             delimiter separating output columns
   --in-memory-name name
                         Name of in-memory database when aggregation is
@@ -63,6 +62,18 @@ old_file
 repeat_name
 unusual#? directory ,
 
+$ gufi_ls -A
+.hidden
+1KB
+1MB
+directory
+empty_file
+file_symlink
+leaf_directory
+old_file
+repeat_name
+unusual#? directory ,
+
 $ gufi_ls -h
 1KB
 1MB
@@ -73,6 +84,17 @@ leaf_directory
 old_file
 repeat_name
 unusual#? directory ,
+
+$ gufi_ls -i  | awk '{ print 0, $2 }'
+0 1KB
+0 1MB
+0 directory
+0 empty_file
+0 file_symlink
+0 leaf_directory
+0 old_file
+0 repeat_name
+0 unusual#?
 
 $ gufi_ls -R
 1KB
@@ -104,6 +126,32 @@ empty_file
 directory
 1MB
 1KB
+
+$ gufi_ls -s  | grep -v -e '.*directory.*' -e 'file_symlink'
+0 1KB
+0 1MB
+0 empty_file
+0 old_file
+0 repeat_name
+
+$ gufi_ls -S  | grep -v '.*directory.*'
+1MB
+1KB
+file_symlink
+old_file
+repeat_name
+empty_file
+
+$ gufi_ls -t
+1MB
+1KB
+unusual#? directory ,
+repeat_name
+leaf_directory
+file_symlink
+empty_file
+directory
+old_file
 
 $ gufi_ls -ar
 unusual#? directory ,
@@ -137,14 +185,6 @@ directory
 1MB
 1KB
 .hidden
-
-$ gufi_ls -S  | grep -v '.*directory.*'
-1MB
-1KB
-file_symlink
-old_file
-repeat_name
-empty_file
 
 $ gufi_ls -Sr | grep -v '.*directory.*'
 empty_file
@@ -258,4 +298,40 @@ $ gufi_ls -h 1KB
 
 $ gufi_ls -h 1MB
 1MB
+
+$ gufi_ls --block-size=YiB
+usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
+                  [-B] [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
+                  [--time-style {full-iso,iso,locale,long-iso}] [-t]
+                  [--delim c] [--in-memory-name name] [--aggregate-name name]
+                  [--skip-file filename]
+                  [paths ...]
+gufi_ls.py: error: argument --block-size: Invalid --block-size argument: 'YiB'
+
+$ gufi_ls --block-size=-
+usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
+                  [-B] [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
+                  [--time-style {full-iso,iso,locale,long-iso}] [-t]
+                  [--delim c] [--in-memory-name name] [--aggregate-name name]
+                  [--skip-file filename]
+                  [paths ...]
+gufi_ls.py: error: argument --block-size: Invalid --block-size argument: '-'
+
+$ gufi_ls --block-size=-1GB
+usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
+                  [-B] [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
+                  [--time-style {full-iso,iso,locale,long-iso}] [-t]
+                  [--delim c] [--in-memory-name name] [--aggregate-name name]
+                  [--skip-file filename]
+                  [paths ...]
+gufi_ls.py: error: argument --block-size: Invalid --block-size argument: '-1GB'
+
+$ gufi_ls --block-size=0GB
+usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
+                  [-B] [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
+                  [--time-style {full-iso,iso,locale,long-iso}] [-t]
+                  [--delim c] [--in-memory-name name] [--aggregate-name name]
+                  [--skip-file filename]
+                  [paths ...]
+gufi_ls.py: error: argument --block-size: Invalid --block-size argument: '0GB'
 

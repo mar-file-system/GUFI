@@ -136,6 +136,7 @@ QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
+AWK="@AWK@"
 GREP="@GREP@"
 HEAD="@HEAD@"
 SORT="@SORT@"
@@ -170,6 +171,7 @@ replace() {
     s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
 
+    s/${AWK//\//\\/}/awk/g;
     s/${GREP//\//\\/}/grep/g;
     s/${HEAD//\//\\/}/head/g;
     s/${SORT//\//\\/}/sort/g;

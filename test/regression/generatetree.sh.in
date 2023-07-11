@@ -105,19 +105,27 @@ mkdir -p "${DIR}"
 cd "${DIR}"
 
 truncate -s 1024 1KB
+touch -amt 197001010017.04 1KB
 
 truncate -s 1048576 1MB
 os_setfattr "user.size" "1MB" 1MB
+touch -amt 197001130316.16 1MB
 
 mkdir directory
 (
     cd directory
     truncate -s 1 executable
     chmod 777 executable
+    touch -amt 197001010000.01 executable
+
     truncate -s 2 readonly
     chmod 444 readonly
+    touch -amt 197001010000.02 readonly
+
     truncate -s 3 writable
     chmod 666 writable
+    touch -amt 197001010000.03 writable
+
     mkdir subdirectory
     os_setfattr "user.type" "dir" subdirectory
     os_setfattr "user.name" "sub" subdirectory
@@ -125,14 +133,20 @@ mkdir directory
         cd subdirectory
         ln -f -s "$(realpath .)" "directory_symlink"
         truncate -s 4 repeat_name
+        touch -amt 197001010000.04 repeat_name
     )
+    touch -amt 197001010000.05 subdirectory
 )
+touch -amt 197001010000.06 directory
 
 touch empty_file
+touch -amt 197001010000.07 empty_file
 
 ln -f -s "$(realpath 1KB)" file_symlink
+touch -hamt 197001010000.08 file_symlink
 
 truncate -s 5 .hidden
+touch -amt 197001010000.09 .hidden
 
 mkdir leaf_directory
 os_setfattr "user.type" "dir"  leaf_directory
@@ -144,20 +158,26 @@ os_setfattr "user.name" "leaf" leaf_directory
     os_setfattr "user.name1" "value1" leaf_file1
     os_setfattr "user.name2" "value2" leaf_file1
     os_setfattr "user.name3" "value3" leaf_file1
+    touch -amt 197001010000.10 leaf_file1
 
     truncate -s 7 leaf_file2
     os_setfattr "user.name4" "value4" leaf_file2
     os_setfattr "user.name5" "value5" leaf_file2
     os_setfattr "user.name6" "value6" leaf_file2
+    touch -amt 197001010000.11 leaf_file2
 )
+touch -amt 197001010000.12 leaf_directory
 
 truncate -s 8 old_file
-TZ=UTC touch -amt 197001010000 old_file
+touch -amt 197001010000 old_file
 
 truncate -s 4 repeat_name
+touch -amt 197001010000.13 repeat_name
 
 mkdir "unusual#? directory ,"
 (
     cd "unusual#? directory ,"
     truncate -s 9 "unusual, name?#"
+    touch -amt 197001010000.14 "unusual, name?#"
 )
+touch -amt 197001010000.15 "unusual#? directory ,"
