@@ -47,7 +47,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -69,7 +68,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -83,7 +81,6 @@ $ gufi_find -anewer not_as_old_file
 prefix
 1KB
 1MB
-directory/subdirectory/directory_symlink
 
 $ gufi_find -atime +0
 prefix
@@ -97,7 +94,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -119,7 +115,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -143,7 +138,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -154,7 +148,7 @@ unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
 $ gufi_find -empty
-empty_file
+old_file
 
 $ gufi_find -executable
 prefix
@@ -176,8 +170,8 @@ leaf_directory/leaf_file2
 $ gufi_find -inum $(stat -c '%i' directory)
 directory
 
-$ gufi_find -inum $(stat -c '%i' empty_file)
-empty_file
+$ gufi_find -inum $(stat -c '%i' old_file)
+old_file
 
 $ gufi_find -inum $(stat -c '%i' file_symlink)
 file_symlink
@@ -195,7 +189,6 @@ directory/executable
 directory/readonly
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
@@ -215,7 +208,6 @@ $ gufi_find -ls
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 1MB
 0 0 drwxrwxr-x 3 user group 0 Jan 01 1970 directory
 0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 directory_symlink -> directory/subdirectory
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 empty_file
 0 0 -rwxrwxrwx 1 user group 0 Jan 01 1970 executable
 0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 file_symlink -> 1KB
 0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 leaf_directory
@@ -236,7 +228,6 @@ prefix
 .hidden
 1KB
 1MB
-empty_file
 file_symlink
 old_file
 repeat_name
@@ -258,7 +249,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -280,7 +270,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -301,7 +290,6 @@ $ gufi_find -newer 'not_as_old_file'
 prefix
 1KB
 1MB
-directory/subdirectory/directory_symlink
 
 $ gufi_find -path  '*directory*'
 directory
@@ -329,7 +317,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -372,7 +359,6 @@ directory/subdirectory/repeat_name
 directory/writable
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
-old_file
 repeat_name
 unusual#? directory ,/unusual, name?#
 
@@ -383,7 +369,7 @@ $ gufi_find -size 2048        -type f
 1MB
 
 $ gufi_find -size=-1c         -type f
-empty_file
+old_file
 
 $ gufi_find -true
 prefix
@@ -397,7 +383,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -422,7 +407,6 @@ directory/executable
 directory/readonly
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 old_file
@@ -444,7 +428,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -469,7 +452,6 @@ $ gufi_find -printf '%-22f %+22f'
 1MB                                       1MB
 directory                           directory
 directory_symlink           directory_symlink
-empty_file                         empty_file
 executable                         executable
 file_symlink                     file_symlink
 leaf_directory                 leaf_directory
@@ -497,7 +479,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -518,16 +499,15 @@ prefix
 directory
 
 $ gufi_find --smallest -type f
-empty_file
+old_file
 directory/executable
 directory/readonly
 directory/writable
 directory/subdirectory/repeat_name
-repeat_name
 .hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
-old_file
+repeat_name
 unusual#? directory ,/unusual, name?#
 1KB
 1MB
@@ -536,16 +516,15 @@ $ gufi_find --largest  -type f
 1MB
 1KB
 unusual#? directory ,/unusual, name?#
-old_file
+repeat_name
 leaf_directory/leaf_file2
 leaf_directory/leaf_file1
 .hidden
 directory/subdirectory/repeat_name
-repeat_name
 directory/writable
 directory/readonly
 directory/executable
-empty_file
+old_file
 
 $ gufi_find directory leaf_directory
 directory
@@ -571,7 +550,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -593,7 +571,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -615,7 +592,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -637,7 +613,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -647,22 +622,21 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_query -a -w -E "UPDATE entries SET inode = 0, ctime = mtime, uid = 0, gid = 0;" "prefix"
+$ gufi_query -a -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "prefix"
 Cannot attach database as "tree": unable to open database: file:db.db?mode=rw&vfs=unix-none
 
 
 $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y" -type f
-% 0 0 0 1 0 0 0 - old_file 0 old_file 0 664 -rw-rw-r-- 1 old_file old_file 8 0 0 f
+% 0 0 0 1 0 0 0 - old_file 0 old_file 0 664 -rw-rw-r-- 1 old_file old_file 0 0 0 f
 % 1 0 1 2 0 0 0 - executable 0 directory/executable 0 777 -rwxrwxrwx 1 directory/executable directory/executable 1 1 0 f
 % 2 0 2 2 0 0 0 - readonly 0 directory/readonly 0 444 -r--r--r-- 1 directory/readonly directory/readonly 2 2 0 f
 % 3 0 3 2 0 0 0 - writable 0 directory/writable 0 666 -rw-rw-rw- 1 directory/writable directory/writable 3 3 0 f
-% 4 0 4 3 0 0 0 - repeat_name 0 directory/subdirectory/repeat_name 0 664 -rw-rw-r-- 1 directory/subdirectory/repeat_name directory/subdirectory/repeat_name 4 4 0 f
-% 7 0 7 1 0 0 0 - empty_file 0 empty_file 0 664 -rw-rw-r-- 1 empty_file empty_file 0 7 0 f
-% 9 0 9 1 0 0 0 - .hidden 0 .hidden 0 664 -rw-rw-r-- 1 .hidden .hidden 5 9 0 f
-% 10 0 10 2 0 0 0 - leaf_file1 0 leaf_directory/leaf_file1 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file1 leaf_directory/leaf_file1 6 10 0 f
-% 11 0 11 2 0 0 0 - leaf_file2 0 leaf_directory/leaf_file2 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file2 leaf_directory/leaf_file2 7 11 0 f
-% 13 0 13 1 0 0 0 - repeat_name 0 repeat_name 0 664 -rw-rw-r-- 1 repeat_name repeat_name 4 13 0 f
-% 14 0 14 2 0 0 0 - unusual, name?# 0 unusual#? directory ,/unusual, name?# 0 664 -rw-rw-r-- 1 unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 9 14 0 f
+% 5 0 5 3 0 0 0 - repeat_name 0 directory/subdirectory/repeat_name 0 664 -rw-rw-r-- 1 directory/subdirectory/repeat_name directory/subdirectory/repeat_name 5 5 0 f
+% 9 0 9 1 0 0 0 - .hidden 0 .hidden 0 664 -rw-rw-r-- 1 .hidden .hidden 9 9 0 f
+% 10 0 10 2 0 0 0 - leaf_file1 0 leaf_directory/leaf_file1 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file1 leaf_directory/leaf_file1 10 10 0 f
+% 11 0 11 2 0 0 0 - leaf_file2 0 leaf_directory/leaf_file2 0 664 -rw-rw-r-- 1 leaf_directory/leaf_file2 leaf_directory/leaf_file2 11 11 0 f
+% 13 0 13 1 0 0 0 - repeat_name 0 repeat_name 0 664 -rw-rw-r-- 1 repeat_name repeat_name 13 13 0 f
+% 14 0 14 2 0 0 0 - unusual, name?# 0 unusual#? directory ,/unusual, name?# 0 664 -rw-rw-r-- 1 unusual#? directory ,/unusual, name?# unusual#? directory ,/unusual, name?# 14 14 0 f
 % 1024 0 1024 1 0 0 0 - 1KB 0 1KB 0 664 -rw-rw-r-- 1 1KB 1KB 1024 1024 0 f
 % 1048576 0 1048576 1 0 0 0 - 1MB 0 1MB 0 664 -rw-rw-r-- 1 1MB 1MB 1048576 1048576 0 f
 

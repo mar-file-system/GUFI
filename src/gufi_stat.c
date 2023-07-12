@@ -239,10 +239,8 @@ int print_callback(void * args, int count, char **data, char **columns) {
 
             /* if the first character starts a number */
             int width = 0;
-            if (*f && (((*f == '-') ||
-                        (*f == '+') ||
+            if (*f && (((*f == '-') || (*f == '+') ||
                         (('0' <= *f) && (*f <= '9'))))) {
-
                 int multiplier = 1;
                 if (*f == '-') {
                     multiplier = -1;

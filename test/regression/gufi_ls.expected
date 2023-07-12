@@ -43,7 +43,6 @@ $ gufi_ls
 1KB
 1MB
 directory
-empty_file
 file_symlink
 leaf_directory
 old_file
@@ -55,7 +54,6 @@ $ gufi_ls -a
 1KB
 1MB
 directory
-empty_file
 file_symlink
 leaf_directory
 old_file
@@ -67,7 +65,6 @@ $ gufi_ls -A
 1KB
 1MB
 directory
-empty_file
 file_symlink
 leaf_directory
 old_file
@@ -78,7 +75,6 @@ $ gufi_ls -h
 1KB
 1MB
 directory
-empty_file
 file_symlink
 leaf_directory
 old_file
@@ -89,7 +85,6 @@ $ gufi_ls -i  | awk '{ print 0, $2 }'
 0 1KB
 0 1MB
 0 directory
-0 empty_file
 0 file_symlink
 0 leaf_directory
 0 old_file
@@ -106,7 +101,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -122,7 +116,6 @@ repeat_name
 old_file
 leaf_directory
 file_symlink
-empty_file
 directory
 1MB
 1KB
@@ -130,17 +123,15 @@ directory
 $ gufi_ls -s  | grep -v -e '.*directory.*' -e 'file_symlink'
 0 1KB
 0 1MB
-0 empty_file
 0 old_file
 0 repeat_name
 
 $ gufi_ls -S  | grep -v '.*directory.*'
 1MB
 1KB
+repeat_name
 file_symlink
 old_file
-repeat_name
-empty_file
 
 $ gufi_ls -t
 1MB
@@ -149,7 +140,6 @@ unusual#? directory ,
 repeat_name
 leaf_directory
 file_symlink
-empty_file
 directory
 old_file
 
@@ -159,7 +149,6 @@ repeat_name
 old_file
 leaf_directory
 file_symlink
-empty_file
 directory
 1MB
 1KB
@@ -174,7 +163,6 @@ leaf_directory/leaf_file2
 leaf_directory/leaf_file1
 leaf_directory
 file_symlink
-empty_file
 directory/writable
 directory/subdirectory/repeat_name
 directory/subdirectory/directory_symlink
@@ -187,10 +175,9 @@ directory
 .hidden
 
 $ gufi_ls -Sr | grep -v '.*directory.*'
-empty_file
-repeat_name
 old_file
 file_symlink
+repeat_name
 1KB
 1MB
 
@@ -200,7 +187,6 @@ $ gufi_ls -B
 1KB
 1MB
 directory
-empty_file
 file_symlink
 leaf_directory
 old_file
@@ -210,22 +196,22 @@ unusual#? directory ,
 $ sqlite3 "db.db" "DELETE FROM entries WHERE name == 'backup~';"
 
 $ gufi_ls old_file --full-time
--rw-rw-r-- 1 user group 8 1970-01-01 00:00:00 +0000 old_file
+-rw-rw-r-- 1 user group 0 1970-01-01 00:00:00 +0000 old_file
 
 $ gufi_ls old_file -l --time-style=full-iso
--rw-rw-r-- 1 user group 8 1970-01-01 00:00:00 +0000 old_file
+-rw-rw-r-- 1 user group 0 1970-01-01 00:00:00 +0000 old_file
 
 $ gufi_ls old_file -l --time-style=long-iso
--rw-rw-r-- 1 user group 8 1970-01-01 00:00:00 old_file
+-rw-rw-r-- 1 user group 0 1970-01-01 00:00:00 old_file
 
 $ gufi_ls old_file -l --time-style=iso
--rw-rw-r-- 1 user group 8 01-01 00:00 old_file
+-rw-rw-r-- 1 user group 0 01-01 00:00 old_file
 
 $ gufi_ls old_file -l --time-style=locale
--rw-rw-r-- 1 user group 8 Jan   1 00:00 old_file
+-rw-rw-r-- 1 user group 0 Jan   1 00:00 old_file
 
 $ gufi_ls old_file -l
--rw-rw-r-- 1 user group 8 Jan   1 00:00 old_file
+-rw-rw-r-- 1 user group 0 Jan   1 00:00 old_file
 
 $ gufi_ls old_file --time-style=full-iso
 old_file
@@ -282,7 +268,7 @@ $ gufi_ls --block-size=1KiB 1KB
 1KB
 
 $ gufi_ls -lG old_file
--rw-rw-r-- 1 user 8 Jan   1 00:00 old_file
+-rw-rw-r-- 1 user 0 Jan   1 00:00 old_file
 
 $ gufi_ls -G old_file
 old_file

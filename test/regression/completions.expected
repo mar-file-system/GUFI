@@ -8,7 +8,7 @@ gufi_stats completion function:
 __gufi
 
 Root entries:
-.hidden 1KB 1MB directory/ empty_file file_symlink leaf_directory/ old_file repeat_name unusual#? directory ,/
+.hidden 1KB 1MB directory/ file_symlink leaf_directory/ old_file repeat_name unusual#? directory ,/
 
 Root entries starting with ".":
 .hidden  
@@ -16,8 +16,8 @@ Root entries starting with ".":
 Root entries starting with "1":
 1KB 1MB
 
-Root entries starting with "e":
-empty_file  
+Root entries starting with "o":
+old_file  
 
 Root entries starting with "w":
 

@@ -17,16 +17,16 @@ $ generatetree prefix
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 Creating GUFI Traces trace with 2 threads
 Total Dirs:          5
-Total Files:         15
+Total Files:         14
 
 $ gufi_trace2index -d "|" trace.0 trace.1 "prefix"
 Creating GUFI Index prefix with 1 threads
 Dirs:                5 (0 empty)
-Files:               15
-Total:               20
+Files:               14
+Total:               19
 
 Total Dirs:          5
-Total Files:         15
+Total Files:         14
 
 Source Directory:
     prefix
@@ -40,7 +40,6 @@ Source Directory:
     prefix/directory/subdirectory/directory_symlink
     prefix/directory/subdirectory/repeat_name
     prefix/directory/writable
-    prefix/empty_file
     prefix/file_symlink
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
@@ -62,7 +61,6 @@ GUFI Index:
     prefix/directory/subdirectory/directory_symlink
     prefix/directory/subdirectory/repeat_name
     prefix/directory/writable
-    prefix/empty_file
     prefix/file_symlink
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
@@ -81,11 +79,11 @@ Failed to open trace file for each thread
 $ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB" 2> >(sort)
 Creating GUFI Index prefix/1KB with 2 threads
 Dirs:                5 (0 empty)
-Files:               15
-Total:               20
+Files:               14
+Total:               19
 
 Total Dirs:          5
-Total Files:         15
+Total Files:         14
 Dupdir failure: "prefix/1KB/prefix": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/directory": Not a directory (20)
 Dupdir failure: "prefix/1KB/prefix/directory/subdirectory": Not a directory (20)

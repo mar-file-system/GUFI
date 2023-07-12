@@ -19,24 +19,23 @@ $ gufi_query -n 2 -O "outdb" -I "CREATE TABLE out(name TEXT, size INT64)" -E "IN
 # Query all per-thread result databse files at once
 $ querydbs -d '|' -NV outdb "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
 name|size|
-empty_file|0|
+old_file|0|
 directory/executable|1|
 directory/readonly|2|
 directory/writable|3|
-directory/subdirectory/repeat_name|4|
-repeat_name|4|
-.hidden|5|
-leaf_directory/leaf_file1|6|
-leaf_directory/leaf_file2|7|
-old_file|8|
-unusual#? directory ,/unusual, name?#|9|
+directory/subdirectory/repeat_name|5|
+.hidden|9|
+leaf_directory/leaf_file1|10|
+leaf_directory/leaf_file2|11|
+repeat_name|13|
+unusual#? directory ,/unusual, name?#|14|
 1KB|1024|
 1MB|1048576|
-query returned 13 records
+query returned 12 records
 
 # Query all per-thread result databse files at once without printing results
 $ querydbs -d '|' outdb "out" "SELECT name, size FROM vout ORDER BY size ASC, name ASC" outdb.*
-query returned 13 records
+query returned 12 records
 
 # Bad Query
 $ querydbs -d '|' outdb "out" "Bad Query" outdb.*

@@ -177,7 +177,7 @@ run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${SEARCH}\""
 mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
 
 echo "# non-directory name mismatch (Fail)"
-@SED@ "s/empty_file/an_empty_file/g" "${TRACE}" > "${BADTRACE}"
+@SED@ "s/old_file/an_old_file/g" "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory permissions mismatch (Fail)"

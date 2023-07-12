@@ -19,9 +19,9 @@ $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table'
 $ gufi_treesummary -X -d " " "prefix"
 WARNING: Not [re]generating tree-summary table with '-X'
 totals:
-totfiles 13 totlinks 2
-totsize 1049649
-totltk 12 totmtk 1 totltm 13 totmtm 0 totmtg 0 totmtt 0
+totfiles 12 totlinks 2
+totsize 1049668
+totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
 
 # Traversed paths (5)
@@ -40,7 +40,7 @@ $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table'
 $ gufi_treesummary prefix/directory
 totals:
 totfiles 4 totlinks 1
-totsize 10
+totsize 11
 totltk 4 totmtk 0 totltm 4 totmtm 0 totmtg 0 totmtt 0
 totxattr 0
 
@@ -52,7 +52,7 @@ prefix/directory
 $ gufi_treesummary "prefix/leaf_directory"
 totals:
 totfiles 2 totlinks 0
-totsize 13
+totsize 21
 totltk 2 totmtk 0 totltm 2 totmtm 0 totmtg 0 totmtt 0
 totxattr 6
 
@@ -72,9 +72,9 @@ prefix|d
 # Generate treesummary table in prefix
 $ gufi_treesummary prefix
 totals:
-totfiles 13 totlinks 2
-totsize 1049649
-totltk 12 totmtk 1 totltm 13 totmtm 0 totmtg 0 totmtt 0
+totfiles 12 totlinks 2
+totsize 1049668
+totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
 
 # Three treesummary tables
@@ -89,9 +89,9 @@ $ sqlite3 "prefix/unusual#? directory ,/db.db" "UPDATE summary SET totfiles = 10
 # Regenerate treesummary table in prefix
 $ gufi_treesummary "prefix"
 totals:
-totfiles 112 totlinks 2
-totsize 1049649
-totltk 12 totmtk 1 totltm 13 totmtm 0 totmtg 0 totmtt 0
+totfiles 111 totlinks 2
+totsize 1049668
+totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
 
 # Still three treesummary tables
@@ -102,11 +102,9 @@ prefix/leaf_directory
 
 # Find file sizes in range
 $ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE (minsize <= 0) and (10 <= maxsize);" -E "SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (0 <= size) AND (size <= 10) ORDER BY size ASC;" prefix
-prefix/empty_file 0
-prefix/repeat_name 4
-prefix/.hidden 5
-prefix/old_file 8
-prefix/unusual#? directory ,/unusual, name?# 9
+prefix/old_file 0
+prefix/file_symlink 8
+prefix/.hidden 9
 
 # Find directories that have xattrs
 $ gufi_query -d " " -T "SELECT '' FROM tree.treesummary WHERE totxattr >  0;" -S "SELECT rpath(sname, sroll), totxattr FROM vrsummary WHERE totxattr > 0;" prefix

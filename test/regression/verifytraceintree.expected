@@ -9,23 +9,23 @@ $ generatetree "prefix"
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 Creating GUFI Traces trace with 2 threads
 Total Dirs:          5
-Total Files:         15
+Total Files:         14
 
 # generate the index
 $ gufi_trace2index -d "|" "trace" "prefix"
 Creating GUFI Index prefix with 1 threads
 Dirs:                5 (0 empty)
-Files:               15
-Total:               20
+Files:               14
+Total:               19
 
 Total Dirs:          5
-Total Files:         15
+Total Files:         14
 
 # generate the trace (single thread)
 $ gufi_dir2trace -d "|" -n 1 -x "prefix" "trace"
 Creating GUFI Traces trace with 1 threads
 Total Dirs:          5
-Total Files:         15
+Total Files:         14
 
 # missing trace (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
@@ -43,8 +43,8 @@ Error: Bad thread count: threads
 # verify that all entries in the trace can be found in the GUFI tree (Pass)
 $ verifytraceintree "trace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 trace Pass
 
 # first line bad delimiter (Fail)
@@ -68,113 +68,110 @@ badtrace Fail
 # directory add trailing slashes (Pass)
 $ verifytraceintree "trace.copy" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 trace.copy Pass
 
 # directory does not exist (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 Source path listed in trace doesn't exist: prefix/directory/subdir
 badtrace Fail
 
 # path exists, but is not directory (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 14
-Total: 19
+Files: 13
+Total: 18
 Source path listed in trace is not a directory: prefix/.hidden
 badtrace Fail
 
 # directory permission mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 Permission mismatch on directory: prefix
 badtrace Fail
 
 # directory uid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 UID mismatch on directory: prefix
 badtrace Fail
 
 # directory gid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 GID mismatch on directory: prefix
 badtrace Fail
 
 # missing db.db (Fail)
 $ verifytraceintree "trace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 Could not open database file: prefix/db.db
 trace Fail
 
 # non-directory name mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Did not find entry with name "an_empty_file" in prefix/db.db
-Did not get 7 matching entries.
+Did not find entry with name "an_old_file" in prefix/db.db
+Did not get 6 matching entries.
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 badtrace Fail
 
 # non-directory permissions mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 Permission mismatch on entry ".hidden" in prefix/db.db
 Permission mismatch on entry "1KB" in prefix/db.db
 Permission mismatch on entry "1MB" in prefix/db.db
-Permission mismatch on entry "empty_file" in prefix/db.db
 Permission mismatch on entry "old_file" in prefix/db.db
 Permission mismatch on entry "repeat_name" in prefix/db.db
-Did not get 7 matching entries.
+Did not get 6 matching entries.
 badtrace Fail
 
 # non-directory uid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Did not get 7 matching entries.
+Did not get 6 matching entries.
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 UID mismatch on entry ".hidden" in prefix/db.db
 UID mismatch on entry "1KB" in prefix/db.db
 UID mismatch on entry "1MB" in prefix/db.db
-UID mismatch on entry "empty_file" in prefix/db.db
 UID mismatch on entry "old_file" in prefix/db.db
 UID mismatch on entry "repeat_name" in prefix/db.db
 badtrace Fail
 
 # non-directory gid mismatch (Fail)
 $ verifytraceintree "badtrace" "|" "prefix"
-Did not get 7 matching entries.
+Did not get 6 matching entries.
 Dirs:  5 (0 empty)
-Files: 15
+Files: 14
 GID mismatch on entry ".hidden" in prefix/db.db
 GID mismatch on entry "1KB" in prefix/db.db
 GID mismatch on entry "1MB" in prefix/db.db
-GID mismatch on entry "empty_file" in prefix/db.db
 GID mismatch on entry "old_file" in prefix/db.db
 GID mismatch on entry "repeat_name" in prefix/db.db
-Total: 20
+Total: 19
 badtrace Fail
 
 # empty line (Pass)
 $ verifytraceintree "trace.copy" "|" "prefix"
 Dirs:  5 (0 empty)
-Files: 15
-Total: 20
+Files: 14
+Total: 19
 trace.copy Pass
 

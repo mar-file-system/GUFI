@@ -67,7 +67,7 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_stat.out"
 
 (
-echo "# gufi_stat help"
+echo "# gufi_stat -h"
 run_no_sort "${GUFI_STAT}"
 
 # entries in the index with a fixed size
@@ -79,7 +79,6 @@ fixed_size=(
     "directory/readonly"
     "directory/subdirectory/repeat_name"
     "directory/writable"
-    "empty_file"
     "leaf_directory/leaf_file1"
     "leaf_directory/leaf_file2"
     "old_file"
@@ -114,12 +113,12 @@ echo "# custom print format"
 (
     for entry in "${fixed_size[@]}"
     do
-        "${GUFI_STAT}" -f '%-60N %60n %a %A %f %F %s %w %W\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT}" -f '%-60N %60n %a %A %d %D %f %F %m %s %w %W\n' "${INDEXROOT}/${entry}"
     done
 
     for entry in "${variable_size[@]}"
     do
-        "${GUFI_STAT}" -f '%-60N %60n %a %A %f %F %w %W\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT}" -f '%-60N %60n %a %A %d %D %f %F %m %N %w %W\n' "${INDEXROOT}/${entry}"
     done
 ) | remove_root | @SORT@
 echo
@@ -147,16 +146,16 @@ printable=(
     "'" '"' '?'
 
     # hex
-    'x41' 'x61' 'x41A' 'x61a'
+    'x41' 'x61' 'x41A' 'x61a' 'xaA' 'xAa'
 
     # bad hex
-    'x?'
+    'x?' 'xA?'
 
     # octal
     '101' '141'
 
     # bad octal
-    '60a'
+    'a60' '6a0' '60a'
 
     # unrecognized
     'yabcd'

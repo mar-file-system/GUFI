@@ -45,7 +45,6 @@ $ gufi_query -d " " -E "SELECT name FROM vrpentries;" "prefix"
 1KB
 1MB
 directory_symlink
-empty_file
 executable
 file_symlink
 leaf_file1
@@ -64,7 +63,6 @@ $ gufi_query -d " " -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpent
 1MB
 directory
 directory_symlink
-empty_file
 executable
 file_symlink
 leaf_directory
@@ -93,7 +91,6 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
-empty_file
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -113,7 +110,6 @@ leaf_directory/leaf_file2
 leaf_directory/leaf_file1
 leaf_directory
 file_symlink
-empty_file
 directory/writable
 directory/subdirectory/repeat_name
 directory/subdirectory/directory_symlink
@@ -128,16 +124,15 @@ prefix
 
 # Get relative paths of all directories and non-directories ascending sizes (files only)
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
-empty_file
+old_file
 directory/executable
 directory/readonly
 directory/writable
 directory/subdirectory/repeat_name
-repeat_name
 .hidden
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
-old_file
+repeat_name
 unusual#? directory ,/unusual, name?#
 1KB
 1MB
@@ -147,16 +142,15 @@ $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE 
 1MB
 1KB
 unusual#? directory ,/unusual, name?#
-old_file
+repeat_name
 leaf_directory/leaf_file2
 leaf_directory/leaf_file1
 .hidden
 directory/subdirectory/repeat_name
-repeat_name
 directory/writable
 directory/readonly
 directory/executable
-empty_file
+old_file
 
 #####################################
 # Invalid Inputs                    #
@@ -265,7 +259,6 @@ prefix/directory/subdirectory 0
 prefix/directory/subdirectory/directory_symlink 0
 prefix/directory/subdirectory/repeat_name 0
 prefix/directory/writable 0
-prefix/empty_file 0
 prefix/file_symlink 0
 prefix/leaf_directory 0
 prefix/leaf_directory/leaf_file1 0

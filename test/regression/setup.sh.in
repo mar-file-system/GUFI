@@ -212,7 +212,6 @@ order_tracefile() {
     @GREP@ "^${SRCDIR}/.hidden${DELIM}"      "$1"
     @GREP@ "^${SRCDIR}/1KB${DELIM}"          "$1"
     @GREP@ "^${SRCDIR}/1MB${DELIM}"          "$1"
-    @GREP@ "^${SRCDIR}/empty_file${DELIM}"   "$1"
     @GREP@ "^${SRCDIR}/file_symlink${DELIM}" "$1"
     @GREP@ "^${SRCDIR}/old_file${DELIM}"     "$1"
     @GREP@ "^${SRCDIR}/repeat_name${DELIM}"  "$1"
@@ -233,6 +232,6 @@ then
     # generate the index
     "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" > /dev/null
 
-    # set all timestamps of old_file to epoch
-    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE entries SET atime = 0, ctime = 0, mtime = 0 WHERE name == 'old_file';"
+    # zero some columns to make test easier
+    "${GUFI_QUERY}" -a -w -S "UPDATE summary SET ctime = mtime;" -E "UPDATE entries SET size = mtime, ctime = mtime;" "${SEARCH}"
 fi

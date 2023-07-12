@@ -103,8 +103,8 @@ echo "Root entries starting with \"1\":"
 tabtab 1
 echo
 
-echo "Root entries starting with \"e\":"
-tabtab e
+echo "Root entries starting with \"o\":"
+tabtab o
 echo
 
 echo "Root entries starting with \"w\":"
