@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,19 +59,32 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+
 
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-DIR="$(dirname ${SCRIPT})"
-BFQ="${DIR}/../src/gufi_query"
-INDEXROOT="$1"
-THREADS="${2:-1}"
+OUTPUT="generateuidsummary.out"
 
-# Drop rows in summary where rectype == 2
-# Insert file summary data into f_info
-# Generate gid summary using entries and f_info
-# Drop rows in f_info
+TEST_UID="$(id -u)"
+TEST_GID="$(id -g)"
+TEST_ID=1001
 
-echo "create gid summary records in summary tables in ${INDEXROOT}"
-"${BFQ}" -I "CREATE TEMP TABLE f_info(gid INT64, totfiles INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64);" -S "DELETE FROM summary WHERE rectype == 2; INSERT INTO f_info(gid, totfiles, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize) SELECT gid, COUNT(*), MIN(size), MAX(size), SUM(CASE WHEN (size <= 1024) THEN 1 ELSE 0 END), SUM(CASE WHEN (size > 1024) THEN 1 ELSE 0 END), SUM(CASE WHEN (size <= 1048576) THEN 1 ELSE 0 END), SUM(CASE WHEN (size > 1048576) THEN 1 ELSE 0 END), SUM(CASE WHEN (size > 1073741824) THEN 1 ELSE 0 END), SUM(CASE WHEN (size > 1099511627776) THEN 1 ELSE 0 END), SUM(size) FROM entries WHERE type == 'f' GROUP BY gid; INSERT INTO summary (gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype) SELECT entries.gid, totfiles, SUM(CASE WHEN type == 'l' THEN 1 ELSE 0 END), MIN(uid), MAX(uid), MIN(entries.gid), MAX(entries.gid), minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, MIN(ctime), MAX(ctime), MIN(mtime), MAX(mtime), MIN(atime), MAX(atime), MIN(blocks), MAX(blocks), SUM(LENGTH(xattr_names) - LENGTH(REPLACE(xattr_names, char(31), ''))), MIN(crtime), MAX(crtime), MIN(ossint1), MAX(ossint1), SUM(ossint1), MIN(ossint2), MAX(ossint2), SUM(ossint2), MIN(ossint3), MAX(ossint3), SUM(ossint3), MIN(ossint4), MAX(ossint4), SUM(ossint4), 2 FROM entries, f_info WHERE entries.gid == f_info.gid GROUP BY entries.gid; DELETE FROM f_info;" -n "${THREADS}" -w "${INDEXROOT}"
+pull_columns() {
+    RELATION="$1"
+    WHERE="$2"
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', uid, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${TEST_UID} ${TEST_UID} ${TEST_UID} ${TEST_GID} ${TEST_GID} \]/${TEST_ID} ${TEST_ID} ${TEST_ID} ${TEST_ID} ${TEST_ID}/g"
+}
+
+(
+    run_no_sort "${GENERATEUIDSUMMARY} \"${INDEXROOT}\" \"${THREADS}\""
+
+    # print all rows in summary table
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), rectype FROM summary;\" \"${INDEXROOT}\""
+
+    pull_columns "summary" " WHERE rectype == 1"
+    pull_columns "vsummaryuser"
+) | @TEE@ "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generateuidsummary.expected "${OUTPUT}"
+rm "${OUTPUT}"

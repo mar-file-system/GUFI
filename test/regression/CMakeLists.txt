@@ -109,6 +109,11 @@ if (NOT APPLE)
     gufi_stat)
 endif()
 
+set(EXAMPLES
+  generategidsummary
+  generateuidsummary
+)
+
 set(OTHERS
   completions
 )
@@ -123,6 +128,7 @@ endif()
 # .sh and .expected
 set(SH_AND_EXPECTED
   ${BINARIES}
+  ${EXAMPLES}
   ${OTHERS}
 )
 
@@ -136,6 +142,10 @@ endforeach()
 
 foreach(NAME ${BINARIES})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression;binary")
+endforeach()
+
+foreach(NAME ${EXAMPLES})
+  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;examples")
 endforeach()
 
 foreach(NAME ${OTHERS})

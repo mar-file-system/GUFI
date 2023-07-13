@@ -118,15 +118,15 @@ const char VRPENTRIES_CREATE[] =
 const char TREESUMMARY_EXISTS[] =
     "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');";
 
-/* summary and tsummary views */
-#define vssql(name, value)                                                                           \
-    const char vssql##name[] =                                                                       \
-        "DROP VIEW IF EXISTS vsummary" #name ";"                                                     \
-        "CREATE VIEW vsummary" #name " AS SELECT * FROM " SUMMARY " WHERE rectype=" #value ";";      \
-                                                                                                     \
-    const char vtssql##name[] =                                                                      \
-        "DROP VIEW IF EXISTS vtsummary" #name ";"                                                    \
-        "CREATE VIEW vtsummary" #name " AS SELECT * FROM " TREESUMMARY " WHERE rectype=" #value ";"  \
+/* summary and tsummary views grouped by uid and gid */
+#define vssql(name, value)                                                                             \
+    const char vssql##name[] =                                                                         \
+        "DROP VIEW IF EXISTS vsummary" #name ";"                                                       \
+        "CREATE VIEW vsummary" #name " AS SELECT * FROM " SUMMARY " WHERE rectype == " #value ";";     \
+                                                                                                       \
+    const char vtssql##name[] =                                                                        \
+        "DROP VIEW IF EXISTS vtsummary" #name ";"                                                      \
+        "CREATE VIEW vtsummary" #name " AS SELECT * FROM " TREESUMMARY " WHERE rectype == " #value ";" \
 
 vssql(dir,   0);
 vssql(user,  1);
