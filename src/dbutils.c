@@ -64,6 +64,7 @@ OF SUCH DAMAGE.
 
 #include <errno.h>
 #include <grp.h>
+#include <math.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -1096,6 +1097,32 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     return;
 }
 
+/*
+ * One pass standard deviation (sample)
+ * https://mathcentral.uregina.ca/QQ/database/QQ.09.06/h/murtaza1.html
+ */
+typedef struct {
+    double sum;
+    double sum_sq;
+    uint64_t count;
+} stdev_t;
+
+static void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
+    const double value = sqlite3_value_double(argv[0]);
+
+    data->sum += value;
+    data->sum_sq += value * value;
+    data->count++;
+}
+
+static void stdev_final(sqlite3_context *context) {
+    stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
+
+    const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * (data->count - 1));
+    sqlite3_result_double(context, sqrt(variance));
+}
+
 int addqueryfuncs_common(sqlite3 *db) {
     return !((sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
                                       NULL,                       &uidtouser,           NULL, NULL) == SQLITE_OK) &&
@@ -1110,7 +1137,9 @@ int addqueryfuncs_common(sqlite3 *db) {
              (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,
                                       NULL,                       &human_readable_size, NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
-                                      NULL,                       &sqlite_basename,     NULL, NULL) == SQLITE_OK));
+                                      NULL,                       &sqlite_basename,     NULL, NULL) == SQLITE_OK) &&
+             (sqlite3_create_function(db,  "stdev",               1,   SQLITE_UTF8,
+                                      NULL,                       NULL,    stdev_step, stdev_final) == SQLITE_OK));
 }
 
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
