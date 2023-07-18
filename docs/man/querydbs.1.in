@@ -7,7 +7,6 @@
 .Sh SYNOPSIS
 .Nm
 .Op options
-attach_name
 table_name
 SQL
 DB_name
@@ -28,8 +27,6 @@ print column-names (header) for DB results
 print column-names (header) for DB results
 .It Fl d\ <delim>
 print column-names (header) for DB results
-.It attach_name
-prefix of alias used to attach database files
 .It table_name
 name of table in database file to attach; also used for view table name: 'v<table_name>'
 .It SQL

@@ -91,21 +91,21 @@ echo "# Use ${GUFI_QUERY} to generate per-thread result database files" | replac
 run_no_sort "${GUFI_QUERY} -n ${THREADS} -O \"${OUTDB}\" -I \"CREATE TABLE ${TABLE}(name TEXT, size INT64)\" -E \"INSERT INTO ${TABLE} SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type=='f');\" \"${INDEXROOT}\""
 
 echo "# Query all per-thread result databse files at once"
-run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${OUTDB}.*"
 
 echo "# Query all per-thread result databse files at once without printing results"
-run_no_sort "${QUERYDBS} -d '|' ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" outdb.*"
+run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${OUTDB}.*"
 
 echo "# Bad Query"
-run_no_sort "${QUERYDBS} -d '|' ${OUTDB} \"${TABLE}\" \"Bad Query\" outdb.*"
+run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"Bad Query\" ${OUTDB}.*"
 
 echo "# Attach too many database files"
 too_many=""
 for (( i = 0; i < 126 / THREADS; i++))
 do
-    too_many+="outdb.* "
+    too_many+="${OUTDB}.* "
 done
-run_no_sort "${QUERYDBS} -d '|' -NV ${OUTDB} \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${too_many}"
+run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${too_many}"
 ) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"

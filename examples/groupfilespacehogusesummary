@@ -68,4 +68,4 @@ QUERYDBS=$DIR/../src/querydbs
 echo "query to create db insert recs from entry query into out db group file space hog use group summary"
 rm -f outdb*
 $BFQ -E "insert into sumsum select gidtogroup(gid), totfiles, totsize from vsummarygroup;" -n $2 -O outdb -I "create table sumsum (groupname text, totfiles int64, totsize int64);" $1
-$QUERYDBS -NV outdb sumsum "select groupname, sum(totfiles), sum(totsize) from vsumsum group by groupname;" outdb.*
+$QUERYDBS -NV sumsum "select groupname, sum(totfiles), sum(totsize) from vsumsum group by groupname;" outdb.*
