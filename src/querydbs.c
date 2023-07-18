@@ -70,8 +70,21 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 
-#define ATTACH_PREFIX     "querydbs_src"
-#define ATTACH_PREFIX_LEN sizeof(ATTACH_PREFIX) - 1
+#define ATTACH_PREFIX               "querydbs_src"
+#define ATTACH_PREFIX_LEN           sizeof(ATTACH_PREFIX) - 1
+
+/*
+ * not putting ATTACH_PREFIX into SELECT FROM because
+ * the attach name is needed for attachdb
+ */
+const char   SELECT_FROM[]        = " SELECT * FROM ";
+const size_t SELECT_FROM_LEN      = sizeof(SELECT_FROM) - 1;
+const char   UNION_ALL[]          = " UNION ALL";
+const size_t UNION_ALL_LEN        = sizeof(UNION_ALL) - 1;
+const char   CREATE_TEMP_VIEW[]   = "CREATE TEMP VIEW v";
+const size_t CREATE_TEMP_VIEW_LEN = sizeof(CREATE_TEMP_VIEW) - 1;
+const char   AS[]                 = " AS";
+const size_t AS_LEN               = sizeof(AS) - 1;
 
 void sub_help() {
    printf("table_name               name of table in database file to attach; also used for view table name: 'v<table_name>'\n");
@@ -121,13 +134,15 @@ int main(int argc, char *argv[])
     int idx = parse_cmd_line(argc, argv, "hHNVd:", 3, pos_args, &in);
     if (in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
         return -1;
-    else {
-        // parse positional args following the options
-        tablename = argv[idx++];
-        rsqlstmt = argv[idx++];
     }
+
+    // parse positional args following the options
+    tablename = argv[idx++];
+    rsqlstmt = argv[idx++];
+
+    const size_t tablename_len = strlen(tablename);
 
     if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1,
                       NULL, NULL
@@ -154,46 +169,57 @@ int main(int argc, char *argv[])
    /*     goto done; */
    /* } */
 
-   /* length of a single " SELECT * FROM %s.%s UNION ALL" */
-   const size_t single_db_len = strlen(" SELECT * FROM ") +
+   /* length of a single " SELECT * FROM <attach prefix>%d.<tablename> UNION ALL" */
+   const size_t single_db_len = SELECT_FROM_LEN +
                                 ATTACH_PREFIX_LEN +
-                                3 +                         /* %d (max 125, so 3 chars) */
+                                3 +                         /* max 125, so 3 chars */
                                 1 +                         /* .  */
-                                strlen(tablename) +         /* %s */
-                                strlen(" UNION ALL");
+                                tablename_len +
+                                UNION_ALL_LEN;
 
-   /* overestimate size to allocate for CREATE TEMP VIEW string */
-   const size_t create_len = strlen("CREATE TEMP VIEW v") +
-                             strlen(tablename) +            /* %s */
-                             strlen(" AS") +
-                             (numdbs * single_db_len) +
-                             1;                             /* NULL terminator */
+   /* allocation size for "CREATE TEMP VIEW v<tablename> AS ..." */
+   const size_t create_view_len = CREATE_TEMP_VIEW_LEN +
+                                  tablename_len +
+                                  AS_LEN +
+                                  (numdbs * single_db_len) +
+                                  1 +                       /* semicolon */
+                                  1;                        /* NULL terminator */
 
-   char *create_view = malloc(create_len);                  /* buffer for CREATE TEMP VIEW string */
-   char *dbn = malloc(ATTACH_PREFIX_LEN + 1 + 3);           /* buffer for database attach name (<name>.ddd) */
-
+   char *create_view = malloc(create_view_len);             /* buffer for CREATE TEMP VIEW string */
    char *curr = create_view;
-   curr += SNPRINTF(curr, create_len, "CREATE TEMP VIEW v%s AS", tablename);
+   curr += SNFORMAT_S(curr, create_view_len, 3,
+                      CREATE_TEMP_VIEW, CREATE_TEMP_VIEW_LEN,
+                      tablename, tablename_len,
+                      AS, AS_LEN);
+
+   /* init with prefix since it's the same each time */
+   char dbn[ATTACH_PREFIX_LEN + 3 + 1] = ATTACH_PREFIX;     /* buffer for <attach prefix>ddd + NULL terminator */
 
    /* build actual CREATE TEMP VIEW string */
    idx = start;
    for(int i = 0; idx < argc; idx++) {
-       SNPRINTF(dbn, MAXSQL, ATTACH_PREFIX "%d", i);
+       SNPRINTF(dbn + ATTACH_PREFIX_LEN, 4, "%03d", i);
 
-       /* attach individual database files */
+       /* attach individual database file */
        if (!attachdb(argv[idx], db, dbn, SQLITE_OPEN_READONLY, 1)) {
            rc = 1;
            goto detach;
        }
 
-       /* add the contents of the current database into the view */
-       curr += SNPRINTF(curr, MAXSQL, " SELECT * FROM %s.%s UNION ALL", dbn, tablename);
+       /* append SQL for adding the contents of the current database into the view */
+       curr += SNFORMAT_S(curr, create_view_len - (curr - create_view), 5,
+                          SELECT_FROM, SELECT_FROM_LEN,
+                          dbn, ATTACH_PREFIX_LEN + 3,
+                          ".", (size_t) 1,
+                          tablename, tablename_len,
+                          UNION_ALL, UNION_ALL_LEN);
 
        i++;
    }
 
-   curr -= strlen(" UNION ALL");   /* remove last " UNION ALL" */
-   *curr = '\0';
+   curr -= UNION_ALL_LEN;   /* remove last " UNION ALL" since there's nothing to union with */
+   curr[0] = ';';
+   curr[1] = '\0';
 
    char * err = NULL;
 
@@ -230,7 +256,6 @@ int main(int argc, char *argv[])
    /*     i++; */
    /* } */
 
-   free(dbn);
    free(create_view);
 
   /* done: */
