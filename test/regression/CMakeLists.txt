@@ -101,13 +101,9 @@ set(BINARIES
   gufi_treesummary
   gufi_treesummary_all
   gufi_query
+  gufi_stat
   querydbs
 )
-
-if (NOT APPLE)
-  list(APPEND BINARIES
-    gufi_stat)
-endif()
 
 set(EXAMPLES
   generategidsummary
