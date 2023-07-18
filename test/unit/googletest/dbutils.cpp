@@ -80,8 +80,22 @@ static int str_output(void *args, int, char **data, char **) {
     return 0;
 }
 
+TEST(attachdb, nullptr) {
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 0), nullptr);
+    EXPECT_EQ(attachdb("filename", nullptr, "attach name", SQLITE_OPEN_READONLY, 1), nullptr);
+}
+
+TEST(detachdb, nullptr) {
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 0), nullptr);
+    EXPECT_EQ(detachdb("filename", nullptr, "attach name", 1), nullptr);
+}
+
 TEST(create_table_wrapper, nullptr) {
     EXPECT_NE(create_table_wrapper(nullptr, nullptr, nullptr, nullptr), SQLITE_OK);
+}
+
+TEST(create_treesummary_tables, nullptr) {
+    EXPECT_EQ(create_treesummary_tables(nullptr, nullptr, nullptr), -1);
 }
 
 TEST(set_db_pragmas, good) {
@@ -93,6 +107,37 @@ TEST(set_db_pragmas, good) {
 
 TEST(set_db_pragmas, nullptr) {
     EXPECT_EQ(set_db_pragmas(nullptr), 1);
+}
+
+TEST(opendb, bad_modify_db) {
+    sqlite3 *db = opendb(":memory:", SQLITE_OPEN_READWRITE, 0, 0,
+                         [](const char *, sqlite3 *, void *){ return 1; }, nullptr
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , nullptr, nullptr
+                         , nullptr, nullptr
+#endif
+        );
+    EXPECT_EQ(db, nullptr);
+}
+
+TEST(insertdbprep, nullptr) {
+    EXPECT_EQ(insertdbprep(nullptr, nullptr), nullptr);
+}
+
+TEST(insertdbgo_xattrs_avail, nullptr) {
+    struct entry_data ed;
+    memset(&ed, 0, sizeof(ed));
+    ed.xattrs.count = 1;
+    struct xattr xattr;
+    ed.xattrs.pairs = &xattr;
+
+    EXPECT_NE(insertdbgo_xattrs_avail(&ed, nullptr), SQLITE_OK);
+}
+
+TEST(inserttreesumdb, nullptr) {
+    struct sum su;
+    memset(&su, 0, sizeof(su));
+    EXPECT_EQ(inserttreesumdb("", nullptr, &su, 0, 0, 0), -1);
 }
 
 TEST(addqueryfuncs, path) {
@@ -152,6 +197,15 @@ TEST(addqueryfuncs, fpath) {
     EXPECT_EQ(sqlite3_exec(db, "SELECT fpath();", str_output, &work, nullptr), SQLITE_OK);
     EXPECT_NE(work.fullpath, nullptr);
     EXPECT_GT(work.fullpath_len, (size_t) 0);
+
+    // copy current values
+    const char *fullpath = work.fullpath;
+    const size_t fullpath_len = work.fullpath_len;
+
+    // call again - should not update fullpath
+    EXPECT_EQ(sqlite3_exec(db, "SELECT fpath();", str_output, &work, nullptr), SQLITE_OK);
+    EXPECT_EQ(work.fullpath, fullpath);
+    EXPECT_EQ(work.fullpath_len, fullpath_len);
 
     sqlite3_close(db);
     free(work.fullpath);
@@ -353,14 +407,17 @@ TEST(addqueryfuncs, blocksize) {
         }
     }
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize('', '')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* non-integer size argument */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', '')", str_output, nullptr, nullptr), SQLITE_ERROR); /* missing size argument */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'i')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* single bad character */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'iB')",   str_output, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'ij')",   str_output, nullptr, nullptr), SQLITE_ERROR); /* 2nd character isn't B */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'AiB')",  str_output, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'AjB')",  str_output, nullptr, nullptr), SQLITE_ERROR); /* 2nd character isn't i */
-    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'Aij')",  str_output, nullptr, nullptr), SQLITE_ERROR); /* 3nd character isn't B */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize('', '')",      str_output, nullptr, nullptr), SQLITE_ERROR); /* non-integer size argument */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize('abc', '')",   str_output, nullptr, nullptr), SQLITE_ERROR); /* missing size argument */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'i')",      str_output, nullptr, nullptr), SQLITE_ERROR); /* single bad character */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'iB')",     str_output, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'ij')",     str_output, nullptr, nullptr), SQLITE_ERROR); /* 2nd character isn't B */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'AiB')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* 1st character isn't valid */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'AjB')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* 2nd character isn't i */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'Aij')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* 3nd character isn't B */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, '0KB')",    str_output, nullptr, nullptr), SQLITE_ERROR); /* block coefficient is 0 */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, '1.2KiB')", str_output, nullptr, nullptr), SQLITE_ERROR); /* decimal point is not allowed */
+    ASSERT_EQ(sqlite3_exec(db, "SELECT blocksize(0, 'KiBGiB')", str_output, nullptr, nullptr), SQLITE_ERROR); /* suffix is too long */
 
     sqlite3_close(db);
 }
@@ -471,7 +528,30 @@ TEST(addqueryfuncs, basename) {
     ASSERT_EQ(sqlite3_exec(db, "SELECT basename('..')", str_output, output, nullptr), SQLITE_OK);
     EXPECT_STREQ(output, "..");
 
-    ASSERT_EQ(sqlite3_exec(db, "SELECT basename(None)", str_output, nullptr, nullptr), SQLITE_ERROR);
+    /* not from manpage */
+
+    ASSERT_EQ(sqlite3_exec(db, "SELECT basename(NULL)", str_output, output, nullptr), SQLITE_OK);
+    EXPECT_STREQ(output, "");
+
+    sqlite3_close(db);
+}
+
+int double_callback(void *arg, int, char **data, char **) {
+    return !(sscanf(data[0], "%lf", (double *) arg) == 1);
+}
+
+TEST(addqueryfuncs, stdev) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db, 0, nullptr), 0);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE t (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
+    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1), (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+    double stdev = 0;
+    EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
+    EXPECT_DOUBLE_EQ(stdev * stdev * 2, (double) 5); /* sqrt(5 / 2) */
 
     sqlite3_close(db);
 }
@@ -543,4 +623,8 @@ TEST(sqlite_uri_path, not_enough_space) {
         EXPECT_EQ(dst_len, strlen(expected));
         EXPECT_EQ(memcmp(expected, dst, dst_len), 0);
     }
+}
+
+TEST(get_rollupscore, nullptr) {
+    EXPECT_EQ(get_rollupscore(nullptr, nullptr), -1);
 }

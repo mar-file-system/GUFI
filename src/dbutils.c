@@ -164,10 +164,12 @@ sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int prin
   char detach[MAXSQL];
   sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn);
 
-  if (sqlite3_exec(db, detach, NULL, NULL, NULL) != SQLITE_OK) {
+  char *err = NULL;
+  if (sqlite3_exec(db, detach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
       if (print_err) {
-          fprintf(stderr, "Cannot detach database: %s %s\n", name, sqlite3_errmsg(db));
+          fprintf(stderr, "Cannot detach database: %s %s\n", name, err);
       }
+      sqlite3_free(err);
       return NULL;
   }
 
