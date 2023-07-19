@@ -376,9 +376,12 @@ endif()
 if (DEP_USE_JEMALLOC)
   list(APPEND COMMON_LIBRARIES
     ${DEP_INSTALL_PREFIX}/jemalloc/lib/libjemalloc.a
-    dl
   )
 endif()
+
+list(APPEND COMMON_LIBRARIES
+  dl
+)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # ##########################################

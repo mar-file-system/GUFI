@@ -272,3 +272,27 @@ jobs:
     - name: Memcheck
       working-directory: ${{ github.workspace }}/build
       run:  valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all --suppressions=test/unit/googletest/valgrind.suppressions --error-exitcode=1 test/unit/googletest/unit_tests --gtest_color=yes
+
+  WithoutJemalloc:
+    needs: [ShellCheck, Pylint]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      with:
+        path: ${{ env.DEP_INSTALL_PREFIX }}
+        key:  ${{ runner.os }}-debug-prints
+
+    - name: Ubuntu Prerequisites
+      run:  sudo contrib/CI/ubuntu.sh
+
+    - name: Configure CMake
+      run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DDEP_USE_JEMALLOC=Off
+
+    - name: Build
+      run:  cmake --build ${{ github.workspace }}/build -j
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build
+      run:  ctest --output-on-failure
