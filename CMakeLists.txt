@@ -69,6 +69,17 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Refusing to build in source directory \"${CMAKE_SOURCE_DIR}\"")
 endif()
 
+# Don't allow in-source or in-build installs
+# CMAKE_INSTALL_PREFIX is not set by CMake until later on, so set it here so that the real path can be used
+set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Install path prefix, prepended onto install directories.")
+get_filename_component(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" REALPATH)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_INSTALL_PREFIX)
+  message(FATAL_ERROR "Refusing to install into source directory \"${CMAKE_SOURCE_DIR}\"")
+endif()
+if (CMAKE_BINARY_DIR STREQUAL CMAKE_INSTALL_PREFIX)
+  message(FATAL_ERROR "Refusing to install into build directory \"${CMAKE_BINARY_DIR}\"")
+endif()
+
 project(GUFI VERSION 0.6.1 LANGUAGES C)
 
 # print version info
