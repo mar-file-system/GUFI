@@ -1,0 +1,40 @@
+$ gufi_query -d " " -S "SELECT name, rectype FROM summary" "prefix"
+directory 0
+leaf_directory 0
+prefix 0
+subdirectory 0
+unusual#? directory , 0
+
+$ generateuidsummary "prefix" 2
+create uid summary records in summary tables in prefix
+
+$ generategidsummary "prefix" 2
+create gid summary records in summary tables in prefix
+
+$ gufi_query -d " " -S "SELECT name, rectype FROM summary" "prefix"
+ 1
+ 1
+ 1
+ 1
+ 1
+ 2
+ 2
+ 2
+ 2
+ 2
+directory 0
+leaf_directory 0
+prefix 0
+subdirectory 0
+unusual#? directory , 0
+
+$ deluidgidsummaryrecs "prefix" 2
+delete all uid and gid summary records from summary tables in prefix
+
+$ gufi_query -d " " -S "SELECT name, rectype FROM summary" "prefix"
+directory 0
+leaf_directory 0
+prefix 0
+subdirectory 0
+unusual#? directory , 0
+

@@ -1,5 +1,4 @@
-#!/bin/bash -e
-
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,9 +59,15 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-BFQ=$DIR/../src/gufi_query
 
-echo "delete all uid and gid summary records from summary tables in $1"
-$BFQ -S "delete from summary where rectype>0;" -n 2 -w $1
+
+set -e
+
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+BFQ="${DIR}/../src/gufi_query"
+INDEX="$1"
+THREADS="${2:-1}"
+
+echo "delete all uid and gid summary records from summary tables in ${INDEX}"
+"${BFQ}" -S "DELETE FROM summary WHERE rectype > 0;" -n "${THREADS}" -w "${INDEX}"

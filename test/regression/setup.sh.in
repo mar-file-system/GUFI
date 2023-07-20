@@ -118,9 +118,12 @@ chmod 666 "${CONFIG}"
 
 # paths of all executables
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
-GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
+DELUIDGIDSUMMARYRECS="@CMAKE_BINARY_DIR@/examples/deluidgidsummaryrecs"
 GENERATEGIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generategidsummary"
+GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
 GENERATEUIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generateuidsummary"
+GROUPFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/groupfilespacehog"
+GROUPFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/groupfilespacehogusesummary"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
 GUFI_FIND="@CMAKE_CURRENT_BINARY_DIR@/gufi_find.py"
@@ -134,7 +137,10 @@ GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
 GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
 GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
+OLDBIGFILES="@CMAKE_BINARY_DIR@/examples/oldbigfiles"
 QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
+USERFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/userfilespacehog"
+USERFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/userfilespacehogusesummary"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
@@ -149,9 +155,12 @@ WC="@WC@"
 replace() {
     @SED@ "
     s/${SQLITE3//\//\\/}/sqlite3/g;
-    s/${GENERATETREE//\//\\/}/generatetree/g;
+    s/${DELUIDGIDSUMMARYRECS//\//\\/}/deluidgidsummaryrecs/g;
     s/${GENERATEGIDSUMMARY//\//\\/}/generategidsummary/g;
+    s/${GENERATETREE//\//\\/}/generatetree/g;
     s/${GENERATEUIDSUMMARY//\//\\/}/generateuidsummary/g;
+    s/${GROUPFILESPACEHOG//\//\\/}/groupfilespacehog/g;
+    s/${GROUPFILESPACEHOGUSESUMMARY//\//\\/}/groupfilespacehogusesummary/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
     s/${GUFI_DIR2TRACE//\//\\/}/gufi_dir2trace/g;
     s/${GUFI_FIND//\//\\/}/gufi_find/g;
@@ -165,7 +174,10 @@ replace() {
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;
     s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
+    s/${OLDBIGFILES//\//\\/}/oldbigfiles/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
+    s/${USERFILESPACEHOG//\//\\/}/userfilespacehog/g;
+    s/${USERFILESPACEHOGUSESUMMARY//\//\\/}/userfilespacehogusesummary/g;
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 

@@ -1,4 +1,4 @@
-$ generateuidsummary "prefix" "2"
+$ generateuidsummary "prefix" 2
 create uid summary records in summary tables in prefix
 
 $ gufi_query -d " " -S "SELECT path(), level(), rectype FROM summary;" "prefix"

@@ -77,7 +77,7 @@ pull_columns() {
 }
 
 (
-    run_no_sort "${GENERATEUIDSUMMARY} \"${INDEXROOT}\" \"${THREADS}\""
+    run_no_sort "${GENERATEUIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
 
     # print all rows in summary table
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), rectype FROM summary;\" \"${INDEXROOT}\""

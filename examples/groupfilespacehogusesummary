@@ -1,5 +1,4 @@
-#!/bin/bash -e
-
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,12 +59,24 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-BFQ=$DIR/../src/gufi_query
-QUERYDBS=$DIR/../src/querydbs
 
-echo "query to create db insert recs from entry query into out db group file space hog use group summary"
-rm -f outdb*
-$BFQ -E "insert into sumsum select gidtogroup(gid), totfiles, totsize from vsummarygroup;" -n $2 -O outdb -I "create table sumsum (groupname text, totfiles int64, totsize int64);" $1
-$QUERYDBS -NV sumsum "select groupname, sum(totfiles), sum(totsize) from vsumsum group by groupname;" outdb.*
+
+set -e
+
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+BFQ="${DIR}/../src/gufi_query"
+INDEX="$1"
+THREADS="${2:-1}"
+
+echo "query to get total file count and total file size grouped by group using the group summary view"
+
+"${DIR}/generategidsummary" "${INDEX}" "${THREADS}"
+
+"${BFQ}" -d " " -n "${THREADS}" \
+    -I "CREATE TABLE intermediate (gid TEXT, totfiles INT64, totsize INT64);" \
+    -E "INSERT INTO intermediate SELECT gid, totfiles, totsize FROM vsummarygroup;" \
+    -K "CREATE TABLE aggregate (gid TEXT, totfiles INT64, totsize INT64);" \
+    -J "INSERT INTO aggregate SELECT gid, SUM(totfiles), SUM(totsize) FROM intermediate GROUP BY gid;" \
+    -G "SELECT gidtogroup(gid), SUM(totfiles), SUM(totsize) as finalsize FROM aggregate GROUP BY gid ORDER BY finalsize DESC;" \
+    "${INDEX}"

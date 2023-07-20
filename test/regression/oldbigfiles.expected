@@ -1,0 +1,16 @@
+$ oldbigfiles "prefix" 2
+query to create db insert recs from entry query into out db old big files
+user prefix 1MB 1048576 1048576
+user prefix 1KB 1024 1024
+user prefix/unusual#? directory , unusual, name?# 14 14
+user prefix repeat_name 13 13
+user prefix/leaf_directory leaf_file2 11 11
+user prefix/leaf_directory leaf_file1 10 10
+user prefix .hidden 9 9
+user prefix/directory/subdirectory repeat_name 5 5
+
+$ oldbigfiles "prefix" 2 1000
+query to create db insert recs from entry query into out db old big files
+user prefix 1MB 1048576 1048576
+user prefix 1KB 1024 1024
+

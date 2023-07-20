@@ -1,5 +1,4 @@
-#!/bin/bash -e
-
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,14 +59,22 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-SCRIPT="$BASH_SOURCE" # Must be at the top
-DIR=`dirname $SCRIPT`
-BFQ=$DIR/../src/gufi_query
-QUERYDBS=$DIR/../src/querydbs
 
-EPATH=..
-echo "query to create db insert recs from entry query into out db user file space hog"
-rm -f outdb*
-$BFQ -E "insert into sument select uidtouser(uid), count(*), sum(size) from entries where type='f' group by uid;" -n $2 -O outdb -I "create table sument (username text, totfiles int64, totsize int64);" $1
-#$EPATH/querydbs outdb "select username, totfiles, totsize from vsument group by username;" 0 1 1 $2 sument
-$QUERYDBS -NV sument "select username, sum(totfiles), sum(totsize) from vsument group by username;" outdb.*
+
+set -e
+
+SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
+DIR="$(dirname ${SCRIPT})"
+BFQ="${DIR}/../src/gufi_query"
+INDEX="$1"
+THREADS="${2:-1}"
+
+echo "query to get total file count and total file size grouped by user using the entries table"
+
+"${BFQ}" -d " " -n "${THREADS}" \
+    -I "CREATE TABLE intermediate (uid INT64, totfiles INT64, totsize INT64);" \
+    -E "INSERT INTO intermediate SELECT uid, COUNT(*), SUM(size) FROM entries WHERE type == 'f' GROUP by uid;" \
+    -K "CREATE TABLE aggregate (uid INT64, totfiles INT64, totsize INT64);" \
+    -J "INSERT INTO aggregate SELECT uid, SUM(totfiles), SUM(totsize) FROM intermediate GROUP BY uid;" \
+    -G "SELECT uidtouser(uid), SUM(totfiles), SUM(totsize) as finalsize FROM aggregate GROUP BY uid ORDER BY finalsize DESC;" \
+    "${INDEX}"

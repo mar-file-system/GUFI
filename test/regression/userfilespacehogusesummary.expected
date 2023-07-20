@@ -1,0 +1,5 @@
+$ userfilespacehogusesummary "prefix" 2
+query to get total file count and total file size grouped by user using the user summary view
+create uid summary records in summary tables in prefix
+user 12 1049668
+

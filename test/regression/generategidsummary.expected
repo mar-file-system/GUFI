@@ -1,4 +1,4 @@
-$ generategidsummary "prefix" "2"
+$ generategidsummary "prefix" 2
 create gid summary records in summary tables in prefix
 
 $ gufi_query -d " " -S "SELECT path(), level(), rectype FROM summary;" "prefix"

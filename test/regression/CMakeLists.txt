@@ -106,8 +106,14 @@ set(BINARIES
 )
 
 set(EXAMPLES
+  deluidgidsummaryrecs
   generategidsummary
   generateuidsummary
+  groupfilespacehog
+  groupfilespacehogusesummary
+  oldbigfiles
+  userfilespacehog
+  userfilespacehogusesummary
 )
 
 set(OTHERS

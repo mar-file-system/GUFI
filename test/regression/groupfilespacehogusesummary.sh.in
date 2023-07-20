@@ -62,20 +62,16 @@
 
 
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
-DIR="$(dirname ${SCRIPT})"
-BFQ="${DIR}/../src/gufi_query"
-INDEX="$1"
-THREADS="${2:-1}"
-MINSIZE="${3:-4}"
+OUTPUT="groupfilespacehogusesummary.out"
 
-echo "query to create db insert recs from entry query into out db old big files"
-# if you want to be fancy then use date functions to provide this in user readable date/time
-"${BFQ}" -d " " -n "${THREADS}" \
-    -I "CREATE TABLE intermediate (uid INT64, pathname TEXT, name TEXT, size INT64, mtime INT64);" \
-    -E "INSERT INTO intermediate SELECT uid, rpath(sname, sroll), name, size, mtime FROM vrpentries WHERE (type == 'f') AND (size > ${MINSIZE});" \
-    -K "CREATE TABLE aggregate (uid INT64, pathname TEXT, name TEXT, size INT64, mtime INT64);" \
-    -J "INSERT INTO aggregate SELECT uid, pathname, name, size, mtime FROM intermediate;" \
-    -G "SELECT uidtouser(uid), pathname, name, size, mtime FROM aggregate ORDER BY size DESC, pathname ASC, name ASC;" \
-    "${INDEX}"
+GROUP="$(id -gn)"
+TEST_GROUP="group"
+
+(
+    run_no_sort "${GROUPFILESPACEHOGUSESUMMARY} \"${INDEXROOT}\" ${THREADS}"
+) | @SED@ "s/${GROUP}/${TEST_GROUP}/g" | @TEE@ "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehogusesummary.expected "${OUTPUT}"
+rm "${OUTPUT}"
