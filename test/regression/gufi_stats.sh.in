@@ -92,6 +92,9 @@ run "${GUFI_STATS} -r filecount"
 run "${GUFI_STATS}    linkcount"
 run "${GUFI_STATS} -r linkcount"
 
+run "${GUFI_STATS}    extensions"
+run "${GUFI_STATS} -r extensions"
+
 run "${GUFI_STATS}    total-filesize"
 run "${GUFI_STATS} -c total-filesize"
 
@@ -116,9 +119,6 @@ run "${GUFI_STATS} -c links-per-level"
 run "${GUFI_STATS}    dirs-per-level"
 run "${GUFI_STATS} -c dirs-per-level"
 
-run "${GUFI_STATS}    extensions"
-run "${GUFI_STATS} -c extensions"
-
 run "${GUFI_STATS}    duplicate-names"
 
 run_uidgid_size "${GUFI_STATS} uid-size --order ASC"
@@ -129,6 +129,12 @@ run_uidgid_size "${GUFI_STATS} gid-size --order ASC"
 run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order ASC"
 run_uidgid_size "${GUFI_STATS} gid-size --order DESC"
 run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order DESC"
+
+# bad flags
+run "${GUFI_STATS} -c depth"
+run "${GUFI_STATS} -r total-filesize"
+run "${GUFI_STATS} -c duplicate-names"
+run "${GUFI_STATS} -r duplicate-names"
 
 # shellcheck disable=SC2050
 if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE" ]]
@@ -145,7 +151,13 @@ then
     run "${GUFI_STATS}    total-leaf-files"
     run "${GUFI_STATS} -c total-leaf-files"
 
+    run "${GUFI_STATS}    average-leaf-files"
+    run "${GUFI_STATS}    average-leaf-links"
+    run "${GUFI_STATS}    average-leaf-size"
+
     run "${GUFI_STATS}    median-leaf-files"
+    run "${GUFI_STATS}    median-leaf-links"
+    run "${GUFI_STATS}    median-leaf-size"
 fi
 ) |& remove_root | @TEE@ "${OUTPUT}"
 
