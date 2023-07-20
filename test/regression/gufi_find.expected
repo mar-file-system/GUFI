@@ -559,7 +559,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -user  gufi_test
+$ gufi_find -user  user
 prefix
 .hidden
 1KB
@@ -601,7 +601,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_find -group gufi_test
+$ gufi_find -group group
 prefix
 .hidden
 1KB

@@ -66,8 +66,6 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="gufi_ls.out"
 
-USER="$(id -un)"
-GROUP="$(id -gn)"
 BACKUP="backup~"
 
 (
@@ -140,7 +138,7 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     # human readable sizes without -l (should only show name)
     run_no_sort "${GUFI_LS} -h 1KB"
     run_no_sort "${GUFI_LS} -h 1MB"
-) | @SED@ "s/${USER} ${GROUP}/user group/g; s/${USER}/user/g;"
+) | @SED@ "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g; s/${USER_NAME}/${TEST_USER_NAME}/g;"
 
 (
     # bad blocksizes

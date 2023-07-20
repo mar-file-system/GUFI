@@ -66,12 +66,9 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="groupfilespacehogusesummary.out"
 
-GROUP="$(id -gn)"
-TEST_GROUP="group"
-
 (
     run_no_sort "${GROUPFILESPACEHOGUSESUMMARY} \"${INDEXROOT}\" ${THREADS}"
-) | @SED@ "s/${GROUP}/${TEST_GROUP}/g" | @TEE@ "${OUTPUT}"
+) | @SED@ "s/${GROUP_NAME}/${TEST_GROUP_NAME}/g" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/groupfilespacehogusesummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

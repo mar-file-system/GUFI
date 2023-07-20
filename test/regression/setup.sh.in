@@ -90,6 +90,23 @@ BADDELIM="?"
 SEARCH="search"
 INDEXROOT="${SEARCH}/$(basename ${SRCDIR})"
 
+# shellcheck disable=SC2034
+USER_ID="$(@ID@ -u)"
+# shellcheck disable=SC2034
+USER_NAME="$(@ID@ -un)"
+# shellcheck disable=SC2034
+GROUP_ID="$(@ID@ -g)"
+# shellcheck disable=SC2034
+GROUP_NAME="$(@ID@ -gn)"
+# shellcheck disable=SC2034
+TEST_USER_ID="1001"
+# shellcheck disable=SC2034
+TEST_USER_NAME="user"
+# shellcheck disable=SC2034
+TEST_GROUP_ID="${TEST_USER_ID}"
+# shellcheck disable=SC2034
+TEST_GROUP_NAME="group"
+
 # always clean up
 setup_cleanup() {
     rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}"

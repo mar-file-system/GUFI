@@ -66,12 +66,9 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="userfilespacehog.out"
 
-USERNAME="$(id -un)"
-TEST_USERNAME="user"
-
 (
     run_no_sort "${USERFILESPACEHOG} \"${INDEXROOT}\" ${THREADS}"
-) | @SED@ "s/${USERNAME}/${TEST_USERNAME}/g" | @TEE@ "${OUTPUT}"
+) | @SED@ "s/${USER_NAME}/${TEST_USER_NAME}/g" | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/userfilespacehog.expected "${OUTPUT}"
 rm "${OUTPUT}"

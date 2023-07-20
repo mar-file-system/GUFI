@@ -84,9 +84,6 @@ cleanup
 
 touch -amt 197001010001 "${REFERENCE}"            # 1 minute after epoch
 
-TEST_ID=1001
-TEST_NAME="gufi_test"
-
 (
 run_no_sort "${GUFI_FIND} --help"
 
@@ -167,18 +164,11 @@ run_no_sort "${GUFI_FIND} --largest  -type f"
 # multiple input directories
 run_sort "${GUFI_FIND} directory leaf_directory"
 
-(
-    run_sort "${GUFI_FIND} -uid   \"$(id -u)\""
-    run_sort "${GUFI_FIND} -user  \"$(id -un)\""
-    run_sort "${GUFI_FIND} -gid   \"$(id -g)\""
-    run_sort "${GUFI_FIND} -group \"$(id -gn)\""
+run_sort "${GUFI_FIND} -uid   \"${USER_ID}\""   | @SED@ "s/\"${USER_ID}\"/${TEST_USER_ID}/g;"
+run_sort "${GUFI_FIND} -user  \"${USER_NAME}\"" | @SED@ "s/\"${USER_NAME}\"/${TEST_USER_NAME}/g;"
+run_sort "${GUFI_FIND} -gid   \"${GROUP_ID}\""  | @SED@ "s/\"${GROUP_ID}\"/${TEST_GROUP_ID}/g;"
+run_sort "${GUFI_FIND} -group \"${GROUP_NAME}\""| @SED@ "s/\"${GROUP_NAME}\"/${TEST_GROUP_NAME}/g;"
 
-) | @SED@ "
-    s/\"$(id -u)\"/${TEST_ID}/g;
-    s/\"$(id -un)\"/${TEST_NAME}/g;
-    s/\"$(id -g)\"/${TEST_ID}/g;
-    s/\"$(id -gn)\"/${TEST_NAME}/g;
-    "
 # zero some columns to make test easier
 run_no_sort "${GUFI_QUERY} -a -w -E \"UPDATE entries SET inode = 0, uid = 0, gid = 0;\" \"${SEARCH}\""
 

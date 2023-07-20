@@ -66,14 +66,10 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="generateuidsummary.out"
 
-TEST_UID="$(id -u)"
-TEST_GID="$(id -g)"
-TEST_ID=1001
-
 pull_columns() {
     RELATION="$1"
     WHERE="$2"
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', uid, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${TEST_UID} ${TEST_UID} ${TEST_UID} ${TEST_GID} ${TEST_GID} \]/${TEST_ID} ${TEST_ID} ${TEST_ID} ${TEST_ID} ${TEST_ID}/g"
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', uid, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${USER_ID} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${TEST_USER_ID} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g"
 }
 
 (

@@ -66,9 +66,6 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="oldbigfiles.out"
 
-USER_NAME="$(id -un)"
-TEST_USER_NAME="user"
-
 (
     run_no_sort "${OLDBIGFILES} \"${INDEXROOT}\" ${THREADS}"
     run_no_sort "${OLDBIGFILES} \"${INDEXROOT}\" ${THREADS} 1000"
