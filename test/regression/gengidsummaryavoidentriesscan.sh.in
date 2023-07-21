@@ -62,18 +62,25 @@
 
 
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-SCRIPT="${BASH_SOURCE[0]}" # Must be at the top
-DIR="$(dirname ${SCRIPT})"
-BFQ="${DIR}/../src/gufi_query"
-INDEX="$1"
-THREADS="${2:-1}"
+OUTPUT="gengidsummaryavoidentriesscan.out"
 
-# if there is only one gid in this directory, the gid summary can be created using the original summary row
-# if not, fall back to pulling from entries
+(
+    run_no_sort "${GENERATEGIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
+    expected=$(pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2";
+               pull_ug_summary_columns "gid" "vsummarygroup")
+    echo "${expected}"
+    echo
 
-echo "create gid summary records in summary tables in ${INDEX}"
-"${BFQ}" -n "${THREADS}" -a -w \
-    -S "DELETE FROM summary WHERE rectype == 2; INSERT INTO summary (gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype) SELECT gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, 2 FROM summary WHERE rectype == 0 AND mingid == maxgid" \
-    -E "INSERT INTO summary (gid, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype) SELECT gid, SUM(CASE WHEN type == 'f' THEN 1 ELSE 0 END), SUM(CASE WHEN type == 'l' THEN 1 ELSE 0 END), MIN(uid), MAX(uid), MIN(gid), MAX(gid), MIN(size), MAX(size), SUM(CASE WHEN size <= 1024 then 1 ELSE 0 END), SUM(CASE WHEN size > 1024 then 1 ELSE 0 END), SUM(CASE WHEN size <= 1048576 then 1 ELSE 0 END), SUM(CASE WHEN size > 1048576 then 1 ELSE 0 END), SUM(CASE WHEN size > 1073741824 then 1 ELSE 0 END), SUM(CASE WHEN size > 1099511627776 then 1 ELSE 0 END), SUM(size), MIN(ctime), MAX(ctime), MIN(mtime), MAX(mtime), MIN(atime), MAX(atime), MIN(blocks), MAX(blocks), SUM(LENGTH(xattr_names) - LENGTH(REPLACE(xattr_names, char(31), ''))), MIN(crtime), MAX(crtime), MIN(ossint1), MAX(ossint1), SUM(ossint1), MIN(ossint2), MAX(ossint2), SUM(ossint2), MIN(ossint3), MAX(ossint3), SUM(ossint3), MIN(ossint4), MAX(ossint4), SUM(ossint4), 2 FROM entries WHERE NOT EXISTS (SELECT 1 FROM summary WHERE rectype == 2) GROUP BY gid;" \
-    "${INDEX}"
+    run_no_sort "${GENGIDSUMMARYAVOIDENTRIESSCAN} \"${INDEXROOT}\" ${THREADS}"
+    results=$(pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2";
+              pull_ug_summary_columns "gid" "vsummarygroup")
+    echo "${results}"
+    echo
+
+    run_no_sort "@DIFF@ <(echo \"\${expected}\") <(echo \"\${results}\")"
+) | @TEE@ "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gengidsummaryavoidentriesscan.expected "${OUTPUT}"
+rm "${OUTPUT}"

@@ -139,6 +139,8 @@ DELUIDGIDSUMMARYRECS="@CMAKE_BINARY_DIR@/examples/deluidgidsummaryrecs"
 GENERATEGIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generategidsummary"
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
 GENERATEUIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generateuidsummary"
+GENGIDSUMMARYAVOIDENTRIESSCAN="@CMAKE_BINARY_DIR@/examples/gengidsummaryavoidentriesscan"
+GENUIDSUMMARYAVOIDENTRIESSCAN="@CMAKE_BINARY_DIR@/examples/genuidsummaryavoidentriesscan"
 GROUPFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/groupfilespacehog"
 GROUPFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/groupfilespacehogusesummary"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
@@ -162,6 +164,7 @@ VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
 VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 AWK="@AWK@"
+DIFF="@DIFF@"
 GREP="@GREP@"
 HEAD="@HEAD@"
 SORT="@SORT@"
@@ -176,6 +179,8 @@ replace() {
     s/${GENERATEGIDSUMMARY//\//\\/}/generategidsummary/g;
     s/${GENERATETREE//\//\\/}/generatetree/g;
     s/${GENERATEUIDSUMMARY//\//\\/}/generateuidsummary/g;
+    s/${GENGIDSUMMARYAVOIDENTRIESSCAN//\//\\/}/gengidsummaryavoidentriesscan/g;
+    s/${GENUIDSUMMARYAVOIDENTRIESSCAN//\//\\/}/genuidsummaryavoidentriesscan/g;
     s/${GROUPFILESPACEHOG//\//\\/}/groupfilespacehog/g;
     s/${GROUPFILESPACEHOGUSESUMMARY//\//\\/}/groupfilespacehogusesummary/g;
     s/${GUFI_DIR2INDEX//\//\\/}/gufi_dir2index/g;
@@ -205,6 +210,7 @@ replace() {
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
 
     s/${AWK//\//\\/}/awk/g;
+    s/${DIFF//\//\\/}/diff/g;
     s/${GREP//\//\\/}/grep/g;
     s/${HEAD//\//\\/}/head/g;
     s/${SORT//\//\\/}/sort/g;
@@ -255,6 +261,25 @@ order_tracefile() {
 
 remove_indexing_time() {
     @GREP@ -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
+}
+
+
+pull_ug_summary_columns() {
+    UG="$1"
+    RELATION="$2"
+    WHERE="$3"
+
+    if [[ "${UG}" = "uid" ]]
+    then
+        SRC="${USER_ID}"
+        DST="${TEST_USER_ID}"
+    elif [[ "${UG}" = "gid" ]]
+    then
+        SRC="${GROUP_ID}"
+        DST="${TEST_GROUP_ID}"
+    fi
+
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
 }
 
 if [[ "${GENERATE_INDEX}" == "1" ]]

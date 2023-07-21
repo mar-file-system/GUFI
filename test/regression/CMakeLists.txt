@@ -110,6 +110,8 @@ set(EXAMPLES
   deluidgidsummaryrecs
   generategidsummary
   generateuidsummary
+  gengidsummaryavoidentriesscan
+  genuidsummaryavoidentriesscan
   groupfilespacehog
   groupfilespacehogusesummary
   oldbigfiles

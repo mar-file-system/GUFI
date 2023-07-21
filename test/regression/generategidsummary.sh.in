@@ -66,20 +66,14 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="generategidsummary.out"
 
-pull_columns() {
-    RELATION="$1"
-    WHERE="$2"
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', gid, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${GROUP_ID} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${TEST_GROUP_ID} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g"
-}
-
 (
     run_no_sort "${GENERATEGIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
 
     # print all rows in summary table
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), rectype FROM summary;\" \"${INDEXROOT}\""
 
-    pull_columns "summary" " WHERE rectype == 2"
-    pull_columns "vsummarygroup"
+    pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2"
+    pull_ug_summary_columns "gid" "vsummarygroup"
 ) | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generategidsummary.expected "${OUTPUT}"
