@@ -489,6 +489,6 @@ int INSTALL_STR(refstr_t *VAR, const char *SOURCE) {
         }                                                                      \
     }
 
-INSTALL_NUMBER(INT, int, "%d");
-INSTALL_NUMBER(SIZE, size_t, "%zu");
-INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64);
+INSTALL_NUMBER(INT, int, "%d")
+INSTALL_NUMBER(SIZE, size_t, "%zu")
+INSTALL_NUMBER(UINT64, uint64_t, "%" PRIu64)

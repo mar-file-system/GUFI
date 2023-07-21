@@ -201,7 +201,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* Not checking arguments */
 
-    (void) ctx;
+    (void) ctx; (void) id;
 
     struct PoolArgs *pa = (struct PoolArgs *) args;
     struct input *in = &pa->in;
@@ -491,7 +491,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     struct ScoutArgs *sa = (struct ScoutArgs *) data;
     struct input *in = sa->in;
 
-    (void) id;
+    (void) id; (void) args;
 
     char *line = NULL;
     size_t size = 0;
@@ -528,8 +528,6 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     struct row *work = row_init(sa->trace, first_delim, line, len, offset);
 
-    size_t target_thread = 0;
-
     size_t file_count = 0;
     size_t dir_count = 1; /* always start with a directory */
     size_t empty = 0;
@@ -560,8 +558,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
             empty += !work->entries;
 
             /* put the previous work on the queue */
-            QPTPool_enqueue(ctx, target_thread, processdir, work);
-            target_thread = (target_thread + 1) % in->maxthreads;
+            QPTPool_enqueue(ctx, id, processdir, work);
 
             /* put the current line into a new work item */
             work = row_init(sa->trace, first_delim, line, len, offset);
@@ -584,7 +581,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     free(line);
 
     /* insert the last work item */
-    QPTPool_enqueue(ctx, target_thread, processdir, work);
+    QPTPool_enqueue(ctx, id, processdir, work);
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
 

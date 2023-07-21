@@ -82,10 +82,7 @@ static const struct xattr EXPECTED_XATTR[] = {
 };
 
 static const struct xattrs EXPECTED_XATTRS = {
-    .pairs = (struct xattr *) EXPECTED_XATTR,
-    .name_len = 18,
-    .len = 30,
-    .count = 2,
+    (struct xattr *) EXPECTED_XATTR, 18, 30, 2,
 };
 
 static void check_contents(struct xattrs &xattrs) {

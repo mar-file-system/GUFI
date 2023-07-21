@@ -71,26 +71,12 @@ static const uint64_t nsecs_per_sec = 1000000000ULL;
 TEST(debug, since_epoch) {
     epoch = 0;
 
-    struct timespec ts = {
-        .tv_sec = 1,
-        .tv_nsec = 0,
-    };
-
+    struct timespec ts = { 1, 0 };
     EXPECT_EQ(since_epoch(&ts), nsecs_per_sec);
 }
 
 TEST(debug, nsec) {
-    struct start_end se = {
-        .start = {
-            .tv_sec = 1,
-            .tv_nsec = 0,
-        },
-        .end = {
-            .tv_sec = 2,
-            .tv_nsec = 0,
-        },
-    };
-
+    struct start_end se = { {1, 0}, {2, 0} };
     EXPECT_EQ(nsec(&se), nsecs_per_sec);
 }
 
@@ -101,16 +87,7 @@ TEST(debug, sec) {
 TEST(debug, print_timer) {
     epoch = 0;
 
-    struct start_end se = {
-        .start = {
-            .tv_sec = 1,
-            .tv_nsec = 0,
-        },
-        .end = {
-            .tv_sec = 2,
-            .tv_nsec = 0,
-        },
-    };
+    struct start_end se = { {1, 0}, {2, 0} };
 
     struct OutputBuffers obufs;
     memset(&obufs, 0, sizeof(obufs));

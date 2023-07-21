@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 
-BU_f f = [](void *args timestamp_sig) -> void {};
+BU_f f = [](void *args timestamp_sig) -> void { (void) args; };
 
 TEST(BottomUp, builddir) {
     const char *roots[] = {

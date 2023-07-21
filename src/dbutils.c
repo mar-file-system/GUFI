@@ -188,6 +188,7 @@ int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, co
 }
 
 int create_treesummary_tables(const char *name, sqlite3 *db, void *args) {
+    (void) args;
     if ((create_table_wrapper(name, db, "tsql",        TREESUMMARY_CREATE) != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)          != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)         != SQLITE_OK) ||
@@ -876,6 +877,7 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+    (void) argc;
     int fmode;
     char tmode[64];
     fmode = sqlite3_value_int(argv[0]);
@@ -1110,6 +1112,7 @@ typedef struct {
 } stdev_t;
 
 static void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
     stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
     const double value = sqlite3_value_double(argv[0]);
 

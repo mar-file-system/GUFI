@@ -316,8 +316,8 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'G': /* group name of owner */
                     {
-                        struct group * grp = getgrgid(atoi(data[8]));
-                        const char * group = grp?grp->gr_name:unknown;
+                        struct group *gr = getgrgid(atoi(data[8]));
+                        const char *group = gr?gr->gr_name:unknown;
                         fprintf(out, line, group);
                     }
                     break;
@@ -368,8 +368,8 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     break;
                 case 'U': /* user name of owner */
                     {
-                        struct passwd * usr = getpwuid(atoi(data[7]));
-                        const char * user = usr?usr->pw_name:unknown;
+                        struct passwd *pw = getpwuid(atoi(data[7]));
+                        const char *user = pw?pw->pw_name:unknown;
                         fprintf(out, line, user);
                     }
                     break;
@@ -384,7 +384,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, atime_str);
                     break;
                 case 'X': /* time of last access, seconds since Epoch */
-                    strftime(atime_str, MAXPATH, "%s", &atm);
+                    SNPRINTF(atime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&atm));
                     fprintf(out, line, atime_str);
                     break;
                 case 'y': /* time of last modification, human-readable */
@@ -392,7 +392,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, mtime_str);
                     break;
                 case 'Y': /* time of last modification, seconds since Epoch */
-                    strftime(mtime_str, MAXPATH, "%s", &mtm);
+                    SNPRINTF(mtime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&mtm));
                     fprintf(out, line, mtime_str);
                     break;
                 case 'z': /* time of last change, human-readable */
@@ -400,7 +400,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, ctime_str);
                     break;
                 case 'Z': /* time of last change, seconds since Epoch */
-                    strftime(ctime_str, MAXPATH, "%s", &ctm);
+                    SNPRINTF(ctime_str, MAXPATH, "%llu", (long long unsigned int) mktime(&ctm));
                     fprintf(out, line, ctime_str);
                     break;
                 default:
