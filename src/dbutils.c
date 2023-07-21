@@ -1329,10 +1329,7 @@ size_t sqlite_uri_path(char *dst, size_t dst_size,
 
 static int get_rollupscore_callback(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
-
-    int *rollupscore = (int *) args;
-    *rollupscore = atoi(data[0]);
-    return 0;
+    return !(sscanf(data[0], "%d", (int *) args) == 1);
 }
 
 int get_rollupscore(sqlite3 *db, int *rollupscore) {

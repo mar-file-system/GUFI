@@ -80,17 +80,6 @@ struct Unrollup {
     int rolledup; /* set by parent, can be modified by self */
 };
 
-int get_rolled_up(void *args, int count, char **data, char **columns) {
-    (void) columns;
-
-    if ((count == 1) && (data[0][1] == '\0')) {
-        int *rolledup = (int *) args;
-        *rolledup = (data[0][0] == '1');
-        return 0;
-    }
-    return 1;
-}
-
 int count_pwd(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
@@ -152,7 +141,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     (void) args;
 
     struct Unrollup *work = (struct Unrollup *) data;
-    char *err = NULL;
     int rc = 0;
 
     DIR *dir = opendir(work->name);
@@ -161,8 +149,6 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         rc = 1;
         goto free_work;
     }
-
-    int rolledup = 0;
 
     char dbname[MAXPATH];
     SNPRINTF(dbname, MAXPATH, "%s/" DBNAME, work->name);
@@ -179,22 +165,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* get roll up status set by parent */
-    rolledup = work->rolledup;
+    int rolledup = work->rolledup;
 
     /*
      * if parent of this directory was rolled up, all children are rolled up, so skip this check
      * if parent of this directory was not rolled up, this directory might be
      */
     if (db && !rolledup) {
-        /* get whether or not the current directory was rolled up */
-        if (sqlite3_exec(db, "SELECT (rollupscore <> 0) FROM summary WHERE isroot == 1",
-                         get_rolled_up, &rolledup, &err) != SQLITE_OK) {
-            fprintf(stderr, "Error: Failed to get rollup score from \"%s\": %s\n",
-                    work->name, err);
-            rc = 1;
-        }
-        sqlite3_free(err);
-        err = NULL;
+        rc = !!get_rollupscore(db, &rolledup);
     }
 
     /*
@@ -234,6 +212,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* now that work has been pushed onto the queue, clean up this db */
     if (db && rolledup) {
+        char *err = NULL;
         if (sqlite3_exec(db,
                          "BEGIN TRANSACTION;"
                          "DELETE FROM " PENTRIES_ROLLUP ";"
