@@ -109,6 +109,17 @@ TEST(set_db_pragmas, nullptr) {
     EXPECT_EQ(set_db_pragmas(nullptr), 1);
 }
 
+TEST(opendb, bad_path) {
+    sqlite3 *db = opendb("", SQLITE_OPEN_READWRITE, 0, 0,
+                         [](const char *, sqlite3 *, void *){ return 1; }, nullptr
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+                         , nullptr, nullptr
+                         , nullptr, nullptr
+#endif
+        );
+    EXPECT_EQ(db, nullptr);
+}
+
 TEST(opendb, bad_modify_db) {
     sqlite3 *db = opendb(":memory:", SQLITE_OPEN_READWRITE, 0, 0,
                          [](const char *, sqlite3 *, void *){ return 1; }, nullptr
@@ -132,6 +143,10 @@ TEST(insertdbgo_xattrs_avail, nullptr) {
     ed.xattrs.pairs = &xattr;
 
     EXPECT_NE(insertdbgo_xattrs_avail(&ed, nullptr), SQLITE_OK);
+}
+
+TEST(insertsumdb, nullptr) {
+    EXPECT_EQ(insertsumdb(nullptr, nullptr, nullptr, nullptr, nullptr), 1);
 }
 
 TEST(inserttreesumdb, nullptr) {
@@ -556,6 +571,19 @@ TEST(addqueryfuncs, stdev) {
     sqlite3_close(db);
 }
 
+TEST(sqlite_uri_path, none) {
+    const char src[] = "prefix/basename";
+    size_t src_len = strlen(src);
+    char dst[1024] = {0};
+    const char *expected = src;
+
+    const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+    EXPECT_EQ(src_len, strlen(src));
+    EXPECT_EQ(dst_len, strlen(expected));
+    EXPECT_STREQ(dst, expected);
+}
+
 TEST(sqlite_uri_path, 23) {
     const char src[] = "prefix/#/basename";
     size_t src_len = strlen(src);
@@ -627,4 +655,20 @@ TEST(sqlite_uri_path, not_enough_space) {
 
 TEST(get_rollupscore, nullptr) {
     EXPECT_EQ(get_rollupscore(nullptr, nullptr), -1);
+}
+
+TEST(bottomup_collect_treesummary, nullptr) {
+    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES), 1);
+
+    char dirname[] = "XXXXXX";
+    ASSERT_EQ(mkdtemp(dirname), dirname);
+
+    sll_t sll;
+    sll_init(&sll);
+    sll_push(&sll, dirname);
+
+    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES), 1);
+
+    sll_destroy(&sll, nullptr);
+    EXPECT_EQ(rmdir(dirname), 0);
 }
