@@ -143,7 +143,6 @@ int zeroit(struct sum *summary)
   summary->maxatime=LLONG_MIN;
   summary->minblocks=LLONG_MAX;
   summary->maxblocks=LLONG_MIN;
-  summary->setit=0;
   summary->totxattr=0;
   summary->totsubdirs=0;
   summary->maxsubdirfiles=LLONG_MIN;
@@ -167,38 +166,6 @@ int zeroit(struct sum *summary)
 }
 
 int sumit(struct sum *summary, struct entry_data *ed) {
-
-  if (summary->setit == 0) {
-    summary->minuid=ed->statuso.st_uid;
-    summary->maxuid=ed->statuso.st_uid;
-    summary->mingid=ed->statuso.st_gid;
-    summary->maxgid=ed->statuso.st_gid;
-    summary->minsize=ed->statuso.st_size;
-    summary->maxsize=ed->statuso.st_size;;
-    summary->minctime=ed->statuso.st_ctime;
-    summary->maxctime=ed->statuso.st_ctime;
-    summary->minmtime=ed->statuso.st_mtime;
-    summary->maxmtime=ed->statuso.st_mtime;
-    summary->minatime=ed->statuso.st_atime;
-    summary->maxatime=ed->statuso.st_atime;;
-    summary->minblocks=ed->statuso.st_blocks;
-    summary->maxblocks=ed->statuso.st_blocks;
-    summary->mincrtime=ed->crtime;
-    summary->maxcrtime=ed->crtime;
-    summary->minossint1=ed->ossint1;
-    summary->maxossint1=ed->ossint1;
-    summary->totossint1=ed->ossint1;
-    summary->minossint2=ed->ossint2;
-    summary->maxossint2=ed->ossint2;
-    summary->totossint2=ed->ossint2;
-    summary->minossint3=ed->ossint3;
-    summary->maxossint3=ed->ossint3;
-    summary->totossint3=ed->ossint3;
-    summary->minossint4=ed->ossint4;
-    summary->maxossint4=ed->ossint4;
-    summary->totossint4=ed->ossint4;
-    summary->setit=1;
-  }
   if (ed->type == 'f') {
      summary->totfiles++;
      if (ed->statuso.st_size < summary->minsize) summary->minsize=ed->statuso.st_size;
@@ -272,34 +239,6 @@ int tsumit(struct sum *sumin, struct sum *smout) {
   smout->totlinks += sumin->totlinks;
 
   if (sumin->totfiles > 0) {
-    if (smout->setit == 0) {
-      smout->minuid=sumin->minuid;
-      smout->maxuid=sumin->maxuid;
-      smout->mingid=sumin->mingid;
-      smout->maxgid=sumin->maxgid;
-      smout->minsize=sumin->minsize;
-      smout->maxsize=sumin->maxsize;
-      smout->minctime=sumin->minctime;
-      smout->maxctime=sumin->maxctime;
-      smout->minmtime=sumin->minmtime;
-      smout->maxmtime=sumin->maxmtime;
-      smout->minatime=sumin->minatime;
-      smout->maxatime=sumin->maxatime;
-      smout->minblocks=sumin->minblocks;
-      smout->maxblocks=sumin->maxblocks;
-      smout->mincrtime=sumin->mincrtime;
-      smout->maxcrtime=sumin->maxcrtime;
-      smout->minossint1=sumin->minossint1;
-      smout->maxossint1=sumin->maxossint1;
-      smout->minossint2=sumin->minossint2;
-      smout->maxossint2=sumin->maxossint2;
-      smout->minossint3=sumin->minossint3;
-      smout->maxossint3=sumin->maxossint3;
-      smout->minossint4=sumin->minossint4;
-      smout->maxossint4=sumin->maxossint4;
-      smout->setit=1;
-    }
-
   /* only set these mins and maxes if there are files in the directory
      otherwise mins are all zero */
   //if (sumin->totfiles > 0) {

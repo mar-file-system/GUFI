@@ -108,7 +108,6 @@ struct sum {
   long long int minblocks;
   long long int maxblocks;
   long long int totxattr;
-  long long int setit;
   long long int totsubdirs;
   long long int maxsubdirfiles;
   long long int maxsubdirlinks;

@@ -118,7 +118,6 @@ TEST(summary, zeroit) {
     EXPECT_EQ(summary.maxatime, LLONG_MIN);
     EXPECT_EQ(summary.minblocks, LLONG_MAX);
     EXPECT_EQ(summary.maxblocks, LLONG_MIN);
-    EXPECT_EQ(summary.setit, 0);
     EXPECT_EQ(summary.totxattr, 0);
     EXPECT_EQ(summary.totsubdirs, 0);
     EXPECT_EQ(summary.maxsubdirfiles, LLONG_MIN);
@@ -147,9 +146,6 @@ TEST(summary, sumit_file) {
 
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
-
-    // pretend everything had been set through previous operations
-    summary.setit = 1;
 
     struct work pwork;
     struct entry_data ed;
@@ -199,7 +195,6 @@ TEST(summary, sumit_file) {
     EXPECT_EQ(summary.maxossint3, ed.ossint3);
     EXPECT_EQ(summary.minossint4, ed.ossint4);
     EXPECT_EQ(summary.maxossint4, ed.ossint4);
-    EXPECT_EQ(summary.setit,      1);
     EXPECT_EQ(summary.totxattr,   0);
 }
 
@@ -210,9 +205,6 @@ TEST(summary, sumit_link) {
 
     struct sum summary;
     ASSERT_EQ(zeroit(&summary), 0);
-
-    // pretend everything had been set through previous operations
-    summary.setit = 1;
 
     struct work pwork;
     struct entry_data ed;
@@ -262,7 +254,6 @@ TEST(summary, sumit_link) {
     EXPECT_EQ(summary.maxossint3, ed.ossint3);
     EXPECT_EQ(summary.minossint4, ed.ossint4);
     EXPECT_EQ(summary.maxossint4, ed.ossint4);
-    EXPECT_EQ(summary.setit,      1);
     EXPECT_EQ(summary.totxattr,   0);
 }
 
