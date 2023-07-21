@@ -73,6 +73,7 @@ find_exec_dependency(HEAD head)
 find_exec_dependency(ID   id)
 find_exec_dependency(SED  sed)
 find_exec_dependency(SORT sort)
+find_exec_dependency(STAT stat)
 find_exec_dependency(TAIL tail)
 find_exec_dependency(TEE  tee)
 find_exec_dependency(UNIQ uniq)
@@ -122,6 +123,12 @@ set(EXAMPLES
 set(OTHERS
   completions
 )
+
+if (ZLIB_FOUND)
+  list(APPEND OTHERS
+    compression
+  )
+endif()
 
 if (CMAKE_CXX_COMPILER)
   list(APPEND OTHERS

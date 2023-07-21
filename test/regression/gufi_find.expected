@@ -78,7 +78,6 @@ unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
 $ gufi_find -anewer not_as_old_file
-prefix
 1KB
 1MB
 
@@ -167,13 +166,13 @@ leaf_directory
 leaf_directory/leaf_file1
 leaf_directory/leaf_file2
 
-$ gufi_find -inum $(stat -c '%i' directory)
+$ gufi_find -inum 7
 directory
 
-$ gufi_find -inum $(stat -c '%i' old_file)
+$ gufi_find -inum 0
 old_file
 
-$ gufi_find -inum $(stat -c '%i' file_symlink)
+$ gufi_find -inum 8
 file_symlink
 
 $ gufi_find -iregex 'LEAF'
@@ -287,7 +286,6 @@ $ gufi_find -name  'file*'
 file_symlink
 
 $ gufi_find -newer 'not_as_old_file'
-prefix
 1KB
 1MB
 

@@ -61,125 +61,52 @@
 
 
 
-#
-# This script generates a fixed tree with the following structure:
-#
-# ${DIR}/
-# |---- 1KB
-# |---- 1MB                        (user.size=1MB)
-# |---- directory/
-#       |---- executable
-#       |---- readonly
-#       |---- writable
-#       |---- subdirectory/        (user.type=dir, user.name=sub)
-#             |---- directory_symlink -> subdirectory
-#             |---- repeat_name
-# |---- file_symlink -> 1KB
-# |---- .hidden
-# |---- leaf_directory/            (user.type=dir, user.name=leaf)
-#       |---- leaf_file1           (user.name1=value1, user.name2=value2, user.name3=value3)
-#       |---- leaf_file2           (user.name4=value4, user.name5=value5, user.name6=value6)
-# |---- old_file
-# |---- repeat_name
-# |---- unusual#? directory ,
-#       |---- unusual, name?#
-#
-# All file and link sizes and timestamps should match
-#
-
 set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-if [[ "$#" -lt 1 ]]
-then
-    echo "Syntax: $0 directory"
-    return 1
-fi
+OUTPUT="compression.out"
 
-DIR="$(realpath $1)"
+D2I="${SEARCH}.d2i"
+T2I="${SEARCH}.t2i"
 
-source @CMAKE_CURRENT_BINARY_DIR@/os_setfattr.sh
+cleanup() {
+    rm -rf "${D2I}" "${T2I}"
+}
 
-rm -rf "${DIR}"
-mkdir -p "${DIR}"
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
 
-# generate tree
-cd "${DIR}"
+trap cleanup_exit EXIT
 
-truncate -s 1024 1KB
-touch -amt 197001010017.04 1KB
+cleanup
 
-truncate -s 1048576 1MB
-os_setfattr "user.size" "1MB" 1MB
-touch -amt 197001130316.16 1MB
+remove_e() {
+    @SED@ 's/-e/  /g;'
+}
 
-mkdir directory
+# calling gufi_query with and without -e should result in the same output
+compare_output() {
+    INDEX="$1"
+    ORIG=$(run_sort "\"${GUFI_QUERY}\" -d \" \"    -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
+    COMP=$(run_sort "\"${GUFI_QUERY}\" -d \" \" -e -S \"SELECT name, size, mtime FROM summary;\" -E \"SELECT name, size, mtime FROM entries;\" \"${INDEX}\"")
+    run_no_sort "@DIFF@ <(echo '${ORIG}') <(echo '${COMP}' | remove_e)"
+}
+
 (
-    cd directory
-    truncate -s 1 executable
-    chmod 777 executable
-    touch -amt 197001010000.01 executable
+    # generate with compression
+    run_no_sort "\"${GUFI_DIR2INDEX}\"   -x -e \"${SRCDIR}\" \"${D2I}\""
+    run_no_sort "\"${GUFI_DIR2TRACE}\"   -x -e \"${SRCDIR}\" \"${TRACE}\""
+    run_no_sort "\"${GUFI_TRACE2INDEX}\"       \"${TRACE}.0\" \"${T2I}\""
 
-    truncate -s 2 readonly
-    chmod 444 readonly
-    touch -amt 197001010000.02 readonly
+    clean_index "${D2I}/${BASENAME}"
+    clean_index "${T2I}/${BASENAME}"
 
-    truncate -s 3 writable
-    chmod 666 writable
-    touch -amt 197001010000.03 writable
+    compare_output "${INDEXROOT}"
+    compare_output "${D2I}/${BASENAME}"
+    compare_output "${T2I}/${BASENAME}"
+) | remove_indexing_time | replace | remove_root | @TEE@ "${OUTPUT}"
 
-    mkdir subdirectory
-    os_setfattr "user.type" "dir" subdirectory
-    os_setfattr "user.name" "sub" subdirectory
-    (
-        cd subdirectory
-        ln -f -s "$(realpath .)" directory_symlink
-        touch -hamt 197001010000.04 directory_symlink
-
-        truncate -s 5 repeat_name
-        touch -amt 197001010000.05 repeat_name
-    )
-    touch -amt 197001010000.06 subdirectory
-)
-touch -amt 197001010000.07 directory
-
-ln -f -s "$(realpath 1KB)" file_symlink
-touch -hamt 197001010000.08 file_symlink
-
-truncate -s 9 .hidden
-touch -amt 197001010000.09 .hidden
-
-mkdir leaf_directory
-os_setfattr "user.type" "dir"  leaf_directory
-os_setfattr "user.name" "leaf" leaf_directory
-(
-    cd leaf_directory
-
-    truncate -s 10 leaf_file1
-    os_setfattr "user.name1" "value1" leaf_file1
-    os_setfattr "user.name2" "value2" leaf_file1
-    os_setfattr "user.name3" "value3" leaf_file1
-    touch -amt 197001010000.10 leaf_file1
-
-    truncate -s 11 leaf_file2
-    os_setfattr "user.name4" "value4" leaf_file2
-    os_setfattr "user.name5" "value5" leaf_file2
-    os_setfattr "user.name6" "value6" leaf_file2
-    touch -amt 197001010000.11 leaf_file2
-)
-touch -amt 197001010000.12 leaf_directory
-
-truncate -s 0 old_file
-touch -amt 197001010000 old_file
-
-truncate -s 13 repeat_name
-touch -amt 197001010000.13 repeat_name
-
-mkdir "unusual#? directory ,"
-(
-    cd "unusual#? directory ,"
-    truncate -s 14 "unusual, name?#"
-    touch -amt 197001010000.14 "unusual, name?#"
-)
-touch -amt 197001010000.15 "unusual#? directory ,"
-
-touch -amt 197001010000.16 "${DIR}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/compression.expected "${OUTPUT}"
+rm "${OUTPUT}"

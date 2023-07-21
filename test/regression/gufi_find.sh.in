@@ -104,9 +104,9 @@ run_sort "${GUFI_FIND} -empty"
 run_sort "${GUFI_FIND} -executable"
 run_sort "${GUFI_FIND} -false"
 run_sort "${GUFI_FIND} -iname 'LEAF'"             # regex on file name (should be glob, but glob is case sensitive)
-run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/directory)"
-run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/old_file)"
-run_sort "${GUFI_FIND} -inum \$(stat -c '%i' ${SRCDIR}/file_symlink)"
+run_sort "${GUFI_FIND} -inum 7"                   # directory
+run_sort "${GUFI_FIND} -inum 0"                   # old file
+run_sort "${GUFI_FIND} -inum 8"                   # file_symlink)
 run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
 run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks change depending on filesystem
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
@@ -131,7 +131,7 @@ run_sort "${GUFI_FIND} -size +1 -size=-3 -type f" # 512 < size < 1536
 run_sort "${GUFI_FIND} -size +1024c      -type f"
 run_sort "${GUFI_FIND} -size +1c         -type f"
 run_sort "${GUFI_FIND} -size 1c          -type f"
-run_sort "${GUFI_FIND} -size 2048        -type f"        # 512 * 2048 = 1MB
+run_sort "${GUFI_FIND} -size 2048        -type f" # 512 * 2048 = 1MB
 run_sort "${GUFI_FIND} -size=-1c         -type f"
 run_sort "${GUFI_FIND} -true"
 run_sort "${GUFI_FIND} -type d"
