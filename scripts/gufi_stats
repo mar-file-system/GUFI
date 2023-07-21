@@ -858,7 +858,7 @@ def per_level(config, args, where, type): # pylint: disable=redefined-builtin
 
         '-G', gufi_common.build_query(([] if args.cumulative else ['uidtouser(uid)']) + ['level', 'SUM(count)'],
                                       [args.aggregate_name],
-                                      ['count <> 0'],
+                                      ['count != 0'],
                                       group_by,
                                       order_by,
                                       args.num_results,

@@ -178,7 +178,7 @@ def build_where(args, name=None):
         else:
             # -A: ignore . and ..
             if args.almost_all:
-                where += ['name <> "." AND name <> ".."']
+                where += ['name != "." AND name != ".."']
 
             # everything that's not hidden
             else:

@@ -216,7 +216,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (sqlite3_exec(db,
                          "BEGIN TRANSACTION;"
                          "DELETE FROM " PENTRIES_ROLLUP ";"
-                         "DELETE FROM " SUMMARY " WHERE isroot <> 1;"
+                         "DELETE FROM " SUMMARY " WHERE isroot != 1;"
                          "UPDATE " SUMMARY " SET rollupscore = 0 WHERE isroot == 1;"
                          "DELETE FROM " XATTRS_ROLLUP ";"
                          "SELECT filename FROM " EXTERNAL_DBS_ROLLUP ";"
