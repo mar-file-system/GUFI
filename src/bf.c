@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "bf.h"
+#include "dbutils.h"
 #include "utils.h"
 
 #ifdef __CYGWIN__
@@ -143,6 +144,8 @@ void print_help(const char* prog_name,
 #if HAVE_ZLIB
       case 'e': printf("  -e                     compress work items"); break;
 #endif
+      case 'Q': printf("  -Q <single_db_path> <dsi_table_name> <dsi_column_name> <gufi_column_name> root directory of source tree, name of database file found in each directory of the source tree, and the table name to join on"); break;
+
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -197,8 +200,12 @@ void show_input(struct input* in, int retval) {
    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
    printf("in.compress                 = %d\n",            in->compress);
+   printf("in.dsi.dbname               = %s\n",            in->dsi.dbname.data);
+   printf("in.dsi.table                = %s\n",            in->dsi.table.data);
+   printf("in.dsi.column               = %s\n",            in->dsi.column.data);
+   printf("in.dsi.gufi_column          = %s\n",            in->dsi.gufi_column.data);
    printf("\n");
-   printf("retval                      = %d\n",    retval);
+   printf("retval                      = %d\n",            retval);
    printf("\n");
 }
 
@@ -431,6 +438,35 @@ int parse_cmd_line(int         argc,
           in->compress = 1;
           break;
 #endif
+
+      case 'Q':
+          INSTALL_STR(&in->dsi.dbname, optarg);
+          optarg = argv[optind];
+
+          INSTALL_STR(&in->dsi.table, optarg);
+          optarg = argv[++optind];
+
+          INSTALL_STR(&in->dsi.column, optarg);
+          optarg = argv[++optind];
+
+          INSTALL_STR(&in->dsi.gufi_column, optarg);
+          optind++;
+
+          /* SUMMARY table contains all data from the DSI table */
+          SNPRINTF(in->dsi.vssql, sizeof(in->dsi.vssql),
+                   "CREATE TEMP VIEW DSI_SUMMARY AS SELECT * FROM " SUMMARY " JOIN %s;",
+                   in->dsi.table.data);
+
+          /* ENTRIES only joins on DSI data matching each entry */
+          SNPRINTF(in->dsi.vesql, sizeof(in->dsi.vesql),
+                   "CREATE TEMP VIEW DSI_ENTRIES AS SELECT * FROM " ENTRIES " LEFT JOIN %s ON " ENTRIES ".%s == %s.%s;",
+                   in->dsi.table.data, in->dsi.gufi_column.data, in->dsi.table.data, in->dsi.column.data);
+
+          /* PENTRIES only joins on DSI data matching each entry */
+          SNPRINTF(in->dsi.vpsql, sizeof(in->dsi.vpsql),
+                   "CREATE TEMP VIEW DSI_PENTRIES AS SELECT * FROM " PENTRIES " LEFT JOIN %s ON " PENTRIES ".%s == %s.%s;",
+                   in->dsi.table.data, in->dsi.gufi_column.data, in->dsi.table.data, in->dsi.column.data);
+          break;
 
       case '?':
          // getopt returns '?' when there is a problem.  In this case it

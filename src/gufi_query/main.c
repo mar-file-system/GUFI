@@ -292,6 +292,23 @@ static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
     }
 }
 
+static void create_dsi_views(PoolArgs_t *pa) {
+    for(size_t i = 0; i < (size_t) pa->in->maxthreads; i++) {
+        ThreadArgs_t *ta = &pa->ta[i];
+        sqlite3 *db = ta->outdb;
+
+        char *err = NULL;
+        if ((sqlite3_exec(db, pa->in->dsi.vssql, NULL, NULL, &err) != SQLITE_OK) ||
+            (sqlite3_exec(db, pa->in->dsi.vesql, NULL, NULL, &err) != SQLITE_OK) ||
+            (sqlite3_exec(db, pa->in->dsi.vpsql, NULL, NULL, &err) != SQLITE_OK)) {
+            fprintf(stderr, "Warning: Could not create DSI view: %s\n", err);
+        }
+        sqlite3_free(err);
+    }
+}
+
+static const char DSI_ATTACH_NAME[] = "dsi_attach_name";
+
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int recs;
     char shortname[MAXPATH];
@@ -362,6 +379,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_end(attachdb_call);
     increment_query_count(ta);
     #endif
+
+    if (db && in->dsi.dbname.data) {
+        attachdb(in->dsi.dbname.data, db, DSI_ATTACH_NAME, in->open_flags, 1);
+    }
 
     /* this is needed to add some query functions like path() uidtouser() gidtogroup() */
     #ifdef ADDQUERYFUNCS
@@ -496,6 +517,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
     thread_timestamp_end(xattrdone_call);
 
+    if (db && in->dsi.dbname.data) {
+        detachdb(gqw->work.name, db, DSI_ATTACH_NAME, 1);
+    }
+
     #ifdef OPENDB
     thread_timestamp_start(ts.tts, detachdb_call);
     if (db) {
@@ -627,7 +652,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT, 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)
@@ -658,6 +683,10 @@ int main(int argc, char *argv[])
     const uint64_t setup_globals_time = timestamp_elapsed(setup_globals);
     #endif
     #endif
+
+    if (in.dsi.dbname.data) {
+        create_dsi_views(&pa);
+    }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_create_start(setup_aggregate);
