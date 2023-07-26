@@ -501,6 +501,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     /* keep current directory while finding next directory */
     /* in order to find out whether or not the current */
     /* directory has files in it */
+
     /* empty trace */
     if ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) < 1) {
         free(line);
@@ -541,14 +542,18 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     while ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
         first_delim = parsefirst(line, len, in->delim);
 
-        /* bad line */
+        /*
+         * if got bad line, have to stop here or else processdir will
+         * not know where this directory ends and will try to parse
+         * bad line
+         */
         if (first_delim == (size_t) -1) {
             free(line);
             line = NULL;
             size = 0;
             len = 0;
             fprintf(stderr, "Scout encountered bad line ending at offset %jd\n", (intmax_t) offset);
-            continue;
+            return 1;
         }
 
         /* push directories onto queues */
@@ -599,6 +604,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         fprintf(stdout, "Dirs:                %zu (%zu empty)\n", *sa->dirs, *sa->empty);
         fprintf(stdout, "Files:               %zu\n", *sa->files);
         fprintf(stdout, "Total:               %zu\n", *sa->files + *sa->dirs);
+        fprintf(stdout, "\n");
     }
     pthread_mutex_unlock(&print_mutex);
 
@@ -614,20 +620,14 @@ static void sub_help() {
 }
 
 static void close_traces(int *traces, size_t trace_count) {
-    if (traces) {
-        for(size_t i = 0; i < trace_count; i++) {
-            close(traces[i]);
-        }
-        free(traces);
+    for(size_t i = 0; i < trace_count; i++) {
+        close(traces[i]);
     }
+    free(traces);
 }
 
 static int *open_traces(char **trace_names, size_t trace_count) {
     int *traces = (int *) calloc(trace_count, sizeof(int));
-    if (!traces) {
-        return NULL;
-    }
-
     for(size_t i = 0; i < trace_count; i++) {
         traces[i] = open(trace_names[i], O_RDONLY);
         if (traces[i] < 0) {
@@ -768,7 +768,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\n");
     #endif
 
-    fprintf(stdout, "\n");
     fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", dirs);
     fprintf(stdout, "Total Files:         %" PRIu64 "\n", files);
     fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);

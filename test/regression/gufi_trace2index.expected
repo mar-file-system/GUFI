@@ -95,7 +95,6 @@ Dupdir failure: "prefix/1KB/prefix/unusual#? directory ,": Not a directory (20)
 $ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
 Could not get the first line of the trace
 Creating GUFI Index prefix with 2 threads
-
 Total Dirs:          0
 Total Files:         0
 
@@ -104,7 +103,6 @@ Total Files:         0
 $ gufi_trace2index -d "?" -n "2" "trace" "prefix"
 Could not find the specified delimiter
 Creating GUFI Index prefix with 2 threads
-
 Total Dirs:          0
 Total Files:         0
 
@@ -113,8 +111,14 @@ Total Files:         0
 $ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
 First line of trace is not a directory
 Creating GUFI Index prefix with 2 threads
-
 Total Dirs:          0
 Total Files:         0
 
+
+# file delimiter not found
+$ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
+Scout encountered bad line ending at offset 24
+Creating GUFI Index prefix with 2 threads
+Total Dirs:          0
+Total Files:         0
 

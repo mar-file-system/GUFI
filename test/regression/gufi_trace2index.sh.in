@@ -114,6 +114,16 @@ echo "# first line does not start with a directory"
 @TAIL@ -n -1 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
 echo
+
+# generate trace with good directory line and bad file line
+# only need the first delimiter to trigger error
+(
+    echo "${SRCDIR}${DELIM}d${DELIM}"
+    echo "${SRCDIR}/1KB${BADDELIM}f${BADDELIM}"
+) > "${BADTRACE}"
+
+echo "# file delimiter not found"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
 ) | remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"
