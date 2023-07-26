@@ -272,10 +272,10 @@ Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db
 $ gufi_query -a -w -S "UPDATE summary SET inode = 0;" -E "UPDATE entries SET inode = 0;" "prefix"
 
 # Negative check to see if changes have been applied
-$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary where inode != 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;" "prefix"
+$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode != 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode != 0;" "prefix"
 
 # Positive check to see if changes have been applied
-$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary where inode = 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode = 0;" "prefix"
+$ gufi_query -a -d " " -S "SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;" -E "SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;" "prefix"
 prefix 0
 prefix/.hidden 0
 prefix/1KB 0
