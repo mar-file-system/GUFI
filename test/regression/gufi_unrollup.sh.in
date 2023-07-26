@@ -99,6 +99,10 @@ run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}\""
 
 echo "# level, COUNT(entries), COUNT(pentries_rollup), directory"
 run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT COUNT(*) FROM pentries_rollup), rpath(name, rollupscore) AS fullpath FROM summary ORDER BY fullpath ASC\" \"${INDEXROOT}\"" | @SORT@ -k4 | @TAIL@ -n +2
+
+echo
+run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/db.db\""
+run_no_sort "${GUFI_UNROLLUP} \"${INDEXROOT}/badfile\""
 ) | @SED@ "s/${SRCDIR//\//\\/}\\///g" | remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_unrollup.expected "${OUTPUT}"

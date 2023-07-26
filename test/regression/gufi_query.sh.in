@@ -95,6 +95,12 @@ echo "#####################################"
 echo "# Invalid Inputs                    #"
 echo "#####################################"
 
+echo "# Bad directory"
+run_no_sort "${GUFI_QUERY} \"${INDEXROOT}/baddirectory\""
+
+echo "# Path is a file"
+run_no_sort "${GUFI_QUERY} \"${INDEXROOT}/db.db\""
+
 echo "# Missing -I (outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb \"${INDEXROOT}\""
 

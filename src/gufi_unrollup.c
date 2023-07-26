@@ -295,7 +295,12 @@ int main(int argc, char *argv[]) {
         mywork->rolledup = 0;
 
         struct stat st;
-        lstat(mywork->name, &st);
+        if (lstat(mywork->name, &st) != 0) {
+            fprintf(stderr,"Could not stat input-dir '%s'\n", mywork->name);
+            free(mywork);
+            continue;
+        }
+
         if (!S_ISDIR(st.st_mode)) {
             fprintf(stderr,"input-dir '%s' is not a directory\n", mywork->name);
             free(mywork);

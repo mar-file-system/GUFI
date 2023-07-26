@@ -89,9 +89,12 @@ fixed_size=(
 variable_size=(
     "directory"
     "directory/subdirectory"
-    # "directory/subdirectory/directory_symlink"
-    # "file_symlink"
     "leaf_directory"
+)
+
+symlinks=(
+    "directory/subdirectory/directory_symlink"
+    "file_symlink"
 )
 
 echo "# first line of default print"
@@ -113,18 +116,20 @@ echo "# custom print format"
 (
     for entry in "${fixed_size[@]}"
     do
-        "${GUFI_STAT}" -f '%-60N %60n %a %A %d %D %f %F %m %s %w %W\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT}" -f '%-60N %60n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
 
     for entry in "${variable_size[@]}"
     do
-        "${GUFI_STAT}" -f '%-60N %60n %a %A %d %D %f %F %m %N %w %W\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT}" -f '%-60N %60n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
 ) | remove_root | @SORT@
 echo
 
-# the atime and mtime of ${SRCDIR}/old_file are Jan 1, 1970
-TZ=UTC "${GUFI_STAT}" -f '%-60N %60n %x %X %y %Y\n' "${INDEXROOT}/old_file" | remove_root
+for entry in "${symlinks[@]}"
+do
+    "${GUFI_STAT}" -f '%N %n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+done | remove_root
 echo
 
 echo "# escape character parsing"
@@ -166,6 +171,10 @@ do
     echo -n "\\${c} -> "
     "${GUFI_STAT}" -f "\\${c}\n" "${INDEXROOT}/old_file" 2>&1
 done
+echo
+
+run_no_sort "${GUFI_STAT} ${INDEXROOT}/bad/directory"
+run_no_sort "${GUFI_STAT} ${INDEXROOT}/badfile"
 ) | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"

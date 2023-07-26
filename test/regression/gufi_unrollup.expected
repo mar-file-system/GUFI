@@ -162,3 +162,10 @@ $ gufi_query -d " " -S "SELECT level(), (SELECT COUNT(*) FROM entries), (SELECT 
 3 1 0 ugo/ugo/dir1
 3 2 0 ugo/ugo/dir2
 3 3 0 ugo/ugo/dir3
+
+$ gufi_unrollup "db.db"
+input-dir 'db.db' is not a directory
+
+$ gufi_unrollup "badfile"
+Could not stat input-dir 'badfile'
+

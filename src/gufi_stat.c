@@ -105,12 +105,7 @@ struct callback_args {
 };
 
 int print_callback(void * args, int count, char **data, char **columns) {
-    (void) columns;
-
-    if (count != 14) {
-        fprintf(stderr, "Returned wrong number of columns: %d\n", count);
-        return 1;
-    }
+    (void) count; (void) columns;
 
     struct callback_args * ca = (struct callback_args *) args;
     ca->found = 1;
@@ -419,7 +414,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
 
 int process_path(const char *path, FILE *out, const char *format) {
     char dbname[MAXPATH];
-    char table[MAXSQL];
+    const char *table = NULL;
     char where[MAXSQL];
     char query[MAXSQL];
     struct stat st;
@@ -427,7 +422,7 @@ int process_path(const char *path, FILE *out, const char *format) {
     /* path is directory */
     if ((lstat(path, &st) == 0) && S_ISDIR(st.st_mode)) {
         SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, path);
-        SNPRINTF(table, sizeof(table), "summary");
+        table = SUMMARY;
         SNPRINTF(where, sizeof(where), "WHERE isroot == 1");
     }
     /*
@@ -446,8 +441,8 @@ int process_path(const char *path, FILE *out, const char *format) {
         shortpath(path, parent, name);
 
         SNPRINTF(dbname, sizeof(dbname), "%s/" DBNAME, parent);
-        SNPRINTF(table, sizeof(table), "entries");
-        SNPRINTF(where, sizeof(where), "WHERE name == '%s'", name);
+        table = PENTRIES;
+        sqlite3_snprintf(sizeof(where), where, "WHERE name == %Q", name);
     }
 
     SNPRINTF(query, sizeof(query), "%s %s %s;", query_prefix, table, where);
@@ -469,18 +464,19 @@ int process_path(const char *path, FILE *out, const char *format) {
                      ))) {
         /* query the database */
         char *err = NULL;
-        if (sqlite3_exec(db, query, print_callback, &ca, &err) != SQLITE_OK) {
+        if (sqlite3_exec(db, query, print_callback, &ca, &err) == SQLITE_OK) {
+            /* if the query was successful, but nothing was found, error */
+            if (!ca.found) {
+                fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);
+                rc = 1;
+            }
+        }
+        else {
             fprintf(stderr, "gufi_stat: failed to query database in '%s': %s\n", path, err);
             rc = 1;
         }
 
         sqlite3_free(err);
-
-        /* if the query was successful, but nothing was found, error */
-        if (!ca.found) {
-            fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);
-            rc = 1;
-        }
     }
     else {
         fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);

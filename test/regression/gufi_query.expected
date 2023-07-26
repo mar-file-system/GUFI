@@ -155,6 +155,14 @@ old_file
 #####################################
 # Invalid Inputs                    #
 #####################################
+# Bad directory
+$ gufi_query "prefix/baddirectory"
+Could not stat directory "prefix/baddirectory"
+
+# Path is a file
+$ gufi_query "prefix/db.db"
+input-dir 'prefix/db.db' is not a directory
+
 # Missing -I (outdb)
 $ gufi_query -O outdb "prefix"
 Error: Missing -I
