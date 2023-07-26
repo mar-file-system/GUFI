@@ -213,10 +213,28 @@ Creating GUFI Index trace with 2 threads
 Total Dirs:          0
 Total Files:         0
 
-# bad skip file
-$ gufi_dir2index -n 2 -k "trace" "prefix" "prefix"
+# skip file
+$ gufi_dir2index -n 2 -k "skip" "prefix" "prefix"
 "prefix" Already exists!
 Creating GUFI Index prefix with 2 threads
-Total Dirs:          5
-Total Files:         14
+Total Dirs:          3
+Total Files:         9
+
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# bad skip file
+$ gufi_dir2index -n 2 -k "skip.bad" "prefix" "prefix"
+Error: Cannot open skip file "skip.bad"
 

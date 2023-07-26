@@ -259,6 +259,15 @@ $ gufi_stats -c duplicate-names
 $ gufi_stats -r duplicate-names
 --recursive/-r and --cumulative/-c have no effect on "duplicate-names" statistic
 
+$ gufi_stats -r depth --skip "skip"
+prefix 0
+leaf_directory 1
+unusual#? directory , 1
+
+$ gufi_stats -r depth --skip "skip.bad"
+Error: Cannot open skip file "skip.bad"
+Error: Bad input skip list
+
 $ gufi_stats    leaf-dirs
 leaf_directory
 unusual#? directory ,

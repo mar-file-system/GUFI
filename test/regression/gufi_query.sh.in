@@ -91,6 +91,9 @@ run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT
 echo "# Get relative paths of all directories and non-directories descending sizes (files only)"
 run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\"" | remove_root
 
+echo "# Get all directory and non-directory names not in directory"
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" -k \"${SKIP}\""
+
 echo "#####################################"
 echo "# Invalid Inputs                    #"
 echo "#####################################"
@@ -127,6 +130,9 @@ run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\
 
 echo "# Missing -G (aggregate, outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
+
+echo "# Bad skip file"
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" -k \"${SKIP}.bad\""
 
 echo "#####################################"
 echo "# Extra Inputs                      #"

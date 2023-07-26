@@ -91,6 +91,9 @@ BADDELIM="?"
 SEARCH="search"
 INDEXROOT="${SEARCH}/${BASENAME}"
 
+# skip file (list of directory basenames)
+SKIP="skip"
+
 # shellcheck disable=SC2034
 USER_ID="$(@ID@ -u)"
 # shellcheck disable=SC2034
@@ -110,7 +113,7 @@ TEST_GROUP_NAME="group"
 
 # always clean up
 setup_cleanup() {
-    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}"
+    rm -rf "${CONFIG}" "${SRCDIR}" "${TRACE}" "${TRACES[@]}" "${BADTRACE}" "${SEARCH}" "${SKIP}"
 }
 
 trap setup_cleanup EXIT
@@ -133,6 +136,8 @@ CONFIG="$(@PYTHON_INTERPRETER@ -c 'import common, os; print(os.path.realpath(com
     echo "OutputBuffer=4096"
 ) > "${CONFIG}"
 chmod 666 "${CONFIG}"
+
+echo "directory" > "${SKIP}"
 
 # paths of all executables
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"

@@ -321,3 +321,16 @@ usage: gufi_ls.py [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE]
                   [paths ...]
 gufi_ls.py: error: argument --block-size: Invalid --block-size argument: '0GB'
 
+$ gufi_ls --skip "skip"
+1KB
+1MB
+file_symlink
+leaf_directory
+old_file
+repeat_name
+unusual#? directory ,
+
+$ gufi_ls --skip "skip.bad"
+Error: Cannot open skip file "skip.bad"
+Error: Bad input skip list
+

@@ -147,6 +147,12 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     run_no_sort "${GUFI_LS} --block-size=-1GB"
     run_no_sort "${GUFI_LS} --block-size=0GB"
 ) | replace_argparse
+
+# skip
+run_sort "${GUFI_LS} --skip \"${SKIP}\""
+
+# bad skip
+run_no_sort "${GUFI_LS} --skip \"${SKIP}.bad\""
 ) |& remove_root | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"

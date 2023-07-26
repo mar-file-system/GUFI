@@ -137,8 +137,13 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | 
 echo "# empty source path"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
 
+echo "# skip file"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${SEARCH}\""
+
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\""
+
 echo "# bad skip file"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${TRACE}\" \"${SRCDIR}\" \"${SEARCH}\""
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${SEARCH}\""
 ) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"

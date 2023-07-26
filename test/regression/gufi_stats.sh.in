@@ -136,6 +136,12 @@ run "${GUFI_STATS} -r total-filesize"
 run "${GUFI_STATS} -c duplicate-names"
 run "${GUFI_STATS} -r duplicate-names"
 
+# skip
+run_sort "${GUFI_STATS} -r depth --skip \"${SKIP}\""
+
+# bad skip
+run_no_sort "${GUFI_STATS} -r depth --skip \"${SKIP}.bad\""
+
 # shellcheck disable=SC2050
 if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE" ]]
 then

@@ -669,3 +669,21 @@ Traceback (most recent call last):
     raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
 RuntimeError: gufi_find: unknown predicate `-unknown-predicate'
 
+$ gufi_find --skip "skip"
+prefix
+.hidden
+1KB
+1MB
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_find --skip "skip.bad"
+Error: Cannot open skip file "skip.bad"
+Error: Bad input skip list
+

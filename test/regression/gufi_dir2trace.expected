@@ -90,7 +90,29 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          0
 Total Files:         0
 
+# skip file
+$ gufi_dir2trace -d "|" -n 2 -k "skip" "prefix" "trace"
+"trace.0" Already exists!
+"trace.1" Already exists!
+Creating GUFI Traces trace with 2 threads
+Total Dirs:          3
+Total Files:         9
+
+$ cat trace.0 trace.1 | awk -F "|" '{print $1}'
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
 # bad skip file
-$ gufi_dir2trace -d "|" -n 2 -k "trace" "prefix" "trace"
-Error: Cannot open skip file "trace"
+$ gufi_dir2trace -d "|" -n 2 -k "skip.bad" "prefix" "trace"
+Error: Cannot open skip file "skip.bad"
 

@@ -122,8 +122,14 @@ echo "# empty source path"
 rm "${TRACES[@]}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${TRACE}\""
 
+echo "# skip file"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""
+
+# shellcheck disable=SC2145
+run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}'"
+
 echo "# bad skip file"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${TRACE}\" \"${SRCDIR}\" \"${TRACE}\""
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
 ) | remove_indexing_time | @TEE@ "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"

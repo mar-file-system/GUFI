@@ -152,6 +152,21 @@ directory/readonly
 directory/executable
 old_file
 
+# Get all directory and non-directory names not in directory
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" -k "skip"
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
 #####################################
 # Invalid Inputs                    #
 #####################################
@@ -198,6 +213,11 @@ Error: Missing -G
 # Missing -G (aggregate, outfile)
 $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix"
 Error: Missing -G
+
+# Bad skip file
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" -k "skip.bad"
+Error: Bad input skip list
+Error: Cannot open skip file "skip.bad"
 
 #####################################
 # Extra Inputs                      #
