@@ -64,74 +64,44 @@ OF SUCH DAMAGE.
 
 #include "gufi_query/xattrs.h"
 
+static int create_view(const char *name, sqlite3 *db, const char *query, size_t *query_counter) {
+    char *err = NULL;
+    const int rc = sqlite3_exec(db, query, NULL, NULL, NULL);
+
+    (*query_counter)++;
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: Create %s view failed: %s\n", name, err);
+        sqlite3_free(err);
+    }
+
+    return !err; /* return 1 on success */
+}
+
 int xattr_create_views(sqlite3 *db
                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                        , size_t *query_count
                        #endif
     ) {
-    int rc;
+    #if !(defined(DEBUG) && defined(CUMULATIVE_TIMES))
+    static size_t query_count_stack = 0;
+    static size_t *query_count = &query_count_stack;
+    #endif
 
     /* create LEFT JOIN views (all rows, with and without xattrs) */
     /* these should run once, and be no-ops afterwards since the backing data of the views get swapped out */
 
-    /* entries, pentries, summary */
+    return !(
+        /* entries, pentries, summary */
+        create_view(XENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " XENTRIES " AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode;", query_count) &&
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XENTRIES " AS SELECT " ENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " ENTRIES " LEFT JOIN " XATTRS " ON " ENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
+        create_view(XPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " XPENTRIES " AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN " XATTRS " ON " PENTRIES ".inode == " XATTRS ".inode;", query_count) &&
 
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
+        create_view(XSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;", query_count) &&
 
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create xentries view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
+        /* vrpentries and vrsummary */
+        create_view(VRXPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXPENTRIES " AS SELECT " VRPENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRPENTRIES " LEFT JOIN " XATTRS " ON " VRPENTRIES ".inode == " XATTRS ".inode;", query_count) &&
 
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XPENTRIES " AS SELECT " PENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " PENTRIES " LEFT JOIN " XATTRS " ON " PENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create xpentries view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: create xsummary view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    /* vrpentries and vrsummary */
-
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " VRXPENTRIES " AS SELECT " VRPENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRPENTRIES " LEFT JOIN " XATTRS " ON " VRPENTRIES ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Create vrxpentries view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    rc = sqlite3_exec(db, "CREATE TEMP VIEW IF NOT EXISTS " VRXSUMMARY " AS SELECT " VRSUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRSUMMARY " LEFT JOIN " XATTRS " ON " VRSUMMARY ".inode == " XATTRS ".inode;", NULL, NULL, NULL);
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: create vrxsummary view failed: %s\n", sqlite3_errmsg(db));
-        return -1;
-    }
-
-    return 0;
+        create_view(VRXSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXSUMMARY " AS SELECT " VRSUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRSUMMARY " LEFT JOIN " XATTRS " ON " VRSUMMARY ".inode == " XATTRS ".inode;", query_count)
+        );
 }

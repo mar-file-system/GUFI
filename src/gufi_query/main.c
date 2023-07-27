@@ -88,6 +88,7 @@ OF SUCH DAMAGE.
 #include "gufi_query/aggregate.h"
 #include "gufi_query/query.h"
 #include "gufi_query/timers.h"
+#include "gufi_query/xattrs.h"
 
 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
 #define print_stats(normal_fmt, terse_fmt, ...)             \

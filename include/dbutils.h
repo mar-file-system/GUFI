@@ -207,13 +207,6 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
 
-/* create convenience views: xentries, xpentries, and xsummary */
-int xattr_create_views(sqlite3 *db
-                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                        , size_t *query_count
-                       #endif
-    );
-
 /* convert characters in sqlite URI paths */
 size_t sqlite_uri_path(char *dst, size_t dst_size,
                        const char *src, size_t *src_len);
