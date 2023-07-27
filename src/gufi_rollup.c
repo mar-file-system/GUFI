@@ -380,8 +380,8 @@ int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) {
                                      add_entries_count, subnondir_count, &err);
     if (exec_rc != SQLITE_OK) {
         fprintf(stderr, "Warning: Failed to get entries row count from \"%s\": %s\n", name, err);
+        sqlite3_free(err);
     }
-    sqlite3_free(err);
     return exec_rc;
 }
 
@@ -444,8 +444,6 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
             sqlite3_free(err);
             break;
         }
-
-        sqlite3_free(err);
 
         /* rolled up size is checked by caller */
         *total_child_entries += data.count;
@@ -579,8 +577,6 @@ int can_rollup(struct input *in,
     }
 
 end_can_rollup:
-    sqlite3_free(err);
-
     timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "can_rollup", can_roll_up);
 
     return legal;
@@ -676,9 +672,9 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to copy \"%s\" xattrs into xattrs_rollup of %s: %s\n",
                                child_xattr_db_name, xattr_db_name, err);
+        sqlite3_free(err);
     }
 
-    sqlite3_free(err);
     closedb(xattr_db);
     return 0;
 }

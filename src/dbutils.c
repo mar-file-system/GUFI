@@ -150,8 +150,8 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
   if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
       if (print_err) {
           fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
+          sqlite3_free(err);
       }
-      sqlite3_free(err);
       return NULL;
   }
 
@@ -168,8 +168,8 @@ sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int prin
   if (sqlite3_exec(db, detach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
       if (print_err) {
           fprintf(stderr, "Cannot detach database: %s %s\n", name, err);
+          sqlite3_free(err);
       }
-      sqlite3_free(err);
       return NULL;
   }
 
@@ -398,8 +398,8 @@ int startdb(sqlite3 *db)
     char *err = NULL;
     if (sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err) != SQLITE_OK) {
         printf("begin transaction issue %s\n", err);
+        sqlite3_free(err);
     }
-    sqlite3_free(err);
     return !err;
 }
 
@@ -408,8 +408,8 @@ int stopdb(sqlite3 *db)
     char *err = NULL;
     if (sqlite3_exec(db, "END TRANSACTION", NULL, NULL, &err) != SQLITE_OK) {
         printf("end transaction issue %s\n", err);
+        sqlite3_free(err);
     }
-    sqlite3_free(err);
     return !err;
 }
 

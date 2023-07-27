@@ -473,10 +473,9 @@ int process_path(const char *path, FILE *out, const char *format) {
         }
         else {
             fprintf(stderr, "gufi_stat: failed to query database in '%s': %s\n", path, err);
+            sqlite3_free(err);
             rc = 1;
         }
-
-        sqlite3_free(err);
     }
     else {
         fprintf(stderr, "gufi_stat: cannot stat '%s': No such file or directory\n", path);

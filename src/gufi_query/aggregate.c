@@ -90,10 +90,9 @@ static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
     char *err = NULL;
     if (sqlite3_exec(db, init_agg, NULL, NULL, &err) != SQLITE_OK) {
         fprintf(stderr, "Could not create aggregation table \"%s\" on %s: %s\n", init_agg, dbname, err);
+        sqlite3_free(err);
         closedb(db);
     }
-
-    sqlite3_free(err);
 
     return err?NULL:db;
 }
@@ -155,12 +154,13 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
         if (sqlite3_exec(aggregate->db, attach, NULL, NULL, &err) == SQLITE_OK) {
             if ((sqlite3_exec(aggregate->db, in->sql.intermediate.data, NULL, NULL, &err) != SQLITE_OK)) {
                 fprintf(stderr, "Error: Cannot aggregate intermediate databases with \"%s\": %s\n", in->sql.intermediate.data, err);
+                sqlite3_free(err);
             }
         }
         else {
             fprintf(stderr, "Could not attach aggregate database to intermediate database: %s\n", err);
+            sqlite3_free(err);
         }
-        sqlite3_free(err);
         detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1);
     }
 }
@@ -180,10 +180,9 @@ int aggregate_process(Aggregate_t *aggregate, struct input *in) {
         char *err = NULL;
         if (sqlite3_exec(aggregate->db, in->sql.agg.data, print_parallel, &pa, &err) != SQLITE_OK) {
             fprintf(stderr, "Final aggregation error: \"%s\": %s\n", in->sql.agg.data, err);
+            sqlite3_free(err);
             rc = -1;
         }
-
-        sqlite3_free(err);
     }
 
     OutputBuffer_flush(&aggregate->ob, aggregate->outfile);

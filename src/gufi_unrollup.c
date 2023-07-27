@@ -127,9 +127,9 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
         else {
             fprintf(stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n",
                     fullpath, err_msg);
+            sqlite3_free(err_msg);
             rc = 1;
         }
-        sqlite3_free(err_msg);
     }
 
     closedb(db);
@@ -233,9 +233,9 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                          work->name,
                          &err) != SQLITE_OK) {
             fprintf(stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
+            sqlite3_free(err);
             rc = 1;
         }
-        sqlite3_free(err);
         err = NULL;
     }
 
