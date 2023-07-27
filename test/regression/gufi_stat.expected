@@ -5,7 +5,7 @@ options:
   -h                     help
   -H                     show assigned input values (debugging)
   -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT
-  -j                     print the information in terse form
+  -j                     print debug information in terse form
 
 path                 path to stat
 

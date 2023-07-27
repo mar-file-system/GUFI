@@ -9,7 +9,7 @@ options:
   -E <SQL_ent>           SQL for entries table
   -a                     AND/OR (SQL query combination)
   -n <threads>           number of threads
-  -j                     print the information in terse form
+  -j                     print debug information in terse form
   -o <out_fname>         output file (one-per-thread, with thread-id suffix)
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
   -O <out_DB>            output DB
