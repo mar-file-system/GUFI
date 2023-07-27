@@ -95,7 +95,7 @@ TEST(create_table_wrapper, nullptr) {
 }
 
 TEST(create_treesummary_tables, nullptr) {
-    EXPECT_EQ(create_treesummary_tables(nullptr, nullptr, nullptr), -1);
+    EXPECT_EQ(create_treesummary_tables(nullptr, nullptr, nullptr), 1);
 }
 
 TEST(set_db_pragmas, good) {
@@ -110,14 +110,27 @@ TEST(set_db_pragmas, nullptr) {
 }
 
 TEST(opendb, bad_path) {
-    sqlite3 *db = opendb("", SQLITE_OPEN_READWRITE, 0, 0,
-                         [](const char *, sqlite3 *, void *){ return 1; }, nullptr
+    {
+        sqlite3 *db = opendb("", SQLITE_OPEN_READWRITE, 0, 0,
+                             [](const char *, sqlite3 *, void *){ return 1; }, nullptr
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                         , nullptr, nullptr
-                         , nullptr, nullptr
+                             , nullptr, nullptr
+                             , nullptr, nullptr
 #endif
-        );
-    EXPECT_EQ(db, nullptr);
+            );
+        EXPECT_EQ(db, nullptr);
+    }
+
+    {
+        sqlite3 *db = opendb("", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0,
+                             [](const char *, sqlite3 *, void *){ return 1; }, nullptr
+#if defined(DEBUG) && defined(PER_THREAD_STATS)
+                             , nullptr, nullptr
+                             , nullptr, nullptr
+#endif
+            );
+        EXPECT_EQ(db, nullptr);
+    }
 }
 
 TEST(opendb, bad_modify_db) {
@@ -129,6 +142,19 @@ TEST(opendb, bad_modify_db) {
 #endif
         );
     EXPECT_EQ(db, nullptr);
+}
+
+TEST(querytsdb, nullptr) {
+    EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 0), 1);
+    EXPECT_EQ(querytsdb(nullptr, nullptr, nullptr, 1), 1);
+}
+
+TEST(startdb, nullptr) {
+    EXPECT_EQ(startdb(nullptr), 1);
+}
+
+TEST(stopdb, nullptr) {
+    EXPECT_EQ(stopdb(nullptr), 1);
 }
 
 TEST(insertdbprep, nullptr) {
@@ -152,7 +178,7 @@ TEST(insertsumdb, nullptr) {
 TEST(inserttreesumdb, nullptr) {
     struct sum su;
     memset(&su, 0, sizeof(su));
-    EXPECT_EQ(inserttreesumdb("", nullptr, &su, 0, 0, 0), -1);
+    EXPECT_EQ(inserttreesumdb("", nullptr, &su, 0, 0, 0), 1);
 }
 
 TEST(addqueryfuncs, path) {
@@ -654,7 +680,7 @@ TEST(sqlite_uri_path, not_enough_space) {
 }
 
 TEST(get_rollupscore, nullptr) {
-    EXPECT_EQ(get_rollupscore(nullptr, nullptr), -1);
+    EXPECT_EQ(get_rollupscore(nullptr, nullptr), 1);
 }
 
 TEST(bottomup_collect_treesummary, nullptr) {

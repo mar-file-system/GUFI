@@ -669,7 +669,7 @@ int main(int argc, char *argv[])
     /* enqueue all input paths */
     for(int i = idx; i < argc; i++) {
         /* remove trailing slashes */
-        size_t len = trailing_match_index(argv[i], strlen(argv[i]), "/", 1);
+        size_t len = trailing_non_match_index(argv[i], strlen(argv[i]), "/", 1);
 
         /* root is special case */
         if (len == 0) {
@@ -678,7 +678,6 @@ int main(int argc, char *argv[])
         }
 
         struct stat st;
-
         if (lstat(argv[i], &st) != 0) {
             fprintf(stderr, "Could not stat directory \"%s\"\n", argv[i]);
             continue;
@@ -696,7 +695,7 @@ int main(int argc, char *argv[])
 
         /* parent of input path */
         root->work.root_parent.data = argv[i];
-        root->work.root_parent.len  = trailing_non_match_index(root->work.root_parent.data, root->work.name_len, "/", 1);
+        root->work.root_parent.len  = trailing_match_index(root->work.root_parent.data, root->work.name_len, "/", 1);
         ((char *) root->work.root_parent.data)[root->work.root_parent.len] = '\0';
         root->work.basename_len = root->work.name_len - root->work.root_parent.len;
 

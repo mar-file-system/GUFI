@@ -268,7 +268,7 @@ int reprocessdir(struct input *in, void * passv, DIR *dir)
             qwork_ed.type = 'l';
             //sprintf(qwork.linkname,"%s/%s",passmywork->name,lpatho);
             sumit(&summary,&qwork_ed);
-            insertdbgo(&qwork,&qwork_ed,db,res);
+            insertdbgo(&qwork,&qwork_ed,res);
             transcnt++;
             if (transcnt > 100000) {
               stopdb(db);
@@ -278,7 +278,7 @@ int reprocessdir(struct input *in, void * passv, DIR *dir)
         } else if (S_ISREG(qwork_ed.statuso.st_mode) ) {
             qwork_ed.type = 'f';
             sumit(&summary,&qwork_ed);
-            insertdbgo(&qwork,&qwork_ed,db,res);
+            insertdbgo(&qwork,&qwork_ed,res);
             transcnt++;
             if (transcnt > 100000) {
               stopdb(db);
@@ -370,7 +370,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
              }
              //printf("in processdirs in.outdb=%d in.insertdir=%d id=%d in.insertfl=%d\n",in.outdb,in.insertdir,id,in.insertfl);
              startdb(gts.outdbd[todb]);
-             insertdbgor(passmywork,&ed,gts.outdbd[todb],global_res[todb]);
+             insertdbgor(passmywork,&ed,global_res[todb]);
              if (in->stride > 0) {
                stopdb(gts.outdbd[todb]); //striping inodes
                //***** drop a lock
@@ -468,7 +468,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
                   pthread_mutex_lock(&outdb_mutex[todb]);
                   startdb(gts.outdbd[todb]); //striping inodes
                 }
-                insertdbgor(&qwork,&qwork_ed,gts.outdbd[todb],global_res[todb]);
+                insertdbgor(&qwork,&qwork_ed,global_res[todb]);
                 if (in->stride > 0) {
                   stopdb(gts.outdbd[todb]); //striping inodes
                   //************** drop a lock
@@ -537,7 +537,7 @@ static int processdir(QPTPool_t * ctx, const size_t id, void * data, void * args
            }
            startdb(gts.outdbd[todb]);
            //printf("in processdirs in.outdb=%d in.insertdir=%d id=%d in.insertfl=%d\n",in.outdb,in.insertdir,id,in.insertfl);
-           insertdbgor(passmywork,&ed,gts.outdbd[todb],global_res[todb]);
+           insertdbgor(passmywork,&ed,global_res[todb]);
            if (in->stride > 0) {
              stopdb(gts.outdbd[todb]); //striping inodes
              //***** drop a lock

@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
 
     struct work *root = calloc(1, sizeof(struct work));
     root->name_len = SNFORMAT_S(root->name, sizeof(root->name), 1, pa.in.name.data, pa.in.name.len);
-    root->name_len = trailing_match_index(root->name, root->name_len, "/", 1);
+    root->name_len = trailing_non_match_index(root->name, root->name_len, "/", 1);
 
     QPTPool_enqueue(pool, 0, processdir, root);
     QPTPool_wait(pool);

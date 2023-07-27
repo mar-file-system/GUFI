@@ -120,7 +120,7 @@ int linetowork(char *line, const size_t len, const char delim, struct work *work
     int64_t uid = -1;
     int64_t gid = -1;
 
-    p=line; q = split(p, &delim, 1, end); SNPRINTF(work->name, MAXPATH, "%s", p);
+    p=line; q = split(p, &delim, 1, end); work->name_len = SNPRINTF(work->name, MAXPATH, "%s", p);
     p = q;  q = split(p, &delim, 1, end); ed->type = *p;
     p = q;  q = split(p, &delim, 1, end); sscanf(p, "%" STAT_ino, &ed->statuso.st_ino);
     p = q;  q = split(p, &delim, 1, end); ed->statuso.st_mode = atol(p);
@@ -143,6 +143,8 @@ int linetowork(char *line, const size_t len, const char delim, struct work *work
     p = q;  q = split(p, &delim, 1, end); SNPRINTF(ed->osstext1, MAXXATTR, "%s", p);
     p = q;  q = split(p, &delim, 1, end); SNPRINTF(ed->osstext2, MAXXATTR, "%s", p);
     p = q;      split(p, &delim, 1, end); work->pinode = atol(p);
+
+    work->basename_len = work->name_len - trailing_match_index(work->name, work->name_len, "/", 1);
 
     return 0;
 }

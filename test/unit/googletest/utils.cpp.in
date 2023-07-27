@@ -65,6 +65,7 @@ OF SUCH DAMAGE.
 #include <climits>
 #include <cstdio>
 #include <cstring>
+#include <fcntl.h>
 #include <fstream>
 #include <random>
 #include <unistd.h>
@@ -692,29 +693,29 @@ TEST(trailing_match_index, paths) {
     const char match[] = "\b\t/";
     const size_t match_len = strlen(match);
 
-    EXPECT_EQ(trailing_match_index(root,    strlen(root),    match, match_len), (size_t) 0);
-    EXPECT_EQ(trailing_match_index(dir,     strlen(dir),     match, match_len), (size_t) 6);
-    EXPECT_EQ(trailing_match_index(nondir,  strlen(nondir),  match, match_len), (size_t) 6);
-    EXPECT_EQ(trailing_match_index(slashes, strlen(slashes), match, match_len), (size_t) 0);
+    EXPECT_EQ(trailing_match_index(root,    strlen(root),    match, match_len), (size_t) 1);
+    EXPECT_EQ(trailing_match_index(dir,     strlen(dir),     match, match_len), (size_t) 7);
+    EXPECT_EQ(trailing_match_index(nondir,  strlen(nondir),  match, match_len), (size_t) 5);
+    EXPECT_EQ(trailing_match_index(slashes, strlen(slashes), match, match_len), (size_t) 4);
     EXPECT_EQ(trailing_match_index(nulls,   strlen(nulls),   match, match_len), (size_t) 0);
 
     EXPECT_EQ(trailing_match_index(nullptr, 10,              match, match_len), (size_t) 0);
 }
 
 TEST(trailing_non_match_index, paths) {
-    char root[MAXPATH]     = "/";
-    char dir[MAXPATH]      = "/a/b/c/";
-    char nondir[MAXPATH]   = "/a/b/c";
-    char slashes[MAXPATH]  = "////";
-    char nulls[MAXPATH]    = "";
+    char root[MAXPATH]    = "/";
+    char dir[MAXPATH]     = "/a/b/c/";
+    char nondir[MAXPATH]  = "/a/b/c";
+    char slashes[MAXPATH] = "////";
+    char nulls[MAXPATH]   = "";
 
     const char match[] = "\b\t/";
     const size_t match_len = strlen(match);
 
-    EXPECT_EQ(trailing_non_match_index(root,    strlen(root),    match, match_len), (size_t) 1);
-    EXPECT_EQ(trailing_non_match_index(dir,     strlen(dir),     match, match_len), (size_t) 7);
-    EXPECT_EQ(trailing_non_match_index(nondir,  strlen(nondir),  match, match_len), (size_t) 5);
-    EXPECT_EQ(trailing_non_match_index(slashes, strlen(slashes), match, match_len), (size_t) 4);
+    EXPECT_EQ(trailing_non_match_index(root,    strlen(root),    match, match_len), (size_t) 0);
+    EXPECT_EQ(trailing_non_match_index(dir,     strlen(dir),     match, match_len), (size_t) 6);
+    EXPECT_EQ(trailing_non_match_index(nondir,  strlen(nondir),  match, match_len), (size_t) 6);
+    EXPECT_EQ(trailing_non_match_index(slashes, strlen(slashes), match, match_len), (size_t) 0);
     EXPECT_EQ(trailing_non_match_index(nulls,   strlen(nulls),   match, match_len), (size_t) 0);
 
     EXPECT_EQ(trailing_non_match_index(nullptr, 10,              match, match_len), (size_t) 0);
@@ -909,4 +910,9 @@ TEST(getline, fd) {
     EXPECT_EQ(getline_fd(&line,   &size,   -1, &offset, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   &size,   fd, nullptr, default_size), -EINVAL);
     EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, 0),            -EINVAL);
+
+    /* initial alloc is too big */
+    size = (size_t) -1;
+    EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, default_size),  -ENOMEM);
+    EXPECT_EQ(line, nullptr);
 }

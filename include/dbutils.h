@@ -156,15 +156,14 @@ int startdb(sqlite3 *db);
 
 int stopdb(sqlite3 *db);
 
-int closedb(sqlite3 *db);
+void closedb(sqlite3 *db);
 
-int insertdbfin(sqlite3_stmt *res);
+void insertdbfin(sqlite3_stmt *res);
 
 sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli);
 
 /* insert entries and xattr names */
-int insertdbgo(struct work *pwork, struct entry_data *data,
-    sqlite3 *db, sqlite3_stmt *res);
+int insertdbgo(struct work *pwork, struct entry_data *data, sqlite3_stmt *res);
 /* insert directly into xattrs_avail in the associated db */
 int insertdbgo_xattrs_avail(struct entry_data *data, sqlite3_stmt *res);
 /* figure out where the xattr should go and insert it there */
@@ -172,7 +171,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *dat
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res);
-int insertdbgor(struct work *pwork, struct entry_data *data, sqlite3 *db, sqlite3_stmt *res);
+int insertdbgor(struct work *pwork, struct entry_data *data, sqlite3_stmt *res);
 
 int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *data, struct sum *su);
 

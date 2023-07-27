@@ -177,12 +177,12 @@ sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int prin
 }
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql) {
-    char *err_msg = NULL;
-    const int rc = sqlite3_exec(db, sql, NULL, NULL, &err_msg);
+    char *err = NULL;
+    const int rc = sqlite3_exec(db, sql, NULL, NULL, &err);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "%s:%d SQL error while executing '%s' on %s: '%s' (%d)\n",
-                __FILE__, __LINE__, sql_name, name, err_msg, rc);
-        sqlite3_free(err_msg);
+                __FILE__, __LINE__, sql_name, name, err, rc);
+        sqlite3_free(err);
     }
     return rc;
 }
@@ -193,7 +193,7 @@ int create_treesummary_tables(const char *name, sqlite3 *db, void *args) {
         (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)          != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)         != SQLITE_OK) ||
         (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup)        != SQLITE_OK)) {
-        return -1;
+        return 1;
     }
 
     return 0;
@@ -257,11 +257,11 @@ int set_db_pragmas(sqlite3 *db) {
 #endif
 
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
-                 int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
-                 #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                 , struct start_end *sqlite3_open,   struct start_end *set_pragmas
-                 , struct start_end *load_extension, struct start_end *modify_db
-                 #endif
+                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
+                #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                , struct start_end *sqlite3_open,   struct start_end *set_pragmas
+                , struct start_end *load_extension, struct start_end *modify_db
+                #endif
     ) {
     sqlite3 *db = NULL;
 
@@ -322,7 +322,7 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
     if (sqlite3_prepare_v2(db, sqlstmt, MAXSQL, &res, NULL) != SQLITE_OK) {
         fprintf(stderr, "SQL error on query: %s, name: %s, err: %s\n",
                 sqlstmt,name,sqlite3_errmsg(db));
-        return -1;
+        return 1;
     }
 
     int rows = 0;
@@ -395,33 +395,32 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
 
 int startdb(sqlite3 *db)
 {
-    char *err_msg = NULL;
-    if (sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err_msg) != SQLITE_OK) printf("begin transaction issue %s\n",sqlite3_errmsg(db));
-    sqlite3_free(err_msg);
-    return 0;
+    char *err = NULL;
+    if (sqlite3_exec(db, "BEGIN TRANSACTION", NULL , NULL, &err) != SQLITE_OK) {
+        printf("begin transaction issue %s\n", err);
+    }
+    sqlite3_free(err);
+    return !err;
 }
 
 int stopdb(sqlite3 *db)
 {
-    char *err_msg = NULL;
-    sqlite3_exec(db,"END TRANSACTION",NULL, NULL, &err_msg);
-    sqlite3_free(err_msg);
-    return 0;
-}
-
-int closedb(sqlite3 *db)
-{
-    if (sqlite3_close(db) != SQLITE_OK) {
-      printf("closedb issue %s\n", sqlite3_errmsg(db));
-      exit(9);
+    char *err = NULL;
+    if (sqlite3_exec(db, "END TRANSACTION", NULL, NULL, &err) != SQLITE_OK) {
+        printf("end transaction issue %s\n", err);
     }
-    return 0;
+    sqlite3_free(err);
+    return !err;
 }
 
-int insertdbfin(sqlite3_stmt *res)
+void closedb(sqlite3 *db)
+{
+    sqlite3_close(db);
+}
+
+void insertdbfin(sqlite3_stmt *res)
 {
     sqlite3_finalize(res);
-    return 0;
 }
 
 sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
@@ -441,57 +440,37 @@ sqlite3_stmt *insertdbprep(sqlite3 *db, const char *sqli)
 }
 
 int insertdbgo(struct work *pwork, struct entry_data *ed,
-               sqlite3 *db, sqlite3_stmt *res)
+               sqlite3_stmt *res)
 {
-    int error;
-    char *zname;
-    char *ztype;
-    char *zlinkname;
-    char *zosstext1;
-    char *zosstext2;
-    int len=0;;
-    const char *shortname;
-    int found;
-    int cnt;
+    /* Not checking arguments */
 
-    shortname=pwork->name;
-    len=strlen(pwork->name);
-    cnt=0;
-    found=0;
-    while (len > 0) {
-       if (!memcmp(shortname,"/",1)) {
-          found=cnt;
-       }
-       cnt++;
-       len--;
-       shortname++;
-    }
-    if (found > 0) {
-      shortname=pwork->name+found+1;
-    } else {
-      shortname=pwork->name;
-    }
+    int rc = 0;
 
-    zname = sqlite3_mprintf("%q",shortname);
-    ztype = sqlite3_mprintf("%c",ed->type);
-    zlinkname = sqlite3_mprintf("%q",ed->linkname);
-    zosstext1 = sqlite3_mprintf("%q",ed->osstext1);
-    zosstext2 = sqlite3_mprintf("%q",ed->osstext2);
-    error=sqlite3_bind_text(res,1,zname,-1,SQLITE_STATIC);
-    if (error != SQLITE_OK) fprintf(stderr, "SQL insertdbgo bind name: %s error %d err %s\n",pwork->name,error,sqlite3_errmsg(db));
-    sqlite3_bind_text(res,2,ztype,-1,SQLITE_STATIC);
-    sqlite3_bind_int64(res,3,ed->statuso.st_ino);
-    sqlite3_bind_int64(res,4,ed->statuso.st_mode);
-    sqlite3_bind_int64(res,5,ed->statuso.st_nlink);
-    sqlite3_bind_int64(res,6,ed->statuso.st_uid);
-    sqlite3_bind_int64(res,7,ed->statuso.st_gid);
-    sqlite3_bind_int64(res,8,ed->statuso.st_size);
-    sqlite3_bind_int64(res,9,ed->statuso.st_blksize);
-    sqlite3_bind_int64(res,10,ed->statuso.st_blocks);
-    sqlite3_bind_int64(res,11,ed->statuso.st_atime);
-    sqlite3_bind_int64(res,12,ed->statuso.st_mtime);
-    sqlite3_bind_int64(res,13,ed->statuso.st_ctime);
-    sqlite3_bind_text(res,14,zlinkname,-1,SQLITE_STATIC);
+    char *zname     = sqlite3_mprintf("%q", pwork->name + pwork->name_len - pwork->basename_len);
+    char *ztype     = sqlite3_mprintf("%c", ed->type);
+    char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
+    char *zosstext1 = sqlite3_mprintf("%q", ed->osstext1);
+    char *zosstext2 = sqlite3_mprintf("%q", ed->osstext2);
+    int error = sqlite3_bind_text(res, 1, zname, -1, SQLITE_STATIC);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "SQL insertdbgo bind name: %s error %d err %s\n",
+                pwork->name, error, sqlite3_errstr(error));
+        rc = 1;
+        goto cleanup;
+    }
+    sqlite3_bind_text(res,  2,  ztype, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(res, 3,  ed->statuso.st_ino);
+    sqlite3_bind_int64(res, 4,  ed->statuso.st_mode);
+    sqlite3_bind_int64(res, 5,  ed->statuso.st_nlink);
+    sqlite3_bind_int64(res, 6,  ed->statuso.st_uid);
+    sqlite3_bind_int64(res, 7,  ed->statuso.st_gid);
+    sqlite3_bind_int64(res, 8,  ed->statuso.st_size);
+    sqlite3_bind_int64(res, 9,  ed->statuso.st_blksize);
+    sqlite3_bind_int64(res, 10, ed->statuso.st_blocks);
+    sqlite3_bind_int64(res, 11, ed->statuso.st_atime);
+    sqlite3_bind_int64(res, 12, ed->statuso.st_mtime);
+    sqlite3_bind_int64(res, 13, ed->statuso.st_ctime);
+    sqlite3_bind_text(res,  14, zlinkname, -1, SQLITE_STATIC);
 
     /* only insert xattr names */
     char xattr_names[MAXXATTR];
@@ -501,27 +480,49 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     }
     sqlite3_bind_blob64(res, 15, xattr_names, xattr_names_len, SQLITE_STATIC);
 
-    sqlite3_bind_int64(res,16,ed->crtime);
-    sqlite3_bind_int64(res,17,ed->ossint1);
-    sqlite3_bind_int64(res,18,ed->ossint2);
-    sqlite3_bind_int64(res,19,ed->ossint3);
-    sqlite3_bind_int64(res,20,ed->ossint4);
-    error=sqlite3_bind_text(res,21,zosstext1,-1,SQLITE_STATIC);
-    error=sqlite3_bind_text(res,22,zosstext2,-1,SQLITE_STATIC);
-    sqlite3_bind_int64(res,23,pwork->pinode);
-    error=sqlite3_step(res);
+    sqlite3_bind_int64(res, 16, ed->crtime);
+    sqlite3_bind_int64(res, 17, ed->ossint1);
+    sqlite3_bind_int64(res, 18, ed->ossint2);
+    sqlite3_bind_int64(res, 19, ed->ossint3);
+    sqlite3_bind_int64(res, 20, ed->ossint4);
+    error = sqlite3_bind_text(res, 21, zosstext1, -1, SQLITE_STATIC);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "SQL insertdbgo bind osstext1: %s error %d err %s\n",
+                pwork->name, error, sqlite3_errstr(error));
+        rc = 1;
+        goto cleanup;
+    }
+    error = sqlite3_bind_text(res, 22, zosstext2, -1, SQLITE_STATIC);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "SQL insertdbgo bind osstext2: %s error %d err %s\n",
+                pwork->name, error, sqlite3_errstr(error));
+        rc = 1;
+        goto cleanup;
+    }
+    sqlite3_bind_int64(res, 23, pwork->pinode);
+    error = sqlite3_step(res);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "SQL insertdbgo step: %s error %d err %s\n",
+                pwork->name, error, sqlite3_errstr(error));
+        rc = 1;
+    }
+
+  cleanup:
     sqlite3_free(zname);
     sqlite3_free(ztype);
     sqlite3_free(zlinkname);
     sqlite3_free(zosstext1);
     sqlite3_free(zosstext2);
     sqlite3_reset(res);
+    sqlite3_clear_bindings(res); /* NULL will cause invalid read here */
 
-    return 0;
+    return rc;
 }
 
 int insertdbgo_xattrs_avail(struct entry_data *ed, sqlite3_stmt *res)
 {
+    /* Not checking arguments */
+
     int error = SQLITE_DONE;
     for(size_t i = 0; (i < ed->xattrs.count) && (error == SQLITE_DONE); i++) {
         struct xattr *xattr = &ed->xattrs.pairs[i];
@@ -582,7 +583,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
                                            ed->statuso.st_mode,
                                            xattr_files_res);
             if (!xattr_uid_db) {
-                return -1;
+                return 1;
             }
             sll_push(xattr_db_list, xattr_uid_db);
         }
@@ -597,7 +598,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
                                            ed->statuso.st_mode,
                                            xattr_files_res);
             if (!xattr_gid_db) {
-                return -1;
+                return 1;
             }
             sll_push(xattr_db_list, xattr_gid_db);
         }
@@ -610,28 +611,37 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
     return 0;
 }
 
-int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3 *db, sqlite3_stmt *res)
+int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *res)
 {
-    int error;
-    char *zname;
-    char *ztype;
-
-    zname = sqlite3_mprintf("%q",pwork->name);
-    ztype = sqlite3_mprintf("%q",ed->type);
-    error=sqlite3_bind_text(res,1,zname,-1,SQLITE_TRANSIENT);
-    if (error != SQLITE_OK) fprintf(stderr, "SQL insertdbgor bind name: %s error %d err %s\n",pwork->name,error,sqlite3_errmsg(db));
-    sqlite3_bind_text(res,2,ztype,-1,SQLITE_TRANSIENT);
-    sqlite3_bind_int64(res,3,ed->statuso.st_ino);
-    sqlite3_bind_int64(res,4,pwork->pinode);
-    sqlite3_bind_int64(res,5,ed->suspect);
+    int rc = 0;
+    char *zname = sqlite3_mprintf("%q", pwork->name);
+    char *ztype = sqlite3_mprintf("%q", ed->type);
+    int error = sqlite3_bind_text(res, 1, zname, -1, SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) {
+        fprintf(stderr,  "SQL insertdbgor bind name: %s error %d err %s\n",
+                pwork->name, error, sqlite3_errstr(error));
+        rc = 1;
+        goto cleanup;
+    }
+    sqlite3_bind_text(res,  2, ztype, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(res, 3, ed->statuso.st_ino);
+    sqlite3_bind_int64(res, 4, pwork->pinode);
+    sqlite3_bind_int64(res, 5, ed->suspect);
 
     error = sqlite3_step(res);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr,  "SQL insertdbgor step: %s error %d err %s\n",
+                pwork->name, error, sqlite3_errstr(error));
+        rc = 1;
+    }
+
+  cleanup:
     sqlite3_free(zname);
     sqlite3_free(ztype);
-    sqlite3_clear_bindings(res);
     sqlite3_reset(res);
+    sqlite3_clear_bindings(res);
 
-    return 0;
+    return rc;
 }
 
 int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry_data *ed, struct sum *su)
@@ -710,15 +720,16 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  58, 0); /* rollupscore */
 
     sqlite3_step(res);
-    sqlite3_clear_bindings(res);
     sqlite3_reset(res);
+    sqlite3_clear_bindings(res);
 
     sqlite3_free(zxattrnames);
     sqlite3_free(zlinkname);
     sqlite3_free(ztype);
     sqlite3_free(zname);
 
-    return insertdbfin(res);
+    insertdbfin(res);
+    return 0;
 }
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,int uid,int gid)
@@ -729,14 +740,14 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     }
 
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO treesummary VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
        su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
 
-    char *err_msg = NULL;
-    if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err_msg) != SQLITE_OK ) {
-        fprintf(stderr, "SQL error on insert (treesummary): %s\n", err_msg);
-        sqlite3_free(err_msg);
-        return -1;
+    char *err = NULL;
+    if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err) != SQLITE_OK ) {
+        fprintf(stderr, "SQL error on insert (treesummary): %s\n", err);
+        sqlite3_free(err);
+        return 1;
     }
 
     return 0;
@@ -749,7 +760,6 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
     struct work *work = (struct work *) sqlite3_user_data(context);
 
     sqlite3_result_text(context, work->name, work->name_len, SQLITE_STATIC);
-    return;
 }
 
 /* return the basename of the directory you are currently in */
@@ -760,7 +770,6 @@ static void epath(sqlite3_context *context, int argc, sqlite3_value **argv)
 
     sqlite3_result_text(context, work->name + work->name_len - work->basename_len,
                         work->basename_len, SQLITE_STATIC);
-    return;
 }
 
 /* return the fullpath of the directory you are currently in */
@@ -775,8 +784,6 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     }
 
     sqlite3_result_text(context, work->fullpath, work->fullpath_len, SQLITE_STATIC);
-
-    return;
 }
 
 /*
@@ -841,8 +848,6 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 
         sqlite3_result_text(context, fullpath, fullpath_len, SQLITE_TRANSIENT);
     }
-
-    return;
 }
 
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -856,8 +861,6 @@ static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
     const char *show = fmypasswd?fmypasswd->pw_name:text;
 
     sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
-
-    return;
 }
 
 static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -871,8 +874,6 @@ static void gidtogroup(sqlite3_context *context, int argc, sqlite3_value **argv)
     const char *show = fmygroup?fmygroup->gr_name:text;
 
     sqlite3_result_text(context, show, -1, SQLITE_TRANSIENT);
-
-    return;
 }
 
 static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -883,7 +884,6 @@ static void modetotxt(sqlite3_context *context, int argc, sqlite3_value **argv)
     fmode = sqlite3_value_int(argv[0]);
     modetostr(tmode, sizeof(tmode), fmode);
     sqlite3_result_text(context, tmode, -1, SQLITE_TRANSIENT);
-    return;
 }
 
 static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -901,8 +901,6 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
     strftime(buf, sizeof(buf), fmt, localtime(&t));
     #endif
     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
-
-    return;
 }
 
 /* uint64_t goes up to E */
@@ -1019,8 +1017,6 @@ static void blocksize(sqlite3_context *context, int argc, sqlite3_value **argv) 
     }
 
     sqlite3_result_text(context, buf, buf_len, SQLITE_TRANSIENT);
-
-    return;
 }
 
 /* Returns a string containg the size with as large of a unit as reasonable */
@@ -1051,8 +1047,6 @@ static void human_readable_size(sqlite3_context *context, int argc, sqlite3_valu
     }
 
     sqlite3_result_text(context, buf, -1, SQLITE_TRANSIENT);
-
-    return;
 }
 
 static void relative_level(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -1060,7 +1054,6 @@ static void relative_level(sqlite3_context *context, int argc, sqlite3_value **a
 
     size_t level = (size_t) (uintptr_t) sqlite3_user_data(context);
     sqlite3_result_int64(context, level);
-    return;
 }
 
 static void starting_point(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -1068,7 +1061,6 @@ static void starting_point(sqlite3_context *context, int argc, sqlite3_value **a
 
     refstr_t *root = (refstr_t *) sqlite3_user_data(context);
     sqlite3_result_text(context, root->data, root->len, SQLITE_STATIC);
-    return;
 }
 
 static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -1084,21 +1076,19 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     const size_t path_len = strlen(path);
 
     /* remove trailing slashes */
-    const size_t trimmed_len = trailing_match_index(path, path_len, "/", 1);
+    const size_t trimmed_len = trailing_non_match_index(path, path_len, "/", 1);
     if (!trimmed_len) {
         sqlite3_result_text(context, "/", 1, SQLITE_TRANSIENT);
         return;
     }
 
     /* basename(work->name) will be the same as the first part of the input path, so remove it */
-    const size_t offset = trailing_non_match_index(path, trimmed_len, "/", 1);
+    const size_t offset = trailing_match_index(path, trimmed_len, "/", 1);
 
     const size_t bn_len = trimmed_len - offset;
     char *bn = path + offset;
 
     sqlite3_result_text(context, bn, bn_len, SQLITE_TRANSIENT);
-
-    return;
 }
 
 /*
@@ -1273,6 +1263,7 @@ void destroy_xattr_db(void *ptr) {
 
     sqlite3_step(xdb->file_list);
     sqlite3_reset(xdb->file_list);
+    sqlite3_clear_bindings(xdb->file_list);
 
     free(xdb);
 }
@@ -1339,8 +1330,9 @@ int get_rollupscore(sqlite3 *db, int *rollupscore) {
     char *err = NULL;
     if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
                      get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
+        fprintf(stderr, "Could not get rollupscore: %s\n", err);
         sqlite3_free(err);
-        return -1;
+        return 1;
     }
 
     return 0;

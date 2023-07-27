@@ -299,7 +299,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
             /* add row to bulk insert */
             timestamp_create_start(insertdbgo);
-            insertdbgo(&row, &row_ed, db, entries_res);
+            insertdbgo(&row, &row_ed, entries_res);
             insertdbgo_xattrs(in, &ed.statuso, &row_ed,
                               &xattr_db_list, &pa->xattr,
                               topath, topath_len,
@@ -379,7 +379,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         /* find the basename of this path */
         w->line[w->first_delim] = '\x00';
-        const size_t basename_start = trailing_non_match_index(w->line, w->first_delim, "/", 1);
+        const size_t basename_start = trailing_match_index(w->line, w->first_delim, "/", 1);
 
         insertsumdb(db, w->line + basename_start, &dir, &ed, &summary);
         xattrs_cleanup(&ed.xattrs);

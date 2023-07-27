@@ -140,16 +140,15 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     /* get entry relative path (use extra buffer to prevent memcpy overlap) */
     char relpath[MAXPATH];
     const size_t relpath_len = SNFORMAT_S(relpath, MAXPATH, 1,
-                                          entry->name + entry->root_parent.len + 1, entry->name_len - entry->root_parent.len - 1);
-
+                                          entry->name + entry->root_parent.len, entry->name_len - entry->root_parent.len);
     /* overwrite full path with relative path */
-    /* e.name_len = */ SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
+    entry->name_len = SNFORMAT_S(entry->name, MAXPATH, 1, relpath, relpath_len);
 
     /* update summary table */
     sumit(&nda->summary, ed);
 
     /* add entry + xattr names into bulk insert */
-    insertdbgo(entry, ed, nda->db, nda->entries_res);
+    insertdbgo(entry, ed, nda->entries_res);
 
     return 0;
 }

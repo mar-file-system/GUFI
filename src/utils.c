@@ -606,26 +606,30 @@ static int loop_matches(const char c, const char *match, const size_t match_coun
     return 0;
 }
 
+/* find the index of the first match, walking backwards */
 size_t trailing_match_index(const char *str, size_t len,
                             const char *match, const size_t match_count) {
     if (!str) {
         return 0;
     }
 
-    while (len && loop_matches(str[len - 1], match, match_count)) {
+    /* loop while not match */
+    while (len && !loop_matches(str[len - 1], match, match_count)) {
         len--;
     }
 
     return len;
 }
 
+/* find the index of the first non-match, walking backwards */
 size_t trailing_non_match_index(const char *str, size_t len,
                                 const char *not_match, const size_t not_match_count) {
     if (!str) {
         return 0;
     }
 
-    while (len && !loop_matches(str[len - 1], not_match, not_match_count)) {
+    /* loop while match */
+    while (len && loop_matches(str[len - 1], not_match, not_match_count)) {
         len--;
     }
 
@@ -654,7 +658,7 @@ size_t trailing_non_match_index(const char *str, size_t len,
  * result = /home/search/
  */
 size_t dirname_len(const char *path, size_t len) {
-    return trailing_non_match_index(path, len, "/", 1);
+    return trailing_match_index(path, len, "/", 1);
 }
 
 /* create a trie of directory names to skip from a file */
@@ -664,10 +668,6 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
     }
 
     *skip = trie_alloc();
-    if (!*skip) {
-        fprintf(stderr, "Error: Could not set up skip list\n");
-        return -1;
-    }
 
     /* always skip . and .. */
     trie_insert(*skip, ".",  1);

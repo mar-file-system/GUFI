@@ -518,7 +518,7 @@ void generatecurr(ThreadArgs *arg, const std::size_t files, std::list <off_t> &s
         sumit(&summary, &ed);
 
         // insert the row
-        insertdbgo(&work, &ed, on_disk, res);
+        insertdbgo(&work, &ed, res);
 
         // store stats in local variables first
         // to prevent lock contention and
