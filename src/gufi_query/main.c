@@ -354,7 +354,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                       XATTRS, sizeof(XATTRS) - 1,
                       XATTR_COLS, sizeof(XATTR_COLS) - 1,
                       XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
-                      xattr_modify_filename query_count_arg);
+                      xattr_modify_filename);
         xattr_create_views(db query_count_arg);
         thread_timestamp_end(xattrprep_call);
     }

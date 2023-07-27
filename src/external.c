@@ -93,11 +93,7 @@ int external_loop(struct work *work, sqlite3 *db,
                   const char *tablename, const size_t tablename_len,
                   size_t (*modify_filename)(char **dst, const size_t dst_size,
                                             const char *src, const size_t src_len,
-                                            struct work *work)
-                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                  , size_t *query_count
-                  #endif
-    ) {
+                                            struct work *work)) {
     /* Not checking arguments */
 
     int           rec_count = 0;
