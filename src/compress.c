@@ -111,7 +111,7 @@ void *compress_struct(const int comp, void *src, const size_t struct_len) {
         }
     }
 
-    /* if no compresseion or compression failed, copy src */
+    /* if no compression or compression failed, copy src */
     memcpy(dst, src, struct_len);
 
     return dst;

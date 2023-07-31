@@ -128,7 +128,7 @@ void print_help(const char* prog_name,
       case 'B': printf("  -B <buffer size>       size of each thread's output buffer in bytes"); break;
       case 'w': printf("  -w                     open the database files in read-write mode instead of read only mode"); break;
       case 'f': printf("  -f <FORMAT>            use the specified FORMAT instead of the default; output a newline after each use of FORMAT"); break;
-      case 'j': printf("  -j                     print debug information in terse form"); break;
+      case 'j': printf("  -j                     print the information in terse form"); break; /* output from stat --help */
       case 'X': printf("  -X                     Dry run"); break;
       case 'L': printf("  -L <count>             Highest number of files/links in a directory allowed to be rolled up"); break;
       case 'k': printf("  -k <filename>          file containing directory names to skip"); break;

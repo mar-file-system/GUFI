@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 
 static int create_view(const char *name, sqlite3 *db, const char *query, size_t *query_counter) {
     char *err = NULL;
-    const int rc = sqlite3_exec(db, query, NULL, NULL, NULL);
+    const int rc = sqlite3_exec(db, query, NULL, NULL, &err);
 
     (*query_counter)++;
 
