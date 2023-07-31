@@ -127,6 +127,7 @@ jobs:
             (${{ github.workspace }}/build/test/regression/gufi_find.sh     || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_getfattr.sh || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_ls.sh       || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_stat.sh     || true) > /dev/null 2>&1
             (${{ github.workspace }}/build/test/regression/gufi_stats.sh    || true) > /dev/null 2>&1
 
             coverage xml --omit="${{ github.workspace }}/build/contrib/hashes.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/*,${{ github.workspace }}/build/test/*,${{ github.workspace }}/build/test/regression/*,${{ github.workspace }}/build/test/unit/python/*"

@@ -78,21 +78,21 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 /* query to extract data fom databases - this determines the indexing in the print callback */
-static const char query_prefix[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names FROM";
+static const char QUERY_PREFIX[] = "SELECT type, size, blocks, blksize, inode, nlink, mode, uid, gid, atime, mtime, ctime, linkname, xattr_names FROM";
 
 /* user/group name */
-static const char unknown[] = "UNKNOWN";
+static const char UNKNOWN[] = "UNKNOWN";
 
 /* default format used by GNU stat */
-static const char default_format[] = "  File: %N\n"
-                              "  Size: %-15s Blocks: %-10b IO Block: %-6o %F\n"
-                              "Device: %-4Dh/%-5dd    Inode: %-11i Links: %h\n"
-                              "Access: (0%a/%A)  Uid: (%5u/%8U)   Gid: (%5g/%8G)\n"
-                              "Context: %C\n"
-                              "Access: %x\n"
-                              "Modify: %y\n"
-                              "Change: %z\n"
-                              " Birth: %w\n";
+static const char DEFAULT_FORMAT[] = "  File: %N\n"
+                                     "  Size: %-15s Blocks: %-10b IO Block: %-6o %F\n"
+                                     "Device: %-4Dh/%-5dd    Inode: %-11i Links: %h\n"
+                                     "Access: (0%a/%A)  Uid: (%5u/%8U)   Gid: (%5g/%8G)\n"
+                                     "Context: %C\n"
+                                     "Access: %x\n"
+                                     "Modify: %y\n"
+                                     "Change: %z\n"
+                                     " Birth: %w\n";
 
 /* terse format used by GNU stat -t/--terse when selinux is available */
 static const char terse_format[] = "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C\n";
@@ -277,15 +277,15 @@ int print_callback(void * args, int count, char **data, char **columns) {
                     fprintf(out, line, data[3]);
                     break;
                 case 'C': /* SELinux security context string */
-                    if (data[13]) {
-                        fprintf(out, line, data[13] + (strlen(data[13])?16:0)); /* offset by "security.selinux" */
+                    if (strlen(data[13])) {
+                        fprintf(out, line, data[13] + 16); /* offset by "security.selinux" */
                     }
                     break;
                 case 'd': /* device number in decimal */
-                    fprintf(out, line, " ");
+                    fprintf(out, line, "?");
                     break;
                 case 'D': /* device number in hex */
-                    fprintf(out, line, " ");
+                    fprintf(out, line, "?");
                     break;
                 case 'f': /* raw mode in hex */
                     SNPRINTF(line, sizeof(line), "%sx", format);
@@ -312,7 +312,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                 case 'G': /* group name of owner */
                     {
                         struct group *gr = getgrgid(atoi(data[8]));
-                        const char *group = gr?gr->gr_name:unknown;
+                        const char *group = gr?gr->gr_name:UNKNOWN;
                         fprintf(out, line, group);
                     }
                     break;
@@ -364,7 +364,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
                 case 'U': /* user name of owner */
                     {
                         struct passwd *pw = getpwuid(atoi(data[7]));
-                        const char *user = pw?pw->pw_name:unknown;
+                        const char *user = pw?pw->pw_name:UNKNOWN;
                         fprintf(out, line, user);
                     }
                     break;
@@ -445,7 +445,7 @@ int process_path(const char *path, FILE *out, const char *format) {
         sqlite3_snprintf(sizeof(where), where, "WHERE name == %Q", name);
     }
 
-    SNPRINTF(query, sizeof(query), "%s %s %s;", query_prefix, table, where);
+    SNPRINTF(query, sizeof(query), "%s %s %s;", QUERY_PREFIX, table, where);
 
     struct callback_args ca;
     ca.found = 0;
@@ -506,7 +506,7 @@ int main(int argc, char *argv[])
     if (idx < 0)
         return -1;
 
-    const char *format = default_format;
+    const char *format = DEFAULT_FORMAT;
 
     /* the print format has precedence over the terse format */
     if (in.format_set) {

@@ -104,12 +104,7 @@ endforeach()
 # don't modify the tarball
 configure_file("testdir.tar" "testdir.tar" COPYONLY)
 
-foreach(PYTHON_SCRIPT
-    common.py)
-  # copy the python script into the build directory for easy access
-  configure_file("${PYTHON_SCRIPT}" "${PYTHON_SCRIPT}" @ONLY)
-endforeach()
-
+# allow for the test working directory to be moved
 set(TEST_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" CACHE PATH "Directory to run tests in")
 execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${TEST_WORKING_DIRECTORY}")
 

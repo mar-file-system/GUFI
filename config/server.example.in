@@ -67,7 +67,11 @@ Threads=@CORES@
 
 # absolute path to gufi_query
 # single path string
-Executable=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
+Query=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
+
+# absolute path to gufi_stat_src
+# single path string
+Stat=@CMAKE_INSTALL_PREFIX@/bin/gufi_stat_bin
 
 # directory where all GUFI indicies are placed under
 # single path string

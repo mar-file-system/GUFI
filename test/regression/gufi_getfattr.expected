@@ -1,9 +1,9 @@
 $ gufi_getfattr --help
-usage: gufi_getfattr.py [--help] [--version] [--name NAME] [--dump]
-                        [--match PATTERN] [--only-values] [--recursive]
-                        [--delim c] [--in-memory-name name]
-                        [--aggregate-name name] [--skip-file filename]
-                        path [path ...]
+usage: gufi_getfattr [--help] [--version] [--name NAME] [--dump]
+                     [--match PATTERN] [--only-values] [--recursive]
+                     [--delim c] [--in-memory-name name]
+                     [--aggregate-name name] [--skip-file filename]
+                     path [path ...]
 
 GUFI version of getfattr
 

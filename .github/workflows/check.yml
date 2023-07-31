@@ -80,7 +80,7 @@ jobs:
       run:  sudo apt -y install shellcheck
 
     - name: Run ShellCheck
-      run:  shellcheck -s bash -e SC1090,SC1091,SC2086 $(find \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*"; grep -rl "\#\!/usr/bin/env bash" examples)
+      run:  shellcheck -s bash -e SC1090,SC1091,SC2086 $(find \( -name "*.sh" -o -name "*.sh.in" \) -not -path "*/contrib/debug/*"; grep -rl "\#\!/usr/bin/env bash" examples scripts | sort -u)
 
   Pylint:
     runs-on: ubuntu-latest

@@ -177,15 +177,15 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         decompress_struct((void **) &nda.work, data, sizeof(work_src));
     }
 
-    DIR *dir = opendir(nda.work->name);
-    if (!dir) {
-        fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
+    if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
+        fprintf(stderr, "Could not stat directory \"%s\"\n", nda.work->name);
         rc = 1;
         goto cleanup;
     }
 
-    if (lstat(nda.work->name, &nda.ed.statuso) != 0) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", nda.work->name);
+    DIR *dir = opendir(nda.work->name);
+    if (!dir) {
+        fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
         rc = 1;
         goto cleanup;
     }

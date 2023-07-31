@@ -1,10 +1,10 @@
 $ gufi_stats --help
-usage: gufi_stats.py [--help] [--version] [--recursive] [--cumulative]
-                     [--order order] [--num-results n] [--uid u] [--delim c]
-                     [--in-memory-name name] [--aggregate-name name]
-                     [--skip-file filename]
-                     {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
-                     [path]
+usage: gufi_stats [--help] [--version] [--recursive] [--cumulative]
+                  [--order order] [--num-results n] [--uid u] [--delim c]
+                  [--in-memory-name name] [--aggregate-name name]
+                  [--skip-file filename]
+                  {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
+                  [path]
 GUFI statistics
 positional arguments:
   {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}

@@ -508,7 +508,7 @@ def help(parser): # pylint: disable=redefined-builtin
 
 def build_expression_parser():
     # parse the arguments
-    parser = argparse.ArgumentParser(description='GUFI version of find', add_help=False)
+    parser = argparse.ArgumentParser('gufi_find', description='GUFI version of find', add_help=False)
 
     # override help to not use -h
     parser.add_argument('-help', '--help',
@@ -789,7 +789,7 @@ def run(argv, config_path):
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
 
     # create the query command
-    query_cmd = [config.executable(),
+    query_cmd = [config.query(),
                  '-n', str(config.threads()),
                  '-B', str(config.outputbuffer()),
                  '-a',

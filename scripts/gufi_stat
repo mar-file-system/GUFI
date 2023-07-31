@@ -61,11 +61,82 @@
 
 
 
+import argparse
+import os
+import subprocess
 import sys
 
-import common
+import gufi_config
 
-# do not call this file directly - script will set up environment
+# location of this file
+PATH = os.path.realpath(__file__)
+
+def parse_args():
+    # parse the arguments
+    parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
+
+    # parser.add_argument('-L', '--dereference'
+    #                     action='set_true',
+    #                     help='follow links')
+
+    # parser.add_argument('-f', '--file-system'
+    #                     action='set_true',
+    #                     help='display file system status instead of file status')
+
+    parser.add_argument('-c', '--format',
+                        metavar='FORMAT',
+                        type=str,
+                        help='use the specified FORMAT instead of the default; output a newline after each use of FORMAT')
+
+    # parser.add_argument('--printf',
+    #                     metavar='FORMAT',
+    #                     type=str,
+    #                     help='like --format but interpret backslash escapes, and do not output a mandatory trailing newline; if you want a newline, include \n in FORMAT')
+
+    parser.add_argument('-t', '--terse',
+                        action='store_true',
+                        help='print the information in terse form')
+
+    # override help to not use -h
+    parser.add_argument('--help',
+                        action='help',
+                        help='display this help and exit')
+
+    parser.add_argument('--version',
+                        action='version',
+                        version='{0} @GUFI_VERSION@'.format(os.path.basename(PATH)),
+                        help='output version information and exit')
+
+    parser.add_argument('paths',
+                        metavar='FILE',
+                        nargs='+')
+
+    return parser
+
+# argv[0] should be the command name
+def run(argv, config_path):
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
+
+    parser = parse_args()
+    args = parser.parse_args(argv[1:])
+
+    # create the stat command
+    stat_cmd = [config.stat()]
+
+    if args.format is not None:
+        stat_cmd += ['-f', args.format]
+
+    if args.terse is True:
+        stat_cmd += ['-j']
+
+    paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path]))
+             for path in args.paths]
+
+    stat = subprocess.Popen(stat_cmd + paths)  # pylint: disable=consider-using-with
+    stat.communicate()                         # block until stat finishes
+
+    return stat.returncode
+
 if __name__ == '__main__':
-    gufi_ls = common.import_tool('gufi_ls')
-    sys.exit(gufi_ls.run(sys.argv, common.CONFIG_PATH))
+    sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))

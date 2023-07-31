@@ -50,13 +50,13 @@ gufi_trace2index <trace_file> <index_dir>
 # post-process the index
 gufi_treesummary/gufi_treesummary_all/gufi_rollup
 
-# use the index
-gufi_query/gufi_stat
+# query the index
+gufi_query
 
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
 # use gufi_query wrapper scripts
-gufi_find/gufi_ls/gufi_stats/gufi_getfattr
+gufi_find/gufi_ls/gufi_getfattr/gufi_stat/gufi_stats
 ```
 
 For the dependency list, detailed build and install instructions, and details about GUFI, please see the [documentation](docs/README.md).

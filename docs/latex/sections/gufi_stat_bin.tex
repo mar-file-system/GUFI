@@ -60,21 +60,22 @@
 
 
 
-\section{\gufistat}
-\gufistat is analogous to \stat in file status mode. \\
+\subsection{\gufistatbin}
+\gufistat is a script that can be used to extract individual entries
+from an index like \stat. However, it is not a wrapper for
+\gufiquery. Instead, it is a wrapper for \gufistatbin, a compiled
+executable. \gufistatbin does not use the configuration file and thus
+needs to be provided the search path. \\
 
 \begin{tabular}{| l | l |}
   \hline
   Option & Description \\
   \hline
-  \texttt{-c FORMAT}, \texttt{--format FORMAT} & use the
-    specified FORMAT instead of the default; \\
-  & output a newline after each use of FORMAT \\
+  \texttt{-f <FORMAT>} & use the specified FORMAT instead of the
+  default. \\
+  & A newline is outputted after each use of FORMAT. \\
   \hline
-  \texttt{-t}, \texttt{--terse} & print the information in terse form \\
-  \hline
-  \texttt{--help} & display this help and exit \\
-  \hline
-  \texttt{--version} & output version information and exit \\
+  \texttt{-j} & print the information in terse form; Same as \\
+  & \texttt{-t}/\texttt{-{}-terse} in \texttt{stat(1)}. \\
   \hline
 \end{tabular}

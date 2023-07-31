@@ -61,6 +61,7 @@
 
 
 
+import argparse
 import os
 import sys
 
@@ -97,3 +98,19 @@ def import_tool(tool, filename=None,
         return script
 
     return None
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='GUFI Testing Tool Selector', add_help=False)
+    parser.add_argument('tool',
+                        choices=[
+                            'find',
+                            'getfattr',
+                            'ls',
+                            'stat',
+                            'stats',
+                        ])
+
+    args, tool_args = parser.parse_known_args()
+
+    gufi_tool = import_tool('gufi_{0}'.format(args.tool))
+    sys.exit(gufi_tool.run([args.tool] + tool_args, CONFIG_PATH))

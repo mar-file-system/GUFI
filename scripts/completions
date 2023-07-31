@@ -63,11 +63,7 @@
 
 GUFI_PWD=""
 
-CONFIG="/etc/GUFI/config"
-if [[ "$1" != "" ]]
-then
-    CONFIG="$1"
-fi
+CONFIG="${1-/etc/GUFI/config}"
 
 __gufi() {
     # make sure the config file exists
@@ -77,11 +73,13 @@ __gufi() {
         exit 1
     fi
 
-    root=$(readlink -m $(@GREP@ "IndexRoot=" "${CONFIG}"  | sed "s/^.*=//"))
-    gufi_query=$(readlink -m $(@GREP@ "Executable=" ${CONFIG} | sed "s/^.*=//"))
-    curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
+    # shellcheck disable=2046
+    root=$("@READLINK@" -m $("@GREP@" "IndexRoot=" "${CONFIG}" | "@SED@" 's/^.*=//'))
+    # shellcheck disable=2046
+    gufi_query=$("@READLINK@" -m $("@GREP@" "Query=" "${CONFIG}" | "@SED@" 's/^.*=//'))
+    curr=$("@PRINTF@" "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
     path="${root}/${curr}"
-    name=${path##*/} # basename without expanding
+    name="${path##*/}" # basename without expanding
 
     COMPREPLY=()
 
@@ -90,26 +88,26 @@ __gufi() {
         GUFI_PWD="${path}"
 
         # return all entries in the directory and directory names in subdirectories
-        matches=$(${gufi_query} \
+        matches=$("${gufi_query}" \
             -a \
             -z 2 \
             -d $' ' \
-            -I "CREATE TABLE out(name TEXT, type TEXT);" \
-            -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (level() == 1);" \
-            -E "INSERT INTO out SELECT name || ' ', type FROM entries WHERE (level() == 0);" \
+            -I "CREATE TABLE out(name TEXT);" \
+            -S "INSERT INTO out SELECT name || '/' FROM summary WHERE (level() == 1);" \
+            -E "INSERT INTO out SELECT name || ' ' FROM entries WHERE (level() == 0);" \
+            -K "CREATE TABLE aggregate(name TEXT);" \
             -J "INSERT INTO aggregate SELECT * FROM out;" \
-            -K "CREATE TABLE aggregate(name TEXT, type TEXT);" \
             -G "SELECT name FROM aggregate ORDER BY name ASC;" \
-            ${GUFI_PWD})
+            "${GUFI_PWD}")
 
         # return all matches
-        for match in ${matches}
+        for match in ${matches} # do not quote (?)
         do
             COMPREPLY+=("${match}")
         done
     else
         # break up path into directory and name
-        GUFI_PWD=$(dirname ${path})
+        GUFI_PWD=$("@DIRNAME@" "${path}")
 
         if [[ "${name}" =~ ^\. ]]
         then
@@ -117,25 +115,26 @@ __gufi() {
         fi
 
         # search the index for matches on the name
-        matches=$(${gufi_query} \
+        matches=$("${gufi_query}" \
             -a \
             -z 2 \
             -d " " \
-            -I "CREATE TABLE out(name TEXT, type TEXT);" \
-            -S "INSERT INTO out SELECT name || '/', type FROM summary WHERE (name REGEXP \"^${name}\") AND (level() == 1);" \
-            -E "INSERT INTO out SELECT name || ' ', type FROM entries WHERE (name REGEXP \"^${name}\") AND (level() == 0);" \
+            -I "CREATE TABLE out(name TEXT);" \
+            -S "INSERT INTO out SELECT name || '/' FROM summary WHERE (name REGEXP \"^${name}\") AND (level() == 1);" \
+            -E "INSERT INTO out SELECT name || ' ' FROM entries WHERE (name REGEXP \"^${name}\") AND (level() == 0);" \
+            -K "CREATE TABLE aggregate(name TEXT);" \
             -J "INSERT INTO aggregate SELECT * FROM out;" \
-            -K "CREATE TABLE aggregate(name TEXT, type TEXT);" \
             -G "SELECT name FROM aggregate ORDER BY name ASC;" \
             "${GUFI_PWD}")
 
         if [[ $(echo "${matches}" | wc -l) -eq "1" ]]
         then
             fullpath="${GUFI_PWD}/${matches}"
+            # shellcheck disable=2295
             COMPREPLY=("${fullpath#${root}/}")
         else
             # return all matches
-            for match in ${matches}
+            for match in ${matches} # do not quote (?)
             do
                 COMPREPLY+=("${match}")
             done
@@ -148,9 +147,11 @@ __gufi() {
 # register gufi_find, gufi_ls, and gufi_stats to be able to expand paths
 complete -F __gufi gufi_find
 complete -F __gufi gufi_ls
+complete -F __gufi gufi_stat
 complete -F __gufi gufi_stats
 
 # don't append spaces after tab completion
 compopt -o nospace gufi_find
 compopt -o nospace gufi_ls
+compopt -o nospace gufi_stat
 compopt -o nospace gufi_stats

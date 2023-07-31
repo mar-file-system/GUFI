@@ -220,7 +220,7 @@ def run(argv, config_path):
     config = gufi_config.Server(config_path)
 
     # parse the arguments
-    parser = argparse.ArgumentParser(description='GUFI version of ls', add_help=False)
+    parser = argparse.ArgumentParser('gufi_ls', description='GUFI version of ls', add_help=False)
     # override help to not use -h
     parser.add_argument('--help',
                         action='help',
@@ -305,7 +305,7 @@ def run(argv, config_path):
             fullpath, match_name = os.path.split(fullpath)
 
         # create the base command
-        query_cmd = [config.executable(),
+        query_cmd = [config.query(),
                      '-n', str(config.threads())]
 
         if not args.recursive:

@@ -171,6 +171,7 @@ def run(argv, config_path):
 
     # parse the arguments
     parser = argparse.ArgumentParser(
+        'gufi_getfattr',
         description='GUFI version of getfattr\n\nNote: --no-dereference/-h is always set',
         add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -222,7 +223,7 @@ def run(argv, config_path):
             nondir = os.path.basename(path)
 
         # create the query command
-        query_cmd = [config.executable(),
+        query_cmd = [config.query(),
                      '-n', str(config.threads()),
                      '-B', str(config.outputbuffer()),
                      '-d', args.delim] + getfattr(args, config, dirname, nondir)

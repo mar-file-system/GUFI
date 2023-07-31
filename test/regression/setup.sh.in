@@ -124,14 +124,15 @@ umask 002
 export TZ=UTC
 export LC_ALL="C"
 export PATH="@CMAKE_BINARY_DIR@/scripts:${PATH}"
-export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_BINARY_DIR@/test:${PYTHONPATH}"
+export PYTHONPATH="@CMAKE_BINARY_DIR@/scripts:@CMAKE_CURRENT_BINARY_DIR@:${PYTHONPATH}"
 
 # generate a fake config file
 # shellcheck disable=SC2046
-CONFIG="$(@PYTHON_INTERPRETER@ -c 'import common, os; print(os.path.realpath(common.CONFIG_PATH))')"
+CONFIG="$(@PYTHON_INTERPRETER@ -c 'import gufi_tool, os; print(os.path.realpath(gufi_tool.CONFIG_PATH))')"
 (
     echo "Threads=1"
-    echo "Executable=@CMAKE_BINARY_DIR@/src/gufi_query"
+    echo "Query=@CMAKE_BINARY_DIR@/src/gufi_query"
+    echo "Stat=@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
     echo "IndexRoot=${INDEXROOT}"
     echo "OutputBuffer=4096"
 ) > "${CONFIG}"
@@ -141,6 +142,7 @@ echo "directory" > "${SKIP}"
 
 # paths of all executables
 SQLITE3="@DEP_INSTALL_PREFIX@/sqlite3/bin/sqlite3"
+GUFI_TOOL="@CMAKE_CURRENT_BINARY_DIR@/gufi_tool.py"
 DELUIDGIDSUMMARYRECS="@CMAKE_BINARY_DIR@/examples/deluidgidsummaryrecs"
 GENERATEGIDSUMMARY="@CMAKE_BINARY_DIR@/examples/generategidsummary"
 GENERATETREE="@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh"
@@ -151,13 +153,14 @@ GROUPFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/groupfilespacehog"
 GROUPFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/groupfilespacehogusesummary"
 GUFI_DIR2INDEX="@CMAKE_BINARY_DIR@/src/gufi_dir2index"
 GUFI_DIR2TRACE="@CMAKE_BINARY_DIR@/src/gufi_dir2trace"
-GUFI_FIND="@CMAKE_CURRENT_BINARY_DIR@/gufi_find.py"
-GUFI_GETFATTR="@CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.py"
-GUFI_LS="@CMAKE_CURRENT_BINARY_DIR@/gufi_ls.py"
+GUFI_FIND="${GUFI_TOOL} find"
+GUFI_GETFATTR="${GUFI_TOOL} getfattr"
+GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
 GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
-GUFI_STAT="@CMAKE_BINARY_DIR@/src/gufi_stat"
-GUFI_STATS="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.py"
+GUFI_STAT="${GUFI_TOOL} stat"
+GUFI_STATS="${GUFI_TOOL} stats"
+GUFI_STAT_BIN="@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
 GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
 GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
@@ -198,6 +201,7 @@ replace() {
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
     s/${GUFI_STAT//\//\\/}/gufi_stat/g
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
+    s/${GUFI_STAT_BIN//\//\\/}/gufi_stat_bin/g
     s/${GUFI_TRACE2INDEX//\//\\/}/gufi_trace2index/g;
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;
@@ -209,7 +213,8 @@ replace() {
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 
-    s/^ *-e                     compress work items$//g;
+    /gufi_tool/d;
+    /-e                     compress work items/d;
 
     s/${SEARCH//\//\\/}\\///g;
     s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;

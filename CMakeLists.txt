@@ -416,11 +416,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
-# grep is required in scripts and test/regression
-find_exec_dependency(GREP grep)
-
-# awk is required in contrib/performance and test/regression
-find_exec_dependency(AWK awk gawk)
+find_exec_dependency(AWK  awk gawk) # contrib/performance and test/regression
+find_exec_dependency(GREP grep)     # scripts and test/regression
+find_exec_dependency(SED  sed)      # scripts and test/regression
 
 # enable "make test"
 enable_testing()

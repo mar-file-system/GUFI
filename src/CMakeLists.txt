@@ -169,7 +169,6 @@ set(C_SOURCES
   gufi_dir2index.c
   gufi_dir2trace.c
   gufi_rollup.c
-  gufi_stat.c
   gufi_trace2index.c
   gufi_treesummary.c
   gufi_treesummary_all.c
@@ -179,7 +178,10 @@ set(C_SOURCES
 )
 
 # build the C executables
-build_and_install(${BIN} TRUE ${C_SOURCES})
+build_and_install("${BIN}" TRUE ${C_SOURCES})
+
+# this is the gufi_stat binary that operates on indexes directly
+build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
 
 # gufi_query is split up into multiple files
 add_library(gufi_query_lib OBJECT

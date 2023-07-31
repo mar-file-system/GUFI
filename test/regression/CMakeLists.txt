@@ -71,7 +71,7 @@ find_exec_dependency(DIFF colordiff diff)
 find_exec_dependency(FIND find)
 find_exec_dependency(HEAD head)
 find_exec_dependency(ID   id)
-find_exec_dependency(SED  sed)
+find_exec_dependency(OD   od)
 find_exec_dependency(SORT sort)
 find_exec_dependency(STAT stat)
 find_exec_dependency(TAIL tail)
@@ -103,7 +103,7 @@ set(BINARIES
   gufi_treesummary
   gufi_treesummary_all
   gufi_query
-  gufi_stat
+  gufi_stat_bin
   querydbs
 )
 
@@ -137,12 +137,23 @@ if (CMAKE_CXX_COMPILER)
   )
 endif()
 
+set(PYTHON
+  gufi_find
+  gufi_getfattr
+  gufi_ls
+  gufi_stat
+  gufi_stats
+)
+
 # .sh and .expected
 set(SH_AND_EXPECTED
   ${BINARIES}
+  ${PYTHON}
   ${EXAMPLES}
   ${OTHERS}
 )
+
+configure_file(gufi_tool.py.in gufi_tool.py)
 
 foreach(NAME ${SH_AND_EXPECTED})
   configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
@@ -162,28 +173,6 @@ endforeach()
 
 foreach(NAME ${OTHERS})
   set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
-endforeach()
-
-set(PYTHON
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stats
-)
-
-# .sh, .py, and .expected
-set(SH_PY_AND_EXPECTED
-  ${PYTHON}
-)
-
-foreach(NAME ${SH_PY_AND_EXPECTED})
-  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-  configure_file("${NAME}.py.in"    "${NAME}.py"       @ONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-  add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-  set_tests_properties("${NAME}" PROPERTIES ENVIRONMENT PYTHONPATH="${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_BINARY_DIR}/scripts:$ENV{PYTHONPATH}")
 endforeach()
 
 foreach(NAME ${PYTHON})

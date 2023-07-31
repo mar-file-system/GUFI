@@ -87,7 +87,8 @@ class TestConfig(unittest.TestCase):
 class TestServerConfig(unittest.TestCase):
     default = {
         gufi_config.Server.THREADS      : 5,
-        gufi_config.Server.EXECUTABLE   : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_query'),
+        gufi_config.Server.QUERY        : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_query'),
+        gufi_config.Server.STAT         : os.path.join('@CMAKE_BINARY_DIR@', 'src', 'gufi_stat'),
         gufi_config.Server.INDEXROOT    : '@CMAKE_BINARY_DIR@',
         gufi_config.Server.OUTPUTBUFFER : 1024,
     }
@@ -98,8 +99,10 @@ class TestServerConfig(unittest.TestCase):
     def check_values(self, config):
         self.assertEqual(TestServerConfig.default[gufi_config.Server.THREADS],
                          config.threads())
-        self.assertEqual(TestServerConfig.default[gufi_config.Server.EXECUTABLE],
-                         config.executable())
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.QUERY],
+                         config.query())
+        self.assertEqual(TestServerConfig.default[gufi_config.Server.STAT],
+                         config.stat())
         self.assertEqual(TestServerConfig.default[gufi_config.Server.INDEXROOT],
                          config.indexroot())
         self.assertEqual(TestServerConfig.default[gufi_config.Server.OUTPUTBUFFER],

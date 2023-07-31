@@ -27,7 +27,6 @@ options:
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
 
-
 GUFI_index        find GUFI index here
 
 

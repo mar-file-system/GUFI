@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,11 +61,120 @@
 
 
 
-import sys
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-import common
+OUTPUT="gufi_stat_bin.out"
 
-# do not call this file directly - script will set up environment
-if __name__ == '__main__':
-    gufi_getfattr = common.import_tool('gufi_getfattr')
-    sys.exit(gufi_getfattr.run(sys.argv, common.CONFIG_PATH))
+(
+run_no_sort "${GUFI_STAT_BIN} -h"
+
+# entries in the index with a fixed size
+fixed_size=(
+    ".hidden"
+    "1KB"
+    "1MB"
+    "directory/executable"
+    "directory/readonly"
+    "directory/subdirectory/repeat_name"
+    "directory/writable"
+    "leaf_directory/leaf_file1"
+    "leaf_directory/leaf_file2"
+    "old_file"
+    "repeat_name"
+    "unusual#? directory ,/unusual, name?#"
+)
+
+variable_size=(
+    "directory"
+    "directory/subdirectory"
+    "leaf_directory"
+)
+
+symlinks=(
+    "directory/subdirectory/directory_symlink"
+    "file_symlink"
+)
+
+echo "# first line of default print"
+for entry in "${fixed_size[@]}"
+do
+    "${GUFI_STAT_BIN}" "${INDEXROOT}/${entry}" | @HEAD@ -n 1
+done | remove_root
+echo
+
+echo "# first two columns of terse format"
+for entry in "${fixed_size[@]}"
+do
+    # shellcheck disable=SC2016
+    "${GUFI_STAT_BIN}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
+done | remove_root | @SORT@
+echo
+
+echo "# custom print format"
+(
+    for entry in "${fixed_size[@]}"
+    do
+        "${GUFI_STAT_BIN}" -f '%-60N %60n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+    done
+
+    for entry in "${variable_size[@]}"
+    do
+        "${GUFI_STAT_BIN}" -f '%-60N %60n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+    done
+) | remove_root | @SORT@
+echo
+
+for entry in "${symlinks[@]}"
+do
+    "${GUFI_STAT_BIN}" -f '%N %n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+done | remove_root
+echo
+
+echo "# escape character parsing"
+nonprintable=('a' 'b' 'e' 'f' 'n' 'r' 't' 'v')
+
+for c in "${nonprintable[@]}"
+do
+    echo -n "\\${c} -> "
+    # shellcheck disable=SC2016
+    "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | @OD@ -t x1 | @HEAD@ -n 1 | @AWK@ '{ print $2 }'
+done
+
+# do this separately to not deal with "\\${c}\n" -> "\\\\n"
+echo -n "\\\\ -> "
+"${GUFI_STAT_BIN}" -f "\\\\\n" "${INDEXROOT}/old_file"
+
+printable=(
+    # special characters
+    "'" '"' '?'
+
+    # hex
+    'x41' 'x61' 'x41A' 'x61a' 'xaA' 'xAa'
+
+    # bad hex
+    'x?' 'xA?'
+
+    # octal
+    '101' '141'
+
+    # bad octal
+    'a60' '6a0' '60a'
+
+    # unrecognized
+    'yabcd'
+)
+
+for c in "${printable[@]}"
+do
+    echo -n "\\${c} -> "
+    "${GUFI_STAT_BIN}" -f "\\${c}\n" "${INDEXROOT}/old_file" 2>&1
+done
+echo
+
+run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/bad/directory"
+run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/badfile"
+) | replace | @TEE@ "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat_bin.expected "${OUTPUT}"
+rm "${OUTPUT}"

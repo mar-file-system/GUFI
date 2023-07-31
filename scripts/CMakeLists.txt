@@ -62,6 +62,10 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
+find_exec_dependency(DIRNAME  dirname)
+find_exec_dependency(PRINTF   printf)
+find_exec_dependency(READLINK readlink)
+
 # list this first so that make install will overwrite these files
 if (CLIENT)
   # add the paramiko source for installing
@@ -85,6 +89,10 @@ if (CLIENT)
   configure_file(gufi_client gufi_client_ls @ONLY)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_ls    RENAME gufi_ls    DESTINATION bin COMPONENT Client)
 
+  set(TOOL stat)
+  configure_file(gufi_client gufi_client_stat @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stat  RENAME gufi_stat  DESTINATION bin COMPONENT Client)
+
   set(TOOL stats)
   configure_file(gufi_client gufi_client_stats @ONLY)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stats RENAME gufi_stats DESTINATION bin COMPONENT Client)
@@ -95,6 +103,7 @@ set(TOOLS
   gufi_find
   gufi_getfattr
   gufi_ls
+  gufi_stat
   gufi_stats)
 
 # python libraries installed into bin for convenience

@@ -121,14 +121,16 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
 
 class Server(Config):
     THREADS      = 'Threads'      # number of threads to use
-    EXECUTABLE   = 'Executable'   # absolute path of gufi_query
+    QUERY        = 'Query'        # absolute path of gufi_query
+    STAT         = 'Stat'         # absolute path of gufi_stat_bin
     INDEXROOT    = 'IndexRoot'    # absolute path of root directory for GUFI to traverse
     OUTPUTBUFFER = 'OutputBuffer' # size of per-thread buffers used to buffer prints
 
     # key -> str to value converter
     SETTINGS = {
         THREADS      : gufi_common.get_positive,
-        EXECUTABLE   : None,
+        QUERY        : os.path.normpath,
+        STAT         : os.path.normpath,
         INDEXROOT    : os.path.normpath,
         OUTPUTBUFFER : gufi_common.get_non_negative
     }
@@ -141,9 +143,13 @@ class Server(Config):
         '''return number of threads to use'''
         return self.config[Server.THREADS]
 
-    def executable(self):
+    def query(self):
         '''return absolute path of gufi_query'''
-        return self.config[Server.EXECUTABLE]
+        return self.config[Server.QUERY]
+
+    def stat(self):
+        '''return absolute path of gufi_stat_bin'''
+        return self.config[Server.STAT]
 
     def indexroot(self):
         '''return absolute path of root directory for GUFI to traverse'''
