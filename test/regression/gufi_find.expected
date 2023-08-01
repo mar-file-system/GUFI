@@ -204,21 +204,21 @@ file_symlink
 $ gufi_find -ls
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 .hidden
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 1KB
-0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 1MB
-0 0 drwxrwxr-x 3 user group 0 Jan 01 1970 directory
+0 0 -rw-rw-r-- 1 user group 0 Jan 13 1970 1MB
+0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 directory
 0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 directory_symlink -> directory/subdirectory
 0 0 -rwxrwxrwx 1 user group 0 Jan 01 1970 executable
 0 0 lrwxrwxrwx 1 user group 0 Jan 01 1970 file_symlink -> 1KB
-0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 leaf_directory
+0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 leaf_directory
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 leaf_file1
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 leaf_file2
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 old_file
-0 0 drwxrwxr-x 5 user group 0 Jan 01 1970 prefix
+0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 prefix
 0 0 -r--r--r-- 1 user group 0 Jan 01 1970 readonly
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 repeat_name
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 repeat_name
-0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 subdirectory
-0 0 drwxrwxr-x 2 user group 0 Jan 01 1970 unusual#? directory ,
+0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 subdirectory
+0 0 drwxrwxr-x 1 user group 0 Jan 01 1970 unusual#? directory ,
 0 0 -rw-rw-r-- 1 user group 0 Jan 01 1970 unusual, name?#
 0 0 -rw-rw-rw- 1 user group 0 Jan 01 1970 writable
 
@@ -621,7 +621,7 @@ unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
 $ gufi_query -a -w -E "UPDATE entries SET inode = 0, uid = 0, gid = 0;" "prefix"
-Cannot attach database as "tree": unable to open database: file:db.db?mode=rw&vfs=unix-none
+Cannot attach database as "tree": unable to open database: file:db.db?mode=rw
 
 
 $ gufi_find -printf "%% %a %b %c %d %k %g %u %D %f %G %h %i %m %M %n %p %P %s %t %U %y" -type f

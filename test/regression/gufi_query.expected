@@ -152,7 +152,7 @@ directory/executable
 old_file
 
 # Get all directory and non-directory names not in directory
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" -k "skip"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip" "prefix"
 prefix
 prefix/.hidden
 prefix/1KB
@@ -214,7 +214,7 @@ $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -J "i
 Error: Missing -G
 
 # Bad skip file
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix" -k "skip.bad"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip.bad" "prefix"
 Error: Bad input skip list
 Error: Cannot open skip file "skip.bad"
 

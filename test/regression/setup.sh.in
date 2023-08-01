@@ -213,6 +213,7 @@ replace() {
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
     s/${VERIFYTRACEINTREE//\//\\/}/verifytraceintree/g;
 
+    s/&vfs=.*//g;
     /gufi_tool/d;
     /-e                     compress work items/d;
 
@@ -302,7 +303,7 @@ clean_index() {
 
     # update inodes
     # ${INDEXROOT} has inode == 16
-    "${GUFI_QUERY}" -a -w -S "UPDATE summary SET inode = mtime, size = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, ctime = mtime" "${INDEX}"
+    "${GUFI_QUERY}" -a -w -S "UPDATE summary SET inode = mtime, size = mtime, atime = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, atime = mtime, ctime = mtime" "${INDEX}"
 
     # ${INDEXROOT} is not a child of itself
     "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = 17 WHERE name == \"${BASENAME}\";"

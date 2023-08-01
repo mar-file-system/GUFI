@@ -111,7 +111,8 @@ run_sort "${GUFI_FIND} -iregex 'LEAF'"            # regex on whole path
 run_sort "${GUFI_FIND} -links 1 -type f"          # directory and symlinks change depending on filesystem
 run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
-run_no_sort "${GUFI_FIND} -ls" | awk '{ if (NF > 10) { $1="0"; $2="0"; $5="user"; $6="group"; $7="0"; $8="Jan"; $9="01"; $10="1970"; } print }' | sort -k 11; echo # replace fields that change
+# shellcheck disable=SC2016
+run_no_sort "${GUFI_FIND} -ls" | @SED@ "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g;" | @AWK@ '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | @SORT@ -k 11; echo
 run_sort "${GUFI_FIND} -maxdepth 0"
 run_sort "${GUFI_FIND} -mindepth 2"
 run_sort "${GUFI_FIND} -mmin  +0"

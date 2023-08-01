@@ -92,7 +92,7 @@ echo "# Get relative paths of all directories and non-directories descending siz
 run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\"" | remove_root
 
 echo "# Get all directory and non-directory names not in directory"
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" -k \"${SKIP}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}\" \"${INDEXROOT}\""
 
 echo "#####################################"
 echo "# Invalid Inputs                    #"
@@ -132,7 +132,7 @@ echo "# Missing -G (aggregate, outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
 
 echo "# Bad skip file"
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" -k \"${SKIP}.bad\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}.bad\" \"${INDEXROOT}\""
 
 echo "#####################################"
 echo "# Extra Inputs                      #"
@@ -156,7 +156,7 @@ run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\
 
 echo "# Have -G even though not aggregating (outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
-) | @SED@ 's/&vfs=.*//g'
+)
 
 echo "#####################################"
 echo "# Modify Index                      #"

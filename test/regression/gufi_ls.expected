@@ -120,7 +120,7 @@ directory
 1MB
 1KB
 
-$ gufi_ls -s  | grep -v -e '.*directory.*' -e 'file_symlink'
+$ gufi_ls -s  | grep -v -e '.*directory.*' -e 'file_symlink' | awk '{ $1=0; print }'
 0 1KB
 0 1MB
 0 old_file
