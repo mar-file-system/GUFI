@@ -80,7 +80,11 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+#if defined(__APPLE__) || defined(__linux__)
 #define GUFI_SQLITE_VFS       "unix-none"
+#elif defined(__CYGWIN__)
+#define GUFI_SQLITE_VFS       "win32-none"
+#endif
 #define GUFI_SQLITE_VFS_URI   "&vfs=" GUFI_SQLITE_VFS
 
 #define DROP_TABLE(name) "DROP TABLE IF EXISTS " #name ";"

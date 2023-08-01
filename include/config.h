@@ -38,4 +38,12 @@ See LICENSE.txt in top-level directory for license terms.
 // typedef size_t    STAT_size_t;
 //#  define STAT_size_t  size_t
 
+#elif defined(__CYGWIN__)
+
+#  define STAT_ino    "lu"
+#  define STAT_nlink  "hu"
+#  define STAT_size   "ld"
+#  define STAT_bsize  "d"
+#  define STAT_blocks "ld"
+
 #endif

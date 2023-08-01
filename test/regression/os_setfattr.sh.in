@@ -64,7 +64,7 @@
 # source this file instead of using it as a command to only check OS once
 # shellcheck disable=SC2194
 case "@CMAKE_SYSTEM_NAME@" in
-    "Linux")
+    "Linux" | "CYGWIN")
         os_setfattr() {
             @SETFATTR@ -n "$1" -v "$2" "$3"
         }

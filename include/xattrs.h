@@ -93,6 +93,11 @@ extern "C" {
 #  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))
 #  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0)
 
+#elif defined(CONFIG_CYGWIN_XATTRS)
+#  define LISTXATTR(PATH, BUF, SIZE)        listxattr((PATH), (BUF), (SIZE))
+#  define GETXATTR(PATH, KEY, BUF, SIZE)    lgetxattr((PATH), (KEY), (BUF), (SIZE))
+#  define SETXATTR(PATH, KEY, VALUE, SIZE)  lsetxattr((PATH), (KEY), (VALUE), (SIZE), 0)
+
 #endif
 
 #define MAXXATTR            1024

@@ -143,7 +143,7 @@ run_sort "${GUFI_STATS} -r depth --skip \"${SKIP}\""
 run_no_sort "${GUFI_STATS} -r depth --skip \"${SKIP}.bad\""
 
 # shellcheck disable=SC2050
-if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE" ]]
+if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE" ]] && [[ "@CMAKE_SYSTEM_NAME@" != "CYGWIN" ]]
 then
     run "${GUFI_STATS}    leaf-dirs"
     run "${GUFI_STATS} -r leaf-dirs"
@@ -171,7 +171,7 @@ EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 COPY="${EXPECTED}.copy"
 
 # shellcheck disable=SC2050
-if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]]
+if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]] || [[ "@CMAKE_SYSTEM_NAME@" == "CYGWIN" ]]
 then
     # shellcheck disable=SC2016
     @SED@ '/^\$ gufi_stats    leaf-dirs$/Q' "${EXPECTED}" > "${COPY}"
