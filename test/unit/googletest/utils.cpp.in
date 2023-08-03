@@ -590,7 +590,7 @@ TEST(descend, builddir) {
     // work->level == in->max_level - not descending
     {
         EXPECT_EQ(descend(nullptr, 0, nullptr, &in, &work, 0, dir,
-                          nullptr, 0, 1, nullptr,
+                          nullptr, 0, 0, nullptr,
                           nullptr, nullptr,
                           &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
 
@@ -602,7 +602,45 @@ TEST(descend, builddir) {
 
     // good descend
     {
+        rewinddir(dir);
         in.max_level = 1;
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir,
+                          nullptr, 0, 0,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              free(data);
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+
+        EXPECT_NE(dir_count,         (std::size_t) 0);
+        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(nondir_count,      (std::size_t) 0);
+        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+        in.max_level = (size_t) -1;
+    }
+
+    // good descend with skip_db
+    {
+        rewinddir(dir);
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir,
+                          nullptr, 1, 0,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              free(data);
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+
+        EXPECT_NE(dir_count,         (std::size_t) 0);
+        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(nondir_count,      (std::size_t) 0);
+        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+    }
+
+    // good descend with lstat
+    {
+        rewinddir(dir);
         EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir,
                           nullptr, 0, 1,
                           [](QPTPool_t *, const size_t, void *data, void *) -> int {
@@ -614,6 +652,28 @@ TEST(descend, builddir) {
 
         EXPECT_NE(dir_count,         (std::size_t) 0);
         EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(nondir_count,      (std::size_t) 0);
+        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+    }
+
+    // good descend with some in-situ processing
+    {
+        rewinddir(dir);
+        in.subdir_limit = 1;
+        EXPECT_EQ(descend(pool, 0, nullptr, &in, &work, 0, dir,
+                          nullptr, 0, 0,
+                          [](QPTPool_t *, const size_t, void *data, void *) -> int {
+                              struct work *work = (struct work *) data;
+                              if (work->recursion_level == 0) {
+                                  free(data);
+                              }
+                              return 0;
+                          },
+                          nullptr, nullptr,
+                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+
+        EXPECT_NE(dir_count,         (std::size_t) 0);
+        EXPECT_NE(dirs_insitu,       (std::size_t) 0);
         EXPECT_NE(nondir_count,      (std::size_t) 0);
         EXPECT_EQ(nondirs_processed, (std::size_t) 0);
     }

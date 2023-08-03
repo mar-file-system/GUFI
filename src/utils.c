@@ -443,7 +443,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
 
             /* skip . and .. and *.db */
             const int skip = (trie_search(skip_names, dir_child->d_name, len) ||
-                              (skip_db && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0)));
+                              (skip_db && (len >= 3) && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0)));
             if (skip) {
                 continue;
             }
