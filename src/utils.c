@@ -70,9 +70,7 @@ OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#if HAVE_ZLIB
-#include <zlib.h>
-#endif
+#include <unistd.h>
 
 #include "utils.h"
 
