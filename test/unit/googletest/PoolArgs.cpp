@@ -130,12 +130,12 @@ void test_common(PoolArgs *pa) {
         // no need for WHERE - there should only be 1 table
         EXPECT_EQ(sqlite3_exec(ta->outdb, "SELECT name FROM sqlite_master;",
                                print_parallel, &print, nullptr), SQLITE_OK);
-        EXPECT_EQ(OutputBuffer_flush(ob, file), TABLE_NAME.size() + 2);
+        EXPECT_EQ(OutputBuffer_flush(ob, file), TABLE_NAME.size() + 1);
         EXPECT_EQ(fflush(file), 0);
         EXPECT_EQ(fclose(file), 0);
 
         EXPECT_EQ(print.rows, (size_t) 1);
-        EXPECT_EQ(strlen(file_buf), TABLE_NAME.size() + 2);
+        EXPECT_EQ(strlen(file_buf), TABLE_NAME.size() + 1);
         EXPECT_EQ(memcmp(file_buf, TABLE_NAME.c_str(), TABLE_NAME.size()), 0);
     }
 }

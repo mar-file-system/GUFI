@@ -74,7 +74,7 @@ int print_parallel(void *args, int count, char **data, char **columns) {
     struct OutputBuffer *ob = print->output_buffer;
 
     size_t *lens = malloc(count * sizeof(size_t));
-    size_t row_len = count + 1; /* one delimiter per column + newline */
+    size_t row_len = count - 1 + 1; /* one delimiter per column except last column + newline */
     for(int i = 0; i < count; i++) {
         lens[i] = 0;
         if (data[i]) {
@@ -100,12 +100,15 @@ int print_parallel(void *args, int count, char **data, char **columns) {
         if (print->mutex) {
             pthread_mutex_lock(print->mutex);
         }
-        for(int i = 0; i < count; i++) {
+        const int last = count - 1;
+        for(int i = 0; i < last; i++) {
             if (data[i]) {
                 fwrite(data[i], sizeof(char), lens[i], print->outfile);
             }
             fwrite(&print->delim, sizeof(char), 1, print->outfile);
         }
+        /* print last column with no follow up delimiter */
+        fwrite(data[last], sizeof(char), lens[last], print->outfile);
         fwrite("\n", sizeof(char), 1, print->outfile);
         ob->count++;
         if (print->mutex) {
@@ -128,8 +131,8 @@ int print_parallel(void *args, int count, char **data, char **columns) {
             filled++;
         }
 
-        buf[filled] = '\n';
-        filled++;
+        /* replace final delimiter with newline */
+        buf[filled - 1] = '\n';
 
         ob->filled = filled;
         ob->count++;
