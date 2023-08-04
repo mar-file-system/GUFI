@@ -69,8 +69,8 @@ metadata.
 \subsection{\entries}
 The \entries table contains file and link metadata extracted from the
 source filesystem using \stat, \readlink, and \listxattr. There are
-also a few OS specific columns (\texttt{oss*}) that are currently
-unused.
+also a few OS specific columns (\texttt{oss*}) that are unused in
+base GUFI.
 
 \subsection{Directory \summary}
 The directory \summary table contains the metadata of the current
@@ -105,18 +105,19 @@ all child \pentries views copied into the current directory.
 \subsection{\vrsummary}
 The \vrsummary view is the \summary table with a handful of columns
 repeated as aliases. This was done so that the \texttt{rpath} SQL
-command can be called with column names with those found in
-\vrpentries. The \vrsummary view can be used whether or not the index
-has been rolled up. Using the \summary table directly with a rolled up
-index is possible, but will complicate queries.
+command can be called to generate the path of a given directory with the
+same view and query whether or not the index has been rolled up. Using
+the \summary table directly with a rolled up index is possible, but
+will complicate queries.
 
 \subsection{\vrpentries}
 The \vrpentries view is the \pentries view with a few \summary table
-columns aliased. This allows for the \texttt{rpath} SQL command to be
-called with the same arguments that would be used with \vrsummary.
-The \vrpentries view can be used whether or not the index has been
-rolled up. Using the \pentries view directly with a rolled up index is
-possible, but will complicate queries.
+columns aliased. This allows for the \texttt{rpath} SQL command can be
+called to generate the path of a given directory with the same view
+and query whether or not the index has been rolled up. \texttt{rpath}
+with the \vrpentries view is called with the same arguments that are
+used with \vrsummary. Using the \pentries view directly with a rolled
+up index is possible, but will complicate queries.
 
 \subsection{\treesummary}
 Similar to the directory \summary table, GUFI also provides

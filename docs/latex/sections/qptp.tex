@@ -67,8 +67,9 @@ a handful of threads. GUFI can run on hundreds of threads, and thus
 required a more performant thread pool. The solution to this was
 \qptp.
 
-\qptp is named so because work queues (and a lock) are maintained for
-each thread in the thread pool.
+\qptp is named so because originally, there was one work queue (and
+lock) maintained for each thread in the thread pool. Now, there are
+multiple work queues maintained for each thread.
 
 \subsubsection{Adding Work}
 By default, work is added to threads in a round robin fashion in order
@@ -157,7 +158,7 @@ queue.
   \texttt{QPTPool\_enqueue(pool, id, function, work);}
 
   The function passed into \texttt{QPTPool\_enqueue} must match the
-  signature found in \texttt{QPTPool.h}. The \texttt{work} argument
+  signature found in \texttt{QueuePerThreadPool.h}. The \texttt{work} argument
   will only be accessible to the thread processing this work.
 
   The thread that will receive the new work item is not \texttt{id}.

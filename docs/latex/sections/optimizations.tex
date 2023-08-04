@@ -194,9 +194,9 @@ one thread:
 \begin{itemize}
 \item When indexing, only one thread writes to each directory's
   database.
-\item When querying, writes only occur when aggregating, which
-  involves writing to a per-thread intermediate database before
-  performing the final aggregating serially.
+\item When querying, the per-thread results are written to per-thread
+  databases. After the tree walk, the per-thread databases are merged
+  serially into a final database.
 \end{itemize}
 
 Locking despite never modifying databases in parallel is not useful,

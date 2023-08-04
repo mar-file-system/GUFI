@@ -65,8 +65,9 @@ Printing in parallel to a single target such as \stdout without
 locking results in a jumble of text. Additionally, printing incurs a
 base cost in addition to the amount of data being printed. The
 OutputBuffers code, in conjunction with the \texttt{print\_parallel}
-function found in the \gufiquery directory, allow for data to be
-buffered in known, customizable sizes before being written to \stdout.
+function, allows for data to be placed into individual buffers of
+known, customizable sizes before being written to \stdout in a single
+call when a buffer is full.
 
 The \texttt{print\_parallel} function works as follows:
 
