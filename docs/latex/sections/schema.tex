@@ -61,7 +61,7 @@
 
 \section{Database Schema}
 \label{sec:schema}
-GUFI stores extracted metadata in SQLite 3 database files. Each
+GUFI stores extracted metadata in SQLite3 database files. Each
 directory contains a database file named db.db that contains a set of
 tables and views designed to facilitate efficient querying of
 metadata.
@@ -77,7 +77,7 @@ The directory \summary table contains the metadata of the current
 directory. Additionally, it contains columns that summarizes the
 \entries table located in the same database file, such as minimum and
 maximum file sizes, uids, and gids. These summary columns can be used
-to determine whether or not \querydb needs to query the \entries table
+to determine whether or not the \entries table needs to be queried
 at all.
 
 \begin{figure} [h]
@@ -98,26 +98,29 @@ In general, users should query the \pentries view over the \entries
 table in order to obtain complete sets of data to query on.
 
 \subsubsection{\pentriesrollup}
-In order to simplify rolling up indicies, the \pentries table was
+In order to simplify rolling up indexes, the \pentries view was
 modified to also union with the \pentriesrollup table, which contains
-all child \pentries views copied into the current directory.
+all child \pentries views copied into the current directory's database
+file.
 
 \subsection{\vrsummary}
 The \vrsummary view is the \summary table with a handful of columns
 repeated as aliases. This was done so that the \texttt{rpath} SQL
-command can be called to generate the path of a given directory with the
-same view and query whether or not the index has been rolled up. Using
+function can be called to generate the path of a given directory with
+the same view and query whether or not the index has been rolled up,
+and thus should be preferred over querying the \summary table. Using
 the \summary table directly with a rolled up index is possible, but
 will complicate queries.
 
 \subsection{\vrpentries}
 The \vrpentries view is the \pentries view with a few \summary table
-columns aliased. This allows for the \texttt{rpath} SQL command can be
-called to generate the path of a given directory with the same view
-and query whether or not the index has been rolled up. \texttt{rpath}
-with the \vrpentries view is called with the same arguments that are
-used with \vrsummary. Using the \pentries view directly with a rolled
-up index is possible, but will complicate queries.
+columns aliased. This allows for the \texttt{rpath} SQL function can
+be called to generate the path of a given directory with the same view
+and query whether or not the index has been rolled up, and thus should
+be preferred over querying \entries and \pentries. \texttt{rpath} with
+the \vrpentries view is called with the same arguments that are used
+with \vrsummary. Using the \pentries view directly with a rolled up
+index is possible, but will complicate queries.
 
 \subsection{\treesummary}
 Similar to the directory \summary table, GUFI also provides

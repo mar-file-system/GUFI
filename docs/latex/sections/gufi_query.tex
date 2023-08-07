@@ -62,11 +62,11 @@
 
 \subsection{\gufiquery}
 
-\gufiquery is the main tool used for accessing indicies. Arbitrary SQL
+\gufiquery is the main tool used for accessing indexes. Arbitrary SQL
 statements are passed into \gufiquery to run on the individual
 databases, allowing for anything SQL can do to be done on the
 databases in an index, including modifying the contents of each
-database. To prevent accidental modifications from occuring, indicies
+database. To prevent accidental modifications from occuring, indexes
 are opened in read-only mode by default.
 
 Because \gufiquery uses SQL statements for database access, caller
@@ -223,11 +223,9 @@ further processing.
 
 \noindent Parallel Results:
 \\\\
-\indent \gufiquery \texttt{-S "SELECT * FROM vrsummary"
-  ~/directory\_of\_root\_index}
+\indent \gufiquery \texttt{-S "SELECT * FROM vrsummary;"~/path/to/index}
 \\\\
-\indent \gufiquery \texttt{-E "SELECT * FROM vrpentries"
-  ~/directory\_of\_root\_index}
+\indent \gufiquery \texttt{-E "SELECT * FROM vrpentries;"~/path/to/index}
 \\\\
 \noindent Aggregate Results:
 \\\\
@@ -236,7 +234,8 @@ further processing.
 \indent \texttt{-E "INSERT INTO intermediate SELECT name, size FROM vrpentries;"~\textbackslash} \\
 \indent \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);"~\textbackslash} \\
 \indent \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;"~\textbackslash} \\
-\indent \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
+\indent \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"~\textbackslash} \\
+\indent \texttt{/path/to/index}
 
 \subsubsection{Visualizing the Workflow}
 \begin{figure} [H]

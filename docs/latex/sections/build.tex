@@ -60,9 +60,10 @@
 
 
 
-\section{Building with CMake}
+\section{Build}
 
-From the root directory of the GUFI source, run:
+GUFI uses the CMake as its build system. CMake 3.1 or higher is
+required. From the root directory of the GUFI source, run:
 \begin{verbatim}
 mkdir build
 cd build
@@ -73,8 +74,12 @@ make
 The recommended options for deployment are
 \texttt{-DCMAKE\_BUILD\_TYPE=Release -DCLIENT=On}.
 \\\\
-GUFI is known to build on Ubuntu Xenial, OpenSuse~12.3, CentOS~7,
-CentOS~8, and OSX~10.13.
+GUFI is known to build on Ubuntu 16.04 (Xenial), Ubuntu 18.04
+(Bionic), Ubuntu 20.04 (Focal), Ubuntu 22.04 (Jammy), CentOS~7,
+CentOS~8, RockyLinux~8, OSX~10.13 (High Sierra), OSX~11 (Big Sur),
+OSX~12 (Monterey), and OSX~13 (Ventura). Building on Windows with
+cygwin and GCC (not MinGW) also works. OpenSUSE~12.3 was supported in
+the past, and may still work.
 
 \subsection{Environment Variables}
 \begin{table}[h]
@@ -88,7 +93,7 @@ CentOS~8, and OSX~10.13.
 \end{tabularx}
 \end{table}
 
-\subsection{Flags}
+\subsection{CMake Flags}
 
 \subsubsection{General}
 \begin{table}[h!]
@@ -176,7 +181,20 @@ have effect.
 \end{table}
 
 \subsubsection{Testing}
-Do not turn these off unless you know what you are doing.
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
+  \hline
+  \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{TEST\_WORKING\_DIRECTORY=<PATH>}
+  & Directory to run tests in. Defaults to \\
+  & \texttt{\$\{CMAKE\_BINARY\_DIR\}/test} \\
+  \hline
+\end{tabularx}
+\end{table}
+
+Do not turn these off unless you know what you are doing:
 
 \begin{table}[H]
 \centering

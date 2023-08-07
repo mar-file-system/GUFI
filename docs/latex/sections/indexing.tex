@@ -68,7 +68,7 @@ directories that exist in the source filesystem also exist in the
 index. If an administrator created the index, the directories will
 also have the same access permissions, uid, and gid.
 
-Indicies will not contain any of the files that the source filesystem
+Indexes will not contain any of the files that the source filesystem
 contained. Instead, all metadata extracted from a single directory of
 the source filesystem will be placed into a single database file,
 called db.db, in the cooresponding directory in the index. Each
@@ -89,14 +89,14 @@ parallelizable.
 \input{sections/xattrs.tex}
 
 \subsection{Location}
-GUFI is expected to be used to query the indices of many filesystems
+GUFI is expected to be used to query the indexes of many filesystems
 all at once. However, the source filesystems are not expected to be
-accessible from each other. In order for the indices from many
+accessible from each other. In order for the indexes from many
 disconnected systems to be queried at once, they should all be built
 under a common directory on a single machine.
 
 \subsubsection{Permissions}
-If a GUFI index is located on a different machine than the source
+If a GUFI tree is located on a different machine than the source
 tree, the users and groups are probably not available on the machine
 with the index on it. \texttt{/etc/passwd} should be populated with
 the entries from the source machine and modified so that they do not

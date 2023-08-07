@@ -64,8 +64,14 @@
 \querydbs attaches all database files it is given into a single view
 for querying. All tables in the provided database files should have
 the same name and schema. For tables called \texttt{table}, the view
-combining all tables will be named \texttt{vtable}.
+combining all tables will be named \texttt{vtable}. This was intended
+to allow for easy post-processing of \gufiquery~\texttt{-O} output
+database files.
 
-Note that there is
-a hard limit of 125 databases that can be queried by querydbs that is
-set by SQLite3.
+\querydbs does not have a \texttt{gufi\_} prefix because it will work
+for any set of input databases with the same schema. For example,
+\querydbs can also be used directly on individual database files
+from an index.
+
+Note that there is a hard limit of 125 databases that can be queried
+by querydbs that is set by SQLite3.

@@ -172,7 +172,7 @@ This was used to fix
 \subsubsection{Database Templates}
 Every directory in an index contains at least one database file,
 called db.db, containing the \lstat data from the source
-filesystem. When creating indicies, a database file is created with
+filesystem. When creating indexes, a database file is created with
 the same schema as db.db and is left unfilled. When each directory in
 the index is processed, the database file created earlier is copied
 into the directory as a bytestream instead of having SQlite open new
@@ -221,7 +221,7 @@ temporary files to be stored in memory with \\
 \texttt{-DSQLITE\_TEMP\_STORE=3}.
 
 \subsubsection{Caching Queries (Not Merged)}
-When queries are performed on indicies, they are processed from
+When queries are performed on indexes, they are processed from
 scratch by each thread for each directory. An obvious optimization
 would be to reduce the amount of string parsing and query planning by
 compiling each query once (or a small number of times such as once per
