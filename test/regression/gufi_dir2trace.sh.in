@@ -80,25 +80,25 @@ run_no_sort "${GUFI_DIR2TRACE}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"${TRACE}\""
 
 # count output files
-found=$(@FIND@ "${TRACES[@]}" | wc -l)
+found=$(find "${TRACES[@]}" | wc -l)
 echo "Expecting ${THREADS} trace files. Found ${found}."
 
 # count lines
 # shellcheck disable=SC2016
 trace_lines=$(cat "${TRACES[@]}" | wc -l | @AWK@ '{print $1}')
-contents=$(@FIND@ "${SRCDIR}")
+contents=$(find "${SRCDIR}")
 # shellcheck disable=SC2016
 content_lines=$(echo "${contents}" | wc -l | @AWK@ '{print $1}')
 echo "Expecting ${content_lines} lines. Got ${trace_lines}."
 
 # count separators
-columns=$(@SED@ "s/[^${DELIM}]//g" "${TRACES[@]}" | @AWK@ '{ print length }' | @SORT@ | @UNIQ@)
+columns=$(sed "s/[^${DELIM}]//g" "${TRACES[@]}" | @AWK@ '{ print length }' | sort | uniq)
 echo "Expecting 23 columns per row. Got ${columns}."
 
 # compare names
-src=$(@FIND@ "${SRCDIR}" | @SORT@)
+src=$(find "${SRCDIR}" | sort)
 # shellcheck disable=SC2016
-lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | @SED@ "s/\\/\\//\\//g" | @SORT@)
+lines=$(@AWK@ -F"${DELIM}" -v SRCDIR="${SRCDIR}" "{ print \$1 }" "${TRACES[@]}" | sed "s/\\/\\//\\//g" | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -116,7 +116,7 @@ run_no_sort "rm -r \"${SRCDIR}.0\""
 echo "# source path is file"
 # shellcheck disable=SC2046,SC2086
 FULLTRACEPATH="$(dirname $(realpath ${TRACE}))"
-run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\"" | @SED@ "s/${FULLTRACEPATH//\//\\/}\\///g;"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \"${TRACE}\"" | sed "s/${FULLTRACEPATH//\//\\/}\\///g;"
 
 echo "# empty source path"
 rm "${TRACES[@]}"
@@ -130,7 +130,7 @@ run_sort "cat ${TRACES[@]} | @AWK@ -F \"${DELIM}\" '{print \$1}'"
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${TRACE}\""
-) | remove_indexing_time | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2trace.expected "${OUTPUT}"
 rm "${OUTPUT}"

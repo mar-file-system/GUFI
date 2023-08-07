@@ -69,7 +69,7 @@ OUTPUT="oldbigfiles.out"
 (
     run_no_sort "${OLDBIGFILES} \"${INDEXROOT}\" ${THREADS}"
     run_no_sort "${OLDBIGFILES} \"${INDEXROOT}\" ${THREADS} 1000"
-) | @SED@ "s/${USER_NAME}/${TEST_USER_NAME}/g" | @TEE@ "${OUTPUT}"
+) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/oldbigfiles.expected "${OUTPUT}"
 rm "${OUTPUT}"

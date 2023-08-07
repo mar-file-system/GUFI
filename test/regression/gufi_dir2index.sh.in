@@ -79,9 +79,9 @@ run_no_sort "${GUFI_DIR2INDEX}"
     # shellcheck disable=SC2016
     out=$(${GUFI_DIR2INDEX} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
 
-    src=$(@FIND@ "${SRCDIR}" | @SORT@)
+    src=$(find "${SRCDIR}" | sort)
 
-    index=$(${GUFI_QUERY} -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | @SORT@)
+    index=$(${GUFI_QUERY} -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | sort)
 
     echo "Index Everything:"
     echo "    Source Directory:"
@@ -106,9 +106,9 @@ do
     # shellcheck disable=SC2016
     out=$(${GUFI_DIR2INDEX} -z ${level} -x "${SRCDIR}" "${SEARCH}" | @AWK@ '{ print "    " $0 }')
 
-    src=$(@FIND@ "${SRCDIR}" -maxdepth ${level} | @SORT@)
+    src=$(find "${SRCDIR}" -maxdepth ${level} | sort)
 
-    index=$(${GUFI_QUERY} -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | @SORT@)
+    index=$(${GUFI_QUERY} -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | sort)
 
     echo "Index up to level ${level}:"
     echo "    Source Directory:"
@@ -132,7 +132,7 @@ run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}\" \"${SRCDIR}/1KB\""
 echo "# source path is file"
 # shellcheck disable=SC2046,SC2086
 PARENT="$(dirname $(realpath ${SRCDIR}))"
-run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | @SED@ "s/${PARENT//\//\\/}\\///g;"
+run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"${SRCDIR}/1KB\" \"${SEARCH}\"" | sed "s/${PARENT//\//\\/}\\///g;"
 
 echo "# empty source path"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} \"\" \"${TRACE}\""
@@ -144,7 +144,7 @@ run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;
 
 echo "# bad skip file"
 run_no_sort "${GUFI_DIR2INDEX} -n ${THREADS} -k \"${SKIP}.bad\" \"${SRCDIR}\" \"${SEARCH}\""
-) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_dir2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

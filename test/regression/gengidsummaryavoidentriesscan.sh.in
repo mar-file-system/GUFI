@@ -80,7 +80,7 @@ OUTPUT="gengidsummaryavoidentriesscan.out"
     echo
 
     run_no_sort "@DIFF@ <(echo \"\${expected}\") <(echo \"\${results}\")"
-) | @TEE@ "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gengidsummaryavoidentriesscan.expected "${OUTPUT}"
 rm "${OUTPUT}"

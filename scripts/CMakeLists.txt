@@ -62,10 +62,6 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
-find_exec_dependency(DIRNAME  dirname)
-find_exec_dependency(PRINTF   printf)
-find_exec_dependency(READLINK readlink)
-
 # list this first so that make install will overwrite these files
 if (CLIENT)
   # add the paramiko source for installing

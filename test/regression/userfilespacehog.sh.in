@@ -68,7 +68,7 @@ OUTPUT="userfilespacehog.out"
 
 (
     run_no_sort "${USERFILESPACEHOG} \"${INDEXROOT}\" ${THREADS}"
-) | @SED@ "s/${USER_NAME}/${TEST_USER_NAME}/g" | @TEE@ "${OUTPUT}"
+) | sed "s/${USER_NAME}/${TEST_USER_NAME}/g" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/userfilespacehog.expected "${OUTPUT}"
 rm "${OUTPUT}"

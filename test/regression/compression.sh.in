@@ -83,7 +83,7 @@ trap cleanup_exit EXIT
 cleanup
 
 remove_e() {
-    @SED@ 's/-e/  /g;'
+    sed 's/-e/  /g;'
 }
 
 # calling gufi_query with and without -e should result in the same output
@@ -106,7 +106,7 @@ compare_output() {
     compare_output "${INDEXROOT}"
     compare_output "${D2I}/${BASENAME}"
     compare_output "${T2I}/${BASENAME}"
-) | remove_indexing_time | replace | remove_root | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | replace | remove_root | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/compression.expected "${OUTPUT}"
 rm "${OUTPUT}"

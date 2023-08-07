@@ -74,7 +74,7 @@ OUTPUT="generateuidsummary.out"
 
     pull_ug_summary_columns "uid" "summary" " WHERE rectype == 1"
     pull_ug_summary_columns "uid" "vsummaryuser"
-) | @TEE@ "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generateuidsummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

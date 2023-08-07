@@ -99,7 +99,7 @@ symlinks=(
 echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
-    "${GUFI_STAT_BIN}" "${INDEXROOT}/${entry}" | @HEAD@ -n 1
+    "${GUFI_STAT_BIN}" "${INDEXROOT}/${entry}" | head -n 1
 done | remove_root
 echo
 
@@ -108,7 +108,7 @@ for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
     "${GUFI_STAT_BIN}" -j "${INDEXROOT}/${entry}" | @AWK@ '{ print $1 " " $2 }'
-done | remove_root | @SORT@
+done | remove_root | sort
 echo
 
 echo "# custom print format"
@@ -122,7 +122,7 @@ echo "# custom print format"
     do
         "${GUFI_STAT_BIN}" -f '%-60N %60n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
-) | remove_root | @SORT@
+) | remove_root | sort
 echo
 
 for entry in "${symlinks[@]}"
@@ -138,7 +138,7 @@ for c in "${nonprintable[@]}"
 do
     echo -n "\\${c} -> "
     # shellcheck disable=SC2016
-    "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | @OD@ -t x1 | @HEAD@ -n 1 | @AWK@ '{ print $2 }'
+    "${GUFI_STAT_BIN}" -f "\\${c}" "${INDEXROOT}/old_file" | od -t x1 | head -n 1 | @AWK@ '{ print $2 }'
 done
 
 # do this separately to not deal with "\\${c}\n" -> "\\\\n"
@@ -174,7 +174,7 @@ echo
 
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/bad/directory"
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/badfile"
-) | replace | @TEE@ "${OUTPUT}"
+) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat_bin.expected "${OUTPUT}"
 rm "${OUTPUT}"

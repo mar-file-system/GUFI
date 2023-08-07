@@ -77,12 +77,12 @@ run_no_sort "${GUFI_LS} -h"
 run_no_sort "${GUFI_LS} -i  | @AWK@ '{ print 0, \$2 }'"
 run_no_sort "${GUFI_LS} -R"
 run_no_sort "${GUFI_LS} -r"
-run_no_sort "${GUFI_LS} -s  | @GREP@ -v -e '.*directory.*' -e 'file_symlink' | @AWK@ '{ \$1=0; print }'"
-run_no_sort "${GUFI_LS} -S  | @GREP@ -v '.*directory.*'"
+run_no_sort "${GUFI_LS} -s  | grep -v -e '.*directory.*' -e 'file_symlink' | @AWK@ '{ \$1=0; print }'"
+run_no_sort "${GUFI_LS} -S  | grep -v '.*directory.*'"
 run_no_sort "${GUFI_LS} -t"
 run_no_sort "${GUFI_LS} -ar"
 run_no_sort "${GUFI_LS} -arR"
-run_no_sort "${GUFI_LS} -Sr | @GREP@ -v '.*directory.*'"
+run_no_sort "${GUFI_LS} -Sr | grep -v '.*directory.*'"
 
 # remove backup files
 run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"INSERT INTO entries (name) VALUES ('${BACKUP}');\""
@@ -137,7 +137,7 @@ run_no_sort "${SQLITE3} \"${INDEXROOT}/db.db\" \"DELETE FROM entries WHERE name 
     # human readable sizes without -l (should only show name)
     run_no_sort "${GUFI_LS} -h 1KB"
     run_no_sort "${GUFI_LS} -h 1MB"
-) | @SED@ "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g; s/${USER_NAME}/${TEST_USER_NAME}/g;"
+) | sed "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g; s/${USER_NAME}/${TEST_USER_NAME}/g;"
 
 (
     # bad blocksizes
@@ -152,7 +152,7 @@ run_sort "${GUFI_LS} --skip \"${SKIP}\""
 
 # bad skip
 run_no_sort "${GUFI_LS} --skip \"${SKIP}.bad\""
-) |& remove_root | @TEE@ "${OUTPUT}"
+) |& remove_root | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_ls.expected "${OUTPUT}"
 rm "${OUTPUT}"

@@ -193,6 +193,49 @@ endif()
 set(PYTHON_INTERPRETER "python${Python_VERSION_MAJOR}" CACHE STRING "Python Interpreter")
 message(STATUS "Using Python Interpreter: ${PYTHON_INTERPRETER}")
 
+# require find_program to return executables with -r+x permissions
+if (POLICY CMP0109)
+  cmake_policy(SET CMP0109 NEW)
+endif()
+
+# find an executable dependency
+function(find_exec_dependency var exec)
+  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
+  if (${var})
+    message(STATUS "Found ${exec}: ${${var}}")
+  else ()
+    # try alternative
+    if (${ARGC} GREATER 2)
+      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
+      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
+    endif()
+
+    if (${var})
+      message(STATUS "Found alternative to ${exec}: ${${var}}")
+    endif()
+  endif()
+
+  if (NOT ${var})
+    message(FATAL_ERROR "Required program ${var} not found.")
+  endif()
+endfunction()
+
+# from coreutils, so should always be available, and if
+# found, all other coreutils commands are also available
+find_exec_dependency(TRUNCATE truncate)
+
+# not from coreutils, but still very common
+find_exec_dependency(AWK   awk gawk)
+find_exec_dependency(DIFF  colordiff diff)
+find_exec_dependency(FIND  find)
+find_exec_dependency(PATCH patch)
+find_exec_dependency(SED   sed)
+if(APPLE)
+  find_exec_dependency(XATTR xattr)
+else()
+  find_exec_dependency(SETFATTR setfattr)
+endif()
+
 # Need the PkgConfig module for pkg_search_module
 find_package(PkgConfig REQUIRED)
 
@@ -225,36 +268,8 @@ endif()
 set(BIN "bin" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
 set(LIB "lib" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install binaries")
 
-# find an executable dependency
-function(find_exec_dependency var exec)
-  find_program(${var} ${exec})        # REQUIRED option was not added until 3.18
-  if (${var})
-    message(STATUS "Found ${exec}: ${${var}}")
-  else ()
-    # try alternative
-    if (${ARGC} GREATER 2)
-      message(WARNING "${exec} not found. Trying alternative: ${ARGV2}")
-      find_program(${var} ${ARGV2})   # REQUIRED option was not added until 3.18
-    endif()
-
-    if (${var})
-      message(STATUS "Found alternative to ${exec}: ${${var}}")
-    endif()
-  endif()
-
-  if (NOT ${var})
-    message(FATAL_ERROR "Required program ${var} not found.")
-  endif()
-endfunction()
-
-# patch is needed to patch dependencies
-find_exec_dependency(PATCH patch)
-
 # Need pthread
 find_package(Threads REQUIRED)
-
-# Load the ExternalProject module
-include(ExternalProject)
 
 # Need PCRE for linking only
 pkg_search_module(PCRE REQUIRED libpcre)
@@ -419,10 +434,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
-find_exec_dependency(AWK  awk gawk) # contrib/performance and test/regression
-find_exec_dependency(GREP grep)     # scripts and test/regression
-find_exec_dependency(SED  sed)      # scripts and test/regression
-
 # enable "make test"
 enable_testing()
 
@@ -463,12 +474,7 @@ if (RPMBUILD)
 
   # get the architecture of this machine
   # assumes that we are not cross compiling
-  find_program(UNAME uname) # REQUIRED option was not added until 3.18
-  if (NOT UNAME)
-    message(FATAL_ERROR "uname not found. Cannot build RPMs.")
-  endif()
-  message(STATUS "Found uname: ${UNAME}")
-  execute_process(COMMAND ${UNAME} -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   set(CPACK_GENERATOR "RPM")
   set(CPACK_RPM_COMPONENT_INSTALL On)

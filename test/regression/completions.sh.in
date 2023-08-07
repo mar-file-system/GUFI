@@ -68,7 +68,7 @@ source @CMAKE_BINARY_DIR@/scripts/completions "${CONFIG}"
 
 get_function_name() {
     echo "$@" "completion function:"
-    complete -p "$@" | @SED@ "s/.*-F \\([^ ]*\\) .*/\\1/"
+    complete -p "$@" | sed "s/.*-F \\([^ ]*\\) .*/\\1/"
     echo
 }
 
@@ -130,7 +130,7 @@ echo
 echo "The \"directory/subdirectory\" directory:"
 tabtab directory/subdirectory
 echo
-) | @TEE@ "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/completions.expected "${OUTPUT}"
 rm "${OUTPUT}"

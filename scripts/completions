@@ -74,10 +74,10 @@ __gufi() {
     fi
 
     # shellcheck disable=2046
-    root=$("@READLINK@" -m $("@GREP@" "IndexRoot=" "${CONFIG}" | "@SED@" 's/^.*=//'))
+    root=$(readlink -m $(grep "IndexRoot=" "${CONFIG}" | "sed" 's/^.*=//'))
     # shellcheck disable=2046
-    gufi_query=$("@READLINK@" -m $("@GREP@" "Query=" "${CONFIG}" | "@SED@" 's/^.*=//'))
-    curr=$("@PRINTF@" "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
+    gufi_query=$(readlink -m $(grep "Query=" "${CONFIG}" | "sed" 's/^.*=//'))
+    curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
     path="${root}/${curr}"
     name="${path##*/}" # basename without expanding
 
@@ -107,7 +107,7 @@ __gufi() {
         done
     else
         # break up path into directory and name
-        GUFI_PWD=$("@DIRNAME@" "${path}")
+        GUFI_PWD=$(dirname "${path}")
 
         if [[ "${name}" =~ ^\. ]]
         then

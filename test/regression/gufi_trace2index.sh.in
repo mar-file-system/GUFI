@@ -80,8 +80,8 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -x \"${SRCDIR}\" \"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\"" "${TRACES[@]}" "\"${SEARCH}\""
 
 # compare contents
-src_contents=$(@FIND@ "${SRCDIR}" | @SORT@)
-index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | @SORT@)
+src_contents=$(find "${SRCDIR}" | sort)
+index_contents=$("${GUFI_QUERY}" -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "${INDEXROOT}" | replace | sort)
 
 echo "Source Directory:"
 # shellcheck disable=SC2016
@@ -98,7 +98,7 @@ echo "# bad trace path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"\" \"${SEARCH}\""
 
 echo "# bad index path"
-run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(@SORT@)"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${TRACE}\" \"${SRCDIR}/1KB\" 2> >(sort)"
 echo
 
 echo "# empty trace"
@@ -111,7 +111,7 @@ run_no_sort "${GUFI_TRACE2INDEX} -d \"${BADDELIM}\" -n \"${THREADS}\" \"${TRACE}
 echo
 
 echo "# first line does not start with a directory"
-@TAIL@ -n -1 "${TRACE}" > "${BADTRACE}"
+tail -n -1 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
 echo
 
@@ -124,7 +124,7 @@ echo
 
 echo "# file delimiter not found"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${BADTRACE}\" \"${SEARCH}\""
-) | remove_indexing_time | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_trace2index.expected "${OUTPUT}"
 rm "${OUTPUT}"

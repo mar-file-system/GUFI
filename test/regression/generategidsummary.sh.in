@@ -74,7 +74,7 @@ OUTPUT="generategidsummary.out"
 
     pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2"
     pull_ug_summary_columns "gid" "vsummarygroup"
-) | @TEE@ "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generategidsummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

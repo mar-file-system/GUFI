@@ -88,7 +88,7 @@ fixed_size=(
 echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
-    ${GUFI_STAT} "${entry}" | @HEAD@ -n 1
+    ${GUFI_STAT} "${entry}" | head -n 1
 done | remove_root
 echo
 
@@ -97,7 +97,7 @@ for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
     ${GUFI_STAT} --terse "${entry}" | @AWK@ '{ print $1 " " $2 }'
-done | remove_root | @SORT@
+done | remove_root | sort
 echo
 
 run_no_sort "${GUFI_STAT} --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${fixed_size[0]}\""
@@ -107,7 +107,7 @@ ${GUFI_STAT} --terse "${fixed_size[0]}" | @AWK@ "{ \$3=0; \$5=${TEST_USER_ID}; \
 
 run_no_sort "${GUFI_STAT} bad/directory"
 run_no_sort "${GUFI_STAT} badfile"
-) | replace | @TEE@ "${OUTPUT}"
+) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"
 rm "${OUTPUT}"

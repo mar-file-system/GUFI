@@ -173,7 +173,7 @@ run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM 
 
 echo "# Positive check to see if changes have been applied"
 run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;\" \"${INDEXROOT}\""
-) |& @TEE@ "${OUTPUT}"
+) |& tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"
 rm "${OUTPUT}"

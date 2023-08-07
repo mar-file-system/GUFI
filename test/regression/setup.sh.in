@@ -95,13 +95,13 @@ INDEXROOT="${SEARCH}/${BASENAME}"
 SKIP="skip"
 
 # shellcheck disable=SC2034
-USER_ID="$(@ID@ -u)"
+USER_ID="$(id -u)"
 # shellcheck disable=SC2034
-USER_NAME="$(@ID@ -un)"
+USER_NAME="$(id -un)"
 # shellcheck disable=SC2034
-GROUP_ID="$(@ID@ -g)"
+GROUP_ID="$(id -g)"
 # shellcheck disable=SC2034
-GROUP_NAME="$(@ID@ -gn)"
+GROUP_NAME="$(id -gn)"
 # shellcheck disable=SC2034
 TEST_USER_ID="1001"
 # shellcheck disable=SC2034
@@ -174,15 +174,10 @@ VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 AWK="@AWK@"
 DIFF="@DIFF@"
-GREP="@GREP@"
-HEAD="@HEAD@"
-SORT="@SORT@"
-TAIL="@TAIL@"
-WC="@WC@"
 
 # common strings that need replacing
 replace() {
-    @SED@ "
+    sed "
     s/${SQLITE3//\//\\/}/sqlite3/g;
     s/${DELUIDGIDSUMMARYRECS//\//\\/}/deluidgidsummaryrecs/g;
     s/${GENERATEGIDSUMMARY//\//\\/}/generategidsummary/g;
@@ -223,11 +218,6 @@ replace() {
 
     s/${AWK//\//\\/}/awk/g;
     s/${DIFF//\//\\/}/diff/g;
-    s/${GREP//\//\\/}/grep/g;
-    s/${HEAD//\//\\/}/head/g;
-    s/${SORT//\//\\/}/sort/g;
-    s/${TAIL//\//\\/}/tail/g;
-    s/${WC//\//\\/}/wc/g;
 
     s/[[:space:]]*$//g;
     "
@@ -235,18 +225,18 @@ replace() {
 
 # argparse help output changes slightly between versions
 replace_argparse() {
-    @SED@ 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
+    sed 's/optional arguments/options/g; s/\[paths \[paths ...\]\]/\[paths ...\]/g;'
 }
 
 remove_root() {
     REALSRCDIR="$(realpath ${SRCDIR})"
-    @SED@ "s/${REALSRCDIR//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
+    sed "s/${REALSRCDIR//\//\\/}\\///g; s/${SRCDIR//\//\\/}\\///g;"
 }
 
 run_sort() {
     echo "$" "$@"                             |& replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | @SORT@
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | sort
     echo
 }
 
@@ -259,20 +249,20 @@ run_no_sort() {
 
 # somewhat force ordering of trace file
 order_tracefile() {
-    @GREP@ "^${SRCDIR}${DELIM}"              "$1"
-    @GREP@ "^${SRCDIR}/.hidden${DELIM}"      "$1"
-    @GREP@ "^${SRCDIR}/1KB${DELIM}"          "$1"
-    @GREP@ "^${SRCDIR}/1MB${DELIM}"          "$1"
-    @GREP@ "^${SRCDIR}/file_symlink${DELIM}" "$1"
-    @GREP@ "^${SRCDIR}/old_file${DELIM}"     "$1"
-    @GREP@ "^${SRCDIR}/repeat_name${DELIM}"  "$1"
-    @GREP@ "^${SRCDIR}/directory.*${DELIM}"  "$1"
-    @GREP@ "^${SRCDIR}/leaf.*${DELIM}"       "$1"
-    @GREP@ "^${SRCDIR}/unusual.*${DELIM}"    "$1"
+    grep "^${SRCDIR}${DELIM}"              "$1"
+    grep "^${SRCDIR}/.hidden${DELIM}"      "$1"
+    grep "^${SRCDIR}/1KB${DELIM}"          "$1"
+    grep "^${SRCDIR}/1MB${DELIM}"          "$1"
+    grep "^${SRCDIR}/file_symlink${DELIM}" "$1"
+    grep "^${SRCDIR}/old_file${DELIM}"     "$1"
+    grep "^${SRCDIR}/repeat_name${DELIM}"  "$1"
+    grep "^${SRCDIR}/directory.*${DELIM}"  "$1"
+    grep "^${SRCDIR}/leaf.*${DELIM}"       "$1"
+    grep "^${SRCDIR}/unusual.*${DELIM}"    "$1"
 }
 
 remove_indexing_time() {
-    @GREP@ -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
+    grep -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
 }
 
 pull_ug_summary_columns() {
@@ -290,7 +280,7 @@ pull_ug_summary_columns() {
         DST="${TEST_GROUP_ID}"
     fi
 
-    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | @SED@ "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
+    run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | sed "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
 }
 
 clean_index() {
@@ -309,8 +299,8 @@ clean_index() {
     "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = 17 WHERE name == \"${BASENAME}\";"
 
     # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
-    DIR="$(@STAT@ -c '%i' ${SRCDIR}/directory/subdirectory)"
-    FILE="$(@STAT@ -c '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
+    DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"
+    FILE="$(stat -c '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
     "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE summary SET inode = ${DIR}, pinode = 7 WHERE name == 'subdirectory';"
     "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE entries SET inode = ${FILE} WHERE name == 'repeat_name'"
     "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = ${DIR} WHERE inode == 6;"

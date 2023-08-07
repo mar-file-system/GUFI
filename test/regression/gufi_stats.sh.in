@@ -67,18 +67,18 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_stats.out"
 
 run() {
-    run_sort "$@" | @SED@ "s/${USER_NAME}/${TEST_USER_ID}/g;"
+    run_sort "$@" | sed "s/${USER_NAME}/${TEST_USER_ID}/g;"
 }
 
 run_uidgid_size() {
     echo "$" "$@"                             |& replace
     # shellcheck disable=SC2294
-    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | awk "{ \$1 = ${TEST_USER_ID} ; print }"
+    eval "${GUFI_PYTHON_TEST_COVERAGE}" "$@"  |& replace | @AWK@ "{ \$1 = ${TEST_USER_ID} ; print }"
     echo
 }
 
 (
-run_no_sort "${GUFI_STATS} --help" | replace_argparse | @SED@ '/^$/d;'
+run_no_sort "${GUFI_STATS} --help" | replace_argparse | sed '/^$/d;'
 
 run "${GUFI_STATS}    depth"
 run "${GUFI_STATS} -r depth"
@@ -165,7 +165,7 @@ then
     run "${GUFI_STATS}    median-leaf-links"
     run "${GUFI_STATS}    median-leaf-size"
 fi
-) |& remove_root | @TEE@ "${OUTPUT}"
+) |& remove_root | tee "${OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
 COPY="${EXPECTED}.copy"
@@ -174,7 +174,7 @@ COPY="${EXPECTED}.copy"
 if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]] || [[ "@CMAKE_SYSTEM_NAME@" == "CYGWIN" ]]
 then
     # shellcheck disable=SC2016
-    @SED@ '/^\$ gufi_stats    leaf-dirs$/Q' "${EXPECTED}" > "${COPY}"
+    sed '/^\$ gufi_stats    leaf-dirs$/Q' "${EXPECTED}" > "${COPY}"
 else
     cp "${EXPECTED}" "${COPY}"
 fi

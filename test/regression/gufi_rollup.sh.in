@@ -84,15 +84,15 @@ echo "# ${GUFI_ROLLUP} help" | replace
 run_no_sort "${GUFI_ROLLUP}"
 
 do_tests() {
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${INDEXROOT}\" | @WC@ -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | @WC@ -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | @WC@ -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
 
     run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1\" \"${INDEXROOT}\""
 
-    run_no_sort "${GUFI_FIND} -type d | @WC@ -l"
-    run_no_sort "${GUFI_FIND} -type f | @WC@ -l"
-    run_no_sort "${GUFI_FIND} | @WC@ -l"
+    run_no_sort "${GUFI_FIND} -type d | wc -l"
+    run_no_sort "${GUFI_FIND} -type f | wc -l"
+    run_no_sort "${GUFI_FIND} | wc -l"
 
     run_no_sort "${GUFI_LS}"
     for level1 in "o+rx" "ugo" "ug" "u"
@@ -109,7 +109,7 @@ do_tests() {
     done
 
     echo "# 1 less because gufi_ls does not list the input dir"
-    run_no_sort "${GUFI_LS} -R | @WC@ -l"
+    run_no_sort "${GUFI_LS} -R | wc -l"
 
     run_sort "${GUFI_STATS}    depth"
     run_sort "${GUFI_STATS} -r depth"
@@ -136,7 +136,7 @@ rm -r "${SEARCH}"
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
 "${GUFI_ROLLUP}" -L 3 "${INDEXROOT}"
 do_tests
-) | remove_indexing_time | replace | @TEE@ "${OUTPUT}"
+) | remove_indexing_time | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_rollup.expected "${OUTPUT}"
 rm "${OUTPUT}"

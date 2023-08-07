@@ -75,7 +75,7 @@ OUTPUT="deluidgidsummaryrecs.out"
 
     run_no_sort "${DELUIDGIDSUMMARYRECS} \"${INDEXROOT}\" ${THREADS}"
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name, rectype FROM summary\" \"${INDEXROOT}\""
-) | @TEE@ "${OUTPUT}"
+) | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/deluidgidsummaryrecs.expected "${OUTPUT}"
 rm "${OUTPUT}"

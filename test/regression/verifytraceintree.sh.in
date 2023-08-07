@@ -133,25 +133,25 @@ echo "# second line bad delimiter (Fail)"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# first line is not a directory (Fail)"
-@TAIL@ -n +2 "${TRACE}" > "${BADTRACE}"
+tail -n +2 "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory add trailing slashes (Pass)"
-@SED@ "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
+sed "s/^${SRCDIR}${DELIM}/${SRCDIR}\\/\\/\\/${DELIM}/g" "${TRACE}" > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory does not exist (Fail)"
-@SED@ "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
+sed "s/subdirectory${DELIM}/subdir${DELIM}/g" "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# path exists, but is not directory (Fail)"
 (
     # remove the first line and convert the second line into a directory
-    @HEAD@ -n 2 "${TRACE}" | @TAIL@ -n 1 | @SED@ "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
-    @TAIL@ -n +3 "${TRACE}"
+    head -n 2 "${TRACE}" | tail -n 1 | sed "s/${DELIM}f${DELIM}/${DELIM}d${DELIM}/g"
+    tail -n +3 "${TRACE}"
 ) > "${BADTRACE}"
 # shellcheck disable=SC2016
-filename=$(echo -n "${SEARCH}/"; @HEAD@ -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
+filename=$(echo -n "${SEARCH}/"; head -n 1 "${BADTRACE}" | @AWK@ -F "${DELIM}" '{ printf $1 }')
 touch "${filename}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 rm "${filename}"
@@ -177,7 +177,7 @@ run_no_sort "${VERIFYTRACEINTREE} \"${TRACE}\" \"${DELIM}\" \"${SEARCH}\""
 mv "${INDEXROOT}/db.db.bak" "${INDEXROOT}/db.db"
 
 echo "# non-directory name mismatch (Fail)"
-@SED@ "s/old_file/an_old_file/g" "${TRACE}" > "${BADTRACE}"
+sed "s/old_file/an_old_file/g" "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory permissions mismatch (Fail)"
@@ -202,7 +202,7 @@ echo "# empty line (Pass)"
     echo
 ) > "${COPY}"
 run_no_sort "${VERIFYTRACEINTREE} \"${COPY}\" \"${DELIM}\" \"${SEARCH}\""
-) |& remove_indexing_time | @SED@ '/qptpool.*/d' | @TEE@ "${OUTPUT}"
+) |& remove_indexing_time | sed '/qptpool.*/d' | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/verifytraceintree.expected "${OUTPUT}"
 rm "${OUTPUT}"

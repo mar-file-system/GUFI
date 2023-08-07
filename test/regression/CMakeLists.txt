@@ -62,29 +62,6 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
-# require find_program to return executables with -r+x permissions
-if (POLICY CMP0109)
-  cmake_policy(SET CMP0109 NEW)
-endif()
-
-find_exec_dependency(DIFF colordiff diff)
-find_exec_dependency(FIND find)
-find_exec_dependency(HEAD head)
-find_exec_dependency(ID   id)
-find_exec_dependency(OD   od)
-find_exec_dependency(SORT sort)
-find_exec_dependency(STAT stat)
-find_exec_dependency(TAIL tail)
-find_exec_dependency(TEE  tee)
-find_exec_dependency(UNIQ uniq)
-find_exec_dependency(WC   wc)
-
-if(APPLE)
-  find_exec_dependency(XATTR xattr)
-else()
-  find_exec_dependency(SETFATTR setfattr)
-endif()
-
 # regression test specific files
 set(CORE
   generatetree.sh

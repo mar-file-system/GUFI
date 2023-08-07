@@ -106,7 +106,7 @@ do
     too_many+="${OUTDB}.* "
 done
 run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${too_many}"
-) | @SED@ "s/${SRCDIR//\//\\/}\\///g;" | @TEE@ "${OUTPUT}"
+) | sed "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"
 rm "${OUTPUT}"
