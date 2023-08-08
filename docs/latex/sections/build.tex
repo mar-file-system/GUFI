@@ -78,8 +78,8 @@ GUFI is known to build on Ubuntu 16.04 (Xenial), Ubuntu 18.04
 (Bionic), Ubuntu 20.04 (Focal), Ubuntu 22.04 (Jammy), CentOS~7,
 CentOS~8, RockyLinux~8, OSX~10.13 (High Sierra), OSX~11 (Big Sur),
 OSX~12 (Monterey), and OSX~13 (Ventura). Building on Windows with
-cygwin and GCC (not MinGW) also works. OpenSUSE~12.3 was supported in
-the past, and may still work.
+cygwin, GCC (not MinGW), and with jemalloc turned off also works.
+OpenSUSE~12.3 was supported in the past, and may still work.
 
 \subsection{Environment Variables}
 \begin{table}[h]
@@ -136,6 +136,9 @@ the past, and may still work.
   \hline
   \texttt{DEP\_PATCH\_SQLITE3\_OPEN=<On|Off>}
   & Whether or not to patch SQLite3 open \\
+  \hline
+  \texttt{DEP\_USE\_JEMALLOC=<On|Off>}
+  & Whether or not to build and link with jemalloc \\
   \hline
 \end{tabularx}
 \end{table}
