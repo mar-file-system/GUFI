@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 
 #include "dbutils.h"
 #include "template_db.h"
+#include "utils.h"
 #include "xattrs.h"
 
 #if defined(__APPLE__)
@@ -269,4 +270,32 @@ sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid
                   , NULL, NULL
                   #endif
         );
+}
+
+/* create db.db with empty tables at the given directory (and leave it on the filesystem) */
+int create_empty_dbdb(struct template_db *tdb, refstr_t *dst, uid_t uid, gid_t gid) {
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 3,
+               dst->data, dst->len,
+               "/", (size_t) 1,
+               DBNAME, DBNAME_LEN);
+
+    /* if database file already exists, assume it's good */
+    struct stat st;
+    if (stat(dbname, &st) != 0) {
+        const int err = errno;
+        /* if the parent's database file is not found, create it */
+        if (err == ENOENT) {
+            if (copy_template(tdb, dbname, uid, gid) != 0) {
+                return -1;
+            }
+        }
+        else {
+            fprintf(stderr, "Issue with index parent directory %s: %s (%d)\n",
+                    dst->data, strerror(err), err);
+            return -1;
+        }
+    }
+
+    return 0;
 }

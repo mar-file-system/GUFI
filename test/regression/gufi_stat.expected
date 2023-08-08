@@ -42,15 +42,15 @@ old_file 0
 repeat_name 13
 unusual#? directory
 
-$ gufi_stat --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' ".hidden"
+$ gufi_stat --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "prefix/.hidden"
 'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   9 - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
 
-gufi_stat --terse ".hidden"
+gufi_stat --terse "prefix/.hidden"
 prefix/.hidden 9 0 81b4 1001 1001 ? 9 1 0 0 9 9 9 0 0
-$ gufi_stat bad/directory
+$ gufi_stat prefix/bad/directory
 Cannot open database: prefix/bad/db.db unable to open database file rc 14
 gufi_stat: cannot stat 'prefix/bad/directory': No such file or directory
 
-$ gufi_stat badfile
+$ gufi_stat prefix/badfile
 gufi_stat: cannot stat 'prefix/badfile': No such file or directory
 

@@ -37,8 +37,11 @@ options:
                         Name of final database when aggregation is performed
   --skip-file filename  Name of file containing directory basenames to skip
 
-# 0 xattrs
+# prefix
 $ gufi_getfattr .
+
+# 0 xattrs
+$ gufi_getfattr prefix
 
 # 1 xattr
 $ gufi_getfattr 1MB

@@ -69,141 +69,144 @@ OUTPUT="gufi_getfattr.out"
 do_tests() {
     run_no_sort "${GUFI_GETFATTR} --help" | replace_argparse
 
-    # no flags
-    echo "# 0 xattrs"
+    echo "# ${SEARCH}"
     run_sort "${GUFI_GETFATTR} ."
 
+    # no flags
+    echo "# 0 xattrs"
+    run_sort "${GUFI_GETFATTR} ${BASENAME}"
+
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} 1MB"
+    run_sort "${GUFI_GETFATTR} ${BASENAME}/1MB"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} directory/subdirectory"
+    run_sort "${GUFI_GETFATTR} ${BASENAME}/directory/subdirectory"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} leaf_directory"
+    run_sort "${GUFI_GETFATTR} ${BASENAME}/leaf_directory"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} leaf_directory/leaf_file1"
+    run_sort "${GUFI_GETFATTR} ${BASENAME}/leaf_directory/leaf_file1"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} leaf_directory/leaf_file2"
+    run_sort "${GUFI_GETFATTR} ${BASENAME}/leaf_directory/leaf_file2"
 
     echo "# 0 xattrs"
     run_sort "${GUFI_GETFATTR} nonexistant_path"
 
     # dump
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --dump 1MB"
+    run_sort "${GUFI_GETFATTR} --dump ${BASENAME}/1MB"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --dump directory/subdirectory"
+    run_sort "${GUFI_GETFATTR} --dump ${BASENAME}/directory/subdirectory"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --dump leaf_directory"
+    run_sort "${GUFI_GETFATTR} --dump ${BASENAME}/leaf_directory"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} --dump leaf_directory/leaf_file1"
+    run_sort "${GUFI_GETFATTR} --dump ${BASENAME}/leaf_directory/leaf_file1"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} --dump leaf_directory/leaf_file2"
+    run_sort "${GUFI_GETFATTR} --dump ${BASENAME}/leaf_directory/leaf_file2"
 
     # name
     echo "# No matching name"
-    run_sort "${GUFI_GETFATTR} --name user.name 1MB"
+    run_sort "${GUFI_GETFATTR} --name user.name ${BASENAME}/1MB"
 
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --name user.size 1MB"
+    run_sort "${GUFI_GETFATTR} --name user.size ${BASENAME}/1MB"
 
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --name user.type directory/subdirectory"
+    run_sort "${GUFI_GETFATTR} --name user.type ${BASENAME}/directory/subdirectory"
 
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --name user.name leaf_directory"
+    run_sort "${GUFI_GETFATTR} --name user.name ${BASENAME}/leaf_directory"
 
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --name user.name1 leaf_directory/leaf_file1"
+    run_sort "${GUFI_GETFATTR} --name user.name1 ${BASENAME}/leaf_directory/leaf_file1"
 
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --name user.name4 leaf_directory/leaf_file2"
+    run_sort "${GUFI_GETFATTR} --name user.name4 ${BASENAME}/leaf_directory/leaf_file2"
 
     # match pattern
     echo "# No matching name"
-    run_sort "${GUFI_GETFATTR} --match system.* 1MB"
+    run_sort "${GUFI_GETFATTR} --match system.* ${BASENAME}/1MB"
 
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --match user.* 1MB"
+    run_sort "${GUFI_GETFATTR} --match user.* ${BASENAME}/1MB"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --match .*name directory/subdirectory"
+    run_sort "${GUFI_GETFATTR} --match .*name ${BASENAME}/directory/subdirectory"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --match .*type leaf_directory"
+    run_sort "${GUFI_GETFATTR} --match .*type ${BASENAME}/leaf_directory"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} --match .*name.* leaf_directory/leaf_file1"
+    run_sort "${GUFI_GETFATTR} --match .*name.* ${BASENAME}/leaf_directory/leaf_file1"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} --match user\\..* leaf_directory/leaf_file2"
+    run_sort "${GUFI_GETFATTR} --match user\\..* ${BASENAME}/leaf_directory/leaf_file2"
 
     # only-values
     echo "# 1 xattr"
-    run_sort "${GUFI_GETFATTR} --only-values 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values ${BASENAME}/1MB"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --only-values directory/subdirectory"
+    run_sort "${GUFI_GETFATTR} --only-values ${BASENAME}/directory/subdirectory"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --only-values leaf_directory"
+    run_sort "${GUFI_GETFATTR} --only-values ${BASENAME}/leaf_directory"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} --only-values leaf_directory/leaf_file1"
+    run_sort "${GUFI_GETFATTR} --only-values ${BASENAME}/leaf_directory/leaf_file1"
 
     echo "# 3 xattrs"
-    run_sort "${GUFI_GETFATTR} --only-values leaf_directory/leaf_file2"
+    run_sort "${GUFI_GETFATTR} --only-values ${BASENAME}/leaf_directory/leaf_file2"
 
     # recursive
     echo "# 11 xattrs"
     run_sort "${GUFI_GETFATTR} --recursive ."
 
     echo "# 1 xattr - ignore --recursive because path is a file"
-    run_sort "${GUFI_GETFATTR} --recursive 1MB"
+    run_sort "${GUFI_GETFATTR} --recursive ${BASENAME}/1MB"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --recursive directory"
+    run_sort "${GUFI_GETFATTR} --recursive ${BASENAME}/directory"
 
     echo "# 2 xattrs"
-    run_sort "${GUFI_GETFATTR} --recursive directory/subdirectory"
+    run_sort "${GUFI_GETFATTR} --recursive ${BASENAME}/directory/subdirectory"
 
     echo "# 8 xattrs"
-    run_sort "${GUFI_GETFATTR} --recursive leaf_directory"
+    run_sort "${GUFI_GETFATTR} --recursive ${BASENAME}/leaf_directory"
 
     # multiple flags
     echo "# --name takes precedence over --match (bad name)"
-    run_sort "${GUFI_GETFATTR} --name user.name --match user.* 1MB"
+    run_sort "${GUFI_GETFATTR} --name user.name --match user.* ${BASENAME}/1MB"
 
     echo "# --name takes precedence over --match (bad match)"
-    run_sort "${GUFI_GETFATTR} --name user.size --match .*name.* 1MB"
+    run_sort "${GUFI_GETFATTR} --name user.size --match .*name.* ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump"
-    run_sort "${GUFI_GETFATTR} --only-values --dump 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump, and is affected by bad name"
-    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.name 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.name ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump, and is affected by good name"
-    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.size 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.size ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump, and is affected by bad match pattern"
-    run_sort "${GUFI_GETFATTR} --only-values --dump --match .*name.* 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump --match .*name.* ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump, and is affected by good match pattern"
-    run_sort "${GUFI_GETFATTR} --only-values --dump --match .*size.* 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump --match .*size.* ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump, and is affected by --name and --match (bad name)"
-    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.name --match .*user.* 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.name --match .*user.* ${BASENAME}/1MB"
 
     echo "# --only-values overwrites --dump, and is affected by --name and --match (bad match)"
-    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.size --match .*name.* 1MB"
+    run_sort "${GUFI_GETFATTR} --only-values --dump --name user.size --match .*name.* ${BASENAME}/1MB"
 }
 
 (
@@ -212,7 +215,7 @@ do_tests() {
     do_tests | replace | remove_root | tee "${OUTPUT}"
     @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"
 
-    run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\""
+    run_no_sort "${GUFI_ROLLUP} \"${SEARCH}\""
 
     do_tests | replace | remove_root | tee "${OUTPUT}"
     @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_getfattr.expected "${OUTPUT}"

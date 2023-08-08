@@ -552,14 +552,12 @@ def leaf_dirs(_config, args, where):
 
     return queries
 
-def leaf_depth(config, args, where):
+def leaf_depth(_config, args, where):
     '''
     get the leaf directories immediately under the current directory
 
     using --recursive/-r here will search for leaf directories under the provided directory as well
     '''
-
-    root_slash_count = config.indexroot().count('/')
 
     queries = [
         '-I', build_create(args.inmemory_name,
@@ -576,7 +574,7 @@ def leaf_depth(config, args, where):
 
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
                                            gufi_common.build_query(['name',
-                                                                    '(length(name) - length(replace(name, "/", ""))) - {0} + 1'.format(root_slash_count)],
+                                                                    '(length(name) - length(replace(name, "/", "")))'],
                                                                    [args.inmemory_name],
                                                                    None,
                                                                    None,
@@ -806,20 +804,12 @@ def median_leaf_links(_config, args, where):
 def median_leaf_size(_config, args, where):
     return median_leaf(_config, args, where, 'totsize')
 
-def per_level(config, args, where, type): # pylint: disable=redefined-builtin
+def per_level(_config, args, where, type): # pylint: disable=redefined-builtin
     '''
     get counts of how many <type>s are in each level of the tree, by uid
 
     --cumulative combines the results into one set of distributions
     '''
-
-    root = os.path.normpath(config.indexroot())
-    root_len = len(root)
-    path = os.path.normpath(args.path)
-    path_len = len(path)
-    starting_depth = 0
-    if path_len != root_len:
-        starting_depth = path[root_len - path_len:].count('/')
 
     group_by = ['level'] + ([] if args.cumulative else ['uid'])
     order_by = None if args.cumulative else ['level {0}'.format(ORDER[args.order]),
@@ -834,7 +824,7 @@ def per_level(config, args, where, type): # pylint: disable=redefined-builtin
                            ['level INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['NULL'] + uid + ['level() + {0}'.format(starting_depth), count],
+                                           gufi_common.build_query(['NULL'] + uid + ['level()', count],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where,
                                                                    ['uid'],

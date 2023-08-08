@@ -674,6 +674,27 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    struct stat st;
+    st.st_mode = S_IRWXU | S_IRWXG | S_IRWXO;
+    st.st_uid = geteuid();
+    st.st_gid = getegid();
+
+    if (dupdir(pa.in.nameto.data, &st)) {
+        fprintf(stderr, "Could not create directory %s\n", pa.in.nameto.data);
+        close_traces(traces, trace_count);
+        return -1;
+    }
+
+    /*
+     * create empty db.db in index parent (this file is placed in
+     * "${dst}/db.db"; index is placed in "${dst}/$(basename ${src}))"
+     * so that when querying "${dst}", no error is printed
+     */
+    if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
+        close_traces(traces, trace_count);
+        return -1;
+    }
+
     init_template_db(&pa.xattr);
     if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");

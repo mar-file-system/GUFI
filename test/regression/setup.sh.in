@@ -133,7 +133,7 @@ CONFIG="$(@PYTHON_INTERPRETER@ -c 'import gufi_tool, os; print(os.path.realpath(
     echo "Threads=1"
     echo "Query=@CMAKE_BINARY_DIR@/src/gufi_query"
     echo "Stat=@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
-    echo "IndexRoot=${INDEXROOT}"
+    echo "IndexRoot=${SEARCH}"
     echo "OutputBuffer=4096"
 ) > "${CONFIG}"
 chmod 666 "${CONFIG}"

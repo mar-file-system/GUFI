@@ -388,6 +388,16 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    /*
+     * create empty db.db in index parent (this file is placed in
+     * "${dst}/db.db"; index is placed in "${dst}/$(basename ${src}))"
+     * so that when querying "${dst}", no error is printed
+     */
+    if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
+        trie_free(pa.skip);
+        return -1;
+    }
+
     init_template_db(&pa.xattr);
     if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");

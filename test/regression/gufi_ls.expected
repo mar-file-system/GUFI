@@ -40,6 +40,29 @@ options:
   --skip-file filename  Name of file containing directory basenames to skip
 
 $ gufi_ls
+prefix
+
+$ gufi_ls -R
+prefix
+1KB
+1MB
+directory
+directory/executable
+directory/readonly
+directory/subdirectory
+directory/subdirectory/directory_symlink
+directory/subdirectory/repeat_name
+directory/writable
+file_symlink
+leaf_directory
+leaf_directory/leaf_file1
+leaf_directory/leaf_file2
+old_file
+repeat_name
+unusual#? directory ,
+unusual#? directory ,/unusual, name?#
+
+$ gufi_ls prefix
 1KB
 1MB
 directory
@@ -49,7 +72,7 @@ old_file
 repeat_name
 unusual#? directory ,
 
-$ gufi_ls -a
+$ gufi_ls prefix -a
 .hidden
 1KB
 1MB
@@ -60,7 +83,7 @@ old_file
 repeat_name
 unusual#? directory ,
 
-$ gufi_ls -A
+$ gufi_ls prefix -A
 .hidden
 1KB
 1MB
@@ -71,7 +94,7 @@ old_file
 repeat_name
 unusual#? directory ,
 
-$ gufi_ls -h
+$ gufi_ls prefix -h
 1KB
 1MB
 directory
@@ -81,7 +104,7 @@ old_file
 repeat_name
 unusual#? directory ,
 
-$ gufi_ls -i  | awk '{ print 0, $2 }'
+$ gufi_ls prefix -i  | awk '{ print 0, $2 }'
 0 1KB
 0 1MB
 0 directory
@@ -91,7 +114,7 @@ $ gufi_ls -i  | awk '{ print 0, $2 }'
 0 repeat_name
 0 unusual#?
 
-$ gufi_ls -R
+$ gufi_ls prefix -R
 1KB
 1MB
 directory
@@ -110,7 +133,7 @@ repeat_name
 unusual#? directory ,
 unusual#? directory ,/unusual, name?#
 
-$ gufi_ls -r
+$ gufi_ls prefix -r
 unusual#? directory ,
 repeat_name
 old_file
@@ -120,20 +143,20 @@ directory
 1MB
 1KB
 
-$ gufi_ls -s  | grep -v -e '.*directory.*' -e 'file_symlink' | awk '{ $1=0; print }'
+$ gufi_ls prefix -s  | grep -v -e '.*directory.*' -e 'file_symlink' | awk '{ $1=0; print }'
 0 1KB
 0 1MB
 0 old_file
 0 repeat_name
 
-$ gufi_ls -S  | grep -v '.*directory.*'
+$ gufi_ls prefix -S  | grep -v '.*directory.*'
 1MB
 1KB
 repeat_name
 file_symlink
 old_file
 
-$ gufi_ls -t
+$ gufi_ls prefix -t
 1MB
 1KB
 unusual#? directory ,
@@ -143,7 +166,7 @@ file_symlink
 directory
 old_file
 
-$ gufi_ls -ar
+$ gufi_ls prefix -ar
 unusual#? directory ,
 repeat_name
 old_file
@@ -154,7 +177,7 @@ directory
 1KB
 .hidden
 
-$ gufi_ls -arR
+$ gufi_ls prefix -arR
 unusual#? directory ,/unusual, name?#
 unusual#? directory ,
 repeat_name
@@ -174,7 +197,7 @@ directory
 1KB
 .hidden
 
-$ gufi_ls -Sr | grep -v '.*directory.*'
+$ gufi_ls prefix -Sr | grep -v '.*directory.*'
 old_file
 file_symlink
 repeat_name
@@ -183,7 +206,7 @@ repeat_name
 
 $ sqlite3 "db.db" "INSERT INTO entries (name) VALUES ('backup~');"
 
-$ gufi_ls -B
+$ gufi_ls prefix -B
 1KB
 1MB
 directory
@@ -270,7 +293,7 @@ $ gufi_ls --block-size=1KiB 1KB
 $ gufi_ls -lG old_file
 -rw-rw-r-- 1 user 0 Jan   1 00:00 old_file
 
-$ gufi_ls -G old_file
+$ gufi_ls -G  old_file
 old_file
 
 $ gufi_ls -lh 1KB
@@ -321,7 +344,7 @@ usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
                [paths ...]
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '0GB'
 
-$ gufi_ls --skip "skip"
+$ gufi_ls --skip "skip" prefix
 1KB
 1MB
 file_symlink
@@ -330,7 +353,7 @@ old_file
 repeat_name
 unusual#? directory ,
 
-$ gufi_ls --skip "skip.bad"
+$ gufi_ls --skip "skip.bad" prefix
 Error: Cannot open skip file "skip.bad"
 Error: Bad input skip list
 

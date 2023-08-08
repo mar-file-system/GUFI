@@ -314,9 +314,16 @@ int dupdir(const char *path, struct stat *stat)
 
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     if (mkdir(copy, stat->st_mode) != 0) {
-      if (errno == ENOENT) {
+        const int err = errno;
+      if (err == ENOENT) {
         mkpath(copy, stat->st_mode, stat->st_uid, stat->st_gid);
-      } else if (errno != EEXIST) {
+      }
+      else if (err == EEXIST) {
+          struct stat st;
+          if ((lstat(copy, &st) != 0) || !S_ISDIR(st.st_mode))  {
+              return 1;
+          }
+      } else if (err != EEXIST) {
         return 1;
       }
     }

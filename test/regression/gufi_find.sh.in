@@ -113,8 +113,8 @@ run_sort "${GUFI_FIND} -lname 'directory*'"       # glob on directory link name
 run_sort "${GUFI_FIND} -lname 'file*'"            # glob on file link name
 # shellcheck disable=SC2016
 run_no_sort "${GUFI_FIND} -ls" | sed "s/${USER_NAME} ${GROUP_NAME}/${TEST_USER_NAME} ${TEST_GROUP_NAME}/g;" | @AWK@ '{ if (NF > 10) { $1="0"; $2="0"; $4=1; $7="0"; } print }' | sort -k 11; echo
-run_sort "${GUFI_FIND} -maxdepth 0"
-run_sort "${GUFI_FIND} -mindepth 2"
+run_sort "${GUFI_FIND} -maxdepth 2"
+run_sort "${GUFI_FIND} -mindepth 3"
 run_sort "${GUFI_FIND} -mmin  +0"
 run_sort "${GUFI_FIND} -mtime +0"
 run_sort "${GUFI_FIND} -name  'directory*'"       # glob on file name
@@ -146,7 +146,7 @@ run_no_sort "${GUFI_FIND} -printf ''"
 run_no_sort "${GUFI_FIND} -printf '\141 \142 \143' | head -n 1"
 
 # print escape characters
-run_no_sort "${GUFI_FIND} -printf '[\\a][ \\b][\f][\\n][\\r][\\t][\v][\\\\\\\\]' -maxdepth 0 -type d"
+run_no_sort "${GUFI_FIND} -printf '[\\a][ \\b][\f][\\n][\\r][\\t][\v][\\\\\\\\]' -maxdepth 2 -type d"
 
 # spacing
 run_sort "${GUFI_FIND} -printf '%-22f %+22f'"
@@ -155,7 +155,7 @@ run_sort "${GUFI_FIND} -printf '%-22f %+22f'"
 run_sort "${GUFI_FIND} -fprint ${FPRINT} && cat ${FPRINT}"
 
 # bad escapes and directives
-run_no_sort "${GUFI_FIND} -printf '%z %z \\z' -maxdepth 0 -type d"
+run_no_sort "${GUFI_FIND} -printf '%z %z \\z' -maxdepth 2 -type d"
 
 # GUFI specific flags
 run_no_sort "${GUFI_FIND} --numresults 5"
@@ -163,7 +163,7 @@ run_no_sort "${GUFI_FIND} --smallest -type f"
 run_no_sort "${GUFI_FIND} --largest  -type f"
 
 # multiple input directories
-run_sort "${GUFI_FIND} directory leaf_directory"
+run_sort "${GUFI_FIND} ${BASENAME}/directory ${BASENAME}/leaf_directory"
 
 run_sort "${GUFI_FIND} -uid   \"${USER_ID}\""   | sed "s/\"${USER_ID}\"/${TEST_USER_ID}/g;"
 run_sort "${GUFI_FIND} -user  \"${USER_NAME}\"" | sed "s/\"${USER_NAME}\"/${TEST_USER_NAME}/g;"

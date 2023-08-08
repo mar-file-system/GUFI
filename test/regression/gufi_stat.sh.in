@@ -88,7 +88,7 @@ fixed_size=(
 echo "# first line of default print"
 for entry in "${fixed_size[@]}"
 do
-    ${GUFI_STAT} "${entry}" | head -n 1
+    ${GUFI_STAT} "${BASENAME}/${entry}" | head -n 1
 done | remove_root
 echo
 
@@ -96,17 +96,17 @@ echo "# first two columns of terse format"
 for entry in "${fixed_size[@]}"
 do
     # shellcheck disable=SC2016
-    ${GUFI_STAT} --terse "${entry}" | @AWK@ '{ print $1 " " $2 }'
+    ${GUFI_STAT} --terse "${BASENAME}/${entry}" | @AWK@ '{ print $1 " " $2 }'
 done | remove_root | sort
 echo
 
-run_no_sort "${GUFI_STAT} --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${fixed_size[0]}\""
+run_no_sort "${GUFI_STAT} --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${BASENAME}/${fixed_size[0]}\""
 
-echo "${GUFI_STAT} --terse \"${fixed_size[0]}\"" | replace
-${GUFI_STAT} --terse "${fixed_size[0]}" | @AWK@ "{ \$3=0; \$5=${TEST_USER_ID}; \$6=${TEST_GROUP_ID}; \$16=0; print }"
+echo "${GUFI_STAT} --terse \"${BASENAME}/${fixed_size[0]}\"" | replace
+${GUFI_STAT} --terse "${BASENAME}/${fixed_size[0]}" | @AWK@ "{ \$3=0; \$5=${TEST_USER_ID}; \$6=${TEST_GROUP_ID}; \$16=0; print }"
 
-run_no_sort "${GUFI_STAT} bad/directory"
-run_no_sort "${GUFI_STAT} badfile"
+run_no_sort "${GUFI_STAT} ${BASENAME}/bad/directory"
+run_no_sort "${GUFI_STAT} ${BASENAME}/badfile"
 ) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_stat.expected "${OUTPUT}"

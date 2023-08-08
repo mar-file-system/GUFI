@@ -84,6 +84,14 @@ set(BINARIES
   querydbs
 )
 
+set(PYTHON
+  gufi_find
+  gufi_getfattr
+  gufi_ls
+  gufi_stat
+  gufi_stats
+)
+
 set(EXAMPLES
   deluidgidsummaryrecs
   generategidsummary
@@ -113,14 +121,6 @@ if (CMAKE_CXX_COMPILER)
     verifytraceintree
   )
 endif()
-
-set(PYTHON
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stat
-  gufi_stats
-)
 
 # .sh and .expected
 set(SH_AND_EXPECTED

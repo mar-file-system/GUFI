@@ -91,44 +91,48 @@ get_function_name gufi_find
 get_function_name gufi_ls
 get_function_name gufi_stats
 
-echo "Root entries:"
+echo "Search entries:"
 tabtab ""
 echo
 
-echo "Root entries starting with \".\":"
-tabtab "."
+echo "Index root entries:"
+tabtab "${BASENAME}"
 echo
 
-echo "Root entries starting with \"1\":"
-tabtab 1
+echo "Index root entries starting with \".\":"
+tabtab "${BASENAME}/."
 echo
 
-echo "Root entries starting with \"o\":"
-tabtab o
+echo "Index root entries starting with \"1\":"
+tabtab "${BASENAME}/1"
 echo
 
-echo "Root entries starting with \"w\":"
-tabtab w
+echo "Index root entries starting with \"o\":"
+tabtab "${BASENAME}/o"
 echo
 
-echo "Root entries starting with \"dir\":"
-tabtab dir
+echo "Index root entries starting with \"w\" (none):"
+tabtab "${BASENAME}/w"
+echo
+
+echo "Index root entries starting with \"dir\":"
+tabtab "${BASENAME}/dir"
 echo
 
 echo "The \"directory\" directory:"
-tabtab directory
+tabtab "${BASENAME}/directory"
 echo
 
 echo "The \"directory\" directory with a slash:"
-tabtab directory/
+tabtab "${BASENAME}/directory/"
 echo
 
 echo "Directories under directory whose names start with \"sub\":"
-tabtab directory/sub
+tabtab "${BASENAME}/directory/sub"
 echo
 
 echo "The \"directory/subdirectory\" directory:"
-tabtab directory/subdirectory
+tabtab "${BASENAME}/directory/subdirectory"
 echo
 ) | tee "${OUTPUT}"
 

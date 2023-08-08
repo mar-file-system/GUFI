@@ -21,13 +21,13 @@ Thread Pool Size:            1
 Files/Links Limit:           0
 
 Not Processed:               0
-Cannot Roll Up:              4
+Cannot Roll Up:              5
     Subdirectories:
-        min:                 4
+        min:                 1
         max:                 4
         median:           4.00
-        sum:                16
-        average:          4.00
+        sum:                17
+        average:          3.40
     Files/Links:
         min:                 0
         max:                 0
@@ -36,10 +36,10 @@ Cannot Roll Up:              4
         average:          0.00
     Level:
         min:                 0
-        max:                 1
-        median:           1.00
-        sum:                 3
-        average:          0.75
+        max:                 2
+        median:           2.00
+        sum:                 7
+        average:          1.40
     Too Many Before:         0
     Too Many After:          0
 Can Roll Up:                65
@@ -56,17 +56,17 @@ Can Roll Up:                65
         sum:                96
         average:          1.48
     Level:
-        min:                 1
-        max:                 3
-        median:           3.00
-        sum:               177
-        average:          2.72
+        min:                 2
+        max:                 4
+        median:           4.00
+        sum:               242
+        average:          3.72
     Successful:             65
     Failed:                  0
 Files/Links:    96
-Directories:    69 (21 empty)
-Total:          165
-Remaining Dirs: 17 (24.64%)
+Directories:    70 (22 empty)
+Total:          166
+Remaining Dirs: 18 (25.71%)
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "prefix" | wc -l
 69
 
@@ -104,316 +104,316 @@ $ gufi_find -type f | wc -l
 $ gufi_find | wc -l
 165
 
-$ gufi_ls
+$ gufi_ls prefix
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls o+rx
+$ gufi_ls prefix/o+rx
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls o+rx/o+rx
+$ gufi_ls prefix/o+rx/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/o+rx/dir1
+$ gufi_ls prefix/o+rx/o+rx/dir1
 file1
 
-$ gufi_ls o+rx/o+rx/dir2
+$ gufi_ls prefix/o+rx/o+rx/dir2
 file1
 file2
 
-$ gufi_ls o+rx/o+rx/dir3
+$ gufi_ls prefix/o+rx/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls o+rx/ugo
+$ gufi_ls prefix/o+rx/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/ugo/dir1
+$ gufi_ls prefix/o+rx/ugo/dir1
 file1
 
-$ gufi_ls o+rx/ugo/dir2
+$ gufi_ls prefix/o+rx/ugo/dir2
 file1
 file2
 
-$ gufi_ls o+rx/ugo/dir3
+$ gufi_ls prefix/o+rx/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls o+rx/ug
+$ gufi_ls prefix/o+rx/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/ug/dir1
+$ gufi_ls prefix/o+rx/ug/dir1
 file1
 
-$ gufi_ls o+rx/ug/dir2
+$ gufi_ls prefix/o+rx/ug/dir2
 file1
 file2
 
-$ gufi_ls o+rx/ug/dir3
+$ gufi_ls prefix/o+rx/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls o+rx/u
+$ gufi_ls prefix/o+rx/u
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/u/dir1
+$ gufi_ls prefix/o+rx/u/dir1
 file1
 
-$ gufi_ls o+rx/u/dir2
+$ gufi_ls prefix/o+rx/u/dir2
 file1
 file2
 
-$ gufi_ls o+rx/u/dir3
+$ gufi_ls prefix/o+rx/u/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo
+$ gufi_ls prefix/ugo
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls ugo/o+rx
+$ gufi_ls prefix/ugo/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/o+rx/dir1
+$ gufi_ls prefix/ugo/o+rx/dir1
 file1
 
-$ gufi_ls ugo/o+rx/dir2
+$ gufi_ls prefix/ugo/o+rx/dir2
 file1
 file2
 
-$ gufi_ls ugo/o+rx/dir3
+$ gufi_ls prefix/ugo/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo/ugo
+$ gufi_ls prefix/ugo/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/ugo/dir1
+$ gufi_ls prefix/ugo/ugo/dir1
 file1
 
-$ gufi_ls ugo/ugo/dir2
+$ gufi_ls prefix/ugo/ugo/dir2
 file1
 file2
 
-$ gufi_ls ugo/ugo/dir3
+$ gufi_ls prefix/ugo/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo/ug
+$ gufi_ls prefix/ugo/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/ug/dir1
+$ gufi_ls prefix/ugo/ug/dir1
 file1
 
-$ gufi_ls ugo/ug/dir2
+$ gufi_ls prefix/ugo/ug/dir2
 file1
 file2
 
-$ gufi_ls ugo/ug/dir3
+$ gufi_ls prefix/ugo/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo/u
+$ gufi_ls prefix/ugo/u
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/u/dir1
+$ gufi_ls prefix/ugo/u/dir1
 file1
 
-$ gufi_ls ugo/u/dir2
+$ gufi_ls prefix/ugo/u/dir2
 file1
 file2
 
-$ gufi_ls ugo/u/dir3
+$ gufi_ls prefix/ugo/u/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug
+$ gufi_ls prefix/ug
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls ug/o+rx
+$ gufi_ls prefix/ug/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/o+rx/dir1
+$ gufi_ls prefix/ug/o+rx/dir1
 file1
 
-$ gufi_ls ug/o+rx/dir2
+$ gufi_ls prefix/ug/o+rx/dir2
 file1
 file2
 
-$ gufi_ls ug/o+rx/dir3
+$ gufi_ls prefix/ug/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug/ugo
+$ gufi_ls prefix/ug/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/ugo/dir1
+$ gufi_ls prefix/ug/ugo/dir1
 file1
 
-$ gufi_ls ug/ugo/dir2
+$ gufi_ls prefix/ug/ugo/dir2
 file1
 file2
 
-$ gufi_ls ug/ugo/dir3
+$ gufi_ls prefix/ug/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug/ug
+$ gufi_ls prefix/ug/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/ug/dir1
+$ gufi_ls prefix/ug/ug/dir1
 file1
 
-$ gufi_ls ug/ug/dir2
+$ gufi_ls prefix/ug/ug/dir2
 file1
 file2
 
-$ gufi_ls ug/ug/dir3
+$ gufi_ls prefix/ug/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug/u
+$ gufi_ls prefix/ug/u
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/u/dir1
+$ gufi_ls prefix/ug/u/dir1
 file1
 
-$ gufi_ls ug/u/dir2
+$ gufi_ls prefix/ug/u/dir2
 file1
 file2
 
-$ gufi_ls ug/u/dir3
+$ gufi_ls prefix/ug/u/dir3
 file1
 file2
 file3
 
-$ gufi_ls u
+$ gufi_ls prefix/u
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls u/o+rx
+$ gufi_ls prefix/u/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls u/o+rx/dir1
+$ gufi_ls prefix/u/o+rx/dir1
 file1
 
-$ gufi_ls u/o+rx/dir2
+$ gufi_ls prefix/u/o+rx/dir2
 file1
 file2
 
-$ gufi_ls u/o+rx/dir3
+$ gufi_ls prefix/u/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls u/ugo
+$ gufi_ls prefix/u/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls u/ugo/dir1
+$ gufi_ls prefix/u/ugo/dir1
 file1
 
-$ gufi_ls u/ugo/dir2
+$ gufi_ls prefix/u/ugo/dir2
 file1
 file2
 
-$ gufi_ls u/ugo/dir3
+$ gufi_ls prefix/u/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls u/ug
+$ gufi_ls prefix/u/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls u/ug/dir1
+$ gufi_ls prefix/u/ug/dir1
 file1
 
-$ gufi_ls u/ug/dir2
+$ gufi_ls prefix/u/ug/dir2
 file1
 file2
 
-$ gufi_ls u/ug/dir3
+$ gufi_ls prefix/u/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls u/u
+$ gufi_ls prefix/u/u
 dir1
 dir2
 dir3
 
-$ gufi_ls u/u/dir1
+$ gufi_ls prefix/u/u/dir1
 file1
 
-$ gufi_ls u/u/dir2
+$ gufi_ls prefix/u/u/dir2
 file1
 file2
 
-$ gufi_ls u/u/dir3
+$ gufi_ls prefix/u/u/dir3
 file1
 file2
 file3
 
 # 1 less because gufi_ls does not list the input dir
 $ gufi_ls -R | wc -l
-164
+165
 
-$ gufi_stats    depth
+$ gufi_stats    depth prefix
 0
 
-$ gufi_stats -r depth
+$ gufi_stats -r depth prefix
 prefix 0
 prefix/o+rx 1
 prefix/o+rx/o+rx 2
@@ -484,10 +484,10 @@ prefix/ugo/ugo/dir1 3
 prefix/ugo/ugo/dir2 3
 prefix/ugo/ugo/dir3 3
 
-$ gufi_stats    filecount
+$ gufi_stats    filecount prefix
 0
 
-$ gufi_stats -r filecount
+$ gufi_stats -r filecount prefix
 prefix 0
 prefix/o+rx 0
 prefix/o+rx/o+rx 0
@@ -558,16 +558,16 @@ prefix/ugo/ugo/dir1 1
 prefix/ugo/ugo/dir2 2
 prefix/ugo/ugo/dir3 3
 
-$ gufi_stats    total-filecount
+$ gufi_stats    total-filecount prefix
 root 96
 
-$ gufi_stats -c total-filecount
+$ gufi_stats -c total-filecount prefix
 96
 
-$ gufi_stats    dircount
+$ gufi_stats    dircount prefix
 4
 
-$ gufi_stats -r dircount
+$ gufi_stats -r dircount prefix
 prefix 4
 prefix/o+rx 4
 prefix/o+rx/o+rx 3
@@ -638,10 +638,10 @@ prefix/ugo/ugo/dir1 0
 prefix/ugo/ugo/dir2 0
 prefix/ugo/ugo/dir3 0
 
-$ gufi_stats    total-dircount
+$ gufi_stats    total-dircount prefix
 root 5
 
-$ gufi_stats -c total-dircount
+$ gufi_stats -c total-dircount prefix
 69
 
 Creating GUFI Index prefix with 1 threads
@@ -654,13 +654,13 @@ Thread Pool Size:            1
 Files/Links Limit:           3
 
 Not Processed:               0
-Cannot Roll Up:             21
+Cannot Roll Up:             22
     Subdirectories:
-        min:                 3
+        min:                 1
         max:                 4
         median:           3.00
-        sum:                68
-        average:          3.24
+        sum:                69
+        average:          3.14
     Files/Links:
         min:                 0
         max:                 0
@@ -669,10 +669,10 @@ Cannot Roll Up:             21
         average:          0.00
     Level:
         min:                 0
-        max:                 2
-        median:           2.00
-        sum:                36
-        average:          1.71
+        max:                 3
+        median:           3.00
+        sum:                57
+        average:          2.59
     Too Many Before:         0
     Too Many After:         16
         min:                 6
@@ -694,17 +694,17 @@ Can Roll Up:                48
         sum:                96
         average:          2.00
     Level:
-        min:                 3
-        max:                 3
-        median:           3.00
-        sum:               144
-        average:          3.00
+        min:                 4
+        max:                 4
+        median:           4.00
+        sum:               192
+        average:          4.00
     Successful:             48
     Failed:                  0
 Files/Links:    96
-Directories:    69 (21 empty)
-Total:          165
-Remaining Dirs: 69 (100.00%)
+Directories:    70 (22 empty)
+Total:          166
+Remaining Dirs: 70 (100.00%)
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" "prefix" | wc -l
 69
 
@@ -794,316 +794,316 @@ $ gufi_find -type f | wc -l
 $ gufi_find | wc -l
 165
 
-$ gufi_ls
+$ gufi_ls prefix
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls o+rx
+$ gufi_ls prefix/o+rx
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls o+rx/o+rx
+$ gufi_ls prefix/o+rx/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/o+rx/dir1
+$ gufi_ls prefix/o+rx/o+rx/dir1
 file1
 
-$ gufi_ls o+rx/o+rx/dir2
+$ gufi_ls prefix/o+rx/o+rx/dir2
 file1
 file2
 
-$ gufi_ls o+rx/o+rx/dir3
+$ gufi_ls prefix/o+rx/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls o+rx/ugo
+$ gufi_ls prefix/o+rx/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/ugo/dir1
+$ gufi_ls prefix/o+rx/ugo/dir1
 file1
 
-$ gufi_ls o+rx/ugo/dir2
+$ gufi_ls prefix/o+rx/ugo/dir2
 file1
 file2
 
-$ gufi_ls o+rx/ugo/dir3
+$ gufi_ls prefix/o+rx/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls o+rx/ug
+$ gufi_ls prefix/o+rx/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/ug/dir1
+$ gufi_ls prefix/o+rx/ug/dir1
 file1
 
-$ gufi_ls o+rx/ug/dir2
+$ gufi_ls prefix/o+rx/ug/dir2
 file1
 file2
 
-$ gufi_ls o+rx/ug/dir3
+$ gufi_ls prefix/o+rx/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls o+rx/u
+$ gufi_ls prefix/o+rx/u
 dir1
 dir2
 dir3
 
-$ gufi_ls o+rx/u/dir1
+$ gufi_ls prefix/o+rx/u/dir1
 file1
 
-$ gufi_ls o+rx/u/dir2
+$ gufi_ls prefix/o+rx/u/dir2
 file1
 file2
 
-$ gufi_ls o+rx/u/dir3
+$ gufi_ls prefix/o+rx/u/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo
+$ gufi_ls prefix/ugo
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls ugo/o+rx
+$ gufi_ls prefix/ugo/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/o+rx/dir1
+$ gufi_ls prefix/ugo/o+rx/dir1
 file1
 
-$ gufi_ls ugo/o+rx/dir2
+$ gufi_ls prefix/ugo/o+rx/dir2
 file1
 file2
 
-$ gufi_ls ugo/o+rx/dir3
+$ gufi_ls prefix/ugo/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo/ugo
+$ gufi_ls prefix/ugo/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/ugo/dir1
+$ gufi_ls prefix/ugo/ugo/dir1
 file1
 
-$ gufi_ls ugo/ugo/dir2
+$ gufi_ls prefix/ugo/ugo/dir2
 file1
 file2
 
-$ gufi_ls ugo/ugo/dir3
+$ gufi_ls prefix/ugo/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo/ug
+$ gufi_ls prefix/ugo/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/ug/dir1
+$ gufi_ls prefix/ugo/ug/dir1
 file1
 
-$ gufi_ls ugo/ug/dir2
+$ gufi_ls prefix/ugo/ug/dir2
 file1
 file2
 
-$ gufi_ls ugo/ug/dir3
+$ gufi_ls prefix/ugo/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls ugo/u
+$ gufi_ls prefix/ugo/u
 dir1
 dir2
 dir3
 
-$ gufi_ls ugo/u/dir1
+$ gufi_ls prefix/ugo/u/dir1
 file1
 
-$ gufi_ls ugo/u/dir2
+$ gufi_ls prefix/ugo/u/dir2
 file1
 file2
 
-$ gufi_ls ugo/u/dir3
+$ gufi_ls prefix/ugo/u/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug
+$ gufi_ls prefix/ug
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls ug/o+rx
+$ gufi_ls prefix/ug/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/o+rx/dir1
+$ gufi_ls prefix/ug/o+rx/dir1
 file1
 
-$ gufi_ls ug/o+rx/dir2
+$ gufi_ls prefix/ug/o+rx/dir2
 file1
 file2
 
-$ gufi_ls ug/o+rx/dir3
+$ gufi_ls prefix/ug/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug/ugo
+$ gufi_ls prefix/ug/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/ugo/dir1
+$ gufi_ls prefix/ug/ugo/dir1
 file1
 
-$ gufi_ls ug/ugo/dir2
+$ gufi_ls prefix/ug/ugo/dir2
 file1
 file2
 
-$ gufi_ls ug/ugo/dir3
+$ gufi_ls prefix/ug/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug/ug
+$ gufi_ls prefix/ug/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/ug/dir1
+$ gufi_ls prefix/ug/ug/dir1
 file1
 
-$ gufi_ls ug/ug/dir2
+$ gufi_ls prefix/ug/ug/dir2
 file1
 file2
 
-$ gufi_ls ug/ug/dir3
+$ gufi_ls prefix/ug/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls ug/u
+$ gufi_ls prefix/ug/u
 dir1
 dir2
 dir3
 
-$ gufi_ls ug/u/dir1
+$ gufi_ls prefix/ug/u/dir1
 file1
 
-$ gufi_ls ug/u/dir2
+$ gufi_ls prefix/ug/u/dir2
 file1
 file2
 
-$ gufi_ls ug/u/dir3
+$ gufi_ls prefix/ug/u/dir3
 file1
 file2
 file3
 
-$ gufi_ls u
+$ gufi_ls prefix/u
 o+rx
 u
 ug
 ugo
 
-$ gufi_ls u/o+rx
+$ gufi_ls prefix/u/o+rx
 dir1
 dir2
 dir3
 
-$ gufi_ls u/o+rx/dir1
+$ gufi_ls prefix/u/o+rx/dir1
 file1
 
-$ gufi_ls u/o+rx/dir2
+$ gufi_ls prefix/u/o+rx/dir2
 file1
 file2
 
-$ gufi_ls u/o+rx/dir3
+$ gufi_ls prefix/u/o+rx/dir3
 file1
 file2
 file3
 
-$ gufi_ls u/ugo
+$ gufi_ls prefix/u/ugo
 dir1
 dir2
 dir3
 
-$ gufi_ls u/ugo/dir1
+$ gufi_ls prefix/u/ugo/dir1
 file1
 
-$ gufi_ls u/ugo/dir2
+$ gufi_ls prefix/u/ugo/dir2
 file1
 file2
 
-$ gufi_ls u/ugo/dir3
+$ gufi_ls prefix/u/ugo/dir3
 file1
 file2
 file3
 
-$ gufi_ls u/ug
+$ gufi_ls prefix/u/ug
 dir1
 dir2
 dir3
 
-$ gufi_ls u/ug/dir1
+$ gufi_ls prefix/u/ug/dir1
 file1
 
-$ gufi_ls u/ug/dir2
+$ gufi_ls prefix/u/ug/dir2
 file1
 file2
 
-$ gufi_ls u/ug/dir3
+$ gufi_ls prefix/u/ug/dir3
 file1
 file2
 file3
 
-$ gufi_ls u/u
+$ gufi_ls prefix/u/u
 dir1
 dir2
 dir3
 
-$ gufi_ls u/u/dir1
+$ gufi_ls prefix/u/u/dir1
 file1
 
-$ gufi_ls u/u/dir2
+$ gufi_ls prefix/u/u/dir2
 file1
 file2
 
-$ gufi_ls u/u/dir3
+$ gufi_ls prefix/u/u/dir3
 file1
 file2
 file3
 
 # 1 less because gufi_ls does not list the input dir
 $ gufi_ls -R | wc -l
-164
+165
 
-$ gufi_stats    depth
+$ gufi_stats    depth prefix
 0
 
-$ gufi_stats -r depth
+$ gufi_stats -r depth prefix
 prefix 0
 prefix/o+rx 1
 prefix/o+rx/o+rx 2
@@ -1174,10 +1174,10 @@ prefix/ugo/ugo/dir1 3
 prefix/ugo/ugo/dir2 3
 prefix/ugo/ugo/dir3 3
 
-$ gufi_stats    filecount
+$ gufi_stats    filecount prefix
 0
 
-$ gufi_stats -r filecount
+$ gufi_stats -r filecount prefix
 prefix 0
 prefix/o+rx 0
 prefix/o+rx/o+rx 0
@@ -1248,16 +1248,16 @@ prefix/ugo/ugo/dir1 1
 prefix/ugo/ugo/dir2 2
 prefix/ugo/ugo/dir3 3
 
-$ gufi_stats    total-filecount
+$ gufi_stats    total-filecount prefix
 root 96
 
-$ gufi_stats -c total-filecount
+$ gufi_stats -c total-filecount prefix
 96
 
-$ gufi_stats    dircount
+$ gufi_stats    dircount prefix
 4
 
-$ gufi_stats -r dircount
+$ gufi_stats -r dircount prefix
 prefix 4
 prefix/o+rx 4
 prefix/o+rx/o+rx 3
@@ -1328,9 +1328,9 @@ prefix/ugo/ugo/dir1 0
 prefix/ugo/ugo/dir2 0
 prefix/ugo/ugo/dir3 0
 
-$ gufi_stats    total-dircount
+$ gufi_stats    total-dircount prefix
 root 5
 
-$ gufi_stats -c total-dircount
+$ gufi_stats -c total-dircount prefix
 69
 

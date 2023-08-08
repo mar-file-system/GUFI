@@ -77,18 +77,7 @@ Failed to open trace file for each thread
 
 # bad index path
 $ gufi_trace2index -d "|" -n "2" "trace" "prefix/1KB" 2> >(sort)
-Creating GUFI Index prefix/1KB with 2 threads
-Dirs:                5 (0 empty)
-Files:               14
-Total:               19
-
-Total Dirs:          5
-Total Files:         14
-Dupdir failure: "prefix/1KB/prefix": Not a directory (20)
-Dupdir failure: "prefix/1KB/prefix/directory": Not a directory (20)
-Dupdir failure: "prefix/1KB/prefix/directory/subdirectory": Not a directory (20)
-Dupdir failure: "prefix/1KB/prefix/leaf_directory": Not a directory (20)
-Dupdir failure: "prefix/1KB/prefix/unusual#? directory ,": Not a directory (20)
+Could not create directory prefix/1KB
 
 
 # empty trace

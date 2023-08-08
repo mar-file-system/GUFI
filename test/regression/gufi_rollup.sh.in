@@ -84,9 +84,9 @@ echo "# ${GUFI_ROLLUP} help" | replace
 run_no_sort "${GUFI_ROLLUP}"
 
 do_tests() {
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${INDEXROOT}\" | wc -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
-    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${INDEXROOT}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${SEARCH}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${SEARCH}\" | wc -l"
+    run_no_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"${SEARCH}\" | wc -l"
 
     run_sort "${GUFI_QUERY} -d \" \" -T \"SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1\" \"${INDEXROOT}\""
 
@@ -94,16 +94,16 @@ do_tests() {
     run_no_sort "${GUFI_FIND} -type f | wc -l"
     run_no_sort "${GUFI_FIND} | wc -l"
 
-    run_no_sort "${GUFI_LS}"
+    run_no_sort "${GUFI_LS} ${BASENAME}"
     for level1 in "o+rx" "ugo" "ug" "u"
     do
-        run_no_sort "${GUFI_LS} ${level1}"
+        run_no_sort "${GUFI_LS} ${BASENAME}/${level1}"
         for level2 in "o+rx" "ugo" "ug" "u"
         do
-            run_no_sort "${GUFI_LS} ${level1}/${level2}"
+            run_no_sort "${GUFI_LS} ${BASENAME}/${level1}/${level2}"
             for level3 in "dir1" "dir2" "dir3"
             do
-                run_no_sort "${GUFI_LS} ${level1}/${level2}/${level3}"
+                run_no_sort "${GUFI_LS} ${BASENAME}/${level1}/${level2}/${level3}"
             done
         done
     done
@@ -111,30 +111,30 @@ do_tests() {
     echo "# 1 less because gufi_ls does not list the input dir"
     run_no_sort "${GUFI_LS} -R | wc -l"
 
-    run_sort "${GUFI_STATS}    depth"
-    run_sort "${GUFI_STATS} -r depth"
+    run_sort "${GUFI_STATS}    depth ${BASENAME}"
+    run_sort "${GUFI_STATS} -r depth ${BASENAME}"
 
-    run_sort "${GUFI_STATS}    filecount"
-    run_sort "${GUFI_STATS} -r filecount"
+    run_sort "${GUFI_STATS}    filecount ${BASENAME}"
+    run_sort "${GUFI_STATS} -r filecount ${BASENAME}"
 
-    run_sort "${GUFI_STATS}    total-filecount"
-    run_sort "${GUFI_STATS} -c total-filecount"
+    run_sort "${GUFI_STATS}    total-filecount ${BASENAME}"
+    run_sort "${GUFI_STATS} -c total-filecount ${BASENAME}"
 
-    run_sort "${GUFI_STATS}    dircount"
-    run_sort "${GUFI_STATS} -r dircount"
+    run_sort "${GUFI_STATS}    dircount ${BASENAME}"
+    run_sort "${GUFI_STATS} -r dircount ${BASENAME}"
 
-    run_sort "${GUFI_STATS}    total-dircount"
-    run_sort "${GUFI_STATS} -c total-dircount"
+    run_sort "${GUFI_STATS}    total-dircount ${BASENAME}"
+    run_sort "${GUFI_STATS} -c total-dircount ${BASENAME}"
 }
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
-"${GUFI_ROLLUP}" "${INDEXROOT}"
+"${GUFI_ROLLUP}" "${SEARCH}"
 do_tests
 
 rm -r "${SEARCH}"
 
 "${GUFI_DIR2INDEX}" "${SRCDIR}" "${SEARCH}"
-"${GUFI_ROLLUP}" -L 3 "${INDEXROOT}"
+"${GUFI_ROLLUP}" -L 3 "${SEARCH}"
 do_tests
 ) | remove_indexing_time | replace | tee "${OUTPUT}"
 

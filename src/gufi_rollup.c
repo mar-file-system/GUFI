@@ -327,11 +327,8 @@ struct RollUp {
 
 /* ************************************** */
 /* get permissions from directory entries */
-const char PERM_SQL[] = "SELECT "
-    "(SELECT mode FROM summary WHERE isroot == 1), "
-    "(SELECT uid  FROM summary WHERE isroot == 1), "
-    "(SELECT gid  FROM summary WHERE isroot == 1), "
-    "(SELECT COUNT(*) FROM pentries)";
+const char PERM_SQL[] = "SELECT mode, uid, gid, (SELECT COUNT(*) FROM pentries) "
+                        "FROM " SUMMARY " WHERE isroot == 1;";
 
 struct Permissions {
     mode_t mode;

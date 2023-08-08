@@ -80,90 +80,90 @@ run_uidgid_size() {
 (
 run_no_sort "${GUFI_STATS} --help" | replace_argparse | sed '/^$/d;'
 
-run "${GUFI_STATS}    depth"
-run "${GUFI_STATS} -r depth"
+run "${GUFI_STATS}    depth \"${BASENAME}\""
+run "${GUFI_STATS} -r depth \"${BASENAME}\""
 
-run "${GUFI_STATS}    filesize"
-run "${GUFI_STATS} -r filesize"
+run "${GUFI_STATS}    filesize \"${BASENAME}\""
+run "${GUFI_STATS} -r filesize \"${BASENAME}\""
 
-run "${GUFI_STATS}    filecount"
-run "${GUFI_STATS} -r filecount"
+run "${GUFI_STATS}    filecount \"${BASENAME}\""
+run "${GUFI_STATS} -r filecount \"${BASENAME}\""
 
-run "${GUFI_STATS}    linkcount"
-run "${GUFI_STATS} -r linkcount"
+run "${GUFI_STATS}    linkcount \"${BASENAME}\""
+run "${GUFI_STATS} -r linkcount \"${BASENAME}\""
 
-run "${GUFI_STATS}    extensions"
-run "${GUFI_STATS} -r extensions"
+run "${GUFI_STATS}    extensions \"${BASENAME}\""
+run "${GUFI_STATS} -r extensions \"${BASENAME}\""
 
-run "${GUFI_STATS}    total-filesize"
-run "${GUFI_STATS} -c total-filesize"
+run "${GUFI_STATS}    total-filesize \"${BASENAME}\""
+run "${GUFI_STATS} -c total-filesize \"${BASENAME}\""
 
-run "${GUFI_STATS}    total-filecount"
-run "${GUFI_STATS} -c total-filecount"
+run "${GUFI_STATS}    total-filecount \"${BASENAME}\""
+run "${GUFI_STATS} -c total-filecount \"${BASENAME}\""
 
-run "${GUFI_STATS}    total-linkcount"
-run "${GUFI_STATS} -c total-linkcount"
+run "${GUFI_STATS}    total-linkcount \"${BASENAME}\""
+run "${GUFI_STATS} -c total-linkcount \"${BASENAME}\""
 
-run "${GUFI_STATS}    dircount"
-run "${GUFI_STATS} -r dircount"
+run "${GUFI_STATS}    dircount \"${BASENAME}\""
+run "${GUFI_STATS} -r dircount \"${BASENAME}\""
 
-run "${GUFI_STATS}    total-dircount"
-run "${GUFI_STATS} -c total-dircount"
+run "${GUFI_STATS}    total-dircount \"${BASENAME}\""
+run "${GUFI_STATS} -c total-dircount \"${BASENAME}\""
 
-run "${GUFI_STATS}    files-per-level"
-run "${GUFI_STATS} -c files-per-level"
+run "${GUFI_STATS}    files-per-level \"${BASENAME}\""
+run "${GUFI_STATS} -c files-per-level \"${BASENAME}\""
 
-run "${GUFI_STATS}    links-per-level"
-run "${GUFI_STATS} -c links-per-level"
+run "${GUFI_STATS}    links-per-level \"${BASENAME}\""
+run "${GUFI_STATS} -c links-per-level \"${BASENAME}\""
 
-run "${GUFI_STATS}    dirs-per-level"
-run "${GUFI_STATS} -c dirs-per-level"
+run "${GUFI_STATS}    dirs-per-level \"${BASENAME}\""
+run "${GUFI_STATS} -c dirs-per-level \"${BASENAME}\""
 
-run "${GUFI_STATS}    duplicate-names"
+run "${GUFI_STATS}    duplicate-names \"${BASENAME}\""
 
-run_uidgid_size "${GUFI_STATS} uid-size --order ASC"
-run_uidgid_size "${GUFI_STATS} uid-size --num-results 6 --order ASC"
-run_uidgid_size "${GUFI_STATS} uid-size --order DESC"
-run_uidgid_size "${GUFI_STATS} uid-size --num-results 6 --order DESC"
-run_uidgid_size "${GUFI_STATS} gid-size --order ASC"
-run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order ASC"
-run_uidgid_size "${GUFI_STATS} gid-size --order DESC"
-run_uidgid_size "${GUFI_STATS} gid-size --num-results 6 --order DESC"
+run_uidgid_size "${GUFI_STATS} --order ASC uid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --num-results 6 --order ASC uid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --order DESC uid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --num-results 6 --order DESC uid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --order ASC gid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --num-results 6 --order ASC gid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --order DESC gid-size \"${BASENAME}\""
+run_uidgid_size "${GUFI_STATS} --num-results 6 --order DESC gid-size \"${BASENAME}\""
 
 # bad flags
-run "${GUFI_STATS} -c depth"
-run "${GUFI_STATS} -r total-filesize"
-run "${GUFI_STATS} -c duplicate-names"
-run "${GUFI_STATS} -r duplicate-names"
+run "${GUFI_STATS} -c depth \"${BASENAME}\""
+run "${GUFI_STATS} -r total-filesize \"${BASENAME}\""
+run "${GUFI_STATS} -c duplicate-names \"${BASENAME}\""
+run "${GUFI_STATS} -r duplicate-names \"${BASENAME}\""
 
 # skip
-run_sort "${GUFI_STATS} -r depth --skip \"${SKIP}\""
+run_sort "${GUFI_STATS} --skip \"${SKIP}\" -r depth \"${BASENAME}\""
 
 # bad skip
-run_no_sort "${GUFI_STATS} -r depth --skip \"${SKIP}.bad\""
+run_no_sort "${GUFI_STATS} --skip \"${SKIP}.bad\" -r depth \"${BASENAME}\""
 
 # shellcheck disable=SC2050
 if [[ "@CMAKE_SYSTEM_NAME@" != "APPLE" ]] && [[ "@CMAKE_SYSTEM_NAME@" != "CYGWIN" ]]
 then
-    run "${GUFI_STATS}    leaf-dirs"
-    run "${GUFI_STATS} -r leaf-dirs"
+    run "${GUFI_STATS}    leaf-dirs \"${BASENAME}\""
+    run "${GUFI_STATS} -r leaf-dirs \"${BASENAME}\""
 
-    run "${GUFI_STATS}    leaf-depth"
-    run "${GUFI_STATS} -r leaf-depth"
+    run "${GUFI_STATS}    leaf-depth \"${BASENAME}\""
+    run "${GUFI_STATS} -r leaf-depth \"${BASENAME}\""
 
-    run "${GUFI_STATS}    leaf-files"
-    run "${GUFI_STATS} -r leaf-files"
+    run "${GUFI_STATS}    leaf-files \"${BASENAME}\""
+    run "${GUFI_STATS} -r leaf-files \"${BASENAME}\""
 
-    run "${GUFI_STATS}    total-leaf-files"
-    run "${GUFI_STATS} -c total-leaf-files"
+    run "${GUFI_STATS}    total-leaf-files \"${BASENAME}\""
+    run "${GUFI_STATS} -c total-leaf-files \"${BASENAME}\""
 
-    run "${GUFI_STATS}    average-leaf-files"
-    run "${GUFI_STATS}    average-leaf-links"
-    run "${GUFI_STATS}    average-leaf-size"
+    run "${GUFI_STATS}    average-leaf-files \"${BASENAME}\""
+    run "${GUFI_STATS}    average-leaf-links \"${BASENAME}\""
+    run "${GUFI_STATS}    average-leaf-size \"${BASENAME}\""
 
-    run "${GUFI_STATS}    median-leaf-files"
-    run "${GUFI_STATS}    median-leaf-links"
-    run "${GUFI_STATS}    median-leaf-size"
+    run "${GUFI_STATS}    median-leaf-files \"${BASENAME}\""
+    run "${GUFI_STATS}    median-leaf-links \"${BASENAME}\""
+    run "${GUFI_STATS}    median-leaf-size \"${BASENAME}\""
 fi
 ) |& remove_root | tee "${OUTPUT}"
 

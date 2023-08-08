@@ -7,23 +7,26 @@ __gufi
 gufi_stats completion function:
 __gufi
 
-Root entries:
+Search entries:
+prefix/
+
+Index root entries:
 .hidden 1KB 1MB directory/ file_symlink leaf_directory/ old_file repeat_name unusual#? directory ,/
 
-Root entries starting with ".":
-.hidden 
+Index root entries starting with ".":
+prefix/.hidden 
 
-Root entries starting with "1":
+Index root entries starting with "1":
 1KB 1MB
 
-Root entries starting with "o":
-old_file 
+Index root entries starting with "o":
+prefix/old_file 
 
-Root entries starting with "w":
+Index root entries starting with "w" (none):
+prefix/
 
-
-Root entries starting with "dir":
-directory/
+Index root entries starting with "dir":
+prefix/directory/
 
 The "directory" directory:
 executable readonly subdirectory/ writable
@@ -32,7 +35,7 @@ The "directory" directory with a slash:
 executable readonly subdirectory/ writable
 
 Directories under directory whose names start with "sub":
-directory/subdirectory/
+prefix/directory/subdirectory/
 
 The "directory/subdirectory" directory:
 directory_symlink repeat_name
