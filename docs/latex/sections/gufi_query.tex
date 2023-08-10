@@ -62,21 +62,14 @@
 
 \subsection{\gufiquery}
 
-\gufiquery is the main tool used for accessing indexes. Arbitrary SQL
-statements are passed into \gufiquery to run on the individual
-databases, allowing for anything SQL can do to be done on the
-databases in an index, including modifying the contents of each
-database. To prevent accidental modifications from occuring, indexes
-are opened in read-only mode by default.
+\gufiquery is the main tool used for accessing indexes.
 
-Because \gufiquery uses SQL statements for database access, caller
-will need to know about GUFI's database and table schemas. We expect
-only ``advanced'' users such as administrators and developers to use
+\gufiquery takes in SQL statements and applies them to each database
+in the index in a specific way. Because of this, callers will need to
+know about GUFI's database and table schemas. We expect only
+``advanced'' users such as administrators and developers to use
 \gufiquery directly. Users who do not know how GUFI functions may call
 \gufiquery, but might not be able to use it properly.
-
-Just as indexing processes directories in parallel, the set of
-queries passed into \gufiquery run on directories in parallel.
 
 \subsubsection{Flags}
 
@@ -138,27 +131,49 @@ queries passed into \gufiquery run on directories in parallel.
     \hline
     -M \textless bytes\textgreater & target memory footprint \\
     \hline
+    -e & compress work items \\
+    \hline
   \end{tabular*}
   \caption{\label{tab:widgets} \gufiquery Flags and Arguments}
 \end{table}
 
-\subsubsection{Short Circuiting with Compound Queries}
-Although each table/view has a specific flag that they are associated
-with, there is no need to use them with the flag. Queries are
-free-form text, so there is no reliable way to limit their usage to a
-particular flag.
+\subsubsection{Flag/Table Associations}
+A \gufiquery call should use at least one of the \texttt{-T},
+\texttt{-S}, and \texttt{-E} flags to pass in SQL statements. Not
+passing in any SQL statements results in \gufiquery simply walking the
+tree and filling up the inode and dentries caches.
 
-The purpose of having separate flags was to allow for directory
-processing to be short-circuited: if \texttt{-T} fails to return any
-results, processing is stopped before running the \texttt{-S}
-query. Similarly, if \texttt{-S} does not return any results, the
-\texttt{-E} query is not run. This allows for threads to end the
-processing of a directory early if it is determined early on that no
-rows would be obtained from a later query. For example, if a query is
-searching for files larger than 1MB, but the \texttt{-S} query found
-that the range of file sizes is 1KB to 5KB, there is no need to run
-the \texttt{-E} query to get rows, since no rows will match in any
-case.
+\texttt{-T} should be used to query the \treesummary
+table. \texttt{-S} should be used to query the \summary table and its
+variants. \texttt{-E} should be used to query the \entries table and
+its variants.
+
+Note that user provided SQL statements are passed directly into
+SQLite\footnote{Anything that can be done with SQL can also be done on
+  the databases in an index. To prevent accidental modifications,
+  databases default to opening in read-only mode.} and thus
+associations between flags and tables are not
+enforced\footnote{Querying tables/views with the wrong flags may
+  result in unexpected output.}.
+
+\subsubsection{Short Circuiting with Compound Queries}
+At each directory, the set of user provided SQL statements run on the
+db.db file in the following order: if \texttt{-T} was provided, it
+will run if the optional \treesummary table exists in the database. If
+\texttt{-T} was not run or returned at least one row of results,
+\texttt{-S} will run if it was provided. If \texttt{-S} was not
+provided or returned at least one row of results, \texttt{-E} will run
+if it was provided.
+
+Conversely, if \texttt{-T} runs and does not return any results,
+processing is stopped before running the \texttt{-S} query. If
+\texttt{-S} does not return any results, the \texttt{-E} query is not
+run. This allows for threads to short circuit the processing of a
+directory if it is determined early on that no rows would be obtained
+from a later query. For example, if a query is searching for files
+larger than 1MB, but the \texttt{-S} query found that the range of
+file sizes is 1KB to 5KB, there is no need to run the \texttt{-E}
+query to get rows, since no rows will match in any case.
 
 To turn off short circuiting and always run all queries for each
 directory, pass the \texttt{-a} flag to \gufiquery.
@@ -189,11 +204,11 @@ querying the index must be aggregated for final processing.
 
 In order to handle these situations, the \texttt{-I} flag should be
 used to create per-thread intermediate tables that are written to by
-\texttt{-S} and \texttt{-E}. The intermediate table results will then
-be aggregated using \texttt{-J} into the final table created by
-\texttt{-K}. The rows stored in the final table are processed one last
-time as a whole, rather than as results from independent threads,
-using \texttt{-G}.
+\texttt{-T}, \texttt{-S}, and \texttt{-E}. The intermediate table
+results will then be aggregated using \texttt{-J} into the final table
+created by \texttt{-K}. The rows stored in the final table are
+processed one last time as a whole, rather than as results from
+independent threads, using \texttt{-G}.
 
 \subsubsection{Per-Thread Output Files}
 The \texttt{-o} flag causes results to be outputted to text
@@ -208,13 +223,13 @@ database files instead of text files. The resulting filenames follow
 the same creation rules as \texttt{-o}. However, the queries passed
 into \gufiquery need modifications. When writing in parallel,
 \texttt{-I} is needed to create the table for each per-thread output
-database. \texttt{-S} and \texttt{-E} should be modified to write to
-the per-thread tables in the same way as writing to the intermediate
-tables when aggregating. When writing aggregate results, \texttt{-G}
-is not needed, as \texttt{-J} already wrote the results into the
-aggregate table. However, \texttt{-G} may still be provided to get
-results during the \gufiquery in addition to queries on the results
-database file later on.
+database. \texttt{-T}, \texttt{-S}, and \texttt{-E} should be modified
+to write to the per-thread tables in the same way as writing to the
+intermediate tables when aggregating. When writing aggregate results
+to a database, \texttt{-G} is not needed as \texttt{-J} already wrote
+the results into the aggregate table. However, \texttt{-G} may still
+be provided to get results during the \gufiquery in addition to
+queries on the results database file later on.
 
 Output database files may be passed to the \querydbs executable for
 further processing.
