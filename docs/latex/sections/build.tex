@@ -62,7 +62,7 @@
 
 \section{Build}
 
-GUFI uses the CMake as its build system. CMake 3.1 or higher is
+GUFI uses CMake to generate Makefiles. CMake 3.1 or higher is
 required. From the root directory of the GUFI source, run:
 \begin{verbatim}
 mkdir build
@@ -82,7 +82,7 @@ cygwin, GCC (not MinGW), and with jemalloc turned off also works.
 OpenSUSE~12.3 was supported in the past, and may still work.
 
 \subsection{Environment Variables}
-\begin{table}[h]
+\begin{table}[h!]
 \centering
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
@@ -112,7 +112,7 @@ OpenSUSE~12.3 was supported in the past, and may still work.
 \end{table}
 
 \subsubsection{Dependencies}
-\begin{table}[H]
+\begin{table}[H] % do not change
 \centering
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
@@ -171,7 +171,7 @@ have effect.
 \end{table}
 
 \subsubsection{Client}
-\begin{table}[h!]
+\begin{table}[H]
 \centering
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline
@@ -218,7 +218,7 @@ Do not turn these off unless you know what you are doing:
 \end{table}
 
 \subsubsection{Docs}
-\begin{table}[h!]
+\begin{table}[H]
 \centering
 \begin{tabularx}{1.2\textwidth}{| l | X |}
   \hline

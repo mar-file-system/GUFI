@@ -73,7 +73,7 @@ know about GUFI's database and table schemas. We expect only
 
 \subsubsection{Flags}
 
-\begin{table} [H]
+\begin{table}[h!]
   \centering
   \begin{tabular*}{\linewidth}{l|p{0.5\linewidth}}
     Flag & Functionality \\
@@ -253,7 +253,7 @@ further processing.
 \indent \texttt{/path/to/index}
 
 \subsubsection{Visualizing the Workflow}
-\begin{figure} [H]
+\begin{figure}[h!]
   \centering
   \includegraphics[width=\textwidth]{images/gufi_query_main.png}
   \caption{Workflow of \gufiquery}
@@ -265,7 +265,7 @@ The core of \gufiquery is the \processdir function. This is where the
 function are run in parallel via the thread pool in order to quickly
 traverse and process an index.
 
-\begin{figure} [H]
+\begin{figure}[h!]
   \centering
   \includegraphics[width=\textwidth]{images/gufi_query_processdir.png}
   \caption{Workflow of \processdir}
@@ -274,7 +274,7 @@ traverse and process an index.
 \subsubsection{\querydb macro}
 \querydb is the macro used to execute SQL statements and handle errors.
 
-\begin{figure} [H]
+\begin{figure}[h!]
   \centering
   \includegraphics[width=\textwidth]{images/querydb_macro.png}
   \caption{\querydb macro workflow}

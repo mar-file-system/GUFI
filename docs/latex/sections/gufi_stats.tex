@@ -70,7 +70,7 @@ specifying the statistic desired. Each statistic has a default
 version, Most also have a more in-depth version that is specified by
 their category: recursive, cumulative, or other.
 
-\begin{table} [h]
+\begin{table}[h!]
   \centering
   \begin{tabular}{| l | r |}
     \hline
@@ -112,34 +112,36 @@ directory. Specifying \texttt{-r} or \texttt{-{}-recursive} will
 recursively descend the starting directory and return each
 subdirectory's statistic.
 \\\\
-\begin{tabular} {| l | l |}
-  \hline
-  Statistic & Description \\
-  \hline
-  depth & Get the depths of the provided directory relative to the root
-  directory \\
-  \hline
-  filesize & Get the size the files in the immediate directory \\
-  \hline
-  filecount & Get the number of files in the immediate directory \\
-  \hline
-  linkcount & Get the number of links in the immediate directory \\
-  \hline
-  dircount & Get the number of directories in the immediate directory \\
-  \hline
-  leaf-dirs & Get the leaf directories immediately under the current
-  directory \\
-  \hline
-  leaf-depth & Get the depth of the leaf directories immediately under
-  the current directory \\
-  \hline
-  leaf-files & Get number of files in the leaf directories immediately
-  under the current directory \\
-  \hline
-  leaf-links & Get number of links in the leaf directories immediately
-  under the current directory \\
-  \hline
-\end{tabular}
+\begin{table}[h!]
+  \begin{tabular} {| l | l |}
+    \hline
+    Statistic & Description \\
+    \hline
+    depth & Get the depths of the provided directory relative to the root
+    directory \\
+    \hline
+    filesize & Get the size the files in the immediate directory \\
+    \hline
+    filecount & Get the number of files in the immediate directory \\
+    \hline
+    linkcount & Get the number of links in the immediate directory \\
+    \hline
+    dircount & Get the number of directories in the immediate directory \\
+    \hline
+    leaf-dirs & Get the leaf directories immediately under the current
+    directory \\
+    \hline
+    leaf-depth & Get the depth of the leaf directories immediately under
+    the current directory \\
+    \hline
+    leaf-files & Get number of files in the leaf directories immediately
+    under the current directory \\
+    \hline
+    leaf-links & Get number of links in the leaf directories immediately
+    under the current directory \\
+    \hline
+  \end{tabular}
+\end{table}
 
 \subsubsection{Cumulative}
 These statistics will run a computation on an entire subtree. By
@@ -147,54 +149,58 @@ default, the results will be grouped together by UID. Specifying
 \texttt{-c} or \texttt{-{}-cumulative} will combine all of the results
 into a single sum.
 \\\\
-\begin{tabular} {| l | l |}
-  \hline
-  Statistic & Description \\
-  \hline
-  total-filesize & Get the total size taken up by the entire directory
-  \\
-  \hline
-  total-filecount & Get the total number of files under the directory \\
-  \hline
-  total-linkcount & Get the total number of links under the directory \\
-  \hline
-  total-dircount & Get the total number of directories under the
-  directory \\
-  \hline
-  total-leaf-files & Get total number of files in the leaf directories
-  under this directory \\
-  \hline
-  total-leaf-links & Get total number of links in the leaf directories
-  under this directory \\
-  \hline
-  files-per-level & Get counts of how many files are in each level of
-  the tree \\
-  \hline
-  links-per-level & Get counts of how many links are in each level of
-  the tree \\
-  \hline
-  dirs-per-level & Get counts of how many dirs are in each level of the
-  tree \\
-  \hline
-  average-leaf-files & Get average number of leaf files under the
-  provided directory \\
-  \hline
-  average-leaf-links & Get average number of leaf links under the
-  provided directory \\
-  \hline
-\end{tabular}
+\begin{table}[h!]
+  \begin{tabular} {| l | l |}
+    \hline
+    Statistic & Description \\
+    \hline
+    total-filesize & Get the total size taken up by the entire directory
+    \\
+    \hline
+    total-filecount & Get the total number of files under the directory \\
+    \hline
+    total-linkcount & Get the total number of links under the directory \\
+    \hline
+    total-dircount & Get the total number of directories under the
+    directory \\
+    \hline
+    total-leaf-files & Get total number of files in the leaf directories
+    under this directory \\
+    \hline
+    total-leaf-links & Get total number of links in the leaf directories
+    under this directory \\
+    \hline
+    files-per-level & Get counts of how many files are in each level of
+    the tree \\
+    \hline
+    links-per-level & Get counts of how many links are in each level of
+    the tree \\
+    \hline
+    dirs-per-level & Get counts of how many dirs are in each level of the
+    tree \\
+    \hline
+    average-leaf-files & Get average number of leaf files under the
+    provided directory \\
+    \hline
+    average-leaf-links & Get average number of leaf links under the
+    provided directory \\
+    \hline
+  \end{tabular}
+\end{table}
 
 \subsubsection{Other}
 Statistics under the ``other'' category do not have extra flags
 associated with them.
 \\\\
-\begin{tabular} {| l | l |}
-  \hline
-  Statistic & Description \\
-  \hline
-  median-leaf-files & Get median number of leaf files under the provided
-  directory \\
-  \hline
-  duplicate-names & Find files with matching names and sizes \\
-  \hline
-\end{tabular}
+\begin{table}[h!]
+  \begin{tabular} {| l | l |}
+    \hline
+    Statistic & Description \\
+    \hline
+    median-leaf-files & Get median number of leaf files under the provided
+    directory \\
+    \hline
+    duplicate-names & Find files with matching names and sizes \\
+    \hline
+  \end{tabular}
+\end{table}

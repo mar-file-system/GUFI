@@ -80,7 +80,7 @@ maximum file sizes, uids, and gids. These summary columns can be used
 to determine whether or not the \entries table needs to be queried
 at all.
 
-\begin{figure} [h]
+\begin{figure} [h!]
 \centering
 \includegraphics[width=1.0\textwidth]{images/Database_Schemas.png}
 \caption{\label{fig:Database Schema}Database schema}
@@ -98,10 +98,10 @@ In general, users should query the \pentries view over the \entries
 table in order to obtain complete sets of data to query on.
 
 \subsubsection{\pentriesrollup}
-In order to simplify rolling up indexes, the \pentries view was
-modified to also union with the \pentriesrollup table, which contains
-all child \pentries views copied into the current directory's database
-file.
+In order to simplify rolling up indexes (see
+Section~\ref{sec:rollup}), the \pentries view was modified to also
+union with the \pentriesrollup table, which contains all child
+\pentries views copied into the current directory's database file.
 
 \subsection{\vrsummary}
 The \vrsummary view is the \summary table with a handful of columns
@@ -141,8 +141,8 @@ easily populatable via a query)).
 
 \subsection{\vsummarygroup}
 The \vsummarygroup view provides access to the directory summary for
-each group (if this summary has been populated (not by default but
-easily populatable via a query)).
+each group (if this summary row has been created (not by default but
+easily created via a query)).
 
 \subsection{\vtsummarydir}
 The vtsummarydir view provides access to the entire tree directory
@@ -150,8 +150,8 @@ summary and not a partial directory summary (say by user or group).
 
 \subsection{\vtsummaryuser}
 The \vtsummaryuser view provides access to the tree directory summary
-for each user (if this summary has been populated (not by default but
-easily populatable via a query)).
+for each user (if this summary row has been created (not by default
+but easily created via a query)).
 
 \subsection{\vtsummarygroup}
 The \vtsummarygroup view provides access to the tree directory summary
