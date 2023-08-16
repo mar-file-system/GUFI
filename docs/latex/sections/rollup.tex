@@ -67,6 +67,7 @@ directories that need to be opened when querying by significant
 amounts while still obtaining the same results as an unmodified index.
 
 \subsubsection{Bottlenecks}
+\label{subsec:bottlenecks}
 During querying, every single directory runs a fixed set of
 operations:
 
@@ -172,27 +173,6 @@ Additional steps are needed to rollup xattrs:
   into the parent's external database's \xattrsrollup table instead.
 \end{itemize}
 
-\subsubsection{Schema Usage}
-Prior to rolling up, the \pentries view can be treated as an optional
-improvement to the \entries table. After rolling up, the \pentries
-view will have been updated extensively and will contain both the
-original \entries data as well as the rolled up data. However, the
-\vrpentries view should be preferred over the \pentries view. The
-\vrpentries view contains data from the \summary table that allows for
-the parent directory of each entry's row to be generated when the
-index is rolled up, rather than requiring users to do it themselves,
-which is error prone. The \vrpentries view can be used whether or not
-the index has been rolled up, and should be the preferred view for
-getting file and link data.
-
-Similarly, the \vrsummary view should be preferred over the \summary
-table whether or not the index has been rolled up, as it works in both
-cases.
-
-The \vrpentries and \vrsummary views were constructed specifically to
-make the usage of the \rpath SQL function consistent. See the
-\rpath entry in Table~\ref{tab:sqlwcontext} for details.
-
 \subsubsection{\gufirollup executable}
 In order to apply rollup to an index, run the \gufirollup executable:
 \\\\
@@ -204,13 +184,13 @@ performs the rollup operation on a directory once all of the
 directory's children have been processed as shown in
 Figure~\ref{fig:rollupfunction}.
 
-\begin{sidewaysfigure} [hp]
+\begin{sidewaysfigure} [!hp]
   \centering \includegraphics[width=\textwidth]{images/rollup.png}
   \caption{\gufirollup Workflow}
   \label{fig:rollupworkflow}
 \end{sidewaysfigure}
 
-\begin{figure} [hp]
+\begin{figure} [!hp]
   \centering
   \includegraphics[width=\textwidth]{images/rollup_function.png}
   \caption{Rollup Function Diagram}
@@ -221,3 +201,4 @@ Figure~\ref{fig:rollupfunction}.
 To remove rollup data from an index, run the \gufiunrollup executable:
 \\\\
 \indent \gufiunrollup \texttt{index\_root}
+\newpage

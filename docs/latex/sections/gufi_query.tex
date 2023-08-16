@@ -64,16 +64,16 @@
 
 \gufiquery is the main tool used for accessing indexes.
 
-\gufiquery takes in SQL statements and applies them to each database
-in the index in a specific way. Because of this, callers will need to
-know about GUFI's database and table schemas. We expect only
-``advanced'' users such as administrators and developers to use
-\gufiquery directly. Users who do not know how GUFI functions may call
-\gufiquery, but might not be able to use it properly.
+\gufiquery processes each directory in parallel, passing user provided
+SQL statements to the current directory's database. Because of this,
+callers will need to know about GUFI's database and table schemas. We
+expect only ``advanced'' users such as administrators and developers
+to use \gufiquery directly. Users who do not know how GUFI functions
+may call \gufiquery, but might not be able to use it properly.
 
 \subsubsection{Flags}
 
-\begin{table}[h!]
+\begin{table}[H]
   \centering
   \begin{tabular*}{\linewidth}{l|p{0.5\linewidth}}
     Flag & Functionality \\
@@ -139,14 +139,18 @@ know about GUFI's database and table schemas. We expect only
 
 \subsubsection{Flag/Table Associations}
 A \gufiquery call should use at least one of the \texttt{-T},
-\texttt{-S}, and \texttt{-E} flags to pass in SQL statements. Not
-passing in any SQL statements results in \gufiquery simply walking the
-tree and filling up the inode and dentries caches.
+\texttt{-S}, and \texttt{-E} flags to pass in SQL
+statements\footnote{Not passing in any SQL statements results in
+  \gufiquery simply walking the tree and filling up the inode and
+  dentries caches.}.
 
-\texttt{-T} should be used to query the \treesummary
-table. \texttt{-S} should be used to query the \summary table and its
-variants. \texttt{-E} should be used to query the \entries table and
-its variants.
+\begin{itemize}
+\item \texttt{-T} should be used to query the \treesummary table.
+\item \texttt{-S} should be used to query the \summary table and its
+  variants.
+\item \texttt{-E} should be used to query the \entries table and its
+  variants.
+\end{itemize}
 
 Note that user provided SQL statements are passed directly into
 SQLite\footnote{Anything that can be done with SQL can also be done on
@@ -155,6 +159,25 @@ SQLite\footnote{Anything that can be done with SQL can also be done on
 associations between flags and tables are not
 enforced\footnote{Querying tables/views with the wrong flags may
   result in unexpected output.}.
+
+Prior to rolling up, the \pentries view can be treated as an optional
+improvement to the \entries table. After rolling up, the \pentries
+view will have been updated extensively and will contain both the
+original \entries data as well as the rolled up data. Querying the
+\entries table of a rolled up index will return a subset of the total
+results that exist in the index since it only contains the current
+directory's information and subdirectories are not traversed. The
+\summary table was updated directly, so querying it will return all
+directory information.
+
+However, instead of querying the \summary table and switching between
+querying \entries and \pentries, the \vrpentries and \vrsummary views
+should always be used. These views contain data from the \summary
+table that allow for the path of each row relative to the starting
+path to be generated using the \rpath SQL function, whether or not the
+index has been rolled up, with consistent input arguments (see
+Table~\ref{tab:sqlwcontext} for details). These views and function
+were set up to help simpliy the queries that users provide.
 
 \subsubsection{Short Circuiting with Compound Queries}
 At each directory, the set of user provided SQL statements run on the
@@ -236,45 +259,94 @@ further processing.
 
 \subsubsection{Example Calls}
 
-\noindent Parallel Results:
-\\\\
-\indent \gufiquery \texttt{-S "SELECT * FROM vrsummary;"~/path/to/index}
-\\\\
-\indent \gufiquery \texttt{-E "SELECT * FROM vrpentries;"~/path/to/index}
-\\\\
-\noindent Aggregate Results:
-\\\\
-\indent \gufiquery~\texttt{\textbackslash} \\
-\indent \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);"~\textbackslash} \\
-\indent \texttt{-E "INSERT INTO intermediate SELECT name, size FROM vrpentries;"~\textbackslash} \\
-\indent \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);"~\textbackslash} \\
-\indent \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;"~\textbackslash} \\
-\indent \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"~\textbackslash} \\
-\indent \texttt{/path/to/index}
+\begin{table}[H]
+  \centering
+  \caption{Parallel Results}
+  \begin{tabular}{|l|l|}
+    \hline
+    Output     & \gufiquery \texttt{/path/to/index} \\
+    \hline
+    \stdout    & \texttt{-S "SELECT * FROM \vrsummary;"} \\
+    \hline
+    Per-thread & \texttt{-E "SELECT * FROM \vrpentries;"} \\
+    Files      & \texttt{-o results} \\
+    \hline
+    Per-thread & \texttt{-I "CREATE  TABLE results(name TEXT, size INT64);"} \\
+    Database   & \texttt{-S "INSERT INTO results SELECT name, size FROM \vrsummary;"} \\
+    Files      & \texttt{-E "INSERT INTO results SELECT name, size FROM \vrpentries;"} \\
+               & \texttt{-O results} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Aggregate Results}
+  \begin{tabular}{|l|l|}
+    \hline
+    Output   & \gufiquery \texttt{/path/to/index} \\
+    \hline
+    \stdout  & \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);"} \\
+             & \texttt{-S "INSERT INTO intermediate SELECT name, size FROM \vrsummary;"} \\
+             & \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);"} \\
+             & \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;"} \\
+             & \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
+    \hline
+    Single   & \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);"} \\
+    File     & \texttt{-E "INSERT INTO intermediate SELECT name, size FROM \vrpentries;"} \\
+             & \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);"} \\
+             & \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;"} \\
+             & \texttt{-G "SELECT * FROM aggregate ORDER BY size DESC;"} \\
+             & \texttt{-o results} \\
+    \hline
+    Single   & \texttt{-I "CREATE TABLE intermediate(name TEXT, size INT64);"} \\
+    Database & \texttt{-S "INSERT INTO intermediate SELECT name, size FROM \vrsummary;"} \\
+    File     & \texttt{-E "INSERT INTO intermediate SELECT name, size FROM \vrpentries;"} \\
+             & \texttt{-K "CREATE TABLE aggregate(name TEXT, size INT64);"} \\
+             & \texttt{-J "INSERT INSERT aggregate SELECT * FROM intermediate;"} \\
+             & \texttt{-O results} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsubsection{Behavior When Traversing Rolled Up Indexes}
+When \gufiquery detects that a directory being processed has been
+rolled up, the thread processing that directory does not enqueue work
+to descend further down into the tree, as all of the data underneath
+the current directory is available in the current directory. While
+this may seem to only reduce tree traversal by ``some" amount, in
+practise, rolling up indexes of real filesystems reduces the number of
+directories (and thus the bottlenecks listed in
+Section~\ref{subsec:bottlenecks}) that need to be processed by over
+99\%, significantly reducing index query time.
+
+Queries are not expected to have to change too often when switching
+between unmodified indexes and rolled up indexes. If they do, they
+should not have to change by much.
 
 \subsubsection{Visualizing the Workflow}
-\begin{figure}[h!]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{images/gufi_query_main.png}
   \caption{Workflow of \gufiquery}
 \end{figure}
 
-\subsubsection{\processdir}
+\paragraph{\processdir}
 The core of \gufiquery is the \processdir function. This is where the
 -T, -S, and -E flags are processed. Multiple instances of this
 function are run in parallel via the thread pool in order to quickly
 traverse and process an index.
 
-\begin{figure}[h!]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{images/gufi_query_processdir.png}
   \caption{Workflow of \processdir}
 \end{figure}
 
-\subsubsection{\querydb macro}
-\querydb is the macro used to execute SQL statements and handle errors.
+\paragraph{\querydb}
+The \querydb macro is used to execute SQL statements and handle errors.
 
-\begin{figure}[h!]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{images/querydb_macro.png}
   \caption{\querydb macro workflow}
