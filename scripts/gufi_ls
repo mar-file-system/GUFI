@@ -305,26 +305,31 @@ def run(argv, config_path):
             fullpath, match_name = os.path.split(fullpath)
 
         # create the base command
-        query_cmd = [config.query(),
-                     '-n', str(config.threads())]
+        query_cmd = [
+            config.query(),
+            '-n', str(config.threads())
+        ]
 
         if not args.recursive:
             query_cmd += ['-y', '0',
                           '-z', '2']
 
-        columns = ['fullpath', 'name', 'type', 'inode', 'nlink',
-                   'size', 'mode', 'uid', 'gid', 'blksize', 'blocks',
-                   'mtime', 'atime', 'ctime', 'linkname',
-                   'xattr_names', 'pinode']
+        columns = [
+            'fullpath', 'name', 'type', 'inode', 'nlink', 'size',
+            'mode', 'uid', 'gid', 'blksize', 'blocks', 'mtime',
+            'atime', 'ctime', 'linkname', 'xattr_names', 'pinode'
+        ]
 
         create_table_cols = ', '.join(
             [
                 '{0} {1}'.format(column, type)
                 for column, type in zip(columns, # pylint: disable=redefined-builtin
-                                        ['TEXT', 'TEXT', 'TEXT', 'INT64', 'INT64',
-                                         'INT64', 'INT64', 'INT64', 'INT64', 'INT64', 'INT64',
-                                         'INT64', 'INT64', 'INT64', 'TEXT',
-                                         'TEXT', 'INT64'])
+                                        [
+                                            'TEXT', 'TEXT', 'TEXT', 'INT64', 'INT64', 'INT64',
+                                            'INT64', 'INT64', 'INT64', 'INT64', 'INT64', 'INT64',
+                                            'INT64', 'INT64', 'TEXT', 'TEXT', 'INT64'
+                                        ]
+                                    )
             ]
         )
 
@@ -374,14 +379,16 @@ def run(argv, config_path):
                                     build_order_by(args),
                                     None)
 
-        query_cmd += ['-I', I,
-                      '-S', S,
-                      '-E', E,
-                      '-K', K,
-                      '-J', J,
-                      '-G', G,
-                      '-a',
-                      '-B', str(config.outputbuffer())]
+        query_cmd += [
+            '-I', I,
+            '-S', S,
+            '-E', E,
+            '-K', K,
+            '-J', J,
+            '-G', G,
+            '-a',
+            '-B', str(config.outputbuffer())
+        ]
 
         if args.delim:
             query_cmd += ['-d', args.delim]

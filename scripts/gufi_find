@@ -78,12 +78,14 @@ PATH = os.path.realpath(__file__)
 SECONDS_PER_DAY = str(24 * 60 * 60) # do string conversion once
 
 '''file size units specified in GNU find.'''
-FILESIZE = {'b' : 512,
-            'c' : 1,
-            'w' : 2,
-            'k' : 1024,
-            'M' : 1048576,
-            'G' : 1073741824}
+FILESIZE = {
+    'b' : 512,
+    'c' : 1,
+    'w' : 2,
+    'k' : 1024,
+    'M' : 1048576,
+    'G' : 1073741824
+}
 
 # Used to parse all numeric arguments
 # From man 1 find:
@@ -789,11 +791,13 @@ def run(argv, config_path):
         raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
 
     # create the query command
-    query_cmd = [config.query(),
-                 '-n', str(config.threads()),
-                 '-B', str(config.outputbuffer()),
-                 '-a',
-                 '-d', ' ']
+    query_cmd = [
+        config.query(),
+        '-n', str(config.threads()),
+        '-B', str(config.outputbuffer()),
+        '-a',
+        '-d', ' '
+    ]
 
     # constants only used here
     VRSUMMARY_NAME  = 'rpath(sname, sroll)'                  # pylint: disable=invalid-name
@@ -848,12 +852,14 @@ def run(argv, config_path):
                                     build_order_by(args),
                                     args.numresults)
 
-        query_cmd += ['-I', I,
-                      '-S', S,
-                      '-E', E,
-                      '-J', J,
-                      '-K', K,
-                      '-G', G]
+        query_cmd += [
+            '-I', I,
+            '-S', S,
+            '-E', E,
+            '-J', J,
+            '-K', K,
+            '-G', G
+        ]
     else:
         S = gufi_common.build_query(build_output(args, VRSUMMARY_NAME),
                                     [gufi_common.VRSUMMARY],
@@ -868,8 +874,10 @@ def run(argv, config_path):
                                     build_group_by(args),
                                     build_order_by(args),
                                     args.numresults)
-        query_cmd += ['-S', S,
-                      '-E', E]
+        query_cmd += [
+            '-S', S,
+            '-E', E
+        ]
 
     if args.maxdepth is not None:
         query_cmd += ['-z', str(args.maxdepth)]

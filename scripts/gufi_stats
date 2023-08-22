@@ -1097,10 +1097,12 @@ def run(argv, config_path):
     args.path = os.path.normpath(os.path.sep.join([config.indexroot(), args.path]))
 
     # create the query command
-    query_cmd = [config.query(),
-                 '-n', str(config.threads()),
-                 '-B', str(config.outputbuffer()),
-                 '-d', args.delim] + stats[args.stat](config, args, build_where(args))
+    query_cmd = [
+        config.query(),
+        '-n', str(config.threads()),
+        '-B', str(config.outputbuffer()),
+        '-d', args.delim
+    ] + stats[args.stat](config, args, build_where(args))
 
     if args.skip:
         query_cmd += ['-k', args.skip]
