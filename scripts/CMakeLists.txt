@@ -62,67 +62,54 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
-# list this first so that make install will overwrite these files
+# gufi_* scripts
+set(TOOLS
+  find
+  getfattr
+  ls
+  stat
+  stats
+
+  jail # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
+)
+
+# python libraries installed into bin for convenience
+set(LIBRARIES
+  gufi_config.py # also executable
+  gufi_common.py # library only
+)
+
 if (CLIENT)
   # add the paramiko source for installing
   # keep the trailing / to rename the directory
   install(DIRECTORY ${DEP_BUILD_PREFIX}/paramiko-master/ DESTINATION lib/GUFI/paramiko COMPONENT Client)
-
-  # copy the configuration handling script into both the Server and Client RPMs
-  configure_file(gufi_config.py gufi_config.py COPYONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_config.py DESTINATION bin COMPONENT Client)
-
-  # gufi_common.py is also needed by the client
-  configure_file(gufi_common.py gufi_common.py COPYONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_common.py DESTINATION bin COMPONENT Client)
-
-  # create individual client scripts
-  set(TOOL find)
-  configure_file(gufi_client gufi_client_find @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_find  RENAME gufi_find  DESTINATION bin COMPONENT Client)
-
-  set(TOOL ls)
-  configure_file(gufi_client gufi_client_ls @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_ls    RENAME gufi_ls    DESTINATION bin COMPONENT Client)
-
-  set(TOOL stat)
-  configure_file(gufi_client gufi_client_stat @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stat  RENAME gufi_stat  DESTINATION bin COMPONENT Client)
-
-  set(TOOL stats)
-  configure_file(gufi_client gufi_client_stats @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_stats RENAME gufi_stats DESTINATION bin COMPONENT Client)
 endif()
 
-# scripts that act as executables on the server
-set(TOOLS
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stat
-  gufi_stats)
+foreach(TOOL ${TOOLS})
+  configure_file(gufi_${TOOL} gufi_${TOOL} @ONLY)
 
-# python libraries installed into bin for convenience
-set(LIBRARIES
-  gufi_config.py
-  gufi_common.py)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_${TOOL} DESTINATION bin COMPONENT Server)
 
-# copy and install scripts that act like binaries
-foreach(SCRIPT ${TOOLS} ${LIBRARIES})
-  # copy the tools into the build directory for easy access
-  configure_file(${SCRIPT} ${SCRIPT} @ONLY)
-
-  # install these scripts into ${CMAKE_INSTALL_PREFIX}/bin
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${SCRIPT} DESTINATION bin COMPONENT Server)
+  # when running make install, client files will not overwrite server files
+  if (CLIENT)
+    configure_file(gufi_client gufi_client_${TOOL} @ONLY)
+    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_client_${TOOL}
+      RENAME gufi_${TOOL}
+      DESTINATION bin
+      COMPONENT Client)
+  endif()
 endforeach()
 
-# gufi_common.py is not an executable, but is installed in bin for convenience
-configure_file(gufi_common.py gufi_common.py @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gufi_common.py DESTINATION bin COMPONENT Server)
+foreach(LIB ${LIBRARIES})
+  configure_file(${LIB} ${LIB} @ONLY)
 
-# gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
-configure_file(gufi_jail gufi_jail COPYONLY)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gufi_jail DESTINATION bin COMPONENT Server)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${LIB} DESTINATION bin COMPONENT Server)
+
+  # when running make install, client files will not overwrite server files
+  if (CLIENT)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIB} DESTINATION bin COMPONENT Client)
+  endif()
+endforeach()
 
 # bash completions for the tools so paths can be tab completed
 configure_file(completions completions @ONLY)
