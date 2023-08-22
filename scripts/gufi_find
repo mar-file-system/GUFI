@@ -496,17 +496,25 @@ def help(parser): # pylint: disable=redefined-builtin
 
     expr = [expr[i:i + 5] for i in range(0, len(expr), 5)]
 
-    print('Usage: gufi_find [-P] [path...] [expression]\n' +
-          '\n' +
-          'default path is the index root directory specified in the configuration file\n' +
-          'expression may consist of:\n' +
-          '\n' +
-          '{}\n'.format('\n'.join(['    ' + ' '.join(row) for row in expr])) +
-          '\nGUFI Specific Flags (--):\n' +
-          '\n    {0}\n'.format(' '.join(gufi_specific)) +
-          '\n' +
-          'Report (and track progress on fixing) bugs to the GitHub Issues\n' +
-          'page at https://github.com/mar-file-system/GUFI/issues\n')
+    msg = [
+        'Usage: gufi_find [-P] [path...] [expression]',
+        '',
+        'default path is the index root directory specified in the configuration file',
+        'expression may consist of:',
+        ''
+    ] + [
+        '    ' + ' '.join(row) for row in expr
+    ] + [
+        '',
+        'GUFI Specific Flags (--):',
+        '',
+        '    {0}'.format(' '.join(gufi_specific)),
+        '',
+        'Report (and track progress on fixing) bugs to the GitHub Issues',
+        'page at https://github.com/mar-file-system/GUFI/issues'
+    ]
+
+    print('\n'.join(msg))
 
 def build_expression_parser():
     # parse the arguments
@@ -890,10 +898,10 @@ def run(argv, config_path):
 
     if args.fprint:
         with open(args.fprint, 'wb') as out:
-            query = subprocess.Popen(query_cmd + paths, stdout=out)   # pylint: disable=consider-using-with
+            query = subprocess.Popen(query_cmd + paths, stdout=out)
     else:
-        query = subprocess.Popen(query_cmd + paths)                   # pylint: disable=consider-using-with
-    query.communicate()                                               # block until query finishes
+        query = subprocess.Popen(query_cmd + paths) # pylint: disable=consider-using-with
+    query.communicate()                             # block until query finishes
 
     return query.returncode
 
