@@ -64,17 +64,26 @@
 import getpass
 import sys
 
-import gufi_config
+if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.version_info.minor < 3):
+    from pipes import quote as sanitize
+else:
+    from shlex import quote as sanitize # new in Python 3.3
+
+import gufi_config # pylint: disable=wrong-import-position
 
 def talk_to_server(config, args):
     '''
-    Send all arguments to gufi_@TOOL@
+    Send all arguments to gufi_@TOOL@ on the server side
     '''
-    try:
-        # import paramiko from provided path
-        sys.path.append(config.paramiko())
-        import paramiko # pylint: disable=import-error,import-outside-toplevel
 
+    # build the command
+    cmd = sanitize('gufi_@TOOL@') + ' ' + ' '.join([sanitize(arg) for arg in args])
+
+    # import paramiko from provided path
+    sys.path.append(config.paramiko())
+    import paramiko # pylint: disable=import-error,import-outside-toplevel
+
+    try:
         ssh = paramiko.client.SSHClient()
 
         # load known server host keys
@@ -87,16 +96,11 @@ def talk_to_server(config, args):
                     hostkey=paramiko.opensshkey.load_pubkey_from_file('/etc/ssh/ssh_host_rsa_key.pub'))
 
         # run the command
-        # assumes that gufi_@TOOL@ can be found in PATH on the other side
-        # args needs to be sanitized
-        cmd = 'gufi_@TOOL@ ' + ' '.join(args)
-
-        try:
-            _, stdout, stderr = ssh.exec_command(cmd)
-            sys.stdout.write(stdout.read())
-            sys.stderr.write(stderr.read())
-        except Exception as e: # pylint: disable=broad-except,invalid-name
-            sys.stderr.write(e)
+        _, stdout, stderr = ssh.exec_command(cmd)
+        sys.stdout.write(stdout.read())
+        sys.stderr.write(stderr.read())
+    except Exception as err: # pylint: disable=broad-except
+        sys.stderr.write(str(err) + '\n')
     finally:
         ssh.close()
 
