@@ -55,7 +55,7 @@ gufi_query
 
 # create /etc/GUFI/config from /etc/GUFI/config.example
 
-# use gufi_query wrapper scripts
+# use wrapper scripts
 gufi_find/gufi_ls/gufi_getfattr/gufi_stat/gufi_stats
 ```
 
