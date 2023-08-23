@@ -106,7 +106,7 @@ set(EXAMPLES
 )
 
 set(OTHERS
-  completions
+  bash_completion
 )
 
 if (ZLIB_FOUND)

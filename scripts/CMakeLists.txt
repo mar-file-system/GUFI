@@ -112,10 +112,10 @@ foreach(LIB ${LIBRARIES})
 endforeach()
 
 # bash completions for the tools so paths can be tab completed
-configure_file(completions completions @ONLY)
-if (EXISTS /etc/bash_completion.d)
-  EXECUTE_PROCESS(COMMAND test -w /etc/bash_completion.d RESULT_VARIABLE WRITABLE)
-  if (WRITABLE EQUAL 0)
-    install(FILES completions DESTINATION /etc/bash_completion.d COMPONENT Server RENAME gufi)
-  endif()
-endif()
+configure_file(bash_completion bash_completion @ONLY)
+install(FILES bash_completion DESTINATION "/etc/bash_completion.d" COMPONENT Server RENAME gufi)
+
+# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
+# in order to not add /etc/bash_completion.d into the RPMs
+list(APPEND CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/bash_completion.d")
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)

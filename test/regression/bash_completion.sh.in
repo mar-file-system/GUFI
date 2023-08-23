@@ -64,7 +64,7 @@
 set -e
 
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
-source @CMAKE_BINARY_DIR@/scripts/completions "${CONFIG}"
+source @CMAKE_BINARY_DIR@/scripts/bash_completion "${CONFIG}"
 
 get_function_name() {
     echo "$@" "completion function:"
@@ -84,7 +84,7 @@ tabtab() {
     __gufi && echo "${COMPREPLY[*]}"
 }
 
-OUTPUT="completions.out"
+OUTPUT="bash_completions.out"
 
 (
 get_function_name gufi_find
@@ -136,5 +136,5 @@ tabtab "${BASENAME}/directory/subdirectory"
 echo
 ) | tee "${OUTPUT}"
 
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/completions.expected "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/bash_completion.expected "${OUTPUT}"
 rm "${OUTPUT}"
