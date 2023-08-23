@@ -74,9 +74,9 @@ __gufi() {
     fi
 
     # shellcheck disable=2046
-    root=$(readlink -m $(grep "IndexRoot=" "${CONFIG}" | "sed" 's/^.*=//'))
+    root=$(readlink -m $(grep "^IndexRoot=" "${CONFIG}" | sed 's/^IndexRoot=//' | tail -n 1))
     # shellcheck disable=2046
-    gufi_query=$(readlink -m $(grep "Query=" "${CONFIG}" | "sed" 's/^.*=//'))
+    gufi_query=$(readlink -m $(grep "^Query=" "${CONFIG}" | sed 's/^Query=//' | tail -n 1))
     curr=$(printf "%s" "${COMP_WORDS[@]:${COMP_CWORD}}")
     path="${root}/${curr}"
     name="${path##*/}" # basename without expanding
