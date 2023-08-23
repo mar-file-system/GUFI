@@ -73,8 +73,7 @@ if (CLIENT)
   # make install and rpm
   install(FILES ${CMAKE_BINARY_DIR}/client.example
     DESTINATION /etc/GUFI
-    COMPONENT Client
-    RENAME config.example)
+    COMPONENT Client)
 endif()
 
 # server config
@@ -84,5 +83,4 @@ configure_file(server.example.in ${CMAKE_BINARY_DIR}/server.example @ONLY)
 # make install and rpm
 install(FILES ${CMAKE_BINARY_DIR}/server.example
         DESTINATION /etc/GUFI
-        COMPONENT Server
-        RENAME config.example)
+        COMPONENT Server)

@@ -69,13 +69,13 @@ Threads=@CORES@
 # single path string
 Query=@CMAKE_INSTALL_PREFIX@/bin/gufi_query
 
-# absolute path to gufi_stat_src
+# absolute path to gufi_stat_bin
 # single path string
 Stat=@CMAKE_INSTALL_PREFIX@/bin/gufi_stat_bin
 
-# directory where all GUFI indicies are placed under
+# directory where all GUFI trees are placed under
 # single path string
-IndexRoot=@CMAKE_BINARY_DIR@
+IndexRoot=/search
 
 # size of per-thread print buffers
 OutputBuffer=4096

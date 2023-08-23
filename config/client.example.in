@@ -69,5 +69,5 @@ Server=lanl.gov
 Port=22
 
 # location of paramiko directory
-# single string
+# single path string
 Paramiko=@CMAKE_INSTALL_PREFIX@/lib/GUFI/paramiko
