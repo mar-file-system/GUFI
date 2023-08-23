@@ -82,7 +82,7 @@ yum install -y gufi-server-*.rpm
 yum autoremove -y GUFI-Server
 
 # upgrade pip to get the latest Python dependencies
-pip@Python_VERSION_MAJOR@ install --upgrade pip
+@PYTHON_INTERPRETER@ -m pip install --upgrade pip
 
 # install the client RPM
 yum install -y gufi-client-*.rpm
