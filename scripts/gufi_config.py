@@ -81,6 +81,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
     def __init__(self, settings, config_reference=DEFAULT_PATH):
         # path string
         if isinstance(config_reference, str):
+            Debug("Reading config from %s" % config_reference)
             with open(config_reference, 'r') as config_file: # pylint: disable=unspecified-encoding
                 self.config = self._read_lines(settings, config_file)
         # iterable object containing lines

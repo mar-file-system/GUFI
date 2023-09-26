@@ -5,6 +5,10 @@ import shlex
 import statistics
 import subprocess
 import sys
+import traceback
+
+from collections.abc import Iterator
+
 import gufi_config as gc
 
 # if user doesn't specify a value for something on the command line, prompt for it
@@ -20,32 +24,58 @@ def prompt_for(which, eg, current=None,edit=False):
   return clause
 
 def get_gufi_command(select, tables, where, nthreads, indexroot):
-  query = "select %s from %s %s %s" % (select,tables,"where" if where else '', where)
+  query = "select %s from %s %s " % (select,tables,"where %s" % where if where else '')
   command = [
     "gufi_query",
     "-S", query, 
     "-n", str(nthreads),
     indexroot
   ]
-  return command
+  # Convert the command list to a single string for display
+  command_str = ' '.join(shlex.quote(arg) for arg in command)
+  return (command,command_str)
 
 def execute_command(command,command_string,aggregate_function,Verbose=False):
   if Verbose: print("Will now execute %s." % command_string)
   output = run_command(command)
   if aggregate_function:
-    agg_func_pointer = aggregate_functions[aggregate_function][1]
-    aggregation = agg_func_pointer(map(int,filter(bool,output))) # make sure to convert the output into ints and remove empty strings for the aggregate functions
-    if Verbose:
-      print("The %s of your query is %d." % (aggregate_function, aggregation))
-    else:
-      print(aggregation)
+    (agg_func_pointer, agg_func_type) = aggregate_functions[aggregate_function][1:3]
+    try:
+      # small problem. We added distinct which works great for strings but the others need to be converted into ints
+      if agg_func_type == int:
+        aggregation = agg_func_pointer(map(int,filter(bool,output))) # make sure to convert the output into ints and remove empty strings for the aggregate functions
+      elif agg_func_type == str:
+        aggregation = agg_func_pointer(output) # make sure to convert the output into ints and remove empty strings for the aggregate functions
+      else:
+        print(f"Unknown agg func type {agg_func_type}")
+        sys.exit(255)
+      ret = aggregation
+    except Exception as e:
+      print(f"Problem with the aggregation function {aggregate_function} which could not convert {output}.\n{e}")
+      traceback.print_exc()
+      sys.exit(255)
   else:
-    print(output)
+    ret = output
+
+  return ret
 
 def run_command(command):
-  completed_process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-  output = completed_process.stdout.split('\n')
+  completed_process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  stdout_data = completed_process.stdout
+  # Uncomment the following line to debug non-printable characters
+  # print(repr(stdout_data))
+
+  output = stdout_data.decode('utf-8').split('\n')
+  
+  if output[-1] == '':
+    output.pop()
+  
+  if completed_process.returncode != 0:
+    print(f"Command failed with error code {completed_process.returncode}")
+    print(completed_process.stderr.decode('utf-8'))
+  
   return output
+
 
 def check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=False):
   if args.confirm:
@@ -54,10 +84,7 @@ def check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=False):
     args.where = prompt_for('where',eg_where,args.where,edit)
     args.aggregate = prompt_for('aggregate',eg_agg,args.aggregate,edit)
   
-  command = get_gufi_command(select=args.select, tables=args.tables, where=args.where, nthreads = args.numthreads, indexroot=args.indexroot)
-
-  # Convert the command list to a single string for display
-  command_str = ' '.join(shlex.quote(arg) for arg in command)
+  (command,command_str) = get_gufi_command(select=args.select, tables=args.tables, where=args.where, nthreads = args.numthreads, indexroot=args.indexroot)
 
   while args.confirm:
     # Show the command to the user for confirmation
@@ -76,21 +103,29 @@ def check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=False):
   # actually exit the function either because confirm was off or because they confirmed
   return (command,command_str)
 
-def count_iterator(iterable):
-  return sum(1 for _ in iterable)
+def count_items(collection):
+  if isinstance(collection, Iterator):
+    return sum(1 for _ in collection)
+  else:
+    return len(collection)
 
+
+def distinct_values(collection):
+  ret = set(collection)
+  return ret
 
 # the aggregation functions that we currently support
 # note that they all must accept a python iterator which is why we can't use len() for count
 aggregate_functions = {
- 'sum':    ['Print the sum of the values',  sum],
- 'max':    ['Print the max value',          max],
- 'min':    ['Print the min value',          min],
- 'count':  ['Print the number of values',   count_iterator],
- 'mean':   ['Print the mean value',         statistics.mean],
- 'median': ['Print the median value',       statistics.median],
- 'mode':   ['Print the mode value',         statistics.mode],
- 'stdev':  ['Print the standard deviation', statistics.stdev]
+ 'sum':      ['Print the sum of the values',  sum, int],
+ 'max':      ['Print the max value',          max, int],
+ 'min':      ['Print the min value',          min, int],
+ 'count':    ['Print the number of values',   count_items, int],
+ 'mean':     ['Print the mean value',         statistics.mean, int],
+ 'median':   ['Print the median value',       statistics.median, int],
+ 'mode':     ['Print the mode value',         statistics.mode, int],
+ 'stdev':    ['Print the standard deviation', statistics.stdev, int],
+ 'distinct': ['Print distinct values',        distinct_values, str],
 }
 
 def detailed_agg_help():
@@ -145,7 +180,16 @@ def main(args):
 
   while True:
     (command,command_string) = check_args(args,eg_select,eg_tables,eg_where,eg_agg)
-    execute_command(command,command_string,args.aggregate,args.verbose)
+    output = execute_command(command,command_string,args.aggregate,args.verbose)
+    if args.aggregate:
+        if args.verbose:
+          print(f"The {args.aggregate} of your query is {output}.")
+        else:
+          print(output)
+    else:
+      for line in output:
+        print(line)
+
     if not args.multiple or input("Run another query? y/n\n\t> ").lower() != 'y':
       break
 
