@@ -91,6 +91,14 @@ ENTRIES_NAMES = [
     VRXPENTRIES,
 ]
 
+# maintain a cache of printed Debug msgs and don't repeat any
+
+debug_dict = set() 
+def Debug(msg):
+    if msg not in debug_dict:
+        print("Debug: %s" % msg)
+        debug_dict.add(msg)
+
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)
 # to make sure input fits certain criteria
@@ -255,6 +263,7 @@ def build_query(select, tables, where=None, group_by=None,
         for sql in extra:
             query += ' {0}'.format(sql)
 
+    Debug("Return query %s" % query)
     return query
 
 def add_common_flags(parser):
