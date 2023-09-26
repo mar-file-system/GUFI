@@ -63,6 +63,7 @@
 
 import argparse
 import grp
+import os
 import pwd
 import re
 
@@ -91,11 +92,11 @@ ENTRIES_NAMES = [
     VRXPENTRIES,
 ]
 
-# maintain a cache of printed Debug msgs and don't repeat any
 
+# maintain a cache of printed Debug msgs and don't repeat any
 debug_dict = set() 
 def Debug(msg):
-    if msg not in debug_dict:
+    if 'GUFI_DEBUG' in os.environ and msg not in debug_dict:
         print("Debug: %s" % msg)
         debug_dict.add(msg)
 

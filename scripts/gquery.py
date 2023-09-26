@@ -24,13 +24,16 @@ def construct_query(args):
   query = "select %s from %s %s %s" % (args.select,args.tables,"where" if args.where else '', args.where)
   return query
 
-def execute_command(command,command_string,aggregate_function):
-  print("Will now execute %s." % command_string)
+def execute_command(command,command_string,aggregate_function,Verbose=False):
+  if Verbose: print("Will now execute %s." % command_string)
   output = run_command(command)
   if aggregate_function:
     agg_func_pointer = aggregate_functions[aggregate_function][1]
     aggregation = agg_func_pointer(map(int,filter(bool,output))) # make sure to convert the output into ints and remove empty strings for the aggregate functions
-    print("The %s of your query is %d." % (aggregate_function, aggregation))
+    if Verbose:
+      print("The %s of your query is %d." % (aggregate_function, aggregation))
+    else:
+      print(aggregation)
   else:
     print(output)
 
@@ -40,10 +43,11 @@ def run_command(command):
   return output
 
 def check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=False):
-  args.select = prompt_for('select',eg_select,args.select,edit)
-  args.tables = prompt_for('tables',eg_tables,args.tables,edit)
-  args.where = prompt_for('where',eg_where,args.where,edit)
-  args.aggregate = prompt_for('aggregate',eg_agg,args.aggregate,edit)
+  if args.confirm:
+    args.select = prompt_for('select',eg_select,args.select,edit)
+    args.tables = prompt_for('tables',eg_tables,args.tables,edit)
+    args.where = prompt_for('where',eg_where,args.where,edit)
+    args.aggregate = prompt_for('aggregate',eg_agg,args.aggregate,edit)
   
   query = construct_query(args)
   command = [
@@ -53,22 +57,25 @@ def check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=False):
     args.indexroot
   ]
 
-  command_str = ' '.join(shlex.quote(arg) for arg in command)
-  if args.confirm:
     # Convert the command list to a single string for display
+  command_str = ' '.join(shlex.quote(arg) for arg in command)
 
+  while args.confirm:
     # Show the command to the user for confirmation
     print(f"Constructed command: {command_str}")
-
     user_confirm = input("\tProceed? y/e/q (Y to execute now. E to edit any fields. Q to quit.)\n\t> ")
+
     if user_confirm.lower() == 'y':
-      return (command,command_str)
+      break
     elif user_confirm.lower() == 'q':
       sys.exit(0)
     else:
       if user_confirm.lower() != 'e':
         print("Unknown input. Please try again.")
       return check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=True)
+
+  # actually exit the function either because confirm was off or because they confirmed
+  return (command,command_str)
 
 def count_iterator(iterable):
   return sum(1 for _ in iterable)
@@ -110,6 +117,7 @@ def parse_args(gconfig,eg_select,eg_tables,eg_where,eg_agg):
   parser.add_argument('-m', '--multiple',     help='Run multiple queries instead of simply quitting after the first.', action='store_true', default=False)
   parser.add_argument('-a', '--aggregate',    help='If output is a list of numbers, use an optional aggregation function. Use -H or --helpagg for more info.')
   parser.add_argument('-H', '--helpagg',      help='Provide detailed help for specific options', action='store_true', default=False) 
+  parser.add_argument('-v', '--verbose',      help='More verbse output', action='store_true', default=False)
   args = parser.parse_args()
 
   if args.helpagg:
@@ -134,7 +142,7 @@ def main(args):
 
   while True:
     (command,command_string) = check_args(args,eg_select,eg_tables,eg_where,eg_agg)
-    execute_command(command,command_string,args.aggregate)
+    execute_command(command,command_string,args.aggregate,args.verbose)
     if not args.multiple or input("Run another query? y/n\n\t> ").lower() != 'y':
       break
 
