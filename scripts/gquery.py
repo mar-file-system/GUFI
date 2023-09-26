@@ -19,10 +19,15 @@ def prompt_for(which, eg, current=None,edit=False):
     clause = None
   return clause
 
-# tiny helper function to create a sql query
-def construct_query(args):
-  query = "select %s from %s %s %s" % (args.select,args.tables,"where" if args.where else '', args.where)
-  return query
+def get_gufi_command(select, tables, where, nthreads, indexroot):
+  query = "select %s from %s %s %s" % (select,tables,"where" if where else '', where)
+  command = [
+    "gufi_query",
+    "-S", query, 
+    "-n", str(nthreads),
+    indexroot
+  ]
+  return command
 
 def execute_command(command,command_string,aggregate_function,Verbose=False):
   if Verbose: print("Will now execute %s." % command_string)
@@ -49,15 +54,9 @@ def check_args(args,eg_select,eg_tables,eg_where,eg_agg,edit=False):
     args.where = prompt_for('where',eg_where,args.where,edit)
     args.aggregate = prompt_for('aggregate',eg_agg,args.aggregate,edit)
   
-  query = construct_query(args)
-  command = [
-    "gufi_query",
-    "-S", query, 
-    "-n", str(args.numthreads),
-    args.indexroot
-  ]
+  command = get_gufi_command(select=args.select, tables=args.tables, where=args.where, nthreads = args.numthreads, indexroot=args.indexroot)
 
-    # Convert the command list to a single string for display
+  # Convert the command list to a single string for display
   command_str = ' '.join(shlex.quote(arg) for arg in command)
 
   while args.confirm:
@@ -126,11 +125,15 @@ def parse_args(gconfig,eg_select,eg_tables,eg_where,eg_agg):
   else:
     return args
 
-def main(args):
+def query_gconfig():
   # before we parse args, let's use gufi_config to try to pull defaults
   # one weird thing is that we seem to need to hard-code the array of possible config values
   possible_settings = {key: None for key in ['Threads', 'Query', 'Stat', 'IndexRoot', 'OutputBuffer']} 
   gconfig = gc.Config(possible_settings)
+  return gconfig
+
+def main(args):
+  gconfig = query_gconfig()
 
   # set some possible example values as variables so we can reuse them
   eg_select = "count(*)"
