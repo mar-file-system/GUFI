@@ -53,7 +53,7 @@ gufi_treesummary/gufi_treesummary_all/gufi_rollup
 # query the index
 gufi_query
 
-# create /etc/GUFI/config from /etc/GUFI/config.example
+# create /etc/GUFI/config from /etc/GUFI/server.example
 
 # use wrapper scripts
 gufi_find/gufi_ls/gufi_getfattr/gufi_stat/gufi_stats
