@@ -93,9 +93,9 @@ def select_size(args, name):
     if args.human_readable:
         column = 'human_readable_size({0})'
     elif args.block_size:
-        column = 'blocksize({{0}}, "{0}")'.format(args.block_size)
+        column = 'blocksize({{0}}, \'{0}\')'.format(args.block_size)
     else:
-        column = 'printf("%d", {0})'
+        column = 'printf(\'%d\', {0})'
 
     return [column.format(name)]
 
@@ -119,7 +119,7 @@ def select_time(args, name):
     else:
         style = args.time_style if args.time_style else 'locale'
 
-    return ['strftime("{0}", {1})'.format(TIME_STYLES[style], name)]
+    return ['strftime(\'{0}\', {1})'.format(TIME_STYLES[style], name)]
 
 def build_select(args):
     '''Build the SELECT portion of the query on the initial scan of entries'''
@@ -140,7 +140,7 @@ def build_select(args):
 
     if args.long_listing or args.full_time:
         select += ['modetotxt(mode)',
-                   'printf("%d", nlink)',
+                   'printf(\'%d\', nlink)',
                    'uidtouser(uid)']
         if not args.no_group:
             select += ['gidtogroup(gid)']
@@ -150,8 +150,8 @@ def build_select(args):
         select += select_size(args, 'size') + select_time(args, 'mtime') + [
             '''(
                 CASE
-                    WHEN (type == "l") THEN
-                        ({0} || " -> " || linkname)
+                    WHEN (type == \'l\') THEN
+                        ({0} || \' -> \' || linkname)
                     ELSE
                         {0}
                     END
@@ -168,7 +168,7 @@ def build_where(args, name=None):
     where = []
 
     if name:
-        where = ['name REGEXP "^{0}$"'.format(name)]
+        where = ['name REGEXP \'^{0}$\''.format(name)]
     else:
         # pylint: disable=anomalous-backslash-in-string
 
@@ -178,15 +178,15 @@ def build_where(args, name=None):
         else:
             # -A: ignore . and ..
             if args.almost_all:
-                where += ['name != "." AND name != ".."']
+                where += ['name != \'.\' AND name != \'..\'']
 
             # everything that's not hidden
             else:
-                where += ['name REGEXP "^(?![\.]).*$"']
+                where += ['name REGEXP \'^(?![\.]).*$\'']
 
         # -B: ignore files that end with ~
         if args.ignore_backups is True:
-            where += ['name REGEXP "^.*(?<![\~])$"']
+            where += ['name REGEXP \'^.*(?<![\~])$\'']
 
     return where
 
@@ -354,7 +354,7 @@ def run(argv, config_path):
                                                                  None))
 
         E = 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                         gufi_common.build_query(['rpath(sname, sroll) || "/" || name'] +
+                                         gufi_common.build_query(['rpath(sname, sroll) || \'/\' || name'] +
                                                                  ['name'] + columns[2:],
                                                                  [gufi_common.VRPENTRIES],
                                                                  E_where,

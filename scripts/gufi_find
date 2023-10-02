@@ -179,9 +179,9 @@ def build_where(args, table, root_uid=0, root_gid=0):
         if table in gufi_common.SUMMARY_NAMES:
             # this is slightly wrong: the number of subdirs should be
             # counted, but that value is not immediately available
-            where += ['(type == "d") AND ((totfiles + totlinks) == 0)']
+            where += ['(type == \'d\') AND ((totfiles + totlinks) == 0)']
         elif table in gufi_common.ENTRIES_NAMES:
-            where += ['(type == "f") AND (size == 0)']
+            where += ['(type == \'f\') AND (size == 0)']
 
     if args.executable is True:
         where += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
@@ -217,7 +217,7 @@ def build_where(args, table, root_uid=0, root_gid=0):
             where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'(?i){0}\')'.format(iregex)
                                    for iregex in args.iregex])]
         elif table in gufi_common.ENTRIES_NAMES:
-            where += [' OR '.join(['((rpath(sname, sroll) || "/" || name) REGEXP \'(?i){0}\')'.format(iregex)
+            where += [' OR '.join(['((rpath(sname, sroll) || \'/\' || name) REGEXP \'(?i){0}\')'.format(iregex)
                                    for iregex in args.iregex])]
 
     # if args.iwholename is not None:
@@ -267,7 +267,7 @@ def build_where(args, table, root_uid=0, root_gid=0):
             where += [' OR '.join(['((rpath(sname, sroll)) REGEXP \'{0}\')'.format(regex)
                                    for regex in args.regex])]
         elif table in gufi_common.ENTRIES_NAMES:
-            where += [' OR '.join(['((rpath(sname, sroll) || "/" || name) REGEXP \'{0}\')'.format(regex)
+            where += [' OR '.join(['((rpath(sname, sroll) || \'/\' || name) REGEXP \'{0}\')'.format(regex)
                                    for regex in args.regex])]
 
     if args.samefile is not None:
@@ -282,7 +282,7 @@ def build_where(args, table, root_uid=0, root_gid=0):
 
     if args.type is not None:
         # multiple types uses OR instead of AND
-        where += [' OR '.join(['(type == "{0}")'.format(t)
+        where += [' OR '.join(['(type == \'{0}\')'.format(t)
                                for t in args.type])]
 
     if args.uid is not None:
@@ -356,13 +356,13 @@ def parse_escape(fmt, i):
     else:
         ret = '\\{0}'.format(ret)
 
-    return '"{0}"'.format(ret), i + 1
+    return '\'{0}\''.format(ret), i + 1
 
 def parse_directives(fmt, fmt_len, i, path):
     # pylint: disable=too-many-branches,too-many-statements
-    # unterminated directive prints ""; behavior is undefined in GNU find
+    # unterminated directive prints ''; behavior is undefined in GNU find
     if i >= fmt_len:
-        return '""', i
+        return '\'\'', i
 
     # check for width formatting
     width = re.match('[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)', fmt[i:])
@@ -377,57 +377,57 @@ def parse_directives(fmt, fmt_len, i, path):
     if ret == '%':
         ret = '\'%\''
     elif ret == 'a':
-        ret = 'printf("%{0}d", atime)'
+        ret = 'printf(\'%{0}d\', atime)'
     # elif ret == 'A':
     elif ret == 'b':
-        ret = 'printf("%{0}d", (blocks * blksize) / 512)'
+        ret = 'printf(\'%{0}d\', (blocks * blksize) / 512)'
     elif ret == 'c':
-        ret = 'printf("%{0}d", ctime)'
+        ret = 'printf(\'%{0}d\', ctime)'
     # elif ret == 'C':
     elif ret == 'd':
-        ret = 'printf("%{0}u", level() + (CASE type WHEN "d" THEN 0 ELSE 1 END))'
+        ret = 'printf(\'%{0}u\', level() + (CASE type WHEN \'d\' THEN 0 ELSE 1 END))'
     elif ret == 'D':
-        ret = 'printf("%{0}s", "-")'
+        ret = 'printf(\'%{0}s\', \'-\')'
     elif ret == 'f':
-        ret = 'printf("%{0}s", name)'
+        ret = 'printf(\'%{0}s\', name)'
     # elif ret == 'F':
     elif ret == 'g':
         ret = 'gidtogroup(gid)'
     elif ret == 'G':
-        ret = 'printf("%{0}d", gid)'
+        ret = 'printf(\'%{0}d\', gid)'
     elif ret == 'h':
-        ret = 'printf("%{{0}}s", {0})'.format(path)
+        ret = 'printf(\'%{{0}}s\', {0})'.format(path)
     elif ret == 'H':
-        ret = 'printf("%{0}s", starting_point())'
+        ret = 'printf(\'%{0}s\', starting_point())'
     elif ret == 'i':
-        ret = 'printf("%{0}d", inode)'
+        ret = 'printf(\'%{0}d\', inode)'
     elif ret == 'k':
-        ret = 'printf("%{0}d", (blocks * blksize) / 1024)'
+        ret = 'printf(\'%{0}d\', (blocks * blksize) / 1024)'
     elif ret == 'l':
-        ret = 'printf("%{0}s", linkname)'
+        ret = 'printf(\'%{0}s\', linkname)'
     elif ret == 'm':
-        ret = 'printf("%{0}o", mode & 511)' # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+        ret = 'printf(\'%{0}o\', mode & 511)' # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
     elif ret == 'M':
-        ret = 'printf("%{0}s", modetotxt(mode))'
+        ret = 'printf(\'%{0}s\', modetotxt(mode))'
     elif ret == 'n':
-        ret = 'printf("%{0}d", nlink)'
+        ret = 'printf(\'%{0}d\', nlink)'
     elif ret == 'p':
         ret = path
     elif ret == 'P':
-        ret = 'printf("%{{0}}s", substr({0}, length(starting_point()) + 1))'.format(path)
+        ret = 'printf(\'%{{0}}s\', substr({0}, length(starting_point()) + 1))'.format(path)
     elif ret == 's':
-        ret = 'printf("%{0}u", size)'
+        ret = 'printf(\'%{0}u\', size)'
     elif ret == 'S':
-        ret = 'printf("%{0}d", (blksize * blocks) / size)'
+        ret = 'printf(\'%{0}d\', (blksize * blocks) / size)'
     elif ret == 't':
-        ret = 'printf("%{0}d", mtime)'
+        ret = 'printf(\'%{0}d\', mtime)'
     # elif ret == 'T':
     elif ret == 'u':
         ret = 'uidtouser(uid)'
     elif ret == 'U':
-        ret = 'printf("%{0}d", uid)'
+        ret = 'printf(\'%{0}d\', uid)'
     elif ret == 'y':
-        ret = 'printf("%{0}s", type)'
+        ret = 'printf(\'%{0}s\', type)'
     # elif ret == 'Y':
     # elif ret == 'Z':
     else:
@@ -438,7 +438,7 @@ def parse_directives(fmt, fmt_len, i, path):
         while (i < fmt_len) and (fmt[i] != '%') and (fmt[i] != '\\'):
             ret += fmt[i]
             i += 1
-        ret = '"{0}"'.format(fmt[start - len(width) - 1:i])
+        ret = '\'{0}\''.format(fmt[start - len(width) - 1:i])
         i -= 1
 
     return ret.format(width), i + 1
@@ -455,8 +455,8 @@ def build_output(args, name):
                   'uidtouser(uid)',
                   'gidtogroup(gid)',
                   'size',
-                  'strftime("%b %d %Y", mtime)',
-                  'name || CASE type WHEN "l" THEN " -> " || linkname ELSE "" END']
+                  'strftime(\'%b %d %Y\', mtime)',
+                  'name || CASE type WHEN \'l\' THEN \' -> \' || linkname ELSE \'\' END']
     elif args.printf is not None:
         fmt = args.printf
         fmt_len = len(fmt)
@@ -473,7 +473,7 @@ def build_output(args, name):
                 column, i = parse_directives(fmt, fmt_len, i + 1, name)
                 cols += [column]
             else:
-                cols += ['"{0}"'.format(fmt[i])]
+                cols += ['\'{0}\''.format(fmt[i])]
                 i += 1
         output = [' || '.join(cols)]
 
@@ -809,7 +809,7 @@ def run(argv, config_path):
 
     # constants only used here
     VRSUMMARY_NAME  = 'rpath(sname, sroll)'                  # pylint: disable=invalid-name
-    VRPENTRIES_NAME = 'rpath(sname, sroll) || "/" || name'   # pylint: disable=invalid-name
+    VRPENTRIES_NAME = 'rpath(sname, sroll) || \'/\' || name' # pylint: disable=invalid-name
 
     # pylint: disable=invalid-name
     if need_aggregation(args):
