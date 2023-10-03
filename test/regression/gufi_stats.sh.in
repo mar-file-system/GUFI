@@ -79,6 +79,7 @@ run_uidgid_size() {
 
 (
 run_no_sort "${GUFI_STATS} --help" | replace_argparse | sed '/^$/d;'
+run_no_sort "${GUFI_STATS} -r -c"  | replace_argparse | sed '/^$/d;'
 
 run "${GUFI_STATS}    depth \"${BASENAME}\""
 run "${GUFI_STATS} -r depth \"${BASENAME}\""
@@ -129,6 +130,16 @@ run_uidgid_size "${GUFI_STATS} --order ASC gid-size \"${BASENAME}\""
 run_uidgid_size "${GUFI_STATS} --num-results 6 --order ASC gid-size \"${BASENAME}\""
 run_uidgid_size "${GUFI_STATS} --order DESC gid-size \"${BASENAME}\""
 run_uidgid_size "${GUFI_STATS} --num-results 6 --order DESC gid-size \"${BASENAME}\""
+
+# replace all inodes for size bins with recursion
+"${GUFI_QUERY}" -a -w -S "UPDATE summary SET inode = mtime, size = mtime, atime = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, atime = mtime, ctime = mtime" "${INDEXROOT}"
+
+run_no_sort "${GUFI_STATS}    filesize-log2-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r filesize-log2-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c filesize-log2-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS}    filesize-log1024-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r filesize-log1024-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c filesize-log1024-bins \"${BASENAME}\""
 
 # bad flags
 run "${GUFI_STATS} -c depth \"${BASENAME}\""

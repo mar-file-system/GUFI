@@ -1,13 +1,13 @@
 $ gufi_stats --help
-usage: gufi_stats [--help] [--version] [--recursive] [--cumulative]
+usage: gufi_stats [--help] [--version] [--recursive | --cumulative]
                   [--order order] [--num-results n] [--uid u] [--delim c]
                   [--in-memory-name name] [--aggregate-name name]
                   [--skip-file filename]
-                  {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
+                  {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,filesize-log2-bins,filesize-log1024-bins,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
                   [path]
 GUFI statistics
 positional arguments:
-  {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
+  {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,filesize-log2-bins,filesize-log1024-bins,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
                         statistic to get
   path
 options:
@@ -15,11 +15,13 @@ options:
   --version, -v         show program's version number and exit
   --recursive, -r       run command recursively (depth, filesize, filecount,
                         linkcount, dircount, leaf-dirs, leaf-depth, leaf-
-                        files, leaf-links, extensions)
+                        files, leaf-links, extensions, filesize-log2-bins,
+                        filesize-log1024-bins)
   --cumulative, -c      return cumulative values (total-filesize, total-
                         filecount, total-linkcount, total-dircount, total-
                         leaf-files, total-leaf-links, files-per-level, links-
-                        per-level, dirs-per-level)
+                        per-level, dirs-per-level, filesize-log2-bins,
+                        filesize-log1024-bins)
   --order order         sort output (if applicable)
   --num-results n       first n results
   --uid u, --user u     restrict to user
@@ -30,6 +32,14 @@ options:
   --aggregate-name name
                         Name of final database when aggregation is performed
   --skip-file filename  Name of file containing directory basenames to skip
+$ gufi_stats -r -c
+usage: gufi_stats [--help] [--version] [--recursive | --cumulative]
+                  [--order order] [--num-results n] [--uid u] [--delim c]
+                  [--in-memory-name name] [--aggregate-name name]
+                  [--skip-file filename]
+                  {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,filesize-log2-bins,filesize-log1024-bins,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
+                  [path]
+gufi_stats: error: argument --cumulative/-c: not allowed with argument --recursive/-r
 $ gufi_stats    depth "prefix"
 0
 
@@ -244,6 +254,50 @@ $ gufi_stats --num-results 6 --order DESC gid-size "prefix"
 1001 13 repeat_name
 1001 11 leaf_directory/leaf_file2
 1001 10 leaf_directory/leaf_file1
+
+$ gufi_stats    filesize-log2-bins "prefix"
+1 1
+8 2
+1024 1
+1048576 1
+
+$ gufi_stats -r filesize-log2-bins "prefix"
+6 4 1
+7 1 1
+7 2 2
+12 8 2
+15 8 1
+16 1 1
+16 8 2
+16 1024 1
+16 1048576 1
+
+$ gufi_stats -c filesize-log2-bins "prefix"
+1 2
+2 2
+4 1
+8 5
+1024 1
+1048576 1
+
+$ gufi_stats    filesize-log1024-bins "prefix"
+1 3
+1024 1
+1048576 1
+
+$ gufi_stats -r filesize-log1024-bins "prefix"
+6 1 1
+7 1 3
+12 1 2
+15 1 1
+16 1 3
+16 1024 1
+16 1048576 1
+
+$ gufi_stats -c filesize-log1024-bins "prefix"
+1 10
+1024 1
+1048576 1
 
 $ gufi_stats -c depth "prefix"
 --cumulative/-c has no effect on "depth" statistic

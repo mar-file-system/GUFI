@@ -993,53 +993,121 @@ def uid_size(_config, args, where):
 def gid_size(_config, args, where):
     return uidgid_size(args, 'gid', where)
 
+def size_bins(args, base, type): # pylint: disable=redefined-builtin
+    '''
+    Gets histogram of sizes
+    bins are [b^n, b^(n+1))
+
+    Requires SQLite 3.35.0
+
+    default returns bins for 1 directory
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+    '''
+
+    bits = 'bits'
+
+    if type in ['f', 'l']:
+        table = gufi_common.VRPENTRIES
+    elif type == 'd':
+        table = gufi_common.VRSUMMARY
+
+    pinode_col = 'pinode'
+    pinode_create = ['{0} INTEGER'.format(pinode_col)] if args.recursive else []
+    pinode = [pinode_col] if args.recursive else []
+
+    queries = [
+        '-I', build_create(args.inmemory_name, pinode_create + ['{0} INTEGER'.format(bits)]),
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(pinode + ['CASE WHEN size == 0 THEN 0 ELSE CAST(FLOOR(LOG({0}, size)) AS INTEGER) END'.format(base)],
+                                                                   [table],
+                                                                   ['type == \'{0}\''.format(type)],
+                                                                   None, # cannot GROUP BY here because value would be aggregate
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(args.aggregate_name, pinode_create + ['{0} INTEGER'.format(bits), 'count INTEGER']),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(pinode + [bits, 'COUNT({0})'.format(bits)],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   pinode + [bits],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(pinode + ['CAST(pow({0}, {1}) AS INTEGER)'.format(base, bits), 'SUM(count)'],
+                                      [args.aggregate_name],
+                                      None,
+                                      pinode + [bits],
+                                      (['{0} {1}'.format(pinode_col, ORDER[args.order])] if args.recursive else []) +
+                                      ['{0} {1}'.format(bits, ORDER[args.order])],
+                                      None,
+                                      None),
+    ]
+
+    if not args.recursive and not args.cumulative:
+        queries += ['-z', '0']
+
+    return queries
+
+def filesize_log2_bins(_config, args, _where):
+    return size_bins(args, 2, 'f')
+
+def filesize_log1024_bins(_config, args, _where):
+    return size_bins(args, 1024, 'f')
+
 # mapping of desired statistics to functions
 
 # normally only computes for current directory
 # use --recursive to recurse down tree
 RECURSIVE = [
-    ['depth',               depth],
-    ['filesize',            filesize],
-    ['filecount',           filecount],
-    ['linkcount',           linkcount],
-    ['dircount',            dircount],
-    ['leaf-dirs',           leaf_dirs],
-    ['leaf-depth',          leaf_depth],
-    ['leaf-files',          leaf_files],
-    ['leaf-links',          leaf_links],
-    ['extensions',          extensions],
+    ['depth',                 depth],
+    ['filesize',              filesize],
+    ['filecount',             filecount],
+    ['linkcount',             linkcount],
+    ['dircount',              dircount],
+    ['leaf-dirs',             leaf_dirs],
+    ['leaf-depth',            leaf_depth],
+    ['leaf-files',            leaf_files],
+    ['leaf-links',            leaf_links],
+    ['extensions',            extensions],
 ]
 
 # normally computes statistics by uid
 # use --cumulative to combine
 CUMULATIVE = [
-    ['total-filesize',      total_filesize],
-    ['total-filecount',     total_filecount],
-    ['total-linkcount',     total_linkcount],
-    ['total-dircount',      total_dircount],
-    ['total-leaf-files',    total_leaf_files],
-    ['total-leaf-links',    total_leaf_links],
-    ['files-per-level',     files_per_level],
-    ['links-per-level',     links_per_level],
-    ['dirs-per-level',      dirs_per_level],
+    ['total-filesize',        total_filesize],
+    ['total-filecount',       total_filecount],
+    ['total-linkcount',       total_linkcount],
+    ['total-dircount',        total_dircount],
+    ['total-leaf-files',      total_leaf_files],
+    ['total-leaf-links',      total_leaf_links],
+    ['files-per-level',       files_per_level],
+    ['links-per-level',       links_per_level],
+    ['dirs-per-level',        dirs_per_level],
+]
+
+BOTH = [
+    ['filesize-log2-bins',    filesize_log2_bins],
+    ['filesize-log1024-bins', filesize_log1024_bins],
 ]
 
 # does not use either
 OTHERS = [
-    ['average-leaf-files',  average_leaf_files],
-    ['average-leaf-links',  average_leaf_links],
-    ['average-leaf-size',   average_leaf_size], # file size only
-    ['median-leaf-files',   median_leaf_files],
-    ['median-leaf-links',   median_leaf_links],
-    ['median-leaf-size',    median_leaf_size],  # file size only
-    ['duplicate-names',     duplicate_names],
-    ['uid-size',            uid_size],
-    ['gid-size',            gid_size],
+    ['average-leaf-files',    average_leaf_files],
+    ['average-leaf-links',    average_leaf_links],
+    ['average-leaf-size',     average_leaf_size], # file size only
+    ['median-leaf-files',     median_leaf_files],
+    ['median-leaf-links',     median_leaf_links],
+    ['median-leaf-size',      median_leaf_size],  # file size only
+    ['duplicate-names',       duplicate_names],
+    ['uid-size',              uid_size],
+    ['gid-size',              gid_size],
 ]
 
 # argv[0] should be the command name
 def run(argv, config_path):
-    stats = OrderedDict(RECURSIVE + CUMULATIVE + OTHERS)
+    stats = OrderedDict(RECURSIVE + CUMULATIVE + BOTH + OTHERS)
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -1054,12 +1122,13 @@ def run(argv, config_path):
     parser.add_argument('--version', '-v',
                         action='version',
                         version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--recursive', '-r',
-                        action='store_true',
-                        help='run command recursively ({0})'.format(', '.join([key for key, _ in RECURSIVE])))
-    parser.add_argument('--cumulative', '-c',
-                        action='store_true',
-                        help='return cumulative values ({0})'.format(', '.join([key for key, _ in CUMULATIVE])))
+    exclusive = parser.add_mutually_exclusive_group()
+    exclusive.add_argument('--recursive', '-r',
+                           action='store_true',
+                           help='run command recursively ({0})'.format(', '.join([key for key, _ in RECURSIVE + BOTH])))
+    exclusive.add_argument('--cumulative', '-c',
+                           action='store_true',
+                           help='return cumulative values ({0})'.format(', '.join([key for key, _ in CUMULATIVE + BOTH])))
     parser.add_argument('--order',
                         metavar='order',
                         choices=ORDER.keys(),
