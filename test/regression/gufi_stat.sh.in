@@ -102,6 +102,8 @@ echo
 
 run_no_sort "${GUFI_STAT} --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${BASENAME}/${fixed_size[0]}\""
 
+run_no_sort "${GUFI_STAT} --verbose --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \"${BASENAME}/${fixed_size[0]}\""
+
 echo "${GUFI_STAT} --terse \"${BASENAME}/${fixed_size[0]}\"" | replace
 ${GUFI_STAT} --terse "${BASENAME}/${fixed_size[0]}" | @AWK@ "{ \$3=0; \$5=${TEST_USER_ID}; \$6=${TEST_GROUP_ID}; \$16=0; print }"
 

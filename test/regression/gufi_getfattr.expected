@@ -3,6 +3,7 @@ usage: gufi_getfattr [--help] [--version] [--name NAME] [--dump]
                      [--match PATTERN] [--only-values] [--recursive]
                      [--delim c] [--in-memory-name name]
                      [--aggregate-name name] [--skip-file filename]
+                     [--verbose]
                      path [path ...]
 
 GUFI version of getfattr
@@ -36,9 +37,22 @@ options:
   --aggregate-name name
                         Name of final database when aggregation is performed
   --skip-file filename  Name of file containing directory basenames to skip
+  --verbose, -V         Show the gufi_query being executed
 
 # prefix
 $ gufi_getfattr .
+
+# prefix with --verbose
+$ gufi_getfattr --verbose .
+GUFI query is
+   gufi_query
+    -n 1
+    -B 4096
+    -d
+    -x
+    -a
+    -S SELECT rpath(sname, sroll), xattr_name FROM vrxsummary WHERE ((name REGEXP '^.$')) AND (isroot == 1) AND (xattr_name REGEXP '^user\.')
+    .
 
 # 0 xattrs
 $ gufi_getfattr prefix

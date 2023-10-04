@@ -82,10 +82,10 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
         # path string
         if isinstance(config_reference, str):
             with open(config_reference, 'r') as config_file: # pylint: disable=unspecified-encoding
-                self.config = self._read_lines(settings, config_file)
+                self.config = self._read_lines(settings, config_file, config_reference)
         # iterable object containing lines
         elif self._check_iterable(config_reference):
-            self.config = self._read_lines(settings, config_reference)
+            self.config = self._read_lines(settings, config_reference, config_reference)
         else:
             raise TypeError('Cannot convert {0} to a config'.format(type(config_reference)))
 
@@ -98,7 +98,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
         return True
 
     @staticmethod
-    def _read_lines(settings, lines):
+    def _read_lines(settings, lines, path):
         out = {}
         for line in lines:
             line = line.strip()
@@ -121,7 +121,7 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
 
         for key in settings:
             if key not in out:
-                raise KeyError('Missing Setting {0}'.format(key))
+                raise KeyError('While attempting to parse GUFI config at {0} found missing setting {1}'.format(path, key))
 
         return out
 

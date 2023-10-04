@@ -71,6 +71,7 @@ BACKUP="backup~"
 (
 run_no_sort "${GUFI_LS} --help" | replace_argparse
 run_no_sort "${GUFI_LS}"
+run_no_sort "${GUFI_LS} --verbose"
 run_no_sort "${GUFI_LS} -R" # Issue #49
 run_no_sort "${GUFI_LS} ${BASENAME}"
 run_no_sort "${GUFI_LS} ${BASENAME} -a"

@@ -66,6 +66,7 @@ import os
 import subprocess
 import sys
 
+import gufi_common
 import gufi_config
 
 # location of this file
@@ -111,6 +112,11 @@ def parse_args():
                         metavar='FILE',
                         nargs='+')
 
+    # the other scripts call gufi_common.add_common_flags but this one doesn't so we have to copy the verbose add_argument stanza here
+    parser.add_argument('--verbose', '-V',
+                        action='store_true',
+                        help='Show the gufi_query being executed')
+
     return parser
 
 # argv[0] should be the command name
@@ -132,6 +138,9 @@ def run(argv, config_path):
 
     paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path]))
              for path in args.paths]
+
+    if args.verbose:
+        gufi_common.print_query(stat_cmd + paths)
 
     stat = subprocess.Popen(stat_cmd + paths)  # pylint: disable=consider-using-with
     stat.communicate()                         # block until stat finishes

@@ -162,6 +162,9 @@ run_no_sort "${GUFI_FIND} --numresults 5"
 run_no_sort "${GUFI_FIND} --smallest -type f"
 run_no_sort "${GUFI_FIND} --largest  -type f"
 
+# check the verbose flag
+run_no_sort "${GUFI_FIND} --verbose --largest -type f"
+
 # multiple input directories
 run_sort "${GUFI_FIND} ${BASENAME}/directory ${BASENAME}/leaf_directory"
 

@@ -1186,6 +1186,9 @@ def run(argv, config_path):
     if args.skip:
         query_cmd += ['-k', args.skip]
 
+    if args.verbose:
+        gufi_common.print_query(query_cmd + [args.path])
+
     query = subprocess.Popen(query_cmd + [args.path]) # pylint: disable=consider-using-with
     query.communicate()                               # block until query finishes
 

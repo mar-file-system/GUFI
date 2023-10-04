@@ -72,6 +72,9 @@ do_tests() {
     echo "# ${SEARCH}"
     run_sort "${GUFI_GETFATTR} ."
 
+    echo "# ${SEARCH} with --verbose"
+    run_no_sort "${GUFI_GETFATTR} --verbose ."
+
     # no flags
     echo "# 0 xattrs"
     run_sort "${GUFI_GETFATTR} ${BASENAME}"
