@@ -256,7 +256,7 @@ $ gufi_stats --num-results 6 --order DESC gid-size "prefix"
 1001 10 leaf_directory/leaf_file1
 
 $ gufi_stats    filesize-log2-bins "prefix"
-1 1
+0 1
 8 2
 1024 1
 1048576 1
@@ -267,13 +267,14 @@ $ gufi_stats -r filesize-log2-bins "prefix"
 7 2 2
 12 8 2
 15 8 1
-16 1 1
+16 0 1
 16 8 2
 16 1024 1
 16 1048576 1
 
 $ gufi_stats -c filesize-log2-bins "prefix"
-1 2
+0 1
+1 1
 2 2
 4 1
 8 5
@@ -281,7 +282,8 @@ $ gufi_stats -c filesize-log2-bins "prefix"
 1048576 1
 
 $ gufi_stats    filesize-log1024-bins "prefix"
-1 3
+0 1
+1 2
 1024 1
 1048576 1
 
@@ -290,12 +292,14 @@ $ gufi_stats -r filesize-log1024-bins "prefix"
 7 1 3
 12 1 2
 15 1 1
-16 1 3
+16 0 1
+16 1 2
 16 1024 1
 16 1048576 1
 
 $ gufi_stats -c filesize-log1024-bins "prefix"
-1 10
+0 1
+1 9
 1024 1
 1048576 1
 

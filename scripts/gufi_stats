@@ -1019,7 +1019,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
     queries = [
         '-I', build_create(args.inmemory_name, pinode_create + ['{0} INTEGER'.format(bits)]),
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(pinode + ['CASE WHEN size == 0 THEN 0 ELSE CAST(FLOOR(LOG({0}, size)) AS INTEGER) END'.format(base)],
+                                           gufi_common.build_query(pinode + ['CASE WHEN size == 0 THEN -1 ELSE CAST(FLOOR(LOG({0}, size)) AS INTEGER) END'.format(base)],
                                                                    [table],
                                                                    ['type == \'{0}\''.format(type)],
                                                                    None, # cannot GROUP BY here because value would be aggregate
@@ -1035,7 +1035,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-G', gufi_common.build_query(pinode + ['CAST(pow({0}, {1}) AS INTEGER)'.format(base, bits), 'SUM(count)'],
+        '-G', gufi_common.build_query(pinode + ['CASE WHEN {1} == -1 THEN 0 ELSE CAST(pow({0}, {1}) AS INTEGER) END'.format(base, bits), 'SUM(count)'],
                                       [args.aggregate_name],
                                       None,
                                       pinode + [bits],
