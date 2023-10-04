@@ -68,11 +68,16 @@ import sys
 import gufi_common
 
 # configuration file location
-gufi_env_config='GUFI_CONFIG'
-if gufi_env_config in os.environ:
-  DEFAULT_PATH = os.environ[gufi_env_config]
-else:
-  DEFAULT_PATH = '/etc/GUFI/config'
+DEFAULT_PATH = '/etc/GUFI/config'
+
+# helper function to allow configurable paths to the gufi config file
+def config_path():
+  global DEFAULT_PATH
+  gufi_env_config='GUFI_CONFIG'
+  if gufi_env_config in os.environ:
+    DEFAULT_PATH = os.environ[gufi_env_config]
+  return DEFAULT_PATH
+
 
 class Config(object): # pylint: disable=too-few-public-methods,useless-object-inheritance
     def __init__(self, settings, config_reference=DEFAULT_PATH):
