@@ -72,7 +72,6 @@ from gufi_common import Debug
 gufi_env_config='GUFI_CONFIG'
 if gufi_env_config in os.environ:
     DEFAULT_PATH = os.environ[gufi_env_config]
-    Debug("Set config path to %s" % DEFAULT_PATH)
 else:
     DEFAULT_PATH = '/etc/GUFI/config'
 
