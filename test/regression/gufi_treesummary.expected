@@ -21,7 +21,7 @@ WARNING: Not [re]generating tree-summary table with '-X'
 totals:
 totfiles 12 totlinks 2
 totsize 1049668
-totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
+totzero 1 totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
 
 # Traversed paths (5)
@@ -41,7 +41,7 @@ $ gufi_treesummary prefix/directory
 totals:
 totfiles 4 totlinks 1
 totsize 11
-totltk 4 totmtk 0 totltm 4 totmtm 0 totmtg 0 totmtt 0
+totzero 0 totltk 4 totmtk 0 totltm 4 totmtm 0 totmtg 0 totmtt 0
 totxattr 0
 
 # One treesummary table
@@ -53,7 +53,7 @@ $ gufi_treesummary "prefix/leaf_directory"
 totals:
 totfiles 2 totlinks 0
 totsize 21
-totltk 2 totmtk 0 totltm 2 totmtm 0 totmtg 0 totmtt 0
+totzero 0 totltk 2 totmtk 0 totltm 2 totmtm 0 totmtg 0 totmtt 0
 totxattr 6
 
 # Two treesummary tables
@@ -74,7 +74,7 @@ $ gufi_treesummary prefix
 totals:
 totfiles 12 totlinks 2
 totsize 1049668
-totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
+totzero 1 totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
 
 # Three treesummary tables
@@ -91,7 +91,7 @@ $ gufi_treesummary "prefix"
 totals:
 totfiles 111 totlinks 2
 totsize 1049668
-totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
+totzero 1 totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
 
 # Still three treesummary tables
@@ -123,6 +123,6 @@ Cannot open database: prefix/1KB/db.db unable to open database file rc 14
 totals:
 totfiles 0 totlinks 0
 totsize 0
-totltk 0 totmtk 0 totltm 0 totmtm 0 totmtg 0 totmtt 0
+totzero 0 totltk 0 totmtk 0 totltm 0 totmtm 0 totmtg 0 totmtt 0
 totxattr 0
 

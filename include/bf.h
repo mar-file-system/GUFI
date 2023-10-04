@@ -92,6 +92,7 @@ struct sum {
   long long int maxgid;
   long long int minsize;
   long long int maxsize;
+  long long int totzero;
   long long int totltk;
   long long int totmtk;
   long long int totltm;

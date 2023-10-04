@@ -126,6 +126,7 @@ int zeroit(struct sum *summary)
   summary->maxgid=LLONG_MIN;
   summary->minsize=LLONG_MAX;
   summary->maxsize=LLONG_MIN;
+  summary->totzero=0;
   summary->totltk=0;
   summary->totmtk=0;
   summary->totltm=0;
@@ -168,6 +169,7 @@ int sumit(struct sum *summary, struct entry_data *ed) {
      summary->totfiles++;
      if (ed->statuso.st_size < summary->minsize) summary->minsize=ed->statuso.st_size;
      if (ed->statuso.st_size > summary->maxsize) summary->maxsize=ed->statuso.st_size;
+     if (ed->statuso.st_size == 0) summary->totzero++;
      if (ed->statuso.st_size <= 1024) summary->totltk++;
      if (ed->statuso.st_size > 1024) summary->totmtk++;
      if (ed->statuso.st_size <= 1048576) summary->totltm++;
@@ -266,6 +268,7 @@ int tsumit(struct sum *sumin, struct sum *smout) {
     if (sumin->maxossint4 > smout->maxossint4) smout->maxossint4=sumin->maxossint4;
   }
 
+  smout->totzero    += sumin->totzero;
   smout->totltk     += sumin->totltk;
   smout->totmtk     += sumin->totmtk;
   smout->totltm     += sumin->totltm;

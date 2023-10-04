@@ -237,8 +237,8 @@ int compute_treesummary(struct PoolArgs *pa) {
            sumout.minuid, sumout.maxuid, sumout.mingid, sumout.maxgid);
     printf("minsize %lld maxsize %lld\n",
            sumout.minsize, sumout.maxsize);
-    printf("totltk %lld totmtk %lld totltm %lld totmtm %lld totmtg %lld totmtt %lld\n",
-           sumout.totltk, sumout.totmtk, sumout.totltm, sumout.totmtm, sumout.totmtg, sumout.totmtt);
+    printf("totzero %lld totltk %lld totmtk %lld totltm %lld totmtm %lld totmtg %lld totmtt %lld\n",
+           sumout.totzero, sumout.totltk, sumout.totmtk, sumout.totltm, sumout.totmtm, sumout.totmtg, sumout.totmtt);
     printf("minctime %lld maxctime %lld\n",
            sumout.minctime, sumout.maxctime);
     printf("minmtime %lld maxmtime %lld\n",

@@ -91,10 +91,10 @@ const char ENTRIES_INSERT[] =
 
 const char SUMMARY_CREATE[] =
     DROP_TABLE(SUMMARY)
-    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
+    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
 
 static const char SUMMARY_INSERT[] =
-    "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
+    "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totzero, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
 
 const char VRSUMMARY_CREATE[] =
     DROP_VIEW(VRSUMMARY)
@@ -113,7 +113,7 @@ const char PENTRIES_CREATE[] =
 
 const char VRPENTRIES_CREATE[] =
     DROP_VIEW(VRPENTRIES)
-    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgidI, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".isroot as atroot, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
+    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgidI, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totzero AS dtotzero, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".isroot as atroot, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
 
 const char TREESUMMARY_EXISTS[] =
     "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');";
@@ -287,9 +287,9 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 
 int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
     static const char *ts_str[] = {
-        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 "
+        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 "
         "FROM summary WHERE rectype == 0;",
-        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, totsubdirs, maxsubdirfiles, maxsubdirlinks, maxsubdirsize "
+        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, totsubdirs, maxsubdirfiles, maxsubdirlinks, maxsubdirsize "
         "FROM treesummary WHERE rectype == 0;",
     };
 
@@ -314,43 +314,44 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
         curr.maxgid     = sqlite3_column_int64(res, 5);
         curr.minsize    = sqlite3_column_int64(res, 6);
         curr.maxsize    = sqlite3_column_int64(res, 7);
-        curr.totltk     = sqlite3_column_int64(res, 8);
-        curr.totmtk     = sqlite3_column_int64(res, 9);
-        curr.totltm     = sqlite3_column_int64(res, 10);
-        curr.totmtm     = sqlite3_column_int64(res, 11);
-        curr.totmtg     = sqlite3_column_int64(res, 12);
-        curr.totmtt     = sqlite3_column_int64(res, 13);
-        curr.totsize    = sqlite3_column_int64(res, 14);
-        curr.minctime   = sqlite3_column_int64(res, 15);
-        curr.maxctime   = sqlite3_column_int64(res, 16);
-        curr.minmtime   = sqlite3_column_int64(res, 17);
-        curr.maxmtime   = sqlite3_column_int64(res, 18);
-        curr.minatime   = sqlite3_column_int64(res, 19);
-        curr.maxatime   = sqlite3_column_int64(res, 20);
-        curr.minblocks  = sqlite3_column_int64(res, 21);
-        curr.maxblocks  = sqlite3_column_int64(res, 22);
-        curr.totxattr   = sqlite3_column_int64(res, 23);
+        curr.totzero    = sqlite3_column_int64(res, 8);
+        curr.totltk     = sqlite3_column_int64(res, 9);
+        curr.totmtk     = sqlite3_column_int64(res, 10);
+        curr.totltm     = sqlite3_column_int64(res, 11);
+        curr.totmtm     = sqlite3_column_int64(res, 12);
+        curr.totmtg     = sqlite3_column_int64(res, 13);
+        curr.totmtt     = sqlite3_column_int64(res, 14);
+        curr.totsize    = sqlite3_column_int64(res, 15);
+        curr.minctime   = sqlite3_column_int64(res, 16);
+        curr.maxctime   = sqlite3_column_int64(res, 17);
+        curr.minmtime   = sqlite3_column_int64(res, 18);
+        curr.maxmtime   = sqlite3_column_int64(res, 19);
+        curr.minatime   = sqlite3_column_int64(res, 20);
+        curr.maxatime   = sqlite3_column_int64(res, 21);
+        curr.minblocks  = sqlite3_column_int64(res, 22);
+        curr.maxblocks  = sqlite3_column_int64(res, 23);
+        curr.totxattr   = sqlite3_column_int64(res, 24);
 
-        curr.mincrtime  = sqlite3_column_int64(res, 24);
-        curr.maxcrtime  = sqlite3_column_int64(res, 25);
-        curr.minossint1 = sqlite3_column_int64(res, 26);
-        curr.maxossint1 = sqlite3_column_int64(res, 27);
-        curr.totossint1 = sqlite3_column_int64(res, 28);
-        curr.minossint2 = sqlite3_column_int64(res, 29);
-        curr.maxossint2 = sqlite3_column_int64(res, 30);
-        curr.totossint2 = sqlite3_column_int64(res, 31);
-        curr.minossint3 = sqlite3_column_int64(res, 32);
-        curr.maxossint3 = sqlite3_column_int64(res, 33);
-        curr.totossint3 = sqlite3_column_int64(res, 34);
-        curr.minossint4 = sqlite3_column_int64(res, 35);
-        curr.maxossint4 = sqlite3_column_int64(res, 36);
-        curr.totossint4 = sqlite3_column_int64(res, 37);
+        curr.mincrtime  = sqlite3_column_int64(res, 25);
+        curr.maxcrtime  = sqlite3_column_int64(res, 26);
+        curr.minossint1 = sqlite3_column_int64(res, 27);
+        curr.maxossint1 = sqlite3_column_int64(res, 28);
+        curr.totossint1 = sqlite3_column_int64(res, 29);
+        curr.minossint2 = sqlite3_column_int64(res, 30);
+        curr.maxossint2 = sqlite3_column_int64(res, 31);
+        curr.totossint2 = sqlite3_column_int64(res, 32);
+        curr.minossint3 = sqlite3_column_int64(res, 33);
+        curr.maxossint3 = sqlite3_column_int64(res, 34);
+        curr.totossint3 = sqlite3_column_int64(res, 35);
+        curr.minossint4 = sqlite3_column_int64(res, 36);
+        curr.maxossint4 = sqlite3_column_int64(res, 37);
+        curr.totossint4 = sqlite3_column_int64(res, 38);
 
         if (ts) {
-            curr.totsubdirs     = sqlite3_column_int64(res, 38);
-            curr.maxsubdirfiles = sqlite3_column_int64(res, 39);
-            curr.maxsubdirlinks = sqlite3_column_int64(res, 40);
-            curr.maxsubdirsize  = sqlite3_column_int64(res, 41);
+            curr.totsubdirs     = sqlite3_column_int64(res, 39);
+            curr.maxsubdirfiles = sqlite3_column_int64(res, 40);
+            curr.maxsubdirlinks = sqlite3_column_int64(res, 41);
+            curr.maxsubdirsize  = sqlite3_column_int64(res, 42);
         }
         else {
             curr.totsubdirs     = 0;
@@ -659,41 +660,42 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  21, su->maxgid);
     sqlite3_bind_int64(res,  22, su->minsize);
     sqlite3_bind_int64(res,  23, su->maxsize);
-    sqlite3_bind_int64(res,  24, su->totltk);
-    sqlite3_bind_int64(res,  25, su->totmtk);
-    sqlite3_bind_int64(res,  26, su->totltm);
-    sqlite3_bind_int64(res,  27, su->totmtm);
-    sqlite3_bind_int64(res,  28, su->totmtg);
-    sqlite3_bind_int64(res,  29, su->totmtt);
-    sqlite3_bind_int64(res,  30, su->totsize);
-    sqlite3_bind_int64(res,  31, su->minctime);
-    sqlite3_bind_int64(res,  32, su->maxctime);
-    sqlite3_bind_int64(res,  33, su->minmtime);
-    sqlite3_bind_int64(res,  34, su->maxmtime);
-    sqlite3_bind_int64(res,  35, su->minatime);
-    sqlite3_bind_int64(res,  36, su->maxatime);
-    sqlite3_bind_int64(res,  37, su->minblocks);
-    sqlite3_bind_int64(res,  38, su->maxblocks);
-    sqlite3_bind_int64(res,  39, su->totxattr);
-    sqlite3_bind_int64(res,  40, 0); /* depth */
-    sqlite3_bind_int64(res,  41, su->mincrtime);
-    sqlite3_bind_int64(res,  42, su->maxcrtime);
-    sqlite3_bind_int64(res,  43, su->minossint1);
-    sqlite3_bind_int64(res,  44, su->maxossint1);
-    sqlite3_bind_int64(res,  45, su->totossint1);
-    sqlite3_bind_int64(res,  46, su->minossint2);
-    sqlite3_bind_int64(res,  47, su->maxossint2);
-    sqlite3_bind_int64(res,  48, su->totossint2);
-    sqlite3_bind_int64(res,  49, su->minossint3);
-    sqlite3_bind_int64(res,  50, su->maxossint3);
-    sqlite3_bind_int64(res,  51, su->totossint3);
-    sqlite3_bind_int64(res,  52, su->minossint4);
-    sqlite3_bind_int64(res,  53, su->maxossint4);
-    sqlite3_bind_int64(res,  54, su->totossint4);
-    sqlite3_bind_int64(res,  55, 0); /* rectype */
-    sqlite3_bind_int64(res,  56, pwork->pinode);
-    sqlite3_bind_int64(res,  57, 1); /* isroot */
-    sqlite3_bind_int64(res,  58, 0); /* rollupscore */
+    sqlite3_bind_int64(res,  24, su->totzero);
+    sqlite3_bind_int64(res,  25, su->totltk);
+    sqlite3_bind_int64(res,  26, su->totmtk);
+    sqlite3_bind_int64(res,  27, su->totltm);
+    sqlite3_bind_int64(res,  28, su->totmtm);
+    sqlite3_bind_int64(res,  29, su->totmtg);
+    sqlite3_bind_int64(res,  30, su->totmtt);
+    sqlite3_bind_int64(res,  31, su->totsize);
+    sqlite3_bind_int64(res,  32, su->minctime);
+    sqlite3_bind_int64(res,  33, su->maxctime);
+    sqlite3_bind_int64(res,  34, su->minmtime);
+    sqlite3_bind_int64(res,  35, su->maxmtime);
+    sqlite3_bind_int64(res,  36, su->minatime);
+    sqlite3_bind_int64(res,  37, su->maxatime);
+    sqlite3_bind_int64(res,  38, su->minblocks);
+    sqlite3_bind_int64(res,  39, su->maxblocks);
+    sqlite3_bind_int64(res,  40, su->totxattr);
+    sqlite3_bind_int64(res,  41, 0); /* depth */
+    sqlite3_bind_int64(res,  42, su->mincrtime);
+    sqlite3_bind_int64(res,  43, su->maxcrtime);
+    sqlite3_bind_int64(res,  44, su->minossint1);
+    sqlite3_bind_int64(res,  45, su->maxossint1);
+    sqlite3_bind_int64(res,  46, su->totossint1);
+    sqlite3_bind_int64(res,  47, su->minossint2);
+    sqlite3_bind_int64(res,  48, su->maxossint2);
+    sqlite3_bind_int64(res,  49, su->totossint2);
+    sqlite3_bind_int64(res,  50, su->minossint3);
+    sqlite3_bind_int64(res,  51, su->maxossint3);
+    sqlite3_bind_int64(res,  52, su->totossint3);
+    sqlite3_bind_int64(res,  53, su->minossint4);
+    sqlite3_bind_int64(res,  54, su->maxossint4);
+    sqlite3_bind_int64(res,  55, su->totossint4);
+    sqlite3_bind_int64(res,  56, 0); /* rectype */
+    sqlite3_bind_int64(res,  57, pwork->pinode);
+    sqlite3_bind_int64(res,  58, 1); /* isroot */
+    sqlite3_bind_int64(res,  59, 0); /* rollupscore */
 
     sqlite3_step(res);
     sqlite3_reset(res);
@@ -716,8 +718,8 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     }
 
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
-       su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+     su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
 
     char *err = NULL;
     if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err) != SQLITE_OK ) {
@@ -1351,7 +1353,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
          * -1 because a directory is not a subdirectory of itself
          */
         static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
-            "INSERT INTO " TREESUMMARY " SELECT COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), rectype, uid, gid FROM " SUMMARY ";";
+            "INSERT INTO " TREESUMMARY " SELECT COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totzero), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), rectype, uid, gid FROM " SUMMARY ";";
 
         char *err = NULL;
         if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {
