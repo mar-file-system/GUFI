@@ -67,8 +67,13 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 OUTPUT="gufi_query.out"
 
 (
+touch "${INDEXROOT}/file" # ignored when walking index
+
 echo "# ${GUFI_QUERY} help" | replace
 run_no_sort "${GUFI_QUERY}"
+
+echo "# Walk without returning results"
+run_sort "${GUFI_QUERY} \"${INDEXROOT}\""
 
 echo "# Get only directories"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM vrsummary;\" \"${INDEXROOT}\""
@@ -79,20 +84,26 @@ run_sort "${GUFI_QUERY} -d \" \" -E \"SELECT name FROM vrpentries;\" \"${INDEXRO
 echo "# Get all directory and non-directory names"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
+echo "# Get number of subdirectories"
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll), subdirs_walked() FROM vrsummary;\" \"${INDEXROOT}\""
+
 echo "# Get relative paths of all directories and non-directories ascending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\"" | remove_root
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending names"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\"" | remove_root
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path DESC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending sizes (files only)"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\"" | remove_root
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size ASC, path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories descending sizes (files only)"
-run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\"" | remove_root
+run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT, size INT64);\" -K \"CREATE TABLE aggregate(path TEXT, size INT64);\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');\" -J \"INSERT INTO aggregate SELECT path, size FROM out;\" -G \"SELECT path FROM aggregate ORDER BY size DESC, path ASC;\" \"${INDEXROOT}\""
 
 echo "# Get all directory and non-directory names not in directory"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}\" \"${INDEXROOT}\""
+
+echo "# Get all directory and non-directory names and their xattrs"
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;\" -x \"${INDEXROOT}\""
 
 echo "#####################################"
 echo "# Invalid Inputs                    #"

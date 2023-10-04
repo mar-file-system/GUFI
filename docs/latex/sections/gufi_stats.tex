@@ -111,7 +111,7 @@ These statistics will run a computation on a single
 directory. Specifying \texttt{-r} or \texttt{-{}-recursive} will
 recursively descend the starting directory and return each
 subdirectory's statistic.
-\\\\
+\\
 \begin{table}[h!]
   \begin{tabular} {| l | l |}
     \hline
@@ -148,7 +148,7 @@ These statistics will run a computation on an entire subtree. By
 default, the results will be grouped together by UID. Specifying
 \texttt{-c} or \texttt{-{}-cumulative} will combine all of the results
 into a single sum.
-\\\\
+\\
 \begin{table}[h!]
   \begin{tabular} {| l | l |}
     \hline
@@ -188,10 +188,26 @@ into a single sum.
   \end{tabular}
 \end{table}
 
+\subsubsection{Both}
+These statistics can be called with both \texttt{-{}-recursive} or
+\texttt{-{}-cumulative}.
+\\
+\begin{table}[h!]
+  \begin{tabular} {| l | l |}
+    \hline
+    filesize-log2-bins & Generate histogram of filesizes with bins
+    [2\textsuperscript{n}, 2\textsuperscript{n+1}) \\
+    \hline
+    filesize-log1024-bins & Generate histogram of filesizes with bins
+    [1024\textsuperscript{n}, 1024\textsuperscript{n+1}) \\
+    \hline
+  \end{tabular}
+\end{table}
+
 \subsubsection{Other}
 Statistics under the ``other'' category do not have extra flags
 associated with them.
-\\\\
+\\
 \begin{table}[h!]
   \begin{tabular} {| l | l |}
     \hline

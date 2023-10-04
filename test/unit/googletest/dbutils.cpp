@@ -268,7 +268,7 @@ TEST(addqueryfuncs, rpath) {
 
     for(int rollupscore : {0, 1}) {
         char query[MAXSQL] = {};
-        SNPRINTF(query, MAXSQL, "SELECT rpath(\"%s\", %d);", dirname, rollupscore);
+        SNPRINTF(query, MAXSQL, "SELECT rpath('%s', %d);", dirname, rollupscore);
 
         // the path returned by the query is the path without the index prefix
         char output[MAXPATH] = {};

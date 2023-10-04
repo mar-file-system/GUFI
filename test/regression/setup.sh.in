@@ -296,7 +296,7 @@ clean_index() {
     "${GUFI_QUERY}" -a -w -S "UPDATE summary SET inode = mtime, size = mtime, atime = mtime, ctime = mtime, pinode = 16;" -E "UPDATE entries SET inode = mtime, size = mtime, atime = mtime, ctime = mtime" "${INDEX}"
 
     # ${INDEXROOT} is not a child of itself
-    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = 17 WHERE name == \"${BASENAME}\";"
+    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = 17 WHERE name == '${BASENAME}';"
 
     # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
     DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"

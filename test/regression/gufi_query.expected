@@ -30,6 +30,9 @@ options:
 GUFI_index        find GUFI index here
 
 
+# Walk without returning results
+$ gufi_query "prefix"
+
 # Get only directories
 $ gufi_query -d " " -S "SELECT name FROM vrsummary;" "prefix"
 directory
@@ -77,79 +80,87 @@ unusual#? directory ,
 unusual, name?#
 writable
 
+# Get number of subdirectories
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs_walked() FROM vrsummary;" "prefix"
+prefix 3
+prefix/directory 1
+prefix/directory/subdirectory 0
+prefix/leaf_directory 0
+prefix/unusual#? directory , 0
+
 # Get relative paths of all directories and non-directories ascending names
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path ASC;" "prefix"
 prefix
-.hidden
-1KB
-1MB
-directory
-directory/executable
-directory/readonly
-directory/subdirectory
-directory/subdirectory/directory_symlink
-directory/subdirectory/repeat_name
-directory/writable
-file_symlink
-leaf_directory
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-old_file
-repeat_name
-unusual#? directory ,
-unusual#? directory ,/unusual, name?#
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
 
 # Get relative paths of all directories and non-directories descending names
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT);" -K "CREATE TABLE aggregate(path TEXT);" -S "INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -J "INSERT INTO aggregate SELECT path FROM out;" -G "SELECT path FROM aggregate ORDER BY path DESC;" "prefix"
-unusual#? directory ,/unusual, name?#
-unusual#? directory ,
-repeat_name
-old_file
-leaf_directory/leaf_file2
-leaf_directory/leaf_file1
-leaf_directory
-file_symlink
-directory/writable
-directory/subdirectory/repeat_name
-directory/subdirectory/directory_symlink
-directory/subdirectory
-directory/readonly
-directory/executable
-directory
-1MB
-1KB
-.hidden
+prefix/unusual#? directory ,/unusual, name?#
+prefix/unusual#? directory ,
+prefix/repeat_name
+prefix/old_file
+prefix/leaf_directory/leaf_file2
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory
+prefix/file_symlink
+prefix/directory/writable
+prefix/directory/subdirectory/repeat_name
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory
+prefix/directory/readonly
+prefix/directory/executable
+prefix/directory
+prefix/1MB
+prefix/1KB
+prefix/.hidden
 prefix
 
 # Get relative paths of all directories and non-directories ascending sizes (files only)
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size ASC, path ASC;" "prefix"
-old_file
-directory/executable
-directory/readonly
-directory/writable
-directory/subdirectory/repeat_name
-.hidden
-leaf_directory/leaf_file1
-leaf_directory/leaf_file2
-repeat_name
-unusual#? directory ,/unusual, name?#
-1KB
-1MB
+prefix/old_file
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/writable
+prefix/directory/subdirectory/repeat_name
+prefix/.hidden
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/repeat_name
+prefix/unusual#? directory ,/unusual, name?#
+prefix/1KB
+prefix/1MB
 
 # Get relative paths of all directories and non-directories descending sizes (files only)
 $ gufi_query -d " " -a -I "CREATE TABLE out(path TEXT, size INT64);" -K "CREATE TABLE aggregate(path TEXT, size INT64);" -E "INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size FROM vrpentries WHERE (type == 'f');" -J "INSERT INTO aggregate SELECT path, size FROM out;" -G "SELECT path FROM aggregate ORDER BY size DESC, path ASC;" "prefix"
-1MB
-1KB
-unusual#? directory ,/unusual, name?#
-repeat_name
-leaf_directory/leaf_file2
-leaf_directory/leaf_file1
-.hidden
-directory/subdirectory/repeat_name
-directory/writable
-directory/readonly
-directory/executable
-old_file
+prefix/1MB
+prefix/1KB
+prefix/unusual#? directory ,/unusual, name?#
+prefix/repeat_name
+prefix/leaf_directory/leaf_file2
+prefix/leaf_directory/leaf_file1
+prefix/.hidden
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/directory/readonly
+prefix/directory/executable
+prefix/old_file
 
 # Get all directory and non-directory names not in directory
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip" "prefix"
@@ -161,6 +172,34 @@ prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# Get all directory and non-directory names and their xattrs
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll), xattr_name, xattr_value FROM vrxsummary;" -E "SELECT rpath(sname, sroll) || '/' || name, xattr_name, xattr_value FROM vrxpentries;" -x "prefix"
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB user.size 1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory user.name sub
+prefix/directory/subdirectory user.type dir
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/file_symlink
+prefix/leaf_directory user.name leaf
+prefix/leaf_directory user.type dir
+prefix/leaf_directory/leaf_file1 user.name1 value1
+prefix/leaf_directory/leaf_file1 user.name2 value2
+prefix/leaf_directory/leaf_file1 user.name3 value3
+prefix/leaf_directory/leaf_file2 user.name4 value4
+prefix/leaf_directory/leaf_file2 user.name5 value5
+prefix/leaf_directory/leaf_file2 user.name6 value6
 prefix/old_file
 prefix/repeat_name
 prefix/unusual#? directory ,

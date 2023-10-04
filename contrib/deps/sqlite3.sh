@@ -72,11 +72,11 @@ PATCH_SQLITE3_OPEN="$1"
 sqlite3_name="sqlite3"
 sqlite3_prefix="${INSTALL_DIR}/${sqlite3_name}"
 if [[ ! -d "${sqlite3_prefix}" ]]; then
-    sqlite3_build="${BUILD_DIR}/sqlite-autoconf-3270200"
+    sqlite3_build="${BUILD_DIR}/sqlite-autoconf-3430100"
     if [[ ! -d "${sqlite3_build}" ]]; then
-        sqlite3_tarball="${DOWNLOAD_DIR}/sqlite-autoconf-3270200.tar.gz"
+        sqlite3_tarball="${DOWNLOAD_DIR}/sqlite-autoconf-3430100.tar.gz"
         if [[ ! -f "${sqlite3_tarball}" ]]; then
-            wget https://www.sqlite.org/2019/sqlite-autoconf-3270200.tar.gz -O "${sqlite3_tarball}"
+            wget https://www.sqlite.org/2023/sqlite-autoconf-3430100.tar.gz -O "${sqlite3_tarball}"
         fi
 
         tar -xf "${sqlite3_tarball}" -C "${BUILD_DIR}"
@@ -95,7 +95,7 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
     mkdir -p build
     cd build
     if [[ ! -f Makefile ]]; then
-        CFLAGS="-USQLITE_TEMP_STORE -DSQLITE_TEMP_STORE=3 -USQLITE_THREADSAFE -DSQLITE_THREADSAFE=0 -USQLITE_MAX_EXPR_DEPTH -DSQLITE_MAX_EXPR_DEPTH=0 -USQLITE_DEFAULT_MEMSTATUS -DSQLITE_DEFAULT_MEMSTATUS=0 -USQLITE_ENABLE_DBSTAT_VTAB -USQLITE_ENABLE_RTREE -USQLITE_ENABLE_FTS4 -USQLITE_ENABLE_JSON1 -USQLITE_OMIT_PROGRESS_CALLBACK -USQLITE_MAX_ATTACHED -DSQLITE_MAX_ATTACHED=125 -O3" ../configure --prefix="${sqlite3_prefix}"
+        CFLAGS="-DSQLITE_DEFAULT_AUTOMATIC_INDEX=0 -DSQLITE_DEFAULT_AUTOVACUUM=0 -DSQLITE_DEFAULT_CACHE_SIZE=16777216 -DSQLITE_DEFAULT_LOCKING_MODE=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DEFAULT_SYNCHRONOUS=0 -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_ATTACHED=125 -DSQLITE_MAX_EXPR_DEPTH=0 -USQLITE_THREADSAFE -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_USE_URI -USQLITE_ENABLE_FTS4 -USQLITE_ENABLE_FTS5 -USQLITE_ENABLE_GEOPOLY -DSQLITE_ENABLE_MATH_FUNCTIONS -USQLITE_ENABLE_RTREE -DSQLITE_OMIT_DEPRECATED -DSQLITE_OMIT_JSON -DSQLITE_OMIT_PROGRESS_CALLBACK -O3" ../configure --prefix="${sqlite3_prefix}"
     fi
     make -j "${THREADS}"
     make install

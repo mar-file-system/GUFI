@@ -91,7 +91,7 @@ def build_where(args, root_uid=0, root_gid=0): # pylint: disable=unused-argument
     #     where  += ['(uid == {0})'.format(os.getuid())]
 
     if args.uid is not None:
-        where += ['uid == "{0}"'.format(args.uid)]
+        where += ['uid == \'{0}\''.format(args.uid)]
 
     return where
 
@@ -125,8 +125,8 @@ def depth(_config, args, where):
 
         '-K', build_create(args.aggregate_name, ['name TEXT']),
 
-        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN "." ELSE name END'] if args.recursive else []) +
-                                      ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, "/", "")) END'],
+        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'] if args.recursive else []) +
+                                      ['CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, \'/\', \'\')) END'],
                                       [args.aggregate_name],
                                       None,
                                       None,
@@ -156,7 +156,7 @@ def filesize(_config, args, where):
                                            gufi_common.build_query(['rpath(sname, sroll)',
                                                                     'CAST(TOTAL(size) as INT64)'],
                                                                    [gufi_common.VRPENTRIES],
-                                                                   where + ['type == "f"'],
+                                                                   where + ['type == \'f\''],
                                                                    None,
                                                                    None,
                                                                    args.num_results,
@@ -173,7 +173,7 @@ def filesize(_config, args, where):
 
         '-K', build_create(args.aggregate_name, ['name TEXT', 'size INT64']),
 
-        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN "." ELSE name END'] if args.recursive else []) +
+        '-G', gufi_common.build_query((['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'] if args.recursive else []) +
                                       ['size'],
                                       [args.aggregate_name],
                                       None,
@@ -199,7 +199,7 @@ def entries_count(_config, args, where, type): # pylint: disable=redefined-built
     queries = [
         '-E', gufi_common.build_query((['rpath({0}.name, {0}.rollupscore)'.format(gufi_common.SUMMARY)] if args.recursive else []) +
                                       ['COUNT({0}.inode)'.format(gufi_common.PENTRIES)],
-                                      ['{0} LEFT JOIN {1} ON (({0}.inode == {1}.pinode) AND {1}.type == "{2}")'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, type)],
+                                      ['{0} LEFT JOIN {1} ON (({0}.inode == {1}.pinode) AND {1}.type == \'{2}\')'.format(gufi_common.SUMMARY, gufi_common.PENTRIES, type)],
                                       where,
                                       ['{0}.inode'.format(gufi_common.SUMMARY)],
                                       None,
@@ -223,7 +223,7 @@ def extensions(_config, args, where):
     queries = [
         '-I', build_create(args.inmemory_name, ['ext TEXT', 'count INTEGER']),
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['REPLACE(name, RTRIM(name, REPLACE(name, ".", "")), "") AS ext', 'COUNT(inode)'],
+                                           gufi_common.build_query(['REPLACE(name, RTRIM(name, REPLACE(name, \'.\', \'\')), \'\') AS ext', 'COUNT(inode)'],
                                                                    [gufi_common.VRPENTRIES],
                                                                    where,
                                                                    ['ext'],
@@ -310,7 +310,7 @@ def total_filesize(_config, args, where):
             '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                                gufi_common.build_query(['NULL', 'uid', 'SUM(size)'],
                                                                        [gufi_common.VRPENTRIES],
-                                                                       where + ['type == "f"'],
+                                                                       where + ['type == \'f\''],
                                                                        group_by,
                                                                        order_by,
                                                                        args.num_results,
@@ -363,7 +363,7 @@ def total_entries_count(_config, args, where, type): # pylint: disable=redefined
                                            gufi_common.build_query(['NULL', 'uid', 'pinode',
                                                                     'COUNT(inode) AS count'],
                                                                    [gufi_common.VRPENTRIES],
-                                                                   where + ['type == "{0}"'.format(type)],
+                                                                   where + ['type == \'{0}\''.format(type)],
                                                                    E_group_by,
                                                                    ['count {0}'.format(ORDER[args.order]),
                                                                     'uid {0}'.format(ORDER[args.order])],
@@ -439,7 +439,7 @@ def dircount(_config, args, where):
         '-K', build_create(args.aggregate_name,
                            ['path TEXT', 'inode INT64', 'pinode INT64', 'level INT64']),
 
-        '-G', gufi_common.build_query((['CASE length(path) WHEN 0 THEN "." ELSE path END as print_path'] if args.recursive else []) +
+        '-G', gufi_common.build_query((['CASE length(path) WHEN 0 THEN \'.\' ELSE path END as print_path'] if args.recursive else []) +
                                       ['(SELECT COUNT(*) FROM {0} AS nested WHERE nested.pinode == {0}.inode)'.format(args.aggregate_name)],
                                       [args.aggregate_name],
                                       None if args.recursive else ['level == 0'],
@@ -537,7 +537,7 @@ def leaf_dirs(_config, args, where):
         '-K', build_create(args.aggregate_name,
                            ['name TEXT']),
 
-        '-G', gufi_common.build_query(['CASE length(name) WHEN 0 THEN "." ELSE name END'],
+        '-G', gufi_common.build_query(['CASE length(name) WHEN 0 THEN \'.\' ELSE name END'],
                                       [args.aggregate_name],
                                       None,
                                       None,
@@ -574,7 +574,7 @@ def leaf_depth(_config, args, where):
 
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
                                            gufi_common.build_query(['name',
-                                                                    '(length(name) - length(replace(name, "/", "")))'],
+                                                                    '(length(name) - length(replace(name, \'/\', \'\')))'],
                                                                    [args.inmemory_name],
                                                                    None,
                                                                    None,
@@ -612,7 +612,7 @@ def leaf(_config, args, where, type): # pylint: disable=redefined-builtin
                            ['name TEXT', 'count INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['rpath(sname, sroll)', '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)],
+                                           gufi_common.build_query(['rpath(sname, sroll)', '(SELECT COUNT(*) FROM entries WHERE type == \'{0}\')'.format(type)],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
@@ -667,7 +667,7 @@ def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
                            ['uid INT64', 'count INT64']),
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type== "{0}") AS count'.format(type)],
+                                           gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type== \'{0}\') AS count'.format(type)],
                                                                    [gufi_common.VRSUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    group_by,
@@ -816,7 +816,7 @@ def per_level(_config, args, where, type): # pylint: disable=redefined-builtin
                                              'uid {0}'.format(ORDER[args.order])]
 
     uid = [] if args.cumulative else ['uid']
-    count = '1' if type == 'd' else '(SELECT COUNT(*) FROM entries WHERE type == "{0}")'.format(type)
+    count = '1' if type == 'd' else '(SELECT COUNT(*) FROM entries WHERE type == \'{0}\')'.format(type)
 
     queries = [
         '-I', build_create(args.inmemory_name,
@@ -951,10 +951,10 @@ def uidgid_size(args, uidgid, where):
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query([uidgid, 'size', 'fullpath'],
                                                                    ['({0})'.format(gufi_common.build_query([uidgid, 'size',
-                                                                                                            'rpath(sname, sroll) || "/" || name AS fullpath',
+                                                                                                            'rpath(sname, sroll) || \'/\' || name AS fullpath',
                                                                                                             'row_number() OVER (PARTITION BY {0} ORDER BY size {1}) AS rownum'.format(uidgid, args.order)],
                                                                                                            [gufi_common.VRPENTRIES],
-                                                                                                           ['type == "f"'],
+                                                                                                           ['type == \'f\''],
                                                                                                            None,
                                                                                                            None,
                                                                                                            None,
@@ -993,53 +993,121 @@ def uid_size(_config, args, where):
 def gid_size(_config, args, where):
     return uidgid_size(args, 'gid', where)
 
+def size_bins(args, base, type): # pylint: disable=redefined-builtin
+    '''
+    Gets histogram of sizes
+    bins are [b^n, b^(n+1))
+
+    Requires SQLite 3.35.0
+
+    default returns bins for 1 directory
+    with --recursive, groups results by pinode
+    with --cumulative, sums all results
+    '''
+
+    bits = 'bits'
+
+    if type in ['f', 'l']:
+        table = gufi_common.VRPENTRIES
+    elif type == 'd':
+        table = gufi_common.VRSUMMARY
+
+    pinode_col = 'pinode'
+    pinode_create = ['{0} INTEGER'.format(pinode_col)] if args.recursive else []
+    pinode = [pinode_col] if args.recursive else []
+
+    queries = [
+        '-I', build_create(args.inmemory_name, pinode_create + ['{0} INTEGER'.format(bits)]),
+        '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
+                                           gufi_common.build_query(pinode + ['CASE WHEN size == 0 THEN 0 ELSE CAST(FLOOR(LOG({0}, size)) AS INTEGER) END'.format(base)],
+                                                                   [table],
+                                                                   ['type == \'{0}\''.format(type)],
+                                                                   None, # cannot GROUP BY here because value would be aggregate
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-K', build_create(args.aggregate_name, pinode_create + ['{0} INTEGER'.format(bits), 'count INTEGER']),
+        '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
+                                           gufi_common.build_query(pinode + [bits, 'COUNT({0})'.format(bits)],
+                                                                   [args.inmemory_name],
+                                                                   None,
+                                                                   pinode + [bits],
+                                                                   None,
+                                                                   None,
+                                                                   None)),
+        '-G', gufi_common.build_query(pinode + ['CAST(pow({0}, {1}) AS INTEGER)'.format(base, bits), 'SUM(count)'],
+                                      [args.aggregate_name],
+                                      None,
+                                      pinode + [bits],
+                                      (['{0} {1}'.format(pinode_col, ORDER[args.order])] if args.recursive else []) +
+                                      ['{0} {1}'.format(bits, ORDER[args.order])],
+                                      None,
+                                      None),
+    ]
+
+    if not args.recursive and not args.cumulative:
+        queries += ['-z', '0']
+
+    return queries
+
+def filesize_log2_bins(_config, args, _where):
+    return size_bins(args, 2, 'f')
+
+def filesize_log1024_bins(_config, args, _where):
+    return size_bins(args, 1024, 'f')
+
 # mapping of desired statistics to functions
 
 # normally only computes for current directory
 # use --recursive to recurse down tree
 RECURSIVE = [
-    ['depth',               depth],
-    ['filesize',            filesize],
-    ['filecount',           filecount],
-    ['linkcount',           linkcount],
-    ['dircount',            dircount],
-    ['leaf-dirs',           leaf_dirs],
-    ['leaf-depth',          leaf_depth],
-    ['leaf-files',          leaf_files],
-    ['leaf-links',          leaf_links],
-    ['extensions',          extensions],
+    ['depth',                 depth],
+    ['filesize',              filesize],
+    ['filecount',             filecount],
+    ['linkcount',             linkcount],
+    ['dircount',              dircount],
+    ['leaf-dirs',             leaf_dirs],
+    ['leaf-depth',            leaf_depth],
+    ['leaf-files',            leaf_files],
+    ['leaf-links',            leaf_links],
+    ['extensions',            extensions],
 ]
 
 # normally computes statistics by uid
 # use --cumulative to combine
 CUMULATIVE = [
-    ['total-filesize',      total_filesize],
-    ['total-filecount',     total_filecount],
-    ['total-linkcount',     total_linkcount],
-    ['total-dircount',      total_dircount],
-    ['total-leaf-files',    total_leaf_files],
-    ['total-leaf-links',    total_leaf_links],
-    ['files-per-level',     files_per_level],
-    ['links-per-level',     links_per_level],
-    ['dirs-per-level',      dirs_per_level],
+    ['total-filesize',        total_filesize],
+    ['total-filecount',       total_filecount],
+    ['total-linkcount',       total_linkcount],
+    ['total-dircount',        total_dircount],
+    ['total-leaf-files',      total_leaf_files],
+    ['total-leaf-links',      total_leaf_links],
+    ['files-per-level',       files_per_level],
+    ['links-per-level',       links_per_level],
+    ['dirs-per-level',        dirs_per_level],
+]
+
+BOTH = [
+    ['filesize-log2-bins',    filesize_log2_bins],
+    ['filesize-log1024-bins', filesize_log1024_bins],
 ]
 
 # does not use either
 OTHERS = [
-    ['average-leaf-files',  average_leaf_files],
-    ['average-leaf-links',  average_leaf_links],
-    ['average-leaf-size',   average_leaf_size], # file size only
-    ['median-leaf-files',   median_leaf_files],
-    ['median-leaf-links',   median_leaf_links],
-    ['median-leaf-size',    median_leaf_size],  # file size only
-    ['duplicate-names',     duplicate_names],
-    ['uid-size',            uid_size],
-    ['gid-size',            gid_size],
+    ['average-leaf-files',    average_leaf_files],
+    ['average-leaf-links',    average_leaf_links],
+    ['average-leaf-size',     average_leaf_size], # file size only
+    ['median-leaf-files',     median_leaf_files],
+    ['median-leaf-links',     median_leaf_links],
+    ['median-leaf-size',      median_leaf_size],  # file size only
+    ['duplicate-names',       duplicate_names],
+    ['uid-size',              uid_size],
+    ['gid-size',              gid_size],
 ]
 
 # argv[0] should be the command name
 def run(argv, config_path):
-    stats = OrderedDict(RECURSIVE + CUMULATIVE + OTHERS)
+    stats = OrderedDict(RECURSIVE + CUMULATIVE + BOTH + OTHERS)
 
     # find and parse the configuration file first
     config = gufi_config.Server(config_path)
@@ -1054,12 +1122,13 @@ def run(argv, config_path):
     parser.add_argument('--version', '-v',
                         action='version',
                         version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
-    parser.add_argument('--recursive', '-r',
-                        action='store_true',
-                        help='run command recursively ({0})'.format(', '.join([key for key, _ in RECURSIVE])))
-    parser.add_argument('--cumulative', '-c',
-                        action='store_true',
-                        help='return cumulative values ({0})'.format(', '.join([key for key, _ in CUMULATIVE])))
+    exclusive = parser.add_mutually_exclusive_group()
+    exclusive.add_argument('--recursive', '-r',
+                           action='store_true',
+                           help='run command recursively ({0})'.format(', '.join([key for key, _ in RECURSIVE + BOTH])))
+    exclusive.add_argument('--cumulative', '-c',
+                           action='store_true',
+                           help='return cumulative values ({0})'.format(', '.join([key for key, _ in CUMULATIVE + BOTH])))
     parser.add_argument('--order',
                         metavar='order',
                         choices=ORDER.keys(),
