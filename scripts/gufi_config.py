@@ -78,7 +78,6 @@ def config_path():
     DEFAULT_PATH = os.environ[gufi_env_config]
   return DEFAULT_PATH
 
-
 class Config(object): # pylint: disable=too-few-public-methods,useless-object-inheritance
     def __init__(self, settings, config_reference=DEFAULT_PATH):
         # path string
@@ -120,7 +119,6 @@ class Config(object): # pylint: disable=too-few-public-methods,useless-object-in
                     out[key] = settings[key](value)
                 else:
                     out[key] = value
-
 
         for key in settings:
             if key not in out:
