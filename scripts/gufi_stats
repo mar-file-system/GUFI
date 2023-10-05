@@ -996,7 +996,7 @@ def gid_size(_config, args, where):
 def size_bins(args, base, type): # pylint: disable=redefined-builtin
     '''
     Gets histogram of sizes
-    bins are [b^n, b^(n+1))
+    bins are [b^n, b^(n+1)) 
 
     Requires SQLite 3.35.0
 
@@ -1035,7 +1035,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-G', gufi_common.build_query(pinode + ['CASE WHEN {1} == -1 THEN 0 ELSE CAST(pow({0}, {1}) AS INTEGER) END'.format(base, bits), 'SUM(count)'],
+        '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS INTEGER) || ',' || CAST(pow({0}, {1}+1) AS INTEGER) || ')' END".format(base, bits), 'SUM(count)'],
                                       [args.aggregate_name],
                                       None,
                                       pinode + [bits],
