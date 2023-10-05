@@ -1035,7 +1035,7 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-G', gufi_common.build_query(pinode + ['CASE WHEN {1} == -1 THEN 0 ELSE CAST(pow({0}, {1}) AS INTEGER) END'.format(base, bits), 'SUM(count)'],
+        '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS INTEGER) || ',' || CAST(pow({0}, {1}+1) AS INTEGER) || ')' END".format(base, bits), 'SUM(count)'],
                                       [args.aggregate_name],
                                       None,
                                       pinode + [bits],
