@@ -72,9 +72,10 @@ DEFAULT_PATH = '/etc/GUFI/config'
 
 # helper function to allow configurable paths to the gufi config file
 def config_path():
-  try:
-    return os.environ['GUFI_CONFIG']
-  except KeyError:
+  gufi_config_env = 'GUFI_CONFIG'
+  if gufi_config_env in os.environ:
+    return os.environ[gufi_config_env]
+  else:
     return DEFAULT_PATH
 
 class Config(object): # pylint: disable=too-few-public-methods,useless-object-inheritance
