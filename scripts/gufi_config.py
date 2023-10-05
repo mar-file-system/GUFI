@@ -75,8 +75,7 @@ def config_path():
   gufi_config_env = 'GUFI_CONFIG'
   if gufi_config_env in os.environ:
     return os.environ[gufi_config_env]
-  else:
-    return DEFAULT_PATH
+  return DEFAULT_PATH
 
 class Config(object): # pylint: disable=too-few-public-methods,useless-object-inheritance
     def __init__(self, settings, config_reference=DEFAULT_PATH):
