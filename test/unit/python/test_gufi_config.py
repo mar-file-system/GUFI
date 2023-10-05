@@ -95,6 +95,11 @@ class TestServerConfig(unittest.TestCase):
 
     def setUp(self): # pylint: disable=invalid-name
         self.pairs = copy.deepcopy(TestServerConfig.default)
+        self.original_environ = os.environ.copy() # save this since we change it to test GUFI_CONFIG
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
 
     def check_values(self, config):
         self.assertEqual(TestServerConfig.default[gufi_config.Server.THREADS],
@@ -135,6 +140,16 @@ class TestServerConfig(unittest.TestCase):
 
     def test_bad_outputbuffer(self):
         self.bad_int(gufi_config.Server.OUTPUTBUFFER, ['-1', '', 'abc'])
+
+    # test the ability to change config path with an env var
+    def test_default_path(self):
+        if 'GUFI_CONFIG' in os.environ:
+            del os.environ['GUFI_CONFIG']
+        self.assertEqual(gufi_config.config_path(), gufi_config.DEFAULT_PATH)
+
+    def test_custom_path_from_env(self):
+        os.environ['GUFI_CONFIG'] = '/custom/path'
+        self.assertEqual(gufi_config.config_path(), '/custom/path')
 
 class TestClientConfig(unittest.TestCase):
     default = {
