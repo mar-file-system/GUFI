@@ -996,7 +996,7 @@ def gid_size(_config, args, where):
 def size_bins(args, base, type): # pylint: disable=redefined-builtin
     '''
     Gets histogram of sizes
-    bins are [b^n, b^(n+1)) 
+    bins are [b^n, b^(n+1))
 
     Requires SQLite 3.35.0
 
