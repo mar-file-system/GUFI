@@ -1005,42 +1005,44 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
     with --cumulative, sums all results
     '''
 
-    bits = 'bits'
+    exponent = 'exponent'
 
     if type in ['f', 'l']:
         table = gufi_common.VRPENTRIES
+        field = 'size'
     elif type == 'd':
         table = gufi_common.VRSUMMARY
+        field = 'totfiles'
 
     pinode_col = 'pinode'
     pinode_create = ['{0} INTEGER'.format(pinode_col)] if args.recursive else []
     pinode = [pinode_col] if args.recursive else []
 
     queries = [
-        '-I', build_create(args.inmemory_name, pinode_create + ['{0} INTEGER'.format(bits)]),
+        '-I', build_create(args.inmemory_name, pinode_create + ['{0} INTEGER'.format(exponent)]),
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(pinode + ['CASE WHEN size == 0 THEN -1 ELSE CAST(FLOOR(LOG({0}, size)) AS INTEGER) END'.format(base)],
+                                           gufi_common.build_query(pinode + ['CASE WHEN {0} == 0 THEN -1 ELSE CAST(FLOOR(LOG({1}, {0})) AS INTEGER) END'.format(field,base)],
                                                                    [table],
                                                                    ['type == \'{0}\''.format(type)],
                                                                    None, # cannot GROUP BY here because value would be aggregate
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-K', build_create(args.aggregate_name, pinode_create + ['{0} INTEGER'.format(bits), 'count INTEGER']),
+        '-K', build_create(args.aggregate_name, pinode_create + ['{0} INTEGER'.format(exponent), 'count INTEGER']),
         '-J', 'INSERT INTO {0} {1}'.format(args.aggregate_name,
-                                           gufi_common.build_query(pinode + [bits, 'COUNT({0})'.format(bits)],
+                                           gufi_common.build_query(pinode + [exponent, 'COUNT({0})'.format(exponent)],
                                                                    [args.inmemory_name],
                                                                    None,
-                                                                   pinode + [bits],
+                                                                   pinode + [exponent],
                                                                    None,
                                                                    None,
                                                                    None)),
-        '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS INTEGER) || ',' || CAST(pow({0}, {1}+1) AS INTEGER) || ')' END".format(base, bits), 'SUM(count)'],
+        '-G', gufi_common.build_query(pinode + ["CASE WHEN {1} == -1 THEN '[0,1)' ELSE '[' || CAST(pow({0}, {1}) AS INTEGER) || ',' || CAST(pow({0}, {1}+1) AS INTEGER) || ')' END".format(base, exponent), 'SUM(count)'],
                                       [args.aggregate_name],
                                       None,
-                                      pinode + [bits],
+                                      pinode + [exponent],
                                       (['{0} {1}'.format(pinode_col, ORDER[args.order])] if args.recursive else []) +
-                                      ['{0} {1}'.format(bits, ORDER[args.order])],
+                                      ['{0} {1}'.format(exponent, ORDER[args.order])],
                                       None,
                                       None),
     ]
@@ -1056,53 +1058,61 @@ def filesize_log2_bins(_config, args, _where):
 def filesize_log1024_bins(_config, args, _where):
     return size_bins(args, 1024, 'f')
 
+def dirfilecount_log2_bins(_config, args, _where):
+    return size_bins(args, 2, 'd')
+
+def dirfilecount_log1024_bins(_config, args, _where):
+    return size_bins(args, 1024, 'd')
+
 # mapping of desired statistics to functions
 
 # normally only computes for current directory
 # use --recursive to recurse down tree
 RECURSIVE = [
-    ['depth',                 depth],
-    ['filesize',              filesize],
-    ['filecount',             filecount],
-    ['linkcount',             linkcount],
-    ['dircount',              dircount],
-    ['leaf-dirs',             leaf_dirs],
-    ['leaf-depth',            leaf_depth],
-    ['leaf-files',            leaf_files],
-    ['leaf-links',            leaf_links],
-    ['extensions',            extensions],
+    ['depth',                     depth],
+    ['filesize',                  filesize],
+    ['filecount',                 filecount],
+    ['linkcount',                 linkcount],
+    ['dircount',                  dircount],
+    ['leaf-dirs',                 leaf_dirs],
+    ['leaf-depth',                leaf_depth],
+    ['leaf-files',                leaf_files],
+    ['leaf-links',                leaf_links],
+    ['extensions',                extensions],
 ]
 
 # normally computes statistics by uid
 # use --cumulative to combine
 CUMULATIVE = [
-    ['total-filesize',        total_filesize],
-    ['total-filecount',       total_filecount],
-    ['total-linkcount',       total_linkcount],
-    ['total-dircount',        total_dircount],
-    ['total-leaf-files',      total_leaf_files],
-    ['total-leaf-links',      total_leaf_links],
-    ['files-per-level',       files_per_level],
-    ['links-per-level',       links_per_level],
-    ['dirs-per-level',        dirs_per_level],
+    ['total-filesize',            total_filesize],
+    ['total-filecount',           total_filecount],
+    ['total-linkcount',           total_linkcount],
+    ['total-dircount',            total_dircount],
+    ['total-leaf-files',          total_leaf_files],
+    ['total-leaf-links',          total_leaf_links],
+    ['files-per-level',           files_per_level],
+    ['links-per-level',           links_per_level],
+    ['dirs-per-level',            dirs_per_level],
 ]
 
 BOTH = [
-    ['filesize-log2-bins',    filesize_log2_bins],
-    ['filesize-log1024-bins', filesize_log1024_bins],
+    ['filesize-log2-bins',        filesize_log2_bins],
+    ['filesize-log1024-bins',     filesize_log1024_bins],
+    ['dirfilecount-log2-bins',    dirfilecount_log2_bins],
+    ['dirfilecount-log1024-bins', dirfilecount_log1024_bins],
 ]
 
 # does not use either
 OTHERS = [
-    ['average-leaf-files',    average_leaf_files],
-    ['average-leaf-links',    average_leaf_links],
-    ['average-leaf-size',     average_leaf_size], # file size only
-    ['median-leaf-files',     median_leaf_files],
-    ['median-leaf-links',     median_leaf_links],
-    ['median-leaf-size',      median_leaf_size],  # file size only
-    ['duplicate-names',       duplicate_names],
-    ['uid-size',              uid_size],
-    ['gid-size',              gid_size],
+    ['average-leaf-files',        average_leaf_files],
+    ['average-leaf-links',        average_leaf_links],
+    ['average-leaf-size',         average_leaf_size], # file size only
+    ['median-leaf-files',         median_leaf_files],
+    ['median-leaf-links',         median_leaf_links],
+    ['median-leaf-size',          median_leaf_size],  # file size only
+    ['duplicate-names',           duplicate_names],
+    ['uid-size',                  uid_size],
+    ['gid-size',                  gid_size],
 ]
 
 # argv[0] should be the command name
