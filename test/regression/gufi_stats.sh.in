@@ -141,6 +141,13 @@ run_no_sort "${GUFI_STATS}    filesize-log1024-bins \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -r filesize-log1024-bins \"${BASENAME}\""
 run_no_sort "${GUFI_STATS} -c filesize-log1024-bins \"${BASENAME}\""
 
+run_no_sort "${GUFI_STATS}    dirfilecount-log2-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r dirfilecount-log2-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c dirfilecount-log2-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS}    dirfilecount-log1024-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -r dirfilecount-log1024-bins \"${BASENAME}\""
+run_no_sort "${GUFI_STATS} -c dirfilecount-log1024-bins \"${BASENAME}\""
+
 # bad flags
 run "${GUFI_STATS} -c depth \"${BASENAME}\""
 run "${GUFI_STATS} -r total-filesize \"${BASENAME}\""
