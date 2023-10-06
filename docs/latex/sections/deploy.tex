@@ -92,16 +92,16 @@ extract useful information (see the user guide for more details). The
 server has the actual implementation of the wrappers while the clients
 have command forwarders.
 
-These wrappers require configuration files located at
-\guficonfigfile (with read permissions for all GUFI users)
-to function. These configuration files are simple text files
-containing lines of \texttt{<key>=<value>}. Duplicate configuration
-keys are overwritten by the bottom-most line. Empty lines and lines
-starting with \# are ignored. The server and client require different
+These wrappers require a valid GUFI configuration file to function correctly.
+By default, they assume this file is available (with read permissions for all
+GUFI users) at \guficonfigfile; alernatively, different paths can be specified
+via a \texttt{GUFI\_CONFIG} environment variable. These configuration files are
+simple text files containing lines of \texttt{<key>=<value>}.  Duplicate
+configuration keys are overwritten by the bottom-most line. Empty lines and
+lines starting with \# are ignored. The server and client require different
 configuration values. Example configuration files can be found in the
 \texttt{config} directory of the GUFI source, as well as in the build
-directory. The corresponding examples will also be installed with
-GUFI.
+directory. The corresponding examples will also be installed with GUFI.
 
 If a server and client exist on the same node, the server and client
 configuration file may be combined into one file.

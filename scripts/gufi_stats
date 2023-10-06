@@ -1182,4 +1182,4 @@ def run(argv, config_path):
     return query.returncode
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.DEFAULT_PATH))
+    sys.exit(run(sys.argv, gufi_config.config_path()))
