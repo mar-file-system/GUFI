@@ -58,32 +58,60 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+# -- Project info --
+copyright = '2023, Triad National Security, LLC'
+author = 'GUFI Authors'
+project = 'GUFI'
 
+# -- General configuration --
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-cmake_minimum_required(VERSION 3.1.0)
+templates_path = ['_templates']
+exclude_patterns = []
 
-# build man pages
-add_subdirectory(man)
+# Add numbers to figure captions
+numfig = True
 
-# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
-# in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
+# Automatically label sections for cross-references
+extensions = [
+            "sphinx.ext.autosectionlabel",
+            ]
 
-# this is just a quick early check
-# changing this variable does not do anything
-find_program(LATEX_PDFLATEX pdflatex)
-if (LATEX_PDFLATEX)
-  # build pdfs from latex files (default off to not require LaTeX)
-  option(LATEX_BUILD "Enable building of LaTeX documentation" Off)
-  message(STATUS "pdflatex found at ${LATEX_PDFLATEX}. Adding LaTeX building option (currently ${LATEX_BUILD}).")
-  if (LATEX_BUILD)
-    add_subdirectory(latex)
-  endif()
-endif()
+# Make sure the target is unique and ignore annoying warnings it generates
+#autosectionlabel_prefix_document = True
+suppress_warnings = ['autosectionlabel.*']
 
-find_package(Sphinx)
-if (Sphinx_FOUND)
-    add_subdirectory(sphinx_docs)
-else()
-    message(WARNING "No Sphinx found. Documentation target not available.")
-endif()
+rst_prolog = """
+.. include:: <s5defs.txt>
+
+"""
+
+# -- Options for HTML output ---
+# Remove advertisement in footer
+html_show_sphinx = False
+html_theme = 'sphinx_rtd_theme'
+html_static_path = ['_static']
+html_css_files = ['css/custom.css']
+# Removes the need to escape quotes
+smartquotes=False
+#character_level_inline_markup = True
+
+# -- Latex Config -- 
+documentclass = 'manual'
+
+#  The settings for each document
+# Sphinx converts each base rst file into a .tex file.
+latex_documents = [
+           ('gufi_user', 'gufi_user.tex', u'GUFI User Guide',
+                author, documentclass),
+           ('gufi_administrator', 'gufi_administrator.tex', u'GUFI Admin Guide',
+                author, documentclass),
+           ('gufi_developer', 'gufi_developer.tex', u'GUFI Developer Guide',
+                author, documentclass),
+]
+
+# Removes excess blank pages
+latex_elements = {
+          'extraclassoptions': 'openany,oneside'
+          }
+

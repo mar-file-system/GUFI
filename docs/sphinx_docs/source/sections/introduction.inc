@@ -1,0 +1,82 @@
+..
+    This file is part of GUFI, which is part of MarFS, which is released
+    under the BSD license.
+
+
+    Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without modification,
+    are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation and/or
+    other materials provided with the distribution.
+
+    3. Neither the name of the copyright holder nor the names of its contributors
+    may be used to endorse or promote products derived from this software without
+    specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+    IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+    OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+    From Los Alamos National Security, LLC:
+    LA-CC-15-039
+
+    Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+    Copyright 2017. Los Alamos National Security, LLC. This software was produced
+    under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+    Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+    the U.S. Department of Energy. The U.S. Government has rights to use,
+    reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+    ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+    ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+    modified to produce derivative works, such modified software should be
+    clearly marked, so as not to confuse it with the version available from
+    LANL.
+
+    THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+    THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+    CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+    OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+    IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+    OF SUCH DAMAGE.
+
+Introduction
+============
+
+| Over the years, the amount of data we store and use has grown
+  exponentially to the point that petabytes of storage is not uncommon.
+  What used to be a simple task of accessing and sorting through
+  information has been compounded into an arduous task with the size and
+  scale of super-computing data centers. Being able to query data
+  effectively, while also taking into account user permissions becomes
+  paramount into accomplishing daily tasks. This is what the Grand
+  Unified File Index(GUFI) tool aims to accomplish.
+| This process of efficiently accessing data is accomplished by
+  recreating the tree structure via indexing. Each directory contains an
+  SQL database file that stores the metadata of the files as well as
+  summary information for that directory and optionally summary
+  information for the entire tree below that directory.
+
+    |[fig:gufi_structure]Layout and user interaction with GUFI|
+
+.. |[fig:gufi_structure]Layout and user interaction with GUFI| image:: images/gufi_structure.png
+   :width: 50.0%

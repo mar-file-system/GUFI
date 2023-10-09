@@ -60,30 +60,16 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
-
-# build man pages
-add_subdirectory(man)
-
-# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
-# in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
-
-# this is just a quick early check
-# changing this variable does not do anything
-find_program(LATEX_PDFLATEX pdflatex)
-if (LATEX_PDFLATEX)
-  # build pdfs from latex files (default off to not require LaTeX)
-  option(LATEX_BUILD "Enable building of LaTeX documentation" Off)
-  message(STATUS "pdflatex found at ${LATEX_PDFLATEX}. Adding LaTeX building option (currently ${LATEX_BUILD}).")
-  if (LATEX_BUILD)
-    add_subdirectory(latex)
-  endif()
-endif()
-
 find_package(Sphinx)
+
 if (Sphinx_FOUND)
-    add_subdirectory(sphinx_docs)
+    add_sphinx_document(
+        my-user-manual
+        CONF_FILE "${CMAKE_CURRENT_LIST_DIR}/doc/user/conf.py"
+        "${CMAKE_CURRENT_LIST_DIR}/doc/user/index.rst"
+        "${CMAKE_CURRENT_LIST_DIR}/doc/user/introduction.rst"
+        "${CMAKE_CURRENT_LIST_DIR}/doc/user/models.rst"
+        "${CMAKE_CURRENT_LIST_DIR}/doc/user/api.rst")
 else()
     message(WARNING "No Sphinx found. Documentation target not available.")
 endif()

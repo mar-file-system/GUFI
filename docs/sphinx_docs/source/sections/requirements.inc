@@ -1,0 +1,159 @@
+..
+    This file is part of GUFI, which is part of MarFS, which is released
+    under the BSD license.
+
+
+    Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without modification,
+    are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation and/or
+    other materials provided with the distribution.
+
+    3. Neither the name of the copyright holder nor the names of its contributors
+    may be used to endorse or promote products derived from this software without
+    specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+    IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+    OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+    From Los Alamos National Security, LLC:
+    LA-CC-15-039
+
+    Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+    Copyright 2017. Los Alamos National Security, LLC. This software was produced
+    under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+    Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+    the U.S. Department of Energy. The U.S. Government has rights to use,
+    reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+    ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+    ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+    modified to produce derivative works, such modified software should be
+    clearly marked, so as not to confuse it with the version available from
+    LANL.
+
+    THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+    THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+    CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+    OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+    IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+    OF SUCH DAMAGE.
+
+Requirements
+============
+
+The following requirements were all considered in the design choices
+made in producing this capability:
+
+-  Unified index over multiple heterogeneous storage systems including
+   home, project, scratch, campaign, and archive
+
+-  Obey and support full POSIX tree attributes, permissions, hierarchy
+   representation, etc.
+
+-  Metadata-only supporting attributes and extended attributes
+
+-  Shared index for users and admins
+
+-  Fast parallel search capabilities
+
+-  Parallel metadata extraction for creating new indexes
+
+-  Parallel metadata extraction for incremental updates of existing
+   indexes and ease of using this data to update the index
+
+-  Index can live in a separate space or within the source file/storage
+   systems themselves where possible
+
+-  Can appear as mounted file system where you get a virtual image of
+   your file metadata based on query input and also a pre-run query can
+   also appear as a mounted file system
+
+-  | Full/Incremental update from sources with reasonable update
+   | time/annoyance
+
+-  Provide a way to work in a pure POSIX environment requiring only a
+   POSIX interface to storage systems for full and incremental metadata
+   extraction
+
+-  Exploit special interfaces from source file/storages systems provided
+   by some storage systems for mass metadata manipulation/extraction
+   like GPFS ILM
+
+-  Be open source software and leverage other open source software
+   and/or open interfaces
+
+-  | Very transparent and simple so one can easily
+   | understand/enhance/administrate with simple to understand formats.
+     Avoid black box anything.
+
+-  Extensible capabilities, especially in the query area, for example
+   enable outputs from query to be consumable by humans or other
+   programs and ability to connect in external data sources into query
+   results.
+
+-  Ability to store both base POSIX information and potentially source
+   storage system unique metadata per entry.
+
+-  The intent is to provide a nearly consistent index (doesn’t have to
+   be a perfect snapshot or continuously keeping up with source
+   file/storage systems.
+
+-  The intent is not to produce a policy management system for users or
+   admins but of course it could provide the index usable for policy
+   management function.
+
+-  Keep the code base small by leveraging existing technology as much as
+   possible both hardware and software including:
+
+   -  Flash storage: Assume the index would be small enough to fit in
+      flash storage or even perhaps memory with a few hundred bytes of
+      index per entry. Assume metadata mount per directory will
+      typically be a few kilobytes so parallel access ends up looking
+      like multi-kilobyte random reads which is well suited to flash
+      devices which can provide millions of read IOPS.
+
+   -  Both process and thread parallelism: where possible enable both
+      types of parallelism for speed and efficiency
+
+   -  A standard and powerful basis for search: enable the exploitation
+      of the power and stability of an existing basis for search even if
+      the interface to the user doesn’t export that interface (like SQL
+      or other)
+
+   -  Commercial database technology: no need to invent our own
+      underlying indexing/database technology given the abundance of
+      solutions available
+
+   -  Commercial file system technology: leverage commercial file system
+      technology and its strengths including extremely fast traversal
+      and access control which is probably of the most optimized code in
+      the world
+
+   -  Ppen source software: leverage open interfaces/software where
+      possible agnostic to leveraged parts where possible: if depending
+      on external function where possible enable use of more than one
+      provider of that external function
+
+   -  | Very transparent and simple so one can easily
+      | understand/enhance/administrate.

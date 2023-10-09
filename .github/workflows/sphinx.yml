@@ -58,32 +58,31 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+name: documentation
 
+on: [push, pull_request, workflow_dispatch]
 
-cmake_minimum_required(VERSION 3.1.0)
+permissions:
+  contents: write
 
-# build man pages
-add_subdirectory(man)
-
-# CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION needs to be sent all the way to the root scope
-# in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
-
-# this is just a quick early check
-# changing this variable does not do anything
-find_program(LATEX_PDFLATEX pdflatex)
-if (LATEX_PDFLATEX)
-  # build pdfs from latex files (default off to not require LaTeX)
-  option(LATEX_BUILD "Enable building of LaTeX documentation" Off)
-  message(STATUS "pdflatex found at ${LATEX_PDFLATEX}. Adding LaTeX building option (currently ${LATEX_BUILD}).")
-  if (LATEX_BUILD)
-    add_subdirectory(latex)
-  endif()
-endif()
-
-find_package(Sphinx)
-if (Sphinx_FOUND)
-    add_subdirectory(sphinx_docs)
-else()
-    message(WARNING "No Sphinx found. Documentation target not available.")
-endif()
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: Install dependencies
+        run: |
+          pip install sphinx sphinx_rtd_theme myst_parser
+      - name: Sphinx build
+        run: |
+          ls
+          sphinx-build docs/sphinx_docs/docs/source _build
+          ls _build
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_build/
