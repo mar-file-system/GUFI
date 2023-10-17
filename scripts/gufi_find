@@ -139,7 +139,7 @@ def build_aggregation_columns(args):
         for col in [('size', 'INT64'), ('type', 'TEXT')]:
             cols.add(col)
 
-    return list(cols)
+    return sorted(list(cols))
 
 def build_where(args, table, root_uid=0, root_gid=0):
     '''Build the WHERE clause'''
@@ -488,6 +488,7 @@ def help(parser): # pylint: disable=redefined-builtin
     expr.remove('delim')
     expr.remove('inmemory_name')
     expr.remove('skip')
+    expr.remove('verbose')
 
     # print these separately
     gufi_specific = ['numresults', 'largest', 'smallest']
@@ -895,6 +896,9 @@ def run(argv, config_path):
 
     if args.skip:
         query_cmd += ['-k', args.skip]
+
+    if args.verbose:
+        gufi_common.print_query(query_cmd + paths)
 
     if args.fprint:
         with open(args.fprint, 'wb') as out:

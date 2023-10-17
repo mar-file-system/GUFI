@@ -84,6 +84,8 @@ run_no_sort "${GUFI_STATS} -r -c"  | replace_argparse | sed '/^$/d;'
 run "${GUFI_STATS}    depth \"${BASENAME}\""
 run "${GUFI_STATS} -r depth \"${BASENAME}\""
 
+run_no_sort "${GUFI_STATS} --verbose depth \"${BASENAME}\""
+
 run "${GUFI_STATS}    filesize \"${BASENAME}\""
 run "${GUFI_STATS} -r filesize \"${BASENAME}\""
 

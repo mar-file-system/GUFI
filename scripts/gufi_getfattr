@@ -230,6 +230,9 @@ def run(argv, config_path):
             '-d', args.delim
         ] + getfattr(args, config, dirname, nondir)
 
+        if args.verbose:
+            gufi_common.print_query(query_cmd)
+
         query = subprocess.Popen(query_cmd) # pylint: disable=consider-using-with
         query.communicate()                 # block until query finishes
 

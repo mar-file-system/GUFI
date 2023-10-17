@@ -3,7 +3,7 @@ usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
                [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
                [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
                [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename]
+               [--skip-file filename] [--verbose]
                [paths ...]
 
 GUFI version of ls
@@ -38,8 +38,37 @@ options:
   --aggregate-name name
                         Name of final database when aggregation is performed
   --skip-file filename  Name of file containing directory basenames to skip
+  --verbose, -V         Show the gufi_query being executed
 
 $ gufi_ls
+prefix
+
+$ gufi_ls --verbose
+GUFI query is
+   gufi_query
+    -n 1
+    -y 0
+    -z 2
+    -I CREATE TABLE out (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);
+    -S INSERT INTO out SELECT rpath(sname, sroll), basename(name), type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattr_names, pinode FROM vrsummary WHERE (name REGEXP '^(?![\.]).*$') AND (
+    CASE level()
+        WHEN 0 THEN
+            CASE rollupscore
+                WHEN 0 THEN FALSE
+                WHEN 1 THEN (isroot == 0 AND depth == 1)
+            END
+        WHEN 1 THEN
+            (isroot == 1 AND depth == 0)
+    END
+)
+    -E INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, name, type, inode, nlink, size, mode, uid, gid, blksize, blocks, mtime, atime, ctime, linkname, xattr_names, pinode FROM vrpentries WHERE (name REGEXP '^(?![\.]).*$') AND (atroot == 1) AND (level() == 0)
+    -K CREATE TABLE aggregate (fullpath TEXT, name TEXT, type TEXT, inode INT64, nlink INT64, size INT64, mode INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, mtime INT64, atime INT64, ctime INT64, linkname TEXT, xattr_names TEXT, pinode INT64);
+    -J INSERT INTO aggregate SELECT * FROM out
+    -G SELECT name AS display_name FROM aggregate ORDER BY display_name COLLATE NOCASE ASC
+    -a
+    -B 4096
+    -d
+    prefix
 prefix
 
 $ gufi_ls -R
@@ -313,7 +342,7 @@ usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
                [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
                [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
                [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename]
+               [--skip-file filename] [--verbose]
                [paths ...]
 gufi_ls: error: argument --block-size: Invalid --block-size argument: 'YiB'
 
@@ -322,7 +351,7 @@ usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
                [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
                [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
                [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename]
+               [--skip-file filename] [--verbose]
                [paths ...]
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '-'
 
@@ -331,7 +360,7 @@ usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
                [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
                [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
                [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename]
+               [--skip-file filename] [--verbose]
                [paths ...]
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '-1GB'
 
@@ -340,7 +369,7 @@ usage: gufi_ls [--help] [--version] [-a] [-A] [--block-size BLOCK_SIZE] [-B]
                [--full-time] [-G] [-h] [-i] [-l] [-r] [-R] [-s] [-S]
                [--time-style {full-iso,iso,locale,long-iso}] [-t] [--delim c]
                [--in-memory-name name] [--aggregate-name name]
-               [--skip-file filename]
+               [--skip-file filename] [--verbose]
                [paths ...]
 gufi_ls: error: argument --block-size: Invalid --block-size argument: '0GB'
 

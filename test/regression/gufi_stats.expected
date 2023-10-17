@@ -2,7 +2,7 @@ $ gufi_stats --help
 usage: gufi_stats [--help] [--version] [--recursive | --cumulative]
                   [--order order] [--num-results n] [--uid u] [--delim c]
                   [--in-memory-name name] [--aggregate-name name]
-                  [--skip-file filename]
+                  [--skip-file filename] [--verbose]
                   {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,filesize-log2-bins,filesize-log1024-bins,dirfilecount-log2-bins,dirfilecount-log1024-bins,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
                   [path]
 GUFI statistics
@@ -34,11 +34,12 @@ options:
   --aggregate-name name
                         Name of final database when aggregation is performed
   --skip-file filename  Name of file containing directory basenames to skip
+  --verbose, -V         Show the gufi_query being executed
 $ gufi_stats -r -c
 usage: gufi_stats [--help] [--version] [--recursive | --cumulative]
                   [--order order] [--num-results n] [--uid u] [--delim c]
                   [--in-memory-name name] [--aggregate-name name]
-                  [--skip-file filename]
+                  [--skip-file filename] [--verbose]
                   {depth,filesize,filecount,linkcount,dircount,leaf-dirs,leaf-depth,leaf-files,leaf-links,extensions,total-filesize,total-filecount,total-linkcount,total-dircount,total-leaf-files,total-leaf-links,files-per-level,links-per-level,dirs-per-level,filesize-log2-bins,filesize-log1024-bins,dirfilecount-log2-bins,dirfilecount-log1024-bins,average-leaf-files,average-leaf-links,average-leaf-size,median-leaf-files,median-leaf-links,median-leaf-size,duplicate-names,uid-size,gid-size}
                   [path]
 gufi_stats: error: argument --cumulative/-c: not allowed with argument --recursive/-r
@@ -51,6 +52,22 @@ directory 1
 directory/subdirectory 2
 leaf_directory 1
 unusual#? directory , 1
+
+$ gufi_stats --verbose depth "prefix"
+GUFI query is
+   gufi_query
+    -n 1
+    -B 4096
+    -d
+    -I CREATE TABLE out(name TEXT)
+    -S INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary
+    -J INSERT INTO aggregate SELECT * FROM out
+    -K CREATE TABLE aggregate(name TEXT)
+    -G SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '/', '')) END FROM aggregate ORDER BY name ASC
+    -y 0
+    -z 0
+    prefix
+0
 
 $ gufi_stats    filesize "prefix"
 1049622
