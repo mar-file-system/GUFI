@@ -73,7 +73,13 @@ brew --prefix grep
 echo "$(brew --prefix)/opt/grep/libexec/gnubin" >> "${GITHUB_PATH}"
 
 # install required packages
-brew install coreutils cmake pcre pkg-config python3 zlib
+brew install coreutils cmake pcre pkg-config
+
+if [[ "$(sw_vers -productVersion | awk '{ print $1 }' | awk -F '.' '{ print $1 }')" -lt 13 ]]
+then
+    brew install python3 zlib
+fi
+
 
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
