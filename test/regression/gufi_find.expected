@@ -11,7 +11,7 @@ expression may consist of:
     mindepth mmin mtime name newer
     path printf readable regex samefile
     size true type uid user
-    verbose writable
+    writable
 
 GUFI Specific Flags (--):
 
