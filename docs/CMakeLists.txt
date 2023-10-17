@@ -69,14 +69,19 @@ add_subdirectory(man)
 # in order to not add /usr/share/man and /usr/share/man/man1 into the RPMs
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION}" PARENT_SCOPE)
 
-# this is just a quick early check
-# changing this variable does not do anything
-find_program(LATEX_PDFLATEX pdflatex)
-if (LATEX_PDFLATEX)
-  # build pdfs from latex files (default off to not require LaTeX)
-  option(LATEX_BUILD "Enable building of LaTeX documentation" Off)
-  message(STATUS "pdflatex found at ${LATEX_PDFLATEX}. Adding LaTeX building option (currently ${LATEX_BUILD}).")
-  if (LATEX_BUILD)
-    add_subdirectory(latex)
-  endif()
+# Define the option first
+option(LATEX_BUILD "Enable building of LaTeX documentation" Off)
+
+if (LATEX_BUILD)
+    # this is just a quick early check
+    # changing this variable does not do anything
+    find_program(LATEX_PDFLATEX pdflatex)
+    if (LATEX_PDFLATEX)
+        message(STATUS "pdflatex found at ${LATEX_PDFLATEX}. Adding LaTeX building option (currently ${LATEX_BUILD}).")
+        add_subdirectory(latex)
+    else()
+        message(FATAL_ERROR "pdflatex executable not found. Please install in order to build GUFI documentation.")
+    endif()
+else()
+    message(STATUS "LaTeX building is disabled (currently ${LATEX_BUILD}).")
 endif()
