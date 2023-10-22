@@ -525,17 +525,17 @@ old_file
 
 $ gufi_find --verbose --largest -type f
 GUFI query is
-   gufi_query
-    -n 1
-    -B 4096
-    -a
-    -d
-    -I CREATE TABLE out (name TEXT, size INT64, type TEXT)
-    -S INSERT INTO out SELECT rpath(sname, sroll), size, type FROM vrsummary WHERE ((type == 'f')) ORDER BY size DESC, name ASC
-    -E INSERT INTO out SELECT rpath(sname, sroll) || '/' || name, size, type FROM vrpentries WHERE ((type == 'f')) ORDER BY size DESC, name ASC
-    -J INSERT INTO aggregate SELECT name, size, type FROM out WHERE ((type == 'f')) ORDER BY size DESC, name ASC
-    -K CREATE TABLE aggregate (name TEXT, size INT64, type TEXT)
-    -G SELECT name FROM aggregate WHERE ((type == 'f')) ORDER BY size DESC, name ASC
+   gufi_query \
+    -n 1 \
+    -B 4096 \
+    -a \
+    -d ' ' \
+    -I 'CREATE TABLE out (name TEXT, size INT64, type TEXT)' \
+    -S 'INSERT INTO out SELECT rpath(sname, sroll), size, type FROM vrsummary WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -E 'INSERT INTO out SELECT rpath(sname, sroll) || '"'"'/'"'"' || name, size, type FROM vrpentries WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -J 'INSERT INTO aggregate SELECT name, size, type FROM out WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
+    -K 'CREATE TABLE aggregate (name TEXT, size INT64, type TEXT)' \
+    -G 'SELECT name FROM aggregate WHERE ((type == '"'"'f'"'"')) ORDER BY size DESC, name ASC' \
     prefix
 1MB
 1KB

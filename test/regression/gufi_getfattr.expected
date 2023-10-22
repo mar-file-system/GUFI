@@ -45,13 +45,13 @@ $ gufi_getfattr .
 # prefix with --verbose
 $ gufi_getfattr --verbose .
 GUFI query is
-   gufi_query
-    -n 1
-    -B 4096
-    -d
-    -x
-    -a
-    -S SELECT rpath(sname, sroll), xattr_name FROM vrxsummary WHERE ((name REGEXP '^.$')) AND (isroot == 1) AND (xattr_name REGEXP '^user\.')
+   gufi_query \
+    -n 1 \
+    -B 4096 \
+    -d ' ' \
+    -x \
+    -a \
+    -S 'SELECT rpath(sname, sroll), xattr_name FROM vrxsummary WHERE ((name REGEXP '"'"'^.$'"'"')) AND (isroot == 1) AND (xattr_name REGEXP '"'"'^user\.'"'"')' \
     .
 
 # 0 xattrs
