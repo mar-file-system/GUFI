@@ -67,6 +67,11 @@ import pwd
 import re
 import sys
 
+if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.version_info.minor < 3):
+    from pipes import quote as sanitize
+else:
+    from shlex import quote as sanitize # new in Python 3.3
+
 # table names
 SUMMARY     = 'summary'
 PENTRIES    = 'pentries'
@@ -259,13 +264,15 @@ def build_query(select, tables, where=None, group_by=None,
     return query
 
 # a helper function to show the gufi_query being executed. Helpful for debugging and education.
+# use escaping so it can be copy-pasted into a bash shell and executed correctly
 def print_query(query_tokens):
-    formatted_string = ""
+    formatted_string = ''
     for index, token in enumerate(query_tokens):
+        quoted_token = sanitize(token)
         if token.startswith('-') or index == len(query_tokens)-1:
-            formatted_string += '\n    ' + token
+            formatted_string += ' \\\n    ' + quoted_token
         else:
-            formatted_string += ' ' + token
+            formatted_string += ' ' + quoted_token
     print('GUFI query is \n  {0}'.format(formatted_string))
     sys.stdout.flush()
 

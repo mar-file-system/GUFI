@@ -49,8 +49,8 @@ $ gufi_stat --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "prefix
 
 $ gufi_stat --verbose --format '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "prefix/.hidden"
 GUFI query is
-   gufi_stat_bin
-    -f %N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n
+   gufi_stat_bin \
+    -f '%N %n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' \
     prefix/.hidden
 'prefix/.hidden' prefix/.hidden 664 -rw-rw-r-- ? ? 81b4 regular file   9 - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
 

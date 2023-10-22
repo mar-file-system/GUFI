@@ -55,17 +55,17 @@ unusual#? directory , 1
 
 $ gufi_stats --verbose depth "prefix"
 GUFI query is
-   gufi_query
-    -n 1
-    -B 4096
-    -d
-    -I CREATE TABLE out(name TEXT)
-    -S INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary
-    -J INSERT INTO aggregate SELECT * FROM out
-    -K CREATE TABLE aggregate(name TEXT)
-    -G SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '/', '')) END FROM aggregate ORDER BY name ASC
-    -y 0
-    -z 0
+   gufi_query \
+    -n 1 \
+    -B 4096 \
+    -d ' ' \
+    -I 'CREATE TABLE out(name TEXT)' \
+    -S 'INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary ' \
+    -J 'INSERT INTO aggregate SELECT * FROM out ' \
+    -K 'CREATE TABLE aggregate(name TEXT)' \
+    -G 'SELECT CASE length(name) WHEN 0 THEN 0 ELSE length(name) - length(replace(name, '"'"'/'"'"', '"'"''"'"')) END FROM aggregate ORDER BY name ASC' \
+    -y 0 \
+    -z 0 \
     prefix
 0
 
