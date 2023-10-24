@@ -137,6 +137,14 @@ extern const char vtssqldir[];
 extern const char vtssqluser[];
 extern const char vtssqlgroup[];
 
+/* summary table + extra joins on inode */
+#define SUMMARYLONG       "summarylong"
+extern const char SUMMARYLONG_CREATE[];
+
+/* vrsummary view + extra joins on inode */
+#define VRSUMMARYLONG     "vrsummarylong"
+extern const char VRSUMMARYLONG_CREATE[];
+
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err);
 
 sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err);

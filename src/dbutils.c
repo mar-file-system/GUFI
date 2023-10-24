@@ -132,6 +132,21 @@ vssql(dir,   0);
 vssql(user,  1);
 vssql(group, 2);
 
+/*
+ * use LONG_STATS at end of LONG_CREATE
+ * to add columns from more tables
+ *
+ * newtable must have an inode column
+ */
+#define LONG_STATS(newtable) " LEFT JOIN " newtable " ON " SUMMARY ".inode == " newtable ".inode "
+#define LONG_CREATE(source)                                         \
+    const char source##LONG_CREATE[] =                              \
+        DROP_VIEW(source##LONG)                                     \
+        "CREATE VIEW " source##LONG " AS SELECT * FROM " source ";" \
+
+LONG_CREATE(SUMMARY);
+LONG_CREATE(VRSUMMARY);
+
 sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err)
 {
   char ow = '?';
