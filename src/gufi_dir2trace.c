@@ -86,7 +86,7 @@ struct PoolArgs {
     trie_t *skip;
     FILE **outfiles;
 
-    uint64_t *total_files;
+    size_t *total_files;
 };
 
 struct NondirArgs {
@@ -115,7 +115,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work work_src;
     struct work *work = (struct work *) data;
     struct entry_data ed;
-    uint64_t nondirs_processed = 0;
+    size_t nondirs_processed = 0;
     int rc = 0;
 
     if (work->compressed.yes) {
@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
 
-    pa.total_files = calloc(pa.in.maxthreads, sizeof(uint64_t));
+    pa.total_files = calloc(pa.in.maxthreads, sizeof(size_t));
 
     struct start_end after_init;
     clock_gettime(CLOCK_MONOTONIC, &after_init.start);
@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
     outfiles_fin(pa.outfiles, pa.in.maxthreads);
     trie_free(pa.skip);
 
-    uint64_t total_files = 0;
+    size_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
         total_files += pa.total_files[i];
     }
@@ -335,7 +335,7 @@ int main(int argc, char *argv[]) {
     free(pa.total_files);
 
     fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
-    fprintf(stdout, "Total Files:         %" PRIu64 "\n", total_files);
+    fprintf(stdout, "Total Files:         %zu\n",         total_files);
     fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
     fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
     fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);

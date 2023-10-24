@@ -86,11 +86,11 @@ struct DirStats {
 
     uint64_t level;           /* level this directory is at */
 
-    uint64_t subdir_count;    /* unrolled up count from readdir, not summary */
-    uint64_t subnondir_count; /* rolled up count from entries and subdir.pentries */
+    size_t subdir_count;      /* unrolled up count from readdir, not summary */
+    size_t subnondir_count;   /* rolled up count from entries and subdir.pentries */
 
-    uint64_t too_many_before; /* current directory is too big to roll up */
-    uint64_t too_many_after;  /* rolling up would result in too many rows in pentries */
+    size_t too_many_before;   /* current directory is too big to roll up */
+    size_t too_many_after;    /* rolling up would result in too many rows in pentries */
     int score;                /* roll up score regardless of success or failure */
     int success;              /* whether or not the roll up succeeded */
 };
@@ -115,22 +115,22 @@ struct PoolArgs {
 };
 
 /* compare function for qsort */
-int compare_uint64_t(const void *lhs, const void *rhs) {
-    return (*(uint64_t *) lhs - *(uint64_t *) rhs);
+int compare_size_t(const void *lhs, const void *rhs) {
+    return (*(size_t *) lhs - *(size_t *) rhs);
 }
 
 #define sll_dir_stats(name, all, var, width)                                     \
 do {                                                                             \
-    const uint64_t count = sll_get_size(all);                                    \
+    const size_t count = sll_get_size(all);                                      \
     if (count == 0) {                                                            \
         break;                                                                   \
     }                                                                            \
                                                                                  \
-    uint64_t *array = malloc(count * sizeof(uint64_t));                          \
-    uint64_t min = (uint64_t) -1;                                                \
-    uint64_t max = 0;                                                            \
-    uint64_t sum = 0;                                                            \
-    uint64_t i = 0;                                                              \
+    size_t *array = malloc(count * sizeof(size_t));                              \
+    size_t min = (size_t) -1;                                                    \
+    size_t max = 0;                                                              \
+    size_t sum = 0;                                                              \
+    size_t i = 0;                                                                \
     sll_loop(all, node) {                                                        \
         struct DirStats *ds = (struct DirStats *) sll_node_data(node);           \
         if (ds->var < min) {                                                     \
@@ -145,8 +145,8 @@ do {                                                                            
         array[i++] = ds->var;                                                    \
     }                                                                            \
                                                                                  \
-    qsort(array, count, sizeof(uint64_t), compare_uint64_t);                     \
-    const uint64_t half = count / 2;                                             \
+    qsort(array, count, sizeof(size_t), compare_size_t);                         \
+    const size_t half = count / 2;                                               \
     double median = array[half];                                                 \
     if (count % 2 == 0) {                                                        \
         median += array[half - 1];                                               \
@@ -156,26 +156,26 @@ do {                                                                            
     const double avg = ((double) sum) / count;                                   \
                                                                                  \
     fprintf(stdout, "    %s:\n", name);                                          \
-    fprintf(stdout, "        min:        %" #width PRIu64 "\n",  min);           \
-    fprintf(stdout, "        max:        %" #width PRIu64 "\n",  max);           \
-    fprintf(stdout, "        median:     %" #width ".2f\n",      median);        \
-    fprintf(stdout, "        sum:        %" #width PRIu64 "\n",  sum);           \
-    fprintf(stdout, "        average:    %" #width ".2f\n",      avg);           \
+    fprintf(stdout, "        min:        %" #width "zu\n",  min);                \
+    fprintf(stdout, "        max:        %" #width "zu\n",  max);                \
+    fprintf(stdout, "        median:     %" #width ".2f\n", median);             \
+    fprintf(stdout, "        sum:        %" #width "zu\n",  sum);                \
+    fprintf(stdout, "        average:    %" #width ".2f\n",  avg);               \
                                                                                  \
     free(array);                                                                 \
 } while (0)
 
 #define print_too_many(name, all, var, width)                                    \
 do {                                                                             \
-    const uint64_t count = sll_get_size(all);                                    \
+    const size_t count = sll_get_size(all);                                      \
     if (count == 0) {                                                            \
         break;                                                                   \
     }                                                                            \
                                                                                  \
-    uint64_t *array = malloc(count * sizeof(uint64_t));                          \
-    uint64_t min = (uint64_t) -1;                                                \
-    uint64_t max = 0;                                                            \
-    uint64_t sum = 0;                                                            \
+    size_t *array = malloc(count * sizeof(size_t));                              \
+    size_t min = (size_t) -1;                                                    \
+    size_t max = 0;                                                              \
+    size_t sum = 0;                                                              \
     size_t i = 0;                                                                \
     sll_loop(all, node) {                                                        \
         struct DirStats *ds = (struct DirStats *) sll_node_data(node);           \
@@ -197,8 +197,8 @@ do {                                                                            
                                                                                  \
     fprintf(stdout, "    %s %9zu\n", name, i);                                   \
     if (i) {                                                                     \
-        qsort(array, i, sizeof(uint64_t), compare_uint64_t);                     \
-        const uint64_t half = i / 2;                                             \
+        qsort(array, i, sizeof(size_t), compare_size_t);                         \
+        const size_t half = i / 2;                                               \
         double median = array[half];                                             \
         if (i % 2 == 0) {                                                        \
             median += array[half - 1];                                           \
@@ -207,11 +207,11 @@ do {                                                                            
                                                                                  \
         const double avg = ((double) sum) / i;                                   \
                                                                                  \
-        fprintf(stdout, "        min:        %" #width PRIu64 "\n",  min);       \
-        fprintf(stdout, "        max:        %" #width PRIu64 "\n",  max);       \
-        fprintf(stdout, "        median:     %" #width ".2f\n",      median);    \
-        fprintf(stdout, "        sum:        %" #width PRIu64 "\n",  sum);       \
-        fprintf(stdout, "        average:    %" #width ".2f\n",      avg);       \
+        fprintf(stdout, "        min:        %" #width "zu\n",  min);            \
+        fprintf(stdout, "        max:        %" #width "zu\n",  max);            \
+        fprintf(stdout, "        median:     %" #width ".2f\n", median);         \
+        fprintf(stdout, "        sum:        %" #width "zu\n",  sum);            \
+        fprintf(stdout, "        average:    %" #width ".2f\n", avg);            \
     }                                                                            \
                                                                                  \
     free(array);                                                                 \
@@ -271,36 +271,36 @@ void print_stats(char **paths, const int path_count,
     /* count empty directories */
 
     /* do not count not_processed, since they do not have databases to scan */
-    uint64_t not_processed_nondirs = 0;
-    uint64_t not_processed_empty = 0;
+    size_t not_processed_nondirs = 0;
+    size_t not_processed_empty = 0;
 
-    uint64_t not_rolled_up_nondirs = 0;
-    uint64_t not_rolled_up_empty = 0;
+    size_t not_rolled_up_nondirs = 0;
+    size_t not_rolled_up_empty = 0;
     sll_loop(&not_rolled_up, node) {
         struct DirStats *ds = (struct DirStats *) sll_node_data(node);
         not_rolled_up_nondirs += ds->subnondir_count;
         not_rolled_up_empty += !ds->subnondir_count;
     }
 
-    uint64_t rolled_up_nondirs = 0;
-    uint64_t rolled_up_empty = 0;
+    size_t rolled_up_nondirs = 0;
+    size_t rolled_up_empty = 0;
     sll_loop(&rolled_up, node) {
         struct DirStats *ds = (struct DirStats *) sll_node_data(node);
         rolled_up_nondirs += ds->subnondir_count;
         rolled_up_empty += !ds->subnondir_count;
     }
 
-    const uint64_t total_nondirs = not_processed_nondirs +
+    const size_t total_nondirs = not_processed_nondirs +
                                  not_rolled_up_nondirs +
                                  rolled_up_nondirs;
 
-    const uint64_t empty = not_processed_empty +
+    const size_t empty = not_processed_empty +
                          not_rolled_up_empty +
                          rolled_up_empty;
 
-    const uint64_t total_dirs = sll_get_size(&not_processed) +
-                                sll_get_size(&not_rolled_up) +
-                                sll_get_size(&rolled_up);
+    const size_t total_dirs = sll_get_size(&not_processed) +
+                              sll_get_size(&not_rolled_up) +
+                              sll_get_size(&rolled_up);
 
     /* print stats of each type of directory */
     print_stanza("Not Processed:",   &not_processed);
@@ -310,9 +310,9 @@ void print_stats(char **paths, const int path_count,
     print_stanza("Can Roll Up:",     &rolled_up);
     fprintf(stdout, "    Successful: %14zu\n", successful);
     fprintf(stdout, "    Failed:     %14zu\n", failed);
-    fprintf(stdout, "Files/Links:    %" PRIu64 "\n", total_nondirs);
-    fprintf(stdout, "Directories:    %" PRIu64 " (%" PRIu64 " empty)\n", total_dirs, empty);
-    fprintf(stdout, "Total:          %" PRIu64 "\n", total_nondirs + total_dirs);
+    fprintf(stdout, "Files/Links:    %zu\n", total_nondirs);
+    fprintf(stdout, "Directories:    %zu (%zu empty)\n", total_dirs, empty);
+    fprintf(stdout, "Total:          %zu\n", total_nondirs + total_dirs);
     fprintf(stdout, "Remaining Dirs: %zu (%.2Lf%%)\n", remaining, (100 * (long double) remaining) / total_dirs);
     sll_destroy(&rolled_up, free);
     sll_destroy(&not_rolled_up, free);

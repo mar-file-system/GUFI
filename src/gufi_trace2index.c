@@ -113,7 +113,7 @@ struct row {
     size_t first_delim;
     char *line;
     size_t len;
-    long offset;
+    off_t offset;
     size_t entries;
 };
 
@@ -789,11 +789,11 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\n");
     #endif
 
-    fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", dirs);
-    fprintf(stdout, "Total Files:         %" PRIu64 "\n", files);
-    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n",      processtime);
-    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       dirs / processtime);
-    fprintf(stdout, "Files/Sec:           %.2Lf\n",       files / processtime);
+    fprintf(stdout, "Total Dirs:          %zu\n",    dirs);
+    fprintf(stdout, "Total Files:         %zu\n",    files);
+    fprintf(stdout, "Time Spent Indexing: %.2Lfs\n", processtime);
+    fprintf(stdout, "Dirs/Sec:            %.2Lf\n",  dirs / processtime);
+    fprintf(stdout, "Files/Sec:           %.2Lf\n",  files / processtime);
 
     return 0;
 }
