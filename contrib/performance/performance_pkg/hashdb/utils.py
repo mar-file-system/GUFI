@@ -66,8 +66,8 @@ import sys
 
 from hashes import Hashes # not part of performance_pkg
 
-from performance_pkg import common
-from performance_pkg.hashdb import commits, machine, gufi, raw_data
+from performance_pkg import common                                  # pylint: disable=wrong-import-order
+from performance_pkg.hashdb import commits, machine, gufi, raw_data # pylint: disable=wrong-import-order
 
 def check_exists(path):
     if not os.path.exists(path):

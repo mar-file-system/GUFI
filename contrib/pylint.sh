@@ -66,11 +66,24 @@ set -e
 BUILD="$(realpath $1)"
 
 # shellcheck disable=SC2155
-export PYTHONPATH="$(realpath ${BUILD}/contrib):$(realpath ${BUILD}/contrib/performance):$(realpath ${BUILD}/scripts):$(realpath ${BUILD}/test):${PYTHONPATH}"
+export PYTHONPATH="${BUILD}/contrib:${BUILD}/scripts:${BUILD}/test:${PYTHONPATH}"
 
 # not scanning ${BUILD}/contrib
+PATHS=(
+    "${BUILD}/scripts"
+    "${BUILD}/test"
+)
+
+# performance history framework is optional
+PERF="${BUILD}/contrib/performance"
+if [[ -d "${PERF}" ]]
+then
+    export PYTHONPATH="${PERF}:${PYTHONPATH}"
+    PATHS+=("${PERF}")
+fi
+
 # shellcheck disable=SC2044
-for file in $(find "${BUILD}/contrib/performance" "${BUILD}/scripts" "${BUILD}/test" -type f)
+for file in $(find "${PATHS[@]}" -type f)
 do
     if [[ "$(head -n 1 ${file} | strings)" =~ ^#!/usr/bin/env\ python(2|3).*$ ]]
     then

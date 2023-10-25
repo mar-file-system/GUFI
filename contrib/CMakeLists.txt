@@ -81,6 +81,17 @@ if (CMAKE_CXX_COMPILER)
   add_dependencies(verifytraceintree install_dependencies)
 endif()
 
+# add 'make pylint'
+find_program(PYLINT pylint)
+if (PYLINT)
+  message(STATUS "Found pylint: ${PYLINT}")
+  configure_file(pylint.sh pylint.sh @ONLY)
+  add_custom_target(pylint
+    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
+else()
+  message(STATUS "pylint not found")
+endif()
+
 # potentially useful scripts
 set(USEFUL
   canned_queries.sh

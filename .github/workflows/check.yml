@@ -104,7 +104,8 @@ jobs:
       run:  cmake -B ${{ github.workspace }}/build ${{ env.COMMON_CONFIG }} -DCMAKE_BUILD_TYPE=Debug -DPRINT_CUMULATIVE_TIMES=On
 
     - name: Run Python3 Pylint
-      run:  contrib/CI/pylint.sh ${{ github.workspace }}/build
+      working-directory: ${{ github.workspace }}/build
+      run:  make pylint
 
   Older_CMake:
     needs: [ShellCheck, Pylint]
