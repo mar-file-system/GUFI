@@ -81,6 +81,8 @@ if (CMAKE_CXX_COMPILER)
   add_dependencies(verifytraceintree install_dependencies)
 endif()
 
+set(CHECKSTYLE)
+
 # add 'make shellcheck'
 find_program(SHELLCHECK shellcheck)
 if (SHELLCHECK)
@@ -88,6 +90,7 @@ if (SHELLCHECK)
   configure_file(shellcheck.sh shellcheck.sh @ONLY)
   add_custom_target(shellcheck
     COMMAND "${CMAKE_CURRENT_BINARY_DIR}/shellcheck.sh" "${CMAKE_BINARY_DIR}")
+  list(APPEND CHECKSTYLE shellcheck)
 else()
   message(STATUS "shellcheck not found")
 endif()
@@ -99,8 +102,18 @@ if (PYLINT)
   configure_file(pylint.sh pylint.sh @ONLY)
   add_custom_target(pylint
     COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
+  list(APPEND CHECKSTYLE pylint)
 else()
   message(STATUS "pylint not found")
+endif()
+
+# add 'make checkstyle'
+if (CHECKSTYLE)
+  message(STATUS "checkstyle will run: ${CHECKSTYLE}")
+  add_custom_target(checkstyle
+    DEPENDS ${CHECKSTYLE})
+else()
+  message(STATUS "checkstyle disabled")
 endif()
 
 # potentially useful scripts
