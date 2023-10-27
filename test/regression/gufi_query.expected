@@ -81,7 +81,7 @@ unusual, name?#
 writable
 
 # Get number of subdirectories
-$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs_walked() FROM vrsummary;" "prefix"
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
 prefix 3
 prefix/directory 1
 prefix/directory/subdirectory 0

@@ -85,7 +85,7 @@ echo "# Get all directory and non-directory names"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
 echo "# Get number of subdirectories"
-run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll), subdirs_walked() FROM vrsummary;\" \"${INDEXROOT}\""
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;\" \"${INDEXROOT}\""
 
 echo "# Get relative paths of all directories and non-directories ascending names"
 run_no_sort "${GUFI_QUERY} -d \" \" -a -I \"CREATE TABLE out(path TEXT);\" -K \"CREATE TABLE aggregate(path TEXT);\" -S \"INSERT INTO out SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"INSERT INTO out SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -J \"INSERT INTO aggregate SELECT path FROM out;\" -G \"SELECT path FROM aggregate ORDER BY path ASC;\" \"${INDEXROOT}\""

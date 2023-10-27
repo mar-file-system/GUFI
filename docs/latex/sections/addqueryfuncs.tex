@@ -153,10 +153,11 @@ opened for querying.
     \hline
     \texttt{starting\_point()} & Path of the starting directory \\
     \hline
-    \texttt{subdirs\_walked()} & Number of subdirectories that were enqueued while processing \\
-                               & the current directory. This function will return 0 if the \\
-                               & current directory was rolled up. Only available in \texttt{-S} \\
-                               & and \texttt{-E}. Not recommended for use with \texttt{-E}.\\
+    \texttt{subdirs(srollsubdirs, sroll)} & Number of subdirectories under a directory. Only \\
+                                          & available for use with \vrsummary. When the index \\
+                                          & is not rolled up, the value is retrieved from C. \\
+                                          & When the index is rolled up, the value is retrieved \\
+                                          & from \vrsummary. \\
     \hline
   \end{tabular}
 \end{table}

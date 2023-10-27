@@ -275,12 +275,23 @@ int count_rows(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
-static void subdirs_walked(sqlite3_context *context, int argc, sqlite3_value **argv) {
+/*
+ * SELECT subdirs(srollsubdirs, sroll) FROM vrsummary;
+ *
+ * custom sqlite function for getting number of subdirectories under current directory
+ */
+static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
     (void) argc; (void) argv;
-    size_t *subdirs_walked_count = (size_t *) sqlite3_user_data(context);
 
-    sqlite3_result_int64(context, *subdirs_walked_count);
-    return;
+    const int rollupscore = sqlite3_value_int(argv[1]);
+    if (rollupscore == 0) {
+        size_t *subdirs_walked_count = (size_t *) sqlite3_user_data(context);
+        sqlite3_result_int64(context, *subdirs_walked_count);
+    }
+    else {
+        const int64_t rollup_subdirs = sqlite3_value_int64(argv[0]);
+        sqlite3_result_int64(context, rollup_subdirs);
+    }
 }
 
 int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
@@ -419,8 +430,8 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
 
         if (db) {
-            if (sqlite3_create_function(db, "subdirs_walked", 0, SQLITE_UTF8,
-                                        &subdirs_walked_count, &subdirs_walked,
+            if (sqlite3_create_function(db, "subdirs", 2, SQLITE_UTF8,
+                                        &subdirs_walked_count, &subdirs,
                                         NULL, NULL) != SQLITE_OK) {
                 fprintf(stderr, "Warning: Could not create subdirs_walked function: %s (%d)\n",
                         sqlite3_errmsg(db), sqlite3_errcode(db));
