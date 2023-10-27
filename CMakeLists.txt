@@ -462,11 +462,6 @@ add_subdirectory(examples)
 # Generate Packages
 #
 
-# These variables have to be set before include(CPack)
-set(CPACK_PACKAGE_VERSION_MAJOR ${GUFI_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${GUFI_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
-
 # Generate RPMs
 find_program(RPMBUILD rpmbuild)
 if (RPMBUILD)
@@ -475,6 +470,11 @@ if (RPMBUILD)
   # get the architecture of this machine
   # assumes that we are not cross compiling
   execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  # These variables have to be set before include(CPack)
+  set(CPACK_PACKAGE_VERSION_MAJOR ${GUFI_VERSION_MAJOR})
+  set(CPACK_PACKAGE_VERSION_MINOR ${GUFI_VERSION_MINOR})
+  set(CPACK_PACKAGE_VERSION_PATCH ${GUFI_VERSION_PATCH})
 
   set(CPACK_GENERATOR "RPM")
   set(CPACK_RPM_COMPONENT_INSTALL On)
@@ -501,8 +501,8 @@ if (RPMBUILD)
   endif()
 
   # Generate source RPM
-  set(CPACK_SOURCE_GENERATOR "RPM")
-  set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.gitignore")
+  set(CPACK_SOURCE_PACKAGE_FILE_NAME "gufi-${GUFI_VERSION}")
+  set(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}/" "${CMAKE_SOURCE_DIR}/.git/" "${CMAKE_SOURCE_DIR}/.github/" "${CMAKE_SOURCE_DIR}/.gitignore")
 
   include(CPack)
 else()
