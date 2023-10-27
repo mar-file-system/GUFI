@@ -62,4 +62,5 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
+configure_file(offline_install.txt offline_install.txt @ONLY)
 configure_file(pip_install.sh pip_install.sh @ONLY)
