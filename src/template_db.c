@@ -284,20 +284,18 @@ int create_empty_dbdb(struct template_db *tdb, refstr_t *dst, uid_t uid, gid_t g
 
     /* if database file already exists, assume it's good */
     struct stat st;
-    if (stat(dbname, &st) != 0) {
-        const int err = errno;
-        /* if the parent's database file is not found, create it */
-        if (err == ENOENT) {
-            if (copy_template(tdb, dbname, uid, gid) != 0) {
-                return -1;
-            }
-        }
-        else {
-            fprintf(stderr, "Issue with index parent directory %s: %s (%d)\n",
-                    dst->data, strerror(err), err);
-            return -1;
-        }
+    if (stat(dbname, &st) == 0) {  /* following links */
+        return -!S_ISREG(st.st_mode);
     }
 
-    return 0;
+    const int err = errno;
+
+    /* if the parent's database file is not found, create it */
+    if (err != ENOENT) {
+        fprintf(stderr, "Error: Empty db.db path '%s': %s (%d)\n",
+                dst->data, strerror(err), err);
+        return -1;
+    }
+
+    return copy_template(tdb, dbname, uid, gid);
 }

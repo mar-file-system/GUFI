@@ -149,3 +149,84 @@ TEST(template_db, bad_inputs) {
 
     ASSERT_EQ(close_template_db(&tdb), 0);
 }
+
+TEST(create_empty_dbdb, good) {
+    struct template_db tdb;
+    ASSERT_EQ(init_template_db(&tdb), 0);
+    ASSERT_EQ(create_template(&tdb, create_test_tables, template_name), 0);
+
+    // create new directory
+    char dirname[] = "XXXXXX" ;
+    ASSERT_NE(mkdtemp(dirname), nullptr);
+
+    refstr_t dst = {
+        .data = dirname,
+        .len  = strlen(dirname),
+    };
+
+    // <dirname>/db.db
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 3,
+               dst.data, dst.len,
+               "/", (std::size_t) 1,
+               DBNAME, DBNAME_LEN);
+
+    // create file under dirname not called db.db
+    char filename[MAXPATH];
+    SNFORMAT_S(filename, sizeof(filename), 3,
+               dst.data, dst.len,
+               "/", (std::size_t) 1,
+               "XXXXXX", 6);
+    const int fd = mkstemp(filename);
+    ASSERT_GT(fd, -1);
+    EXPECT_EQ(close(fd), 0);
+
+    // symlink to file is ok
+    EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), 0);
+    EXPECT_EQ(unlink(dbname), 0);
+    EXPECT_EQ(unlink(filename), 0);
+
+    // symlink to <dirname>
+    char symlinktarget[MAXPATH];
+    SNFORMAT_S(symlinktarget, sizeof(symlinktarget), 2,
+               "../", (std::size_t) 3,
+               dst.data, dst.len);
+
+    // symink to directory causes error
+    ASSERT_EQ(symlink(symlinktarget, dbname), 0);
+    EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), -1);
+    EXPECT_EQ(unlink(dbname), 0);
+
+    // try to create db with a bad file descriptor
+    const int tfd = tdb.fd;
+    tdb.fd = -1;
+    EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), -1);
+    tdb.fd = tfd;
+
+    // create new db
+    EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), 0);
+
+    // db already exists, so nothing happens
+    EXPECT_EQ(create_empty_dbdb(&tdb, &dst, -1, -1), 0);
+
+    EXPECT_EQ(remove(dbname), 0);
+    EXPECT_EQ(remove(dirname), 0);
+
+    ASSERT_EQ(close_template_db(&tdb), 0);
+}
+
+TEST(create_empty_dbdb, path_is_file) {
+    char filename[] = "XXXXXX" ;
+    const int fd = mkstemp(filename);
+    ASSERT_GT(fd, -1);
+    EXPECT_EQ(close(fd), 0);
+
+    refstr_t dst = {
+        .data = filename,
+        .len  = strlen(filename),
+    };
+
+    // attempt to create file under file
+    EXPECT_EQ(create_empty_dbdb(nullptr, &dst, -1, -1), -1);
+    EXPECT_EQ(remove(filename), 0);
+}
