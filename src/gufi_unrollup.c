@@ -275,16 +275,15 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    /* enqueue all input paths */
+    /* enqueue input paths */
     for(int i = idx; i < argc; i++) {
-        /* remove trailing slashes */
-        size_t len = trailing_non_match_index(argv[i], strlen(argv[i]), "/", 1);
-
-        /* root is special case */
-        if (len == 0) {
-            argv[i][0] = '/';
-            len = 1;
+        size_t len = strlen(argv[i]);
+        if (!len) {
+            continue;
         }
+
+        /* remove trailing slashes */
+        len = trailing_non_match_index(argv[i] + 1, strlen(argv[i] + 1), "/", 1) + 1;
 
         struct Unrollup *mywork = malloc(sizeof(struct Unrollup));
 
