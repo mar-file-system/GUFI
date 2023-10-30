@@ -40,7 +40,7 @@ cmake ..
 make
 sudo make install
 
-# create a GUFI Index
+# create a GUFI tree
 gufi_dir2index <src_dir> <index_dir>
 -or-
 gufi_dir2trace <src_dir> <trace_file_prefix>
