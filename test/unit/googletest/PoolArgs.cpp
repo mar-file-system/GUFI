@@ -179,7 +179,7 @@ TEST(PoolArgs, OUTFILE) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -220,7 +220,7 @@ TEST(PoolArgs, OUTFILE_aggregate) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -263,7 +263,7 @@ TEST(PoolArgs, OUTDB) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
@@ -300,7 +300,7 @@ TEST(PoolArgs, OUTDB_aggregate) {
 
     char outname[MAXPATH];
     in.outname.data = outname;
-    in.outname.len = snprintf(outname, sizeof(outname), "/tmp/XXXXXX");
+    in.outname.len = snprintf(outname, sizeof(outname), "XXXXXX");
     const int fd = mkstemp(outname);
     EXPECT_NE(fd, -1);
     EXPECT_EQ(close(fd), 0);
