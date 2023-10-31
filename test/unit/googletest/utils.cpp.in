@@ -385,13 +385,18 @@ TEST(shortpath, split) {
 }
 
 TEST(dupdir, parentfirst) {
-    char parent[] = "/tmp/parent";
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+
+    char parent[MAXPATH];
+    EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[] = "/tmp/parent/child";
+    char child[MAXPATH];
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
     orig_child_stat.st_uid = geteuid();
@@ -412,6 +417,7 @@ TEST(dupdir, parentfirst) {
     // clean up
     EXPECT_EQ(rmdir(child),  0);
     EXPECT_EQ(rmdir(parent), 0);
+    EXPECT_EQ(rmdir(root),   0);
 
     EXPECT_EQ(orig_parent_stat.st_mode | S_IFDIR, parent_stat.st_mode);
     EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
@@ -423,13 +429,18 @@ TEST(dupdir, parentfirst) {
 }
 
 TEST(dupdir, childtfirst) {
-    char parent[] = "/tmp/parent";
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+
+    char parent[MAXPATH];
+    EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[] = "/tmp/parent/child";
+    char child[MAXPATH];
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
     orig_child_stat.st_uid = geteuid();
@@ -471,6 +482,7 @@ TEST(dupdir, childtfirst) {
     umask(prev_umask);
     EXPECT_EQ(rmdir(child),  0);
     EXPECT_EQ(rmdir(parent), 0);
+    EXPECT_EQ(rmdir(root),   0);
 
     EXPECT_EQ(orig_parent_stat.st_mode | S_IFDIR, parent_stat.st_mode);
     EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
@@ -481,14 +493,36 @@ TEST(dupdir, childtfirst) {
     EXPECT_EQ(orig_child_stat.st_gid,             child_stat.st_gid);
 }
 
+TEST(dupdir, fileasdir) {
+    char parent[] = "XXXXXX";
+    const int fd = mkstemp(parent);
+    ASSERT_GE(fd, -1);
+    EXPECT_EQ(close(fd), 0);
+
+    char child[MAXPATH];
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
+    struct stat child_stat;
+    child_stat.st_mode = S_IRWXU; // 700
+    child_stat.st_uid = geteuid();
+    child_stat.st_gid = getegid();
+
+    EXPECT_EQ(dupdir(child, &child_stat), 1);
+    EXPECT_EQ(remove(parent), 0);
+}
+
 TEST(mkpath, parentfirst) {
-    char parent[] = "/tmp/parent";
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+
+    char parent[MAXPATH];
+    EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[] = "/tmp/parent/child";
+    char child[MAXPATH];
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
     orig_child_stat.st_uid = geteuid();
@@ -514,6 +548,7 @@ TEST(mkpath, parentfirst) {
     umask(prev_umask);
     EXPECT_EQ(rmdir(child),  0);
     EXPECT_EQ(rmdir(parent), 0);
+    EXPECT_EQ(rmdir(root),   0);
 
     EXPECT_EQ(orig_parent_stat.st_mode | S_IFDIR, parent_stat.st_mode);
     EXPECT_EQ(orig_parent_stat.st_uid,            parent_stat.st_uid);
@@ -525,13 +560,18 @@ TEST(mkpath, parentfirst) {
 }
 
 TEST(mkpath, childfirst) {
-    char parent[] = "/tmp/parent";
+    char root[] = "XXXXXX";
+    ASSERT_NE(mkdtemp(root), nullptr);
+
+    char parent[MAXPATH];
+    EXPECT_GT(SNPRINTF(parent, sizeof(parent), "%s/parent", root), 0);
     struct stat orig_parent_stat;
     orig_parent_stat.st_mode = S_IRWXU; // 700
     orig_parent_stat.st_uid = geteuid();
     orig_parent_stat.st_gid = getegid();
 
-    char child[] = "/tmp/parent/child";
+    char child[MAXPATH];
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
     struct stat orig_child_stat;
     orig_child_stat.st_mode = S_IRWXU | S_IRWXG | S_IRWXO; // 777
     orig_child_stat.st_uid = geteuid();
@@ -554,6 +594,7 @@ TEST(mkpath, childfirst) {
     umask(prev_umask);
     EXPECT_EQ(rmdir(child),  0);
     EXPECT_EQ(rmdir(parent), 0);
+    EXPECT_EQ(rmdir(root),   0);
 
     EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR, parent_stat.st_mode);
     EXPECT_EQ(orig_child_stat.st_uid,            parent_stat.st_uid);
@@ -562,6 +603,18 @@ TEST(mkpath, childfirst) {
     EXPECT_EQ(orig_child_stat.st_mode | S_IFDIR, child_stat.st_mode);
     EXPECT_EQ(orig_child_stat.st_uid,            child_stat.st_uid);
     EXPECT_EQ(orig_child_stat.st_gid,            child_stat.st_gid);
+}
+
+TEST(mkpath, fileasdir) {
+    char parent[] = "XXXXXX";
+    const int fd = mkstemp(parent);
+    ASSERT_GE(fd, -1);
+    EXPECT_EQ(close(fd), 0);
+
+    char child[MAXPATH];
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
+    EXPECT_EQ(mkpath(child, S_IRWXU, geteuid(), getegid()), -1);
+    EXPECT_EQ(remove(parent), 0);
 }
 
 TEST(descend, builddir) {

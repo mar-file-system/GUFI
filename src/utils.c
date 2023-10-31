@@ -289,25 +289,25 @@ int tsumit(struct sum *sumin, struct sum *smout) {
 // also a dir), create the parent dirs all the way down.
 //
 int mkpath(char *path, mode_t mode, uid_t uid, gid_t gid) {
-  for (char *p=strchr(path+1, '/'); p; p=strchr(p+1, '/')) {
-    *p='\0';
-    if (mkdir(path, mode)==-1) {
-      if (errno!=EEXIST) {
-         *p='/';
-         return -1;
-      }
+    for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+        if (mkdir(path, mode) == -1) {
+            const int err = errno;
+            if (err != EEXIST) {
+                *p = '/';
+                return -1;
+            }
+        }
+        else {
+            chmod(path, mode);
+            chown(path, uid, gid);
+        }
+        *p = '/';
     }
-    else {
-      chmod(path, mode);
-      chown(path, uid, gid);
-    }
-    *p='/';
-  }
-  return mkdir(path,mode);
+    return mkdir(path,mode);
 }
 
-int dupdir(const char *path, struct stat *stat)
-{
+int dupdir(const char *path, struct stat *stat) {
     /* if dupdir is called, doing a memory copy will not be relatively heavyweight */
     const size_t path_len = strlen(path);
     char copy[MAXPATH];
@@ -318,17 +318,18 @@ int dupdir(const char *path, struct stat *stat)
     // the writer must be able to create the index files into this directory so or in S_IWRITE
     if (mkdir(copy, stat->st_mode) != 0) {
         const int err = errno;
-      if (err == ENOENT) {
-        mkpath(copy, stat->st_mode, stat->st_uid, stat->st_gid);
-      }
-      else if (err == EEXIST) {
-          struct stat st;
-          if ((lstat(copy, &st) != 0) || !S_ISDIR(st.st_mode))  {
-              return 1;
-          }
-      } else if (err != EEXIST) {
-        return 1;
-      }
+        if (err == ENOENT) {
+            mkpath(copy, stat->st_mode, stat->st_uid, stat->st_gid);
+        }
+        else if (err == EEXIST) {
+            struct stat st;
+            if ((lstat(copy, &st) != 0) || !S_ISDIR(st.st_mode))  {
+                return 1;
+            }
+        }
+        else if (err != EEXIST) {
+            return 1;
+        }
     }
     chmod(copy, stat->st_mode);
     chown(copy, stat->st_uid, stat->st_gid);
