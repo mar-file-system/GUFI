@@ -38,7 +38,7 @@ mkdir build
 cd build
 cmake ..
 make
-sudo make install
+(sudo) make install
 
 # create a GUFI tree
 gufi_dir2index <src_dir> <index_dir>
