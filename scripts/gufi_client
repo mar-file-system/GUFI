@@ -105,7 +105,7 @@ def talk_to_server(config, args):
         ssh.close()
 
 def run(args):
-    config = gufi_config.Client(gufi_config.DEFAULT_PATH)
+    config = gufi_config.Client(gufi_config.PATH)
     talk_to_server(config, args)
 
 if __name__  == '__main__':

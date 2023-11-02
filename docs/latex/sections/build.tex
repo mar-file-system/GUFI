@@ -170,6 +170,25 @@ have effect.
 \end{tabularx}
 \end{table}
 
+\subsubsection{System Paths}
+Some files are installed into system paths that are not
+\texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/bin} or \texttt{\$\{CMAKE\_INSTALL\_PREFIX\}/lib}.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{1.2\textwidth}{| l | X |}
+  \hline
+  \texttt{-D<VAR>=<VALUE>} & Description \\
+  \hline
+  \texttt{CONFIG\_FILE=<FILEPATH>} & Path of configuration file used by scripts. \\
+                                   & Defaults to \guficonfigfile. \\
+                                   & Note that many paths will conflict with the paths of other \\
+                                   & packages if installing GUFI via package. If installing GUFI \\
+                                   & with \texttt{make install}, point to a convenient location. \\
+  \hline
+\end{tabularx}
+\end{table}
+
 \subsubsection{Client}
 \begin{table}[H]
 \centering

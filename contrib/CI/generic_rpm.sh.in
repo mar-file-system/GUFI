@@ -76,7 +76,7 @@ make package
 yum install -y gufi-*.rpm
 
 # compare the configuration files
-@DIFF@ server.example /etc/GUFI/server.example
+@DIFF@ server.example "$(dirname @CONFIG_FILE@)/server.example"
 
 # remove the configuration file
-rm -r /etc/GUFI
+rm -r "$(dirname @CONFIG_FILE@)"

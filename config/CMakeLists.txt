@@ -65,22 +65,43 @@ cmake_minimum_required(VERSION 3.1.0)
 include(ProcessorCount)
 ProcessorCount(CORES)
 
+set(CONFIG_FILE "/etc/GUFI/config" CACHE FILEPATH "Where high level GUFI tools will look for configuration")
+if (NOT IS_ABSOLUTE "${CONFIG_FILE}")
+  message(FATAL_ERROR "CONFIG_FILE must be set to absolute path")
+endif()
+if (EXISTS "${CONFIG_FILE}")
+  execute_process(COMMAND stat --dereference --format "%F" "${CONFIG_FILE}"
+    OUTPUT_VARIABLE CONFIG_FILE_TYPE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (NOT CONFIG_FILE_TYPE STREQUAL "regular file")
+    message(FATAL_ERROR "CONFIG_FILE must point to a file. Got ${CONFIG_FILE_TYPE}")
+  endif()
+endif()
+if (NOT CONFIG_FILE STREQUAL "/etc/GUFI/config")
+  message(WARNING "CONFIG_FILE ${CONFIG_FILE} may conflict with filesystem package when installing GUFI RPMs")
+endif()
+
+get_filename_component(CONFIG_FILE_PARENT "${CONFIG_FILE}" DIRECTORY)
+
 if (CLIENT)
   # client config
   # copy the hard coded client example file
-  configure_file(client.example.in ${CMAKE_BINARY_DIR}/client.example @ONLY)
+  configure_file(client.example.in "${CMAKE_BINARY_DIR}/client.example" @ONLY)
 
   # make install and rpm
-  install(FILES ${CMAKE_BINARY_DIR}/client.example
-    DESTINATION /etc/GUFI
-    COMPONENT Client)
+  install(FILES "${CMAKE_BINARY_DIR}/client.example"
+          DESTINATION "${CONFIG_FILE_PARENT}"
+          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
+          COMPONENT Client)
 endif()
 
 # server config
 # copy the hard coded server example file
-configure_file(server.example.in ${CMAKE_BINARY_DIR}/server.example @ONLY)
+configure_file(server.example.in "${CMAKE_BINARY_DIR}/server.example" @ONLY)
 
 # make install and rpm
-install(FILES ${CMAKE_BINARY_DIR}/server.example
-        DESTINATION /etc/GUFI
+install(FILES "${CMAKE_BINARY_DIR}/server.example"
+        DESTINATION "${CONFIG_FILE_PARENT}"
+        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ GROUP_WRITE WORLD_READ # 664
         COMPONENT Server)

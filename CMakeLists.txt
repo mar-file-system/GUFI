@@ -437,14 +437,14 @@ endif()
 # enable "make test"
 enable_testing()
 
+# configuration files
+add_subdirectory(config)
+
 # build the core executables
 add_subdirectory(src)
 
 # build the core scripts
 add_subdirectory(scripts)
-
-# add configuration examples
-add_subdirectory(config)
 
 # build documentation
 add_subdirectory(docs)

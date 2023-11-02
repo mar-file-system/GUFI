@@ -63,7 +63,7 @@
 
 GUFI_PWD=""
 
-CONFIG="${1-/etc/GUFI/config}"
+CONFIG="${1-@CONFIG_FILE@}"
 
 __gufi() {
     # make sure the config file exists

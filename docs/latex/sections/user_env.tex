@@ -62,13 +62,13 @@
 
 \section{Environment}
 
-Users interact with GUFI using \gufifind, \gufils,
-\gufistat, and \gufistats. These are wrapper scripts
-that access the actual implementations of these files.
+Users interact with GUFI using \gufifind, \gufils, \gufistat, and
+\gufistats. These are wrapper scripts that access the actual
+implementations of these files.
 
-There should be a file readable (but not necessarily modifiable) by
-all GUFI users called \guficonfigfile. This file specifies where the
-GUFI server is, as the actual GUFI trees are not expected to be
-locally available. For experimental GUFI installations such as testing
-and developing, alternative paths to the GUFI configuration file can
-be specified via a \texttt{GUFI\_CONFIG} environment variable.
+These wrapper scripts use a configuration file (that is readable but
+not necessarily modifiable by users) that specifies where the GUFI
+server is, as the actual GUFI trees are not expected to be locally
+available. For experimental GUFI installations, alternative paths to
+the GUFI configuration file can be specified via the
+\texttt{CONFIG\_FILE} CMake variable.
