@@ -163,12 +163,12 @@ run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory uid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "d" { $UID = NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# directory gid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "d" { $GID = NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# missing db.db (Fail)"
@@ -187,12 +187,12 @@ run_no_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory uid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = $NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v UID="${AWK_UID}" -v NEXT_UID="${NEXT_UID}" '$TYPE == "f" { $UID = NEXT_UID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# non-directory gid mismatch (Fail)"
 # shellcheck disable=SC2016
-@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = $NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
+@AWK@ -F "${DELIM}" -v OFS="${DELIM}" -v TYPE="${AWK_TYPE}" -v GID="${AWK_GID}" -v NEXT_GID="${NEXT_GID}" '$TYPE == "f" { $GID = NEXT_GID }; 1' "${TRACE}" > "${BADTRACE}"
 run_sort "${VERIFYTRACEINTREE} \"${BADTRACE}\" \"${DELIM}\" \"${SEARCH}\""
 
 echo "# empty line (Pass)"
