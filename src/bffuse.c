@@ -90,7 +90,6 @@ OF SUCH DAMAGE.
 
 char globalmnt[MAXPATH];
 int  globalmntlen;
-char globaldbname[MAXPTHREAD][MAXPATH];
 int  globaldbs;
 //sqlite3 *globaldb;
 char globalsql[MAXSQL];

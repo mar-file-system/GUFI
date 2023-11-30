@@ -86,6 +86,8 @@ OF SUCH DAMAGE.
 #include <bf.h>
 #include <dbutils.h>
 
+#define MAXPTHREAD 1000
+
 char globalmnt[MAXPATH];
 size_t  globalmntlen;
 char globaldbname[MAXPTHREAD][MAXPATH];

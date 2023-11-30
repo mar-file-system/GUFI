@@ -276,7 +276,7 @@ int parse_cmd_line(int         argc,
          break;
 
       case 'n':
-         INSTALL_SIZE(&in->maxthreads, optarg, 1, MAXPTHREAD, "-n", &retval);
+          INSTALL_SIZE(&in->maxthreads, optarg, 1, (size_t) -1, "-n", &retval);
          break;
 
       case 'd':
