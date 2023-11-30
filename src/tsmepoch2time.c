@@ -4,6 +4,11 @@
 
 int main(int argc, char **argv)
 {
+    if (argc < 2) {
+        fprintf(stderr, "Syntax: %s timestamp", argv[0]);
+        return 1;
+    }
+
     struct tm  ts;
     char       buf[80];
 

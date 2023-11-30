@@ -111,6 +111,7 @@ static int printit(const char *name, const struct stat *status, char *type, char
 static int printload(struct input *in, const char *name, const struct stat *status,
                      char *type, char *linkname, struct xattrs *xattrs, long long pinode,
                      char *sortf, FILE *of) {
+  (void) pinode;
   fprintf(of,"%s%c",             name,in->delim);
   fprintf(of,"%c%c",             type[0],in->delim);
   fprintf(of,"%"STAT_ino"%c",    status->st_ino,in->delim);

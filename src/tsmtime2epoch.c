@@ -70,6 +70,11 @@ OF SUCH DAMAGE.
 
 int main(int argc, char **argv)
 {
+    if (argc < 3) {
+        fprintf(stderr, "Syntax: %s M/D/Y H:M:S\n", argv[0]);
+        return 1;
+    }
+
     struct tm t;
     time_t t_of_day;
     int myear;
@@ -81,4 +86,5 @@ int main(int argc, char **argv)
     t_of_day = mktime(&t);
 
     printf("seconds since the Epoch: %ld\n", (long) t_of_day);
+    return 0;
 }

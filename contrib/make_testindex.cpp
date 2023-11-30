@@ -1071,7 +1071,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     // set up progress thread
-    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex, &start, &pool, &settings](){
+    LoopedThread progress(settings.progress_rate, ThreadArgs::mutex, [&print_mutex, &start, &settings](){
             std::lock_guard <std::mutex> print_lock(print_mutex);
 
             struct timespec now = {};

@@ -159,10 +159,9 @@ TEST(create_empty_dbdb, good) {
     char dirname[] = "XXXXXX" ;
     ASSERT_NE(mkdtemp(dirname), nullptr);
 
-    refstr_t dst = {
-        .data = dirname,
-        .len  = strlen(dirname),
-    };
+    refstr_t dst;
+    dst.data = dirname;
+    dst.len  = strlen(dirname);
 
     // <dirname>/db.db
     char dbname[MAXPATH];
@@ -221,10 +220,9 @@ TEST(create_empty_dbdb, path_is_file) {
     ASSERT_GT(fd, -1);
     EXPECT_EQ(close(fd), 0);
 
-    refstr_t dst = {
-        .data = filename,
-        .len  = strlen(filename),
-    };
+    refstr_t dst;
+    dst.data = filename;
+    dst.len  = strlen(filename);
 
     // attempt to create file under file
     EXPECT_EQ(create_empty_dbdb(nullptr, &dst, -1, -1), -1);

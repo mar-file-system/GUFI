@@ -101,13 +101,18 @@ TEST(QueuePerThreadPool, no_start_stop) {
     QPTPool_destroy(pool);
 }
 
+/* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
+static void *qptpool_init_with_props() {
+    return QPTPool_init_with_props(-1, nullptr, nullptr, nullptr, 0, 0, 0
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , nullptr
+                                   #endif
+        );
+}
+
 TEST(QueuePreThreadPool, bad_init) {
     EXPECT_EQ(QPTPool_init(-1, nullptr), nullptr);
-    EXPECT_EQ(QPTPool_init_with_props(-1, nullptr, nullptr, nullptr, 0, 0, 0
-                                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                      , nullptr
-                                      #endif
-                  ), nullptr);
+    EXPECT_EQ(qptpool_init_with_props(), nullptr);
 }
 
 TEST(QueuePerThreadPool, bad_start) {

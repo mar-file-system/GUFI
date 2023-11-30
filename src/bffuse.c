@@ -211,6 +211,9 @@ skiptofiles:
 }
 
 static int gufir_readdir(const char *path, void *buf, fuse_fill_dir_t filler,off_t offset, struct fuse_file_info *fi) {
+        (void) offset;
+        (void) fi;
+
         int rc;
         sqlite3_stmt    *res;
         const char      *tail;
@@ -344,6 +347,8 @@ static int gufir_access(const char *path, int mask) {
 }
 
 static int gufir_statfs(const char *path, struct statvfs *stbuf) {
+	(void) path;
+
 	int res;
 
 	res = statvfs("/", stbuf);
@@ -358,6 +363,11 @@ static int gufir_getxattr(const char *path, const char *name, char *value,size_t
 #else
 static int gufir_getxattr(const char *path, const char *name, char *value,size_t size) {
 #endif
+#ifdef __APPLE__
+        (void) position;
+#endif
+        (void) name;
+
         int rc;
         sqlite3_stmt    *res;
         const char      *tail;
