@@ -85,18 +85,18 @@ static int printit(const char *name, const struct stat *status, char *type, char
   printf("%s ", name);
   if (!strncmp(type,"l",1)) printf("-> %s ",linkname);
 
-  printf("%"STAT_ino" ",    status->st_ino);
-  printf("%lld ",           pinode);
-  printf("%d ",             status->st_mode);
-  printf("%"STAT_nlink" ",  status->st_nlink);
-  printf("%d ",             status->st_uid);
-  printf("%d ",             status->st_gid);
-  printf("%"STAT_size" ",   status->st_size);
-  printf("%"STAT_bsize" ",  status->st_blksize);
-  printf("%"STAT_blocks" ", status->st_blocks);
-  printf("%ld ",            status->st_atime);
-  printf("%ld ",            status->st_mtime);
-  printf("%ld ",            status->st_ctime);
+  printf("%" STAT_ino"    ", status->st_ino);
+  printf("%lld ",            pinode);
+  printf("%" STAT_mode  " ", status->st_mode);
+  printf("%" STAT_nlink " ", status->st_nlink);
+  printf("%" STAT_uid   " ", status->st_uid);
+  printf("%" STAT_gid   " ", status->st_gid);
+  printf("%" STAT_size  " ", status->st_size);
+  printf("%" STAT_bsize " ", status->st_blksize);
+  printf("%" STAT_blocks" ", status->st_blocks);
+  printf("%ld ",             status->st_atime);
+  printf("%ld ",             status->st_mtime);
+  printf("%ld ",             status->st_ctime);
 
   if (xattrs->count) {
     printf("xattr:");
@@ -112,21 +112,21 @@ static int printload(struct input *in, const char *name, const struct stat *stat
                      char *type, char *linkname, struct xattrs *xattrs, long long pinode,
                      char *sortf, FILE *of) {
   (void) pinode;
-  fprintf(of,"%s%c",             name,in->delim);
-  fprintf(of,"%c%c",             type[0],in->delim);
-  fprintf(of,"%"STAT_ino"%c",    status->st_ino,in->delim);
+  fprintf(of,"%s%c",              name,in->delim);
+  fprintf(of,"%c%c",              type[0],in->delim);
+  fprintf(of,"%" STAT_ino   "%c", status->st_ino,in->delim);
   //fprintf(of,"%lld%c", pinode,in->delim);
-  fprintf(of,"%d%c",             status->st_mode,in->delim);
-  fprintf(of,"%"STAT_nlink"%c",  status->st_nlink,in->delim);
-  fprintf(of,"%d%c",             status->st_uid,in->delim);
-  fprintf(of,"%d%c",             status->st_gid,in->delim);
-  fprintf(of,"%"STAT_size"%c",   status->st_size,in->delim);
-  fprintf(of,"%"STAT_bsize"%c",  status->st_blksize,in->delim);
-  fprintf(of,"%"STAT_blocks"%c", status->st_blocks,in->delim);
-  fprintf(of,"%ld%c",            status->st_atime,in->delim);
-  fprintf(of,"%ld%c",            status->st_mtime,in->delim);
-  fprintf(of,"%ld%c",            status->st_ctime,in->delim);
-  fprintf(of,"%s%c",             linkname,in->delim);
+  fprintf(of,"%" STAT_mode  "%c", status->st_mode,in->delim);
+  fprintf(of,"%" STAT_nlink "%c", status->st_nlink,in->delim);
+  fprintf(of,"%" STAT_uid   "%c", status->st_uid,in->delim);
+  fprintf(of,"%" STAT_gid   "%c", status->st_gid,in->delim);
+  fprintf(of,"%" STAT_size  "%c", status->st_size,in->delim);
+  fprintf(of,"%" STAT_bsize "%c", status->st_blksize,in->delim);
+  fprintf(of,"%" STAT_blocks"%c", status->st_blocks,in->delim);
+  fprintf(of,"%ld%c",             status->st_atime,in->delim);
+  fprintf(of,"%ld%c",             status->st_mtime,in->delim);
+  fprintf(of,"%ld%c",             status->st_ctime,in->delim);
+  fprintf(of,"%s%c",              linkname,in->delim);
   for(size_t i = 0; i < xattrs->count; i++) {
       fprintf(of, "%s\\0", xattrs->pairs[i].name);
   }
@@ -261,7 +261,7 @@ void listdir(struct input *in, const char *name, long long int level,
                 printit(path,&st,type,lpath,&xattrs,1,pin);
               }
             } else {
-              printf("%s %s %"STAT_ino" %lld\n",type, path, entry->d_ino,pin);
+              printf("%s %s %" STAT_ino " %lld\n",type, path, entry->d_ino,pin);
             }
         }
     }

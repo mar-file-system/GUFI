@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include <sqlite3.h>
 
 #include "QueuePerThreadPool.h"
+#include "config.h"
 #include "trace.h"
 
 // Data stored during first pass of input file
@@ -111,9 +112,9 @@ static int callback(void *arg, int, char **data, char **) {
     ca->count++;
 
     // assume no errors
-    sscanf(data[mode_col], "%d", &ca->st.st_mode);
-    sscanf(data[uid_col],  "%d", &ca->st.st_uid);
-    sscanf(data[gid_col],  "%d", &ca->st.st_gid);
+    sscanf(data[mode_col], "%" STAT_mode, &ca->st.st_mode);
+    sscanf(data[uid_col],  "%" STAT_uid,  &ca->st.st_uid);
+    sscanf(data[gid_col],  "%" STAT_gid,  &ca->st.st_gid);
 
     return 0;
 }

@@ -158,8 +158,8 @@ void show_input(struct input* in, int retval) {
    printf("in.nameto                   = '%s'\n",          in->nameto.data);
    printf("in.andor                    = %d\n",            (int) in->andor);
    printf("in.external_enabled         = %d\n",            in->external_enabled);
-   printf("in.nobody.uid               = %d\n",            (int) in->nobody.uid);
-   printf("in.nobody.gid               = %d\n",            (int) in->nobody.gid);
+   printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
+   printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
    printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
    printf("in.sql.tsum                 = '%s'\n",          in->sql.tsum.data);
    printf("in.sql.sum                  = '%s'\n",          in->sql.sum.data);

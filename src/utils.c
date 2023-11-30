@@ -74,48 +74,6 @@ OF SUCH DAMAGE.
 
 #include "utils.h"
 
-int printits(struct input *in, struct work *pwork, struct entry_data *ed, FILE *out) {
-  fprintf(out, "%s%c",             pwork->name,            in->delim);
-  fprintf(out, "%c%c",             ed->type,               in->delim);
-  fprintf(out, "%"STAT_ino"%c",    ed->statuso.st_ino,     in->delim);
-  fprintf(out, "%d%c",             ed->statuso.st_mode,    in->delim);
-  fprintf(out, "%"STAT_nlink"%c",  ed->statuso.st_nlink,   in->delim);
-  fprintf(out, "%d%c",             ed->statuso.st_uid,     in->delim);
-  fprintf(out, "%d%c",             ed->statuso.st_gid,     in->delim);
-  fprintf(out, "%"STAT_size"%c",   ed->statuso.st_size,    in->delim);
-  fprintf(out, "%"STAT_bsize"%c",  ed->statuso.st_blksize, in->delim);
-  fprintf(out, "%"STAT_blocks"%c", ed->statuso.st_blocks,  in->delim);
-  fprintf(out, "%ld%c",            ed->statuso.st_atime,   in->delim);
-  fprintf(out, "%ld%c",            ed->statuso.st_mtime,   in->delim);
-  fprintf(out, "%ld%c",            ed->statuso.st_ctime,   in->delim);
-
-/* we need this field even if its not populated for gufi_trace2index */
-/*
-  if (!strncmp(pwork->type,"l",1)) {
-    fprintf(out, "%s%c", ed->linkname,in->delim);
-  }
-*/
-  fprintf(out, "%s%c", ed->linkname,in->delim);
-
-/* we need this field even if its not populated for gufi_trace2index */
-/*
-  if (ed->xattrs > 0) {
-    //printf("xattr: ");
-    fprintf(out,"%s%c",ed->xattr,in->delim);
-  }
-*/
-  /* fwrite(ed->xattrs, sizeof(char), ed->xattrs_len, out); */
-  fprintf(out,"%c",in->delim);
-
-  /* this one is for create time which posix doesnt have */
-  fprintf(out,"%c", in->delim);
-  /* moved this to end because we would like to use this for input to gufi_trace2index load from file */
-  fprintf(out, "%lld%c", pwork->pinode, in->delim);
-  fprintf(out, "%d%c", ed->suspect, in->delim);
-  fprintf(out,"\n");
-  return 0;
-}
-
 int zeroit(struct sum *summary)
 {
   summary->totfiles=0;

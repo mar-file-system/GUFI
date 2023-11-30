@@ -20,7 +20,10 @@ See LICENSE.txt in top-level directory for license terms.
 // members of struct stat have sizes that vary between OSX/Linux
 #if defined(__APPLE__)
 #  define STAT_ino    "llu"
+#  define STAT_mode   "hd"
 #  define STAT_nlink  "hu"
+#  define STAT_uid    "u"
+#  define STAT_gid    "u"
 #  define STAT_size   "lld"
 #  define STAT_bsize  "d"
 #  define STAT_blocks "lld"
@@ -30,7 +33,10 @@ See LICENSE.txt in top-level directory for license terms.
 
 #elif defined(__linux__)
 #  define STAT_ino    "lu"
+#  define STAT_mode   "u"
 #  define STAT_nlink  "lu"
+#  define STAT_uid    "u"
+#  define STAT_gid    "u"
 #  define STAT_size   "ld"
 #  define STAT_bsize  "ld"
 #  define STAT_blocks "ld"
@@ -41,7 +47,10 @@ See LICENSE.txt in top-level directory for license terms.
 #elif defined(__CYGWIN__)
 
 #  define STAT_ino    "lu"
+#  define STAT_mode   "u"
 #  define STAT_nlink  "hu"
+#  define STAT_uid    "u"
+#  define STAT_gid    "u"
 #  define STAT_size   "ld"
 #  define STAT_bsize  "d"
 #  define STAT_blocks "ld"

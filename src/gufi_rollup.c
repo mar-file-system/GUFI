@@ -612,8 +612,8 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     uid_t uid;
     gid_t gid;
 
-    sscanf(uid_str, "%d", &uid); /* skip checking for failure */
-    sscanf(gid_str, "%d", &gid); /* skip checking for failure */
+    sscanf(uid_str, "%" STAT_uid, &uid); /* skip checking for failure */
+    sscanf(gid_str, "%" STAT_gid, &gid); /* skip checking for failure */
 
     /* parent xattr db filename */
     char xattr_db_name[MAXPATH];
