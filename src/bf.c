@@ -73,7 +73,13 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "utils.h"
 
+#ifdef __CYGWIN__
+__declspec(dllimport)
+#endif
 extern char *optarg;
+#ifdef __CYGWIN__
+__declspec(dllimport)
+#endif
 extern int optind, opterr, optopt;
 
 const char fielddelim = '\x1E';     /* ASCII Record Separator */
