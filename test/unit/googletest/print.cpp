@@ -115,7 +115,7 @@ TEST(print, parallel) {
         EXPECT_EQ(strlen(buf), (std::size_t) 0);
     }
 
-    // BC\n is too large, so A and BC both get flushed
+    // BC\n is too large, so A\n and BC\n both get flushed
     {
         EXPECT_EQ(print_parallel(&pa, 1, (char **) DATA + 1, nullptr), 0);
         EXPECT_EQ(ob.filled, (std::size_t) 0);
@@ -135,7 +135,7 @@ TEST(print, parallel) {
         EXPECT_STREQ(buf, ABC.c_str());
     }
 
-    // force the OutputBuffer to flush to get D
+    // force the OutputBuffer to flush to get D\n
     {
         EXPECT_EQ(OutputBuffer_flush(&ob, file), D.size() + NL.size());
         EXPECT_EQ(fflush(file), 0);
@@ -151,12 +151,12 @@ TEST(print, parallel) {
         EXPECT_EQ(OutputBuffer_flush(&ob, file), NL.size());
         EXPECT_EQ(fflush(file), 0);
         EXPECT_EQ(pa.rows, (std::size_t) 4);
-        EXPECT_EQ(memcmp(buf, ABCD.c_str(), ABCD.size()), 0);
+        EXPECT_STREQ(buf, (ABCD + "\n").c_str());
     }
 
     // print all data as one row, which is too big for the buffer, so it gets flushed immediately
     {
-        const std::string ROW = A + SEP + BC + SEP + D + SEP; // final separator is for NULL data column, not line end
+        const std::string ROW = A + SEP + BC + SEP + D + SEP + NL; // final separator is for NULL data column, not line end
 
         EXPECT_EQ(ob.filled, (std::size_t) 0);
 
