@@ -376,16 +376,18 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    int rc = 0;
+
     if (setup_dst(pa.in.nameto.data) != 0) {
-        trie_free(pa.skip);
-        return -1;
+        rc = -1;
+        goto free_skip;
     }
 
     init_template_db(&pa.db);
     if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        trie_free(pa.skip);
-        return -1;
+        rc = -1;
+        goto free_skip;
     }
 
     /*
@@ -394,16 +396,15 @@ int main(int argc, char *argv[]) {
      * so that when querying "${dst}", no error is printed
      */
     if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
-        trie_free(pa.skip);
-        return -1;
+        rc = -1;
+        goto free_skip;
     }
 
     init_template_db(&pa.xattr);
     if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        close_template_db(&pa.db);
-        trie_free(pa.skip);
-        return -1;
+        rc = -1;
+        goto free_db;
     }
 
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
@@ -415,10 +416,8 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
-        close_template_db(&pa.xattr);
-        close_template_db(&pa.db);
-        trie_free(pa.skip);
-        return -1;
+        rc = -1;
+        goto free_xattr;
     }
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
@@ -472,9 +471,6 @@ int main(int argc, char *argv[]) {
         free(roots[i]);
     }
     free(roots);
-    close_template_db(&pa.xattr);
-    close_template_db(&pa.db);
-    trie_free(pa.skip);
 
     uint64_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
@@ -489,5 +485,12 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
     fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
-    return 0;
+  free_xattr:
+    close_template_db(&pa.xattr);
+  free_db:
+    close_template_db(&pa.db);
+  free_skip:
+    trie_free(pa.skip);
+
+    return rc;
 }

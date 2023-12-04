@@ -667,11 +667,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    int rc = 0;
+
     init_template_db(&pa.db);
     if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        close_traces(traces, trace_count);
-        return -1;
+        rc = -1;
+        goto free_traces;
     }
 
     struct stat st;
@@ -681,8 +683,8 @@ int main(int argc, char *argv[]) {
 
     if (dupdir(pa.in.nameto.data, &st)) {
         fprintf(stderr, "Could not create directory %s\n", pa.in.nameto.data);
-        close_traces(traces, trace_count);
-        return -1;
+        rc = -1;
+        goto free_traces;
     }
 
     /*
@@ -691,16 +693,15 @@ int main(int argc, char *argv[]) {
      * so that when querying "${dst}", no error is printed
      */
     if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
-        close_traces(traces, trace_count);
-        return -1;
+        rc = -1;
+        goto free_traces;
     }
 
     init_template_db(&pa.xattr);
     if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        close_template_db(&pa.db);
-        close_traces(traces, trace_count);
-        return -1;
+        rc = -1;
+        goto free_db;
     }
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -716,10 +717,8 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
-        close_template_db(&pa.xattr);
-        close_template_db(&pa.db);
-        close_traces(traces, trace_count);
-        return -1;
+        rc = -1;
+        goto free_xattr;
     }
 
     fprintf(stdout, "Creating GUFI Index %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
@@ -752,10 +751,6 @@ int main(int argc, char *argv[]) {
 
     /* don't count as part of processtime */
     QPTPool_destroy(pool);
-
-    close_template_db(&pa.xattr);
-    close_template_db(&pa.db);
-    close_traces(traces, trace_count);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_flush_to_single(&debug_output_buffers, stderr);
@@ -795,5 +790,12 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Dirs/Sec:            %.2Lf\n",  dirs / processtime);
     fprintf(stdout, "Files/Sec:           %.2Lf\n",  files / processtime);
 
-    return 0;
+  free_xattr:
+    close_template_db(&pa.xattr);
+  free_db:
+    close_template_db(&pa.db);
+  free_traces:
+    close_traces(traces, trace_count);
+
+    return rc;
 }
