@@ -115,3 +115,29 @@ TEST(compress, on) {
     /* compressed was freed, decompressed points to stack address */
     free_struct(decompressed, compressed, 0);
 }
+
+#ifdef HAVE_ZLIB
+TEST(compress_zlib, bad) {
+    compressed_t src;
+    memset(&src, 0, sizeof(src));
+
+    compressed_t *dst = (compressed_t *) compress_struct(1, &src, sizeof(src));
+    EXPECT_NE(dst, nullptr);
+    EXPECT_NE(dst, &src);
+    EXPECT_EQ(dst->yes, (std::int8_t) 0);
+    EXPECT_EQ(dst->len, (std::size_t) 0);
+
+    free(dst);
+}
+
+TEST(decompress_zlib, bad) {
+    compressed_t src; // should not be freed
+    src.yes = 1;
+    src.len = 0;
+
+    compressed_t dst;
+    compressed_t *dstp = &dst;
+
+    ASSERT_NO_THROW(decompress_struct((void **) &dstp, &src, sizeof(src)));
+}
+#endif

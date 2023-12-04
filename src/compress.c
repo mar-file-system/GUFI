@@ -84,6 +84,7 @@ static int decompress_zlib(void *dst, size_t *dst_len, void *src, const size_t s
 
 /* always return new address */
 void *compress_struct(const int comp, void *src, const size_t struct_len) {
+    /* not checking src == NULL */
     compressed_t *dst = malloc(struct_len);
     dst->yes = 0;
     dst->len = 0;
@@ -118,6 +119,7 @@ void *compress_struct(const int comp, void *src, const size_t struct_len) {
 }
 
 int decompress_struct(void **dst, void *src, const size_t struct_len) {
+    /* not checking src == NULL */
     compressed_t *comp = (compressed_t *) src;
     if (comp->yes) {
         compressed_t *decomp = (compressed_t *) *dst;
