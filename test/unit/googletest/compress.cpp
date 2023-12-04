@@ -116,6 +116,11 @@ TEST(compress, on) {
     free_struct(decompressed, compressed, 0);
 }
 
+TEST(compress, free_in_situ) {
+    char c;
+    ASSERT_NO_THROW(free_struct(&c, &c, 1));
+}
+
 #ifdef HAVE_ZLIB
 TEST(compress_zlib, bad) {
     compressed_t src;
