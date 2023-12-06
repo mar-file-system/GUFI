@@ -299,6 +299,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     char shortname[MAXPATH];
     char endname[MAXPATH];
     DIR *dir = NULL;
+    sqlite3 *db = NULL;
 
     /* Not checking arguments */
 
@@ -340,7 +341,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     #if OPENDB
     thread_timestamp_start(ts.tts, attachdb_call);
-    sqlite3 *db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
+    db = attachdb(dbname, ta->outdb, ATTACH_NAME, in->open_flags, 1);
     thread_timestamp_end(attachdb_call);
     increment_query_count(ta);
     #endif

@@ -172,6 +172,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     memset(&nda.ed, 0, sizeof(nda.ed));
     nda.ed.type    = 'd';
 
+    DIR *dir = NULL;
+
     if (nda.work->compressed.yes) {
         nda.work = &work_src;
         decompress_struct((void **) &nda.work, data, sizeof(work_src));
@@ -183,7 +185,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         goto cleanup;
     }
 
-    DIR *dir = opendir(nda.work->name);
+    dir = opendir(nda.work->name);
     if (!dir) {
         fprintf(stderr, "Could not open directory \"%s\"\n", nda.work->name);
         rc = 1;
