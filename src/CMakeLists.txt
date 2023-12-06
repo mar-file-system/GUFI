@@ -64,7 +64,9 @@ cmake_minimum_required(VERSION 3.1.0)
 
 include(CheckSymbolExists)
 check_symbol_exists(localtime_r "time.h" LOCALTIME_R)
-add_definitions(-DLOCALTIME_R=${LOCALTIME_R})
+if (LOCALTIME_R)
+  add_definitions(-DLOCALTIME_R)
+endif()
 
 # ##########################################
 # flags that can be used to modify code

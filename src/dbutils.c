@@ -854,7 +854,7 @@ static void sqlite3_strftime(sqlite3_context *context, int argc, sqlite3_value *
     const time_t t = sqlite3_value_int64(argv[1]);          /* timestamp */
 
     char buf[MAXPATH];
-    #if LOCALTIME_R
+    #ifdef LOCALTIME_R
     struct tm tm;
     strftime(buf, sizeof(buf), fmt, localtime_r(&t, &tm));
     #else
