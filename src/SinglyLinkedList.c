@@ -140,26 +140,50 @@ sll_t *sll_move(sll_t *dst, sll_t *src) {
     return sll_move_first(dst, src, src->size);
 }
 
-sll_t *sll_move_append(sll_t *dst, sll_t *src) {
+sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n) {
     /* Not checking arguments */
 
-    /* src is appended to dst and then cleared */
-    if (!dst->head) {
+    if (!src->size) {
+        return dst;
+    }
+
+    /* Connect src->head to dst->tail first */
+    if (dst->head) {
+        dst->tail->next = src->head;
+    }
+    else {
         dst->head = src->head;
     }
 
-    if (dst->tail) {
-        dst->tail->next = src->head;
+    /* find up to n nodes from src */
+    sll_node_t *last = src->head;
+    uint64_t i = 0;
+    sll_loop(src, node) {
+        if (i == n) {
+            break;
+        }
+
+        last = node;
+        i++;
     }
 
-    if (src->tail) {
-        dst->tail = src->tail;
+    src->head = last->next;
+    if (last == src->tail) {
+        src->tail = NULL;
     }
 
-    dst->size += src->size;
+    dst->tail = last;
+    dst->tail->next = NULL;
 
-    sll_clear(src);
+    dst->size += i;
+    src->size -= i;
+
     return dst;
+}
+
+sll_t *sll_move_append(sll_t *dst, sll_t *src) {
+    /* Not checking arguments */
+    return sll_move_append_first(dst, src, src->size);
 }
 
 uint64_t sll_get_size(sll_t *sll) {
@@ -172,6 +196,10 @@ sll_node_t *sll_head_node(sll_t *sll) {
 
 sll_node_t *sll_next_node(sll_node_t *node) {
     return node?node->next:NULL;
+}
+
+sll_node_t *sll_tail_node(sll_t *sll) {
+    return sll?sll->tail:NULL;
 }
 
 void *sll_node_data(sll_node_t *node) {

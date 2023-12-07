@@ -140,184 +140,245 @@ TEST(SinglyLinkedList, move_first) {
 
 TEST(SinglyLinkedList, move) {
     // create sll with 2 items
-    sll_t sll_src;
-    EXPECT_EQ(&sll_src, sll_init(&sll_src));
-    EXPECT_EQ(sll_src.head, nullptr);
-    EXPECT_EQ(sll_src.tail, nullptr);
-    EXPECT_EQ(&sll_src, sll_push(&sll_src, nullptr));
-    EXPECT_EQ(&sll_src, sll_push(&sll_src, nullptr));
+    sll_t src;
+    EXPECT_EQ(&src, sll_init(&src));
+    EXPECT_EQ(src.head, nullptr);
+    EXPECT_EQ(src.tail, nullptr);
+    EXPECT_EQ(&src, sll_push(&src, nullptr));
+    EXPECT_EQ(&src, sll_push(&src, nullptr));
 
-    sll_node_t *head = sll_src.head;
-    sll_node_t *tail = sll_src.tail;
+    sll_node_t *head = src.head;
+    sll_node_t *tail = src.tail;
 
     // empty sll
-    sll_t sll_dst;
-    EXPECT_EQ(&sll_dst, sll_init(&sll_dst));
-    EXPECT_EQ(sll_dst.head, nullptr);
-    EXPECT_EQ(sll_dst.tail, nullptr);
+    sll_t dst;
+    EXPECT_EQ(&dst, sll_init(&dst));
+    EXPECT_EQ(dst.head, nullptr);
+    EXPECT_EQ(dst.tail, nullptr);
 
     // dst has old info
-    EXPECT_EQ(&sll_dst, sll_move(&sll_dst, &sll_src));
-    EXPECT_EQ(sll_dst.head, head);
-    EXPECT_EQ(sll_dst.tail, tail);
+    EXPECT_EQ(&dst, sll_move(&dst, &src));
+    EXPECT_EQ(dst.head, head);
+    EXPECT_EQ(dst.tail, tail);
 
     // src is empty
-    EXPECT_EQ(sll_src.head, nullptr);
-    EXPECT_EQ(sll_src.tail, nullptr);
+    EXPECT_EQ(src.head, nullptr);
+    EXPECT_EQ(src.tail, nullptr);
 
-    sll_destroy(&sll_dst, nullptr);
-    sll_destroy(&sll_src, nullptr);
+    sll_destroy(&dst, nullptr);
+    sll_destroy(&src, nullptr);
+}
+
+TEST(SinglyLinkedList, move_append_first) {
+    static const std::size_t src_start = 10;
+    static const std::size_t src_stop = 20;
+    static const std::size_t src_count = src_stop - src_start;
+    static const std::size_t src_half = src_count / 2;
+
+    sll_t dst;
+    sll_t src;
+
+    // empty dst
+    {
+        sll_init(&dst);
+        sll_init(&src);
+
+        // empty src
+        EXPECT_EQ(sll_move_append_first(&dst, &src, src_count), &dst);
+        EXPECT_EQ(dst.head, nullptr);
+        EXPECT_EQ(dst.tail, nullptr);
+        EXPECT_EQ(dst.size, (uint64_t) 0);
+        EXPECT_EQ(src.head, nullptr);
+        EXPECT_EQ(src.tail, nullptr);
+        EXPECT_EQ(src.size, (uint64_t) 0);
+
+        // src with items
+        {
+            for(std::size_t i = 0; i < src_count; i++) {
+                EXPECT_EQ(sll_push(&src, (void *) (uintptr_t) (i + src_start)), &src);
+            }
+
+            // move some of src
+            EXPECT_EQ(sll_move_append_first(&dst, &src, src_half), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) src_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) src_start + src_half - 1);
+            EXPECT_EQ(dst.size, src_half);
+            EXPECT_NE(src.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(src.head), (uint64_t) src_start + src_half);
+            EXPECT_NE(src.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(src.tail), (uint64_t) src_start + src_count - 1);
+            EXPECT_EQ(src.size, src_count - src_half);
+
+            // move all of src
+            EXPECT_EQ(sll_move_append_first(&dst, &src, src_count), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) src_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) src_start + src_count - 1);
+            EXPECT_EQ(dst.size, src_count);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+            EXPECT_EQ(src.size, (uint64_t) 0);
+        }
+
+        sll_destroy(&src, nullptr); // not strictly necessary
+        sll_destroy(&dst, nullptr);
+    }
+
+    // dst with items
+    {
+        sll_init(&dst);
+        sll_init(&src);
+
+        static const std::size_t dst_start = 0;
+        static const std::size_t dst_stop = 10;
+        static const std::size_t dst_count = dst_stop - dst_start;
+
+        for(std::size_t i = 0; i < dst_count; i++) {
+            EXPECT_EQ(sll_push(&dst, (void *) (uintptr_t) (i + dst_start)), &dst);
+        }
+
+        // empty src
+        {
+            EXPECT_EQ(sll_move_append_first(&dst, &src, src_count), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) dst_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) dst_stop - 1);
+            EXPECT_EQ(dst.size, dst_count);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+            EXPECT_EQ(src.size, (uint64_t) 0);
+        }
+
+        // src with items
+        {
+            for(std::size_t i = 0; i < src_count; i++) {
+                EXPECT_EQ(sll_push(&src, (void *) (uintptr_t) (i + src_start)), &src);
+            }
+
+            // move some of src
+            EXPECT_EQ(sll_move_append_first(&dst, &src, src_half), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) dst_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) src_start + src_half - 1);
+            EXPECT_EQ(dst.size, dst_count + src_half);
+            EXPECT_NE(src.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(src.head), (uint64_t) src_start + src_half);
+            EXPECT_NE(src.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(src.tail), (uint64_t) src_start + src_count - 1);
+            EXPECT_EQ(src.size, src_count - src_half);
+
+            // move all of src
+            EXPECT_EQ(sll_move_append_first(&dst, &src, src_count), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) dst_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) src_start + src_count - 1);
+            EXPECT_EQ(dst.size, dst_count + src_count);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+            EXPECT_EQ(src.size, (uint64_t) 0);
+        }
+
+        sll_destroy(&src, nullptr); // not strictly necessary
+        sll_destroy(&dst, nullptr);
+    }
 }
 
 TEST(SinglyLinkedList, move_append) {
-    // dst is empty
+    static const std::size_t src_start = 10;
+    static const std::size_t src_stop = 20;
+    static const std::size_t src_count = src_stop - src_start;
+
+    sll_t dst;
+    sll_t src;
+
+    // empty dst
     {
-        // move one item
-        {
-            sll_t dst;
-            EXPECT_EQ(&dst, sll_init(&dst));
+        sll_init(&dst);
+        sll_init(&src);
 
-            sll_t src;
-            EXPECT_EQ(&src, sll_init(&src));
-            EXPECT_EQ(&src, sll_push(&src, nullptr));
-
-            sll_node_t *src_head = src.head;
-            sll_node_t *src_tail = src.tail;
-            EXPECT_EQ(src_head, src_tail);
-
-            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
-            EXPECT_EQ(dst.head, src_head);
-            EXPECT_EQ(dst.tail, src_tail);
-            EXPECT_EQ(src.head, nullptr);
-            EXPECT_EQ(src.tail, nullptr);
-
-            sll_destroy(&src, 0);
-            sll_destroy(&dst, 0);
-        }
-
-        // move two items
-        {
-            sll_t dst;
-            EXPECT_EQ(&dst, sll_init(&dst));
-
-            sll_t src;
-            EXPECT_EQ(&src, sll_init(&src));
-            EXPECT_EQ(&src, sll_push(&src, nullptr));
-            EXPECT_EQ(&src, sll_push(&src, nullptr));
-
-            sll_node_t *src_head = src.head;
-            sll_node_t *src_tail = src.tail;
-            EXPECT_NE(src_head, src_tail);
-
-            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
-            EXPECT_EQ(dst.head, src_head);
-            EXPECT_EQ(dst.tail, src_tail);
-            EXPECT_EQ(src.head, nullptr);
-            EXPECT_EQ(src.tail, nullptr);
-
-            sll_destroy(&src, 0);
-            sll_destroy(&dst, 0);
-        }
-    }
-
-    // src is empty
-    {
-        sll_t dst;
-        EXPECT_EQ(&dst, sll_init(&dst));
-        EXPECT_EQ(&dst, sll_push(&dst, nullptr));
-        EXPECT_EQ(&dst, sll_push(&dst, nullptr));
-
-        sll_node_t *dst_head = dst.head;
-        sll_node_t *dst_tail = dst.tail;
-        EXPECT_NE(dst_head, dst_tail);
-
-        sll_t src;
-        EXPECT_EQ(&src, sll_init(&src));
-
-        // nothing in src
+        // empty src
+        EXPECT_EQ(sll_move_append(&dst, &src), &dst);
+        EXPECT_EQ(dst.head, nullptr);
+        EXPECT_EQ(dst.tail, nullptr);
+        EXPECT_EQ(dst.size, (uint64_t) 0);
         EXPECT_EQ(src.head, nullptr);
         EXPECT_EQ(src.tail, nullptr);
+        EXPECT_EQ(src.size, (uint64_t) 0);
 
-        EXPECT_EQ(&dst, sll_move_append(&dst, &src));
+        // src with items
+        {
+            for(std::size_t i = 0; i < src_count; i++) {
+                EXPECT_EQ(sll_push(&src, (void *) (uintptr_t) (i + src_start)), &src);
+            }
 
-        // dst not changed
-        EXPECT_EQ(dst.head, dst_head);
-        EXPECT_EQ(dst.tail, dst_tail);
+            // move all of src
+            EXPECT_EQ(sll_move_append(&dst, &src), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) src_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) src_start + src_count - 1);
+            EXPECT_EQ(dst.size, src_count);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+            EXPECT_EQ(src.size, (uint64_t) 0);
+        }
 
-        // still nothing in src
-        EXPECT_EQ(src.head, nullptr);
-        EXPECT_EQ(src.tail, nullptr);
-
-        sll_destroy(&src, 0);
-        sll_destroy(&dst, 0);
+        sll_destroy(&src, nullptr); // not strictly necessary
+        sll_destroy(&dst, nullptr);
     }
 
-    // neither empty
+    // dst with items
     {
-        // move one item
-        {
-            sll_t dst;
-            EXPECT_EQ(&dst, sll_init(&dst));
-            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
-            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
+        sll_init(&dst);
+        sll_init(&src);
 
-            sll_node_t *dst_head = dst.head;
-            sll_node_t *dst_tail = dst.tail;
-            EXPECT_NE(dst_head, dst_tail);
+        static const std::size_t dst_start = 0;
+        static const std::size_t dst_stop = 10;
+        static const std::size_t dst_count = dst_stop - dst_start;
 
-            sll_t src;
-            EXPECT_EQ(&src, sll_init(&src));
-            EXPECT_EQ(&src, sll_push(&src, nullptr));
-
-            sll_node_t *src_head = src.head;
-            sll_node_t *src_tail = src.tail;
-            EXPECT_EQ(src_head, src_tail);
-
-            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
-
-            EXPECT_EQ(dst.head, dst_head); // same head
-            EXPECT_EQ(dst.tail, src_tail); // different tail
-
-            // src empty
-            EXPECT_EQ(src.head, nullptr);
-            EXPECT_EQ(src.tail, nullptr);
-
-            sll_destroy(&src, 0);
-            sll_destroy(&dst, 0);
+        for(std::size_t i = 0; i < dst_count; i++) {
+            EXPECT_EQ(sll_push(&dst, (void *) (uintptr_t) (i + dst_start)), &dst);
         }
 
-        // move two items
+        // empty src
         {
-            sll_t dst;
-            EXPECT_EQ(&dst, sll_init(&dst));
-            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
-            EXPECT_EQ(&dst, sll_push(&dst, nullptr));
-
-            sll_node_t *dst_head = dst.head;
-            sll_node_t *dst_tail = dst.tail;
-            EXPECT_NE(dst_head, dst_tail);
-
-            sll_t src;
-            EXPECT_EQ(&src, sll_init(&src));
-            EXPECT_EQ(&src, sll_push(&src, nullptr));
-            EXPECT_EQ(&src, sll_push(&src, nullptr));
-
-            sll_node_t *src_head = src.head;
-            sll_node_t *src_tail = src.tail;
-            EXPECT_NE(src_head, src_tail);
-
-            EXPECT_EQ(&dst, sll_move_append(&dst, &src));
-
-            EXPECT_EQ(dst.head, dst_head); // same head
-            EXPECT_EQ(dst.tail, src_tail); // different tail
-
-            // src empty
+            EXPECT_EQ(sll_move_append(&dst, &src), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) dst_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) dst_stop - 1);
+            EXPECT_EQ(dst.size, dst_count);
             EXPECT_EQ(src.head, nullptr);
             EXPECT_EQ(src.tail, nullptr);
-
-            sll_destroy(&src, 0);
-            sll_destroy(&dst, 0);
+            EXPECT_EQ(src.size, (uint64_t) 0);
         }
+
+        // src with items
+        {
+            for(std::size_t i = 0; i < src_count; i++) {
+                EXPECT_EQ(sll_push(&src, (void *) (uintptr_t) (i + src_start)), &src);
+            }
+
+            // move all of src
+            EXPECT_EQ(sll_move_append(&dst, &src), &dst);
+            EXPECT_NE(dst.head, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.head), (uint64_t) dst_start);
+            EXPECT_NE(dst.tail, nullptr);
+            EXPECT_EQ((uint64_t) (uintptr_t) sll_node_data(dst.tail), (uint64_t) src_start + src_count - 1);
+            EXPECT_EQ(dst.size, dst_count + src_count);
+            EXPECT_EQ(src.head, nullptr);
+            EXPECT_EQ(src.tail, nullptr);
+            EXPECT_EQ(src.size, (uint64_t) 0);
+        }
+
+        sll_destroy(&src, nullptr); // not strictly necessary
+        sll_destroy(&dst, nullptr);
     }
 }
 
@@ -326,12 +387,14 @@ TEST(SinglyLinkedList, head_node) {
     EXPECT_EQ(&sll, sll_init(&sll));
 
     // empty sll
+    EXPECT_EQ(sll.head, nullptr);
     EXPECT_EQ(sll.head, sll_head_node(&sll));
 
     EXPECT_EQ(&sll, sll_push(&sll, nullptr));
     EXPECT_EQ(&sll, sll_push(&sll, nullptr));
 
     // non-null head node
+    EXPECT_NE(sll.head, nullptr);
     EXPECT_EQ(sll.head, sll_head_node(&sll));
     EXPECT_NE(sll.tail, sll_head_node(&sll));
 
@@ -358,6 +421,25 @@ TEST(SinglyLinkedList, next_node) {
     EXPECT_EQ(&sll, sll_push(&sll, nullptr));
     sll_node_t *third = sll.tail;
     EXPECT_EQ(third, sll_next_node(second));
+
+    sll_destroy(&sll, nullptr);
+}
+
+TEST(SinglyLinkedList, tail_node) {
+    sll_t sll;
+    EXPECT_EQ(&sll, sll_init(&sll));
+
+    // empty sll
+    EXPECT_EQ(sll.tail, nullptr);
+    EXPECT_EQ(sll.tail, sll_tail_node(&sll));
+
+    EXPECT_EQ(&sll, sll_push(&sll, nullptr));
+    EXPECT_EQ(&sll, sll_push(&sll, nullptr));
+
+    // non-null tail node
+    EXPECT_NE(sll.tail, nullptr);
+    EXPECT_EQ(sll.tail, sll_tail_node(&sll));
+    EXPECT_NE(sll.head, sll_tail_node(&sll));
 
     sll_destroy(&sll, nullptr);
 }

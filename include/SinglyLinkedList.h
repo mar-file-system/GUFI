@@ -84,14 +84,16 @@ typedef struct SinglyLinkedList sll_t;
 
 sll_t *sll_init(sll_t *sll);
 sll_t *sll_push(sll_t *sll, void *data);
-sll_t *sll_move_first(sll_t *dst, sll_t *src, const uint64_t n);  /* move first n from src to dst, replacing dst */
-sll_t *sll_move(sll_t *dst, sll_t *src);                          /* move all of src to dst, replacing dst */
-sll_t *sll_move_append(sll_t *dst, sll_t *src);                   /* move all from src to dst, appending to dst */
+sll_t *sll_move_first(sll_t *dst, sll_t *src, const uint64_t n);        /* move first n from src to dst, replacing dst */
+sll_t *sll_move(sll_t *dst, sll_t *src);                                /* move all of src to dst, replacing dst */
+sll_t *sll_move_append_first(sll_t *dst, sll_t *src, const uint64_t n); /* move first n from src to dst, appending to dst */
+sll_t *sll_move_append(sll_t *dst, sll_t *src);                         /* move all from src to dst, appending to dst */
 uint64_t sll_get_size(sll_t *sll);
 
 /* functions for looping over a sll */
 sll_node_t *sll_head_node(sll_t *sll);
 sll_node_t *sll_next_node(sll_node_t *node);
+sll_node_t *sll_tail_node(sll_t *sll);
 void *sll_node_data(sll_node_t *node);
 
 /* convenience macro */
