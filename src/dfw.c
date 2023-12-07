@@ -140,9 +140,9 @@ static int printload(struct input *in, const char *name, const struct stat *stat
   return(0);
 }
 
-void listdir(struct input *in, const char *name, long long int level,
-             struct dirent *entry, long long int pin, int statit,
-             int xattrit, int loader) {
+static void listdir(struct input *in, const char *name, long long int level,
+                    struct dirent *entry, long long int pin, int statit,
+                    int xattrit, int loader) {
     DIR *dir = NULL;
     //struct dirent *entry;
     char path[MAXPATH];
@@ -268,7 +268,7 @@ void listdir(struct input *in, const char *name, long long int level,
     closedir(dir);
 }
 
-void helpme() {
+static void helpme(void) {
     fprintf (stderr, "dfw depth first file system tree walk printing:\n");
     fprintf (stderr, "path, type, stat info, linkname\n");
     fprintf (stderr, "optionally if asked for xattrs \n");
@@ -289,12 +289,10 @@ int main(int argc, char **argv)
     int statit;
     int xattrit;
     int c;
-    int numops;
     int loader;
 
     statit=0;
     xattrit=0;
-    numops=0;
     loader=0;
     in.max_level=-1;
     while ((c = getopt (argc, argv, "sxlhDd:")) != -1)
@@ -302,15 +300,12 @@ int main(int argc, char **argv)
         {
         case 's':
           statit=1;
-          numops++;
           break;
         case 'x':
           xattrit=1;
-          numops++;
           break;
         case 'l':
           loader=1;
-          numops++;
           break;
         case 'd':
           if (optarg[0] == 'x') {
@@ -322,7 +317,6 @@ int main(int argc, char **argv)
           break;
         case 'D':
           in.max_level=0;
-          numops++;
           break;
         case 'h':
           helpme();

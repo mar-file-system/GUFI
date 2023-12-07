@@ -613,7 +613,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     return 0;
 }
 
-static void sub_help() {
+static void sub_help(void) {
    printf("trace_file...     parse one or more trace files to produce the GUFI index\n");
    printf("output_dir        build GUFI index here\n");
    printf("\n");

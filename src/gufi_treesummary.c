@@ -222,7 +222,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return 0;
 }
 
-int compute_treesummary(struct PoolArgs *pa) {
+static int compute_treesummary(struct PoolArgs *pa) {
     struct sum sumout;
     zeroit(&sumout);
     for(size_t i = 0; i < pa->in.maxthreads; i++) {
@@ -307,7 +307,7 @@ int compute_treesummary(struct PoolArgs *pa) {
     return 0;
 }
 
-void sub_help() {
+static void sub_help(void) {
     printf("GUFI_index               path to GUFI index\n");
     printf("\n");
 }

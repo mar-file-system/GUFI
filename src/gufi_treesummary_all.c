@@ -70,6 +70,10 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 static void treesummary(void *args timestamp_sig) {
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    (void) timestamp_buffers;
+    #endif
+
     struct BottomUp *dir = (struct BottomUp *) args;
 
     char dbname[MAXPATH];
@@ -92,7 +96,7 @@ static void treesummary(void *args timestamp_sig) {
     closedb(db);
 }
 
-void sub_help() {
+static void sub_help(void) {
     printf("GUFI_index               path to GUFI index\n");
     printf("\n");
 }

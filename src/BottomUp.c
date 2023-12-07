@@ -86,7 +86,13 @@ processed before processing the current one
 
 /* define so that descend and ascend always have valid functions to call */
 static void noop(void *user_struct
-                 timestamp_sig) { (void) user_struct; }
+                 timestamp_sig) {
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    (void) timestamp_buffers;
+    #endif
+
+    (void) user_struct;
+}
 
 struct UserArgs {
     size_t user_struct_size;

@@ -93,10 +93,10 @@ OF SUCH DAMAGE.
 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
 #define print_stats(normal_fmt, terse_fmt, ...)             \
     if (in.terse) {                                         \
-        fprintf(stderr, terse_fmt " ", ##__VA_ARGS__);      \
+        fprintf(stderr, terse_fmt " ", __VA_ARGS__);        \
     }                                                       \
     else {                                                  \
-        fprintf(stderr, normal_fmt "\n", ##__VA_ARGS__);    \
+        fprintf(stderr, normal_fmt "\n", __VA_ARGS__);      \
     }
 
 #define query_count_arg , &ta->queries
@@ -122,7 +122,7 @@ typedef struct gufi_query_work {
 } gqw_t;
 
 /* prepend the current directory to the database filenamee */
-size_t xattr_modify_filename(char **dst, const size_t dst_size,
+static size_t xattr_modify_filename(char **dst, const size_t dst_size,
                              const char *src, const size_t src_len,
                              struct work *work) {
     if (src[0] == '/') {
@@ -265,7 +265,7 @@ static size_t descend2(QPTPool_t *ctx,
     return pushed;
 }
 
-int count_rows(void *args, int count, char **data, char **columns) {
+static int count_rows(void *args, int count, char **data, char **columns) {
     (void) count;
     (void) data;
     (void) columns;
@@ -294,7 +294,7 @@ static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
     }
 }
 
-int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     int recs;
     char shortname[MAXPATH];
     char endname[MAXPATH];
@@ -526,7 +526,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return 0;
 }
 
-int validate_inputs(struct input *in) {
+static int validate_inputs(struct input *in) {
     /*
      * - Leaves are final outputs
      * - OUTFILE/OUTDB + aggregation will create per thread and final aggregation files
@@ -595,7 +595,7 @@ int validate_inputs(struct input *in) {
     return 0;
 }
 
-void sub_help() {
+static void sub_help(void) {
    printf("GUFI_index        find GUFI index here\n");
    printf("\n");
 }

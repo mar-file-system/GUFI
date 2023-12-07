@@ -86,7 +86,7 @@ const size_t CREATE_TEMP_VIEW_LEN = sizeof(CREATE_TEMP_VIEW) - 1;
 const char   AS[]                 = " AS";
 const size_t AS_LEN               = sizeof(AS) - 1;
 
-void sub_help() {
+static void sub_help(void) {
    printf("table_name               name of table in database file to attach; also used for view table name: 'v<table_name>'\n");
    printf("SQL                      arbitrary SQL executed on view\n");
    printf("DB_name                  path of source database file(s) to add to view");
@@ -98,7 +98,7 @@ struct CallbackArgs {
     size_t rows;
 };
 
-int print_callback(void *args, int count, char **data, char **columns) {
+static int print_callback(void *args, int count, char **data, char **columns) {
     struct CallbackArgs *ca = (struct CallbackArgs *) args;
 
     if (!ca->rows) {

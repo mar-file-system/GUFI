@@ -349,7 +349,6 @@ static int gufir_statfs(const char *path, struct statvfs *stbuf) {
         int rc;
         sqlite3_stmt    *res;
         const char      *tail;
-        int rec_count;
         char sqlstmt[MAXSQL];
         sqlite3 *mydb;
         int bsize=512;
@@ -376,13 +375,11 @@ static int gufir_statfs(const char *path, struct statvfs *stbuf) {
           fprintf(stderr, "statvfs SQL error on query: %s name %s \n",sqlstmt,path);
           return -1;
         }
-        rec_count = 0;
 
         while (sqlite3_step(res) == SQLITE_ROW) {
           //ncols=sqlite3_column_count(res);
           totbytes=sqlite3_column_int64(res,0);
           totfiles=sqlite3_column_int64(res,1);
-          rec_count++;
           break;
         }
         sqlite3_finalize(res);

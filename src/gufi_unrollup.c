@@ -80,7 +80,7 @@ struct Unrollup {
     int rolledup; /* set by parent, can be modified by self */
 };
 
-int count_pwd(void *args, int count, char **data, char **columns) {
+static int count_pwd(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     size_t *xattr_count = (size_t *) args;
@@ -89,7 +89,7 @@ int count_pwd(void *args, int count, char **data, char **columns) {
 }
 
 /* Delete all entries in each file found in the XATTR_FILES_ROLLUP table */
-int process_xattrs(void *args, int count, char **data, char **columns) {
+static int process_xattrs(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     char *dir = (char *) args;
@@ -137,7 +137,7 @@ int process_xattrs(void *args, int count, char **data, char **columns) {
     return rc;
 }
 
-int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     (void) args;
 
     struct Unrollup *work = (struct Unrollup *) data;
@@ -248,7 +248,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return rc;
 }
 
-void sub_help() {
+static void sub_help(void) {
    printf("GUFI_index        GUFI index to unroll up\n");
    printf("\n");
 }

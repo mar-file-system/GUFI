@@ -78,7 +78,11 @@ OF SUCH DAMAGE.
 /* Subdirectories are already gone, so    */
 /* they don't have to processed at the    */
 /* current level.                         */
-void rm_dir(void * args timestamp_sig) {
+static void rm_dir(void * args timestamp_sig) {
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    (void) timestamp_buffers;
+    #endif
+
     struct BottomUp * dir = (struct BottomUp *) args;
 
     char db_name[MAXPATH];
@@ -96,7 +100,7 @@ void rm_dir(void * args timestamp_sig) {
     }
 }
 
-void sub_help() {
+static void sub_help(void) {
    printf("directory        directory to delete\n");
    printf("\n");
 }

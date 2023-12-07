@@ -237,7 +237,7 @@ static int validate_source(const char *path, struct work *work) {
     return 0;
 }
 
-static void sub_help() {
+static void sub_help(void) {
     printf("input_dir...         walk one or more trees to produce trace file\n");
     printf("output_prefix        prefix of output files (<prefix>.<tid>)\n");
     printf("\n");

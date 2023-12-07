@@ -67,6 +67,8 @@ on: [push, pull_request]
 env:
   CC: clang
   CXX: clang++
+  CFLAGS: -Wall -Wextra -Werror -pedantic
+  CXXFLAGS: -Wall -Wextra -Werror -pedantic
   DEP_INSTALL_PREFIX: ~/.local
   COMMON_CONFIG: -DDEP_INSTALL_PREFIX="${DEP_INSTALL_PREFIX}" -DDEP_BUILD_THREADS=2 -DENABLE_SUDO_TESTS=On
 

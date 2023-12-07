@@ -107,8 +107,6 @@ The number of files generated is
 #include "debug.h"
 #include "utils.h"
 
-extern int errno;
-
 #define DIR_PERMS (S_IRWXU | S_IRWXG | S_IRWXO)
 
 // constants to pass to threads
@@ -124,7 +122,7 @@ struct dir {
     size_t current_level;
 };
 
-int generate_level(QPTPool_t * ctx, const size_t id, void * data, void * args) {
+static int generate_level(QPTPool_t * ctx, const size_t id, void * data, void * args) {
     struct settings * settings = (struct settings *) args;
     struct dir * dir = (struct dir *) data;
 

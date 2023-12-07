@@ -257,7 +257,7 @@ static int recursive(QPTPool_t *pool, const std::size_t id, void *data, void *ar
     free(work);
 
     return 0;
-};
+}
 
 // push work onto queues from within the queue function
 TEST(QueuePerThreadPool, enqueue_internal) {

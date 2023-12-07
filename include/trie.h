@@ -71,7 +71,7 @@ extern "C" {
 
 typedef struct trie trie_t;
 
-trie_t *trie_alloc();
+trie_t *trie_alloc(void);
 void trie_insert(trie_t *head, const char* str, const size_t len);
 int trie_search(trie_t *head, const char* str, const size_t len);
 int trie_delete(trie_t *head, const char* str, const size_t len);

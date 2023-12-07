@@ -104,7 +104,7 @@ struct callback_args {
     const char * format;
 };
 
-int print_callback(void * args, int count, char **data, char **columns) {
+static int print_callback(void * args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     struct callback_args * ca = (struct callback_args *) args;
@@ -412,7 +412,7 @@ int print_callback(void * args, int count, char **data, char **columns) {
     return 0;
 }
 
-int process_path(const char *path, FILE *out, const char *format) {
+static int process_path(const char *path, FILE *out, const char *format) {
     char dbname[MAXPATH];
     const char *table = NULL;
     char where[MAXSQL];
@@ -488,7 +488,7 @@ int process_path(const char *path, FILE *out, const char *format) {
     return rc;
 }
 
-void sub_help() {
+static void sub_help(void) {
     printf("path                 path to stat\n");
     printf("\n");
 }

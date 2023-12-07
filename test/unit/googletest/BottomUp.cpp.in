@@ -70,7 +70,13 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 
-BU_f f = [](void *args timestamp_sig) -> void { (void) args; };
+static BU_f f = [](void *args timestamp_sig) -> void {
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    (void) timestamp_buffers;
+    #endif
+
+    (void) args;
+};
 
 /* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
 static int parallel_bottomup_wrapper(char **root_names, const size_t root_count,

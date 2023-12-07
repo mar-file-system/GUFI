@@ -651,7 +651,7 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
     return 0;
 }
 
-int processfin(struct PoolArgs *pa) {
+static int processfin(struct PoolArgs *pa) {
     for(size_t i = 0; i < pa->in.maxthreads; i++) {
         struct ThreadArgs *ta = &pa->ta[i];
         if (ta->file) {
@@ -682,7 +682,7 @@ static int validate_inputs(struct input *in) {
     return 0;
 }
 
-static void sub_help() {
+static void sub_help(void) {
     printf("input_dir                walk this tree to produce GUFI index\n");
     printf("index                    build GUFI index here\n");
     printf("\n");

@@ -217,7 +217,7 @@ do {                                                                            
     free(array);                                                                 \
 } while (0)
 
-void print_stanza(const char *name, sll_t *stats) {
+static void print_stanza(const char *name, sll_t *stats) {
     fprintf(stdout, "%s %*" PRIu64 "\n", name, (int) (29 - strlen(name)), sll_get_size(stats));
     sll_dir_stats("Subdirectories", stats, subdir_count,    10);
     sll_dir_stats("Files/Links",    stats, subnondir_count, 10);
@@ -225,8 +225,8 @@ void print_stanza(const char *name, sll_t *stats) {
 }
 
 /* this function moves the sll stats up and deallocates them */
-void print_stats(char **paths, const int path_count,
-                 struct input *in, struct RollUpStats *stats) {
+static void print_stats(char **paths, const int path_count,
+                        struct input *in, struct RollUpStats *stats) {
     fprintf(stdout, "Roots:\n");
     for(int i = 0; i < path_count; i++) {
         fprintf(stdout, "    %s\n", paths[i]);
@@ -336,7 +336,7 @@ struct Permissions {
     gid_t gid;
 };
 
-int get_permissions(void *args, int count, char **data, char **columns) {
+static int get_permissions(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     struct Permissions *perms = (struct Permissions *) args;
@@ -351,14 +351,14 @@ struct ChildData {
     size_t count;
 };
 
-int get_permissions_and_count(void *args, int count, char **data, char **columns) {
+static int get_permissions_and_count(void *args, int count, char **data, char **columns) {
     struct ChildData *child = (struct ChildData *) args;
     get_permissions(child->perms, count, data, columns);
     child->count = atoi(data[3]);
     return 0;
 }
 
-int add_entries_count(void *args, int count, char **data, char **columns) {
+static int add_entries_count(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     size_t *total = (size_t *) args;
@@ -371,7 +371,7 @@ int add_entries_count(void *args, int count, char **data, char **columns) {
 }
 
 /* get number of non-dirs in this directory from the pentries table */
-int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) {
+static int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) {
     char *err = NULL;
     const int exec_rc = sqlite3_exec(dst, "SELECT COUNT(*) FROM pentries",
                                      add_entries_count, subnondir_count, &err);
@@ -387,9 +387,9 @@ int get_nondirs(const char *name, sqlite3 *dst, size_t *subnondir_count) {
          0 - do not roll up
          1 - all permissions pass
 */
-int check_children(struct RollUp *rollup, struct Permissions *curr,
-                   const size_t child_count, size_t *total_child_entries
-                   timestamp_sig) {
+static int check_children(struct RollUp *rollup, struct Permissions *curr,
+                          const size_t child_count, size_t *total_child_entries
+                          timestamp_sig) {
     if (child_count == 0) {
         return 1;
     }
@@ -498,11 +498,11 @@ int check_children(struct RollUp *rollup, struct Permissions *curr,
  * @return   0 - cannot rollup
  *           1 - can rollup
  */
-int can_rollup(struct input *in,
-               struct RollUp *rollup,
-               struct DirStats *ds,
-               sqlite3 *dst
-               timestamp_sig) {
+static int can_rollup(struct input *in,
+                      struct RollUp *rollup,
+                      struct DirStats *ds,
+                      sqlite3 *dst
+                      timestamp_sig) {
     /* Not checking arguments */
 
     char *err = NULL;
@@ -681,11 +681,11 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
          0 - success
          1 - at least one child failed to be moved
 */
-int do_rollup(struct RollUp *rollup,
-              struct DirStats *ds,
-              sqlite3 *dst,
-              struct template_db *xattr_template
-              timestamp_sig) {
+static int do_rollup(struct RollUp *rollup,
+                     struct DirStats *ds,
+                     sqlite3 *dst,
+                     struct template_db *xattr_template
+                     timestamp_sig) {
     /* assume that this directory can be rolled up */
     /* can_rollup should have been called earlier  */
 
@@ -784,7 +784,7 @@ end_rollup:
     return rc;
 }
 
-void rollup(void *args timestamp_sig) {
+static void rollup(void *args timestamp_sig) {
     timestamp_create_start(setup);
 
     struct RollUp *dir = (struct RollUp *) args;
@@ -883,7 +883,7 @@ void rollup(void *args timestamp_sig) {
     closedb(dst);
 }
 
-void sub_help() {
+static void sub_help(void) {
    printf("GUFI_index        GUFI index to roll up\n");
    printf("\n");
 }

@@ -76,7 +76,7 @@ struct trie
 };
 
 // Function that returns a new Trie node
-trie_t *trie_alloc()
+trie_t *trie_alloc(void)
 {
     trie_t* node = (trie_t*)malloc(sizeof(trie_t));
     node->isLeaf = 0;
