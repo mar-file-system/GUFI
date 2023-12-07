@@ -1078,6 +1078,146 @@ static void stdev_final(sqlite3_context *context) {
     sqlite3_result_double(context, sqrt(variance));
 }
 
+static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    (void) argc;
+    sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
+    if (sll_get_size(data) == 0) {
+        sll_init(data);
+    }
+
+    const double value = sqlite3_value_double(argv[0]);
+    sll_push(data, (void *) (uintptr_t) value);
+}
+
+/* /\* */
+/*  * find kth largest element */
+/*  * */
+/*  * Adapted from code by Russell Cohen */
+/*  * https://rcoh.me/posts/linear-time-median-finding/ */
+/*  *\/ */
+/* static double quickselect(sll_t *sll, uint64_t count, uint64_t k) { */
+/*     /\* cache unused values here since partitioning destroys the original list *\/ */
+/*     sll_t cache; */
+/*     sll_init(&cache); */
+
+/*     sll_t lt, eq, gt; */
+/*     sll_init(&lt); */
+/*     sll_init(&eq); */
+/*     sll_init(&gt); */
+
+/*     while (count > 1) { */
+/*         /\* TODO: Better pivot selection *\/ */
+/*         const uint64_t pivot_idx = (rand() * rand()) % count; */
+/*         double pivot = 0; */
+/*         size_t i = 0; */
+/*         sll_loop(sll, node) { */
+/*             if (i == pivot_idx) { */
+/*                 pivot = (double) (uintptr_t) sll_node_data(node); */
+/*                 break; */
+/*             } */
+/*             i++; */
+/*         } */
+
+/*         sll_node_t *node = NULL; */
+/*         while ((node = sll_head_node(sll))) { */
+/*             const double value = (double) (uint64_t) sll_node_data(node); */
+/*             if (value < pivot) { */
+/*                 sll_move_append_first(&lt, sll, 1); */
+/*             } */
+/*             else if (value > pivot) { */
+/*                 sll_move_append_first(&gt, sll, 1); */
+/*             } */
+/*             else { */
+/*                 sll_move_append_first(&eq, sll, 1); */
+/*             } */
+/*         } */
+
+/*         /\* sll is empty at this point *\/ */
+
+/*         const uint64_t lt_size = sll_get_size(&lt); */
+/*         const uint64_t eq_size = sll_get_size(&eq); */
+
+/*         if (k < lt_size) { */
+/*             sll_move_append(sll,    &lt); */
+/*             sll_move_append(&cache, &eq); */
+/*             sll_move_append(&cache, &gt); */
+/*         } */
+/*         else if (k < (lt_size + eq_size)) { */
+/*             sll_move_append(&cache, &lt); */
+/*             sll_move_append(sll,    &eq); */
+/*             sll_move_append(&cache, &gt); */
+/*             break; */
+/*         } */
+/*         else { */
+/*             k -= lt_size + eq_size; */
+/*             sll_move_append(&cache, &lt); */
+/*             sll_move_append(&cache, &eq); */
+/*             sll_move_append(sll,    &gt); */
+/*         } */
+
+/*         count = sll_get_size(sll); */
+/*     } */
+
+/*     /\* restore original list's contents (different order) *\/ */
+/*     sll_move_append(sll, &cache); */
+
+/*     return (double) (uintptr_t) sll_node_data(sll_head_node(sll)); */
+/* } */
+
+static int cmp_double(const void *lhs, const void *rhs) {
+    return * (double *) lhs - * (double *) rhs;
+}
+
+static void median_final(sqlite3_context *context) {
+    sll_t *data = (sll_t *) sqlite3_aggregate_context(context, sizeof(*data));
+
+    const uint64_t count = sll_get_size(data);
+    double median = 0;
+
+    /* skip some mallocs */
+    if (count == 0) {
+        goto cleanup;
+    }
+    else if (count == 1) {
+        median = (double) (uintptr_t) sll_node_data(sll_head_node(data));
+        goto ret_median;
+    }
+    else if (count == 2) {
+        median = ((double) (uintptr_t) sll_node_data(sll_head_node(data)) +
+                  (double) (uintptr_t) sll_node_data(sll_tail_node(data))) / 2.0;
+        goto ret_median;
+    }
+
+    const uint64_t half = count / 2;
+
+    double *arr = malloc(count * sizeof(double));
+    size_t i = 0;
+    sll_loop(data, node) {
+        arr[i++] = (double) (uintptr_t) sll_node_data(node);
+    }
+
+    qsort(arr, count, sizeof(double), cmp_double);
+
+    median = arr[half];
+    if (!(count & 1)) {
+        median += arr[half - 1];
+        median /= 2.0;
+    }
+    free(arr);
+
+    /* median = quickselect(data, count, half); */
+    /* if (!(count & 1)) { */
+    /*     median += quickselect(data, count, half - 1); */
+    /*     median /= 2.0; */
+    /* } */
+
+  ret_median:
+    sqlite3_result_double(context, median);
+
+  cleanup:
+    sll_destroy(data, NULL);
+}
+
 int addqueryfuncs_common(sqlite3 *db) {
     return !((sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
                                       NULL,                       &uidtouser,           NULL, NULL) == SQLITE_OK) &&
@@ -1094,7 +1234,9 @@ int addqueryfuncs_common(sqlite3 *db) {
              (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
                                       NULL,                       &sqlite_basename,     NULL, NULL) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "stdev",               1,   SQLITE_UTF8,
-                                      NULL,                       NULL,    stdev_step, stdev_final) == SQLITE_OK));
+                                      NULL,                       NULL,    stdev_step, stdev_final) == SQLITE_OK) &&
+             (sqlite3_create_function(db,  "median",              1,   SQLITE_UTF8,
+                                      NULL,                       NULL,  median_step, median_final) == SQLITE_OK));
 }
 
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {

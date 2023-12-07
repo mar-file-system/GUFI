@@ -577,7 +577,10 @@ TEST(addqueryfuncs, basename) {
     sqlite3_close(db);
 }
 
-int double_callback(void *arg, int, char **data, char **) {
+static int double_callback(void *arg, int, char **data, char **) {
+    if (!data[0]) {
+        return SQLITE_ERROR;
+    }
     return !(sscanf(data[0], "%lf", (double *) arg) == 1);
 }
 
@@ -588,11 +591,37 @@ TEST(addqueryfuncs, stdev) {
 
     ASSERT_EQ(addqueryfuncs(db, 0, nullptr), 0);
     ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE t (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
-    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1), (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
 
     double stdev = 0;
+    EXPECT_NE(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
+
+    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1), (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+
     EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
     EXPECT_DOUBLE_EQ(stdev * stdev * 2, (double) 5); /* sqrt(5 / 2) */
+
+    sqlite3_close(db);
+}
+
+TEST(addqueryfuncs, median) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db, 0, nullptr), 0);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE t (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+    double median = 0;
+    EXPECT_NE(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+
+    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1), (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+    EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+    EXPECT_DOUBLE_EQ(median , (double) 3);
+
+    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (6);", nullptr, nullptr, nullptr), SQLITE_OK);
+    EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+    EXPECT_DOUBLE_EQ(median , (double) 3.5);
 
     sqlite3_close(db);
 }
