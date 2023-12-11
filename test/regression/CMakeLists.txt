@@ -107,6 +107,7 @@ set(EXAMPLES
 
 set(OTHERS
   bash_completion
+  split_trace
 )
 
 if (ZLIB_FOUND)

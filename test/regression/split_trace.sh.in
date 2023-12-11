@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,112 +61,98 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-# build the simple source tree generator
-add_executable(gendir gendir.c)
-target_link_libraries(gendir ${COMMON_LIBRARIES})
-add_dependencies(gendir GUFI)
+OUTPUT="split_trace.out"
 
-# utility for spliting large traces into smaller files for parallel processing
-add_executable(split_trace split_trace.c)
-target_link_libraries(split_trace ${COMMON_LIBRARIES})
-add_dependencies(split_trace GUFI)
+# shellcheck disable=SC2153
+TRACE0="${TRACE}.0"
+DELIM="|"
 
-# potentially useful C++ executables
-if (CMAKE_CXX_COMPILER)
-  # a more complex index generator
-  add_executable(make_testindex make_testindex.cpp)
-  target_link_libraries(make_testindex ${COMMON_LIBRARIES})
-  add_dependencies(make_testindex GUFI)
+SPLIT_PREFIX="split"
+SPLIT_COUNT=4
+SPLITS=()
+for ((i = 0; i < SPLIT_COUNT; i++))
+do
+    SPLITS+=("${SPLIT_PREFIX}.${i}")
+done
 
-  add_executable(verifytrace verifytrace.cpp)
 
-  add_executable(verifytraceintree verifytraceintree.cpp)
-  target_link_libraries(verifytraceintree ${COMMON_LIBRARIES})
-  add_dependencies(verifytraceintree install_dependencies)
-endif()
+cleanup() {
+    rm -rf "${TRACE0}" "${SPLIT_PREFIX}" "${SPLITS[@]}"
+}
 
-set(CHECKSTYLE)
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
 
-# add 'make shellcheck'
-find_program(SHELLCHECK shellcheck)
-if (SHELLCHECK)
-  message(STATUS "Found shellcheck: ${SHELLCHECK}")
-  configure_file(shellcheck.sh shellcheck.sh @ONLY)
-  add_custom_target(shellcheck
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/shellcheck.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE shellcheck)
-else()
-  message(STATUS "shellcheck not found")
-endif()
+trap cleanup_exit EXIT
 
-# add 'make pylint'
-find_program(PYLINT pylint)
-if (PYLINT)
-  message(STATUS "Found pylint: ${PYLINT}")
-  configure_file(pylint.sh pylint.sh @ONLY)
-  add_custom_target(pylint
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/pylint.sh" "${CMAKE_BINARY_DIR}")
-  list(APPEND CHECKSTYLE pylint)
-else()
-  message(STATUS "pylint not found")
-endif()
+cleanup
 
-# add 'make checkstyle'
-if (CHECKSTYLE)
-  message(STATUS "checkstyle will run: ${CHECKSTYLE}")
-  add_custom_target(checkstyle
-    DEPENDS ${CHECKSTYLE})
-else()
-  message(STATUS "checkstyle disabled")
-endif()
+(
+echo "# ${SPLIT_TRACE} help" | replace
+run_no_sort "${SPLIT_TRACE}"
 
-# potentially useful scripts
-set(USEFUL
-  canned_queries.sh
-  gentrace.py
-  hashes.py
-  trace_anonymizer.py
-  )
+# #################################
+# test splitting empty trace file
+rm -f "${TRACE0}"
+touch "${TRACE0}"
 
-foreach(file ${USEFUL})
-    configure_file("${file}" "${file}" @ONLY)
-endforeach()
+echo "Split empty trace file"
+run_no_sort "\"${SPLIT_TRACE}\" \"${TRACE0}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\""
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_subdirectory(debug)
-endif()
+found=$(find "${SPLITS[@]}" 2> /dev/null | wc -l)
+echo "Expecting 0 trace files. Found ${found}."
+echo
+# #################################
 
-add_subdirectory(CI)
-if (GIT_FOUND)
-  # git -C <path>
-  set(GIT_PERFORMANCE_VERSION "1.8.5")
+# generate the tree
+@CMAKE_CURRENT_BINARY_DIR@/generatetree.sh "${SRCDIR}"
 
-  if (CMAKE_VERSION GREATER "3.14")
-    set(GIT_VERSION "${GIT_VERSION_STRING}")
-  else()
-    execute_process(COMMAND ${GIT_EXECUTABLE} --version
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-      OUTPUT_VARIABLE GIT_VERSION_STRING
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX MATCH "[0-9]+\.[0-9]+(\.[0-9]+)?" GIT_VERSION "${GIT_VERSION_STRING}")
-  endif()
-  message(STATUS "git version: ${GIT_VERSION}")
+# generate a single trace
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n 1 -x \"${SRCDIR}\" \"${TRACE}\""
 
-  # VERSION_GREATER_EQUAL was introduced in CMake 3.7
-  if (GIT_VERSION VERSION_LESS GIT_PERFORMANCE_VERSION)
-    message(STATUS "Not adding performance history framework (need git 1.8.5+)")
-  else()
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND PRINT_CUMULATIVE_TIMES)
-      message(STATUS "Adding performance history framework")
-      add_subdirectory(performance)
-    else()
-      message(STATUS "Not adding performance history framework (need PRINT_CUMULATIVE_TIMES enabled)")
-    endif()
-  endif()
-endif()
+# split trace
+run_no_sort "${SPLIT_TRACE} \"${TRACE0}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\" \"${THREADS}\"" | replace
 
-if (CLIENT)
-  add_subdirectory(deps)
-endif()
+# there might be fewer files than requested
+splits=()
+while IFS= read -r -d $'\0'
+do
+    splits+=("${REPLY}")
+done < <(find "${SPLITS[@]}" -print0 || true)
+
+# combine files
+for split in "${splits[@]}"
+do
+    cat "${split}"
+done > "${SPLIT_PREFIX}"
+
+# make sure there are no differences
+run_no_sort "@DIFF@ \"${TRACE0}\" \"${SPLIT_PREFIX}\""
+
+echo "# Split non-existant trace"
+run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\"" | replace
+
+echo "# Bad maximum split count"
+run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${DELIM}\"       \"${SPLIT_PREFIX}\"" | replace
+
+echo "# Bad maximum thread count"
+run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\" \"${DELIM}\"" | replace
+
+(
+echo a
+echo b
+echo c
+echo d
+) > "${BADTRACE}"
+echo "# Missing delimiter"
+run_no_sort "${SPLIT_TRACE} \"${BADTRACE}\" \"${DELIM}\" \"${SPLIT_COUNT}\" \"${SPLIT_PREFIX}\"" | replace
+
+) | remove_indexing_time | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/split_trace.expected "${OUTPUT}"
+rm "${OUTPUT}"
