@@ -74,71 +74,6 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-#if defined(__APPLE__)
-
-#include <copyfile.h>
-
-static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
-    (void) size;
-    lseek(src_fd, 0, SEEK_SET);
-    return fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
-}
-
-#elif defined(__linux__)
-
-#include <sys/sendfile.h>
-
-static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
-    off_t offset = 0;
-    return sendfile(dst_fd, src_fd, &offset, size);
-}
-
-#else
-
-static ssize_t gufi_copyfd(int src_fd, int dst_fd, size_t size) {
-    #define buf_size 40960 /* size of empty db.db */
-    char buf[buf_size];
-
-    off_t src_off = 0;
-    off_t dst_off = 0;
-
-    ssize_t copied = 0;
-    while ((size_t) copied < size) {
-        const ssize_t r = pread(src_fd, buf, buf_size, src_off);
-        if (r == 0) {
-            break;
-        }
-        if (r < 0) {
-            copied = -1;
-            break;
-        }
-
-        src_off += r;
-
-        ssize_t written = 0;
-        while (written < r) {
-            const ssize_t w = pwrite(dst_fd, buf + written, r - written, dst_off);
-            if (w < 1) {
-                copied = -1;
-                break;
-            }
-
-            written += w;
-            dst_off += w;
-        }
-
-        if (copied == -1) {
-            break;
-        }
-
-        copied += written;
-    }
-
-    return copied;
-}
-
-#endif
-
 int init_template_db(struct template_db *tdb) {
     /* Not checking argument */
 
@@ -241,7 +176,7 @@ int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid
     err = err?err:errno;
     const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     err = err?err:errno;
-    const ssize_t sf = gufi_copyfd(src_db, dst_db, tdb->size);
+    const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
     err = err?err:errno;
     fchown(dst_db, uid, gid);
     err = err?err:errno;

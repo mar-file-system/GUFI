@@ -749,3 +749,72 @@ ssize_t getline_fd(char **lineptr, size_t *n, int fd, off_t *offset, const size_
 
     return read;
 }
+
+#if defined(__APPLE__)
+
+#include <copyfile.h>
+
+ssize_t copyfd(int src_fd, off_t src_off,
+               int dst_fd, off_t dst_off,
+               size_t size) {
+    (void) size;
+    lseek(src_fd, src_off, SEEK_SET);
+    lseek(dst_fd, dst_off, SEEK_SET);
+    return fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
+}
+
+#elif defined(__linux__)
+
+#include <sys/sendfile.h>
+
+ssize_t copyfd(int src_fd, off_t src_off,
+               int dst_fd, off_t dst_off,
+               size_t size) {
+    lseek(dst_fd, dst_off, SEEK_SET);
+    return sendfile(dst_fd, src_fd, &src_off, size);
+}
+
+#else
+
+ssize_t copyfd(int src_fd, off_t src_off,
+               int dst_fd, off_t dst_off,
+               size_t size) {
+    #define buf_size 40960 /* size of empty db.db */
+    char buf[buf_size];
+
+    ssize_t copied = 0;
+    while ((size_t) copied < size) {
+        const ssize_t r = pread(src_fd, buf, buf_size, src_off);
+        if (r == 0) {
+            break;
+        }
+        if (r < 0) {
+            copied = -1;
+            break;
+        }
+
+        src_off += r;
+
+        ssize_t written = 0;
+        while (written < r) {
+            const ssize_t w = pwrite(dst_fd, buf + written, r - written, dst_off);
+            if (w < 1) {
+                copied = -1;
+                break;
+            }
+
+            written += w;
+            dst_off += w;
+        }
+
+        if (copied == -1) {
+            break;
+        }
+
+        copied += written;
+    }
+
+    return copied;
+}
+
+#endif
