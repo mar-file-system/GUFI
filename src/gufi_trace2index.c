@@ -469,19 +469,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     return !db;
 }
 
-static size_t parsefirst(char *line, const size_t len, const char delim) {
-    size_t first_delim = 0;
-    while ((first_delim < len) && (line[first_delim] != delim)) {
-        first_delim++;
-    }
-
-    if (first_delim == len) {
-        first_delim = -1;
-    }
-
-    return first_delim;
-}
-
 /* Read ahead to figure out where files under directories start */
 static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct start_end scouting;
@@ -511,8 +498,8 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     }
 
     /* find a delimiter */
-    size_t first_delim = parsefirst(line, len, in->delim);
-    if (first_delim == (size_t) -1) {
+    char *first_delim = memchr(line, in->delim, len);
+    if (!first_delim) {
         free(line);
         free(sa);
         fprintf(stderr, "Could not find the specified delimiter\n");
@@ -520,14 +507,14 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     }
 
     /* make sure the first line is a directory */
-    if (line[first_delim + 1] != 'd') {
+    if (first_delim[1] != 'd') {
         free(line);
         free(sa);
         fprintf(stderr, "First line of trace is not a directory\n");
         return 1;
     }
 
-    struct row *work = row_init(sa->trace, first_delim, line, len, offset);
+    struct row *work = row_init(sa->trace, first_delim - line, line, len, offset);
 
     size_t file_count = 0;
     size_t dir_count = 1; /* always start with a directory */
@@ -540,14 +527,14 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     size = 0;
     len = 0;
     while ((len = getline_fd(&line, &size, sa->trace, &offset, GETLINE_DEFAULT_SIZE)) > 0) {
-        first_delim = parsefirst(line, len, in->delim);
+        first_delim = memchr(line, in->delim, len);
 
         /*
          * if got bad line, have to stop here or else processdir will
          * not know where this directory ends and will try to parse
          * bad line
          */
-        if (first_delim == (size_t) -1) {
+        if (!first_delim) {
             free(line);
             line = NULL;
             size = 0;
@@ -557,7 +544,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
         }
 
         /* push directories onto queues */
-        if (line[first_delim + 1] == 'd') {
+        if (first_delim[1] == 'd') {
             dir_count++;
 
             empty += !work->entries;
@@ -566,7 +553,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
             QPTPool_enqueue(ctx, id, processdir, work);
 
             /* put the current line into a new work item */
-            work = row_init(sa->trace, first_delim, line, len, offset);
+            work = row_init(sa->trace, first_delim - line, line, len, offset);
         }
         /* ignore non-directories */
         else {
