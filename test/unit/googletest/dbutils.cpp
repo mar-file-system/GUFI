@@ -584,7 +584,7 @@ static int double_callback(void *arg, int, char **data, char **) {
     return !(sscanf(data[0], "%lf", (double *) arg) == 1);
 }
 
-TEST(addqueryfuncs, stdev) {
+TEST(addqueryfuncs, stdevs) {
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
     ASSERT_NE(db, nullptr);
@@ -596,22 +596,55 @@ TEST(addqueryfuncs, stdev) {
 
     // no values
     {
-        EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdevs(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
     }
 
     // 1 value
     {
         ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1);", nullptr, nullptr, nullptr), SQLITE_OK);
 
-        EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdevs(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
     }
 
     // 5 values
     {
         ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
 
-        EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdevs(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
         EXPECT_DOUBLE_EQ(stdev * stdev * 2, (double) 5); /* sqrt(5 / 2) */
+    }
+
+    sqlite3_close(db);
+}
+
+TEST(addqueryfuncs, stdevp) {
+    sqlite3 *db = nullptr;
+    ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
+    ASSERT_NE(db, nullptr);
+
+    ASSERT_EQ(addqueryfuncs(db, 0, nullptr), 0);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE t (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+    double stdev = 0;
+
+    // no values
+    {
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdevp(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
+    }
+
+    // 1 value
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdevp(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
+    }
+
+    // 5 values
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdevp(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
+        EXPECT_FLOAT_EQ(stdev * stdev, (double) 2); /* sqrt(2); need to use float instead of double due to slightly too large differences */
     }
 
     sqlite3_close(db);

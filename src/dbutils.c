@@ -1051,15 +1051,28 @@ static void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv)
     data->count++;
 }
 
-static void stdev_final(sqlite3_context *context) {
+static void stdevs_final(sqlite3_context *context) {
     stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
 
     if (data->count < 2) {
         sqlite3_result_null(context);
     }
+    else {
+        const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * (data->count - 1));
+        sqlite3_result_double(context, sqrt(variance));
+    }
+}
 
-    const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * (data->count - 1));
-    sqlite3_result_double(context, sqrt(variance));
+static void stdevp_final(sqlite3_context *context) {
+    stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
+
+    if (data->count < 2) {
+        sqlite3_result_null(context);
+    }
+    else {
+        const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * data->count);
+        sqlite3_result_double(context, sqrt(variance));
+    }
 }
 
 static void median_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -1205,23 +1218,25 @@ static void median_final(sqlite3_context *context) {
 
 int addqueryfuncs_common(sqlite3 *db) {
     return !((sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
-                                      NULL,                       &uidtouser,           NULL, NULL) == SQLITE_OK) &&
+                                      NULL,                       &uidtouser,           NULL, NULL)  == SQLITE_OK) &&
              (sqlite3_create_function(db,  "gidtogroup",          1,   SQLITE_UTF8,
-                                      NULL,                       &gidtogroup,          NULL, NULL) == SQLITE_OK) &&
+                                      NULL,                       &gidtogroup,          NULL, NULL)  == SQLITE_OK) &&
              (sqlite3_create_function(db,  "modetotxt",           1,   SQLITE_UTF8,
-                                      NULL,                       &modetotxt,           NULL, NULL) == SQLITE_OK) &&
+                                      NULL,                       &modetotxt,           NULL, NULL)  == SQLITE_OK) &&
              (sqlite3_create_function(db,  "strftime",            2,   SQLITE_UTF8,
-                                      NULL,                       &sqlite3_strftime,    NULL, NULL) == SQLITE_OK) &&
+                                      NULL,                       &sqlite3_strftime,    NULL, NULL)  == SQLITE_OK) &&
              (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
-                                      NULL,                       &blocksize,           NULL, NULL) == SQLITE_OK) &&
+                                      NULL,                       &blocksize,           NULL, NULL)  == SQLITE_OK) &&
              (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,
-                                      NULL,                       &human_readable_size, NULL, NULL) == SQLITE_OK) &&
+                                      NULL,                       &human_readable_size, NULL, NULL)  == SQLITE_OK) &&
              (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
-                                      NULL,                       &sqlite_basename,     NULL, NULL) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "stdev",               1,   SQLITE_UTF8,
-                                      NULL,                       NULL,    stdev_step, stdev_final) == SQLITE_OK) &&
+                                      NULL,                       &sqlite_basename,     NULL, NULL)  == SQLITE_OK) &&
+             (sqlite3_create_function(db,  "stdevs",              1,   SQLITE_UTF8,
+                                      NULL,                       NULL,    stdev_step, stdevs_final) == SQLITE_OK) &&
+             (sqlite3_create_function(db,  "stdevp",              1,   SQLITE_UTF8,
+                                      NULL,                       NULL,    stdev_step, stdevp_final) == SQLITE_OK) &&
              (sqlite3_create_function(db,  "median",              1,   SQLITE_UTF8,
-                                      NULL,                       NULL,  median_step, median_final) == SQLITE_OK));
+                                      NULL,                       NULL,  median_step,  median_final) == SQLITE_OK));
 }
 
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
