@@ -593,12 +593,26 @@ TEST(addqueryfuncs, stdev) {
     ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE t (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
 
     double stdev = 0;
-    EXPECT_NE(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
 
-    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1), (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+    // no values
+    {
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
+    }
 
-    EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
-    EXPECT_DOUBLE_EQ(stdev * stdev * 2, (double) 5); /* sqrt(5 / 2) */
+    // 1 value
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_ABORT);
+    }
+
+    // 5 values
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT stdev(value) FROM t", double_callback, &stdev, nullptr), SQLITE_OK);
+        EXPECT_DOUBLE_EQ(stdev * stdev * 2, (double) 5); /* sqrt(5 / 2) */
+    }
 
     sqlite3_close(db);
 }
@@ -612,16 +626,43 @@ TEST(addqueryfuncs, median) {
     ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE t (value INT);", nullptr, nullptr, nullptr), SQLITE_OK);
 
     double median = 0;
-    EXPECT_NE(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
 
-    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1), (2), (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+    // no values
+    {
+        EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_ABORT);
+    }
 
-    EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
-    EXPECT_DOUBLE_EQ(median , (double) 3);
+    // 1 value short circuit
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (1);", nullptr, nullptr, nullptr), SQLITE_OK);
 
-    ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (6);", nullptr, nullptr, nullptr), SQLITE_OK);
-    EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
-    EXPECT_DOUBLE_EQ(median , (double) 3.5);
+        EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+        EXPECT_DOUBLE_EQ(median, (double) 1);
+    }
+
+    // 2 values short circuit
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (2);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+        EXPECT_DOUBLE_EQ(median, (double) 1.5);
+    }
+
+    // odd number of values
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (3), (4), (5);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+        EXPECT_DOUBLE_EQ(median, (double) 3);
+    }
+
+    // even number of values
+    {
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO t (value) VALUES (6);", nullptr, nullptr, nullptr), SQLITE_OK);
+
+        EXPECT_EQ(sqlite3_exec(db, "SELECT median(value) FROM t", double_callback, &median, nullptr), SQLITE_OK);
+        EXPECT_DOUBLE_EQ(median, (double) 3.5);
+    }
 
     sqlite3_close(db);
 }

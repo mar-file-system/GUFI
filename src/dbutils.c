@@ -1054,6 +1054,10 @@ static void stdev_step(sqlite3_context *context, int argc, sqlite3_value **argv)
 static void stdev_final(sqlite3_context *context) {
     stdev_t *data = (stdev_t *) sqlite3_aggregate_context(context, sizeof(*data));
 
+    if (data->count < 2) {
+        sqlite3_result_null(context);
+    }
+
     const double variance = ((data->count * data->sum_sq) - (data->sum * data->sum)) / (data->count * (data->count - 1));
     sqlite3_result_double(context, sqrt(variance));
 }
@@ -1156,6 +1160,7 @@ static void median_final(sqlite3_context *context) {
 
     /* skip some mallocs */
     if (count == 0) {
+        sqlite3_result_null(context);
         goto cleanup;
     }
     else if (count == 1) {
