@@ -204,14 +204,11 @@ int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, co
 
 int create_treesummary_tables(const char *name, sqlite3 *db, void *args) {
     (void) args;
-    if ((create_table_wrapper(name, db, "tsql",        TREESUMMARY_CREATE) != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)          != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)         != SQLITE_OK) ||
-        (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup)        != SQLITE_OK)) {
-        return 1;
-    }
 
-    return 0;
+    return ((create_table_wrapper(name, db, "tsql",        TREESUMMARY_CREATE) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vtssqldir",   vtssqldir)          != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vtssqluser",  vtssqluser)         != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vtssqlgroup", vtssqlgroup)        != SQLITE_OK));
 }
 
 int set_db_pragmas(sqlite3 *db) {
@@ -443,13 +440,8 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
     char *zosstext1 = sqlite3_mprintf("%q", ed->osstext1);
     char *zosstext2 = sqlite3_mprintf("%q", ed->osstext2);
-    int error = sqlite3_bind_text(res, 1, zname, -1, SQLITE_STATIC);
-    if (error != SQLITE_OK) {
-        fprintf(stderr, "SQL insertdbgo bind name: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-        goto cleanup;
-    }
+
+    sqlite3_bind_text(res,  1,  zname, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  2,  ztype, -1, SQLITE_STATIC);
     sqlite3_bind_int64(res, 3,  ed->statuso.st_ino);
     sqlite3_bind_int64(res, 4,  ed->statuso.st_mode);
@@ -477,29 +469,17 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     sqlite3_bind_int64(res, 18, ed->ossint2);
     sqlite3_bind_int64(res, 19, ed->ossint3);
     sqlite3_bind_int64(res, 20, ed->ossint4);
-    error = sqlite3_bind_text(res, 21, zosstext1, -1, SQLITE_STATIC);
-    if (error != SQLITE_OK) {
-        fprintf(stderr, "SQL insertdbgo bind osstext1: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-        goto cleanup;
-    }
-    error = sqlite3_bind_text(res, 22, zosstext2, -1, SQLITE_STATIC);
-    if (error != SQLITE_OK) {
-        fprintf(stderr, "SQL insertdbgo bind osstext2: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-        goto cleanup;
-    }
+    sqlite3_bind_text(res,  21, zosstext1, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res,  22, zosstext2, -1, SQLITE_STATIC);
     sqlite3_bind_int64(res, 23, pwork->pinode);
-    error = sqlite3_step(res);
+
+    const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {
         fprintf(stderr, "SQL insertdbgo step: %s error %d err %s\n",
                 pwork->name, error, sqlite3_errstr(error));
         rc = 1;
     }
 
-  cleanup:
     sqlite3_free(zname);
     sqlite3_free(ztype);
     sqlite3_free(zlinkname);

@@ -127,11 +127,7 @@ static int searchmyll(struct PoolArgs *pa, ino_t inode, const enum DFL type) {
 static int create_readdirplus_tables(const char *name, sqlite3 *db, void *args) {
     (void) args;
 
-    if (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK) {
-        return -1;
-    }
-
-    return 0;
+    return  (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK);
 }
 
 static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *res)
