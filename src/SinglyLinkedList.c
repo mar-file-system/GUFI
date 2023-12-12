@@ -123,8 +123,8 @@ sll_t *sll_move_first(sll_t *dst, sll_t *src, const uint64_t n) {
     sll_node_t *node = sll_head_node(dst);
     src->size--;
 
-    for(uint64_t i = 1; node && (i < n); i++) {
-        node = sll_next_node(node);
+    for(uint64_t i = 1; i < n; i++) {
+        node = sll_next_node(node); /* no need to check for NULL */
         src->size--;
     }
 

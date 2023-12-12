@@ -74,6 +74,12 @@ OF SUCH DAMAGE.
 
 #include "utils.h"
 
+TEST(SNPRINTF, bad) {
+    char buf[1];
+    const std::size_t size = sizeof(buf);
+    EXPECT_EQ(SNPRINTF(buf, size, "%s", "A"), (ssize_t) size);
+}
+
 TEST(SNFORMAT_S, concatenate) {
     char buf[1024];
     SNFORMAT_S(buf, 1024, 3, "A", (size_t) 1, "BC", (size_t) 2, "DEF", (size_t) 3);
@@ -611,14 +617,27 @@ TEST(mkpath, fileasdir) {
     ASSERT_GE(fd, -1);
     EXPECT_EQ(close(fd), 0);
 
+    // need 2 levels due to how mkpath is implemented
     char child[MAXPATH];
-    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/child", parent), 0);
+    EXPECT_GT(SNPRINTF(child, sizeof(child), "%s/dir/subdir", parent), 0);
     EXPECT_EQ(mkpath(child, S_IRWXU, geteuid(), getegid()), -1);
+
     EXPECT_EQ(remove(parent), 0);
 }
 
 TEST(descend, builddir) {
     struct input in = {};
+
+    // need to put under CMAKE_BINARY_DIR
+    // or will end up in TEST_WORKING_DIRECTORY
+
+    // processed by descend
+    const char linkname[] = "@CMAKE_BINARY_DIR@/testlink";
+    ASSERT_EQ(symlink(linkname, linkname), 0);
+
+    // ignored by descend
+    const char pipename[] = "@CMAKE_BINARY_DIR@/testpipe";
+    ASSERT_EQ(mkfifo(pipename, S_IRUSR | S_IWUSR), 0);
 
     struct work work = {};
     work.name_len = SNPRINTF(work.name, sizeof(work.name), "@CMAKE_BINARY_DIR@");
@@ -734,7 +753,9 @@ TEST(descend, builddir) {
     QPTPool_wait(pool);
     QPTPool_destroy(pool);
 
-    closedir(dir);
+    EXPECT_EQ(closedir(dir),    0);
+    EXPECT_EQ(unlink(pipename), 0);
+    EXPECT_EQ(unlink(linkname), 0);
 }
 
 static char *another_modetostr(char *str, const mode_t mode) {
