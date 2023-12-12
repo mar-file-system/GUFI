@@ -125,6 +125,10 @@ echo "# custom print format"
 ) | remove_root | sort
 echo
 
+echo "# bad print format specifier"
+"${GUFI_STAT_BIN}" -f '%e\n' "${INDEXROOT}"
+echo
+
 for entry in "${symlinks[@]}"
 do
     "${GUFI_STAT_BIN}" -f '%N %n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
@@ -171,6 +175,9 @@ do
     "${GUFI_STAT_BIN}" -f "\\${c}\n" "${INDEXROOT}/old_file" 2>&1
 done
 echo
+
+echo "# existing non-directory path"
+run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/db.db"
 
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/bad/directory"
 run_no_sort "${GUFI_STAT_BIN} ${INDEXROOT}/badfile"

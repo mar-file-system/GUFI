@@ -54,6 +54,9 @@ unusual#? directory
 'repeat_name'                                                                     repeat_name 664 -rw-rw-r-- ? ? 81b4 regular file   13 - 0 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13
 'unusual#? directory ,/unusual, name?#'                 unusual#? directory ,/unusual, name?# 664 -rw-rw-r-- ? ? 81b4 regular file   14 - 0 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14
 
+# bad print format specifier
+?
+
 'directory/subdirectory/directory_symlink' -> 'directory/subdirectory' directory/subdirectory/directory_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'directory/subdirectory/directory_symlink' -> 'directory/subdirectory' - 0 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
 'file_symlink' -> '1KB' file_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'file_symlink' -> '1KB' - 0 1970-01-01 00:00:08 +0000 8 1970-01-01 00:00:08 +0000 8
 
@@ -86,6 +89,10 @@ unusual#? directory
 \6a0 -> æa0
 \60a -> 0a
 \yabcd -> \yabcd
+
+# existing non-directory path
+$ gufi_stat_bin prefix/db.db
+gufi_stat: cannot stat 'prefix/db.db': No such file or directory
 
 $ gufi_stat_bin prefix/bad/directory
 Cannot open database: prefix/bad/db.db unable to open database file rc 14

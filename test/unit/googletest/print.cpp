@@ -82,6 +82,7 @@ TEST(print, parallel) {
         BC.c_str(),
         D.c_str(),
         nullptr,
+        nullptr,
     };
 
     const std::string ABC  = A + NL + BC + NL;
@@ -91,7 +92,7 @@ TEST(print, parallel) {
     struct OutputBuffer ob;
     EXPECT_EQ(OutputBuffer_init(&ob, OUTPUTBUFFER_CAP), &ob);
 
-    const std::size_t buf_size = ABCD.size() + SEP.size() + 1;
+    const std::size_t buf_size = ABCD.size() + SEP.size() + 2;
     char *buf = new char[buf_size]();
     FILE *file = fmemopen(buf, buf_size, "w+b");
     ASSERT_NE(file, nullptr);
@@ -156,7 +157,7 @@ TEST(print, parallel) {
 
     // print all data as one row, which is too big for the buffer, so it gets flushed immediately
     {
-        const std::string ROW = A + SEP + BC + SEP + D + SEP + NL; // final separator is for NULL data column, not line end
+        const std::string ROW = A + SEP + BC + SEP + D + SEP + SEP +NL; // final separator is for NULL data column, not line end
 
         EXPECT_EQ(ob.filled, (std::size_t) 0);
 
