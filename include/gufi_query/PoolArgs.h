@@ -98,6 +98,8 @@ typedef struct PoolArgs {
     trie_t *skip;
     pthread_mutex_t *stdout_mutex;
 
+    char detach[MAXSQL];               /* cache SQL statement for detaching index dbs */
+
     #if defined(DEBUG)
     struct timespec start_time;
     #endif

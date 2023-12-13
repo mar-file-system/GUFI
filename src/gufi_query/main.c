@@ -106,9 +106,6 @@ OF SUCH DAMAGE.
 #define increment_query_count(ta)
 #endif
 
-/* name doesn't matter, so long as it is not used by callers */
-#define ATTACH_NAME "tree"
-
 /* additional data gufi_query needs */
 typedef struct gufi_query_work {
     struct work work;
@@ -480,7 +477,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #ifdef OPENDB
     thread_timestamp_start(ts.tts, detachdb_call);
     if (db) {
-        detachdb(dbname, db, ATTACH_NAME, 1);
+        detachdb_cached(dbname, db, pa->detach, 1);
         increment_query_count(ta);
     }
     thread_timestamp_end(detachdb_call);

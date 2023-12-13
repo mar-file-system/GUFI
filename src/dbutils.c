@@ -173,14 +173,10 @@ sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flag
   return db;
 }
 
-sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err)
+sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql, const int print_err)
 {
-  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
-  char detach[MAXSQL];
-  sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn);
-
   char *err = NULL;
-  if (sqlite3_exec(db, detach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
+  if (sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
       if (print_err) {
           fprintf(stderr, "Cannot detach database: %s %s\n", name, err);
           sqlite3_free(err);
@@ -189,6 +185,15 @@ sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int prin
   }
 
   return db;
+}
+
+sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err)
+{
+  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
+  char detach[MAXSQL];
+  sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn);
+
+  return detachdb_cached(name, db, detach, print_err);
 }
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql) {

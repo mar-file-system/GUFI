@@ -153,6 +153,9 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         return 1;
     }
 
+    /* cache this to not have to do repeated constructions of the same SQL statement */
+    sqlite3_snprintf(sizeof(pa->detach), pa->detach, "DETACH %Q;", ATTACH_NAME);
+
     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
     clock_gettime(CLOCK_MONOTONIC, &pa->start_time);
     epoch = since_epoch(&pa->start_time); /* debug.h */
