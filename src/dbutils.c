@@ -1454,6 +1454,10 @@ int treesummary_exists_callback(void *args, int count, char **data, char **colum
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
                                  const enum CheckRollupScore check_rollupscore) {
+    if (!db) {
+        return 1;
+    }
+
     int rollupscore = 0;
     switch(check_rollupscore) {
         case ROLLUPSCORE_CHECK:
@@ -1491,76 +1495,75 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
             sqlite3_free(err);
             return 1;
         }
+
+        return 0;
     }
-    else {
-        /*
-         * this directory has not rolled up, so have to use child
-         * directories to get information
-         *
-         * every child is either
-         *     - a leaf, and thus all the data is available in the summary table, or
-         *     - has a treesummary table because BottomUp is comming back up
-         *
-         * reopen child dbs to collect data
-         *     - not super efficient, but should not happen too often
-         */
 
-        struct sum tsum;
-        zeroit(&tsum);
+    /*
+     * this directory has not rolled up, so have to use child
+     * directories to get information
+     *
+     * every child is either
+     *     - a leaf, and thus all the data is available in the summary table, or
+     *     - has a treesummary table because BottomUp is comming back up
+     *
+     * reopen child dbs to collect data
+     *     - not super efficient, but should not happen too often
+     */
 
-        struct sum sum;
-        sll_loop(subdirs, node) {
-            struct BottomUp *subdir = (struct BottomUp *) sll_node_data(node);
+    struct sum tsum;
+    zeroit(&tsum);
 
-            char child_dbname[MAXPATH];
-            SNFORMAT_S(child_dbname, sizeof(child_dbname), 2,
-                       subdir->name, subdir->name_len,
-                       "/" DBNAME, DBNAME_LEN + 1);
+    struct sum sum;
+    sll_loop(subdirs, node) {
+        struct BottomUp *subdir = (struct BottomUp *) sll_node_data(node);
 
-            sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL
-                                       #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                       , NULL, NULL
-                                       , NULL, NULL
-                                       #endif
-                );
-            if (!child_db) {
-                 continue;
-            }
+        char child_dbname[MAXPATH];
+        SNFORMAT_S(child_dbname, sizeof(child_dbname), 2,
+                   subdir->name, subdir->name_len,
+                   "/" DBNAME, DBNAME_LEN + 1);
 
-            char *err = NULL;
-            int trecs = 0;
-            if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
-                             treesummary_exists_callback,
-                             &trecs, &err) == SQLITE_OK) {
-                zeroit(&sum);
-                if (trecs < 1) {
-                    /* add summary data from this child */
-                    querytsdb(dirname, &sum, child_db, 0);
-                } else {
-                    /* add treesummary data from this child */
-                    querytsdb(dirname, &sum, child_db, 1);
-                }
-
-                /* aggregate subdirectory summaries */
-                tsumit(&sum, &tsum);
-            }
-            else {
-                fprintf(stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n",
-                        subdir->name, err);
-                sqlite3_free(err);
-            }
-
-            closedb(child_db);
+        sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL
+                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
+                                   , NULL, NULL
+                                   , NULL, NULL
+                                   #endif
+            );
+        if (!child_db) {
+            continue;
         }
 
-        /* add summary data from this directory */
-        zeroit(&sum);
-        querytsdb(dirname, &tsum, db, 0);
-        tsumit(&sum, &tsum);
-        tsum.totsubdirs--;
+        char *err = NULL;
+        int trecs = 0;
+        if (sqlite3_exec(child_db, TREESUMMARY_EXISTS,
+            treesummary_exists_callback,
+            &trecs, &err) == SQLITE_OK) {
+            zeroit(&sum);
+            if (trecs < 1) {
+                /* add summary data from this child */
+                querytsdb(dirname, &sum, child_db, 0);
+            } else {
+                /* add treesummary data from this child */
+                querytsdb(dirname, &sum, child_db, 1);
+            }
 
-        inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
+            /* aggregate subdirectory summaries */
+            tsumit(&sum, &tsum);
+        }
+        else {
+            fprintf(stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n",
+            subdir->name, err);
+            sqlite3_free(err);
+        }
+
+        closedb(child_db);
     }
 
-    return 0;
+    /* add summary data from this directory */
+    zeroit(&sum);
+    querytsdb(dirname, &tsum, db, 0);
+    tsumit(&sum, &tsum);
+    tsum.totsubdirs--;
+
+    return inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
 }

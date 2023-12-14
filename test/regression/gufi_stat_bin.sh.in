@@ -115,12 +115,12 @@ echo "# custom print format"
 (
     for entry in "${fixed_size[@]}"
     do
-        "${GUFI_STAT_BIN}" -f '%-60N %60n %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT_BIN}" -f '%-60N %60n %+60N %a %A %d %D %f %F %m %s %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
 
     for entry in "${variable_size[@]}"
     do
-        "${GUFI_STAT_BIN}" -f '%-60N %60n %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
+        "${GUFI_STAT_BIN}" -f '%-60N %60n %+60N %a %A %d %D %f %F %m %N %w %W %x %X %y %Y\n' "${INDEXROOT}/${entry}"
     done
 ) | remove_root | sort
 echo
@@ -157,10 +157,10 @@ printable=(
     'x41' 'x61' 'x41A' 'x61a' 'xaA' 'xAa'
 
     # bad hex
-    'x?' 'xA?'
+    'x!' 'x?' 'xA!' 'xA?'
 
     # octal
-    '101' '141'
+    '101' '141' '40!' '40?'
 
     # bad octal
     'a60' '6a0' '60a'

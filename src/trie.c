@@ -161,24 +161,21 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
         // recurse for the node corresponding to next character in
         // the string and if it returns 1, delete current node
         // (if it is non-leaf)
-        if (*curr != NULL && (*curr)->character[c] != NULL &&
-            trie_delete_recursive(&((*curr)->character[c]), str, i + 1, len) &&
+        //
+        // *curr and (*curr)->character[c] can never be
+        // NULL unless the trie was modified externally
+        if (trie_delete_recursive(&((*curr)->character[c]), str, i + 1, len) &&
             (*curr)->isLeaf == 0)
         {
-            if (!trie_have_children(*curr))
-            {
-                free(*curr);
-                (*curr) = NULL;
-                return 1;
-            }
-            else {
-                return 0;
-            }
+            // leaf, so clean up
+            free(*curr);
+            (*curr) = NULL;
+            return 1;
         }
     }
 
     // if we have reached the end of the string
-    if ((i == len) && (*curr)->isLeaf)
+    else if ((*curr)->isLeaf)
     {
         // if current node is a leaf node and have children
         if (trie_have_children(*curr))

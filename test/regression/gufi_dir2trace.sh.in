@@ -64,10 +64,23 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
-# trace delimiter
-DELIM="|"
-
 OUTPUT="gufi_dir2trace.out"
+
+DELIM="|" # trace delimiter
+NEWDIR="$(mktemp -d 'XXXXXX')"
+
+cleanup() {
+    rm -rf "${NEWDIR}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
 
 (
 echo "# ${GUFI_DIR2TRACE} help" | replace
@@ -121,6 +134,9 @@ run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"${SRCDIR}/1KB\" \
 echo "# empty source path"
 rm "${TRACES[@]}"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${TRACE}\""
+
+echo "# nonexistant trace directory"
+run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} \"\" \"${NEWDIR}/baddir/${TRACE}\"" | sed "s/${NEWDIR}\\///g"
 
 echo "# skip file"
 run_no_sort "${GUFI_DIR2TRACE} -d \"${DELIM}\" -n ${THREADS} -k \"${SKIP}\" \"${SRCDIR}\" \"${TRACE}\""

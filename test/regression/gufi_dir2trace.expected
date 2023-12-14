@@ -89,6 +89,10 @@ Creating GUFI Traces trace with 2 threads
 Total Dirs:          0
 Total Files:         0
 
+# nonexistant trace directory
+$ gufi_dir2trace -d "|" -n 2 "" "baddir/trace"
+Could not open output file baddir/trace.0
+
 # skip file
 $ gufi_dir2trace -d "|" -n 2 -k "skip" "prefix" "trace"
 "trace.0" Already exists!

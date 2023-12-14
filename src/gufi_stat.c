@@ -241,6 +241,9 @@ static int print_callback(void * args, int count, char **data, char **columns) {
                     multiplier = -1;
                     f++;
                 }
+                else if (*f == '+') {
+                    f++;
+                }
 
                 /* get width */
                 while (*f && ('0' <= *f) && (*f <= '9')) {

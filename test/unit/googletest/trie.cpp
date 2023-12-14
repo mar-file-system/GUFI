@@ -119,8 +119,9 @@ TEST(trie, delete) {
     ASSERT_NE(root, nullptr);
 
     EXPECT_EQ(trie_delete(nullptr, nullptr, 0), 0);
-    EXPECT_EQ(trie_delete(root, nullptr,    0), 0);
-    EXPECT_EQ(trie_delete(root, str,        0), 0);
+    EXPECT_EQ(trie_delete(nullptr, str,     0), 0);
+    EXPECT_EQ(trie_delete(root,    nullptr, 0), 0);
+    EXPECT_EQ(trie_delete(root,    str,     0), 0);
 
     {
         /* insert long string and sub string */

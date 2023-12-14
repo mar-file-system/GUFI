@@ -76,7 +76,6 @@ if (CMAKE_CXX_COMPILER)
     SinglyLinkedList.cpp
     bf.cpp
     compress.cpp
-    dbutils.cpp
     debug.cpp
     print.cpp
     template_db.cpp
@@ -90,6 +89,7 @@ if (CMAKE_CXX_COMPILER)
   set(NEED_PATH
     BottomUp.cpp
     aggregate.cpp
+    dbutils.cpp
     utils.cpp
     )
   foreach(SRC ${NEED_PATH})

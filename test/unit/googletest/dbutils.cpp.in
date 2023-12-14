@@ -111,7 +111,7 @@ TEST(set_db_pragmas, nullptr) {
 
 TEST(opendb, bad_path) {
     {
-        sqlite3 *db = opendb("", SQLITE_OPEN_READWRITE, 0, 0,
+        sqlite3 *db = opendb("@CMAKE_CURRENT_BINARY_DIR@", SQLITE_OPEN_READWRITE, 0, 0,
                              [](const char *, sqlite3 *, void *){ return 1; }, nullptr
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
                              , nullptr, nullptr
@@ -122,7 +122,7 @@ TEST(opendb, bad_path) {
     }
 
     {
-        sqlite3 *db = opendb("", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0,
+        sqlite3 *db = opendb("@CMAKE_CURRENT_BINARY_DIR@", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0,
                              [](const char *, sqlite3 *, void *){ return 1; }, nullptr
 #if defined(DEBUG) && defined(PER_THREAD_STATS)
                              , nullptr, nullptr
@@ -259,7 +259,7 @@ TEST(addqueryfuncs, rpath) {
     memset(&work, 0, sizeof(work));
     work.root_parent.data = "index_root";     // currently at this path
     work.root_parent.len = strlen(work.root_parent.data);
-    work.name_len = SNPRINTF(work.name, MAXPATH, "%s/%s", work.root_parent.data, dirname);
+    work.name_len = SNPRINTF(work.name, MAXPATH, "%s//%s", work.root_parent.data, dirname);
 
     sqlite3 *db = nullptr;
     ASSERT_EQ(sqlite3_open(":memory:", &db), SQLITE_OK);
