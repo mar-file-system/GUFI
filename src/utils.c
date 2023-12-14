@@ -766,8 +766,23 @@ ssize_t copyfd(int src_fd, off_t src_off,
 ssize_t copyfd(int src_fd, off_t src_off,
                int dst_fd, off_t dst_off,
                size_t size) {
-    lseek(dst_fd, dst_off, SEEK_SET);
-    return sendfile(dst_fd, src_fd, &src_off, size);
+    if (lseek(dst_fd, dst_off, SEEK_SET) == (off_t) -1) {
+        return -1;
+    }
+
+    const ssize_t copied = size;
+
+    while (size > 0) {
+        /* sendfile(2): sendfile transfers at most 0x7ffff000 bytes */
+        const ssize_t rc = sendfile(dst_fd, src_fd, &src_off, size);
+        if (rc < 0) {
+            return rc;
+        }
+
+        size -= (size_t) rc;
+    }
+
+    return copied;
 }
 
 #else
