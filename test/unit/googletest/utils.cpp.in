@@ -68,6 +68,8 @@ OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <fstream>
 #include <random>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
@@ -1049,4 +1051,92 @@ TEST(getline, fd) {
     size = (size_t) -1;
     EXPECT_EQ(getline_fd(&line,   &size,   fd, &offset, default_size),  -ENOMEM);
     EXPECT_EQ(line, nullptr);
+}
+
+TEST(copyfd, good) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution <> dist(0, 255);
+
+    char srcname[] = "XXXXXX";
+    int src = mkstemp(srcname);
+    ASSERT_GT(src, -1);
+
+    const std::size_t size = 4096;
+
+    char srcbuf[size];
+    for(std::size_t i = 0; i < size; i++) {
+        srcbuf[i] = dist(gen);
+    }
+
+    size_t remaining = size;
+    while (remaining) {
+        const ssize_t w = write(src, srcbuf + size - remaining, remaining);
+        ASSERT_GT(w, (ssize_t) 0);
+        remaining -= w;
+    }
+
+    struct stat srcst;
+    ASSERT_EQ(fstat(src, &srcst), 0);
+    ASSERT_EQ(srcst.st_size, (off_t) size);
+
+    const off_t offsets[] = {(off_t) 0,
+                             (off_t) ((dist(gen) * dist(gen)) % size),
+                             (off_t) ((dist(gen) * dist(gen)) % size)};
+
+    for(std::size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); i++) {
+        // new dst each time
+        char dstname[] = "XXXXXX";
+        int dst = mkstemp(dstname);
+        ASSERT_GT(dst, -1);
+
+        const ssize_t copy_size = size - offsets[i];
+
+        ASSERT_EQ(lseek(src, 0, SEEK_SET), 0);
+        // dst is new, so the position is still at 0
+
+        EXPECT_EQ(copyfd(src, offsets[i], dst, 0, size), copy_size);
+
+        // dst will have been moved
+        EXPECT_EQ(lseek(dst, 0, SEEK_SET), 0);
+
+        struct stat dstst;
+        EXPECT_EQ(fstat(dst, &dstst), 0);
+        EXPECT_EQ(dstst.st_size, (off_t) copy_size);
+
+        char dstbuf[size];
+
+        remaining = copy_size;
+        while (remaining) {
+            const ssize_t r = read(dst, dstbuf + copy_size - remaining, remaining);
+            ASSERT_GT(r, (ssize_t) 0);
+            remaining -= r;
+        }
+        EXPECT_EQ(memcmp(dstbuf, srcbuf + offsets[i], copy_size), 0);
+
+        EXPECT_EQ(close(dst), 0);
+        EXPECT_EQ(remove(dstname), 0);
+    }
+
+    EXPECT_EQ(close(src), 0);
+    EXPECT_EQ(remove(srcname), 0);
+}
+
+TEST(copyfd, bad) {
+    char srcname[] = "XXXXXX";
+    int src = mkstemp(srcname);
+    ASSERT_GT(src, -1);
+
+    char dstname[] = "XXXXXX";
+    int dst = mkstemp(dstname);
+    ASSERT_GT(dst, -1);
+
+    EXPECT_EQ(copyfd(-1,  0, dst, 0, 1), (ssize_t) -1);
+    EXPECT_EQ(copyfd(src, 0, -1,  0, 1), (ssize_t) -1);
+
+    EXPECT_EQ(close(dst), 0);
+    EXPECT_EQ(remove(dstname), 0);
+
+    EXPECT_EQ(close(src), 0);
+    EXPECT_EQ(remove(srcname), 0);
 }

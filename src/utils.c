@@ -754,9 +754,27 @@ ssize_t copyfd(int src_fd, off_t src_off,
                int dst_fd, off_t dst_off,
                size_t size) {
     (void) size;
-    lseek(src_fd, src_off, SEEK_SET);
-    lseek(dst_fd, dst_off, SEEK_SET);
-    return fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
+
+    if (lseek(src_fd, src_off, SEEK_SET) != src_off) {
+        return -1;
+    }
+
+    const off_t start = lseek(dst_fd, dst_off, SEEK_SET);
+    if (start != dst_off) {
+        return -1;
+    }
+
+    const int rc = fcopyfile(src_fd, dst_fd, 0, COPYFILE_DATA);
+    if (rc < 0) {
+        return rc;
+    }
+
+    const off_t end = lseek(dst_fd, 0, SEEK_CUR);
+    if (end == (off_t) -1) {
+        return -1;
+    }
+
+    return end - start;
 }
 
 #elif defined(__linux__)
@@ -766,7 +784,7 @@ ssize_t copyfd(int src_fd, off_t src_off,
 ssize_t copyfd(int src_fd, off_t src_off,
                int dst_fd, off_t dst_off,
                size_t size) {
-    if (lseek(dst_fd, dst_off, SEEK_SET) == (off_t) -1) {
+    if (lseek(dst_fd, dst_off, SEEK_SET) != dst_off) {
         return -1;
     }
 
@@ -777,6 +795,9 @@ ssize_t copyfd(int src_fd, off_t src_off,
         const ssize_t rc = sendfile(dst_fd, src_fd, &src_off, size);
         if (rc < 0) {
             return rc;
+        }
+        else if (rc == 0) {
+            return copied - size;
         }
 
         size -= (size_t) rc;
