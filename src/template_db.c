@@ -133,8 +133,13 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
                          #endif
                          );
 
-    sqlite3_close(db);
+    /*
+     * open before sqlite3_close to prevent potential race
+     * condition where file is deleted before being reopened
+     */
     tdb->fd = open(name, O_RDONLY);
+
+    sqlite3_close(db);
 
     /* no need for the file to remain on the filesystem */
     remove(name);
