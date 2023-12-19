@@ -600,6 +600,39 @@ QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFu
     return ret;
 }
 
+QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
+                                           QPTPoolFunc_t func, void *new_work) {
+    /* Not checking other arguments */
+
+    if ((queue != QPTPool_enqueue_WAIT) &&
+        (queue != QPTPool_enqueue_DEFERRED)) {
+        return QPTPool_enqueue_ERROR;
+    }
+
+    struct queue_item *qi = malloc(sizeof(struct queue_item));
+    qi->func = func; /* if no function is provided, the thread will segfault when it processes this item */
+    qi->work = new_work;
+
+    QPTPoolThreadData_t *data = &ctx->data[id];
+
+    pthread_mutex_lock(&data->mutex);
+    if (queue == QPTPool_enqueue_WAIT) {
+        sll_push(&data->waiting, qi);
+    }
+    else if (queue == QPTPool_enqueue_DEFERRED) {
+        sll_push(&data->deferred, qi);
+    }
+
+    pthread_mutex_lock(&ctx->mutex);
+    ctx->incomplete++;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    pthread_cond_broadcast(&data->cv);
+    pthread_mutex_unlock(&data->mutex);
+
+    return queue;
+}
+
 void QPTPool_wait(QPTPool_t *ctx) {
     if (!ctx) {
         return;

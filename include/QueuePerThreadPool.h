@@ -156,17 +156,39 @@ typedef enum QPTPool_enqueue_dst {
 
 /*
  * Enqueue data and a function to process the data
- * id will push to the thread's next scheduled queue, rather than directly onto queue[id]
+ * Pushes to thread[id]->next_queue, rather than directly to thread[id]
  *
- * This function can be called before starting the thread pool
+ * This function can be called before starting the thread pool.
+ *
+ * @param ctx      the pool context the function is running in
+ * @param id       the id of the thread used to select where the work item should be enqueued
+ * @param func     the function to run
+ * @param new_work the work to be processed by func
  */
-QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id, QPTPoolFunc_t func, void *new_work);
+QPTPool_enqueue_dst_t QPTPool_enqueue(QPTPool_t *ctx, const size_t id,
+                                      QPTPoolFunc_t func, void *new_work);
 
 /*
- * wait for all work to be processed and join threads
+ * Enqueue data and a function to process the data
+ * Pushes directly to thread[id]->queue. Because the id is used
+ * directly, the internal "next queue" value is not updated.
  *
- * this is separate from QPTPool_destroy to allow for
- * collecting of stats before destroying context
+ * This function can be called before starting the thread pool.
+ *
+ * @param ctx      the pool context the function is running in
+ * @param id       the id of the thread that will process this work
+ * @param queue    queue to push to: wait or deferred
+ * @param func     the function to run
+ * @param new_work the work to be processed by func
+ */
+QPTPool_enqueue_dst_t QPTPool_enqueue_here(QPTPool_t *ctx, const size_t id, QPTPool_enqueue_dst_t queue,
+                                           QPTPoolFunc_t func, void *new_work);
+
+/*
+ * Wait for all work to be processed and join threads
+ *
+ * This is separate from QPTPool_destroy to allow for
+ * collecting of stats before destroying context.
  */
 void QPTPool_wait(QPTPool_t *ctx);
 

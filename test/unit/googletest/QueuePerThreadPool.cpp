@@ -77,6 +77,10 @@ static constexpr std::size_t WORK_COUNT = 2 * THREADS + 1;
     /* don't bother cleaning up */                                      \
     ASSERT_EQ(QPTPool_start(pool), 0)
 
+static int return_data(QPTPool_t *, const std::size_t, void *data, void *) {
+    return (int) (uintptr_t) data;
+}
+
 static int increment_counter(QPTPool_t *, const std::size_t, void *data, void *) {
     std::size_t *counter = static_cast<std::size_t *>(data);
     (*counter)++;
@@ -283,20 +287,48 @@ TEST(QueuePerThreadPool, enqueue_internal) {
     QPTPool_destroy(pool);
 }
 
+TEST(QueuePerThreadPool, enqueue_deferred) {
+    QPTPool_t *pool = QPTPool_init(1, nullptr);
+    ASSERT_NE(pool, nullptr);
+    ASSERT_EQ(QPTPool_set_queue_limit(pool, 1), 0);
+
+    EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_WAIT);
+    EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_DEFERRED);
+
+    QPTPool_destroy(pool);
+}
+
+TEST(QueuePerThreadPool, enqueue_here) {
+    setup_pool(THREADS, nullptr);
+
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_ERROR,    return_data, nullptr),
+              QPTPool_enqueue_ERROR);
+
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,     return_data, nullptr),
+              QPTPool_enqueue_WAIT);
+
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_DEFERRED, return_data, nullptr),
+              QPTPool_enqueue_DEFERRED);
+
+    QPTPool_wait(pool);
+
+    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) 2);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 2);
+
+    QPTPool_destroy(pool);
+}
+
 TEST(QueuePerThreadPool, threads_started) {
     setup_pool(THREADS, nullptr);
 
     for(std::size_t i = 0; i < WORK_COUNT; i++) {
-        QPTPool_enqueue(pool, i % THREADS,
-                        [](QPTPool_t *, const std::size_t, void *, void *) -> int {
-                            return 0;
-                        },
-                        nullptr);
+        QPTPool_enqueue(pool, i % THREADS, return_data, (void *) (uintptr_t) 1);
     }
 
     QPTPool_wait(pool);
 
-    EXPECT_EQ(QPTPool_threads_started(pool), WORK_COUNT);
+    EXPECT_EQ(QPTPool_threads_started(pool),   WORK_COUNT);
+    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) 0);
 
     QPTPool_destroy(pool);
 }
@@ -305,14 +337,12 @@ TEST(QueuePerThreadPool, threads_completed) {
     setup_pool(THREADS, nullptr);
 
     for(std::size_t i = 0; i < WORK_COUNT; i++) {
-        QPTPool_enqueue(pool, i % THREADS,
-                        [](QPTPool_t *, const std::size_t, void *, void *) -> int {
-                            return 0;
-                        }, nullptr);
+        QPTPool_enqueue(pool, i % THREADS, return_data, nullptr);
     }
 
     QPTPool_wait(pool);
 
+    EXPECT_EQ(QPTPool_threads_started(pool),   WORK_COUNT);
     EXPECT_EQ(QPTPool_threads_completed(pool), WORK_COUNT);
 
     QPTPool_destroy(pool);
@@ -367,17 +397,6 @@ TEST(QueuePerThreadPool, custom_next) {
     delete [] values;
 }
 
-TEST(QueuePerThreadPool, deferred) {
-    QPTPool_t *pool = QPTPool_init(1, nullptr);
-    ASSERT_NE(pool, nullptr);
-    ASSERT_EQ(QPTPool_set_queue_limit(pool, 1), 0);
-
-    EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_WAIT);
-    EXPECT_EQ(QPTPool_enqueue(pool, 0, nullptr, nullptr), QPTPool_enqueue_DEFERRED);
-
-    QPTPool_destroy(pool);
-}
-
 static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     std::size_t counter = 0;
 
@@ -404,41 +423,23 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
                                   return 0;
                               }, &counter), QPTPool_enqueue_WAIT);
 
-    // need to make sure only this work item got popped off
+    // need to make sure only work item got popped off
     while (!counter) {
         sched_yield();
     }
 
-    counter = 0;
-
-    std::size_t expected = 1; // at least 1 item is always pushed
-
-    // thread 1; processed immediately
-    EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
+    uint64_t expected = 1;
 
     if (find) {
-        // thread 0; previous work item has already been popped off, so it goes into the wait queue and gets stuck
-        EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
+        // thread 0; put a work item in the designated queue for stealing
+        EXPECT_EQ(QPTPool_enqueue_here(pool, 0, queue, increment_counter, &counter),
+                  queue);
 
-        if (queue == QPTPool_enqueue_WAIT) {
-            // thread 1; always goes into wait queue since there is no wait queue limit
-            EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
+        // thread 1; gets 1 work item and triggers stealing 1 work item from queue being tested
+        EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
+                  QPTPool_enqueue_WAIT);
 
-            // thread 0; goes into wait queue and is stolen when thread 1 completes both of its work items
-            EXPECT_EQ(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_WAIT);
-        }
-        else {
-            // thread 1; can go into either queue
-            EXPECT_NE(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_ERROR);
-
-            // thread 0; most likely goes into deferred queue and is stolen when thread 1 completes both of its work items
-            //           if this enqueue gets delayed, thread 1 might have already stolen the work item from thread 0's wait queue, causing this work item to end up on thread 0's wait queue
-            EXPECT_NE(QPTPool_enqueue(pool, 0, increment_counter, &counter), QPTPool_enqueue_ERROR);
-        }
-
-        // thread 1 gets 2 work items and steals 1 from queue being tested
-        // thread 1 then comes back to steal final work item in thread 0's wait queue
-        expected = 4;
+        expected += 2;
     }
     else {
         // thread 1 will look in both queues and not find anything to steal
@@ -455,8 +456,8 @@ static void test_steal(const QPTPool_enqueue_dst queue, const bool find) {
     QPTPool_wait(pool);
 
     EXPECT_EQ(counter, expected);
-    EXPECT_EQ(QPTPool_threads_started(pool),   (uint64_t) (expected + 1));
-    EXPECT_EQ(QPTPool_threads_completed(pool), (uint64_t) (expected + 1));
+    EXPECT_EQ(QPTPool_threads_started(pool),   expected);
+    EXPECT_EQ(QPTPool_threads_completed(pool), expected);
 
     QPTPool_destroy(pool);
 }
@@ -473,6 +474,71 @@ TEST(QueuePerThreadPool, steal_waiting) {
 
 TEST(QueuePerThreadPool, steal_deferred) {
     test_steal(QPTPool_enqueue_DEFERRED, true);
+}
+
+TEST(QueuePerThreadPool, not_enough_deferred) {
+    std::size_t counter = 0;
+
+    // macOS doesn't seem to like std::mutex
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    QPTPool_t *pool = QPTPool_init(2, &mutex);
+    ASSERT_NE(pool, nullptr);
+    ASSERT_EQ(QPTPool_set_queue_limit(pool, 2), 0);
+    ASSERT_EQ(QPTPool_set_steal(pool, 1, 2), 0);
+    ASSERT_EQ(QPTPool_start(pool), 0);
+
+    // prevent thread 0 from completing
+    pthread_mutex_lock(&mutex);
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_WAIT,
+                                   [](QPTPool_t *ctx, const std::size_t id, void *data, void *args) -> int {
+                                       increment_counter(ctx, id, data, args);
+
+                                       pthread_mutex_t *mutex = static_cast<pthread_mutex_t *>(args);
+                                       pthread_mutex_lock(mutex);
+                                       pthread_mutex_unlock(mutex);
+                                       return 0;
+                                   }, &counter), QPTPool_enqueue_WAIT);
+
+    // need to make sure this work item got popped off
+    while (!counter) {
+        sched_yield();
+    }
+
+    // thread 0: put work in deferred queue
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 0, QPTPool_enqueue_DEFERRED, increment_counter, &counter),
+              QPTPool_enqueue_DEFERRED);
+
+    // thread 1: add work so that it triggers searching for work to steal
+    //           (but fails because there's not enough to steal)
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
+              QPTPool_enqueue_WAIT);
+
+    // wait until thread 1 runs
+    while (counter < 1) {
+        sched_yield();
+    }
+
+    // thread 1: add a second work item to make sure thread 1 had time to attempt to steal work
+    EXPECT_EQ(QPTPool_enqueue_here(pool, 1, QPTPool_enqueue_WAIT, increment_counter, &counter),
+              QPTPool_enqueue_WAIT);
+
+    // wait until thread 1 is complete
+    while (counter < 2) {
+        sched_yield();
+    }
+
+    // let thread 0 finish
+    pthread_mutex_unlock(&mutex);
+
+    QPTPool_wait(pool);
+
+    const uint64_t expected = 4;
+    EXPECT_EQ(counter, expected);
+    EXPECT_EQ(QPTPool_threads_started(pool),   expected);
+    EXPECT_EQ(QPTPool_threads_completed(pool), expected);
+
+    QPTPool_destroy(pool);
 }
 
 static std::size_t test_next_func(const std::size_t, const std::size_t,
