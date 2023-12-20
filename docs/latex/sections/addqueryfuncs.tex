@@ -124,6 +124,22 @@ opened for querying.
 
 \begin{table}[htb]
   \centering
+  \caption{\label{tab:sqlmath}Several math functions have been added to complement the set of built-in math functions provided by SQLite. They return NULL when there are not enough values.}
+  \begin{tabular}{| l | l |}
+    \hline
+    Function & Purpose \\
+    \hline
+    \texttt{stdevs(numeric column)} & Sample standard deviation \\
+    \hline
+    \texttt{stdevp(numeric column)} & Population standard deviation \\
+    \hline
+    \texttt{median(numeric column)} & Median of values \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[htb]
+  \centering
   \caption{\label{tab:sqlwcontext}SQLite functions that require the context of an index and thus are only
     available in \gufiquery.}
   \begin{tabular}{| l | l |}
