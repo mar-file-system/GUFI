@@ -62,22 +62,17 @@
 
 cmake_minimum_required(VERSION 3.1.0)
 
-# build the simple source tree generator
-add_executable(gendir gendir.c)
-target_link_libraries(gendir ${COMMON_LIBRARIES})
-add_dependencies(gendir GUFI)
-
-# utility for spliting large traces into smaller files for parallel processing
-add_executable(split_trace split_trace.c)
-target_link_libraries(split_trace ${COMMON_LIBRARIES})
-add_dependencies(split_trace GUFI)
+set(CONTRIB_SOURCES
+  gendir.c                # simple source tree generator
+  split_trace.c           # utility for spliting large traces into smaller files for parallel processing
+  treediff.c              # walk two trees and print the names that don't match
+  )
 
 # potentially useful C++ executables
 if (CMAKE_CXX_COMPILER)
-  # a more complex index generator
-  add_executable(make_testindex make_testindex.cpp)
-  target_link_libraries(make_testindex ${COMMON_LIBRARIES})
-  add_dependencies(make_testindex GUFI)
+  list(APPEND CONTRIB_SOURCES
+    make_testindex.cpp    # a more complex index generator
+    )
 
   add_executable(verifytrace verifytrace.cpp)
 
@@ -85,6 +80,15 @@ if (CMAKE_CXX_COMPILER)
   target_link_libraries(verifytraceintree ${COMMON_LIBRARIES})
   add_dependencies(verifytraceintree install_dependencies)
 endif()
+
+# build C/C++ sources that depend on libGUFI
+foreach(SOURCE ${CONTRIB_SOURCES})
+  # NAME_WE removes the directory and the longest extension
+  get_filename_component(TARGET "${SOURCE}" NAME_WE)
+  add_executable("${TARGET}" "${SOURCE}")
+  target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
+  add_dependencies("${TARGET}" GUFI)
+endforeach()
 
 set(CHECKSTYLE)
 

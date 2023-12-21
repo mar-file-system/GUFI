@@ -1,0 +1,45 @@
+$ treediff -h
+usage: treediff [options] lhs rhs
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+  -z <max level>         maximum level to go down
+
+lhs               starting path of tree used on left hand side of this comparision
+rhs               starting path of tree used on right hand side of this comparision
+
+
+# Compare against the same tree
+$ treediff "prefix" "prefix"
+
+# Compare against source tree
+$ treediff "prefix" "prefix"
+
+$ mv "directory" "new_name"
+
+# Create directory that will come after "unusual#? directory ," to run cleanup code
+$ mkdir "xyz"
+
+# Compare different trees
+$ treediff "prefix" "prefix"
+directory
+new_name
+xyz
+
+$ treediff "prefix" "prefix"
+directory
+new_name
+xyz
+
+# Not enough levels to show differences
+$ treediff -z 0 "prefix" "prefix"
+
+# Bad left hand path
+$ treediff "" "prefix"
+Error: Could not stat left directory "": No such file or directory (2)
+
+# Bad right hand path
+$ treediff "prefix" ""
+Error: Could not stat right directory "": No such file or directory (2)
+

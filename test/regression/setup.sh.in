@@ -168,6 +168,7 @@ GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
 OLDBIGFILES="@CMAKE_BINARY_DIR@/examples/oldbigfiles"
 QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
+TREEDIFF="@CMAKE_BINARY_DIR@/contrib/treediff"
 USERFILESPACEHOG="@CMAKE_BINARY_DIR@/examples/userfilespacehog"
 USERFILESPACEHOGUSESUMMARY="@CMAKE_BINARY_DIR@/examples/userfilespacehogusesummary"
 VERIFYTRACE="@CMAKE_BINARY_DIR@/contrib/verifytrace"
@@ -205,6 +206,7 @@ replace() {
     s/${OLDBIGFILES//\//\\/}/oldbigfiles/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;
+    s/${TREEDIFF//\//\\/}/treediff/g;
     s/${USERFILESPACEHOG//\//\\/}/userfilespacehog/g;
     s/${USERFILESPACEHOGUSESUMMARY//\//\\/}/userfilespacehogusesummary/g;
     s/${VERIFYTRACE//\//\\/}/verifytrace/g;
