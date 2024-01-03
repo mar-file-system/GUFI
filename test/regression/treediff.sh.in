@@ -92,6 +92,9 @@ run_no_sort "${TREEDIFF} \"\" \"${SEARCH}\""
 
 echo "# Bad right hand path"
 run_no_sort "${TREEDIFF} \"${SEARCH}\" \"\""
+
+echo "# Bad skip"
+run_sort "${TREEDIFF} \"${SRCDIR}\" \"${INDEXROOT}\" -k \"\""
 ) | remove_root | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/treediff.expected "${OUTPUT}"

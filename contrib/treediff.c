@@ -342,7 +342,7 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:z:", 2, "lhs rhs", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:z:k:", 2, "lhs rhs", &pa.in);
     if (pa.in.helped)
         sub_help();
     if (idx < 0)

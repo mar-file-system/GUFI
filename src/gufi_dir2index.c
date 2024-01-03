@@ -372,10 +372,10 @@ int main(int argc, char *argv[]) {
         /* parse positional args, following the options */
         /* does not have to be canonicalized */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+    }
 
-        if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-            return -1;
-        }
+    if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
+        return -1;
     }
 
     int rc = 0;

@@ -364,9 +364,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
     ua.generate_alt_name = generate_alt_name;
 
     /* only skip . and .. */
-    if (setup_directory_skip(NULL, &ua.skip)) {
-        return -1;
-    }
+    setup_directory_skip(NULL, &ua.skip);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     ua.timestamp_buffers = timestamp_buffers;

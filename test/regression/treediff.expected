@@ -5,6 +5,7 @@ options:
   -H                     show assigned input values (debugging)
   -n <threads>           number of threads
   -z <max level>         maximum level to go down
+  -k <filename>          file containing directory names to skip
 
 lhs               starting path of tree used on left hand side of this comparision
 rhs               starting path of tree used on right hand side of this comparision
@@ -42,4 +43,8 @@ Error: Could not stat left directory "": No such file or directory (2)
 # Bad right hand path
 $ treediff "prefix" ""
 Error: Could not stat right directory "": No such file or directory (2)
+
+# Bad skip
+$ treediff "prefix" "prefix" -k ""
+Error: Cannot open skip file ""
 

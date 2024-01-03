@@ -253,10 +253,10 @@ int main(int argc, char *argv[]) {
     else {
         /* parse positional args, following the options */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
+    }
 
-        if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-            return -1;
-        }
+    if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
+        return -1;
     }
 
     pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
