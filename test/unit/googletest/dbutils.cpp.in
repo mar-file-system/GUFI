@@ -703,7 +703,7 @@ TEST(addqueryfuncs, median) {
 TEST(sqlite_uri_path, none) {
     const char src[] = "prefix/basename";
     size_t src_len = strlen(src);
-    char dst[1024] = {0};
+    char dst[32] = {0};
     const char *expected = src;
 
     const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -716,7 +716,7 @@ TEST(sqlite_uri_path, none) {
 TEST(sqlite_uri_path, 23) {
     const char src[] = "prefix/#/basename";
     size_t src_len = strlen(src);
-    char dst[1024] = {0};
+    char dst[32] = {0};
     const char expected[] = "prefix/%23/basename";
 
     const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
@@ -729,8 +729,21 @@ TEST(sqlite_uri_path, 23) {
 TEST(sqlite_uri_path, 3f) {
     const char src[] = "prefix/?/basename";
     size_t src_len = strlen(src);
-    char dst[1024] = {0};
+    char dst[32] = {0};
     const char expected[] = "prefix/%3f/basename";
+
+    const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
+
+    EXPECT_EQ(src_len, strlen(src));
+    EXPECT_EQ(dst_len, strlen(expected));
+    EXPECT_STREQ(dst, expected);
+}
+
+TEST(sqlite_uri_path, 25) {
+    const char src[] = "prefix/%/basename";
+    size_t src_len = strlen(src);
+    char dst[32] = {0};
+    const char expected[] = "prefix/%25/basename";
 
     const size_t dst_len = sqlite_uri_path(dst, sizeof(dst), src, &src_len);
 
