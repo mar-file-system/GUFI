@@ -507,7 +507,7 @@ int main(int argc, char *argv[])
     if (in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     const char *format = DEFAULT_FORMAT;
 
@@ -525,5 +525,5 @@ int main(int argc, char *argv[])
         rc |= process_path(argv[i], stdout, format);
     }
 
-    return rc;
+    return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

@@ -111,7 +111,7 @@ int main(int argc, char * argv[]) {
     if (in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec now;
@@ -135,5 +135,5 @@ int main(int argc, char * argv[]) {
 
     timestamp_print_destroy(timestamp_buffers);
 
-    return rc;
+    return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

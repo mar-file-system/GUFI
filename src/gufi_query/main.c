@@ -608,10 +608,10 @@ int main(int argc, char *argv[])
     if (in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     if (validate_inputs(&in) != 0) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -622,7 +622,7 @@ int main(int argc, char *argv[])
     pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
     PoolArgs_t pa;
     if (PoolArgs_init(&pa, &in, &global_mutex) != 0) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     #ifdef DEBUG
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
     if (in.sql.init_agg.len) {
         if (!aggregate_init(&aggregate, &in)) {
             PoolArgs_fin(&pa, in.maxthreads);
-            return -1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -672,7 +672,7 @@ int main(int argc, char *argv[])
         QPTPool_destroy(pool);
         aggregate_fin(&aggregate, &in);
         PoolArgs_fin(&pa, in.maxthreads);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     /* enqueue input paths */
@@ -732,7 +732,6 @@ int main(int argc, char *argv[])
     size_t rows = 0;
     #endif
 
-    int rc = 0;
     if (in.sql.init_agg.len) {
         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         timestamp_create_start(aggregation);
@@ -863,5 +862,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "\n");
     }
     #endif
-    return rc;
+
+    return EXIT_SUCCESS;
 }

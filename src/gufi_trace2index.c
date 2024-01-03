@@ -639,7 +639,7 @@ int main(int argc, char *argv[]) {
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
     else {
         /* parse positional args, following the options */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
@@ -651,15 +651,15 @@ int main(int argc, char *argv[]) {
     int *traces = open_traces(&argv[idx], trace_count);
     if (!traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    int rc = 0;
+    int rc = EXIT_SUCCESS;
 
     init_template_db(&pa.db);
     if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_traces;
     }
 
@@ -670,7 +670,7 @@ int main(int argc, char *argv[]) {
 
     if (dupdir(pa.in.nameto.data, &st)) {
         fprintf(stderr, "Could not create directory %s\n", pa.in.nameto.data);
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_traces;
     }
 
@@ -680,14 +680,14 @@ int main(int argc, char *argv[]) {
      * so that when querying "${dst}", no error is printed
      */
     if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_traces;
     }
 
     init_template_db(&pa.xattr);
     if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_db;
     }
 

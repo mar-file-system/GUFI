@@ -324,7 +324,7 @@ int main(int argc, char *argv[]) {
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
-        return 1;
+        return EXIT_FAILURE;
     else {
         INSTALL_STR(&pa.in.name, argv[idx++]);
     }
@@ -342,7 +342,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
         trie_free(pa.skip);
-        return 1;
+        return EXIT_FAILURE;
     }
 
     pa.sums = calloc(pa.in.maxthreads, sizeof(struct sum));
@@ -362,5 +362,5 @@ int main(int argc, char *argv[]) {
     free(pa.sums);
     trie_free(pa.skip);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

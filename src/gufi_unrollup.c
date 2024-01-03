@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
     if (in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     epoch = since_epoch(NULL);
@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_wait(pool);
         QPTPool_destroy(pool);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     /* enqueue input paths */
@@ -317,5 +317,5 @@ int main(int argc, char *argv[]) {
     timestamp_print_destroy(timestamp_buffers);
     #endif
 
-    return 0;
+    return EXIT_SUCCESS;
 }

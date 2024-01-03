@@ -128,14 +128,13 @@ int main(int argc, char *argv[])
     char *tablename = NULL;
     char *rsqlstmt = NULL;
     sqlite3 *db = NULL;
-    int rc = 0;
 
     const char* pos_args = "table_name SQL DB_name [DB_name ...]";
     int idx = parse_cmd_line(argc, argv, "hHNVd:", 3, pos_args, &in);
     if (in.helped)
         sub_help();
     if (idx < 0) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // parse positional args following the options
@@ -152,11 +151,13 @@ int main(int argc, char *argv[])
                       #endif
               ))) {
         fprintf(stderr, "Error: Unable to open in-memory database.\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
    // add query funcs to get uidtouser() gidtogroup()
    addqueryfuncs_common(db);
+
+   int rc = EXIT_SUCCESS;
 
    const int start = idx;
    const int numdbs = argc - idx;
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
    /* const int attach_limit = sqlite3_limit(db, SQLITE_LIMIT_ATTACHED, -1); */
    /* if (attach_limit < numdbs) { */
    /*     fprintf(stderr, "Error: Cannot attach %d database files (max %d)\n", numdbs, attach_limit); */
-   /*     rc = 1; */
+   /*     rc = EXIT_FAILURE; */
    /*     goto done; */
    /* } */
 
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
 
        /* attach individual database file */
        if (!attachdb(argv[idx], db, dbn, SQLITE_OPEN_READONLY, 1)) {
-           rc = 1;
+           rc = EXIT_FAILURE;
            goto detach;
        }
 
@@ -227,7 +228,7 @@ int main(int argc, char *argv[])
    if (sqlite3_exec(db, create_view, NULL, NULL, &err) != SQLITE_OK) {
        fprintf(stderr, "Error: Cannot create view with databases: %s\n", err);
        sqlite3_free(err);
-       rc = 1;
+       rc = EXIT_FAILURE;
        goto detach;
    }
 
@@ -242,7 +243,7 @@ int main(int argc, char *argv[])
    else {
        fprintf(stderr, "Error: User query failed: %s\n", err);
        sqlite3_free(err);
-       rc = 1;
+       rc = EXIT_FAILURE;
    }
 
   detach:

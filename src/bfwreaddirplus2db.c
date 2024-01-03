@@ -706,7 +706,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (validate_inputs(&pa.in)) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     /* check the output directory for the gufi dbs for suspect dirs if provided */
@@ -717,11 +717,11 @@ int main(int argc, char *argv[]) {
         struct stat st;
         if (lstat(pa.in.nameto.data, &st) != 0) {
             fprintf(stdout, "directory to place gufi dbs problem for %s\n", pa.in.nameto.data);
-            return -1;
+            return EXIT_FAILURE;
         }
         if (!S_ISDIR(st.st_mode)) {
             fprintf(stdout, "directory to place gufi dbs is not a directory\n");
-            return -1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -733,7 +733,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     processinit(&pa, pool);
@@ -744,5 +744,5 @@ int main(int argc, char *argv[]) {
 
     processfin(&pa);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

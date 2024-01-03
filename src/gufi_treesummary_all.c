@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
     if (in.helped)
         sub_help();
     if (idx < 0)
-        return 1;
+        return EXIT_FAILURE;
 
     return parallel_bottomup(argv + idx, argc - idx,
                              in.maxthreads,
@@ -125,5 +125,5 @@ int main(int argc, char *argv[]) {
                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
                              , NULL
                              #endif
-        );
+        )?EXIT_FAILURE:EXIT_SUCCESS;
 }

@@ -898,12 +898,12 @@ int main(int argc, char *argv[]) {
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     init_template_db(&pa.xattr_template);
     if (create_xattrs_template(&pa.xattr_template) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     #ifdef DEBUG
@@ -972,5 +972,5 @@ int main(int argc, char *argv[]) {
     timestamp_set_end_raw(runtime);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
 
-    return rc;
+    return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

@@ -367,7 +367,7 @@ int main(int argc, char *argv[]) {
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
     else {
         /* parse positional args, following the options */
         /* does not have to be canonicalized */
@@ -375,20 +375,20 @@ int main(int argc, char *argv[]) {
     }
 
     if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    int rc = 0;
+    int rc = EXIT_SUCCESS;
 
     if (setup_dst(pa.in.nameto.data) != 0) {
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_skip;
     }
 
     init_template_db(&pa.db);
     if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_skip;
     }
 
@@ -398,14 +398,14 @@ int main(int argc, char *argv[]) {
      * so that when querying "${dst}", no error is printed
      */
     if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_skip;
     }
 
     init_template_db(&pa.xattr);
     if (create_xattrs_template(&pa.xattr) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_db;
     }
 
@@ -418,7 +418,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
-        rc = -1;
+        rc = EXIT_FAILURE;
         goto free_xattr;
     }
 

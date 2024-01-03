@@ -249,20 +249,20 @@ int main(int argc, char *argv[]) {
     if (pa.in.helped)
         sub_help();
     if (idx < 0)
-        return -1;
+        return EXIT_FAILURE;
     else {
         /* parse positional args, following the options */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
     }
 
     if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
     if (!pa.outfiles) {
         trie_free(pa.skip);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
         QPTPool_destroy(pool);
         outfiles_fin(pa.outfiles, pa.in.maxthreads);
         trie_free(pa.skip);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     fprintf(stdout, "Creating GUFI Traces %s with %zu threads\n", pa.in.nameto.data, pa.in.maxthreads);
@@ -340,5 +340,5 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Dirs/Sec:            %.2Lf\n",       thread_count / processtime);
     fprintf(stdout, "Files/Sec:           %.2Lf\n",       total_files / processtime);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
