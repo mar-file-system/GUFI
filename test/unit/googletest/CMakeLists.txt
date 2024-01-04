@@ -90,6 +90,7 @@ if (CMAKE_CXX_COMPILER)
     BottomUp.cpp
     aggregate.cpp
     dbutils.cpp
+    external.cpp
     utils.cpp
     )
   foreach(SRC ${NEED_PATH})

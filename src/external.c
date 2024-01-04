@@ -88,6 +88,14 @@ const char EXTERNAL_DBS_CREATE[] =
 
 static const char EXTERNAL_DBS_GET[] = "SELECT filename, attachname FROM " EXTERNAL_DBS ";";
 
+int create_external_tables(const char *name, sqlite3 *db, void *args) {
+    (void) args;
+
+    return ((create_table_wrapper(name, db, EXTERNAL_DBS_PWD,    EXTERNAL_DBS_PWD_CREATE)    != SQLITE_OK) ||
+            (create_table_wrapper(name, db, EXTERNAL_DBS_ROLLUP, EXTERNAL_DBS_ROLLUP_CREATE) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, EXTERNAL_DBS,        EXTERNAL_DBS_CREATE)        != SQLITE_OK));
+}
+
 int external_loop(struct work *work, sqlite3 *db,
                   const char *viewname, const size_t viewname_len,
                   const char *select, const size_t select_len,

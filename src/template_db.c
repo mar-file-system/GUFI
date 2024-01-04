@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "dbutils.h"
+#include "external.h"
 #include "template_db.h"
 #include "utils.h"
 #include "xattrs.h"
@@ -83,30 +84,28 @@ int init_template_db(struct template_db *tdb) {
 }
 
 /* each db.db, per-user db, and per-group db will have these tables */
-static int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
+int create_xattr_tables(const char *name, sqlite3 *db, void *args) {
     (void) args;
 
-    return ((create_table_wrapper(name, db, XATTRS_PWD,         XATTRS_PWD_CREATE)         != SQLITE_OK) ||
-            (create_table_wrapper(name, db, XATTRS_ROLLUP,      XATTRS_ROLLUP_CREATE)      != SQLITE_OK) ||
-            (create_table_wrapper(name, db, XATTRS_AVAIL,       XATTRS_AVAIL_CREATE)       != SQLITE_OK));
+    return ((create_table_wrapper(name, db, XATTRS_PWD,      XATTRS_PWD_CREATE)      != SQLITE_OK) ||
+            (create_table_wrapper(name, db, XATTRS_ROLLUP,   XATTRS_ROLLUP_CREATE)   != SQLITE_OK) ||
+            (create_table_wrapper(name, db, XATTRS_AVAIL,    XATTRS_AVAIL_CREATE)    != SQLITE_OK));
 
 }
 
 int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
-    return ((create_table_wrapper(name, db, ENTRIES,             ENTRIES_CREATE)             != SQLITE_OK) ||
-            (create_table_wrapper(name, db, SUMMARY,             SUMMARY_CREATE)             != SQLITE_OK) ||
-            (create_table_wrapper(name, db, VRSUMMARY,           VRSUMMARY_CREATE)           != SQLITE_OK) ||
-            (create_table_wrapper(name, db, PENTRIES_ROLLUP,     PENTRIES_ROLLUP_CREATE)     != SQLITE_OK) ||
-            (create_table_wrapper(name, db, PENTRIES,            PENTRIES_CREATE)            != SQLITE_OK) ||
-            (create_table_wrapper(name, db, VRPENTRIES,          VRPENTRIES_CREATE)          != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqldir",          vssqldir)                   != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqluser",         vssqluser)                  != SQLITE_OK) ||
-            (create_table_wrapper(name, db, "vssqlgroup",        vssqlgroup)                 != SQLITE_OK) ||
-            (create_table_wrapper(name, db, SUMMARYLONG,         SUMMARYLONG_CREATE)         != SQLITE_OK) ||
-            (create_table_wrapper(name, db, VRSUMMARYLONG,       VRSUMMARYLONG_CREATE)       != SQLITE_OK) ||
-            (create_table_wrapper(name, db, EXTERNAL_DBS_PWD,    EXTERNAL_DBS_PWD_CREATE)    != SQLITE_OK) ||
-            (create_table_wrapper(name, db, EXTERNAL_DBS_ROLLUP, EXTERNAL_DBS_ROLLUP_CREATE) != SQLITE_OK) ||
-            (create_table_wrapper(name, db, EXTERNAL_DBS,        EXTERNAL_DBS_CREATE)        != SQLITE_OK) ||
+    return ((create_table_wrapper(name, db, ENTRIES,         ENTRIES_CREATE)         != SQLITE_OK) ||
+            (create_table_wrapper(name, db, SUMMARY,         SUMMARY_CREATE)         != SQLITE_OK) ||
+            (create_table_wrapper(name, db, VRSUMMARY,       VRSUMMARY_CREATE)       != SQLITE_OK) ||
+            (create_table_wrapper(name, db, PENTRIES_ROLLUP, PENTRIES_ROLLUP_CREATE) != SQLITE_OK) ||
+            (create_table_wrapper(name, db, PENTRIES,        PENTRIES_CREATE)        != SQLITE_OK) ||
+            (create_table_wrapper(name, db, VRPENTRIES,      VRPENTRIES_CREATE)      != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqldir",      vssqldir)               != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqluser",     vssqluser)              != SQLITE_OK) ||
+            (create_table_wrapper(name, db, "vssqlgroup",    vssqlgroup)             != SQLITE_OK) ||
+            (create_table_wrapper(name, db, SUMMARYLONG,     SUMMARYLONG_CREATE)     != SQLITE_OK) ||
+            (create_table_wrapper(name, db, VRSUMMARYLONG,   VRSUMMARYLONG_CREATE)   != SQLITE_OK) ||
+            create_external_tables(name, db, args) ||
             create_xattr_tables(name, db, args));
 }
 

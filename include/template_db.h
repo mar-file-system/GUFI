@@ -82,9 +82,13 @@ struct template_db {
 int init_template_db(struct template_db *tdb);
 int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
                     const char *name);
+
+int create_xattr_tables(const char *name, sqlite3 *db, void *args);
 int create_xattrs_template(struct template_db *tdb);
+
 int create_dbdb_tables(const char *name, sqlite3 *db, void *args);
 int create_dbdb_template(struct template_db *tdb);
+
 int close_template_db(struct template_db *tdb);
 
 int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gid);

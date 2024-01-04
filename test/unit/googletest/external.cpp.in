@@ -62,84 +62,82 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef EXTERNAL_H
-#define EXTERNAL_H
+#include <cstddef>
 
-#include <sqlite3.h>
-#include <stdlib.h>
+#include <gtest/gtest.h>
 
-#include "bf.h"
+#include "dbutils.h"
+#include "external.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*
- *
- * these tables/views only exist in db.db and list
- * external databases to attach to db.db
- *
- * these tables/views are always named the same no
- * matter the usage of the external databases
- */
-
-#define EXTERNAL_DBS_PWD      "external_dbs_pwd"    /* *.db files found during indexing */
-extern const char EXTERNAL_DBS_PWD_CREATE[];
-extern const char EXTERNAL_DBS_PWD_INSERT[];
-
-#define EXTERNAL_DBS_ROLLUP   "external_dbs_rollup" /* *.db files brought up during rollup */
-extern const char EXTERNAL_DBS_ROLLUP_CREATE[];
-extern const char EXTERNAL_DBS_ROLLUP_INSERT[];
-
-#define EXTERNAL_DBS          "external_dbs"
-extern const char EXTERNAL_DBS_CREATE[];
-
-int create_external_tables(const char *name, sqlite3 *db, void *args);
-
-/*
- * external_loop
- *
- * Attach the databases listed in the external databases table to
- * db.db and create a temporary view of all data accessible by the
- * caller.
- *
- * @in work               the current work context
- * @in db                 handle to the main db
- * @in view_name          the name of the view to create
- * @in view_name_len      length of view_name
- * @in select             string containing "SELECT <columns> FROM "
- * @in select_len         length of select
- * @in table_name         the table to extract from each external database
- * @in table_name_len     length of table_name
- * @in modify_filename    if provided, modify the filename to attach into db.db
- *                        returns the length of the new filename
- * @return the number of external databases attached
- */
-int external_loop(struct work *work, sqlite3 *db,
-                  const char *view_name, const size_t view_name_len,
-                  const char *select, const size_t select_len,
-                  const char *table_name, const size_t table_name_len,
-                  size_t (*modify_filename)(char **dst, const size_t dst_size,
-                                            const char *src, const size_t src_len,
-                                            struct work *work));
-
-/*
- * drop view and detach external databases
- *
- * @in db           the current working context
- * @in drop_view    SQL statement of the format "DROP VIEW <view name>;"
- *                  This string is not validated. This is done to avoid
- *                  memcpys that would be done if the query were
- 8                  generated instead of provided.
- */
-void external_done(sqlite3 *db, const char *drop_view
-                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                   , size_t *query_count
-                   #endif
-    );
-
-#ifdef __cplusplus
+static size_t bad_filename(char **dst, const size_t dst_size,
+                    const char *, const size_t,
+                    struct work *) {
+    return SNPRINTF(*dst, dst_size, "@CMAKE_BINARY_DIR@");
 }
-#endif
 
-#endif
+TEST(external, loop) {
+    #define VIEWNAME "testview"
+    const std::size_t viewname_len = sizeof(VIEWNAME) - 1;
+    const char select[] = " SELECT * FROM ";
+    const std::size_t select_len = sizeof(select) - 1;
+    const std::size_t externaldbs_len = sizeof(EXTERNAL_DBS) - 1;
+    const char drop_view[] = "DROP VIEW " VIEWNAME ";";
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    std::size_t query_count = 0;
+    #endif
+
+    EXPECT_EQ(external_loop(nullptr, nullptr,
+                            VIEWNAME, viewname_len,
+                            select, select_len,
+                            EXTERNAL_DBS, externaldbs_len,
+                            nullptr), -1);
+
+    sqlite3 *db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 0, 0,
+                         create_external_tables, nullptr);
+    ASSERT_NE(db, nullptr);
+
+    // nothing in external_dbs, so goes directly to create empty view
+    EXPECT_EQ(external_loop(nullptr, db,
+                            VIEWNAME, viewname_len,
+                            select, select_len,
+                            EXTERNAL_DBS, externaldbs_len,
+                            nullptr), 0);
+
+    external_done(db, drop_view
+                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                  , &query_count
+                  #endif
+        );
+
+    // add one external db to run attach loop
+    EXPECT_EQ(sqlite3_exec(db, "INSERT INTO " EXTERNAL_DBS_PWD " (filename, attachname) VALUES ('@CMAKE_CURRENT_BINARY_DIR@', 'attachname');", nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // no modify_filename, so attempt to attach CMAKE_CURRENT_BINARY_DIR and fail
+    EXPECT_EQ(external_loop(nullptr, db,
+                            VIEWNAME, viewname_len,
+                            select, select_len,
+                            EXTERNAL_DBS, externaldbs_len,
+                            nullptr), 0);
+
+    external_done(db, drop_view
+                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                  , &query_count
+                  #endif
+        );
+
+    // modify_filename changes the filename to CMAKE_BINARY_DIR which fails to attach
+    EXPECT_EQ(external_loop(nullptr, db,
+                            VIEWNAME, viewname_len,
+                            select, select_len,
+                            EXTERNAL_DBS, externaldbs_len,
+                            bad_filename), 0);
+
+    external_done(db, drop_view
+                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                  , &query_count
+                  #endif
+        );
+
+    sqlite3_close(db);
+}
