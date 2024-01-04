@@ -145,7 +145,7 @@ int create_template(struct template_db *tdb, int (*create_tables)(const char *, 
     remove(name);
 
     if (tdb->fd == -1) {
-        fprintf(stderr, "Could not open template file\n");
+        fprintf(stderr, "Could not open template file '%s'\n", name);
         return -1;
     }
 

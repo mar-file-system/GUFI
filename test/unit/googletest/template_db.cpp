@@ -138,6 +138,7 @@ TEST(template_db, bad_inputs) {
     EXPECT_EQ(create_template(nullptr, create_test_tables, template_name), -1);
     EXPECT_EQ(create_template(&tdb,    nullptr,            template_name), -1);
     EXPECT_EQ(create_template(&tdb,    create_test_tables, nullptr), -1);
+    EXPECT_EQ(create_template(&tdb,    create_test_tables, ""), -1);
 
     tdb.fd = 0;
     EXPECT_EQ(create_template(&tdb,    create_test_tables, template_name), -1);
