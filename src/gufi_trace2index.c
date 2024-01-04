@@ -120,22 +120,19 @@ struct row {
 static struct row *row_init(const int trace, const size_t first_delim, char *line,
                             const size_t len, const long offset) {
     struct row *row = malloc(sizeof(struct row));
-    if (row) {
-        row->trace = trace;
-        row->first_delim = first_delim;
-        row->line = line; /* takes ownership of line */
-        row->len = len;
-        row->offset = offset;
-        row->entries = 0;
-    }
+    row->trace = trace;
+    row->first_delim = first_delim;
+    row->line = line; /* takes ownership of line */
+    row->len = len;
+    row->offset = offset;
+    row->entries = 0;
     return row;
 }
 
 static void row_destroy(struct row *row) {
-    if (row) {
-        free(row->line);
-        free(row);
-    }
+    /* Not checking arguments */
+    free(row->line);
+    free(row);
 }
 
 #ifdef DEBUG
