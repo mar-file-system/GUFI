@@ -79,6 +79,7 @@ typedef struct total_time {
     uint64_t lstat;
     uint64_t opendir;
     uint64_t attachdb;
+    uint64_t lstat_db;
     uint64_t addqueryfuncs;
     uint64_t xattrprep;
     uint64_t get_rollupscore;
@@ -168,6 +169,7 @@ enum {
 enum {
     tts_lstat_call = 0,
     tts_opendir_call,
+    tts_lstat_db_call,
     tts_attachdb_call,
     tts_addqueryfuncs_call,
     tts_xattrprep_call,

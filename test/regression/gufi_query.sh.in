@@ -149,7 +149,6 @@ echo "#####################################"
 echo "# Extra Inputs                      #"
 echo "#####################################"
 
-(
 echo "# Have -J even though not aggregating (stdout)"
 run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\"              -J \"insert;\" \"${INDEXROOT}\""
 
@@ -167,7 +166,6 @@ run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\
 
 echo "# Have -G even though not aggregating (outdb)"
 run_no_sort "${GUFI_QUERY} -O outdb   -I \"create\" -S \"insert;\" -E \"insert;\"              -G \"query;\"  \"${INDEXROOT}\""
-)
 
 echo "#####################################"
 echo "# Modify Index                      #"
@@ -184,7 +182,20 @@ run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM 
 
 echo "# Positive check to see if changes have been applied"
 run_sort "${GUFI_QUERY} -a -d \" \" -S \"SELECT rpath(sname, sroll), inode FROM vrsummary WHERE inode == 0;\" -E \"SELECT rpath(sname, sroll) || '/' || name, inode FROM vrpentries WHERE inode == 0;\" \"${INDEXROOT}\""
+
+echo "# Set timestamps of one db.db file to epoch, query the index with -m flag, and expect no changes"
+run_no_sort "touch -amt 197001010000.00 \"${INDEXROOT}/db.db\""
+stat --printf "Expect:\n    atime: %X\n    mtime: %Y\n\n" "${INDEXROOT}/db.db"
+run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
+stat --printf "Got:\n    atime: %X\n    mtime: %Y\n\n" "${INDEXROOT}/db.db"
+
+echo "# Missing database file"
+rm "${INDEXROOT}/db.db"
+run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 ) |& tee "${OUTPUT}"
+
+echo "# Print terse debug timestamps (not part of expected results)"
+run_sort "${GUFI_QUERY} -d \" \" -j -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/gufi_query.expected "${OUTPUT}"
 rm "${OUTPUT}"

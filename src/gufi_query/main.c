@@ -63,6 +63,7 @@ OF SUCH DAMAGE.
 
 
 #include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -309,7 +310,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     decompress_struct((void **) &gqw, data, sizeof(stack));
 
-    char dbname[MAXPATH];
+    char dbpath[MAXPATH];  /* filesystem path of db.db; only generated if keep_matime is set */
+    char dbname[MAXPATH];  /* path of db.db modified so that sqlite3 can open it */
     SNFORMAT_S(dbname, MAXPATH, 2, gqw->sqlite3_name, gqw->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
 
     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
@@ -321,7 +323,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_start(ts.tts, lstat_call);
     struct stat st;
     if (lstat(gqw->work.name, &st) != 0) {
-        fprintf(stderr, "Could not stat directory \"%s\"\n", gqw->work.name);
+        const int err = errno;
+        fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
+                gqw->work.name, strerror(err), err);
         goto out_free;
     }
     thread_timestamp_end(lstat_call);
@@ -335,6 +339,22 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (!dir) {
         goto out_free;
     }
+
+    thread_timestamp_start(ts.tts, lstat_db_call);
+    struct utimbuf dbtime;
+    if (in->keep_matime) {
+        SNFORMAT_S(dbpath, sizeof(dbpath), 2, gqw->work.name, gqw->work.name_len, "/" DBNAME, DBNAME_LEN + 1);
+        struct stat db_st;
+        if (lstat(dbpath, &db_st) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Could not stat database file \"%s\": %s (%d)\n",
+                    dbpath, strerror(err), err);
+            goto out_free;
+        }
+        dbtime.actime  = db_st.st_atime;
+        dbtime.modtime = db_st.st_mtime;
+    }
+    thread_timestamp_end(lstat_db_call);
 
     #if OPENDB
     thread_timestamp_start(ts.tts, attachdb_call);
@@ -487,10 +507,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_start(ts.tts, utime_call);
     if (db) {
         if (in->keep_matime) {
-            struct utimbuf dbtime;
-            dbtime.actime  = st.st_atime;
-            dbtime.modtime = st.st_mtime;
-            utime(dbname, &dbtime);
+            if (utime(dbpath, &dbtime) != 0) {
+                const int err = errno;
+                fprintf(stderr, "Warning: Failed to run utime on database file \"%s\": %s (%d)\n",
+                        dbpath, strerror(err), err);
+            }
         }
     }
     thread_timestamp_end(utime_call);
@@ -604,7 +625,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:m:B:wxk:M:" COMPRESS_OPT, 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT, 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)

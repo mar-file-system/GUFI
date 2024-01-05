@@ -74,14 +74,16 @@ void total_time_init(total_time_t *tt) {
 }
 
 uint64_t total_time_sum(total_time_t *tt) {
-    return (tt->opendir + tt->attachdb + tt->addqueryfuncs +
-            tt->xattrprep + tt->get_rollupscore + tt->sqltsumcheck +
-            tt->sqltsum + tt->descend + tt->check_args +
-            tt->level + tt->level_branch + tt->while_branch +
-            tt->readdir + tt->readdir_branch + tt->strncmp +
-            tt->strncmp_branch + tt->snprintf + tt->lstat +
-            tt->isdir + tt->isdir_branch + tt->access +
-            tt->set + tt->clone + tt->pushdir + tt->sqlsum +
+    return (tt->lstat + tt->opendir + tt->lstat_db +
+            tt->attachdb + tt->addqueryfuncs +
+            tt->xattrprep + tt->get_rollupscore +
+            tt->sqltsumcheck + tt->sqltsum + tt->descend +
+            tt->check_args + tt->level + tt->level_branch +
+            tt->while_branch + tt->readdir +
+            tt->readdir_branch + tt->strncmp +
+            tt->strncmp_branch + tt->snprintf + tt->isdir +
+            tt->isdir_branch + tt->access + tt->set +
+            tt->clone + tt->pushdir + tt->sqlsum +
             tt->sqlent + tt->xattrdone + tt->detachdb +
             tt->closedir + tt->utime + tt->free_work +
             tt->output_timestamps);
@@ -121,6 +123,7 @@ void timestamps_print(struct OutputBuffers *obs, const size_t id,
     print_timer          (obs, id, "lstat",              &ts->tts[tts_lstat_call]);
     print_timer          (obs, id, "opendir",            &ts->tts[tts_opendir_call]);
     if (dir) {
+        print_timer      (obs, id, "lstat_db",           &ts->tts[tts_lstat_db_call]);
         print_timer      (obs, id, "attachdb",           &ts->tts[tts_attachdb_call]);
         if (db) {
             print_timer  (obs, id, "addqueryfuncs",      &ts->tts[tts_addqueryfuncs_call]);
@@ -174,6 +177,7 @@ void timestamps_sum(total_time_t *tt, timestamps_t *ts) {
     pthread_mutex_lock(&tt->mutex);
     tt->lstat             += nsec(&ts->tts[tts_lstat_call]);
     tt->opendir           += nsec(&ts->tts[tts_opendir_call]);
+    tt->lstat_db          += nsec(&ts->tts[tts_lstat_db_call]);
     tt->attachdb          += nsec(&ts->tts[tts_attachdb_call]);
     tt->xattrprep         += nsec(&ts->tts[tts_xattrprep_call]);
     tt->sqltsumcheck      += nsec(&ts->tts[tts_sqltsumcheck]);
