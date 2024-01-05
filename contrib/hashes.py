@@ -66,6 +66,7 @@ import hashlib
 
 # wrapper for the built-in hash function to act as a hashlib hash class
 # update() and hexdigest() are not provided
+# pylint: disable=too-few-public-methods
 class BuiltInHash:
     def __init__(self, string):
         self.hashed = hex(abs(__builtins__.hash(string)))[2:]

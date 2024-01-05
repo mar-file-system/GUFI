@@ -63,9 +63,10 @@
 
 import argparse
 
+# pylint: disable=too-many-arguments
 def generate_level_r(out, parent, dir_count, file_count, current_level, max_level, rs = chr(0x1e)):
     # generate all files first
-    for f_name in xrange(file_count):
+    for f_name in range(file_count):
         out.write(parent + 'f.' + str(f_name) + # name
                   rs + 'f' +                    # type
                   rs + '1' +                    # inode
@@ -91,7 +92,7 @@ def generate_level_r(out, parent, dir_count, file_count, current_level, max_leve
                   rs + '0' +                    # pinode
                   rs + '\n')
 
-    for d_name in xrange(dir_count):
+    for d_name in range(dir_count):
         out.write(parent + 'd.' + str(d_name) + # name
                   rs + 'd' +                    # type
                   rs + '1' +                    # inode
@@ -147,7 +148,7 @@ def generate_level(out, root, dir_count, file_count, max_level, rs = chr(0x1e)):
               rs +              # osstext2
               rs + '0' +        # pinode
               rs + '\n')
-    generate_level_r(args.output, root, args.directories, args.files, 1, args.depth, args.separator)
+    generate_level_r(out, root, dir_count, file_count, 1, max_level, rs)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trace Generator')

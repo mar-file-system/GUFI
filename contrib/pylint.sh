@@ -68,8 +68,8 @@ BUILD="$(realpath $1)"
 # shellcheck disable=SC2155
 export PYTHONPATH="${BUILD}/contrib:${BUILD}/scripts:${BUILD}/test:${PYTHONPATH}"
 
-# not scanning ${BUILD}/contrib
 PATHS=(
+    "${BUILD}/contrib"
     "${BUILD}/scripts"
     "${BUILD}/test"
 )
@@ -79,15 +79,18 @@ PERF="${BUILD}/contrib/performance"
 if [[ -d "${PERF}" ]]
 then
     export PYTHONPATH="${PERF}:${PYTHONPATH}"
-    PATHS+=("${PERF}")
+    while IFS= read -r -d $'\0' path
+    do
+        PATHS+=("${path}")
+    done < <(find "${PERF}" -type d -print0)
 fi
 
 # shellcheck disable=SC2044
-for file in $(find "${PATHS[@]}" -type f)
+while IFS= read -r -d $'\0' path
 do
-    if [[ "$(head -n 1 ${file} | strings)" =~ ^#!/usr/bin/env\ python(2|3).*$ ]]
+    if [[ "$(head -n 1 ${path} | strings)" =~ ^#!/usr/bin/env\ python(2|3).*$ ]]
     then
-        echo "${file}"
-        pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string,invalid-name -- "${file}"
+        echo "${path}"
+        pylint --disable=too-many-lines,line-too-long,missing-docstring,consider-using-f-string,invalid-name -- "${path}"
     fi
-done
+done < <(find "${PATHS[@]}" -mindepth 1 -maxdepth 1 -type f -print0)

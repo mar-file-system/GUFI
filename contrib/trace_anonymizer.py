@@ -83,11 +83,11 @@ UID_MAX = 1 << 32
 GID_MIN = 1000
 GID_MAX = 1 << 32
 
-def anonymize(string,                                # the data to hash
-              sep = os.sep,                          # character that separates paths
-              hash = hashes.BuiltInHash,             # an object that has a 'digest' function
-              salt = lambda string, extra_args : "", # a function to salt the each piece of the data, if necessary
-              args = None):                          # extra arguments to pass into the salt function
+def anonymize(string,                                    # the data to hash
+              sep      = os.sep,                         # character that separates paths
+              hash_alg = hashes.BuiltInHash,             # an object that has a 'digest' function
+              salt     = lambda string, extra_args : "", # a function to salt the each piece of the data, if necessary
+              extra     = None):                         # extra arguments to pass into the salt function
     '''
     Splits the input into chunks, if the input contains path separators; otherwise uses the entire input as one chunk
         Empty strings are not hashed, since they are just path separators
@@ -96,11 +96,11 @@ def anonymize(string,                                # the data to hash
     Converts the hash into Base64 to make it printable characters only
     Recombines the chunks with path separators
     '''
-    return sep.join(['' if part == '' else urlsafe_b64encode(hash((salt(part, args) if salt else "") + part).digest()) for part in string.split(sep)])
+    return sep.join(['' if part == '' else urlsafe_b64encode(hash_alg((salt(part, extra) if salt else "") + part).digest()) for part in string.split(sep)])
 
 # convert anonymized integer column back to an integer
 def anonymize_int(args, column):
-    return int(hexlify(urlsafe_b64decode(anonymize(column, hash=Hashes[args.hash]))), 16)
+    return int(hexlify(urlsafe_b64decode(anonymize(column, hash_alg=hashes.Hashes[args.hash_alg]))), 16)
 
 # bound an anonymized integer within [lower, higher)
 # while preventing collisions
@@ -109,12 +109,10 @@ def limit_int(args, column, used, lower, higher):
         raise ValueError('Lower bound ({}) of range is greater than or equal to the high bound ({})'.format(lower, higher))
 
     # anonymize the column
-    anon = anonymize_int(args, column) % higher
-    if anon < lower:
-        anon = lower
+    anon = max(anonymize_int(args, column) % higher, lower)
 
     found = False
-    for _ in xrange(lower, higher):
+    for _ in range(lower, higher):
         # this is a new mapping
         if anon not in used:
             used[anon] = column
@@ -129,9 +127,7 @@ def limit_int(args, column, used, lower, higher):
 
         # this value has been previously assigned to a
         # different source column, so try another value
-        anon = (anon + 1) % higher
-        if anon < lower:
-            anon = lower
+        anon = max((anon + 1) % higher, lower)
 
     if not found:
         raise RuntimeError('Failed to find a mapping for {} in range [{}, {})'.format(column, lower, higher))
@@ -144,9 +140,10 @@ def char(c):
         raise argparse.ArgumentTypeError("Expected 1 character. Got {}.".format(len(c)))
     return c
 
-if __name__ == '__main__':
+def run():
     parser = argparse.ArgumentParser(description='Column Anonymizer: Read from stdin. Output to stdout.')
     parser.add_argument('hash',              nargs='?',        default="BuiltInHash", choices=hashes.Hashes.keys(),
+                        metavar='hash_alg',
                         help='Hash function name')
     parser.add_argument('-i', '--in-delim',  dest='in_delim',  default="\x1e",        type=char,
                         help='Input Column Delimiter')
@@ -166,12 +163,11 @@ if __name__ == '__main__':
         out = []
         for idx, column in enumerate(line.split(args.in_delim)):
             if idx in [PATH_IDX, LINK_IDX]:
-                anon = anonymize(column, hash=Hashes[args.hash])
+                anon = anonymize(column, hash_alg=hashes.Hashes[args.hash_alg])
                 if len(anon) > 490:
                     nl = False
                     break
-                else:
-                    out += [anon]
+                out += [anon]
             elif idx == UID_IDX:
                 out += [limit_int(args, column, used_uids, UID_MIN, UID_MAX)]
             elif idx == GID_IDX:
@@ -179,4 +175,7 @@ if __name__ == '__main__':
             else:
                 out += [column]
         if nl:
-            print args.out_delim.join(out)
+            print(args.out_delim.join(out))
+
+if __name__ == '__main__':
+    run()
