@@ -203,13 +203,8 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
         }
     }
 
-    sqlite3 *db = opendb(dbpath, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
-                         , create_dbdb_tables, NULL
-                         #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                         , NULL, NULL
-                         , NULL, NULL
-                         #endif
-        );
+    sqlite3 *db = opendb(dbpath, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                         1, 1, create_dbdb_tables, NULL);
     if (!db) {
         return -1;
     }
@@ -610,13 +605,8 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
             char outname[MAXPATH];
             SNPRINTF(outname, MAXPATH, "%s.%zu", pa->in.outname.data, i);
 
-            ta->db = opendb(outname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1
-                            , create_readdirplus_tables, NULL
-                            #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                            , NULL, NULL
-                            , NULL, NULL
-                            #endif
-                );
+            ta->db = opendb(outname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                            1, 1, create_readdirplus_tables, NULL);
             ta->res = insertdbprep(ta->db, READDIRPLUS_INSERT);
         }
     }

@@ -97,20 +97,14 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
             SNPRINTF(ta->dbname, MAXPATH, "file:memory%zu?mode=memory&cache=shared" GUFI_SQLITE_VFS_URI, i);
         }
 
-        ta->outdb = opendb(ta->dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1, NULL, NULL
-                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                           , NULL, NULL
-                           , NULL, NULL
-                           #endif
-            );
-
+        ta->outdb = opendb(ta->dbname, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 1, NULL, NULL);
         if (!ta->outdb) {
             fprintf(stderr, "Error: Could not open per-thread database file \"%s\"\n", ta->dbname);
             break;
         }
 
         #ifdef ADDQUERYFUNCS
-        if (addqueryfuncs_common(ta->outdb) != 0) {
+        if (addqueryfuncs(ta->outdb) != 0) {
             fprintf(stderr, "Warning: Could not add functions to sqlite\n");
         }
         #endif

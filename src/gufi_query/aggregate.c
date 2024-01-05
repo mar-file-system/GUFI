@@ -72,19 +72,14 @@ static const char AGGREGATE_FILE_NAME[]      = "file:aggregatedb?mode=memory&cac
 static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate";
 
 static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
-    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                , NULL, NULL
-                                , NULL, NULL
-#endif
-        );
+    sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL);
     if (!db) {
         fprintf(stderr, "Could not open aggregation database\n");
         closedb(db);
         return NULL;
     }
 
-    addqueryfuncs_common(db);
+    addqueryfuncs(db);
 
     /* create table */
     char *err = NULL;
@@ -147,20 +142,15 @@ void aggregate_intermediate(Aggregate_t *aggregate, PoolArgs_t *pa, struct input
     for(size_t i = 0; i < in->maxthreads; i++) {
         ThreadArgs_t *ta = &(pa->ta[i]);
 
-        char attach[MAXSQL];
-        SNPRINTF(attach, sizeof(attach), "ATTACH '%s' AS '%s';", ta->dbname, INTERMEDIATE_ATTACH_NAME);
-
-        char *err = NULL;
-        if (sqlite3_exec(aggregate->db, attach, NULL, NULL, &err) == SQLITE_OK) {
+        if (attachdb_raw(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1)) {
+            char *err = NULL;
             if ((sqlite3_exec(aggregate->db, in->sql.intermediate.data, NULL, NULL, &err) != SQLITE_OK)) {
-                fprintf(stderr, "Error: Cannot aggregate intermediate databases with \"%s\": %s\n", in->sql.intermediate.data, err);
+                fprintf(stderr, "Error: Cannot aggregate intermediate databases with \"%s\": %s\n",
+                        in->sql.intermediate.data, err);
                 sqlite3_free(err);
             }
         }
-        else {
-            fprintf(stderr, "Could not attach aggregate database to intermediate database: %s\n", err);
-            sqlite3_free(err);
-        }
+
         detachdb(ta->dbname, aggregate->db, INTERMEDIATE_ATTACH_NAME, 1);
     }
 }

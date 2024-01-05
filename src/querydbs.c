@@ -143,19 +143,13 @@ int main(int argc, char *argv[])
 
     const size_t tablename_len = strlen(tablename);
 
-    if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1,
-                      NULL, NULL
-                      #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                      , NULL, NULL
-                      , NULL, NULL
-                      #endif
-              ))) {
+    if (!(db = opendb(":memory:", SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL))) {
         fprintf(stderr, "Error: Unable to open in-memory database.\n");
         return EXIT_FAILURE;
     }
 
    // add query funcs to get uidtouser() gidtogroup()
-   addqueryfuncs_common(db);
+   addqueryfuncs(db);
 
    int rc = EXIT_SUCCESS;
 

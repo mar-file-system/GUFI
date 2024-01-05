@@ -147,6 +147,7 @@ extern const char VRSUMMARYLONG_CREATE[];
 
 /* name doesn't matter, so long as it is not used by callers */
 #define ATTACH_NAME "tree"
+sqlite3 *attachdb_raw   (const char *name, sqlite3 *db, const char *dbn,                  const int print_err);
 sqlite3 *attachdb       (const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err);
 sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql,                  const int print_err);
 sqlite3 *detachdb       (const char *name, sqlite3 *db, const char *dbn,                  const int print_err);
@@ -157,12 +158,7 @@ int create_treesummary_tables(const char *name, sqlite3 *db, void *args);
 int set_db_pragmas(sqlite3 *db);
 
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
-                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
-                #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                , struct start_end *sqlite3_open,   struct start_end *set_pragmas
-                , struct start_end *load_extension, struct start_end *modify_db
-                #endif
-    );
+                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args);
 
 int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts);
 
@@ -190,9 +186,8 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
 int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su, int rectype, int uid, int gid);
 
-int addqueryfuncs_common(sqlite3 *db);
+int addqueryfuncs(sqlite3 *db);
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work);
-int addqueryfuncs(sqlite3 *db, size_t id, struct work *work);
 
 /* xattr db list item */
 struct xattr_db {

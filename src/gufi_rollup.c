@@ -409,13 +409,7 @@ static int check_children(struct RollUp *rollup, struct Permissions *curr,
                    DBNAME, DBNAME_LEN);
 
         timestamp_create_start(open_child_db);
-        sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0
-                             , NULL, NULL
-                             #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                             , NULL, NULL
-                             , NULL, NULL
-                             #endif
-            );
+        sqlite3 *db = opendb(dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
         timestamp_end_print(timestamp_buffers, rollup->data.tid.up, "open_child_db", open_child_db);
 
         if (!db) {
@@ -639,13 +633,7 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     }
 
     /* open parent per-user/per-group xattr db file */
-    sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0,
-                               NULL, NULL
-                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                               , NULL, NULL
-                               , NULL, NULL
-                               #endif
-        );
+    sqlite3 *xattr_db = opendb(xattr_db_name, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
     if (!xattr_db) {
         return 1;
     }
@@ -821,12 +809,7 @@ static void rollup(void *args timestamp_sig) {
      * always create the treesummary table
      */
     timestamp_create_start(open_curr_db);
-    sqlite3 *dst = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL
-                           #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                           , NULL, NULL
-                           , NULL, NULL
-                           #endif
-        );
+    sqlite3 *dst = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL);
     timestamp_end_print(timestamp_buffers, id, "opendb", open_curr_db);
 
     /* can attempt to roll up */

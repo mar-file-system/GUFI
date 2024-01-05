@@ -147,53 +147,71 @@ vssql(group, 2);
 LONG_CREATE(SUMMARY);
 LONG_CREATE(VRSUMMARY);
 
-sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err)
-{
-  char ow = '?';
-  if (flags & SQLITE_OPEN_READONLY) {
-      ow = 'o';
-  }
-  else if (flags & SQLITE_OPEN_READWRITE) {
-      ow = 'w';
-  }
+static sqlite3 *attachdb_internal(const char *attach, sqlite3 *db, const char *dbn, const int print_err) {
+    char *err = NULL;
+    if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
+        if (print_err) {
+            fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
+            sqlite3_free(err);
+        }
+        return NULL;
+    }
 
-  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
-  char attach[MAXSQL];
-  sqlite3_snprintf(MAXSQL, attach, "ATTACH 'file:%q?mode=r%c" GUFI_SQLITE_VFS_URI "' AS %Q", name, ow, dbn);
-
-  char *err = NULL;
-  if (sqlite3_exec(db, attach, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
-      if (print_err) {
-          fprintf(stderr, "Cannot attach database as \"%s\": %s\n", dbn, err);
-          sqlite3_free(err);
-      }
-      return NULL;
-  }
-
-  return db;
+    return db;
 }
 
-sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql, const int print_err)
-{
-  char *err = NULL;
-  if (sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
-      if (print_err) {
-          fprintf(stderr, "Cannot detach database: %s %s\n", name, err);
-          sqlite3_free(err);
-      }
-      return NULL;
-  }
+sqlite3 *attachdb_raw(const char *name, sqlite3 *db, const char *dbn, const int print_err) {
+    /*
+     * create ATTACH statement here to prevent double copy that
+     * would be done by generating name first and passing it to
+     * attachdb_internal for SQL statement generation
+     */
+    char attach[MAXSQL];
+    sqlite3_snprintf(sizeof(attach), attach, "ATTACH %Q AS %Q;", name, dbn);
 
-  return db;
+    return attachdb_internal(attach, db, dbn, print_err);
 }
 
-sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err)
-{
-  /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
-  char detach[MAXSQL];
-  sqlite3_snprintf(MAXSQL, detach, "DETACH %Q", dbn);
+sqlite3 *attachdb(const char *name, sqlite3 *db, const char *dbn, const int flags, const int print_err) {
+    char ow = '?';
+    if (flags & SQLITE_OPEN_READONLY) {
+        ow = 'o';
+    }
+    else if (flags & SQLITE_OPEN_READWRITE) {
+        ow = 'w';
+    }
 
-  return detachdb_cached(name, db, detach, print_err);
+    /*
+     * create ATTACH statement here to prevent double copy that
+     * would be done by generating name first and passing it to
+     * attachdb_internal for SQL statement generation
+     */
+    char attach[MAXSQL];
+    sqlite3_snprintf(sizeof(attach), attach, "ATTACH 'file:%q?mode=r%c" GUFI_SQLITE_VFS_URI "' AS %Q;",
+                     name, ow, dbn);
+
+    return attachdb_internal(attach, db, dbn, print_err);
+}
+
+sqlite3 *detachdb_cached(const char *name, sqlite3 *db, const char *sql, const int print_err) {
+    char *err = NULL;
+    if (sqlite3_exec(db, sql, NULL, NULL, print_err?(&err):NULL) != SQLITE_OK) {
+        if (print_err) {
+            fprintf(stderr, "Cannot detach database: %s %s\n", name, err);
+            sqlite3_free(err);
+        }
+        return NULL;
+    }
+
+    return db;
+}
+
+sqlite3 *detachdb(const char *name, sqlite3 *db, const char *dbn, const int print_err) {
+    /* cannot check for sqlite3_snprintf errors except by finding the null terminator, so skipping */
+    char detach[MAXSQL];
+    sqlite3_snprintf(MAXSQL, detach, "DETACH %Q;", dbn);
+
+    return detachdb_cached(name, db, detach, print_err);
 }
 
 int create_table_wrapper(const char *name, sqlite3 *db, const char *sql_name, const char *sql) {
@@ -234,70 +252,39 @@ int set_db_pragmas(sqlite3 *db) {
     return rc;
 }
 
-#if defined(DEBUG) && defined(PER_THREAD_STATS)
-#define check_set_start(name)            \
-    if (name) {                          \
-        timestamp_set_start_raw(*name);  \
-    }
-
-#define check_set_end(name)              \
-    if (name) {                          \
-        timestamp_set_end_raw(*name);    \
-    }
-#else
-#define check_set_start(name)
-#define check_set_end(name)
-#endif
-
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
-                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args
-                #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                , struct start_end *sqlite3_open,   struct start_end *set_pragmas
-                , struct start_end *load_extension, struct start_end *modify_db
-                #endif
-    ) {
+                int (*modifydb_func)(const char *name, sqlite3 *db, void *args), void *modifydb_args) {
     sqlite3 *db = NULL;
 
-    check_set_start(sqlite3_open);
     if (sqlite3_open_v2(name, &db, flags | SQLITE_OPEN_URI, GUFI_SQLITE_VFS) != SQLITE_OK) {
-        check_set_end(sqlite3_open);
         if (!(flags & SQLITE_OPEN_CREATE)) {
             fprintf(stderr, "Cannot open database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
         }
         sqlite3_close(db); /* close db even if it didn't open to avoid memory leaks */
         return NULL;
     }
-    check_set_end(sqlite3_open);
 
-    check_set_start(set_pragmas);
     if (setpragmas) {
         /* ignore errors */
         set_db_pragmas(db);
     }
-    check_set_end(set_pragmas);
 
-    check_set_start(load_extension);
     if (load_extensions) {
         if ((sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL) != SQLITE_OK) || /* enable loading of extensions */
             (sqlite3_extension_init(db, NULL, NULL)                                != SQLITE_OK)) { /* load the sqlite3-pcre extension */
-            check_set_end(load_extension);
             fprintf(stderr, "Unable to load regex extension\n");
             sqlite3_close(db);
             return NULL;
         }
     }
-    check_set_end(load_extension);
 
-    check_set_start(modify_db);
     if (!(flags & SQLITE_OPEN_READONLY) && modifydb_func) {
         if (modifydb_func(name, db, modifydb_args) != 0) {
-            check_set_end(modify_db);
             fprintf(stderr, "Cannot modify database: %s %s rc %d\n", name, sqlite3_errmsg(db), sqlite3_errcode(db));
             sqlite3_close(db);
             return NULL;
         }
     }
-    check_set_end(modify_db);
 
     return db;
 }
@@ -1221,56 +1208,46 @@ static void median_final(sqlite3_context *context) {
     sll_destroy(data, NULL);
 }
 
-int addqueryfuncs_common(sqlite3 *db) {
-    return !((sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
-                                      NULL,                       &uidtouser,           NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "gidtogroup",          1,   SQLITE_UTF8,
-                                      NULL,                       &gidtogroup,          NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "modetotxt",           1,   SQLITE_UTF8,
-                                      NULL,                       &modetotxt,           NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "strftime",            2,   SQLITE_UTF8,
-                                      NULL,                       &sqlite3_strftime,    NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
-                                      NULL,                       &blocksize,           NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,
-                                      NULL,                       &human_readable_size, NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
-                                      NULL,                       &sqlite_basename,     NULL, NULL)  == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "stdevs",              1,   SQLITE_UTF8,
-                                      NULL,                       NULL,    stdev_step, stdevs_final) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "stdevp",              1,   SQLITE_UTF8,
-                                      NULL,                       NULL,    stdev_step, stdevp_final) == SQLITE_OK) &&
-             (sqlite3_create_function(db,  "median",              1,   SQLITE_UTF8,
-                                      NULL,                       NULL,  median_step,  median_final) == SQLITE_OK));
+int addqueryfuncs(sqlite3 *db) {
+    return !(
+        (sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
+                                 NULL,                       &uidtouser,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "gidtogroup",          1,   SQLITE_UTF8,
+                                 NULL,                       &gidtogroup,          NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "modetotxt",           1,   SQLITE_UTF8,
+                                 NULL,                       &modetotxt,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "strftime",            2,   SQLITE_UTF8,
+                                 NULL,                       &sqlite3_strftime,    NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
+                                 NULL,                       &blocksize,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,
+                                 NULL,                       &human_readable_size, NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
+                                 NULL,                       &sqlite_basename,     NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "stdevs",              1,   SQLITE_UTF8,
+                                 NULL,                       NULL,  stdev_step,    stdevs_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "stdevp",              1,   SQLITE_UTF8,
+                                 NULL,                       NULL,  stdev_step,    stdevp_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "median",              1,   SQLITE_UTF8,
+                                 NULL,                       NULL,  median_step,   median_final) == SQLITE_OK)
+        );
 }
 
 int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
-    /* only available if work is valid */
-    if (work) {
-        void *lvl = (void *) (uintptr_t) work->level;
-        if (!((sqlite3_create_function(db,  "path",                     0, SQLITE_UTF8,
-                                       work,                            &path,               NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "epath",                    0, SQLITE_UTF8,
-                                       work,                            &epath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "fpath",                    0, SQLITE_UTF8,
-                                       work,                            &fpath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "rpath",                    2, SQLITE_UTF8,
-                                       work,                            &rpath,              NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "starting_point",           0,  SQLITE_UTF8,
-                                       (void *) &work->root_parent,     &starting_point,     NULL, NULL) == SQLITE_OK) &&
-              (sqlite3_create_function(db,  "level",                    0,  SQLITE_UTF8,
-                                       lvl,                             &relative_level,     NULL, NULL) == SQLITE_OK))) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-int addqueryfuncs(sqlite3 *db, size_t id, struct work *work) {
-    (void) id;
-    return !((addqueryfuncs_common(db) == 0) &&
-             (addqueryfuncs_with_context(db, work) == 0));
+    return !(
+        (sqlite3_create_function(db,  "path",                      0, SQLITE_UTF8,
+                                 work,                             &path,           NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "epath",                     0, SQLITE_UTF8,
+                                 work,                             &epath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "fpath",                     0, SQLITE_UTF8,
+                                 work,                             &fpath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "rpath",                     2, SQLITE_UTF8,
+                                 work,                             &rpath,          NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "starting_point",            0,  SQLITE_UTF8,
+                                 (void *) &work->root_parent,      &starting_point, NULL, NULL) == SQLITE_OK) &&
+        (sqlite3_create_function(db,  "level",                     0,  SQLITE_UTF8,
+                                 (void *) (uintptr_t) work->level, &relative_level, NULL, NULL) == SQLITE_OK)
+        );
 }
 
 struct xattr_db *create_xattr_db(struct template_db *tdb,
@@ -1337,13 +1314,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
         fprintf(stderr, "Warning: Unable to set permissions for %s: %d\n", filename, err);
     }
 
-    xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0
-                     , NULL, NULL
-                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                     , NULL, NULL
-                     , NULL, NULL
-                     #endif
-                     );
+    xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
 
     if (!xdb->db) {
         destroy_xattr_db(xdb);
@@ -1523,12 +1494,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
                    subdir->name, subdir->name_len,
                    "/" DBNAME, DBNAME_LEN + 1);
 
-        sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL
-                                   #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                                   , NULL, NULL
-                                   , NULL, NULL
-                                   #endif
-            );
+        sqlite3 *child_db = opendb(child_dbname, SQLITE_OPEN_READONLY, 1, 0, NULL, NULL);
         if (!child_db) {
             continue;
         }

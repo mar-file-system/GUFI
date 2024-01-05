@@ -458,13 +458,7 @@ static int process_path(const char *path, FILE *out, const char *format) {
 
     int rc = 0;
     sqlite3 *db = NULL;
-    if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 1
-                     , NULL, NULL
-                     #if defined(DEBUG) && defined(PER_THREAD_STATS)
-                     , NULL, NULL
-                     , NULL, NULL
-                     #endif
-                     ))) {
+    if ((db = opendb(dbname, SQLITE_OPEN_READONLY, 0, 1, NULL, NULL))) {
         /* query the database */
         char *err = NULL;
         if (sqlite3_exec(db, query, print_callback, &ca, &err) == SQLITE_OK) {
