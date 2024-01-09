@@ -127,46 +127,31 @@ static int searchmyll(struct PoolArgs *pa, ino_t inode, const enum DFL type) {
 static int create_readdirplus_tables(const char *name, sqlite3 *db, void *args) {
     (void) args;
 
-    return  (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK);
+    return (create_table_wrapper(name, db, READDIRPLUS, READDIRPLUS_CREATE) != SQLITE_OK);
 }
 
 static int insertdbgor(struct work *pwork, struct entry_data *ed, sqlite3_stmt *res)
 {
-    int rc = 0;
     char *zname = sqlite3_mprintf("%q", pwork->name);
     char *ztype = sqlite3_mprintf("%c", ed->type);
-    int error = sqlite3_bind_text(res, 1, zname, -1, SQLITE_TRANSIENT);
-    if (error != SQLITE_OK) {
-        fprintf(stderr,  "SQL insertdbgor bind name: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-        goto cleanup;
-    }
-    error = sqlite3_bind_text(res,  2, ztype, -1, SQLITE_TRANSIENT);
-    if (error != SQLITE_OK) {
-        fprintf(stderr,  "SQL insertdbgor bind type: %s error %d err %s\n",
-                pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
-        goto cleanup;
-    }
+    sqlite3_bind_text (res, 1, zname, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text (res, 2, ztype, -1, SQLITE_TRANSIENT);
     sqlite3_bind_int64(res, 3, ed->statuso.st_ino);
     sqlite3_bind_int64(res, 4, pwork->pinode);
     sqlite3_bind_int64(res, 5, ed->suspect);
 
-    error = sqlite3_step(res);
+    const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {
         fprintf(stderr,  "SQL insertdbgor step: %s error %d err %s\n",
                 pwork->name, error, sqlite3_errstr(error));
-        rc = 1;
     }
 
-  cleanup:
     sqlite3_free(ztype);
     sqlite3_free(zname);
     sqlite3_reset(res);
     sqlite3_clear_bindings(res);
 
-    return rc;
+    return !!error;
 }
 
 static int reprocessdir(struct input *in, void *passv, DIR *dir) {
