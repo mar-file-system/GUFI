@@ -85,13 +85,15 @@ processed before processing the current one
 #include "utils.h"
 
 /* define so that descend and ascend always have valid functions to call */
-static void noop(void *user_struct
-                 timestamp_sig) {
+static int noop(void *user_struct
+                timestamp_sig) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     (void) timestamp_buffers;
     #endif
 
     (void) user_struct;
+
+    return 0;
 }
 
 struct UserArgs {
@@ -113,13 +115,6 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     timestamp_create_start(ascend);
 
     struct UserArgs *ua = (struct UserArgs *) args;
-
-    /* reached root */
-    if (!data) {
-        timestamp_end_print(ua->timestamp_buffers, id, "ascend_to_top", ascend);
-        return 0;
-    }
-
     struct BottomUp *bu = (struct BottomUp *) data;
 
     timestamp_create_start(lock_refs);
@@ -149,17 +144,17 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
 
     /* call user ascend function */
     timestamp_create_start(run_user_asc_func);
-    ua->ascend(bu
-               #ifdef DEBUG
-               #ifdef PER_THREAD_STATS
-               , ua->timestamp_buffers
-               #endif
-               #endif
+    const int asc_rc = ua->ascend(bu
+                                  #ifdef DEBUG
+                                  #ifdef PER_THREAD_STATS
+                                  , ua->timestamp_buffers
+                                  #endif
+                                  #endif
         );
     timestamp_end_print(ua->timestamp_buffers, id, "run_user_ascend_function", run_user_asc_func);
 
     /* clean up 'struct BottomUp's here, when they are */
-    /* children instead of when they are the parent  */
+    /* children instead of when they are the parent */
     timestamp_create_start(cleanup);
     sll_destroy(&bu->subdirs, free);
     sll_destroy(&bu->subnondirs, free);
@@ -168,13 +163,21 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     pthread_mutex_destroy(&bu->refs.mutex);
     timestamp_end_print(ua->timestamp_buffers, id, "cleanup", cleanup);
 
-    /* always push parent to decrement their reference counters */
-    timestamp_create_start(enqueue_ascend);
-    QPTPool_enqueue(ctx, id, ascend_to_top, bu->parent);
-    timestamp_end_print(ua->timestamp_buffers, id, "enqueue_ascend", enqueue_ascend);
+    if (bu->parent) {
+        /* push parent to decrement their reference counters */
+        timestamp_create_start(enqueue_ascend);
+        QPTPool_enqueue(ctx, id, ascend_to_top, bu->parent);
+        timestamp_end_print(ua->timestamp_buffers, id, "enqueue_ascend", enqueue_ascend);
+    }
+    else {
+        /* reached root */
+        timestamp_create_start(free_root);
+        free(bu);
+        timestamp_end_print(ua->timestamp_buffers, id, "free_root", free_root);
+    }
 
     timestamp_end_print(ua->timestamp_buffers, id, "ascend_to_top", ascend);
-    return 0;
+    return asc_rc;
 }
 
 static struct BottomUp *track(struct BottomUp *src,
@@ -215,7 +218,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         fprintf(stderr, "Error: Could not open directory \"%s\": %s\n", bu->name, strerror(errno));
         free(data);
         timestamp_end_print(ua->timestamp_buffers, id, "descend_to_bottom", descend);
-        return 0;
+        return 1;
     }
 
     timestamp_create_start(init);
@@ -299,18 +302,18 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     /* this will probably be a bottleneck since subdirectories won't */
     /* be queued/processed while the descend function runs */
     timestamp_create_start(run_user_desc_func);
-    ua->descend(bu
-                #ifdef DEBUG
-                #ifdef PER_THREAD_STATS
-                , ua->timestamp_buffers
-                #endif
-                #endif
+    const int desc_rc = ua->descend(bu
+                                    #ifdef DEBUG
+                                    #ifdef PER_THREAD_STATS
+                                    , ua->timestamp_buffers
+                                    #endif
+                                    #endif
         );
     timestamp_end_print(ua->timestamp_buffers, id, "run_user_descend_function", run_user_desc_func);
 
     /* if there are subdirectories, this directory cannot go back up just yet */
     bu->refs.remaining = bu->subdir_count;
-    if (bu->subdir_count) {
+    if ((desc_rc == 0) && bu->subdir_count) {
         timestamp_create_start(enqueue_subdirs);
         /* have to lock to prevent subdirs from getting popped */
         /* off before all of them have been enqueued */
@@ -329,14 +332,28 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         timestamp_end_print(ua->timestamp_buffers, id, "enqueue_subdirs", enqueue_subdirs);
     }
     else {
-        /* start working upwards */
-        timestamp_create_start(enqueue_bottom);
-        QPTPool_enqueue(ctx, id, ascend_to_top, bu);
-        timestamp_end_print(ua->timestamp_buffers, id, "enqueue_bottom", enqueue_bottom);
+        if (desc_rc != 0) {
+            sll_destroy(&bu->subdirs, free);
+            sll_destroy(&bu->subnondirs, free);
+            bu->subdir_count = 0;
+            bu->subnondir_count = 0;
+        }
+
+        if (bu->parent) {
+            /* start working upwards */
+            timestamp_create_start(enqueue_ascend);
+            QPTPool_enqueue(ctx, id, ascend_to_top, bu);
+            timestamp_end_print(ua->timestamp_buffers, id, "enqueue_ascend", enqueue_ascend);
+        }
+        else {
+            timestamp_create_start(free_root);
+            free(bu);
+            timestamp_end_print(ua->timestamp_buffers, id, "free_root", free_root);
+        }
     }
 
     timestamp_end_print(ua->timestamp_buffers, id, "descend_to_bottom", descend);
-    return 0;
+    return desc_rc;
 }
 
 int parallel_bottomup(char **root_names, const size_t root_count,
@@ -383,21 +400,11 @@ int parallel_bottomup(char **root_names, const size_t root_count,
     }
 
     /* enqueue all root directories */
+    size_t good_roots = 0;
     timestamp_create_start(enqueue_roots);
-    struct BottomUp *roots = malloc(root_count * user_struct_size);
     for(size_t i = 0; i < root_count; i++) {
-        struct BottomUp *root = &roots[i];
+        struct BottomUp *root = (struct BottomUp *) malloc(user_struct_size);
         root->name_len = SNPRINTF(root->name, MAXPATH, "%s", root_names[i]);
-
-        if (lstat(root->name, &root->st) != 0) {
-            fprintf(stderr, "Could not stat %s\n", root->name);
-            continue;
-        }
-
-        if (!S_ISDIR(root->st.st_mode)) {
-            fprintf(stderr, "%s is not a directory\n", root->name);
-            continue;
-        }
 
         if (generate_alt_name) {
             size_t name_len = root->name_len;
@@ -406,6 +413,7 @@ int parallel_bottomup(char **root_names, const size_t root_count,
 
             if (name_len != root->name_len) {
                 fprintf(stderr, "%s could not fit into ALT_NAME buffer\n", root->name);
+                free(root);
                 continue;
             }
         }
@@ -413,6 +421,8 @@ int parallel_bottomup(char **root_names, const size_t root_count,
         root->parent = NULL;
         root->extra_args = extra_args;
         root->level = 0;
+
+        good_roots++;
 
         timestamp_create_start(enqueue_root);
         QPTPool_enqueue(pool, i % thread_count, descend_to_bottom, root);
@@ -424,17 +434,18 @@ int parallel_bottomup(char **root_names, const size_t root_count,
     QPTPool_wait(pool);
     timestamp_end_print(ua.timestamp_buffers, thread_count, "wait_for_threads", qptpool_wait);
 
-    /* clean up root directories since they don't get freed during processing */
-    free(roots);
+    const size_t threads_started = QPTPool_threads_started(pool);
+    const size_t threads_completed = QPTPool_threads_completed(pool);
 
     #ifdef DEBUG
-    const size_t threads_ran = QPTPool_threads_completed(pool);
-    fprintf(stderr, "Ran %zu threads\n", threads_ran);
+    fprintf(stderr, "Started %zu threads. Successfully completed %zu threads.\n",
+            threads_started, threads_completed);
     #endif
 
     QPTPool_destroy(pool);
 
     trie_free(ua.skip);
 
-    return 0;
+    return -!((root_count == good_roots) &&
+              (threads_started == threads_completed));
 }

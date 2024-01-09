@@ -69,7 +69,7 @@ OF SUCH DAMAGE.
 #include "dbutils.h"
 #include "utils.h"
 
-static void treesummary(void *args timestamp_sig) {
+static int treesummary(void *args timestamp_sig) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     (void) timestamp_buffers;
     #endif
@@ -83,11 +83,14 @@ static void treesummary(void *args timestamp_sig) {
 
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_READWRITE, 1, 0, create_treesummary_tables, NULL);
 
+    int rc = !!db;
     if (db) {
-        bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK);
+        rc = bottomup_collect_treesummary(db, dir->name, &dir->subdirs, ROLLUPSCORE_CHECK);
     }
 
     closedb(db);
+
+    return rc;
 }
 
 static void sub_help(void) {

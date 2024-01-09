@@ -772,7 +772,7 @@ end_rollup:
     return rc;
 }
 
-static void rollup(void *args timestamp_sig) {
+static int rollup(void *args timestamp_sig) {
     timestamp_create_start(setup);
 
     struct RollUp *dir = (struct RollUp *) args;
@@ -864,6 +864,8 @@ static void rollup(void *args timestamp_sig) {
     }
 
     closedb(dst);
+
+    return 0;
 }
 
 static void sub_help(void) {

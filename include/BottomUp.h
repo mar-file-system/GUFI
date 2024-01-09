@@ -129,8 +129,8 @@ struct BottomUp {
 
 /* Signature of function for processing */
 /* directories while traversing a tree */
-typedef void (*BU_f)(void *user_struct
-                     timestamp_sig);
+typedef int (*BU_f)(void *user_struct
+                    timestamp_sig);
 
 /*
  * Function user should call to walk an existing tree in parallel.

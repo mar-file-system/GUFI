@@ -64,18 +64,31 @@ OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
 
 #include "BottomUp.h"
 
-static BU_f f = [](void *args timestamp_sig) -> void {
+static BU_f zero = [](void *args timestamp_sig) -> int {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     (void) timestamp_buffers;
     #endif
 
     (void) args;
+
+    return 0;
+};
+
+static BU_f one = [](void *args timestamp_sig) -> int {
+    #if defined(DEBUG) && defined(PER_THREAD_STATS)
+    (void) timestamp_buffers;
+    #endif
+
+    (void) args;
+
+    return 1;
 };
 
 /* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
@@ -99,33 +112,35 @@ static int parallel_bottomup_wrapper(char **root_names, const size_t root_count,
         );
 }
 
+static const std::string ROOT = "@CMAKE_BINARY_DIR@";
+
 TEST(BottomUp, builddir) {
     const char *roots[] = {
-        "@CMAKE_BINARY_DIR@",
+        (char *) ROOT.c_str(),
     };
 
-    const size_t root_count = sizeof(roots) / sizeof(roots[0]);
+    const std::size_t root_count = sizeof(roots) / sizeof(roots[0]);
 
     EXPECT_EQ(parallel_bottomup_wrapper((char **) roots, root_count, 1,
                                         sizeof(struct BottomUp),
-                                        f, f, 0, 0, nullptr), 0);
+                                        zero, zero, 1, 0, nullptr), 0);
 }
 
 TEST(BottomUp, bad) {
     // bad user struct size
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, 1,
                                         sizeof(struct BottomUp) - 1,
-                                        f, f, 0, 0, nullptr), -1);
+                                        zero, zero, 0, 0, nullptr), -1);
 
     // bad thread count
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, 0,
                                         sizeof(struct BottomUp),
-                                        f, f, 0, 0, nullptr), -1);
+                                        zero, zero, 0, 0, nullptr), -1);
 
-    /* no root dirs */
+    // no root dirs
     EXPECT_EQ(parallel_bottomup_wrapper(nullptr, 0, 1,
                                         sizeof(struct BottomUp),
-                                        f, f, 0, 0, nullptr), 0);
+                                        zero, zero, 0, 0, nullptr), 0);
 
     char badfilename[] = "@CMAKE_BINARY_DIR@/XXXXXX";
     int fd = mkstemp(badfilename);
@@ -136,17 +151,37 @@ TEST(BottomUp, bad) {
         badfilename,
     };
 
-    const size_t root_count = sizeof(roots) / sizeof(roots[0]);
+    const std::size_t root_count = sizeof(roots) / sizeof(roots[0]);
 
     // root path is not directory
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
                                         sizeof(struct BottomUp),
-                                        f, f, 0, 0, nullptr), 0);
+                                        zero, zero, 0, 0, nullptr), -1);
 
     EXPECT_EQ(remove(badfilename), 0);
 
     // root path doesn't exist
     EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
                                         sizeof(struct BottomUp),
-                                        f, f, 0, 0, nullptr), 0);
+                                        zero, zero, 0, 0, nullptr), -1);
+
+    // name is too long after conversion
+    const std::size_t maxpath = sizeof(((struct BottomUp *) nullptr)->name);
+    const std::string name(maxpath, '%');
+    roots[0] = (char *) name.c_str();
+
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+                                        sizeof(struct BottomUp),
+                                        zero, zero, 0, 1, nullptr), -1);
+
+    // path is good but user function returned error
+    roots[0] = (char *) ROOT.c_str();
+
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+                                        sizeof(struct BottomUp),
+                                        one, zero, 0, 1, nullptr), -1);
+
+    EXPECT_EQ(parallel_bottomup_wrapper(roots, root_count, 1,
+                                        sizeof(struct BottomUp),
+                                        zero, one, 0, 1, nullptr), -1);
 }

@@ -78,26 +78,31 @@ OF SUCH DAMAGE.
 /* Subdirectories are already gone, so    */
 /* they don't have to processed at the    */
 /* current level.                         */
-static void rm_dir(void * args timestamp_sig) {
+static int rm_dir(void *args timestamp_sig) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     (void) timestamp_buffers;
     #endif
 
-    struct BottomUp * dir = (struct BottomUp *) args;
+    struct BottomUp *dir = (struct BottomUp *) args;
 
     char db_name[MAXPATH];
     SNPRINTF(db_name, MAXPATH, "%s/" DBNAME, dir->name);
 
+    int rc = 0;
     sll_loop(&dir->subnondirs, node) {
         struct BottomUp * entry = (struct BottomUp *) sll_node_data(node);
         if (unlink(entry->name) != 0) {
             fprintf(stderr, "Warning: Failed to delete \"%s\": %s\n", entry->name, strerror(errno));
+            rc = 1;
         }
     }
 
     if (rmdir(dir->name) != 0) {
         fprintf(stderr, "Warning: Failed to remove \"%s\": %s\n", dir->name, strerror(errno));
+        return 1;
     }
+
+    return rc;
 }
 
 static void sub_help(void) {
