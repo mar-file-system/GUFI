@@ -74,7 +74,7 @@ static const char INTERMEDIATE_ATTACH_NAME[] = "gufi_query_intermediate";
 static sqlite3 *aggregate_setup(char *dbname, const char *init_agg) {
     sqlite3 *db = opendb(dbname, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, 1, 1, NULL, NULL);
     if (!db) {
-        fprintf(stderr, "Could not open aggregation database\n");
+        fprintf(stderr, "Could not open aggregation database \"%s\"\n", dbname);
         closedb(db);
         return NULL;
     }

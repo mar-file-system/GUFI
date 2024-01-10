@@ -329,3 +329,81 @@ TEST(PoolArgs, OUTDB_aggregate) {
 
     // final database file is created by aggregate, so don't test here
 }
+
+TEST(PoolArgs, bad_skip) {
+    struct input in;
+    setup_input(&in, OUTDB, false);
+    in.skip.data = "";
+
+    PoolArgs pa;
+    EXPECT_EQ(PoolArgs_init(&pa, &in, &mutex), 1);
+    EXPECT_EQ(pa.in, &in);
+    EXPECT_EQ(pa.ta, nullptr);
+    EXPECT_EQ(pa.skip, nullptr);
+    EXPECT_EQ(pa.stdout_mutex, nullptr);
+}
+
+static void check_poolargs_init_failed(struct input &in, pthread_mutex_t *expected_mutex) {
+    PoolArgs pa;
+    EXPECT_EQ(PoolArgs_init(&pa, &in, &mutex), 1);
+    EXPECT_EQ(pa.in, &in);
+    EXPECT_EQ(pa.ta, nullptr);
+    EXPECT_EQ(pa.skip, nullptr);
+    EXPECT_EQ(pa.stdout_mutex, expected_mutex);
+}
+
+TEST(PoolArgs, bad_outdb) {
+    struct input in;
+    setup_input(&in, OUTDB, false);
+
+    char parent[7];
+    snprintf(parent, sizeof(parent), "XXXXXX");
+    ASSERT_EQ(mkdtemp(parent), parent);
+
+    char prefix[13];
+    snprintf(prefix, sizeof(prefix), "%s/outdb", parent);
+
+    in.outname.data = prefix;
+
+    // create "<parent>/outdb.0" as a directory so that opendb fails
+    char subdir[MAXPATH];
+    snprintf(subdir, sizeof(subdir), "%s.0", prefix);
+    ASSERT_EQ(mkdir(subdir, S_IRWXU | S_IRWXG | S_IRWXO), 0);
+
+    check_poolargs_init_failed(in, nullptr);
+
+    EXPECT_EQ(rmdir(subdir), 0);
+    EXPECT_EQ(rmdir(parent), 0);
+}
+
+TEST(PoolArgs, bad_outfile) {
+    struct input in;
+    setup_input(&in, OUTFILE, false);
+
+    char parent[7];
+    snprintf(parent, sizeof(parent), "XXXXXX");
+    ASSERT_EQ(mkdtemp(parent), parent);
+
+    char prefix[15];
+    snprintf(prefix, sizeof(prefix), "%s/outfile", parent);
+
+    in.outname.data = prefix;
+
+    // create "<parent>/outfile.0" as a directory so that fopen fails
+    char subdir[MAXPATH];
+    snprintf(subdir, sizeof(subdir), "%s.0", prefix);
+    ASSERT_EQ(mkdir(subdir, S_IRWXU | S_IRWXG | S_IRWXO), 0);
+
+    check_poolargs_init_failed(in, nullptr);
+
+    EXPECT_EQ(rmdir(subdir), 0);
+    EXPECT_EQ(rmdir(parent), 0);
+}
+
+TEST(PoolArgs, bad_output_buffer_size) {
+    struct input in;
+    setup_input(&in, STDOUT, false);
+    in.output_buffer_size = 0;
+
+    check_poolargs_init_failed(in, &mutex);
+}

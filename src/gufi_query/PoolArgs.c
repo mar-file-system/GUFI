@@ -129,7 +129,7 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
                 SNPRINTF(outname, MAXPATH, "%s.%zu", in->outname.data, i);
                 ta->outfile = fopen(outname, "w");
                 if (!ta->outfile) {
-                    fprintf(stderr, "Error: Could not open output file");
+                    fprintf(stderr, "Error: Could not open output file \"%s\"\n", outname);
                     break;
                 }
             }
@@ -183,5 +183,8 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
     }
 
     trie_free(pa->skip);
+    pa->skip = NULL;
+
     free(pa->ta);
+    pa->ta = NULL;
 }

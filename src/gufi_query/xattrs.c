@@ -73,9 +73,10 @@ static int create_view(const char *name, sqlite3 *db, const char *query, size_t 
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Create %s view failed: %s\n", name, err);
         sqlite3_free(err);
+        return 0;
     }
 
-    return !err; /* return 1 on success */
+    return 1;
 }
 
 int xattr_create_views(sqlite3 *db

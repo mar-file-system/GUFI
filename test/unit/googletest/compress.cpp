@@ -66,7 +66,7 @@ OF SUCH DAMAGE.
 
 #include "compress.h"
 
-/* some data structure only visible here */
+// only visible here
 typedef struct {
     compressed_t comp;
     char data[1ULL << 10];
@@ -112,8 +112,28 @@ TEST(compress, on) {
     EXPECT_EQ(decompress_struct((void **) &decompressed, compressed, DATA_LEN), 0);
     EXPECT_NE(decompressed, compressed);
 
-    /* compressed was freed, decompressed points to stack address */
+    // compressed was freed, decompressed points to stack address
     free_struct(decompressed, compressed, 0);
+}
+
+TEST(compress, not_enough) {
+    struct {
+        compressed_t comp;
+        int data; // not enough data to compress
+    } small;
+
+    memset(&small, 0, sizeof(small));
+    small.data = 1234;
+
+    void *not_compressed = compress_struct(1, &small, sizeof(small));
+    EXPECT_NE(not_compressed, nullptr);
+
+    decltype(small) *nc = (decltype(small) *) not_compressed;
+    EXPECT_EQ(nc->comp.yes, (int)    0);
+    EXPECT_EQ(nc->comp.len, (size_t) 0);
+    EXPECT_EQ(nc->data, small.data);
+
+    free(not_compressed);
 }
 
 TEST(compress, free_in_situ) {

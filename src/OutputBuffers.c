@@ -68,14 +68,14 @@ OF SUCH DAMAGE.
 #include "OutputBuffers.h"
 
 struct OutputBuffer *OutputBuffer_init(struct OutputBuffer *obuf, const size_t capacity) {
-    if (obuf) {
-        if (!(obuf->buf = malloc(capacity))) {
-            return NULL;
-        }
-        obuf->capacity = capacity;
-        obuf->filled = 0;
-        obuf->count = 0;
+    if (!obuf || !capacity) {
+        return NULL;
     }
+
+    obuf->buf = malloc(capacity);
+    obuf->capacity = capacity;
+    obuf->filled = 0;
+    obuf->count = 0;
 
     return obuf;
 }
@@ -112,15 +112,13 @@ void OutputBuffer_destroy(struct OutputBuffer *obuf) {
 }
 
 struct OutputBuffers *OutputBuffers_init(struct OutputBuffers *obufs, const size_t count, const size_t capacity, pthread_mutex_t *global_mutex) {
-    if (!obufs) {
+    if (!obufs || !count) {
         return NULL;
     }
 
     obufs->mutex = global_mutex;
     obufs->count = 0;
-    if (!(obufs->buffers = malloc(count * sizeof(struct OutputBuffer)))) {
-        return NULL;
-    }
+    obufs->buffers = calloc(count, sizeof(struct OutputBuffer));
 
     for(size_t i = 0; i < count; i++) {
         if (!OutputBuffer_init(&obufs->buffers[i], capacity)) {

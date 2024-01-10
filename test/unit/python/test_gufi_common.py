@@ -115,6 +115,14 @@ class TestGUFICommon(unittest.TestCase):
                     value = '{0}{1}'.format(prefix, suffix)
                     gufi_common.get_size(value)
 
+    def test_get_user(self):
+        with self.assertRaises(ValueError):
+            gufi_common.get_user('')
+
+    def test_get_group(self):
+        with self.assertRaises(ValueError):
+            gufi_common.get_group('')
+
     def test_get_port(self):
         for valid_port in range(65536):
             self.assertEqual(valid_port, gufi_common.get_port(str(valid_port)))

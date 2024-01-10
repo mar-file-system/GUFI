@@ -116,9 +116,7 @@ TEST(OutputBuffer, use) {
 }
 
 TEST(OutputBuffer, bad) {
-    struct OutputBuffer ob;
-    EXPECT_EQ(OutputBuffer_init(nullptr,                1), nullptr);
-    EXPECT_EQ(OutputBuffer_init(&ob,     (std::size_t) -1), nullptr);
+    EXPECT_EQ(OutputBuffer_init(nullptr, 1), nullptr);
 }
 
 TEST(OutputBuffers, use) {
@@ -203,7 +201,7 @@ TEST(OutputBuffers, use) {
 
 TEST(OutputBuffers, bad) {
     struct OutputBuffers obs;
-    EXPECT_EQ(OutputBuffers_init(nullptr,                1,                1, nullptr), nullptr);
-    EXPECT_EQ(OutputBuffers_init(&obs,    (std::size_t) -1,                1, nullptr), nullptr);
-    EXPECT_EQ(OutputBuffers_init(&obs,                   1, (std::size_t) -1, nullptr), nullptr);
+    EXPECT_EQ(OutputBuffers_init(nullptr, 1, 1, nullptr), nullptr);
+    EXPECT_EQ(OutputBuffers_init(&obs,    0, 1, nullptr), nullptr);
+    EXPECT_EQ(OutputBuffers_init(&obs,    1, 0, nullptr), nullptr);
 }

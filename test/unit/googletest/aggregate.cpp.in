@@ -104,7 +104,7 @@ TEST(gufi_query, aggregate) {
     in.sql.init_agg.data     = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
     in.sql.intermediate.data = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
     in.sql.agg.data          = G.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
-    in.output_buffer_size    = 0;
+    in.output_buffer_size    = 1024;
     in.skip.data             = nullptr;
 
     PoolArgs_t pa;
@@ -182,10 +182,15 @@ TEST(gufi_query, aggregate_outputs) {
     memset(&agg, 0, sizeof(agg));
 
     in.output = STDOUT;
-    in.output_buffer_size = (std::size_t) -1;
+    in.output_buffer_size = 0;
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* bad buffer size */
 
     in.output = OUTFILE;
+    in.outname.data = "@CMAKE_BINARY_DIR@";
+    in.outname.len = strlen(in.outname.data);
+    EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
+
+    in.output = OUTDB;
     in.outname.data = "@CMAKE_BINARY_DIR@";
     in.outname.len = strlen(in.outname.data);
     EXPECT_EQ(aggregate_init(&agg, &in), nullptr); /* directory, not file */
