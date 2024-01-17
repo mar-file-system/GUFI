@@ -121,7 +121,7 @@ static int searchmyll(struct PoolArgs *pa, ino_t inode, const enum DFL type) {
 
     char str[256];
     const size_t len = SNPRINTF(str, sizeof(str), "%" STAT_ino, inode);
-    return trie_search(dst, str, len);
+    return trie_search(dst, str, len, NULL);
 }
 
 static int create_readdirplus_tables(const char *name, sqlite3 *db, void *args) {
@@ -560,7 +560,7 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
                         if (testll > pa->glsuspectdmax) pa->glsuspectdmax = testll;
                     }
 
-                    trie_insert(pa->dirs, incsuspect, strlen(incsuspect));
+                    trie_insert(pa->dirs, incsuspect, strlen(incsuspect), NULL, NULL);
                     cntd++;
                     break;
                 case 'f': case 'l':
@@ -572,7 +572,7 @@ static int processinit(struct PoolArgs *pa, QPTPool_t *ctx) {
                         if (testll > pa->glsuspectflmax) pa->glsuspectflmax = testll;
                     }
 
-                    trie_insert(pa->fls, incsuspect, strlen(incsuspect));
+                    trie_insert(pa->fls, incsuspect, strlen(incsuspect), NULL, NULL);
                     cntfl++;
                     break;
             }

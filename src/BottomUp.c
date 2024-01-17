@@ -241,7 +241,7 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         }
 
         size_t name_len = strlen(entry->d_name);
-        if (trie_search(ua->skip, entry->d_name, name_len) == 1) {
+        if (trie_search(ua->skip, entry->d_name, name_len, NULL) == 1) {
             continue;
         }
 

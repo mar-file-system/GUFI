@@ -1,0 +1,485 @@
+/*
+This file is part of GUFI, which is part of MarFS, which is released
+under the BSD license.
+
+
+Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+From Los Alamos National Security, LLC:
+LA-CC-15-039
+
+Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+Copyright 2017. Los Alamos National Security, LLC. This software was produced
+under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+the U.S. Department of Energy. The U.S. Government has rights to use,
+reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+modified to produce derivative works, such modified software should be
+clearly marked, so as not to confuse it with the version available from
+LANL.
+
+THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+*/
+
+
+
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include <gtest/gtest.h>
+
+#include "bf.h"
+#include "histogram.h"
+
+static void setup_db(sqlite3 **db) {
+    ASSERT_EQ(sqlite3_open(":memory:", db), SQLITE_OK);
+    ASSERT_NE(*db, nullptr);
+    ASSERT_EQ(addhistfuncs(*db), 1);
+}
+
+// macro so that error messages print useful line numbers
+#define insert(db, col, val)                                    \
+    do {                                                        \
+        char sql[MAXSQL];                                       \
+        snprintf(sql, sizeof(sql),                              \
+                 "INSERT INTO test (%s) VALUES (%s);",          \
+                 col, val.c_str());                             \
+        ASSERT_EQ(sqlite3_exec(db, sql, nullptr,                \
+                               nullptr, nullptr), SQLITE_OK);   \
+    } while (0)
+
+static int get_str(void *args, int, char **data, char **) {
+    if (data[0]) {
+        char **output = static_cast <char **> (args);
+        const std::size_t len = strlen(data[0]);
+        *output = (char *) malloc(len + 1);
+        memcpy(*output, data[0], len);
+        (*output)[len] = '\0';
+    }
+    return 0;
+}
+
+static void test_log2_hist(const std::vector <std::string> &types,
+                           const std::vector <std::string> &values) {
+    for(std::string const &type : types) {
+        sqlite3 *db = nullptr;
+        setup_db(&db);
+
+        char create[MAXSQL];
+        snprintf(create, sizeof(create), "CREATE TABLE test (value %s);", type.c_str());
+        ASSERT_EQ(sqlite3_exec(db, create, nullptr, nullptr, nullptr), SQLITE_OK);
+
+        for(std::string const &value : values) {
+            insert(db, "value", value);
+        }
+
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT log2_hist(value, 3) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        log2_hist *hist = log2_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr);
+
+        EXPECT_EQ(hist->count,      (std::size_t) 3);
+        EXPECT_EQ(hist->lt,         (std::size_t) 2); // NULL, 0
+        EXPECT_EQ(hist->buckets[0], (std::size_t) 1); // 1
+        EXPECT_EQ(hist->buckets[1], (std::size_t) 2); // 2, 3
+        EXPECT_EQ(hist->buckets[2], (std::size_t) 1); // 4
+        EXPECT_EQ(hist->ge,         (std::size_t) 1); // 8
+
+        log2_hist_free(hist);
+        free(hist_str);
+        sqlite3_close(db);
+    }
+}
+
+TEST(histogram, log2) {
+    // nothing in buckets
+    {
+        sqlite3 *db = nullptr;
+        setup_db(&db);
+
+        char create[MAXSQL];
+        snprintf(create, sizeof(create), "CREATE TABLE test (value INT);");
+        ASSERT_EQ(sqlite3_exec(db, create, nullptr, nullptr, nullptr), SQLITE_OK);
+
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT log2_hist(value, 3) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        log2_hist *hist = log2_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr); // not null, but don't access
+
+        EXPECT_EQ(hist->count,      (std::size_t) 0);
+        EXPECT_EQ(hist->lt,         (std::size_t) 0);
+        EXPECT_EQ(hist->ge,         (std::size_t) 0);
+
+        log2_hist_free(hist);
+        free(hist_str);
+        sqlite3_close(db);
+    }
+
+    // normal usage
+    test_log2_hist({"INT",  "DOUBLE"}, {"0",   "1",   "2",    "3",     "4",      "8",          "NULL"});
+    test_log2_hist({"TEXT", "BLOB"},   {"''",  "'1'", "'22'", "'333'", "'4444'", "'88888888'", "NULL"});
+
+    // bad strings
+    EXPECT_EQ(log2_hist_parse("'"),          nullptr);
+    EXPECT_EQ(log2_hist_parse("0"),          nullptr);
+    EXPECT_EQ(log2_hist_parse("0;"),         nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0"),        nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;"),       nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;0"),      nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;0;0"),    nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;0;0:"),   nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;0;0:;"),  nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;0;0:';"), nullptr);
+}
+
+TEST(histogram, mode) {
+    // C++20 is not required, so not using Designated Initializers
+    std::size_t buckets[01000];
+    memset(buckets, 0, sizeof(buckets));
+
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE test (mode INT);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // nothing in buckets
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT mode_hist(mode) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+
+        mode_hist *hist = mode_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+
+        EXPECT_EQ(memcmp(hist->buckets, buckets, sizeof(buckets)), 0);
+
+        mode_hist_free(hist);
+        free(hist_str);
+    }
+
+    buckets[0600] = 1;
+    buckets[0644] = 1;
+    buckets[0700] = 1;
+    buckets[0755] = 2;
+
+    for(size_t mode = 0; mode < 01000; mode++) {
+        if (buckets[mode]) {
+            for(size_t i = 0; i < buckets[mode]; i++) {
+                std::stringstream s; s << mode;
+                insert(db, "mode", s.str());
+            }
+        }
+    }
+
+    // normal usage
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT mode_hist(mode) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+
+        mode_hist *hist = mode_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+
+        EXPECT_EQ(memcmp(hist->buckets, buckets, sizeof(buckets)), 0);
+
+        mode_hist_free(hist);
+        free(hist_str);
+    }
+
+    sqlite3_close(db);
+
+    // bad strings
+    EXPECT_EQ(mode_hist_parse("777:"),   nullptr);
+    EXPECT_EQ(mode_hist_parse("777:;"),  nullptr);
+    EXPECT_EQ(mode_hist_parse("777:';"), nullptr);
+    EXPECT_EQ(mode_hist_parse("1000:1"), nullptr);
+}
+
+TEST(histogram, time) {
+    const char reftime[] = "31536000";
+    const std::string timestamps[] = {
+        "0",         // a year ago
+        "31532400",  // an hour ago
+        "31535940",  // a minute ago
+        "31535998",  // 2 seconds ago
+        "31535999",  // 1 second ago
+        "31536000",  // 0 seconds ago
+    };
+
+    char select[MAXSQL];
+    snprintf(select, sizeof(select), "SELECT time_hist(timestamp, %s) FROM test;", reftime);
+
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE test (timestamp INT);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // nothing in buckets
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, select, get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        time_hist *hist = time_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+
+        EXPECT_EQ(hist->ref,        (std::time_t) 0);
+        EXPECT_EQ(hist->buckets[0], (std::size_t) 0); // < second
+        EXPECT_EQ(hist->buckets[1], (std::size_t) 0); // < minute
+        EXPECT_EQ(hist->buckets[2], (std::size_t) 0); // < hour
+        EXPECT_EQ(hist->buckets[3], (std::size_t) 0); // < day
+        EXPECT_EQ(hist->buckets[4], (std::size_t) 0); // < week
+        EXPECT_EQ(hist->buckets[5], (std::size_t) 0); // < 4 weeks
+        EXPECT_EQ(hist->buckets[6], (std::size_t) 0); // < year
+        EXPECT_EQ(hist->buckets[7], (std::size_t) 0); // >= year
+
+        time_hist_free(hist);
+        free(hist_str);
+    }
+
+    for(std::string const &timestamp : timestamps) {
+        insert(db, "timestamp", timestamp);
+    }
+
+    // normal usage
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, select, get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        time_hist *hist = time_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+
+        EXPECT_EQ(hist->ref,        (std::time_t) 31536000);
+        EXPECT_EQ(hist->buckets[0], (std::size_t) 1); // < second
+        EXPECT_EQ(hist->buckets[1], (std::size_t) 2); // < minute
+        EXPECT_EQ(hist->buckets[2], (std::size_t) 1); // < hour
+        EXPECT_EQ(hist->buckets[3], (std::size_t) 1); // < day
+        EXPECT_EQ(hist->buckets[4], (std::size_t) 0); // < week
+        EXPECT_EQ(hist->buckets[5], (std::size_t) 0); // < 4 weeks
+        EXPECT_EQ(hist->buckets[6], (std::size_t) 0); // < year
+        EXPECT_EQ(hist->buckets[7], (std::size_t) 1); // >= year
+
+        time_hist_free(hist);
+        free(hist_str);
+    }
+
+    sqlite3_close(db);
+
+    // bad strings
+    EXPECT_EQ(time_hist_parse("'"),      nullptr);
+    EXPECT_EQ(time_hist_parse("';"),     nullptr);
+    EXPECT_EQ(time_hist_parse("0"),      nullptr);
+    EXPECT_EQ(time_hist_parse("0;5"),    nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:"),   nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:;"),  nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:';"), nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:0;"), nullptr);
+}
+
+static const std::string CATEGORIES[] = {
+    "'3x'",
+    "'string'",
+    "'str'",
+    "'3x'",
+    "NULL",
+    "'string'",
+    "'3x'",
+    "'str'",
+    "'abcd'",
+    "'abcd'",
+    "'once'",
+};
+
+TEST(histogram, category) {
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE test (category TEXT);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // no buckets
+    {
+        char *hist_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        category_hist *hist = category_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr);
+
+        EXPECT_EQ(hist->count, (std::size_t) 0);
+
+        category_hist_free(hist);
+        free(hist_str);
+    }
+
+    for(std::string const &category : CATEGORIES) {
+        insert(db, "category", category);
+    }
+
+    char *hist_str = nullptr;
+    ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category) FROM test;",
+                           get_str, &hist_str, nullptr), SQLITE_OK);
+    ASSERT_NE(hist_str, nullptr);
+
+    // normal usage
+    {
+        category_hist *hist = category_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr);
+
+        EXPECT_EQ(hist->count, (std::size_t) 4);
+
+        EXPECT_STREQ(hist->buckets[0].name, "3x");
+        EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
+
+        EXPECT_STREQ(hist->buckets[1].name, "abcd");
+        EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+        EXPECT_STREQ(hist->buckets[2].name, "str");
+        EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+        EXPECT_STREQ(hist->buckets[3].name, "string");
+        EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2);
+
+        // category "once" does not show up
+
+        category_hist_free(hist);
+    }
+
+    {
+        hist_str[0] = '3'; // incorrect count
+
+        category_hist_t *hist = category_hist_parse(hist_str);
+        ASSERT_NE(hist, nullptr);
+        ASSERT_NE(hist->buckets, nullptr);
+
+        EXPECT_EQ(hist->count, (std::size_t) 3);
+
+        EXPECT_STREQ(hist->buckets[0].name, "3x");
+        EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
+
+        // category "abcd" does not show up due to ordering of categories
+
+        EXPECT_STREQ(hist->buckets[1].name, "str");
+        EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+        EXPECT_STREQ(hist->buckets[2].name, "string");
+        EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+        category_hist_free(hist);
+    }
+
+    free(hist_str);
+    sqlite3_close(db);
+
+    // bad strings
+    EXPECT_EQ(category_hist_parse("'"),          nullptr);
+    EXPECT_EQ(category_hist_parse("1"),          nullptr);
+    EXPECT_EQ(category_hist_parse("1;"),         nullptr);
+    EXPECT_EQ(category_hist_parse("1;'"),        nullptr);
+    EXPECT_EQ(category_hist_parse("1;3"),        nullptr);
+    EXPECT_EQ(category_hist_parse("1;3:"),       nullptr);
+    EXPECT_EQ(category_hist_parse("1;3:cat"),    nullptr);
+    EXPECT_EQ(category_hist_parse("1;3:cat:"),   nullptr);
+    EXPECT_EQ(category_hist_parse("1;3:cat:'"),  nullptr);
+    EXPECT_EQ(category_hist_parse("1;3:cat:';"), nullptr);
+}
+
+TEST(histogram, mode_count) {
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE test (category TEXT);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    // no mode
+    {
+        char *mc_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
+                               get_str, &mc_str, nullptr), SQLITE_OK);
+        ASSERT_EQ(mc_str, nullptr);
+    }
+
+    for(std::string const &category : CATEGORIES) {
+        insert(db, "category", category);
+    }
+
+    // one mode
+    {
+        char *mc_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
+                               get_str, &mc_str, nullptr), SQLITE_OK);
+        ASSERT_NE(mc_str, nullptr);
+
+        mode_count *mc = mode_count_parse(mc_str);
+        ASSERT_NE(mc, nullptr);
+        ASSERT_NE(mc->mode, nullptr);
+
+        EXPECT_STREQ(mc->mode, "3x");
+        EXPECT_EQ(mc->len,     (std::size_t) 2);
+        EXPECT_EQ(mc->count,   (std::size_t) 3);
+
+        mode_count_free(mc);
+        free(mc_str);
+    }
+
+    sqlite3_close(db);
+
+    // bad strings
+    EXPECT_EQ(mode_count_parse("'"),        nullptr);
+    EXPECT_EQ(mode_count_parse("3"),        nullptr);
+    EXPECT_EQ(mode_count_parse("3:"),       nullptr);
+    EXPECT_EQ(mode_count_parse("3:cat"),    nullptr);
+    EXPECT_EQ(mode_count_parse("3:cat:"),   nullptr);
+    EXPECT_EQ(mode_count_parse("3:cat:;"),  nullptr);
+    EXPECT_EQ(mode_count_parse("3:cat:';"), nullptr);
+}

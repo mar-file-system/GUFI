@@ -111,6 +111,7 @@ set(GUFI_SOURCES
   dbutils.c
   debug.c
   external.c
+  histogram.c
   print.c
   template_db.c
   trace.c

@@ -182,7 +182,7 @@ static size_t descend2(QPTPool_t *ctx,
 
             descend_timestamp_start(dts, strncmp_call);
             size_t len = strlen(entry->d_name);
-            const int skip = (trie_search(skip_names, entry->d_name, len) ||
+            const int skip = (trie_search(skip_names, entry->d_name, len, NULL) ||
                              (strncmp(entry->d_name + len - 3, ".db", 3) == 0));
             descend_timestamp_end(strncmp_call);
 

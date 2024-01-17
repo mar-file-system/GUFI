@@ -120,7 +120,7 @@ static int get_entries(DIR *dir, trie_t *skip_db,
         const size_t len = strlen(entry->d_name);
 
         /* skip . and .. and *.db */
-        const int skip = (trie_search(skip_db, entry->d_name, len) ||
+        const int skip = (trie_search(skip_db, entry->d_name, len, NULL) ||
                           ((len >= 3) && (strncmp(entry->d_name + len - 3, ".db", 3) == 0)));
         if (skip) {
             continue;

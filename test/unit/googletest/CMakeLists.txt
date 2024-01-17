@@ -77,6 +77,7 @@ if (CMAKE_CXX_COMPILER)
     bf.cpp
     compress.cpp
     debug.cpp
+    histogram.cpp
     print.cpp
     template_db.cpp
     trace.cpp

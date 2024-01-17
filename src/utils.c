@@ -405,7 +405,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             const size_t len = strlen(dir_child->d_name);
 
             /* skip . and .. and *.db */
-            const int skip = (trie_search(skip_names, dir_child->d_name, len) ||
+            const int skip = (trie_search(skip_names, dir_child->d_name, len, NULL) ||
                               (skip_db && (len >= 3) && (strncmp(dir_child->d_name + len - 3, ".db", 3) == 0)));
             if (skip) {
                 continue;
@@ -633,8 +633,8 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
     *skip = trie_alloc();
 
     /* always skip . and .. */
-    trie_insert(*skip, ".",  1);
-    trie_insert(*skip, "..", 2);
+    trie_insert(*skip, ".",  1, NULL, NULL);
+    trie_insert(*skip, "..", 2, NULL, NULL);
 
     /* add user defined directory names to skip */
     if (filename) {
@@ -655,7 +655,7 @@ int setup_directory_skip(const char *filename, trie_t **skip) {
                 continue;
             }
 
-            trie_insert(*skip, name, strlen(name));
+            trie_insert(*skip, name, strlen(name), NULL, NULL);
         }
 
         fclose(skipfile);

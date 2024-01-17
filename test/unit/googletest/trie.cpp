@@ -81,10 +81,10 @@ TEST(trie, insert_nullptr) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    EXPECT_NO_THROW(trie_insert(nullptr, nullptr, 0));
-    trie_insert(root, nullptr, 0);
+    EXPECT_NO_THROW(trie_insert(nullptr, nullptr, 0, nullptr, nullptr));
+    trie_insert(root, nullptr, 0, nullptr, nullptr);
 
-    EXPECT_EQ(trie_search(root, nullptr, 0), 0);
+    EXPECT_EQ(trie_search(root, nullptr, 0, nullptr), 0);
 
     trie_free(root);
 }
@@ -95,9 +95,9 @@ TEST(trie, insert_empty) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, buf, 0);
+    trie_insert(root, buf, 0, nullptr, nullptr);
 
-    EXPECT_EQ(trie_search(root, buf, 0), 1);
+    EXPECT_EQ(trie_search(root, buf, 0, nullptr), 1);
 
     trie_free(root);
 }
@@ -106,10 +106,10 @@ TEST(trie, search) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, str, 4);
+    trie_insert(root, str, 4, nullptr, nullptr);
 
-    EXPECT_EQ(trie_search(nullptr, str, 0), 0);
-    EXPECT_EQ(trie_search(root, str, 4),  1);
+    EXPECT_EQ(trie_search(nullptr, str, 0, nullptr), 0);
+    EXPECT_EQ(trie_search(root, str, 4, nullptr),  1);
 
     trie_free(root);
 }
@@ -125,37 +125,37 @@ TEST(trie, delete) {
 
     {
         /* insert long string and sub string */
-        trie_insert(root, str, str_len);
-        trie_insert(root, str, sub_len);
-        EXPECT_EQ(trie_search(root, str, str_len), 1);
-        EXPECT_EQ(trie_search(root, str, sub_len), 1);
+        trie_insert(root, str, str_len, nullptr, nullptr);
+        trie_insert(root, str, sub_len, nullptr, nullptr);
+        EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
+        EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
 
         /* longer string is deleted, but the shorter string remains */
         EXPECT_EQ(trie_delete(root, str, str_len), 0);
         EXPECT_NE(root, nullptr);
-        EXPECT_EQ(trie_search(root, str, str_len), 0);
-        EXPECT_EQ(trie_search(root, str, sub_len), 1);
+        EXPECT_EQ(trie_search(root, str, str_len, nullptr), 0);
+        EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
     }
 
     {
         /* insert long string and sub string */
-        trie_insert(root, str, str_len);
-        trie_insert(root, str, sub_len);
-        EXPECT_EQ(trie_search(root, str, str_len), 1);
-        EXPECT_EQ(trie_search(root, str, sub_len), 1);
+        trie_insert(root, str, str_len, nullptr, nullptr);
+        trie_insert(root, str, sub_len, nullptr, nullptr);
+        EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
+        EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
 
         /* shorter string is deleted, but the longer string remains */
         EXPECT_EQ(trie_delete(root, str, sub_len), 0);
         EXPECT_NE(root, nullptr);
-        EXPECT_EQ(trie_search(root, str, str_len), 1);
-        EXPECT_EQ(trie_search(root, str, sub_len), 0);
+        EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
+        EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 0);
     }
 
     /* deleteing the remaining long string deletes the entire chain */
-    EXPECT_EQ(trie_search(root, str, str_len), 1);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
     EXPECT_EQ(trie_delete(root, str, str_len), 1);
     EXPECT_NE(root, nullptr);
-    EXPECT_EQ(trie_search(root, str, str_len), 0);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 0);
 
     trie_free(root);
 }
@@ -164,26 +164,26 @@ TEST(trie, substring) {
     trie_t *root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, str, sub_len);
-    EXPECT_EQ(trie_search(root, str, sub_len), 1);
-    EXPECT_EQ(trie_search(root, str, str_len), 0);
+    trie_insert(root, str, sub_len, nullptr, nullptr);
+    EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 0);
 
-    trie_insert(root, str, str_len);
-    EXPECT_EQ(trie_search(root, str, sub_len), 1);
-    EXPECT_EQ(trie_search(root, str, str_len), 1);
+    trie_insert(root, str, str_len, nullptr, nullptr);
+    EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
 
     trie_free(root);
 
     root = trie_alloc();
     ASSERT_NE(root, nullptr);
 
-    trie_insert(root, str, str_len);
-    EXPECT_EQ(trie_search(root, str, sub_len), 0);
-    EXPECT_EQ(trie_search(root, str, str_len), 1);
+    trie_insert(root, str, str_len, nullptr, nullptr);
+    EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 0);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
 
-    trie_insert(root, str, sub_len);
-    EXPECT_EQ(trie_search(root, str, sub_len), 1);
-    EXPECT_EQ(trie_search(root, str, str_len), 1);
+    trie_insert(root, str, sub_len, nullptr, nullptr);
+    EXPECT_EQ(trie_search(root, str, sub_len, nullptr), 1);
+    EXPECT_EQ(trie_search(root, str, str_len, nullptr), 1);
 
     trie_free(root);
 }

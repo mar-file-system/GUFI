@@ -73,22 +73,19 @@ struct trie
 {
     int isLeaf;    // 1 when node is a leaf node
     struct trie *character[256];
+    void *user_data;
+    void (*free_user)(void *);   /* free(user_data) */
 };
 
 // Function that returns a new Trie node
 trie_t *trie_alloc(void)
 {
-    trie_t* node = (trie_t*)malloc(sizeof(trie_t));
-    node->isLeaf = 0;
-
-    for (int i = 0; i < 256; i++)
-        node->character[i] = NULL;
-
-    return node;
+    return calloc(1, sizeof(trie_t));
 }
 
 // Iterative function to insert a string in Trie.
-void trie_insert(trie_t *head, const char *str, const size_t len)
+void trie_insert(trie_t *head, const char *str, const size_t len,
+                 void *user_data, void (*free_user)(void *))
 {
     if (!head || !str) {
         return;
@@ -109,11 +106,14 @@ void trie_insert(trie_t *head, const char *str, const size_t len)
 
     // mark current node as leaf
     curr->isLeaf = 1;
+    curr->user_data = user_data;
+    curr->free_user = free_user;
 }
 
 // Iterative function to search a string in Trie. It returns 1
 // if the string is found in the Trie, else it returns 0
-int trie_search(trie_t *head, const char *str, const size_t len)
+int trie_search(trie_t *head, const char *str, const size_t len,
+                void **user_data)
 {
     // return 0 if Trie is empty
     if (head == NULL)
@@ -137,7 +137,13 @@ int trie_search(trie_t *head, const char *str, const size_t len)
 
     // if current node is a leaf and we have reached the
     // end of the string, return 1
-    return curr->isLeaf;
+    if (curr->isLeaf) {
+        if (user_data) {
+            *user_data = curr->user_data;
+        }
+        return 1;
+    }
+    return 0;
 }
 
 // returns 1 if given node has any children
@@ -168,6 +174,10 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
             (*curr)->isLeaf == 0)
         {
             // leaf, so clean up
+            if ((*curr)->free_user) {
+                (*curr)->free_user((*curr)->user_data);
+            }
+
             free(*curr);
             (*curr) = NULL;
             return 1;
@@ -180,6 +190,12 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
         // if current node is a leaf node and have children
         if (trie_have_children(*curr))
         {
+            if ((*curr)->free_user) {
+                (*curr)->free_user((*curr)->user_data);
+                (*curr)->user_data = NULL;
+                (*curr)->free_user = NULL;
+            }
+
             // mark current node as non-leaf node (DON'T DELETE IT)
             (*curr)->isLeaf = 0;
             return 0;       // don't delete its parent nodes
@@ -188,6 +204,10 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
         // if current node is a leaf node and don't have any children
         else
         {
+            if ((*curr)->free_user) {
+                (*curr)->free_user((*curr)->user_data);
+            }
+
             free(*curr); // delete current node
             (*curr) = NULL;
             return 1; // delete non-leaf parent nodes
@@ -213,6 +233,10 @@ void trie_free(trie_t *head) {
     if (head) {
         for(int i = 0; i < 256; i++) {
             trie_free(head->character[i]);
+        }
+
+        if (head->free_user) {
+            head->free_user(head->user_data);
         }
 
         free(head);

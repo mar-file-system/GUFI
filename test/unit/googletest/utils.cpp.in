@@ -880,10 +880,10 @@ TEST(setup_directory_skip, file) {
 
     trie_t *skip = nullptr;
     EXPECT_EQ(setup_directory_skip(skip_name, &skip), 0);
-    EXPECT_EQ(trie_search(skip, ".",  1), 1);
-    EXPECT_EQ(trie_search(skip, "..", 2), 1);
+    EXPECT_EQ(trie_search(skip, ".",  1, nullptr), 1);
+    EXPECT_EQ(trie_search(skip, "..", 2, nullptr), 1);
     for(std::string const & skip_dir : skip_dirs) {
-        EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size()), 1);
+        EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size(), nullptr), 1);
     }
     trie_free(skip);
 
@@ -908,8 +908,8 @@ TEST(setup_directory_skip, bad_file) {
 TEST(setup_directory_skip, no_file) {
     trie_t *skip = nullptr;
     EXPECT_EQ(setup_directory_skip(nullptr, &skip), 0);
-    EXPECT_EQ(trie_search(skip, ".",  1), 1);
-    EXPECT_EQ(trie_search(skip, "..", 2), 1);
+    EXPECT_EQ(trie_search(skip, ".",  1, nullptr), 1);
+    EXPECT_EQ(trie_search(skip, "..", 2, nullptr), 1);
     trie_free(skip);
 }
 

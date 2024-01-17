@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 #include "dbutils.h"
+#include "histogram.h"
 
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
@@ -113,7 +114,7 @@ const char PENTRIES_CREATE[] =
 
 const char VRPENTRIES_CREATE[] =
     DROP_VIEW(VRPENTRIES)
-    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" SUMMARY ".name, RTRIM(" SUMMARY ".name, REPLACE(" SUMMARY ".name, '/', '')), '') AS dname, " SUMMARY ".name AS sname, " SUMMARY ".mode AS dmode, " SUMMARY ".nlink AS dnlink, " SUMMARY ".uid AS duid, " SUMMARY ".gid AS dgid, " SUMMARY ".size AS dsize, " SUMMARY ".blksize AS dblksize, " SUMMARY ".blocks AS dblocks, " SUMMARY ".atime AS datime, " SUMMARY ".mtime AS dmtime, " SUMMARY ".ctime AS dctime, " SUMMARY ".linkname AS dlinkname, " SUMMARY ".totfiles AS dtotfile, " SUMMARY ".totlinks AS dtotlinks, " SUMMARY ".minuid AS dminuid, " SUMMARY ".maxuid AS dmaxuid, " SUMMARY ".mingid AS dmingid, " SUMMARY ".maxgid AS dmaxgid, " SUMMARY ".minsize AS dminsize, " SUMMARY ".maxsize AS dmaxsize, " SUMMARY ".totzero AS dtotzero, " SUMMARY ".totltk AS dtotltk, " SUMMARY ".totmtk AS dtotmtk, " SUMMARY ".totltm AS totltm, " SUMMARY ".totmtm AS dtotmtm, " SUMMARY ".totmtg AS dtotmtg, " SUMMARY ".totmtt AS dtotmtt, " SUMMARY ".totsize AS dtotsize, " SUMMARY ".minctime AS dminctime, " SUMMARY ".maxctime AS dmaxctime, " SUMMARY ".minmtime AS dminmtime, " SUMMARY ".maxmtime AS dmaxmtime, " SUMMARY ".minatime AS dminatime, " SUMMARY ".maxatime AS dmaxatime, " SUMMARY ".minblocks AS dminblocks, " SUMMARY ".maxblocks AS dmaxblocks, " SUMMARY ".totxattr AS dtotxattr, " SUMMARY ".depth AS ddepth, " SUMMARY ".mincrtime AS dmincrtime, " SUMMARY ".maxcrtime AS dmaxcrtime, " SUMMARY ".rollupscore AS sroll, " SUMMARY ".isroot as atroot, " PENTRIES ".* FROM " SUMMARY ", " PENTRIES " WHERE " SUMMARY ".inode == " PENTRIES ".pinode;";
+    "CREATE VIEW " VRPENTRIES " AS SELECT REPLACE(" VRSUMMARY ".name, RTRIM(" VRSUMMARY ".name, REPLACE(" VRSUMMARY ".name, '/', '')), '') AS dname, " VRSUMMARY ".name AS sname, " VRSUMMARY ".mode AS dmode, " VRSUMMARY ".nlink AS dnlink, " VRSUMMARY ".uid AS duid, " VRSUMMARY ".gid AS dgid, " VRSUMMARY ".size AS dsize, " VRSUMMARY ".blksize AS dblksize, " VRSUMMARY ".blocks AS dblocks, " VRSUMMARY ".atime AS datime, " VRSUMMARY ".mtime AS dmtime, " VRSUMMARY ".ctime AS dctime, " VRSUMMARY ".linkname AS dlinkname, " VRSUMMARY ".totfiles AS dtotfile, " VRSUMMARY ".totlinks AS dtotlinks, " VRSUMMARY ".minuid AS dminuid, " VRSUMMARY ".maxuid AS dmaxuid, " VRSUMMARY ".mingid AS dmingid, " VRSUMMARY ".maxgid AS dmaxgid, " VRSUMMARY ".minsize AS dminsize, " VRSUMMARY ".maxsize AS dmaxsize, " VRSUMMARY ".totzero AS dtotzero, " VRSUMMARY ".totltk AS dtotltk, " VRSUMMARY ".totmtk AS dtotmtk, " VRSUMMARY ".totltm AS totltm, " VRSUMMARY ".totmtm AS dtotmtm, " VRSUMMARY ".totmtg AS dtotmtg, " VRSUMMARY ".totmtt AS dtotmtt, " VRSUMMARY ".totsize AS dtotsize, " VRSUMMARY ".minctime AS dminctime, " VRSUMMARY ".maxctime AS dmaxctime, " VRSUMMARY ".minmtime AS dminmtime, " VRSUMMARY ".maxmtime AS dmaxmtime, " VRSUMMARY ".minatime AS dminatime, " VRSUMMARY ".maxatime AS dmaxatime, " VRSUMMARY ".minblocks AS dminblocks, " VRSUMMARY ".maxblocks AS dmaxblocks, " VRSUMMARY ".totxattr AS dtotxattr, " VRSUMMARY ".depth AS ddepth, " VRSUMMARY ".mincrtime AS dmincrtime, " VRSUMMARY ".maxcrtime AS dmaxcrtime, " VRSUMMARY ".pinode AS ppinode, " VRSUMMARY ".rollupscore AS sroll, " VRSUMMARY ".isroot as atroot, " VRSUMMARY ".srollsubdirs as srollsubdirs, " PENTRIES ".* FROM " VRSUMMARY ", " PENTRIES " WHERE " VRSUMMARY ".inode == " PENTRIES ".pinode;";
 
 const char TREESUMMARY_EXISTS[] =
     "SELECT name FROM sqlite_master WHERE (type == 'table') AND (name == '" TREESUMMARY "');";
@@ -1210,26 +1211,27 @@ static void median_final(sqlite3_context *context) {
 
 int addqueryfuncs(sqlite3 *db) {
     return !(
-        (sqlite3_create_function(db,  "uidtouser",           1,   SQLITE_UTF8,
-                                 NULL,                       &uidtouser,           NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "gidtogroup",          1,   SQLITE_UTF8,
-                                 NULL,                       &gidtogroup,          NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "modetotxt",           1,   SQLITE_UTF8,
-                                 NULL,                       &modetotxt,           NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "strftime",            2,   SQLITE_UTF8,
-                                 NULL,                       &sqlite3_strftime,    NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "blocksize",           2,   SQLITE_UTF8,
-                                 NULL,                       &blocksize,           NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "human_readable_size", 1,   SQLITE_UTF8,
-                                 NULL,                       &human_readable_size, NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "basename",            1,   SQLITE_UTF8,
-                                 NULL,                       &sqlite_basename,     NULL, NULL)   == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "stdevs",              1,   SQLITE_UTF8,
-                                 NULL,                       NULL,  stdev_step,    stdevs_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "stdevp",              1,   SQLITE_UTF8,
-                                 NULL,                       NULL,  stdev_step,    stdevp_final) == SQLITE_OK) &&
-        (sqlite3_create_function(db,  "median",              1,   SQLITE_UTF8,
-                                 NULL,                       NULL,  median_step,   median_final) == SQLITE_OK)
+        (sqlite3_create_function(db,   "uidtouser",           1,   SQLITE_UTF8,
+                                 NULL, &uidtouser,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "gidtogroup",          1,   SQLITE_UTF8,
+                                 NULL, &gidtogroup,                NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "modetotxt",           1,   SQLITE_UTF8,
+                                 NULL, &modetotxt,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "strftime",            2,   SQLITE_UTF8,
+                                 NULL, &sqlite3_strftime,          NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "blocksize",           2,   SQLITE_UTF8,
+                                 NULL, &blocksize,                 NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "human_readable_size", 1,   SQLITE_UTF8,
+                                 NULL, &human_readable_size,       NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "basename",            1,   SQLITE_UTF8,
+                                 NULL, &sqlite_basename,           NULL, NULL)   == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdevs",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  stdev_step,          stdevs_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "stdevp",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  stdev_step,          stdevp_final) == SQLITE_OK) &&
+        (sqlite3_create_function(db,   "median",              1,   SQLITE_UTF8,
+                                 NULL, NULL,  median_step,         median_final) == SQLITE_OK) &&
+        addhistfuncs(db)
         );
 }
 
