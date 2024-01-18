@@ -81,6 +81,7 @@ VRSUMMARY   = 'vrsummary'
 VRPENTRIES  = 'vrpentries'
 VRXSUMMARY  = 'vrxsummary'
 VRXPENTRIES = 'vrxpentries'
+TREESUMMARY = 'treesummary'
 
 SUMMARY_NAMES = [
     SUMMARY,

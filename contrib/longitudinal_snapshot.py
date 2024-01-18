@@ -62,443 +62,55 @@
 
 
 import argparse
-import numpy as np
-import pandas as pd
+import math        # using math.log(x, 2) instead of math.log2(x) in case Python version is lower than 3.3
+import os          # using os.devnull instead of subprocess.DEVNULL in case Python version is lower than 3.3
 import sqlite3
 import subprocess
 import time
+import sys
 
-from gufi_common import build_query, get_char, get_positive, VRSUMMARY, VRPENTRIES, VRXPENTRIES
+from gufi_common import build_query, get_positive, VRXPENTRIES, TREESUMMARY
 import gufi_config
 
-METADATA_TABLE_NAME = 'metadata'
-SNAPSHOT_VIEW = 'snapshot'
-PINODE = 'pinode'
+METADATA       = 'metadata'
+SNAPSHOT       = 'snapshot'
 
-# returns a list of lists of strings
-# pylint: disable=too-many-arguments
-def run_query(config, delim,
-              columns, tables, where=None, group_by=None, order_by=None, num_results=None,
-              xattrs=False):
-    # keep this here to make debugging easier
-    query = build_query(columns, tables, where, group_by, order_by, num_results)
+SQLITE3_NULL   = 'NULL'
+SQLITE3_INT64  = 'INT64'
+SQLITE3_DOUBLE = 'DOUBLE'
+SQLITE3_TEXT   = 'TEXT'
+SQLITE3_BLOB   = 'BLOB'
 
-    cmd = [
-        config.query(),
-        config.indexroot(),
-        '-n', str(config.threads()),
-        '-d', delim,
-        '-E', query,
-    ]
-
-    if xattrs is True:
-        cmd += ['-x']
-
-    query = subprocess.Popen(cmd, stdout=subprocess.PIPE)     # pylint: disable=consider-using-with
-    out, err = query.communicate()                            # block until query finishes
-
-    return [row.split(delim) for row in out.decode('utf-8').split('\n')[:-1]]
-
-# convert a list of lists of strings to a dataframe
-def to_df(data, col_names):
-    if len(data) == 0:
-        return pd.DataFrame(columns=col_names)
-    return pd.DataFrame(data, columns=col_names)
-
-# get columns directly out of summary table
-def get_summary_data(conn, config, delim):
-    TABLE_NAME = 'summary'
-    SUMMARY_COLS = [
-        'name', 'inode', 'mode', 'nlink', 'uid', 'gid',
-        'blksize', 'blocks', 'atime', 'mtime', 'ctime',
-        'linkname', 'level()',
-        'NULL', #filesystem_type
-        'pinode',
-        'totfiles', 'totlinks', 'subdirs(srollsubdirs, sroll)',
-    ]
-
-    df_summary_cols = SUMMARY_COLS.copy()
-    df_summary_cols[-6] = 'depth'
-    df_summary_cols[-1] = 'totsubdirs'
-    df_summary_cols[-5] = 'filesystem_type'
-
-    to_df(run_query(config, delim, SUMMARY_COLS, [VRSUMMARY]),
-          df_summary_cols).to_sql(TABLE_NAME, conn, index=False, if_exists='fail')
-
-    return TABLE_NAME, df_summary_cols
-
-# returns table with pinode, mode, mode_count
-def mode(config, delim, col):
-    select_cols = [PINODE, col, 'COUNT({0}) AS count'.format(col)]
-    col_names = [PINODE, 'mode', 'mode_count']
-    return to_df(run_query(config, delim,
-                           select_cols, [VRPENTRIES], None, [col], ['count DESC'], 1),
-                 col_names)
-
-def log2_buckets(config, delim, col, table, num_buckets, count_zeros=True, xattrs=False):
-    lst = run_query(config, delim, [PINODE, col], [table], xattrs=xattrs)
-
-    # sort results by directory
-    by_dir = {}
-    for pinode, val in lst:
-        # length of nonexistant string is empty, not 0
-        if len(val) == 0:
-            continue
-
-        if pinode in by_dir:
-            by_dir[pinode] += [int(val)]
-        else:
-            by_dir[pinode] = [int(val)]
-
-    # bucket each directory's values by int(log2(col))
-    dir_msb = []
-    for pinode, values in by_dir.items():
-        zero_count = 0
-        too_big = 0
-        buckets = [0] * num_buckets
-
-        for val in values:
-            if val == 0:
-                zero_count += 1
-                continue
-
-            msb = int(np.floor(np.log2(int(val))))
-
-            # num_buckets -> [0, num_buckets), so keep track of
-            # msb > num_buckets AND msb == num_buckets
-            if msb >= num_buckets:
-                too_big += 1
-                continue
-
-            buckets[msb] += 1
-
-        # generate column
-        row = [pinode]
-        if count_zeros is True:
-            row += [zero_count]
-        row += buckets
-        row += [too_big]
-
-        dir_msb += [row]
-
-    # generate column names
-    cols = [PINODE]
-    if count_zeros is True:
-        cols += ['zero_count']
-    cols += ['msb_{0}'.format(i) for i in range(num_buckets)]
-    cols += ['msb_ge_{0}'.format(num_buckets)]
-
-    return pd.DataFrame(dir_msb, columns=cols)
-
-def time_buckets(config, delim, col_name, reftime):
-    times = run_query(config, delim, [PINODE, col_name], [VRPENTRIES])
-
-    time_units = [
-        ['second',      1],
-        ['minute',      60],
-        ['hour',        3600],
-        ['day',         86400],
-        ['week',        604800],
-        ['four_weeks',  2419200],
-        ['year',        31536000],
-        ['years',       0],
-    ]
-
-    pinodes = {} # each pinode has its own set of buckets
-    for pinode, val in times:
-        delta_time = reftime - int(val)
-
-        if pinode not in pinodes:
-            pinodes[pinode] = {unit : 0 for unit, _ in time_units}
-
-        for unit, seconds in time_units[:-1]:
-            if delta_time < seconds:
-                pinodes[pinode][unit] += 1
-                break
-        else:
-            pinodes[pinode][time_units[-1][0]] += 1
-
-    # transform dictionary of buckets to list of lists
-    lst = []
-    for pinode, buckets in pinodes.items():
-        lst.append([pinode] + [buckets[unit] for unit, _ in time_units]) # guarantee order
-
-    # generate colum names
-    time_keys = [name for name, _ in time_units]
-    return pd.DataFrame(lst, columns=[PINODE] + time_keys)
-
-# compute stats of numeric columns
-# uid, gid, size, ctime, atime, mtime, crtime
-def process_numeric_columns(conn, config, delim, num_size_buckets, reftime):
-    # mapping of snapshot columns name to numeric GUFI columns in VRPENTRIES
-    UID_COLS = {
-        'min':        'dminuid',
-        'max':        'dmaxuid',
-        'num_unique': 'COUNT(DISTINCT uid)',
+# used to generate timestamp columns
+def gen_time_cols(col, reftime):
+    return {
+        'min':    ['dmin{0}'.format(col),                      SQLITE3_INT64],
+        'max':    ['dmax{0}'.format(col),                      SQLITE3_INT64],
+        'mean':   ['AVG({0})'.format(col),                     SQLITE3_DOUBLE],
+        'median': ['median({0})'.format(col),                  SQLITE3_DOUBLE],
+        'mode':   ['mode_count({0})'.format(col),              SQLITE3_TEXT],
+        'stdev':  ['stdevp({0})'.format(col),                  SQLITE3_DOUBLE],
+        'hist':   ['time_hist({0}, {1})'.format(col, reftime), SQLITE3_TEXT],
     }
 
-    GID_COLS = {
-        'min':        'dmingid',
-        'max':        'dmaxgid',
-        'num_unique': 'COUNT(DISTINCT gid)',
+# used to generate columns for name, linkname, xattr_name, and xattr_value
+def gen_str_cols(col, buckets):
+    return {
+        'min':    ['MIN(LENGTH({0}))'.format(col),                     SQLITE3_INT64],
+        'max':    ['MAX(LENGTH({0}))'.format(col),                     SQLITE3_INT64],
+        'mean':   ['AVG(LENGTH({0}))'.format(col),                     SQLITE3_DOUBLE],
+        'median': ['median(LENGTH({0}))'.format(col),                  SQLITE3_DOUBLE],
+        'mode':   ['mode_count(LENGTH({0}))'.format(col),              SQLITE3_TEXT],
+        'stdev':  ['stdevp(LENGTH({0}))'.format(col),                  SQLITE3_DOUBLE],
+        'hist':   ['log2_hist(LENGTH({0}), {1})'.format(col, buckets), SQLITE3_TEXT],
     }
 
-    SIZE_COLS = {
-        'min':    'dminsize',
-        'max':    'dmaxsize',
-        'sum':    'dtotsize',
-        'mean':   'AVG(size)',
-        'median': 'median(size)',
-        'stdev':  'stdevp(size)',
-    }
-
-    TIME_COLS = lambda name: {
-        'min':    'dmin{0}'.format(name),
-        'max':    'dmax{0}'.format(name),
-        'mean':   'AVG({0})'.format(name),
-        'median': 'median({0})'.format(name),
-        'stdev':  'stdevp({0})'.format(name),
-    }
-
-    CTIME_COLS  = TIME_COLS('ctime')
-    ATIME_COLS  = TIME_COLS('atime')
-    MTIME_COLS  = TIME_COLS('mtime')
-    CRTIME_COLS = TIME_COLS('crtime')
-
-    COLS = {
-        'uid':    UID_COLS,
-        'gid':    GID_COLS,
-        'size':   SIZE_COLS,
-        'ctime':  CTIME_COLS,
-        'atime':  ATIME_COLS,
-        'mtime':  MTIME_COLS,
-        'crtime': CRTIME_COLS,
-    }
-
-    cols = {}
-    for col_name, vals in COLS.items():
-        # collect common stats
-        aggreg_df = to_df(run_query(config, delim, [PINODE] + list(vals.values()), [VRPENTRIES]),
-                          [PINODE] + list(vals.keys()))
-        mode_df = mode(config, delim, col_name)
-
-        # merge results
-        df = pd.merge(aggreg_df, mode_df, on=PINODE)
-
-        # append column specific stats
-        if col_name == 'size':
-            buckets_df = log2_buckets(config, delim, col_name, VRPENTRIES, num_size_buckets, True)
-            df = pd.merge(df, buckets_df, on=PINODE)
-        elif col_name in ['ctime', 'atime', 'mtime', 'crtime']:
-            buckets_df = time_buckets(config, delim, col_name, reftime)
-            df = pd.merge(df, buckets_df, on=PINODE)
-
-        df.to_sql(col_name, conn, index=False, if_exists='fail')
-
-        cols[col_name] = df.columns[1:] # drop pinode column name
-
-    return cols
-
-# process string oclumns
-# name, linkname
-def process_string_columns(conn, config, delim,
-                           log_max_name_len):
-    STR_COLS = [
-        'name',
-        'linkname',
-    ]
-
-    cols = {}
-
-    for s in STR_COLS:
-        select_str = [
-            'MIN(LENGTH({0}))'.format(s),
-            'MAX(LENGTH({0}))'.format(s),
-            'AVG(LENGTH({0}))'.format(s),
-            'median(LENGTH({0}))'.format(s),
-            'stdevp(LENGTH({0}))'.format(s),
-        ]
-
-        col_str = [
-            'min',
-            'max',
-            'mean',
-            'median',
-            'stdev',
-        ]
-
-        aggreg_df = to_df(run_query(config, delim, [PINODE] + select_str, [VRPENTRIES]),
-                          [PINODE] + col_str)
-
-        where = None
-        if s == 'linkname:':
-            where = ['type == \'l\'']
-
-        mode_df = to_df(run_query(config, delim,
-                                  [PINODE, 'LENGTH({0}) AS mode'.format(s), 'COUNT(mode) AS count'],
-                                  [VRPENTRIES],
-                                  where,
-                                  ['mode'],
-                                  ['count DESC'],
-                                  1),
-                        [PINODE, 'mode', 'mode_count'])
-
-        df = pd.merge(aggreg_df, mode_df, on=PINODE)
-        buckets_df = log2_buckets(config, delim, 'LENGTH({0})'.format(s), VRPENTRIES, log_max_name_len, False, False)
-        df = pd.merge(df, buckets_df, on=PINODE)
-
-        df.to_sql(s, conn, index=False, if_exists='fail')
-
-        cols[s] = df.columns[1:]
-
-    return cols
-
-def process_xattr_columns(conn, config, delim,
-                          log_max_name_len):
-    XATTR_COLS = [
-        'xattr_name',
-        'xattr_value',
-    ]
-
-    cols = {}
-
-    for xattr in XATTR_COLS:
-        select_str = [
-            'MIN(LENGTH({0}))'.format(xattr),
-            'MAX(LENGTH({0}))'.format(xattr),
-            'AVG(LENGTH({0}))'.format(xattr),
-            'median(LENGTH({0}))'.format(xattr),
-            'stdevp(LENGTH({0}))'.format(xattr)
-        ]
-
-        col_str = [
-            'min',
-            'max',
-            'mean',
-            'median',
-            'stdev',
-        ]
-
-        aggreg_df = to_df(run_query(config, delim, [PINODE] + select_str, [VRXPENTRIES], xattrs=True),
-                          [PINODE] + col_str)
-
-        mode_df = to_df(run_query(config, delim,
-                                  [PINODE, 'LENGTH({0}) AS mode'.format(xattr), 'COUNT(mode) AS count'],
-                                  [VRXPENTRIES],
-                                  None,
-                                  ['mode'],
-                                  ['count DESC'],
-                                  1,
-                                  True),
-                        [PINODE, 'mode', 'mode_count'])
-
-        df = pd.merge(aggreg_df, mode_df, on=PINODE)
-        buckets_df = log2_buckets(config, delim, 'LENGTH({0})'.format(xattr), VRXPENTRIES, log_max_name_len, False, True)
-        df = pd.merge(df, buckets_df, on=PINODE)
-
-        df.to_sql(xattr, conn, index=False, if_exists='fail')
-
-        cols[xattr] = df.columns[1:]
-
-    return cols
-
-# find the top 4 most popular extensions
-# returns single set of results
-def mode_extensions(conn, config, delim):
-    TABLE_NAME = 'extension'
-    COLS = [
-        'extension_1', 'ext_count_1',
-        'extension_2', 'ext_count_2',
-        'extension_3', 'ext_count_3',
-        'extension_4', 'ext_count_4',
-    ]
-
-    df = to_df(run_query(config, delim,
-                         [PINODE,
-                          # filenames without extensions are treated as NULL
-                          '''CASE WHEN name NOT LIKE '%.%' THEN
-                                 NULL
-                             ELSE
-                                 REPLACE(name, RTRIM(name, REPLACE(name, '.', '')), '')
-                             END AS extension''',
-                          'COUNT(*) AS count'],
-                         [VRPENTRIES],
-                         None,
-                         [PINODE, 'extension'],
-                         ['count DESC'],
-                         4),
-               [PINODE, 'extension', 'count'])
-
-    # transpose top 4 results (a single column) of a directory into a single row
-    lst = []
-    pinode_lst = df[PINODE].unique()
-    for pinode in pinode_lst:
-        row = [pinode]
-        same_dir = df[df[PINODE] == pinode]
-        extensions = np.array(same_dir['extension'])
-        counts = np.array(same_dir['count'])
-        for i, _ in enumerate(extensions):
-            row.append(extensions[i])
-            row.append(counts[i])
-        lst.append(row)
-
-    pd.DataFrame([row + [np.nan] * (4 - len(row)) for row in lst],
-                      columns=[PINODE] + COLS).to_sql(TABLE_NAME, conn, index=False, if_exists='fail')
-
-    return {TABLE_NAME: COLS}
-
-# find the top 4 most popular permission bits per directory
-# returns single set of results
-def permission_buckets(conn, config, delim):
-    TABLE_NAME = 'permission'
-    COLS = [
-        'permission_1', 'perm_count_1',
-        'permission_2', 'perm_count_2',
-        'permission_3', 'perm_count_3',
-        'permission_4', 'perm_count_4'
-    ]
-
-    df = to_df(run_query(config, delim,
-                         [PINODE, 'mode'],
-                         [VRPENTRIES]),
-               [PINODE, 'mode'])
-
-    pinodes = df[PINODE].unique()
-    row_lst = []
-
-    for pinode in pinodes:
-        buckets = {i: 0 for i in range(0o1000)} # 512 for 9 permission bits
-
-        # get all results for this directory
-        curr_dir = df[df[PINODE] == pinode]
-        modes = np.array(curr_dir['mode'])
-
-        for mode in modes:
-            perm = int(mode) & 0o777
-            buckets[perm] += 1
-
-        top_four = sorted(buckets.items(), key=lambda item: (item[1], item[0]), reverse=True)[:4]
-
-        row_res = [pinode]
-        for perm, count in top_four:
-            if count != 0:
-                row_res += [perm, count]
-            else:
-                row_res += [None, None]
-        row_lst.append(row_res)
-
-    pd.DataFrame(row_lst, columns=[PINODE] + COLS).to_sql(TABLE_NAME, conn, index=False, if_exists='fail')
-
-    return {TABLE_NAME: COLS}
-
-if __name__ == '__main__':
+def parse_args(argv, now):
     parser = argparse.ArgumentParser(description='GUFI Longitudinal Snapshot Generator')
     parser.add_argument('outname',
                         help='output db file name')
-    parser.add_argument('--reftime',      metavar='seconds', type=int,           default=int(time.time()),
+    parser.add_argument('--reftime',      metavar='seconds', type=int,           default=now,
                         help='reference point for age (since UNIX epoch)')
-    parser.add_argument('--delim',        metavar='c',       type=get_char,      default='|',
-                        help='delimiter of gufi_query output')
     parser.add_argument('--max_size',     metavar='pos_int', type=get_positive,  default=1 << 50,
                         help='the maximum expected size')
     parser.add_argument('--max_name_len', metavar='pos_int', type=get_positive,  default=1 << 8,
@@ -506,53 +118,196 @@ if __name__ == '__main__':
     parser.add_argument('--notes',        metavar='text',    type=str,           default=None,
                         help='freeform text of any extra information to add to the snapshot')
 
-    args = parser.parse_args()
-    config = gufi_config.Server(gufi_config.PATH)
+    return parser.parse_args(argv[1:])
 
+# pylint: disable=too-many-locals, too-many-statements
+def run(argv):
     timestamp = int(time.time())
 
+    args = parse_args(argv, timestamp)
+    config = gufi_config.Server(gufi_config.PATH)
+
+    log2_size_bucket_count = math.ceil(math.log(args.max_size, 2))
+    log2_name_len_bucket_count = math.ceil(math.log(args.max_name_len, 2))
+
+    # ###############################################################
+    # the following structs contain mappings from the GUFI tree to the longitudinal snapshot
+
+    # map VRXPENTRIES columns back to SUMMARY column names
+    SUMMARY_COLS = {
+        'name':            ['dname',                        SQLITE3_TEXT],
+        'inode':           ['pinode',                       SQLITE3_INT64], # entry's pinode is directory's inode
+        'mode':            ['dmode',                        SQLITE3_INT64],
+        'nlink':           ['dnlink',                       SQLITE3_INT64],
+        'uid':             ['duid',                         SQLITE3_INT64],
+        'gid':             ['dgid',                         SQLITE3_INT64],
+        'blksize':         ['dblksize',                     SQLITE3_INT64],
+        'blocks':          ['dblocks',                      SQLITE3_INT64],
+        'atime':           ['datime',                       SQLITE3_INT64],
+        'mtime':           ['dmtime',                       SQLITE3_INT64],
+        'ctime':           ['dctime',                       SQLITE3_INT64],
+        'depth':           ['level()',                      SQLITE3_INT64],
+        'filesystem_type': [SQLITE3_NULL,                   SQLITE3_BLOB],
+        'pinode':          ['ppinode',                      SQLITE3_INT64], # entry's ppinode is directory's pinode
+        'totfiles':        ['dtotfile',                     SQLITE3_INT64],
+        'totlinks':        ['dtotlinks',                    SQLITE3_INT64],
+        'totsubdirs':      ['subdirs(srollsubdirs, sroll)', SQLITE3_INT64],
+    }
+
+    UID_COLS = {
+        'min':        ['dminuid',             SQLITE3_INT64],
+        'max':        ['dmaxuid',             SQLITE3_INT64],
+        'hist':       ['category_hist(uid)',  SQLITE3_INT64],
+        'num_unique': ['COUNT(DISTINCT uid)', SQLITE3_INT64],
+    }
+
+    GID_COLS = {
+        'min':        ['dmingid',             SQLITE3_INT64],
+        'max':        ['dmaxgid',             SQLITE3_INT64],
+        'hist':       ['category_hist(gid)',  SQLITE3_TEXT],
+        'num_unique': ['COUNT(DISTINCT gid)', SQLITE3_INT64],
+    }
+
+    SIZE_COLS = {
+        'min':    ['dminsize',                                            SQLITE3_INT64],
+        'max':    ['dmaxsize',                                            SQLITE3_INT64],
+        'mean':   ['AVG(size)',                                           SQLITE3_DOUBLE],
+        'median': ['median(size)',                                        SQLITE3_DOUBLE],
+        'mode':   ['mode_count(CAST(size AS TEXT))',                      SQLITE3_TEXT],
+        'stdev':  ['stdevp(size)',                                        SQLITE3_DOUBLE],
+        'sum':    ['dtotsize',                                            SQLITE3_INT64],
+        'hist':   ['log2_hist(size, {0})'.format(log2_size_bucket_count), SQLITE3_TEXT],
+    }
+
+    PERM_COLS = {
+        'hist': ['mode_hist(mode)', SQLITE3_TEXT],
+    }
+
+    CTIME_COLS       = gen_time_cols('ctime',  args.reftime)
+    ATIME_COLS       = gen_time_cols('atime',  args.reftime)
+    MTIME_COLS       = gen_time_cols('mtime',  args.reftime)
+    CRTIME_COLS      = gen_time_cols('crtime', args.reftime)
+
+    NAME_COLS        = gen_str_cols('name',     log2_name_len_bucket_count)
+    LINKNAME_COLS    = gen_str_cols('linkname', log2_name_len_bucket_count)
+
+    # keep these separate from name/linkname
+    XATTR_NAME_COLS  = gen_str_cols('xattr_name',  log2_name_len_bucket_count)
+    XATTR_VALUE_COLS = gen_str_cols('xattr_value', log2_name_len_bucket_count)
+
+    EXT_COLS = {
+        # filenames without extensions are treated as NULL
+        'hist': ['''category_hist(CASE WHEN name NOT LIKE '%.%' THEN
+                                     {0}
+                                 ELSE
+                                     REPLACE(name, RTRIM(name, REPLACE(name, '.', '')), '')
+                                 END)'''.format(SQLITE3_NULL),
+                 SQLITE3_TEXT]
+    }
+
+    # columns grabbed during first pass of index
+    FIRST_PASS = {
+        'uid':         UID_COLS,
+        'gid':         GID_COLS,
+        'size':        SIZE_COLS,
+        'permissions': PERM_COLS,
+        'ctime':       CTIME_COLS,
+        'atime':       ATIME_COLS,
+        'mtime':       MTIME_COLS,
+        'crtime':      CRTIME_COLS,
+        'name':        NAME_COLS,
+        'linkname':    LINKNAME_COLS,
+        'xattr_name':  XATTR_NAME_COLS,
+        'xattr_value': XATTR_VALUE_COLS,
+        'extensions':  EXT_COLS,
+    }
+
+    # generate columns for selecting and inserting into
+
+    create_cols = [] # used for creating intermediate tables and aggregating
+    select_cols = [] # SELECT cols FROM VRXPENTRIES
+
+    # summary column names are not prefixed
+    for col_name, stat in SUMMARY_COLS.items():
+        sql, col_type = stat
+        create_cols += ['{0} {1}'.format(col_name, col_type)]
+        select_cols += [sql]
+
+    for col_name, stats_pulled in FIRST_PASS.items():
+        for stat_name, stat in stats_pulled.items():
+            sql, col_type = stat
+            create_cols += ['{0}_{1} {2}'.format(col_name, stat_name, col_type)]
+            select_cols += [sql]
+
+    # same for intermediate and aggregate
+    table_cols_sql = ', '.join(create_cols)
+
+    INTERMEDIATE = 'intermediate'
+    # ###############################################################
+
+    # ###############################################################
+    # treesummary
+    # copied from dbutils.h
+    TREESUMMARY_CREATE = "CREATE TABLE {0}(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);".format
+
+    INTERMEDIATE_TREESUMMARY = 'intermediate_treesummary'
+    # ###############################################################
+
+    # construct full command to run
+    cmd = [
+        config.query(),
+        config.indexroot(),
+        '-n', str(config.threads()),
+        '-x',
+        '-O', args.outname,
+        '-I', 'CREATE TABLE {0}({1}); {2};'.format(
+            INTERMEDIATE, table_cols_sql, TREESUMMARY_CREATE(INTERMEDIATE_TREESUMMARY)),
+
+        '-T', 'INSERT INTO {0} SELECT * FROM {1}; SELECT 1 FROM {1};'.format(
+            INTERMEDIATE_TREESUMMARY, TREESUMMARY),
+
+        '-E', 'INSERT INTO {0} {1};'.format(
+            INTERMEDIATE, build_query(select_cols, [VRXPENTRIES])),
+
+        '-K', 'CREATE TABLE {0}({1}); {2};'.format(
+            SNAPSHOT, table_cols_sql, TREESUMMARY_CREATE(TREESUMMARY)),
+
+        '-J', 'INSERT INTO {0} SELECT * FROM {1}; INSERT INTO {2} SELECT * FROM {3};'.format(
+            SNAPSHOT, INTERMEDIATE, TREESUMMARY, INTERMEDIATE_TREESUMMARY),
+    ]
+
+    rc = 0
+
+    # nothing should be printed to stdout
+    # however, due to how gufi_query is implemented, -T
+    # will print some text that is not used, so drop it
+    with open(os.devnull, 'w') as DEVNULL:                    # pylint: disable=unspecified-encoding
+        query = subprocess.Popen(cmd, stdout=DEVNULL)         # pylint: disable=consider-using-with
+        query.communicate()                                   # block until query finishes
+        rc = query.returncode
+
+    if rc:
+        return rc
+
     with sqlite3.connect(args.outname) as conn:
-        # create the metadata table
-        # one row of data
+        # create the metadata table (one row of data)
         conn.execute('''
-            CREATE TABLE IF NOT EXISTS {} (
+            CREATE TABLE {0} (
                 timestamp INT,
                 src TEXT,
                 notes TEXT
             );
-        '''.format(METADATA_TABLE_NAME))
+        '''.format(METADATA))
 
         conn.execute('''
-            INSERT INTO {} (timestamp, src, notes)
+            INSERT INTO {0} (timestamp, src, notes)
             VALUES (?, ?, ?);
-        '''.format(METADATA_TABLE_NAME),
+        '''.format(METADATA),
                      (timestamp, config.indexroot(), args.notes))
 
         conn.commit()
 
-        # run queries and get table schemas back
-        schemas = {}
-        schemas.update(process_numeric_columns(conn, config, args.delim, int(np.log2(args.max_size)), args.reftime))
-        schemas.update(process_string_columns (conn, config, args.delim, int(np.log2(args.max_name_len))))
-        schemas.update(process_xattr_columns  (conn, config, args.delim, int(np.log2(args.max_name_len))))
-        schemas.update(mode_extensions        (conn, config, args.delim))
-        schemas.update(permission_buckets     (conn, config, args.delim))
+    return 0
 
-        # summary is used separately, so it is not added to the schemas dictionary
-        summary_name, summary_cols = get_summary_data(conn, config, args.delim)
-
-        snapshot_cols = ', '.join([', '.join('{0}.{1} AS {1}'.format(summary_name, summary_col)
-                                             for summary_col in summary_cols)] +
-                                  [', '.join('{0}.{1} AS {0}_{1}'.format(name, col) for col in cols)
-                                   for name, cols in schemas.items()])
-        snapshot_tables = 'summary ' + ' '.join('LEFT JOIN {0} ON summary.inode == {0}.pinode'.format(table_name)
-                                                for table_name in schemas)
-
-        view_of_everything = '''
-            CREATE VIEW {0} AS
-            SELECT {1}
-            FROM {2};
-        '''.format(SNAPSHOT_VIEW, snapshot_cols, snapshot_tables)
-
-        conn.execute(view_of_everything)
-        conn.commit()
+if __name__ == '__main__':
+    run(sys.argv)

@@ -130,6 +130,7 @@ set(USEFUL
   canned_queries.sh
   gentrace.py
   hashes.py
+  longitudinal_snapshot.py
   trace_anonymizer.py
   )
 
