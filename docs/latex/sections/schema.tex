@@ -89,7 +89,8 @@ at all.
 \subsection{\pentries}
 The original \pentries view was defined as:
 \\\\
-\texttt{SELECT entries.*, summary.inode FROM entries, summary};
+\texttt{SELECT entries.*, summary.inode AS pinode, summary.pinode AS
+  ppinode FROM entries, summary};
 \\\\
 This was done in order to not store the parent inode of each entry,
 which would be the same for every entry.
