@@ -72,12 +72,12 @@ OF SUCH DAMAGE.
 const char XATTRDELIM = '\x1F';     // ASCII Unit Separator
 
 const char XATTRS_PWD_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_PWD ";"
-                                 "CREATE TABLE " XATTRS_PWD "(inode INT64, name TEXT, value TEXT);";
+                                 "CREATE TABLE " XATTRS_PWD "(inode TEXT, name TEXT, value TEXT);";
 
 const char XATTRS_PWD_INSERT[] = "INSERT INTO " XATTRS_PWD " VALUES (@inode, @name, @value);";
 
 const char XATTRS_ROLLUP_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_ROLLUP ";"
-                                    "CREATE TABLE " XATTRS_ROLLUP "(inode INT64, name TEXT, value TEXT);";
+                                    "CREATE TABLE " XATTRS_ROLLUP "(inode TEXT, name TEXT, value TEXT);";
 
 const char XATTRS_ROLLUP_INSERT[] = "INSERT INTO " XATTRS_ROLLUP " VALUES (@inode, @name, @value);";
 

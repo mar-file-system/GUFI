@@ -794,7 +794,7 @@ TEST(bottomup_collect_treesummary, nullptr) {
     sll_init(&sll);
     sll_push(&sll, dirname);
 
-    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", nullptr, ROLLUPSCORE_KNOWN_YES), 1);
+    EXPECT_EQ(bottomup_collect_treesummary(nullptr, "", &sll, ROLLUPSCORE_KNOWN_YES), 1);
 
     sll_destroy(&sll, nullptr);
     EXPECT_EQ(rmdir(dirname), 0);

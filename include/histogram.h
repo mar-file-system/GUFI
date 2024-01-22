@@ -201,7 +201,7 @@ void category_hist_free(category_hist_t *hist);
  * mode_count(string) -> len:string:count
  *
  * This is here because mode is implemented using
- * categoriy histograms.
+ * category histograms.
  */
 typedef struct mode_count {
     char *mode;

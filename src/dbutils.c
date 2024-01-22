@@ -293,9 +293,9 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
     static const char *ts_str[] = {
         "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 "
-        "FROM summary WHERE rectype == 0;",
+        "FROM " SUMMARY " WHERE rectype == 0;",
         "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, totsubdirs, maxsubdirfiles, maxsubdirlinks, maxsubdirsize "
-        "FROM treesummary WHERE rectype == 0;",
+        "FROM " TREESUMMARY " WHERE rectype == 0;",
     };
 
     const char *sqlstmt = ts_str[ts];
@@ -680,8 +680,8 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     }
 
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%lld, %lld, %lld, %lld,%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
-     su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize,su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks,su->totxattr,depth,su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4,su->maxossint4, su->totossint4, rectype, uid, gid);
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+             su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, rectype, uid, gid);
 
     char *err = NULL;
     if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err) != SQLITE_OK ) {
@@ -1415,7 +1415,7 @@ static int get_rollupscore_callback(void *args, int count, char **data, char **c
 
 int get_rollupscore(sqlite3 *db, int *rollupscore) {
     char *err = NULL;
-    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1",
+    if (sqlite3_exec(db, "SELECT rollupscore FROM summary WHERE isroot == 1;",
                      get_rollupscore_callback, rollupscore, &err) != SQLITE_OK) {
         fprintf(stderr, "Could not get rollupscore: %s\n", err);
         sqlite3_free(err);
