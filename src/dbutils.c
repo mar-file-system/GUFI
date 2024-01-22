@@ -78,21 +78,21 @@ OF SUCH DAMAGE.
 
 const char READDIRPLUS_CREATE[] =
     DROP_TABLE(READDIRPLUS)
-    "CREATE TABLE " READDIRPLUS "(path TEXT, type TEXT, inode INT64 PRIMARY KEY, pinode INT64, suspect INT64);";
+    "CREATE TABLE " READDIRPLUS "(path TEXT, type TEXT, inode TEXT PRIMARY KEY, pinode TEXT, suspect INT64);";
 
 const char READDIRPLUS_INSERT[] =
     "INSERT INTO " READDIRPLUS " VALUES (@path, @type, @inode, @pinode, @suspect);";
 
 const char ENTRIES_CREATE[] =
     DROP_TABLE(ENTRIES)
-    "CREATE TABLE " ENTRIES "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
+    "CREATE TABLE " ENTRIES "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT);";
 
 const char ENTRIES_INSERT[] =
     "INSERT INTO " ENTRIES " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2);";
 
 const char SUMMARY_CREATE[] =
     DROP_TABLE(SUMMARY)
-    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode INT64, isroot INT64, rollupscore INT64);";
+    "CREATE TABLE " SUMMARY "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, pinode TEXT, isroot INT64, rollupscore INT64);";
 
 static const char SUMMARY_INSERT[] =
     "INSERT INTO " SUMMARY " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @totfiles, @totlinks, @minuid, @maxuid, @mingid, @maxgid, @minsize, @maxsize, @totzero, @totltk, @totmtk, @totltm, @totmtm, @totmtg, @totmtt, @totsize, @minctime, @maxctime, @minmtime, @maxmtime, @minatime, @maxatime, @minblocks, @maxblocks, @totxattr, @depth, @mincrtime, @maxcrtime, @minossint1, @maxossint1, @totossint1, @minossint2, @maxossint2, @totossint2, @minossint3, @maxossint3, @totossint3, @minossint4, @maxossint4, @totossint4, @rectype, @pinode, @isroot, @rollupscore);";
@@ -103,7 +103,7 @@ const char VRSUMMARY_CREATE[] =
 
 const char PENTRIES_ROLLUP_CREATE[] =
     DROP_TABLE(PENTRIES_ROLLUP)
-    "CREATE TABLE " PENTRIES_ROLLUP "(name TEXT, type TEXT, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode INT64, ppinode INT64);";
+    "CREATE TABLE " PENTRIES_ROLLUP "(name TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, linkname TEXT, xattr_names BLOB, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1 TEXT, osstext2 TEXT, pinode TEXT, ppinode TEXT);";
 
 const char PENTRIES_ROLLUP_INSERT[] =
     "INSERT INTO " PENTRIES_ROLLUP " VALUES (@name, @type, @inode, @mode, @nlink, @uid, @gid, @size, @blksize, @blocks, @atime, @mtime, @ctime, @linkname, @xattr_names, @crtime, @ossint1, @ossint2, @ossint3, @ossint4, @osstext1, @osstext2, @pinode, @ppinode);";
@@ -430,13 +430,14 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
 
     char *zname     = sqlite3_mprintf("%q", pwork->name + pwork->name_len - pwork->basename_len);
     char *ztype     = sqlite3_mprintf("%c", ed->type);
+    char *zino      = sqlite3_mprintf("%" PRIu64, ed->statuso.st_ino);
     char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
     char *zosstext1 = sqlite3_mprintf("%q", ed->osstext1);
     char *zosstext2 = sqlite3_mprintf("%q", ed->osstext2);
-
+    char *zpino     = sqlite3_mprintf("%" PRIu64, pwork->pinode);
     sqlite3_bind_text(res,  1,  zname, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  2,  ztype, -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res, 3,  ed->statuso.st_ino);
+    sqlite3_bind_text(res,  3,  zino,  -1, SQLITE_STATIC);
     sqlite3_bind_int64(res, 4,  ed->statuso.st_mode);
     sqlite3_bind_int64(res, 5,  ed->statuso.st_nlink);
     sqlite3_bind_int64(res, 6,  ed->statuso.st_uid);
@@ -464,7 +465,7 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
     sqlite3_bind_int64(res, 20, ed->ossint4);
     sqlite3_bind_text(res,  21, zosstext1, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,  22, zosstext2, -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res, 23, pwork->pinode);
+    sqlite3_bind_text(res,  23, zpino,     -1, SQLITE_STATIC);
 
     const int error = sqlite3_step(res);
     if (error != SQLITE_DONE) {
@@ -473,11 +474,13 @@ int insertdbgo(struct work *pwork, struct entry_data *ed,
         rc = 1;
     }
 
-    sqlite3_free(zname);
-    sqlite3_free(ztype);
-    sqlite3_free(zlinkname);
-    sqlite3_free(zosstext1);
+    sqlite3_free(zpino);
     sqlite3_free(zosstext2);
+    sqlite3_free(zosstext1);
+    sqlite3_free(zlinkname);
+    sqlite3_free(zino);
+    sqlite3_free(ztype);
+    sqlite3_free(zname);
     sqlite3_reset(res);
     sqlite3_clear_bindings(res); /* NULL will cause invalid read here */
 
@@ -585,7 +588,9 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
     char *zname     = sqlite3_mprintf("%q", path);
     char *ztype     = sqlite3_mprintf("%c", ed->type);
+    char *zino      = sqlite3_mprintf("%" PRIu64, ed->statuso.st_ino);
     char *zlinkname = sqlite3_mprintf("%q", ed->linkname);
+    char *zpino     = sqlite3_mprintf("%" PRIu64, pwork->pinode);
 
     char xattrnames[MAXXATTR] = "\x00";
     xattr_get_names(&ed->xattrs, xattrnames, sizeof(xattrnames), XATTRDELIM);
@@ -594,7 +599,7 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
 
     sqlite3_bind_text(res,   1,  zname, -1, SQLITE_STATIC);
     sqlite3_bind_text(res,   2,  ztype, -1, SQLITE_STATIC);
-    sqlite3_bind_int64(res,  3,  ed->statuso.st_ino);
+    sqlite3_bind_text(res,   3,  zino,  -1, SQLITE_STATIC);
     sqlite3_bind_int64(res,  4,  ed->statuso.st_mode);
     sqlite3_bind_int64(res,  5,  ed->statuso.st_nlink);
     sqlite3_bind_int64(res,  6,  ed->statuso.st_uid);
@@ -648,7 +653,7 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_bind_int64(res,  54, su->maxossint4);
     sqlite3_bind_int64(res,  55, su->totossint4);
     sqlite3_bind_int64(res,  56, 0); /* rectype */
-    sqlite3_bind_int64(res,  57, pwork->pinode);
+    sqlite3_bind_text(res,   57, zpino, -1, SQLITE_STATIC);
     sqlite3_bind_int64(res,  58, 1); /* isroot */
     sqlite3_bind_int64(res,  59, 0); /* rollupscore */
 
@@ -657,7 +662,9 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     sqlite3_clear_bindings(res);
 
     sqlite3_free(zxattrnames);
+    sqlite3_free(zpino);
     sqlite3_free(zlinkname);
+    sqlite3_free(zino);
     sqlite3_free(ztype);
     sqlite3_free(zname);
 

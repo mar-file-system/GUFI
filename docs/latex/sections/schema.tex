@@ -70,7 +70,8 @@ metadata.
 The \entries table contains file and link metadata extracted from the
 source filesystem using \stat, \readlink, and \listxattr. There are
 also a few OS specific columns (\texttt{oss*}) that are unused in
-base GUFI.
+base GUFI. Note that the inode column is a string and not an integer
+as one might expect.
 
 \subsection{Directory \summary}
 The directory \summary table contains the metadata of the current
@@ -78,7 +79,8 @@ directory. Additionally, it contains columns that summarizes the
 \entries table located in the same database file, such as minimum and
 maximum file sizes, uids, and gids. These summary columns can be used
 to determine whether or not the \entries table needs to be queried
-at all.
+at all. Note that the inode and pinode colums are strings and not
+integers as one might expect.
 
 \begin{figure} [h!]
 \centering

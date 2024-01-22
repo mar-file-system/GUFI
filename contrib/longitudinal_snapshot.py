@@ -136,7 +136,7 @@ def run(argv):
     # map VRXPENTRIES columns back to SUMMARY column names
     SUMMARY_COLS = {
         'name':            ['dname',                        SQLITE3_TEXT],
-        'inode':           ['pinode',                       SQLITE3_INT64], # entry's pinode is directory's inode
+        'inode':           ['pinode',                       SQLITE3_TEXT], # entry's pinode is directory's inode
         'mode':            ['dmode',                        SQLITE3_INT64],
         'nlink':           ['dnlink',                       SQLITE3_INT64],
         'uid':             ['duid',                         SQLITE3_INT64],
@@ -148,7 +148,7 @@ def run(argv):
         'ctime':           ['dctime',                       SQLITE3_INT64],
         'depth':           ['level()',                      SQLITE3_INT64],
         'filesystem_type': [SQLITE3_NULL,                   SQLITE3_BLOB],
-        'pinode':          ['ppinode',                      SQLITE3_INT64], # entry's ppinode is directory's pinode
+        'pinode':          ['ppinode',                      SQLITE3_TEXT], # entry's ppinode is directory's pinode
         'totfiles':        ['dtotfile',                     SQLITE3_INT64],
         'totlinks':        ['dtotlinks',                    SQLITE3_INT64],
         'totsubdirs':      ['subdirs(srollsubdirs, sroll)', SQLITE3_INT64],
