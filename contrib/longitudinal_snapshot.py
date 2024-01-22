@@ -83,27 +83,27 @@ SQLITE3_BLOB   = 'BLOB'
 
 # used to generate timestamp columns
 def gen_time_cols(col, reftime):
-    return {
-        'min':    ['dmin{0}'.format(col),                      SQLITE3_INT64],
-        'max':    ['dmax{0}'.format(col),                      SQLITE3_INT64],
-        'mean':   ['AVG({0})'.format(col),                     SQLITE3_DOUBLE],
-        'median': ['median({0})'.format(col),                  SQLITE3_DOUBLE],
-        'mode':   ['mode_count({0})'.format(col),              SQLITE3_TEXT],
-        'stdev':  ['stdevp({0})'.format(col),                  SQLITE3_DOUBLE],
-        'hist':   ['time_hist({0}, {1})'.format(col, reftime), SQLITE3_TEXT],
-    }
+    return [
+        ['min',    ['dmin{0}'.format(col),                      SQLITE3_INT64]],
+        ['max',    ['dmax{0}'.format(col),                      SQLITE3_INT64]],
+        ['mean',   ['AVG({0})'.format(col),                     SQLITE3_DOUBLE]],
+        ['median', ['median({0})'.format(col),                  SQLITE3_DOUBLE]],
+        ['mode',   ['mode_count({0})'.format(col),              SQLITE3_TEXT]],
+        ['stdev',  ['stdevp({0})'.format(col),                  SQLITE3_DOUBLE]],
+        ['hist',   ['time_hist({0}, {1})'.format(col, reftime), SQLITE3_TEXT]],
+    ]
 
 # used to generate columns for name, linkname, xattr_name, and xattr_value
 def gen_str_cols(col, buckets):
-    return {
-        'min':    ['MIN(LENGTH({0}))'.format(col),                     SQLITE3_INT64],
-        'max':    ['MAX(LENGTH({0}))'.format(col),                     SQLITE3_INT64],
-        'mean':   ['AVG(LENGTH({0}))'.format(col),                     SQLITE3_DOUBLE],
-        'median': ['median(LENGTH({0}))'.format(col),                  SQLITE3_DOUBLE],
-        'mode':   ['mode_count(LENGTH({0}))'.format(col),              SQLITE3_TEXT],
-        'stdev':  ['stdevp(LENGTH({0}))'.format(col),                  SQLITE3_DOUBLE],
-        'hist':   ['log2_hist(LENGTH({0}), {1})'.format(col, buckets), SQLITE3_TEXT],
-    }
+    return [
+        ['min',    ['MIN(LENGTH({0}))'.format(col),                     SQLITE3_INT64]],
+        ['max',    ['MAX(LENGTH({0}))'.format(col),                     SQLITE3_INT64]],
+        ['mean',   ['AVG(LENGTH({0}))'.format(col),                     SQLITE3_DOUBLE]],
+        ['median', ['median(LENGTH({0}))'.format(col),                  SQLITE3_DOUBLE]],
+        ['mode',   ['mode_count(LENGTH({0}))'.format(col),              SQLITE3_TEXT]],
+        ['stdev',  ['stdevp(LENGTH({0}))'.format(col),                  SQLITE3_DOUBLE]],
+        ['hist',   ['log2_hist(LENGTH({0}), {1})'.format(col, buckets), SQLITE3_TEXT]],
+    ]
 
 def parse_args(argv, now):
     parser = argparse.ArgumentParser(description='GUFI Longitudinal Snapshot Generator')
@@ -134,93 +134,90 @@ def run(argv):
     # the following structs contain mappings from the GUFI tree to the longitudinal snapshot
 
     # map VRXPENTRIES columns back to SUMMARY column names
-    SUMMARY_COLS = {
-        'name':            ['dname',                        SQLITE3_TEXT],
-        'inode':           ['pinode',                       SQLITE3_TEXT], # entry's pinode is directory's inode
-        'mode':            ['dmode',                        SQLITE3_INT64],
-        'nlink':           ['dnlink',                       SQLITE3_INT64],
-        'uid':             ['duid',                         SQLITE3_INT64],
-        'gid':             ['dgid',                         SQLITE3_INT64],
-        'blksize':         ['dblksize',                     SQLITE3_INT64],
-        'blocks':          ['dblocks',                      SQLITE3_INT64],
-        'atime':           ['datime',                       SQLITE3_INT64],
-        'mtime':           ['dmtime',                       SQLITE3_INT64],
-        'ctime':           ['dctime',                       SQLITE3_INT64],
-        'depth':           ['level()',                      SQLITE3_INT64],
-        'filesystem_type': [SQLITE3_NULL,                   SQLITE3_BLOB],
-        'pinode':          ['ppinode',                      SQLITE3_TEXT], # entry's ppinode is directory's pinode
-        'totfiles':        ['dtotfile',                     SQLITE3_INT64],
-        'totlinks':        ['dtotlinks',                    SQLITE3_INT64],
-        'totsubdirs':      ['subdirs(srollsubdirs, sroll)', SQLITE3_INT64],
-    }
+    SUMMARY_COLS = [
+        ['name',            ['dname',                        SQLITE3_TEXT]],
+        ['inode',           ['pinode',                       SQLITE3_TEXT]], # entry's pinode is directory's inode
+        ['mode',            ['dmode',                        SQLITE3_INT64]],
+        ['nlink',           ['dnlink',                       SQLITE3_INT64]],
+        ['uid',             ['duid',                         SQLITE3_INT64]],
+        ['gid',             ['dgid',                         SQLITE3_INT64]],
+        ['blksize',         ['dblksize',                     SQLITE3_INT64]],
+        ['blocks',          ['dblocks',                      SQLITE3_INT64]],
+        ['atime',           ['datime',                       SQLITE3_INT64]],
+        ['mtime',           ['dmtime',                       SQLITE3_INT64]],
+        ['ctime',           ['dctime',                       SQLITE3_INT64]],
+        ['depth',           ['level()',                      SQLITE3_INT64]],
+        ['filesystem_type', [SQLITE3_NULL,                   SQLITE3_BLOB]],
+        ['pinode',          ['ppinode',                      SQLITE3_TEXT]], # entry's ppinode is directory's pinode
+        ['totfiles',        ['dtotfile',                     SQLITE3_INT64]],
+        ['totlinks',        ['dtotlinks',                    SQLITE3_INT64]],
+        ['totsubdirs',      ['subdirs(srollsubdirs, sroll)', SQLITE3_INT64]],
+    ]
 
-    UID_COLS = {
-        'min':        ['dminuid',             SQLITE3_INT64],
-        'max':        ['dmaxuid',             SQLITE3_INT64],
-        'hist':       ['category_hist(uid)',  SQLITE3_INT64],
-        'num_unique': ['COUNT(DISTINCT uid)', SQLITE3_INT64],
-    }
+    UID_COLS = [
+        ['min',        ['dminuid',             SQLITE3_INT64]],
+        ['max',        ['dmaxuid',             SQLITE3_INT64]],
+        ['hist',       ['category_hist(uid)',  SQLITE3_INT64]],
+        ['num_unique', ['COUNT(DISTINCT uid)', SQLITE3_INT64]],
+    ]
 
-    GID_COLS = {
-        'min':        ['dmingid',             SQLITE3_INT64],
-        'max':        ['dmaxgid',             SQLITE3_INT64],
-        'hist':       ['category_hist(gid)',  SQLITE3_TEXT],
-        'num_unique': ['COUNT(DISTINCT gid)', SQLITE3_INT64],
-    }
+    GID_COLS = [
+        ['min',        ['dmingid',             SQLITE3_INT64]],
+        ['max',        ['dmaxgid',             SQLITE3_INT64]],
+        ['hist',       ['category_hist(gid)',  SQLITE3_TEXT]],
+        ['num_unique', ['COUNT(DISTINCT gid)', SQLITE3_INT64]],
+    ]
 
-    SIZE_COLS = {
-        'min':    ['dminsize',                                            SQLITE3_INT64],
-        'max':    ['dmaxsize',                                            SQLITE3_INT64],
-        'mean':   ['AVG(size)',                                           SQLITE3_DOUBLE],
-        'median': ['median(size)',                                        SQLITE3_DOUBLE],
-        'mode':   ['mode_count(CAST(size AS TEXT))',                      SQLITE3_TEXT],
-        'stdev':  ['stdevp(size)',                                        SQLITE3_DOUBLE],
-        'sum':    ['dtotsize',                                            SQLITE3_INT64],
-        'hist':   ['log2_hist(size, {0})'.format(log2_size_bucket_count), SQLITE3_TEXT],
-    }
+    SIZE_COLS = [
+        ['min',    ['dminsize',                                            SQLITE3_INT64]],
+        ['max',    ['dmaxsize',                                            SQLITE3_INT64]],
+        ['mean',   ['AVG(size)',                                           SQLITE3_DOUBLE]],
+        ['median', ['median(size)',                                        SQLITE3_DOUBLE]],
+        ['mode',   ['mode_count(CAST(size AS TEXT))',                      SQLITE3_TEXT]],
+        ['stdev',  ['stdevp(size)',                                        SQLITE3_DOUBLE]],
+        ['sum',    ['dtotsize',                                            SQLITE3_INT64]],
+        ['hist',   ['log2_hist(size, {0})'.format(log2_size_bucket_count), SQLITE3_TEXT]],
+    ]
 
-    PERM_COLS = {
-        'hist': ['mode_hist(mode)', SQLITE3_TEXT],
-    }
+    PERM_COLS = [
+        ['hist', ['mode_hist(mode)', SQLITE3_TEXT]],
+    ]
 
     CTIME_COLS       = gen_time_cols('ctime',  args.reftime)
     ATIME_COLS       = gen_time_cols('atime',  args.reftime)
     MTIME_COLS       = gen_time_cols('mtime',  args.reftime)
     CRTIME_COLS      = gen_time_cols('crtime', args.reftime)
 
-    NAME_COLS        = gen_str_cols('name',     log2_name_len_bucket_count)
-    LINKNAME_COLS    = gen_str_cols('linkname', log2_name_len_bucket_count)
-
-    # keep these separate from name/linkname
+    NAME_COLS        = gen_str_cols('name',        log2_name_len_bucket_count)
+    LINKNAME_COLS    = gen_str_cols('linkname',    log2_name_len_bucket_count)
     XATTR_NAME_COLS  = gen_str_cols('xattr_name',  log2_name_len_bucket_count)
     XATTR_VALUE_COLS = gen_str_cols('xattr_value', log2_name_len_bucket_count)
 
-    EXT_COLS = {
-        # filenames without extensions are treated as NULL
-        'hist': ['''category_hist(CASE WHEN name NOT LIKE '%.%' THEN
-                                     {0}
-                                 ELSE
-                                     REPLACE(name, RTRIM(name, REPLACE(name, '.', '')), '')
-                                 END)'''.format(SQLITE3_NULL),
-                 SQLITE3_TEXT]
-    }
+    EXT_COLS = [
+        # filenames without extensions pass in NULL
+        ['hist', ['''category_hist(CASE WHEN name NOT LIKE '%.%' THEN
+                                       {0}
+                                   ELSE
+                                       REPLACE(name, RTRIM(name, REPLACE(name, '.', '')), '')
+                                   END)'''.format(SQLITE3_NULL),
+                 SQLITE3_TEXT]]
+    ]
 
-    # columns grabbed during first pass of index
-    FIRST_PASS = {
-        'uid':         UID_COLS,
-        'gid':         GID_COLS,
-        'size':        SIZE_COLS,
-        'permissions': PERM_COLS,
-        'ctime':       CTIME_COLS,
-        'atime':       ATIME_COLS,
-        'mtime':       MTIME_COLS,
-        'crtime':      CRTIME_COLS,
-        'name':        NAME_COLS,
-        'linkname':    LINKNAME_COLS,
-        'xattr_name':  XATTR_NAME_COLS,
-        'xattr_value': XATTR_VALUE_COLS,
-        'extensions':  EXT_COLS,
-    }
+    FIRST_PASS = [
+        ['uid',         UID_COLS],
+        ['gid',         GID_COLS],
+        ['size',        SIZE_COLS],
+        ['permissions', PERM_COLS],
+        ['ctime',       CTIME_COLS],
+        ['atime',       ATIME_COLS],
+        ['mtime',       MTIME_COLS],
+        ['crtime',      CRTIME_COLS],
+        ['name',        NAME_COLS],
+        ['linkname',    LINKNAME_COLS],
+        ['xattr_name',  XATTR_NAME_COLS],
+        ['xattr_value', XATTR_VALUE_COLS],
+        ['extensions',  EXT_COLS],
+    ]
 
     # generate columns for selecting and inserting into
 
@@ -228,13 +225,13 @@ def run(argv):
     select_cols = [] # SELECT cols FROM VRXPENTRIES
 
     # summary column names are not prefixed
-    for col_name, stat in SUMMARY_COLS.items():
+    for col_name, stat in SUMMARY_COLS:
         sql, col_type = stat
         create_cols += ['{0} {1}'.format(col_name, col_type)]
         select_cols += [sql]
 
-    for col_name, stats_pulled in FIRST_PASS.items():
-        for stat_name, stat in stats_pulled.items():
+    for col_name, stats_pulled in FIRST_PASS:
+        for stat_name, stat in stats_pulled:
             sql, col_type = stat
             create_cols += ['{0}_{1} {2}'.format(col_name, stat_name, col_type)]
             select_cols += [sql]
