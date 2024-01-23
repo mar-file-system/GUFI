@@ -95,7 +95,7 @@ TEST(gufi_query, aggregate) {
 
     const size_t row_count = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
 
-    struct input in;
+    struct input in{};
     in.output                = STDOUT;
     in.maxthreads            = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
     in.delim                 = ' ';

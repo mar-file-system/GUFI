@@ -236,15 +236,8 @@ struct input {
 
    struct {
        refstr_t dbname;       /* name of single db file */
-       refstr_t table;        /* name of table in db file */
-       refstr_t column;       /* name of column in table to join with GUFI */
-       refstr_t gufi_column;  /* name of column in table to join with DSI */
-
-       /* sql used to create views on dsi data */
-       char vssql[MAXSQL];
-       char vesql[MAXSQL];
-       char vpsql[MAXSQL];
-   } dsi;
+       refstr_t attachname;   /* attach name of db file */
+   } attach_single;
 };
 
 void print_help(const char *prog_name,

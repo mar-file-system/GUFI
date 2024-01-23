@@ -26,7 +26,8 @@ options:
   -x                     enable external database processing
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
-  -Q <single_db_path> <dsi_table_name> <dsi_column_name> <gufi_column_name> root directory of source tree, name of database file found in each directory of the source tree, and the table name to join on
+  -Q <dbname>
+     <attachname>        Attach a single file across every single db in the index. Use -I to create views.
 
 GUFI_index        find GUFI index here
 

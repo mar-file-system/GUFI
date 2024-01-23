@@ -109,6 +109,16 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
         #endif
 
+        /* handle -Q */
+        if (in->attach_single.dbname.len) {
+            /* attach single db to thread instance */
+            if (!attachdb(in->attach_single.dbname.data, ta->outdb,
+                          in->attach_single.attachname.data,
+                          SQLITE_OPEN_READONLY, 1)) {
+                break;
+            }
+        }
+
         /* run -I */
         if (in->sql.init.len) {
             char *err = NULL;

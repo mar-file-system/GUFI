@@ -73,6 +73,7 @@ else:
     from shlex import quote as sanitize # new in Python 3.3
 
 # table names
+ENTRIES     = 'entries'
 SUMMARY     = 'summary'
 PENTRIES    = 'pentries'
 XSUMMARY    = 'xsummary'
