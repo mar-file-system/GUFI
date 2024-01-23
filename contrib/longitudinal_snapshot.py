@@ -121,11 +121,11 @@ def parse_args(argv, now):
     return parser.parse_args(argv[1:])
 
 # pylint: disable=too-many-locals, too-many-statements
-def run(argv):
+def run(argv, config_path):
     timestamp = int(time.time())
 
     args = parse_args(argv, timestamp)
-    config = gufi_config.Server(gufi_config.PATH)
+    config = gufi_config.Server(config_path)
 
     log2_size_bucket_count = math.ceil(math.log(args.max_size, 2))
     log2_name_len_bucket_count = math.ceil(math.log(args.max_name_len, 2))
@@ -307,4 +307,4 @@ def run(argv):
     return 0
 
 if __name__ == '__main__':
-    run(sys.argv)
+    sys.exit(run(sys.argv, gufi_config.PATH))

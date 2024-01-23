@@ -165,6 +165,7 @@ GUFI_TRACE2INDEX="@CMAKE_BINARY_DIR@/src/gufi_trace2index"
 GUFI_TREESUMMARY="@CMAKE_BINARY_DIR@/src/gufi_treesummary"
 GUFI_TREESUMMARY_ALL="@CMAKE_BINARY_DIR@/src/gufi_treesummary_all"
 GUFI_UNROLLUP="@CMAKE_BINARY_DIR@/src/gufi_unrollup"
+LONGITUDINAL_SNAPSHOT="${GUFI_TOOL} longitudinal_snapshot"
 OLDBIGFILES="@CMAKE_BINARY_DIR@/examples/oldbigfiles"
 QUERYDBS="@CMAKE_BINARY_DIR@/src/querydbs"
 SPLIT_TRACE="@CMAKE_BINARY_DIR@/contrib/split_trace"
@@ -203,6 +204,7 @@ replace() {
     s/${GUFI_TREESUMMARY//\//\\/}/gufi_treesummary/g;
     s/${GUFI_TREESUMMARY_ALL//\//\\/}/gufi_treesummary_all/g;
     s/${GUFI_UNROLLUP//\//\\/}/gufi_unrollup/g;
+    s/${LONGITUDINAL_SNAPSHOT//\//\\/}/longitudinal_snapshot/g;
     s/${OLDBIGFILES//\//\\/}/oldbigfiles/g;
     s/${QUERYDBS//\//\\/}/querydbs/g;
     s/${SPLIT_TRACE//\//\\/}/split_trace/g;

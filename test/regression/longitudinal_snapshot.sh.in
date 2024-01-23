@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,52 +61,46 @@
 
 
 
-import argparse
-import os
-import sys
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# test config file name
-CONFIG_PATH = os.path.join('@CMAKE_CURRENT_BINARY_DIR@', 'config.test')
+OUTPUT="longitudinal_snapshot.out"
 
-SCRIPTS = os.path.join('@CMAKE_BINARY_DIR@', 'scripts')
+SNAPSHOT="longitudinal_snapshot.db"
 
-TOOLS = {
-    'find'                  : os.path.join(SCRIPTS, 'gufi_find'),
-    'getfattr'              : os.path.join(SCRIPTS, 'gufi_getfattr'),
-    'ls'                    : os.path.join(SCRIPTS, 'gufi_ls'),
-    'stat'                  : os.path.join(SCRIPTS, 'gufi_stat'),
-    'stats'                 : os.path.join(SCRIPTS, 'gufi_stats'),
-    'longitudinal_snapshot' : os.path.join('@CMAKE_BINARY_DIR@', 'contrib', 'longitudinal_snapshot.py'),
+cleanup() {
+    rm -rf "${SNAPSHOT}"
 }
 
-# import a tool by path (default: the scripts directory)
-# needed for duplicate filenames or files without the .py extension
-def import_tool(tool, filename):
-    if sys.version_info.major < 3: # pylint: disable=no-else-return
-        import imp                 # pylint: disable=deprecated-module,import-outside-toplevel
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
 
-        return imp.load_source(tool, filename)
-    # https://csatlas.com/python-import-file-module/
-    elif sys.version_info.major >= 3:
-        # pylint: disable=import-outside-toplevel
-        import importlib.machinery
-        import importlib.util
-        from pathlib import Path
+trap cleanup_exit EXIT
 
-        # Import mymodule
-        loader = importlib.machinery.SourceFileLoader(tool, filename)
-        spec = importlib.util.spec_from_loader(tool, loader)
-        script = importlib.util.module_from_spec(spec)
-        loader.exec_module(script)
-        return script
+cleanup
 
-    return None
+(
+run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
+run_no_sort "${GUFI_TREESUMMARY_ALL} ${INDEXROOT}" | sed '/^Started .*$/d'
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='GUFI Testing Tool Selector', add_help=False)
-    parser.add_argument('tool', choices=TOOLS.keys())
+run_no_sort "${LONGITUDINAL_SNAPSHOT} ${SNAPSHOT} --notes 'test notes'"
 
-    args, tool_args = parser.parse_known_args()
+run_no_sort "${SQLITE3} ${SNAPSHOT} \".tables\""
 
-    gufi_tool = import_tool(args.tool, TOOLS[args.tool])
-    sys.exit(gufi_tool.run([args.tool] + tool_args, CONFIG_PATH))
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(metadata);\""
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(snapshot);\""
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(treesummary);\""
+
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM metadata;\""
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM snapshot;\""
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM treesummary;\""
+
+run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT notes FROM metadata;\""
+
+run_sort "${SQLITE3} ${SNAPSHOT} \"SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM snapshot AS s, treesummary AS t WHERE s.inode == t.inode;\""
+) | tee "${OUTPUT}"
+
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+rm "${OUTPUT}"

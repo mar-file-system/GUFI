@@ -1,0 +1,192 @@
+$ longitudinal_snapshot --help
+                    [--max_name_len pos_int] [--notes text]
+                    outname
+
+GUFI Longitudinal Snapshot Generator
+
+positional arguments:
+  outname               output db file name
+
+options:
+  -h, --help            show this help message and exit
+  --reftime seconds     reference point for age (since UNIX epoch)
+  --max_size pos_int    the maximum expected size
+  --max_name_len pos_int
+                        the maximum expected length of a name/linkname
+  --notes text          freeform text of any extra information to add to the
+                        snapshot
+
+$ gufi_treesummary_all prefix
+
+$ longitudinal_snapshot longitudinal_snapshot.db --notes 'test notes'
+
+$ sqlite3 longitudinal_snapshot.db ".tables"
+metadata     snapshot     treesummary
+
+$ sqlite3 longitudinal_snapshot.db "PRAGMA TABLE_INFO(metadata);"
+0|timestamp|INT|0||0
+1|src|TEXT|0||0
+2|notes|TEXT|0||0
+
+$ sqlite3 longitudinal_snapshot.db "PRAGMA TABLE_INFO(snapshot);"
+0|name|TEXT|0||0
+1|inode|TEXT|0||0
+2|mode|INT64|0||0
+3|nlink|INT64|0||0
+4|uid|INT64|0||0
+5|gid|INT64|0||0
+6|blksize|INT64|0||0
+7|blocks|INT64|0||0
+8|atime|INT64|0||0
+9|mtime|INT64|0||0
+10|ctime|INT64|0||0
+11|depth|INT64|0||0
+12|filesystem_type|BLOB|0||0
+13|pinode|TEXT|0||0
+14|totfiles|INT64|0||0
+15|totlinks|INT64|0||0
+16|totsubdirs|INT64|0||0
+17|uid_min|INT64|0||0
+18|uid_max|INT64|0||0
+19|uid_hist|INT64|0||0
+20|uid_num_unique|INT64|0||0
+21|gid_min|INT64|0||0
+22|gid_max|INT64|0||0
+23|gid_hist|TEXT|0||0
+24|gid_num_unique|INT64|0||0
+25|size_min|INT64|0||0
+26|size_max|INT64|0||0
+27|size_mean|DOUBLE|0||0
+28|size_median|DOUBLE|0||0
+29|size_mode|TEXT|0||0
+30|size_stdev|DOUBLE|0||0
+31|size_sum|INT64|0||0
+32|size_hist|TEXT|0||0
+33|permissions_hist|TEXT|0||0
+34|ctime_min|INT64|0||0
+35|ctime_max|INT64|0||0
+36|ctime_mean|DOUBLE|0||0
+37|ctime_median|DOUBLE|0||0
+38|ctime_mode|TEXT|0||0
+39|ctime_stdev|DOUBLE|0||0
+40|ctime_hist|TEXT|0||0
+41|atime_min|INT64|0||0
+42|atime_max|INT64|0||0
+43|atime_mean|DOUBLE|0||0
+44|atime_median|DOUBLE|0||0
+45|atime_mode|TEXT|0||0
+46|atime_stdev|DOUBLE|0||0
+47|atime_hist|TEXT|0||0
+48|mtime_min|INT64|0||0
+49|mtime_max|INT64|0||0
+50|mtime_mean|DOUBLE|0||0
+51|mtime_median|DOUBLE|0||0
+52|mtime_mode|TEXT|0||0
+53|mtime_stdev|DOUBLE|0||0
+54|mtime_hist|TEXT|0||0
+55|crtime_min|INT64|0||0
+56|crtime_max|INT64|0||0
+57|crtime_mean|DOUBLE|0||0
+58|crtime_median|DOUBLE|0||0
+59|crtime_mode|TEXT|0||0
+60|crtime_stdev|DOUBLE|0||0
+61|crtime_hist|TEXT|0||0
+62|name_min|INT64|0||0
+63|name_max|INT64|0||0
+64|name_mean|DOUBLE|0||0
+65|name_median|DOUBLE|0||0
+66|name_mode|TEXT|0||0
+67|name_stdev|DOUBLE|0||0
+68|name_hist|TEXT|0||0
+69|linkname_min|INT64|0||0
+70|linkname_max|INT64|0||0
+71|linkname_mean|DOUBLE|0||0
+72|linkname_median|DOUBLE|0||0
+73|linkname_mode|TEXT|0||0
+74|linkname_stdev|DOUBLE|0||0
+75|linkname_hist|TEXT|0||0
+76|xattr_name_min|INT64|0||0
+77|xattr_name_max|INT64|0||0
+78|xattr_name_mean|DOUBLE|0||0
+79|xattr_name_median|DOUBLE|0||0
+80|xattr_name_mode|TEXT|0||0
+81|xattr_name_stdev|DOUBLE|0||0
+82|xattr_name_hist|TEXT|0||0
+83|xattr_value_min|INT64|0||0
+84|xattr_value_max|INT64|0||0
+85|xattr_value_mean|DOUBLE|0||0
+86|xattr_value_median|DOUBLE|0||0
+87|xattr_value_mode|TEXT|0||0
+88|xattr_value_stdev|DOUBLE|0||0
+89|xattr_value_hist|TEXT|0||0
+90|extensions_hist|TEXT|0||0
+
+$ sqlite3 longitudinal_snapshot.db "PRAGMA TABLE_INFO(treesummary);"
+0|inode|TEXT|0||0
+1|totsubdirs|INT64|0||0
+2|maxsubdirfiles|INT64|0||0
+3|maxsubdirlinks|INT64|0||0
+4|maxsubdirsize|INT64|0||0
+5|totfiles|INT64|0||0
+6|totlinks|INT64|0||0
+7|minuid|INT64|0||0
+8|maxuid|INT64|0||0
+9|mingid|INT64|0||0
+10|maxgid|INT64|0||0
+11|minsize|INT64|0||0
+12|maxsize|INT64|0||0
+13|totzero|INT64|0||0
+14|totltk|INT64|0||0
+15|totmtk|INT64|0||0
+16|totltm|INT64|0||0
+17|totmtm|INT64|0||0
+18|totmtg|INT64|0||0
+19|totmtt|INT64|0||0
+20|totsize|INT64|0||0
+21|minctime|INT64|0||0
+22|maxctime|INT64|0||0
+23|minmtime|INT64|0||0
+24|maxmtime|INT64|0||0
+25|minatime|INT64|0||0
+26|maxatime|INT64|0||0
+27|minblocks|INT64|0||0
+28|maxblocks|INT64|0||0
+29|totxattr|INT64|0||0
+30|depth|INT64|0||0
+31|mincrtime|INT64|0||0
+32|maxcrtime|INT64|0||0
+33|minossint1|INT64|0||0
+34|maxossint1|INT64|0||0
+35|totossint1|INT64|0||0
+36|minossint2|INT64|0||0
+37|maxossint2|INT64|0||0
+38|totossint2|INT64|0||0
+39|minossint3|INT64|0||0
+40|maxossint3|INT64|0||0
+41|totossint3|INT64|0||0
+42|minossint4|INT64|0||0
+43|maxossint4|INT64|0||0
+44|totossint4|INT64|0||0
+45|rectype|INT64|0||0
+46|uid|INT64|0||0
+47|gid|INT64|0||0
+
+$ sqlite3 longitudinal_snapshot.db "SELECT COUNT(*) FROM metadata;"
+1
+
+$ sqlite3 longitudinal_snapshot.db "SELECT COUNT(*) FROM snapshot;"
+6
+
+$ sqlite3 longitudinal_snapshot.db "SELECT COUNT(*) FROM treesummary;"
+5
+
+$ sqlite3 longitudinal_snapshot.db "SELECT notes FROM metadata;"
+test notes
+
+$ sqlite3 longitudinal_snapshot.db "SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM snapshot AS s, treesummary AS t WHERE s.inode == t.inode;"
+directory|6|11|3|4
+leaf_directory|21|21|2|2
+prefix|1049622|1049668|5|12
+subdirectory|5|5|1|1
+unusual#? directory ,|14|14|1|1
+

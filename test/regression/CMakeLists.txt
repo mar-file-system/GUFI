@@ -107,6 +107,7 @@ set(EXAMPLES
 
 set(OTHERS
   bash_completion
+  longitudinal_snapshot
   split_trace
   treediff
 )
