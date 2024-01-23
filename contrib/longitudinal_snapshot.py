@@ -69,7 +69,7 @@ import subprocess
 import time
 import sys
 
-from gufi_common import build_query, get_positive, VRXPENTRIES, TREESUMMARY
+from gufi_common import build_query, get_positive, VRXPENTRIES, SUMMARY, TREESUMMARY
 import gufi_config
 
 METADATA       = 'metadata'
@@ -131,7 +131,7 @@ def run(argv):
     log2_name_len_bucket_count = math.ceil(math.log(args.max_name_len, 2))
 
     # ###############################################################
-    # the following structs contain mappings from the GUFI tree to the longitudinal snapshot
+    # the following contain mappings from the GUFI tree to the longitudinal snapshot
 
     # map VRXPENTRIES columns back to SUMMARY column names
     SUMMARY_COLS = [
@@ -245,7 +245,7 @@ def run(argv):
     # ###############################################################
     # treesummary
     # copied from dbutils.h
-    TREESUMMARY_CREATE = "CREATE TABLE {0}(totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);".format
+    TREESUMMARY_CREATE = 'CREATE TABLE {0} (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);'.format
 
     INTERMEDIATE_TREESUMMARY = 'intermediate_treesummary'
     # ###############################################################
@@ -260,8 +260,8 @@ def run(argv):
         '-I', 'CREATE TABLE {0}({1}); {2};'.format(
             INTERMEDIATE, table_cols_sql, TREESUMMARY_CREATE(INTERMEDIATE_TREESUMMARY)),
 
-        '-T', 'INSERT INTO {0} SELECT * FROM {1}; SELECT 1 FROM {1};'.format(
-            INTERMEDIATE_TREESUMMARY, TREESUMMARY),
+        '-T', 'INSERT INTO {0} SELECT {1}.inode, {2}.* FROM {1}, {2}; SELECT 1 FROM {2};'.format(
+            INTERMEDIATE_TREESUMMARY, SUMMARY, TREESUMMARY),
 
         '-E', 'INSERT INTO {0} {1};'.format(
             INTERMEDIATE, build_query(select_cols, [VRXPENTRIES])),
