@@ -125,6 +125,7 @@ endif()
 set(USEFUL
   canned_queries.sh
   gentrace.py
+  gufi_query_dsi
   hashes.py
   longitudinal_snapshot.py
   trace_anonymizer.py
@@ -133,6 +134,8 @@ set(USEFUL
 foreach(file ${USEFUL})
     configure_file("${file}" "${file}" @ONLY)
 endforeach()
+
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_query_dsi" DESTINATION bin COMPONENT Server)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_subdirectory(debug)

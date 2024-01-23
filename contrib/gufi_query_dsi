@@ -1,0 +1,221 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import os
+import subprocess
+import sys
+
+import gufi_common
+
+class Q_Args:
+    def __init__(self, val):
+        parts = val.split()
+        if len(parts) != 5:
+            raise ValueError("Input string should be 5 space separated strings")
+        self.template_path, self.template_attach_name, self.basename, self.table, self.view = parts
+
+    def forward(self):
+        # the template and the matching external database files must have the same table name and schema to UNION on
+        return ['-Q', self.basename, self.table, '{0}.{1}'.format(self.template_attach_name, self.table), self.view]
+
+    def __repr__(self):
+        return '({0})'.format(' '.join(self.forward()[1:]))
+
+EXAMPLE = '''
+Example Usage:
+    gufi_query_dsi                                     \\
+        -Q "templatel.db template1 db1.db table ext1"  \\
+        -Q "template2.db template2 db2.db table ext2"  \\
+        -E "SELECT col1, col2 FROM evrpentries LEFT JOIN ext1 ON (evrpentries.name == ext1.name) AND (evrpentries.type == ext1.type) LEFT JOIN ext2 ON (evrpentries.name == ext2.name) AND (evrpentries.type == ext2.type);" \\
+        index
+
+    The first argument to -Q should be the full path to a globally
+    accessible SQLite3 file that provides a schema templates for
+    matching on in queries (e.g. name, type, inode). The table used
+    should be empty but does not have to be.
+
+    The second argument is the name of the template db file's attach
+    name.
+
+    The third argument to -Q should be the basename of the SQLite3
+    file in the current directory to look for. The comparison done is
+    an exact string match.
+
+    The fourth argument is the table name that must be available in
+    both the template db as well as the current directory's external
+    database and must have the same schema.
+
+    The fifth argument is the name that should be (left) joined with
+    'e' variants of tables and views.
+
+    Multiple '-Q's may be used.
+'''
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        'gufi_query_dsi', description='GUFI Query DSI Wrapper',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=EXAMPLE)
+
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('--verbose', '-V', action='store_true',
+                        help='Show the gufi_query being executed')
+
+    # gufi_query flags
+    parser.add_argument('-d', type=gufi_common.get_char, dest='delim',
+                        metavar='char', default='|',
+                        help='output column separator')
+    parser.add_argument('--threads', '-n', type=gufi_common.get_positive,
+                        metavar='n', default=1,
+                        help='number of threads to run with')
+    parser.add_argument('-x', action='store_true',
+                        help='pull in xattrs when querying')
+    parser.add_argument('-I', type=str,
+                        metavar='SQL',
+                        help='gufi_query -I')
+    parser.add_argument('-T', type=str,
+                        metavar='SQL',
+                        help='gufi_query -T')
+    parser.add_argument('-S', type=str,
+                        metavar='SQL',
+                        help='gufi_query -S')
+    parser.add_argument('-E', type=str,
+                        metavar='SQL',
+                        help='gufi_query -E')
+
+    # positional arg
+    parser.add_argument('index', type=str,
+                        help='starting directory of GUFI tree')
+
+    # -Q
+    parser.add_argument('-Q', type=Q_Args,
+                        metavar='template-path template-attach-name basename table view',
+                        default=[], action='append',
+                        help='attach external databases in current directory for querying')
+
+    # extra args
+    parser.add_argument('--gufi_query', type=str,
+                        metavar='path', default="gufi_query",
+                        help='path of gufi_query executable')
+
+    parser.add_argument('--dry-run', action='store_true',
+                        help='set up command to run but do not run')
+
+    return parser.parse_args(argv[1:])
+
+def run(argv):
+    args = parse_args(argv)
+
+    I = []
+    Q = []
+    for q in args.Q:
+        # set up external db templates
+        I += ['ATTACH \'file:{0}?mode=ro\' AS {1}'.format(q.template_path, q.template_attach_name)]
+        Q += q.forward()
+
+    # then run original -I
+    if args.I:
+        I += [args.I]
+
+    cmd = [
+        args.gufi_query,
+        '-n', str(args.threads),
+        '-d', args.delim,
+    ]
+
+    if args.x is True:
+        cmd += ['-x']
+
+    cmd += Q
+
+    if len(I) > 0:
+        cmd += ['-I', '; '.join(I) + ';']
+
+    if args.T:
+        cmd += ['-T', args.T]
+
+    if args.S:
+        cmd += ['-S', args.S]
+
+    if args.E:
+        cmd += ['-E', args.E]
+
+    cmd += [
+        args.index,
+    ]
+
+    if args.verbose:
+        gufi_common.print_query(cmd)
+
+    if args.dry_run:
+        return 0
+
+    query = subprocess.Popen(cmd) # pylint: disable=consider-using-with
+    query.communicate()           # block until query finishes
+    return query.returncode
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv))
