@@ -69,7 +69,7 @@ import subprocess
 import time
 import sys
 
-from gufi_common import build_query, get_positive, VRXPENTRIES, SUMMARY, TREESUMMARY
+from gufi_common import build_query, get_positive, print_query, VRXPENTRIES, TREESUMMARY
 import gufi_config
 
 METADATA       = 'metadata'
@@ -107,6 +107,9 @@ def gen_str_cols(col, buckets):
 
 def parse_args(argv, now):
     parser = argparse.ArgumentParser(description='GUFI Longitudinal Snapshot Generator')
+    parser.add_argument('--verbose', '-V',
+                        action='store_true',
+                        help='Show the gufi_query being executed')
     parser.add_argument('outname',
                         help='output db file name')
     parser.add_argument('--reftime',      metavar='seconds', type=int,           default=now,
@@ -127,8 +130,8 @@ def run(argv, config_path):
     args = parse_args(argv, timestamp)
     config = gufi_config.Server(config_path)
 
-    log2_size_bucket_count = math.ceil(math.log(args.max_size, 2))
-    log2_name_len_bucket_count = math.ceil(math.log(args.max_name_len, 2))
+    log2_size_bucket_count = int(math.ceil(math.log(args.max_size, 2)))
+    log2_name_len_bucket_count = int(math.ceil(math.log(args.max_name_len, 2)))
 
     # ###############################################################
     # the following contain mappings from the GUFI tree to the longitudinal snapshot
@@ -260,11 +263,23 @@ def run(argv, config_path):
         '-I', 'CREATE TABLE {0}({1}); {2};'.format(
             INTERMEDIATE, table_cols_sql, TREESUMMARY_CREATE(INTERMEDIATE_TREESUMMARY)),
 
-        '-T', 'INSERT INTO {0} SELECT {1}.inode, {2}.* FROM {1}, {2}; SELECT 1 FROM {2};'.format(
-            INTERMEDIATE_TREESUMMARY, SUMMARY, TREESUMMARY),
+        # if TREESUMMARY tables are present in the index, this table
+        # will likely have 1 more row than the snapshot table due to
+        # pulling the row from the top-level db that should otherwise
+        # be empty
+        '-T', 'INSERT INTO {0} SELECT * FROM {1}; SELECT 1 FROM {1};'.format(
+            INTERMEDIATE_TREESUMMARY, TREESUMMARY),
 
+        # GROUP BY is intended to allow for rolled up trees to be able
+        # to be snapshotted. It also has the side effect of removing
+        # the row selected from the top-level db, which is empty and
+        # should not have returned any rows, but does so due to the
+        # aggregation functions that are called.
+        #
+        # pinode is used here instead of inode because -E operates on
+        # the GUFI tree, not the remapped snapshot columns
         '-E', 'INSERT INTO {0} {1};'.format(
-            INTERMEDIATE, build_query(select_cols, [VRXPENTRIES])),
+            INTERMEDIATE, build_query(select_cols, [VRXPENTRIES], group_by = ['pinode'])),
 
         '-K', 'CREATE TABLE {0}({1}); {2};'.format(
             SNAPSHOT, table_cols_sql, TREESUMMARY_CREATE(TREESUMMARY)),
@@ -272,6 +287,9 @@ def run(argv, config_path):
         '-J', 'INSERT INTO {0} SELECT * FROM {1}; INSERT INTO {2} SELECT * FROM {3};'.format(
             SNAPSHOT, INTERMEDIATE, TREESUMMARY, INTERMEDIATE_TREESUMMARY),
     ]
+
+    if args.verbose:
+        print_query(cmd)
 
     rc = 0
 

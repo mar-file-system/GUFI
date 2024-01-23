@@ -147,7 +147,7 @@ prefix/ugo/ugo/dir1 0
 prefix/ugo/ugo/dir2 0
 prefix/ugo/ugo/dir3 0
 
-$ gufi_query -d " " -T "SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1" "prefix"
+$ gufi_query -d " " -T "SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE (vrsummary.isroot == 1) AND (treesummary.inode == vrsummary.inode)" "prefix"
 prefix/o+rx/o+rx: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
 prefix/o+rx/u: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
 prefix/o+rx/ug: totalsubdirs: 3 maxsubdirfiles: 3 totfiles: 6
@@ -856,7 +856,7 @@ prefix/ugo/ugo/dir1 0
 prefix/ugo/ugo/dir2 0
 prefix/ugo/ugo/dir3 0
 
-$ gufi_query -d " " -T "SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE vrsummary.isroot == 1" "prefix"
+$ gufi_query -d " " -T "SELECT rpath(vrsummary.sname, vrsummary.sroll) || ':', 'totalsubdirs:', treesummary.totsubdirs, 'maxsubdirfiles:', treesummary.maxsubdirfiles, 'totfiles:', treesummary.totfiles FROM treesummary, vrsummary WHERE (vrsummary.isroot == 1) AND (treesummary.inode == vrsummary.inode)" "prefix"
 prefix/o+rx/o+rx/dir1: totalsubdirs: 0 maxsubdirfiles: 1 totfiles: 1
 prefix/o+rx/o+rx/dir2: totalsubdirs: 0 maxsubdirfiles: 2 totfiles: 2
 prefix/o+rx/o+rx/dir3: totalsubdirs: 0 maxsubdirfiles: 3 totfiles: 3

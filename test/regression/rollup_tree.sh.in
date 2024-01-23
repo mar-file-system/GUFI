@@ -77,7 +77,7 @@ rollup_tree_cleanup
 # Level 0                 prefix/
 #       Total 1 directory
 #
-# Level 1  007 o+rx | ugo 777   | ug 770    | 700 u
+# Level 1  o+rx 007 | ugo 777   | ug 770    | 700 u
 #          fail     | success   | fail      | fail
 #
 #       Total 4 directories; 1 will roll up

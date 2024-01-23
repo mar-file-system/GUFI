@@ -82,25 +82,36 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
-run_no_sort "${GUFI_TREESUMMARY_ALL} ${INDEXROOT}" | sed '/^Started .*$/d'
+do_tests() {
+    cleanup
 
-run_no_sort "${LONGITUDINAL_SNAPSHOT} ${SNAPSHOT} --notes 'test notes'"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
 
-run_no_sort "${SQLITE3} ${SNAPSHOT} \".tables\""
+    # shellcheck disable=SC2294
+    eval "$@"
 
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(metadata);\""
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(snapshot);\""
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(treesummary);\""
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${SNAPSHOT} --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
 
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM metadata;\""
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM snapshot;\""
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM treesummary;\""
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \".tables\""
 
-run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT notes FROM metadata;\""
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(metadata);\""
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(snapshot);\""
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(treesummary);\""
 
-run_sort "${SQLITE3} ${SNAPSHOT} \"SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM snapshot AS s, treesummary AS t WHERE s.inode == t.inode;\""
-) | tee "${OUTPUT}"
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM metadata;\""
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM snapshot;\""
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM treesummary;\""
 
+    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT notes FROM metadata;\""
+
+    run_sort "${SQLITE3} ${SNAPSHOT} \"SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM snapshot AS s, treesummary AS t WHERE s.inode == t.inode;\""
+}
+
+do_tests "run_no_sort \"${GUFI_TREESUMMARY_ALL} ${INDEXROOT}\" 2&>1 >/dev/null" | tee "${OUTPUT}"
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+
+do_tests "run_no_sort \"${GUFI_ROLLUP} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+)
+
 rm "${OUTPUT}"
