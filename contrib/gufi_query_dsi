@@ -1,0 +1,186 @@
+#!/usr/bin/env @PYTHON_INTERPRETER@
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import os
+import subprocess
+import sys
+
+import gufi_common
+
+INODE='inode'
+DSI_TABLE='dsi'
+
+DSI_DEFAULT_QUERIES = [
+    "CREATE TEMP VIEW dsi_{0} AS SELECT * FROM {0} JOIN {1};".format(gufi_common.SUMMARY, DSI_TABLE),
+    "CREATE TEMP VIEW dsi_{0} AS SELECT * FROM {0} LEFT JOIN {1} ON {0}.{1} == {1}.{2};".format(gufi_common.ENTRIES, DSI_TABLE, INODE),
+    "CREATE TEMP VIEW dsi_{0} AS SELECT * FROM {0} LEFT JOIN {1} ON {0}.{1} == {1}.{2};".format(gufi_common.PENTRIES, DSI_TABLE, INODE),
+]
+
+DSI_EXAMPLE = '''
+Assuming the attached db has a table named "{0}" and a column named "{1}"
+Example SQL args for creating
+    dsi_{2} view with all data from the attached db associated with each row of the {2} table
+        "{3}"
+    dsi_{4} view with only rows in {3} with inodes matching those in {0}
+        "{5}"
+    dsi_{6} view with only rows in {4} with inodes matching those in {0}
+        "{7}"
+'''.format(DSI_TABLE, INODE,
+           gufi_common.SUMMARY,  DSI_DEFAULT_QUERIES[0],
+           gufi_common.ENTRIES,  DSI_DEFAULT_QUERIES[1],
+           gufi_common.PENTRIES, DSI_DEFAULT_QUERIES[2])
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        'gufi_query_dsi', description='GUFI Query DSI Wrapper',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=DSI_EXAMPLE
+    )
+
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version=os.path.basename(os.path.realpath(__file__)) + ' @GUFI_VERSION@')
+    parser.add_argument('--verbose', '-V', action='store_true',
+                        help='Show the gufi_query being executed')
+
+    # gufi_query flags
+    parser.add_argument('-d',  type=gufi_common.get_char, default='|', dest='delim', metavar='char',
+                        help='gufi_query -d')
+    parser.add_argument('-I', type=str, metavar='SQL',
+                        help='gufi_query -I')
+    parser.add_argument('-T', type=str, metavar='SQL',
+                        help='gufi_query -T')
+    parser.add_argument('-S', type=str, metavar='SQL',
+                        help='gufi_query -S')
+    parser.add_argument('-E', type=str, metavar='SQL',
+                        help='gufi_query -E')
+
+    # positional arg
+    parser.add_argument('index', type=str,
+                        help='starting directory of GUFI tree')
+    # -Q
+    # positional arg
+    parser.add_argument('db', type=str,
+                        help='path of single db to attach to all index dbs')
+    # positional arg
+    parser.add_argument('sql', nargs='*', default=DSI_DEFAULT_QUERIES,
+                        help='SQL to run to create views on db data')
+    # not strictly necessary - useful if need to disambiguate namespaces
+    parser.add_argument('--attach', type=str, default='single_db', metavar='name',
+                        help='attached db namespace in the sqlite context')
+
+    # extra args
+    parser.add_argument('--gufi_query', type=str, default="gufi_query",
+                        help='path of gufi_query executable')
+
+    parser.add_argument('--threads', '-n', type=int, default=1, metavar='n',
+                        help='number of threads to run with')
+
+    parser.add_argument('--dry-run', action='store_true',
+                        help='set up command to run but do not run')
+
+    return parser.parse_args(argv[1:])
+
+def run(argv):
+    args = parse_args(argv)
+
+    cmd = [
+        args.gufi_query,
+        '-n', str(args.threads),
+        '-d', args.delim,
+        args.index,
+        '-Q', args.db, args.attach,
+    ]
+
+    # set up external db views first
+    I = args.sql
+
+    # then run original -I
+    if args.I:
+        I += [args.I]
+
+    if len(I):
+        cmd += ['-I', ';'.join(I)]
+
+    if args.T:
+        cmd += ['-T', args.T]
+
+    if args.S:
+        cmd += ['-S', args.S]
+
+    if args.E:
+        cmd += ['-E', args.E]
+
+    if args.verbose:
+        gufi_common.print_query(cmd)
+
+    if args.dry_run:
+        return 0
+
+    query = subprocess.Popen(cmd) # pylint: disable=consider-using-with
+    query.communicate()           # block until query finishes
+    return query.returncode
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv))
