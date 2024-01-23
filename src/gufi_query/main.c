@@ -391,33 +391,35 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* if it fails then this will be set to 1 and will go on */
 
-    if (db && in->sql.tsum.len) {
-        /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
-        /* if this is OR, as well as no-sql-to-run, skip this query */
-        if (in->andor == AND) {
-            /* make sure the treesummary table exists */
-            thread_timestamp_start(ts.tts, sqltsumcheck);
-            querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
-                                "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
-                    pa, id, count_rows, &recs);
-            thread_timestamp_end(sqltsumcheck);
-            increment_query_count(ta);
-            if (recs < 1) {
-                recs = -1;
-            }
-            else {
-                /* run in->sql.tsum */
-                thread_timestamp_start(ts.tts, sqltsum);
-                querydb(dbname, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
-                thread_timestamp_end(sqltsum);
+    if (gqw->work.level >= in->min_level) {
+        if (db && in->sql.tsum.len) {
+            /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
+            /* if this is OR, as well as no-sql-to-run, skip this query */
+            if (in->andor == AND) {
+                /* make sure the treesummary table exists */
+                thread_timestamp_start(ts.tts, sqltsumcheck);
+                querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                        "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
+                        pa, id, count_rows, &recs);
+                thread_timestamp_end(sqltsumcheck);
                 increment_query_count(ta);
+                if (recs < 1) {
+                    recs = -1;
+                }
+                else {
+                    /* run in->sql.tsum */
+                    thread_timestamp_start(ts.tts, sqltsum);
+                    querydb(dbname, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
+                    thread_timestamp_end(sqltsum);
+                    increment_query_count(ta);
+                }
             }
-        }
-        /* this is an OR or we got a record back. go on to summary/entries */
-        /* queries, if not done with this dir and all dirs below it */
-        /* this means that no tree table exists so assume we have to go on */
-        if (recs < 0) {
-            recs=1;
+            /* this is an OR or we got a record back. go on to summary/entries */
+            /* queries, if not done with this dir and all dirs below it */
+            /* this means that no tree table exists so assume we have to go on */
+            if (recs < 0) {
+                recs=1;
+            }
         }
     }
     /* so we have to go on and query summary and entries possibly */
