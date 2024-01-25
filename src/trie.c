@@ -173,11 +173,8 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
         if (trie_delete_recursive(&((*curr)->character[c]), str, i + 1, len) &&
             (*curr)->isLeaf == 0)
         {
-            // leaf, so clean up
-            if ((*curr)->free_user) {
-                (*curr)->free_user((*curr)->user_data);
-            }
-
+            // not a leaf - just clean up
+            // this node can't have user data
             free(*curr);
             (*curr) = NULL;
             return 1;

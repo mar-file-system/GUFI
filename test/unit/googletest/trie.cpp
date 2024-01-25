@@ -187,3 +187,43 @@ TEST(trie, substring) {
 
     trie_free(root);
 }
+
+TEST(trie, user_data) {
+    int count = 0;
+
+    trie_t *root = trie_alloc();
+    ASSERT_NE(root, nullptr);
+
+    trie_insert(root, str, str_len, &count,
+                [](void *ptr) {
+                    int *i = (int *) ptr;
+                    (*i)++;
+                });
+
+    // find the pointer
+    void *ptr = nullptr;
+    EXPECT_EQ(trie_search(root, str, str_len, &ptr), 1);
+    EXPECT_EQ(ptr, &count);
+
+    // substring is not found
+    ptr = nullptr;
+    EXPECT_EQ(trie_search(root, str, sub_len, &ptr), 0);
+    EXPECT_EQ(count, 0);
+    EXPECT_EQ(ptr, nullptr);
+
+    // insert sub to have user data in intermediate node
+    trie_insert(root, str, sub_len, &count, [](void *) {});
+
+    // delete str first to trigger "have children" branch
+    trie_delete(root, str, str_len);
+
+    // triggers "no children" branch
+    trie_delete(root, str, sub_len);
+
+    EXPECT_EQ(count, 1);
+
+    trie_free(root);
+
+    // already freed, so should not increment again
+    EXPECT_EQ(count, 1);
+}

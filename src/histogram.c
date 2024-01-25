@@ -75,12 +75,13 @@ OF SUCH DAMAGE.
 #define DEFAULT_HIST_ALLOC 512
 
 /* generic function for serializing buckets and making sure the data was written */
-static int serialize_bucket(sqlite3_context *context,
-                            char **buf, char **curr,
-                            size_t *size,
-                            ssize_t (*serialize)(char *curr, const size_t avail,
-                                                 void *key, void *data),
-                            void *key, void *data) {
+/* not static to allow for testing */
+int serialize_bucket(sqlite3_context *context,
+                     char **buf, char **curr,
+                     size_t *size,
+                     ssize_t (*serialize)(char *curr, const size_t avail,
+                                          void *key, void *data),
+                     void *key, void *data) {
     const size_t written = *curr - *buf;
 
     ssize_t avail = *size - written;

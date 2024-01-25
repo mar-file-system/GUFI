@@ -70,7 +70,7 @@ OF SUCH DAMAGE.
 
 #include "print.h"
 
-TEST(print, parallel) {
+static void print_parallel_mutex(pthread_mutex_t *mutex) {
     const std::string A   = "A";
     const std::string BC  = "BC";
     const std::string D   = "D";
@@ -97,12 +97,10 @@ TEST(print, parallel) {
     FILE *file = fmemopen(buf, buf_size, "w+b");
     ASSERT_NE(file, nullptr);
 
-    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
     PrintArgs pa;
     pa.output_buffer = &ob;
     pa.delim = SEP[0];
-    pa.mutex = &mutex;
+    pa.mutex = mutex;
     pa.outfile = file;
     pa.rows = 0;
 
@@ -175,4 +173,13 @@ TEST(print, parallel) {
     fclose(file);
     OutputBuffer_destroy(&ob);
     delete [] buf;
+}
+
+TEST(print, parallel_w_mutex) {
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    print_parallel_mutex(&mutex);
+}
+
+TEST(print, parallel_wo_mutex) {
+    print_parallel_mutex(nullptr);
 }

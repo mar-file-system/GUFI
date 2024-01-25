@@ -252,10 +252,17 @@ Error: Missing -G
 $ gufi_query -o outfile -I "create" -S "insert;" -E "insert;" -K "create;" -J "insert;" "prefix"
 Error: Missing -G
 
+# Bad -K (aggregate, stdout)
+$ gufi_query            -I "CREATE TABLE test(col TEXT)" -S "insert;" -E "insert;" -K "create;" -J "insert;" -G "query;" "prefix"
+Could not create aggregation table "create;" on file:aggregatedb?mode=memory&cache=shared
+
 # Bad skip file
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip.bad" "prefix"
 Error: Bad input skip list
 Error: Cannot open skip file "skip.bad"
+
+# Bad path
+$ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" ""
 
 #####################################
 # Extra Inputs                      #

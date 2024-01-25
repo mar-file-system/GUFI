@@ -99,6 +99,68 @@ static int get_str(void *args, int, char **data, char **) {
     return 0;
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+int serialize_bucket(sqlite3_context *context,
+                     char **buf, char **curr,
+                     size_t *size,
+                     ssize_t (*serialize)(char *curr, const size_t avail,
+                                          void *key, void *data),
+                     void *key, void *data);
+#ifdef __cplusplus
+}
+#endif
+
+static void test_hist_step(sqlite3_context *context, int, sqlite3_value **argv) {
+    int *good = (int *) sqlite3_aggregate_context(context, sizeof(*good));
+    *good = sqlite3_value_int(argv[0]);
+}
+
+static ssize_t serialize_test_bucket(char *, const size_t, void *key, void *) {
+    int *good = (int *) sqlite3_aggregate_context((sqlite3_context *) key, sizeof(*good));
+    if (*good) {
+        return 2;       // write the same size both times
+    }
+
+    static size_t iter = 0;
+    static ssize_t ret = 2;
+
+    ret += iter++ * 10; // second call will "write" more than reallocated space provides
+    return ret;
+}
+
+static void test_hist_final(sqlite3_context *context) {
+    size_t size = 1;
+    char *serialized = (char *) malloc(size);
+    char *curr = serialized;
+
+    serialize_bucket(context, &serialized, &curr, &size,
+                     serialize_test_bucket, context, nullptr);
+
+    free(serialized);
+
+    sqlite3_result_null(context);
+}
+
+TEST(histogram, serialize_bucket) {
+    sqlite3 *db = nullptr;
+    setup_db(&db);
+    ASSERT_EQ(sqlite3_create_function(db,               "test_hist",         1,  SQLITE_UTF8,
+                                      nullptr, nullptr,  test_hist_step,     test_hist_final), SQLITE_OK);
+
+    char *err = nullptr;
+    EXPECT_NE(sqlite3_exec(db, "SELECT test_hist(0);",
+                           nullptr, nullptr, &err), SQLITE_OK);
+    EXPECT_NE(err, nullptr);
+    sqlite3_free(err);
+
+    EXPECT_EQ(sqlite3_exec(db, "SELECT test_hist(1);",
+                           nullptr, nullptr, nullptr), SQLITE_OK);
+
+    sqlite3_close(db);
+}
+
 static void test_log2_hist(const std::vector <std::string> &types,
                            const std::vector <std::string> &values) {
     for(std::string const &type : types) {
@@ -176,8 +238,7 @@ TEST(histogram, log2) {
     EXPECT_EQ(log2_hist_parse("0;0;0"),      nullptr);
     EXPECT_EQ(log2_hist_parse("0;0;0;0"),    nullptr);
     EXPECT_EQ(log2_hist_parse("0;0;0;0:"),   nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;0;0:;"),  nullptr);
-    EXPECT_EQ(log2_hist_parse("0;0;0;0:';"), nullptr);
+    EXPECT_EQ(log2_hist_parse("0;0;0;0:0"),  nullptr);
 }
 
 TEST(histogram, mode) {
@@ -238,8 +299,7 @@ TEST(histogram, mode) {
 
     // bad strings
     EXPECT_EQ(mode_hist_parse("777:"),   nullptr);
-    EXPECT_EQ(mode_hist_parse("777:;"),  nullptr);
-    EXPECT_EQ(mode_hist_parse("777:';"), nullptr);
+    EXPECT_EQ(mode_hist_parse("777:0"),  nullptr);
     EXPECT_EQ(mode_hist_parse("1000:1"), nullptr);
 }
 
@@ -315,20 +375,20 @@ TEST(histogram, time) {
     sqlite3_close(db);
 
     // bad strings
-    EXPECT_EQ(time_hist_parse("'"),      nullptr);
-    EXPECT_EQ(time_hist_parse("';"),     nullptr);
-    EXPECT_EQ(time_hist_parse("0"),      nullptr);
-    EXPECT_EQ(time_hist_parse("0;5"),    nullptr);
-    EXPECT_EQ(time_hist_parse("0;5:"),   nullptr);
-    EXPECT_EQ(time_hist_parse("0;5:;"),  nullptr);
-    EXPECT_EQ(time_hist_parse("0;5:';"), nullptr);
-    EXPECT_EQ(time_hist_parse("0;5:0;"), nullptr);
+    EXPECT_EQ(time_hist_parse("'"),        nullptr);
+    EXPECT_EQ(time_hist_parse("';"),       nullptr);
+    EXPECT_EQ(time_hist_parse("0"),        nullptr);
+    EXPECT_EQ(time_hist_parse("0;5"),      nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:"),     nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:0"),    nullptr);
+    EXPECT_EQ(time_hist_parse("0;5:0;"),   nullptr);
+    EXPECT_EQ(time_hist_parse("0;1:0;0"),  nullptr);
 }
 
 static const std::string CATEGORIES[] = {
+    "'str'",
     "'3x'",
     "'string'",
-    "'str'",
     "'3x'",
     "NULL",
     "'string'",
@@ -431,8 +491,7 @@ TEST(histogram, category) {
     EXPECT_EQ(category_hist_parse("1;3:"),       nullptr);
     EXPECT_EQ(category_hist_parse("1;3:cat"),    nullptr);
     EXPECT_EQ(category_hist_parse("1;3:cat:"),   nullptr);
-    EXPECT_EQ(category_hist_parse("1;3:cat:'"),  nullptr);
-    EXPECT_EQ(category_hist_parse("1;3:cat:';"), nullptr);
+    EXPECT_EQ(category_hist_parse("1;3:cat:0"),  nullptr);
 }
 
 TEST(histogram, mode_count) {
@@ -480,6 +539,5 @@ TEST(histogram, mode_count) {
     EXPECT_EQ(mode_count_parse("3:"),       nullptr);
     EXPECT_EQ(mode_count_parse("3:cat"),    nullptr);
     EXPECT_EQ(mode_count_parse("3:cat:"),   nullptr);
-    EXPECT_EQ(mode_count_parse("3:cat:;"),  nullptr);
-    EXPECT_EQ(mode_count_parse("3:cat:';"), nullptr);
+    EXPECT_EQ(mode_count_parse("3:cat:0"),  nullptr);
 }

@@ -142,8 +142,14 @@ run_no_sort "${GUFI_QUERY}            -I \"create\" -S \"insert;\" -E \"insert;\
 echo "# Missing -G (aggregate, outfile)"
 run_no_sort "${GUFI_QUERY} -o outfile -I \"create\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" \"${INDEXROOT}\""
 
+echo "# Bad -K (aggregate, stdout)"
+run_no_sort "${GUFI_QUERY}            -I \"CREATE TABLE test(col TEXT)\" -S \"insert;\" -E \"insert;\" -K \"create;\" -J \"insert;\" -G \"query;\" \"${INDEXROOT}\""
+
 echo "# Bad skip file"
 run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" -k \"${SKIP}.bad\" \"${INDEXROOT}\""
+
+echo "# Bad path"
+run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" -E \"SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;\" \"\""
 
 echo "#####################################"
 echo "# Extra Inputs                      #"
