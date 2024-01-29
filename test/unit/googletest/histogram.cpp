@@ -389,8 +389,9 @@ static const std::string CATEGORIES[] = {
     "'str'",
     "'3x'",
     "'string'",
-    "'3x'",
     "NULL",
+
+    "'3x'",
     "'string'",
     "'3x'",
     "'str'",
@@ -508,12 +509,32 @@ TEST(histogram, mode_count) {
         ASSERT_EQ(mc_str, nullptr);
     }
 
-    for(std::string const &category : CATEGORIES) {
-        insert(db, "category", category);
+    // multiple values, but no mode
+    {
+        for(std::size_t i = 0; i < 4; i++) {
+            insert(db, "category", CATEGORIES[i]);
+        }
+
+        char *mc_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
+                               get_str, &mc_str, nullptr), SQLITE_OK);
+        ASSERT_EQ(mc_str, nullptr);
+
+        mode_count *mc = mode_count_parse(mc_str);
+        EXPECT_EQ(mc, nullptr);
+
+        free(mc_str);
+
+        ASSERT_EQ(sqlite3_exec(db, "DELETE FROM test;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
     }
 
     // one mode
     {
+        for(std::string const &category : CATEGORIES) {
+            insert(db, "category", category);
+        }
+
         char *mc_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT mode_count(category) FROM test;",
                                get_str, &mc_str, nullptr), SQLITE_OK);
@@ -524,8 +545,8 @@ TEST(histogram, mode_count) {
         ASSERT_NE(mc->mode, nullptr);
 
         EXPECT_STREQ(mc->mode, "3x");
-        EXPECT_EQ(mc->len,     (std::size_t) 2);
-        EXPECT_EQ(mc->count,   (std::size_t) 3);
+        EXPECT_EQ(mc->len,   (std::size_t) 2);
+        EXPECT_EQ(mc->count, (std::size_t) 3);
 
         mode_count_free(mc);
         free(mc_str);
@@ -534,6 +555,7 @@ TEST(histogram, mode_count) {
     sqlite3_close(db);
 
     // bad strings
+    EXPECT_EQ(mode_count_parse(""),         nullptr);
     EXPECT_EQ(mode_count_parse("'"),        nullptr);
     EXPECT_EQ(mode_count_parse("3"),        nullptr);
     EXPECT_EQ(mode_count_parse("3:"),       nullptr);

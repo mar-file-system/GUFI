@@ -198,7 +198,7 @@ void category_hist_free(category_hist_t *hist);
 /* ********************************************* */
 /*
  * Statistical Mode
- * mode_count(string) -> len:string:count
+ * mode_count(string) -> len:string:count or NULL
  *
  * This is here because mode is implemented using
  * category histograms.

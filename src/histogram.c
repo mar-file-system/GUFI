@@ -599,15 +599,13 @@ static void mode_count_final(sqlite3_context *context) {
     sqlite_category_hist_t *hist = (sqlite_category_hist_t *) sqlite3_aggregate_context(context, sizeof(*hist));
 
     if (!hist->trie) {
-        hist->trie = trie_alloc();
-        sll_init(&hist->categories);
+        sqlite3_result_null(context);
+        return;
     }
 
-    refstr_t mode_key;
-    memset(&mode_key, 0, sizeof(mode_key));
-
-    size_t mode_count = 0;
-
+    /* move categories into array for sorting */
+    category_t *categories = malloc(sll_get_size(&hist->categories) * sizeof(*categories));
+    size_t cat_count = 0;
     sll_loop(&hist->categories, node) {
         refstr_t *cat = sll_node_data(node);
 
@@ -616,18 +614,33 @@ static void mode_count_final(sqlite3_context *context) {
         /* not checking return value since all categories should be found */
         trie_search(hist->trie, cat->data, cat->len, (void **) &count);
 
-        /* not stable - gets and keeps first one of a count */
-        if (*count > mode_count) {
-            mode_key.data = cat->data;
-            mode_key.len = cat->len;
-            mode_count = *count;
-        }
+        /* copy reference into array */
+        categories[cat_count].name = *cat;
+        categories[cat_count].count = *count;
+        cat_count++;
     }
 
-    if (mode_count == 0) {
-        /* return NULL instead of erroring */
+    if (cat_count == 0) {
         sqlite3_result_null(context);
         goto cleanup;
+    }
+
+    /* there must be at least 1 category at this point */
+
+    /* sort by count descending */
+    qsort(categories, cat_count, sizeof(categories[0]), category_bucket_cmp);
+
+    /* this is the mode */
+    category_t *top = &categories[0];
+
+    if (cat_count > 1) {
+        category_t *next = &categories[1];
+
+        /* multiple modes -> no mode */
+        if (top->count == next->count) {
+            sqlite3_result_null(context);
+            goto cleanup;
+        }
     }
 
     size_t size = DEFAULT_HIST_ALLOC;
@@ -635,7 +648,7 @@ static void mode_count_final(sqlite3_context *context) {
     char *curr = serialized;
 
     if (serialize_bucket(context, &serialized, &curr, &size,
-                         serialize_mode, (void *) &mode_key, &mode_count) != 0) {
+                         serialize_mode, (void *) &top->name, &top->count) != 0) {
         free(serialized);
         goto cleanup;
     }
@@ -643,11 +656,16 @@ static void mode_count_final(sqlite3_context *context) {
     sqlite3_result_text(context, serialized, curr - serialized, free);
 
   cleanup:
+    free(categories);
     sll_destroy(&hist->categories, free_str);
     trie_free(hist->trie);
 }
 
 mode_count_t *mode_count_parse(const char *str) {
+    if (!str || !strlen(str)) {
+        return NULL;
+    }
+
     mode_count_t mc;
 
     int read = 0;
