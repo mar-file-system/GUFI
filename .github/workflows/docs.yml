@@ -81,3 +81,9 @@ jobs:
 
     - name: Build PDFs
       run:  cmake --build ${{ github.workspace }}/build --target gufi_user gufi_administrator gufi_developer
+
+    - name: Upload PDFs
+      uses: actions/upload-artifact@v4
+      with:
+        name: guides
+        path: ${{ github.workspace }}/build/docs/latex/pdfs/*.pdf
