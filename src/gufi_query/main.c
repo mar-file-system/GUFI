@@ -222,7 +222,9 @@ static size_t descend2(QPTPool_t *ctx,
                 descend_timestamp_start(dts, set);
 
                 child.work.level = next_level;
+                child.work.orig_root = gqw->work.orig_root;
                 child.work.root_parent = gqw->work.root_parent;
+                child.work.root_basename_len = gqw->work.root_basename_len;
 
                 /* append converted entry name to converted directory */
                 child.sqlite3_name_len = SNFORMAT_S(child.sqlite3_name, MAXPATH, 2,
@@ -312,7 +314,9 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     char dbpath[MAXPATH];  /* filesystem path of db.db; only generated if keep_matime is set */
     char dbname[MAXPATH];  /* path of db.db modified so that sqlite3 can open it */
-    SNFORMAT_S(dbname, MAXPATH, 2, gqw->sqlite3_name, gqw->sqlite3_name_len, "/" DBNAME, DBNAME_LEN + 1);
+    const size_t dbname_len = SNFORMAT_S(dbname, MAXPATH, 2,
+                                         gqw->sqlite3_name, gqw->sqlite3_name_len,
+                                         "/" DBNAME, DBNAME_LEN + 1);
 
     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
     timestamps_t ts;
@@ -324,8 +328,14 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct stat st;
     if (lstat(gqw->work.name, &st) != 0) {
         const int err = errno;
+
+        char buf[MAXPATH];
+        present_user_path(gqw->work.name, gqw->work.name_len,
+                          &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
+                          buf, sizeof(buf));
+
         fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
-                gqw->work.name, strerror(err), err);
+                buf, strerror(err), err);
         goto out_free;
     }
     thread_timestamp_end(lstat_call);
@@ -343,12 +353,20 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_start(ts.tts, lstat_db_call);
     struct utimbuf dbtime;
     if (in->keep_matime) {
-        SNFORMAT_S(dbpath, sizeof(dbpath), 2, gqw->work.name, gqw->work.name_len, "/" DBNAME, DBNAME_LEN + 1);
+        const size_t dbpath_len = SNFORMAT_S(dbpath, sizeof(dbpath), 2,
+                                             gqw->work.name, gqw->work.name_len,
+                                             "/" DBNAME, DBNAME_LEN + 1);
         struct stat db_st;
         if (lstat(dbpath, &db_st) != 0) {
             const int err = errno;
+
+            char buf[MAXPATH];
+            present_user_path(dbpath, dbpath_len,
+                              &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
+                              buf, sizeof(buf));
+
             fprintf(stderr, "Could not stat database file \"%s\": %s (%d)\n",
-                    dbpath, strerror(err), err);
+                    buf, strerror(err), err);
             goto out_free;
         }
         dbtime.actime  = db_st.st_atime;
@@ -398,7 +416,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (in->andor == AND) {
                 /* make sure the treesummary table exists */
                 thread_timestamp_start(ts.tts, sqltsumcheck);
-                querydb(dbname, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
                         "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
                         pa, id, count_rows, &recs);
                 thread_timestamp_end(sqltsumcheck);
@@ -409,7 +427,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 else {
                     /* run in->sql.tsum */
                     thread_timestamp_start(ts.tts, sqltsum);
-                    querydb(dbname, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
+                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
                     thread_timestamp_end(sqltsum);
                     increment_query_count(ta);
                 }
@@ -467,7 +485,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                     /* put in the path relative to the user's input */
                     thread_timestamp_start(ts.tts, sqlsum);
-                    querydb(dbname, db, in->sql.sum.data, pa, id, print_parallel, &recs);
+                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
                     thread_timestamp_end(sqlsum);
                     increment_query_count(ta);
                 } else {
@@ -480,7 +498,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 if (recs > 0) {
                     if (in->sql.ent.len) {
                         thread_timestamp_start(ts.tts, sqlent);
-                        querydb(dbname, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
+                        querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
                         thread_timestamp_end(sqlent);
                         increment_query_count(ta);
                     }
@@ -699,36 +717,57 @@ int main(int argc, char *argv[])
     }
 
     /* enqueue input paths */
+    char **realpaths = calloc(argc - idx, sizeof(char *));
     for(int i = idx; i < argc; i++) {
-        size_t len = strlen(argv[i]);
-        if (!len) {
+        size_t argvi_len = strlen(argv[i]);
+        if (!argvi_len) {
             continue;
         }
 
-        /* remove trailing slashes */
-        len = trailing_non_match_index(argv[i] + 1, strlen(argv[i] + 1), "/", 1) + 1;
+        /* remove trailing slashes (+ 1 to keep at least 1 character) */
+        argvi_len = trailing_non_match_index(argv[i] + 1, argvi_len - 1, "/", 1) + 1;
+
+        realpaths[i - idx] = realpath(argv[i], NULL);
+        if (!realpaths[i - idx]) {
+            const int err = errno;
+            fprintf(stderr, "Could not get realpath of \"%s\": %s (%d)\n",
+                    argv[i], strerror(err), err);
+            continue;
+        }
 
         struct stat st;
-        if (lstat(argv[i], &st) != 0) {
-            fprintf(stderr, "Could not stat directory \"%s\"\n", argv[i]);
+        if (lstat(realpaths[i - idx], &st) != 0) {
+            const int err = errno;
+            fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
+                    argv[i], strerror(err), err);
             continue;
         }
 
         if (!S_ISDIR(st.st_mode)) {
-            fprintf(stderr,"input-dir '%s' is not a directory\n", argv[i]);
+            fprintf(stderr,"input-dir '%s' is not a directory\n",
+                    argv[i]);
             continue;
         }
 
-        /* copy argv[i] into the work item */
         gqw_t *root = calloc(1, sizeof(gqw_t));
-        root->work.name_len = SNFORMAT_S(root->work.name, MAXPATH, 1, argv[i], len);
-        root->sqlite3_name_len = sqlite_uri_path(root->sqlite3_name, MAXPATH, argv[i], &len);
+
+        /* keep original user input */
+        root->work.orig_root.data = argv[i];
+        root->work.orig_root.len = argvi_len;
+
+         /* set initial work item directory to realpath(argv[i]) */
+        size_t rp_len = strlen(realpaths[i - idx]);
+        root->work.name_len = SNFORMAT_S(root->work.name, MAXPATH, 1, realpaths[i - idx], rp_len);
+        root->sqlite3_name_len = sqlite_uri_path(root->sqlite3_name, MAXPATH, realpaths[i - idx], &rp_len);
 
         /* parent of input path */
-        root->work.root_parent.data = argv[i];
+        root->work.root_parent.data = realpaths[i - idx];
         root->work.root_parent.len  = trailing_match_index(root->work.root_parent.data, root->work.name_len, "/", 1);
+
         ((char *) root->work.root_parent.data)[root->work.root_parent.len] = '\0';
         root->work.basename_len = root->work.name_len - root->work.root_parent.len;
+
+        root->work.root_basename_len = root->work.basename_len;
 
         /* push the path onto the queue (no compression) */
         QPTPool_enqueue(pool, i % in.maxthreads, processdir, root);
@@ -741,6 +780,11 @@ int main(int argc, char *argv[])
     #endif
 
     QPTPool_destroy(pool);
+
+    for(int i = idx; i < argc; i++) {
+        free(realpaths[i - idx]);
+    }
+    free(realpaths);
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     timestamp_set_end(work);

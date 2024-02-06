@@ -44,14 +44,14 @@ usage: gufi_stats [--help] [--version] [--recursive | --cumulative]
                   [path]
 gufi_stats: error: argument --cumulative/-c: not allowed with argument --recursive/-r
 $ gufi_stats    depth "prefix"
-0
+1
 
 $ gufi_stats -r depth "prefix"
-prefix 0
-directory 1
-directory/subdirectory 2
-leaf_directory 1
-unusual#? directory , 1
+prefix 1
+directory 2
+directory/subdirectory 3
+leaf_directory 2
+unusual#? directory , 2
 
 $ gufi_stats --verbose depth "prefix"
 GUFI query is
@@ -67,7 +67,7 @@ GUFI query is
     -y 0 \
     -z 0 \
     prefix
-0
+1
 
 $ gufi_stats    filesize "prefix"
 1049622
@@ -346,7 +346,7 @@ $ gufi_stats -c dirfilecount-log1024-bins "prefix"
 
 $ gufi_stats -c depth "prefix"
 --cumulative/-c has no effect on "depth" statistic
-0
+1
 
 $ gufi_stats -r total-filesize "prefix"
 --recursive/-r has no effect on "total-filesize" statistic
@@ -359,9 +359,9 @@ $ gufi_stats -r duplicate-names "prefix"
 --recursive/-r and --cumulative/-c have no effect on "duplicate-names" statistic
 
 $ gufi_stats --skip "skip" -r depth "prefix"
-prefix 0
-leaf_directory 1
-unusual#? directory , 1
+prefix 1
+leaf_directory 2
+unusual#? directory , 2
 
 $ gufi_stats --skip "skip.bad" -r depth "prefix"
 Error: Cannot open skip file "skip.bad"
@@ -377,13 +377,13 @@ leaf_directory
 unusual#? directory ,
 
 $ gufi_stats    leaf-depth "prefix"
-leaf_directory 1
-unusual#? directory , 1
+leaf_directory 2
+unusual#? directory , 2
 
 $ gufi_stats -r leaf-depth "prefix"
-directory/subdirectory 2
-leaf_directory 1
-unusual#? directory , 1
+directory/subdirectory 3
+leaf_directory 2
+unusual#? directory , 2
 
 $ gufi_stats    leaf-files "prefix"
 leaf_directory 2

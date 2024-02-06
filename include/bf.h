@@ -270,7 +270,9 @@ typedef enum {
 /* minimum data needs to be passed around between threads */
 struct work {
    compressed_t  compressed;
-   refstr_t      root_parent;            /* parent of the the top level directory */
+   refstr_t      orig_root;              /* argv[i] */
+   refstr_t      root_parent;            /* dirname(realpath(argv[i])) */
+   size_t        root_basename_len;      /* strlen(basename(argv[i])) */
    size_t        level;
    char          name[MAXPATH];
    size_t        name_len;

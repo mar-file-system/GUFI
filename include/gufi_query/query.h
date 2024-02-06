@@ -65,10 +65,13 @@ OF SUCH DAMAGE.
 #ifndef GUFI_QUERY_QUERY_H
 #define GUFI_QUERY_QUERY_H
 
+#include "bf.h"
 #include "dbutils.h"
 #include "gufi_query/PoolArgs.h"
 
-void querydb(const char *dbname, sqlite3 *db, const char *query,
+void querydb(struct work *work,
+             const char *dbname, const size_t dbname_len,
+             sqlite3 *db, const char *query,
              PoolArgs_t *pa, int id,
              int (*callback)(void *, int, char **, char**), int *rc);
 

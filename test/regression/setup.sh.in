@@ -221,6 +221,7 @@ replace() {
     s/${SEARCH//\//\\/}\\///g;
     s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;
     s/${INDEXROOT//\//\\/}/${SRCDIR//\//\\/}/g;
+    s/${CONFIG//\//\\/}/\\/etc\\/GUFI\\/config/g;
 
     s/${AWK//\//\\/}/awk/g;
     s/${DIFF//\//\\/}/diff/g;

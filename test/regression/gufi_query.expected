@@ -210,7 +210,7 @@ prefix/unusual#? directory ,/unusual, name?#
 #####################################
 # Bad directory
 $ gufi_query "prefix/baddirectory"
-Could not stat directory "prefix/baddirectory"
+Could not get realpath of "prefix/baddirectory": No such file or directory (2)
 
 # Path is a file
 $ gufi_query "prefix/db.db"

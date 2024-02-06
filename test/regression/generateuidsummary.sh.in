@@ -76,5 +76,10 @@ OUTPUT="generateuidsummary.out"
     pull_ug_summary_columns "uid" "vsummaryuser"
 ) | tee "${OUTPUT}"
 
+
+# echo "[${SEARCH}] [${INDEXROOT}]"
+
+# grep "${SEARCH}" "${OUTPUT}"
+
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/generateuidsummary.expected "${OUTPUT}"
 rm "${OUTPUT}"

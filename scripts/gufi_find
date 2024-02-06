@@ -414,7 +414,7 @@ def parse_directives(fmt, fmt_len, i, path):
     elif ret == 'p':
         ret = path
     elif ret == 'P':
-        ret = 'printf(\'%{{0}}s\', substr({0}, length(starting_point()) + 1))'.format(path)
+        ret = 'printf(\'%{{0}}s\', substr({0}, length(starting_point()) + 2))'.format(path) # 2 because indexes start at 1
     elif ret == 's':
         ret = 'printf(\'%{0}u\', size)'
     elif ret == 'S':

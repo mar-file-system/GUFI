@@ -1,0 +1,148 @@
+# Querying with the real path in "/etc/GUFI/config"
+$ cat "/etc/GUFI/config"
+Threads=1
+Query=gufi_query
+Stat=gufi_stat_bin
+IndexRoot=prefix
+OutputBuffer=4096
+
+$ gufi_find
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_ls -aR
+prefix
+prefix/.hidden
+prefix/1KB
+prefix/1MB
+prefix/directory
+prefix/directory/executable
+prefix/directory/readonly
+prefix/directory/subdirectory
+prefix/directory/subdirectory/directory_symlink
+prefix/directory/subdirectory/repeat_name
+prefix/directory/writable
+prefix/file_symlink
+prefix/leaf_directory
+prefix/leaf_directory/leaf_file1
+prefix/leaf_directory/leaf_file2
+prefix/old_file
+prefix/repeat_name
+prefix/unusual#? directory ,
+prefix/unusual#? directory ,/unusual, name?#
+
+# Current set of indexes are placed under common directory "prefix"
+# Expose "prefix" to users via a symlink
+$ ln -sv "prefix" "user_path"
+'user_path' -> 'prefix'
+
+# Allow users to query via consistent "user_path" in the config file
+$ cat "/etc/GUFI/config"
+Threads=1
+Query=gufi_query
+Stat=gufi_stat_bin
+OutputBuffer=4096
+IndexRoot=user_path
+
+$ gufi_find
+user_path/prefix
+user_path/prefix/.hidden
+user_path/prefix/1KB
+user_path/prefix/1MB
+user_path/prefix/directory
+user_path/prefix/directory/executable
+user_path/prefix/directory/readonly
+user_path/prefix/directory/subdirectory
+user_path/prefix/directory/subdirectory/directory_symlink
+user_path/prefix/directory/subdirectory/repeat_name
+user_path/prefix/directory/writable
+user_path/prefix/file_symlink
+user_path/prefix/leaf_directory
+user_path/prefix/leaf_directory/leaf_file1
+user_path/prefix/leaf_directory/leaf_file2
+user_path/prefix/old_file
+user_path/prefix/repeat_name
+user_path/prefix/unusual#? directory ,
+user_path/prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_ls -aR
+user_path/prefix
+user_path/prefix/.hidden
+user_path/prefix/1KB
+user_path/prefix/1MB
+user_path/prefix/directory
+user_path/prefix/directory/executable
+user_path/prefix/directory/readonly
+user_path/prefix/directory/subdirectory
+user_path/prefix/directory/subdirectory/directory_symlink
+user_path/prefix/directory/subdirectory/repeat_name
+user_path/prefix/directory/writable
+user_path/prefix/file_symlink
+user_path/prefix/leaf_directory
+user_path/prefix/leaf_directory/leaf_file1
+user_path/prefix/leaf_directory/leaf_file2
+user_path/prefix/old_file
+user_path/prefix/repeat_name
+user_path/prefix/unusual#? directory ,
+user_path/prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" user_path
+user_path/prefix
+user_path/prefix/directory
+user_path/prefix/directory/subdirectory
+user_path/prefix/leaf_directory
+user_path/prefix/unusual#? directory ,
+
+# Create a "new" index at "prefix2"
+$ cp -r "prefix" "prefix2"
+
+# Change "prefix2" to distinguish it from "prefix"
+$ rm -r "prefix2/prefix/directory" "prefix2/prefix/leaf_directory"
+
+# Pivot to new set of indexes without changing the path that users see
+$ ln -snfv "prefix2" "user_path"
+'user_path' -> 'prefix2'
+
+$ gufi_find
+user_path/prefix
+user_path/prefix/.hidden
+user_path/prefix/1KB
+user_path/prefix/1MB
+user_path/prefix/file_symlink
+user_path/prefix/old_file
+user_path/prefix/repeat_name
+user_path/prefix/unusual#? directory ,
+user_path/prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_ls -aR
+user_path/prefix
+user_path/prefix/.hidden
+user_path/prefix/1KB
+user_path/prefix/1MB
+user_path/prefix/file_symlink
+user_path/prefix/old_file
+user_path/prefix/repeat_name
+user_path/prefix/unusual#? directory ,
+user_path/prefix/unusual#? directory ,/unusual, name?#
+
+$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" user_path
+user_path/prefix
+user_path/prefix/unusual#? directory ,
+

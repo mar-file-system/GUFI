@@ -62,6 +62,7 @@
 
 
 import argparse
+import errno
 import os
 import subprocess
 import sys
@@ -71,7 +72,7 @@ import gufi_config
 
 PATH = os.path.realpath(__file__)
 
-def getfattr(args, config, dirname, nondirname):
+def getfattr(args, dirname, nondirname):
     # pylint: disable=invalid-name,too-many-branches
 
     S_cols = []
@@ -161,7 +162,7 @@ def getfattr(args, config, dirname, nondirname):
         query_args += ['-y', '0',
                        '-z', '0']
 
-    return query_args + [os.path.join(config.indexroot(), dirname)]
+    return query_args + [dirname]
 
 def run(argv, config_path):
     # pylint: disable=invalid-name
@@ -214,13 +215,19 @@ def run(argv, config_path):
     # process one input arg at a time
     # not sure if it makes sense/is possible to process all at once
     for path in args.path:
-        fullpath = os.path.join(config.indexroot(), path)
-        dirname = path
+        dirname = config.indexroot()
+        if path != '.':
+            dirname = os.path.join(config.indexroot(), path.rstrip('/'))
+
         nondir = None
 
-        if not os.path.isdir(fullpath):
-            dirname = os.path.dirname(path)
-            nondir = os.path.basename(path)
+        if not os.path.isdir(dirname):
+            nondir = os.path.basename(dirname)
+            dirname = os.path.dirname(dirname)
+
+            # make sure parent is a directory
+            if not os.path.isdir(dirname):
+                raise OSError(errno.ENOTDIR, '"{0}" is not a directory.'.format(dirname))
 
         # create the query command
         query_cmd = [
@@ -228,7 +235,7 @@ def run(argv, config_path):
             '-n', str(config.threads()),
             '-B', str(config.outputbuffer()),
             '-d', args.delim
-        ] + getfattr(args, config, dirname, nondir)
+        ] + getfattr(args, dirname, nondir)
 
         if args.verbose:
             gufi_common.print_query(query_cmd)

@@ -51,8 +51,8 @@ GUFI query is
     -d ' ' \
     -x \
     -a \
-    -S 'SELECT rpath(sname, sroll), xattr_name FROM vrxsummary WHERE ((name REGEXP '"'"'^.$'"'"')) AND (isroot == 1) AND (xattr_name REGEXP '"'"'^user\.'"'"')' \
-    .
+    -S 'SELECT rpath(sname, sroll), xattr_name FROM vrxsummary WHERE ((name REGEXP '"'"'^prefix$'"'"')) AND (isroot == 1) AND (xattr_name REGEXP '"'"'^user\.'"'"')' \
+    prefix
 
 # 0 xattrs
 $ gufi_getfattr prefix
@@ -63,8 +63,8 @@ $ gufi_getfattr 1MB
 
 # 2 xattrs
 $ gufi_getfattr directory/subdirectory
-subdirectory user.name
-subdirectory user.type
+directory/subdirectory user.name
+directory/subdirectory user.type
 
 # 2 xattrs
 $ gufi_getfattr leaf_directory
@@ -92,8 +92,8 @@ $ gufi_getfattr --dump 1MB
 
 # 2 xattrs
 $ gufi_getfattr --dump directory/subdirectory
-subdirectory user.name sub
-subdirectory user.type dir
+directory/subdirectory user.name sub
+directory/subdirectory user.type dir
 
 # 2 xattrs
 $ gufi_getfattr --dump leaf_directory
@@ -121,7 +121,7 @@ $ gufi_getfattr --name user.size 1MB
 
 # 1 xattr
 $ gufi_getfattr --name user.type directory/subdirectory
-subdirectory user.type
+directory/subdirectory user.type
 
 # 1 xattr
 $ gufi_getfattr --name user.name leaf_directory
@@ -144,7 +144,7 @@ $ gufi_getfattr --match user.* 1MB
 
 # 2 xattrs
 $ gufi_getfattr --match .*name directory/subdirectory
-subdirectory user.name
+directory/subdirectory user.name
 
 # 2 xattrs
 $ gufi_getfattr --match .*type leaf_directory
@@ -190,17 +190,17 @@ value6
 
 # 11 xattrs
 $ gufi_getfattr --recursive .
-./1MB user.size
-./directory/subdirectory user.name
-./directory/subdirectory user.type
-./leaf_directory user.name
-./leaf_directory user.type
-./leaf_directory/leaf_file1 user.name1
-./leaf_directory/leaf_file1 user.name2
-./leaf_directory/leaf_file1 user.name3
-./leaf_directory/leaf_file2 user.name4
-./leaf_directory/leaf_file2 user.name5
-./leaf_directory/leaf_file2 user.name6
+1MB user.size
+directory/subdirectory user.name
+directory/subdirectory user.type
+leaf_directory user.name
+leaf_directory user.type
+leaf_directory/leaf_file1 user.name1
+leaf_directory/leaf_file1 user.name2
+leaf_directory/leaf_file1 user.name3
+leaf_directory/leaf_file2 user.name4
+leaf_directory/leaf_file2 user.name5
+leaf_directory/leaf_file2 user.name6
 
 # 1 xattr - ignore --recursive because path is a file
 $ gufi_getfattr --recursive 1MB
@@ -213,8 +213,8 @@ directory/subdirectory user.type
 
 # 2 xattrs
 $ gufi_getfattr --recursive directory/subdirectory
-subdirectory user.name
-subdirectory user.type
+directory/subdirectory user.name
+directory/subdirectory user.type
 
 # 8 xattrs
 $ gufi_getfattr --recursive leaf_directory

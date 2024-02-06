@@ -727,8 +727,14 @@ static void path(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
     (void) argc; (void) argv;
     struct work *work = (struct work *) sqlite3_user_data(context);
+    size_t user_dirname_len = work->orig_root.len + work->name_len - work->root_parent.len - work->root_basename_len;
+    char *user_dirname = malloc(user_dirname_len + 1);
 
-    sqlite3_result_text(context, work->name, work->name_len, SQLITE_STATIC);
+    SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
+               work->orig_root.data, work->orig_root.len,
+               work->name + work->root_parent.len + work->root_basename_len, work->name_len - work->root_parent.len - work->root_basename_len);
+
+    sqlite3_result_text(context, user_dirname, user_dirname_len, free);
 }
 
 /* return the basename of the directory you are currently in */
@@ -757,15 +763,11 @@ static void fpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 /*
  * Usage:
- *     SELECT rpath(summary.name, summary.rollupscore) || "/" || pentries.name
- *     FROM summary, pentries
- *     WHERE summary.inode == pentries.pinode;
+ *     SELECT rpath(sname, sroll)
+ *     FROM vrsummary;
  *
- * rpath = work->name - work->root (prefix)
- * // rolled up
- * if summary.rollupscore != 0
- *     path += summary.name - common path (prefix)
- * return path
+ *     SELECT rpath(sname, sroll) || "/" || name
+ *     FROM vrpentries;
  */
 static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
@@ -775,48 +777,46 @@ static void rpath(sqlite3_context *context, int argc, sqlite3_value **argv)
     struct work *work = (struct work *) sqlite3_user_data(context);
     const int rollupscore = sqlite3_value_int(argv[1]);
 
-    refstr_t dirname;
+    size_t user_dirname_len = 0;
+    char *user_dirname = NULL;
 
-    /* remove parent from current directory name */
-    dirname.data = work->name + work->root_parent.len;
-    dirname.len  = work->name_len - work->root_parent.len;
-    while (dirname.len && (dirname.data[0] == '/')) {
-        dirname.data++;
-        dirname.len--;
+    const size_t root_len = work->root_parent.len + work->root_basename_len;
+
+    if (rollupscore == 0) { /* use work->name */
+        user_dirname_len = work->orig_root.len + work->name_len - root_len;
+        user_dirname = malloc(user_dirname_len + 1);
+
+        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
+                   work->orig_root.data, work->orig_root.len,
+                   work->name + root_len, work->name_len - root_len);
     }
-
-    if (rollupscore == 0) {
-        sqlite3_result_text(context, dirname.data, dirname.len, SQLITE_STATIC);
-    }
-    else {
-        char fullpath[MAXPATH];
-        size_t fullpath_len = SNFORMAT_S(fullpath, MAXPATH, 1,
-            dirname.data, dirname.len);
-
+    else { /* reconstruct full path out of argv[0] */
         refstr_t input;
         input.data = (char *) sqlite3_value_text(argv[0]);
         input.len  = strlen(input.data);
-        size_t input_offset = 0;
 
-        /* remove first path segment, including / */
-        while ((input_offset < input.len) &&
-               (input.data[input_offset] != '/')) {
-            input_offset++;
-        }
+        /*
+         * fullpath = work->name[:-work->basename_len] + input
+         */
+        const size_t fullpath_len = work->name_len - work->basename_len + input.len;
+        char *fullpath = malloc(fullpath_len + 1);
+        SNFORMAT_S(fullpath, fullpath_len + 1, 2,
+                   work->name, work->name_len - work->basename_len,
+                   input.data, input.len);
 
-        while ((input_offset < input.len) &&
-               (input.data[input_offset] == '/')) {
-            input_offset++;
-        }
+        /*
+         * replace fullpath prefix with original user input
+         */
+        user_dirname_len = work->orig_root.len + fullpath_len - root_len;
+        user_dirname = malloc(user_dirname_len + 1);
+        SNFORMAT_S(user_dirname, user_dirname_len + 1, 2,
+                   work->orig_root.data, work->orig_root.len,
+                   fullpath + root_len, fullpath_len - root_len);
 
-        const size_t input_remaining = input.len - input_offset;
-        if (input_remaining) {
-            fullpath_len += SNFORMAT_S(fullpath + fullpath_len, MAXPATH, 2,
-                "/", 1, input.data + input_offset, input_remaining);
-        }
-
-        sqlite3_result_text(context, fullpath, fullpath_len, SQLITE_TRANSIENT);
+        free(fullpath);
     }
+
+    sqlite3_result_text(context, user_dirname, user_dirname_len, free);
 }
 
 static void uidtouser(sqlite3_context *context, int argc, sqlite3_value **argv)
@@ -1282,7 +1282,7 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
         (sqlite3_create_function(db,  "rpath",                     2, SQLITE_UTF8,
                                  work,                             &rpath,          NULL, NULL) == SQLITE_OK) &&
         (sqlite3_create_function(db,  "starting_point",            0,  SQLITE_UTF8,
-                                 (void *) &work->root_parent,      &starting_point, NULL, NULL) == SQLITE_OK) &&
+                                 (void *) &work->orig_root,        &starting_point, NULL, NULL) == SQLITE_OK) &&
         (sqlite3_create_function(db,  "level",                     0,  SQLITE_UTF8,
                                  (void *) (uintptr_t) work->level, &relative_level, NULL, NULL) == SQLITE_OK)
         );
