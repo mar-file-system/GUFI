@@ -61,6 +61,16 @@ Stat=gufi_stat_bin
 OutputBuffer=4096
 IndexRoot=user_path
 
+# Create symlink in "prefix" to "directory"
+$ ln -sv "directory" "prefix/subsym"
+'prefix/subsym' -> 'directory'
+
+$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "prefix/subsym"
+prefix/subsym
+prefix/subsym/subdirectory
+
+# "prefix/subsym" does not show up in results querying from above "prefix/subsym"
+
 $ gufi_find
 user_path/prefix
 user_path/prefix/.hidden
@@ -103,7 +113,7 @@ user_path/prefix/repeat_name
 user_path/prefix/unusual#? directory ,
 user_path/prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" user_path
+$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
 user_path/prefix/directory
 user_path/prefix/directory/subdirectory
@@ -142,7 +152,7 @@ user_path/prefix/repeat_name
 user_path/prefix/unusual#? directory ,
 user_path/prefix/unusual#? directory ,/unusual, name?#
 
-$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" user_path
+$ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
 user_path/prefix/unusual#? directory ,
 

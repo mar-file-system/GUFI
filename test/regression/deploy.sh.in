@@ -98,9 +98,16 @@ sed -i "/^IndexRoot=.*$/d" "${CONFIG}"
 echo "IndexRoot=${USER_PATH}" >> "${CONFIG}"
 run_no_sort "cat \"${CONFIG}\""
 
+echo "# Create symlink in \"${INDEXROOT}\" to \"directory\""
+SUBSYM="${INDEXROOT}/subsym"
+run_no_sort "ln -sv \"directory\" \"${SUBSYM}\""
+run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${SUBSYM}\""
+echo "# \"${SUBSYM}\" does not show up in results querying from above \"${SUBSYM}\""
+echo
+
 run_sort "${GUFI_FIND}"
 run_sort "${GUFI_LS} -aR"
-run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" ${USER_PATH}"
+run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${USER_PATH}\""
 
 echo "# Create a \"new\" index at \"${SEARCH2}\""
 run_no_sort "cp -r \"${SEARCH}\" \"${SEARCH2}\""
@@ -113,7 +120,7 @@ run_no_sort "ln -snfv \"${SEARCH2}\" \"${USER_PATH}\""
 
 run_sort "${GUFI_FIND}"
 run_sort "${GUFI_LS} -aR"
-run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" ${USER_PATH}"
+run_sort "${GUFI_QUERY} -S \"SELECT rpath(sname, sroll) FROM vrsummary;\" \"${USER_PATH}\""
 ) | replace | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/deploy.expected "${OUTPUT}"
