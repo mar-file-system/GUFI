@@ -87,3 +87,5 @@ jobs:
       with:
         name: guides
         path: ${{ github.workspace }}/build/docs/latex/pdfs/*.pdf
+        retention-days: 14
+      if: github.ref == 'refs/heads/main'
