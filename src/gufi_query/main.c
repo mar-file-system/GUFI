@@ -212,7 +212,17 @@ static size_t descend2(QPTPool_t *ctx,
             descend_timestamp_end(snprintf_call);
 
             descend_timestamp_start(dts, isdir_cmp);
-            const int isdir = (entry->d_type == DT_DIR);
+            int isdir = (entry->d_type == DT_DIR);
+            if (!isdir) {
+                /* allow for paths immediately under the input paths to be symlinks */
+                if (next_level < 2) {
+                    struct stat st;
+                    if (stat(child.work.name, &st) == 0) {
+                        isdir = S_ISDIR(st.st_mode);
+                    }
+                    /* errors are ignored */
+                }
+            }
             descend_timestamp_end(isdir_cmp);
 
             descend_timestamp_start(dts, isdir_branch);

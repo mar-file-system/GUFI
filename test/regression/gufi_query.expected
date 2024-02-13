@@ -364,6 +364,50 @@ Got:
     atime: 0
     mtime: 0
 
+# Symlink at Level 1
+$ ln -svn "directory/subdirectory" "prefix/symlink"
+'prefix/symlink' -> 'directory/subdirectory'
+
+# directory_symlink shows up 2 times and repeat_name shows up 3 times
+$ gufi_query -d " " -m -E "SELECT name FROM vrpentries;" "prefix"
+.hidden
+1KB
+1MB
+directory_symlink
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
+# Symlink at Level 2
+$ ln -svn "subdirectory" "prefix/directory/symlink"
+'prefix/directory/symlink' -> 'subdirectory'
+
+# Symlink at Level 2 is ignored
+$ gufi_query -d " " -m -E "SELECT name FROM vrpentries;" "prefix"
+.hidden
+1KB
+1MB
+directory_symlink
+executable
+file_symlink
+leaf_file1
+leaf_file2
+old_file
+readonly
+repeat_name
+repeat_name
+unusual, name?#
+writable
+
 # Missing database file
 $ gufi_query -d " " -m -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpentries;" "prefix" > /dev/null
 Could not stat database file "prefix/db.db": No such file or directory (2)

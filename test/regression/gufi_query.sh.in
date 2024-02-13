@@ -195,6 +195,18 @@ stat --printf "Expect:\n    atime: %X\n    mtime: %Y\n\n" "${INDEXROOT}/db.db"
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
 stat --printf "Got:\n    atime: %X\n    mtime: %Y\n\n" "${INDEXROOT}/db.db"
 
+echo "# Symlink at Level 1"
+run_no_sort "ln -svn \"directory/subdirectory\" \"${INDEXROOT}/symlink\""
+echo "# directory_symlink shows up 2 times and repeat_name shows up 3 times"
+run_sort "${GUFI_QUERY} -d \" \" -m -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
+rm -f "${INDEXROOT}/symlink"
+
+echo "# Symlink at Level 2"
+run_no_sort "ln -svn \"subdirectory\" \"${INDEXROOT}/directory/symlink\""
+echo "# Symlink at Level 2 is ignored"
+run_sort "${GUFI_QUERY} -d \" \" -m -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\""
+rm -f "${INDEXROOT}/directory/symlink"
+
 echo "# Missing database file"
 rm "${INDEXROOT}/db.db"
 run_sort "${GUFI_QUERY} -d \" \" -m -S \"SELECT name FROM vrsummary;\" -E \"SELECT name FROM vrpentries;\" \"${INDEXROOT}\" > /dev/null"
