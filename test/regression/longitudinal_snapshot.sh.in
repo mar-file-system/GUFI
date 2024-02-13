@@ -90,24 +90,26 @@ do_tests() {
     # shellcheck disable=SC2294
     eval "$@"
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${SNAPSHOT} --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
 
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \".tables\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(metadata);\""
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(snapshot);\""
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"PRAGMA TABLE_INFO(treesummary);\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(metadata);\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(summary);\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(treesummary);\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(snapshot);\""
 
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM metadata;\""
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM snapshot;\""
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT COUNT(*) FROM treesummary;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT COUNT(*) FROM metadata;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT COUNT(*) FROM summary;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT COUNT(*) FROM treesummary;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT COUNT(*) FROM snapshot;\""
 
-    run_no_sort "${SQLITE3} ${SNAPSHOT} \"SELECT notes FROM metadata;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT notes FROM metadata;\""
 
-    run_sort "${SQLITE3} ${SNAPSHOT} \"SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM snapshot AS s, treesummary AS t WHERE s.inode == t.inode;\""
+    run_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM summary AS s, treesummary AS t WHERE s.inode == t.inode;\""
 }
 
-do_tests "run_no_sort \"${GUFI_TREESUMMARY_ALL} ${INDEXROOT}\" 2&>1 >/dev/null" | tee "${OUTPUT}"
+do_tests "run_no_sort \"${GUFI_TREESUMMARY_ALL} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
 
 do_tests "run_no_sort \"${GUFI_ROLLUP} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
