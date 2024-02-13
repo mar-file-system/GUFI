@@ -128,7 +128,7 @@ def run(argv, config_path):
     args = parser.parse_args(argv[1:])
 
     # create the stat command
-    stat_cmd = [config.stat()]
+    stat_cmd = [config.stat]
 
     if args.format is not None:
         stat_cmd += ['-f', args.format]
@@ -136,7 +136,7 @@ def run(argv, config_path):
     if args.terse is True:
         stat_cmd += ['-j']
 
-    paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path]))
+    paths = [os.path.normpath(os.path.sep.join([config.indexroot, path]))
              for path in args.paths]
 
     if args.verbose:

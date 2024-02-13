@@ -259,9 +259,9 @@ def run(argv, config_path):
 
     # construct full command to run
     cmd = [
-        config.query(),
+        config.query,
         args.index,
-        '-n', str(config.threads()),
+        '-n', str(config.threads),
         '-x',
         '-O', args.outname,
         '-I', 'CREATE TABLE {0}({1}); {2};'.format(

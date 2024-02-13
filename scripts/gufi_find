@@ -785,7 +785,7 @@ def run(argv, config_path):
     # all arguments afterwards are parsed as expressions
 
     # prepend the provided paths with the GUFI root path
-    paths = [os.path.normpath(os.path.sep.join([config.indexroot(), path]))
+    paths = [os.path.normpath(os.path.sep.join([config.indexroot, path]))
              for path in paths]
 
     # parse expressions without the 'real' and path arguments
@@ -801,9 +801,9 @@ def run(argv, config_path):
 
     # create the query command
     query_cmd = [
-        config.query(),
-        '-n', str(config.threads()),
-        '-B', str(config.outputbuffer()),
+        config.query,
+        '-n', str(config.threads),
+        '-B', str(config.outputbuffer),
         '-a',
         '-d', ' '
     ]

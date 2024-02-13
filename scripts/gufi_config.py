@@ -138,22 +138,27 @@ class Server(Config):
         # pylint: disable=super-with-arguments
         super(Server, self).__init__(Server.SETTINGS, config_reference)
 
+    @property
     def threads(self):
         '''return number of threads to use'''
         return self.config[Server.THREADS]
 
+    @property
     def query(self):
         '''return absolute path of gufi_query'''
         return self.config[Server.QUERY]
 
+    @property
     def stat(self):
         '''return absolute path of gufi_stat_bin'''
         return self.config[Server.STAT]
 
+    @property
     def indexroot(self):
         '''return absolute path of root directory for GUFI to traverse'''
         return self.config[Server.INDEXROOT]
 
+    @property
     def outputbuffer(self):
         '''return size of per-thread buffers used to buffer prints'''
         return self.config[Server.OUTPUTBUFFER]
@@ -174,14 +179,17 @@ class Client(Config):
         # pylint: disable=super-with-arguments
         super(Client, self).__init__(Client.SETTINGS, config_reference)
 
+    @property
     def server(self):
         '''return hostname of server'''
         return self.config[Client.SERVER]
 
+    @property
     def port(self):
         '''return ssh port'''
         return self.config[Client.PORT]
 
+    @property
     def paramiko(self):
         '''return location of paramiko installation'''
         return self.config[Client.PARAMIKO]

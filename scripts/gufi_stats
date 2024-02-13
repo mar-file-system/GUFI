@@ -1173,13 +1173,13 @@ def run(argv, config_path):
         sys.stderr.write('--recursive/-r and --cumulative/-c have no effect on "{0}" statistic\n'.format(args.stat))
 
     # prepend the provided paths with the GUFI root path
-    args.path = os.path.normpath(os.path.sep.join([config.indexroot(), args.path]))
+    args.path = os.path.normpath(os.path.sep.join([config.indexroot, args.path]))
 
     # create the query command
     query_cmd = [
-        config.query(),
-        '-n', str(config.threads()),
-        '-B', str(config.outputbuffer()),
+        config.query,
+        '-n', str(config.threads),
+        '-B', str(config.outputbuffer),
         '-d', args.delim
     ] + stats[args.stat](config, args, build_where(args))
 

@@ -215,9 +215,9 @@ def run(argv, config_path):
     # process one input arg at a time
     # not sure if it makes sense/is possible to process all at once
     for path in args.path:
-        dirname = config.indexroot()
+        dirname = config.indexroot
         if path != '.':
-            dirname = os.path.join(config.indexroot(), path.rstrip('/'))
+            dirname = os.path.join(config.indexroot, path.rstrip('/'))
 
         nondir = None
 
@@ -231,9 +231,9 @@ def run(argv, config_path):
 
         # create the query command
         query_cmd = [
-            config.query(),
-            '-n', str(config.threads()),
-            '-B', str(config.outputbuffer()),
+            config.query,
+            '-n', str(config.threads),
+            '-B', str(config.outputbuffer),
             '-d', args.delim
         ] + getfattr(args, dirname, nondir)
 

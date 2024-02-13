@@ -98,15 +98,15 @@ class TestServerConfig(unittest.TestCase):
 
     def check_values(self, config):
         self.assertEqual(TestServerConfig.default[gufi_config.Server.THREADS],
-                         config.threads())
+                         config.threads)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.QUERY],
-                         config.query())
+                         config.query)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.STAT],
-                         config.stat())
+                         config.stat)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.INDEXROOT],
-                         config.indexroot())
+                         config.indexroot)
         self.assertEqual(TestServerConfig.default[gufi_config.Server.OUTPUTBUFFER],
-                         config.outputbuffer())
+                         config.outputbuffer)
 
     def test_iterable(self):
         try:
@@ -148,11 +148,11 @@ class TestClientConfig(unittest.TestCase):
 
     def check_values(self, config):
         self.assertEqual(TestClientConfig.default[gufi_config.Client.SERVER],
-                         config.server())
+                         config.server)
         self.assertEqual(TestClientConfig.default[gufi_config.Client.PORT],
-                         config.port())
+                         config.port)
         self.assertEqual(TestClientConfig.default[gufi_config.Client.PARAMIKO],
-                         config.paramiko())
+                         config.paramiko)
 
     def test_iterable(self):
         try:

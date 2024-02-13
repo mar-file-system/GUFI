@@ -296,7 +296,7 @@ def run(argv, config_path):
 
     for path in args.paths[0]:
         # prepend the provided paths with the GUFI index root
-        fullpath = os.path.normpath(os.path.sep.join([config.indexroot(), path]))
+        fullpath = os.path.normpath(os.path.sep.join([config.indexroot, path]))
 
         match_name = None
 
@@ -306,8 +306,8 @@ def run(argv, config_path):
 
         # create the base command
         query_cmd = [
-            config.query(),
-            '-n', str(config.threads())
+            config.query,
+            '-n', str(config.threads)
         ]
 
         if not args.recursive:
@@ -387,7 +387,7 @@ def run(argv, config_path):
             '-J', J,
             '-G', G,
             '-a',
-            '-B', str(config.outputbuffer())
+            '-B', str(config.outputbuffer)
         ]
 
         if args.delim:
