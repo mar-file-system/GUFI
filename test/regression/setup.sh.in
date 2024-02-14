@@ -302,13 +302,13 @@ clean_index() {
         -E "DELETE FROM xattrs_pwd; INSERT INTO xattrs_pwd SELECT * FROM temp_xattrs; DELETE from temp_xattrs;"
 
     # update inodes
-    # ${INDEXROOT} has inode == 16
+    # ${INDEXROOT} has inode == 17
     "${GUFI_QUERY}" -a -w "${INDEX}" \
-        -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, pinode = '16';" \
+        -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, pinode = '17';" \
         -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;"
 
     # ${INDEXROOT} is not a child of itself
-    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = '17' WHERE name == '${BASENAME}';"
+    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = '18' WHERE name == '${BASENAME}';"
 
     # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
     DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"

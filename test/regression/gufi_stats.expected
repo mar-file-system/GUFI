@@ -50,6 +50,7 @@ $ gufi_stats -r depth "prefix"
 prefix 1
 directory 2
 directory/subdirectory 3
+empty_directory 2
 leaf_directory 2
 unusual#? directory , 2
 
@@ -70,14 +71,15 @@ GUFI query is
 1
 
 $ gufi_stats    filesize "prefix"
-1049622
+1049624
 
 $ gufi_stats -r filesize "prefix"
-prefix 1049622
+prefix 1049624
 directory 6
 directory/subdirectory 5
-leaf_directory 21
-unusual#? directory , 14
+empty_directory 0
+leaf_directory 23
+unusual#? directory , 15
 
 $ gufi_stats    filecount "prefix"
 5
@@ -86,6 +88,7 @@ $ gufi_stats -r filecount "prefix"
 prefix 5
 directory 3
 directory/subdirectory 1
+empty_directory 0
 leaf_directory 2
 unusual#? directory , 1
 
@@ -96,6 +99,7 @@ $ gufi_stats -r linkcount "prefix"
 prefix 1
 directory 0
 directory/subdirectory 1
+empty_directory 0
 leaf_directory 0
 unusual#? directory , 0
 
@@ -123,10 +127,10 @@ unusual, name?# 1
 writable 1
 
 $ gufi_stats    total-filesize "prefix"
-1001 1049668
+1001 1049673
 
 $ gufi_stats -c total-filesize "prefix"
-1049668
+1049673
 
 $ gufi_stats    total-filecount "prefix"
 1001 12
@@ -141,20 +145,21 @@ $ gufi_stats -c total-linkcount "prefix"
 2
 
 $ gufi_stats    dircount "prefix"
-3
+4
 
 $ gufi_stats -r dircount "prefix"
-prefix 3
+prefix 4
 directory 1
 directory/subdirectory 0
+empty_directory 0
 leaf_directory 0
 unusual#? directory , 0
 
 $ gufi_stats    total-dircount "prefix"
-1001 4
+1001 5
 
 $ gufi_stats -c total-dircount "prefix"
-5
+6
 
 $ gufi_stats    files-per-level "prefix"
 1001 0 5
@@ -176,12 +181,12 @@ $ gufi_stats -c links-per-level "prefix"
 
 $ gufi_stats    dirs-per-level "prefix"
 1001 0 1
-1001 1 3
+1001 1 4
 1001 2 1
 
 $ gufi_stats -c dirs-per-level "prefix"
 0 1
-1 3
+1 4
 2 1
 
 $ gufi_stats    duplicate-names "prefix"
@@ -192,11 +197,11 @@ $ gufi_stats --order ASC uid-size "prefix"
 1001 2 directory/readonly
 1001 3 directory/writable
 1001 5 directory/subdirectory/repeat_name
-1001 9 .hidden
-1001 10 leaf_directory/leaf_file1
-1001 11 leaf_directory/leaf_file2
-1001 13 repeat_name
-1001 14 unusual#? directory ,/unusual, name?#
+1001 10 .hidden
+1001 11 leaf_directory/leaf_file1
+1001 12 leaf_directory/leaf_file2
+1001 14 repeat_name
+1001 15 unusual#? directory ,/unusual, name?#
 1001 1024 1KB
 1001 1048576 1MB
 
@@ -206,16 +211,16 @@ $ gufi_stats --num-results 6 --order ASC uid-size "prefix"
 1001 2 directory/readonly
 1001 3 directory/writable
 1001 5 directory/subdirectory/repeat_name
-1001 9 .hidden
+1001 10 .hidden
 
 $ gufi_stats --order DESC uid-size "prefix"
 1001 1048576 1MB
 1001 1024 1KB
-1001 14 unusual#? directory ,/unusual, name?#
-1001 13 repeat_name
-1001 11 leaf_directory/leaf_file2
-1001 10 leaf_directory/leaf_file1
-1001 9 .hidden
+1001 15 unusual#? directory ,/unusual, name?#
+1001 14 repeat_name
+1001 12 leaf_directory/leaf_file2
+1001 11 leaf_directory/leaf_file1
+1001 10 .hidden
 1001 5 directory/subdirectory/repeat_name
 1001 3 directory/writable
 1001 2 directory/readonly
@@ -225,10 +230,10 @@ $ gufi_stats --order DESC uid-size "prefix"
 $ gufi_stats --num-results 6 --order DESC uid-size "prefix"
 1001 1048576 1MB
 1001 1024 1KB
-1001 14 unusual#? directory ,/unusual, name?#
-1001 13 repeat_name
-1001 11 leaf_directory/leaf_file2
-1001 10 leaf_directory/leaf_file1
+1001 15 unusual#? directory ,/unusual, name?#
+1001 14 repeat_name
+1001 12 leaf_directory/leaf_file2
+1001 11 leaf_directory/leaf_file1
 
 $ gufi_stats --order ASC gid-size "prefix"
 1001 0 old_file
@@ -236,11 +241,11 @@ $ gufi_stats --order ASC gid-size "prefix"
 1001 2 directory/readonly
 1001 3 directory/writable
 1001 5 directory/subdirectory/repeat_name
-1001 9 .hidden
-1001 10 leaf_directory/leaf_file1
-1001 11 leaf_directory/leaf_file2
-1001 13 repeat_name
-1001 14 unusual#? directory ,/unusual, name?#
+1001 10 .hidden
+1001 11 leaf_directory/leaf_file1
+1001 12 leaf_directory/leaf_file2
+1001 14 repeat_name
+1001 15 unusual#? directory ,/unusual, name?#
 1001 1024 1KB
 1001 1048576 1MB
 
@@ -250,16 +255,16 @@ $ gufi_stats --num-results 6 --order ASC gid-size "prefix"
 1001 2 directory/readonly
 1001 3 directory/writable
 1001 5 directory/subdirectory/repeat_name
-1001 9 .hidden
+1001 10 .hidden
 
 $ gufi_stats --order DESC gid-size "prefix"
 1001 1048576 1MB
 1001 1024 1KB
-1001 14 unusual#? directory ,/unusual, name?#
-1001 13 repeat_name
-1001 11 leaf_directory/leaf_file2
-1001 10 leaf_directory/leaf_file1
-1001 9 .hidden
+1001 15 unusual#? directory ,/unusual, name?#
+1001 14 repeat_name
+1001 12 leaf_directory/leaf_file2
+1001 11 leaf_directory/leaf_file1
+1001 10 .hidden
 1001 5 directory/subdirectory/repeat_name
 1001 3 directory/writable
 1001 2 directory/readonly
@@ -269,10 +274,10 @@ $ gufi_stats --order DESC gid-size "prefix"
 $ gufi_stats --num-results 6 --order DESC gid-size "prefix"
 1001 1048576 1MB
 1001 1024 1KB
-1001 14 unusual#? directory ,/unusual, name?#
-1001 13 repeat_name
-1001 11 leaf_directory/leaf_file2
-1001 10 leaf_directory/leaf_file1
+1001 15 unusual#? directory ,/unusual, name?#
+1001 14 repeat_name
+1001 12 leaf_directory/leaf_file2
+1001 11 leaf_directory/leaf_file1
 
 $ gufi_stats    filesize-log2-bins "prefix"
 [0,1) 1
@@ -284,12 +289,12 @@ $ gufi_stats -r filesize-log2-bins "prefix"
 6 [4,8) 1
 7 [1,2) 1
 7 [2,4) 2
-12 [8,16) 2
-15 [8,16) 1
-16 [0,1) 1
-16 [8,16) 2
-16 [1024,2048) 1
-16 [1048576,2097152) 1
+13 [8,16) 2
+16 [8,16) 1
+17 [0,1) 1
+17 [8,16) 2
+17 [1024,2048) 1
+17 [1048576,2097152) 1
 
 $ gufi_stats -c filesize-log2-bins "prefix"
 [0,1) 1
@@ -309,12 +314,12 @@ $ gufi_stats    filesize-log1024-bins "prefix"
 $ gufi_stats -r filesize-log1024-bins "prefix"
 6 [1,1024) 1
 7 [1,1024) 3
-12 [1,1024) 2
-15 [1,1024) 1
-16 [0,1) 1
-16 [1,1024) 2
-16 [1024,1048576) 1
-16 [1048576,1073741824) 1
+13 [1,1024) 2
+16 [1,1024) 1
+17 [0,1) 1
+17 [1,1024) 2
+17 [1024,1048576) 1
+17 [1048576,1073741824) 1
 
 $ gufi_stats -c filesize-log1024-bins "prefix"
 [0,1) 1
@@ -326,11 +331,13 @@ $ gufi_stats    dirfilecount-log2-bins "prefix"
 [4,8) 1
 
 $ gufi_stats -r dirfilecount-log2-bins "prefix"
+16 [0,1) 1
 16 [1,2) 2
 16 [2,4) 2
 16 [4,8) 1
 
 $ gufi_stats -c dirfilecount-log2-bins "prefix"
+[0,1) 1
 [1,2) 2
 [2,4) 2
 [4,8) 1
@@ -339,9 +346,11 @@ $ gufi_stats    dirfilecount-log1024-bins "prefix"
 [1,1024) 1
 
 $ gufi_stats -r dirfilecount-log1024-bins "prefix"
+16 [0,1) 1
 16 [1,1024) 5
 
 $ gufi_stats -c dirfilecount-log1024-bins "prefix"
+[0,1) 1
 [1,1024) 5
 
 $ gufi_stats -c depth "prefix"
@@ -350,7 +359,7 @@ $ gufi_stats -c depth "prefix"
 
 $ gufi_stats -r total-filesize "prefix"
 --recursive/-r has no effect on "total-filesize" statistic
-1001 1049668
+1001 1049673
 
 $ gufi_stats -c duplicate-names "prefix"
 --recursive/-r and --cumulative/-c have no effect on "duplicate-names" statistic
@@ -360,6 +369,7 @@ $ gufi_stats -r duplicate-names "prefix"
 
 $ gufi_stats --skip "skip" -r depth "prefix"
 prefix 1
+empty_directory 2
 leaf_directory 2
 unusual#? directory , 2
 
@@ -368,29 +378,35 @@ Error: Cannot open skip file "skip.bad"
 Error: Bad input skip list
 
 $ gufi_stats    leaf-dirs "prefix"
+empty_directory
 leaf_directory
 unusual#? directory ,
 
 $ gufi_stats -r leaf-dirs "prefix"
 directory/subdirectory
+empty_directory
 leaf_directory
 unusual#? directory ,
 
 $ gufi_stats    leaf-depth "prefix"
+empty_directory 2
 leaf_directory 2
 unusual#? directory , 2
 
 $ gufi_stats -r leaf-depth "prefix"
 directory/subdirectory 3
+empty_directory 2
 leaf_directory 2
 unusual#? directory , 2
 
 $ gufi_stats    leaf-files "prefix"
+empty_directory 0
 leaf_directory 2
 unusual#? directory , 1
 
 $ gufi_stats -r leaf-files "prefix"
 directory/subdirectory 1
+empty_directory 0
 leaf_directory 2
 unusual#? directory , 1
 
@@ -401,13 +417,13 @@ $ gufi_stats -c total-leaf-files "prefix"
 4
 
 $ gufi_stats    average-leaf-files "prefix"
-1.33333333333333
+1.0
 
 $ gufi_stats    average-leaf-links "prefix"
-0.333333333333333
+0.25
 
 $ gufi_stats    average-leaf-size "prefix"
-13.3333333333333
+10.75
 
 $ gufi_stats    median-leaf-files "prefix"
 1.0
@@ -416,5 +432,5 @@ $ gufi_stats    median-leaf-links "prefix"
 0.0
 
 $ gufi_stats    median-leaf-size "prefix"
-14.0
+10.0
 

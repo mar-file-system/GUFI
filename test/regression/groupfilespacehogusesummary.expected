@@ -1,5 +1,5 @@
 $ groupfilespacehogusesummary "prefix" 2
 query to get total file count and total file size grouped by group using the group summary view
 create gid summary records in summary tables in prefix
-group 12 1049668
+group 12 1049673
 

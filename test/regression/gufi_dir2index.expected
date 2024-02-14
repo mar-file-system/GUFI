@@ -28,6 +28,7 @@ Index Everything:
         prefix/directory/subdirectory/directory_symlink
         prefix/directory/subdirectory/repeat_name
         prefix/directory/writable
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/leaf_directory/leaf_file1
@@ -38,7 +39,7 @@ Index Everything:
         prefix/unusual#? directory ,/unusual, name?#
 
     Creating GUFI Index prefix with 1 threads
-    Total Dirs:          5
+    Total Dirs:          6
     Total Files:         14
 
     GUFI Index:
@@ -53,6 +54,7 @@ Index Everything:
         prefix/directory/subdirectory/directory_symlink
         prefix/directory/subdirectory/repeat_name
         prefix/directory/writable
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/leaf_directory/leaf_file1
@@ -80,6 +82,7 @@ Index up to level 1:
         prefix/1KB
         prefix/1MB
         prefix/directory
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/old_file
@@ -87,7 +90,7 @@ Index up to level 1:
         prefix/unusual#? directory ,
 
     Creating GUFI Index prefix with 1 threads
-    Total Dirs:          4
+    Total Dirs:          5
     Total Files:         6
 
     GUFI Index:
@@ -96,6 +99,7 @@ Index up to level 1:
         prefix/1KB
         prefix/1MB
         prefix/directory
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/old_file
@@ -113,6 +117,7 @@ Index up to level 2:
         prefix/directory/readonly
         prefix/directory/subdirectory
         prefix/directory/writable
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/leaf_directory/leaf_file1
@@ -123,7 +128,7 @@ Index up to level 2:
         prefix/unusual#? directory ,/unusual, name?#
 
     Creating GUFI Index prefix with 1 threads
-    Total Dirs:          5
+    Total Dirs:          6
     Total Files:         12
 
     GUFI Index:
@@ -136,6 +141,7 @@ Index up to level 2:
         prefix/directory/readonly
         prefix/directory/subdirectory
         prefix/directory/writable
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/leaf_directory/leaf_file1
@@ -158,6 +164,7 @@ Index up to level 3:
         prefix/directory/subdirectory/directory_symlink
         prefix/directory/subdirectory/repeat_name
         prefix/directory/writable
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/leaf_directory/leaf_file1
@@ -168,7 +175,7 @@ Index up to level 3:
         prefix/unusual#? directory ,/unusual, name?#
 
     Creating GUFI Index prefix with 1 threads
-    Total Dirs:          5
+    Total Dirs:          6
     Total Files:         14
 
     GUFI Index:
@@ -183,6 +190,7 @@ Index up to level 3:
         prefix/directory/subdirectory/directory_symlink
         prefix/directory/subdirectory/repeat_name
         prefix/directory/writable
+        prefix/empty_directory
         prefix/file_symlink
         prefix/leaf_directory
         prefix/leaf_directory/leaf_file1
@@ -216,7 +224,7 @@ Total Files:         0
 $ gufi_dir2index -n 2 -k "skip" "prefix" "prefix"
 "prefix" Already exists!
 Creating GUFI Index prefix with 2 threads
-Total Dirs:          3
+Total Dirs:          4
 Total Files:         9
 
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" "prefix"
@@ -224,6 +232,7 @@ prefix
 prefix/.hidden
 prefix/1KB
 prefix/1MB
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1

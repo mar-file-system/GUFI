@@ -332,21 +332,22 @@ $ sqlite3 "longitudinal_snapshot.db" "SELECT COUNT(*) FROM metadata;"
 1
 
 $ sqlite3 "longitudinal_snapshot.db" "SELECT COUNT(*) FROM summary;"
-5
+6
 
 $ sqlite3 "longitudinal_snapshot.db" "SELECT COUNT(*) FROM treesummary;"
-5
+6
 
 $ sqlite3 "longitudinal_snapshot.db" "SELECT COUNT(*) FROM snapshot;"
-5
+6
 
 $ sqlite3 "longitudinal_snapshot.db" "SELECT notes FROM metadata;"
 test notes
 
 $ sqlite3 "longitudinal_snapshot.db" "SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM summary AS s, treesummary AS t WHERE s.inode == t.inode;"
 directory|6|11|3|4
-leaf_directory|21|21|2|2
-prefix|1049622|1049668|5|12
+empty_directory||0|0|0
+leaf_directory|23|23|2|2
+prefix|1049624|1049673|5|12
 subdirectory|5|5|1|1
-unusual#? directory ,|14|14|1|1
+unusual#? directory ,|15|15|1|1
 

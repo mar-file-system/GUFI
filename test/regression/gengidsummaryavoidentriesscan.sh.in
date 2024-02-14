@@ -68,14 +68,18 @@ OUTPUT="gengidsummaryavoidentriesscan.out"
 
 (
     run_no_sort "${GENERATEGIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
-    expected=$(pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2";
-               pull_ug_summary_columns "gid" "vsummarygroup")
+    expected=$(
+        pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2";
+        pull_ug_summary_columns "gid" "vsummarygroup"
+    )
     echo "${expected}"
     echo
 
     run_no_sort "${GENGIDSUMMARYAVOIDENTRIESSCAN} \"${INDEXROOT}\" ${THREADS}"
-    results=$(pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2";
-              pull_ug_summary_columns "gid" "vsummarygroup")
+    results=$(
+        pull_ug_summary_columns "gid" "summary" " WHERE rectype == 2";
+        pull_ug_summary_columns "gid" "vsummarygroup"
+    )
     echo "${results}"
     echo
 

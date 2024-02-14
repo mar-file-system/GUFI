@@ -82,6 +82,7 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
+empty_directory
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -95,6 +96,7 @@ $ gufi_ls prefix
 1KB
 1MB
 directory
+empty_directory
 file_symlink
 leaf_directory
 old_file
@@ -106,6 +108,7 @@ $ gufi_ls prefix -a
 1KB
 1MB
 directory
+empty_directory
 file_symlink
 leaf_directory
 old_file
@@ -117,6 +120,7 @@ $ gufi_ls prefix -A
 1KB
 1MB
 directory
+empty_directory
 file_symlink
 leaf_directory
 old_file
@@ -127,6 +131,7 @@ $ gufi_ls prefix -h
 1KB
 1MB
 directory
+empty_directory
 file_symlink
 leaf_directory
 old_file
@@ -137,6 +142,7 @@ $ gufi_ls prefix -i  | awk '{ print 0, $2 }'
 0 1KB
 0 1MB
 0 directory
+0 empty_directory
 0 file_symlink
 0 leaf_directory
 0 old_file
@@ -153,6 +159,7 @@ directory/subdirectory
 directory/subdirectory/directory_symlink
 directory/subdirectory/repeat_name
 directory/writable
+empty_directory
 file_symlink
 leaf_directory
 leaf_directory/leaf_file1
@@ -168,6 +175,7 @@ repeat_name
 old_file
 leaf_directory
 file_symlink
+empty_directory
 directory
 1MB
 1KB
@@ -192,6 +200,7 @@ unusual#? directory ,
 repeat_name
 leaf_directory
 file_symlink
+empty_directory
 directory
 old_file
 
@@ -201,6 +210,7 @@ repeat_name
 old_file
 leaf_directory
 file_symlink
+empty_directory
 directory
 1MB
 1KB
@@ -215,6 +225,7 @@ leaf_directory/leaf_file2
 leaf_directory/leaf_file1
 leaf_directory
 file_symlink
+empty_directory
 directory/writable
 directory/subdirectory/repeat_name
 directory/subdirectory/directory_symlink
@@ -239,6 +250,7 @@ $ gufi_ls prefix -B
 1KB
 1MB
 directory
+empty_directory
 file_symlink
 leaf_directory
 old_file
@@ -376,6 +388,7 @@ gufi_ls: error: argument --block-size: Invalid --block-size argument: '0GB'
 $ gufi_ls --skip "skip" prefix
 1KB
 1MB
+empty_directory
 file_symlink
 leaf_directory
 old_file

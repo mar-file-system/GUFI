@@ -18,6 +18,7 @@ prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 prefix/directory/writable
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
@@ -39,6 +40,7 @@ prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 prefix/directory/writable
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
@@ -83,6 +85,7 @@ user_path/prefix/directory/subdirectory
 user_path/prefix/directory/subdirectory/directory_symlink
 user_path/prefix/directory/subdirectory/repeat_name
 user_path/prefix/directory/writable
+user_path/prefix/empty_directory
 user_path/prefix/file_symlink
 user_path/prefix/leaf_directory
 user_path/prefix/leaf_directory/leaf_file1
@@ -104,6 +107,7 @@ user_path/prefix/directory/subdirectory
 user_path/prefix/directory/subdirectory/directory_symlink
 user_path/prefix/directory/subdirectory/repeat_name
 user_path/prefix/directory/writable
+user_path/prefix/empty_directory
 user_path/prefix/file_symlink
 user_path/prefix/leaf_directory
 user_path/prefix/leaf_directory/leaf_file1
@@ -117,6 +121,7 @@ $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
 user_path/prefix/directory
 user_path/prefix/directory/subdirectory
+user_path/prefix/empty_directory
 user_path/prefix/leaf_directory
 user_path/prefix/unusual#? directory ,
 
@@ -135,6 +140,7 @@ user_path/prefix
 user_path/prefix/.hidden
 user_path/prefix/1KB
 user_path/prefix/1MB
+user_path/prefix/empty_directory
 user_path/prefix/file_symlink
 user_path/prefix/old_file
 user_path/prefix/repeat_name
@@ -146,6 +152,7 @@ user_path/prefix
 user_path/prefix/.hidden
 user_path/prefix/1KB
 user_path/prefix/1MB
+user_path/prefix/empty_directory
 user_path/prefix/file_symlink
 user_path/prefix/old_file
 user_path/prefix/repeat_name
@@ -154,5 +161,6 @@ user_path/prefix/unusual#? directory ,/unusual, name?#
 
 $ gufi_query -S "SELECT rpath(sname, sroll) FROM vrsummary;" "user_path"
 user_path/prefix
+user_path/prefix/empty_directory
 user_path/prefix/unusual#? directory ,
 

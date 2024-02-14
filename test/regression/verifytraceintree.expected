@@ -8,23 +8,23 @@ $ generatetree "prefix"
 # generate the trace (multiple threads)
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 # generate the index
 $ gufi_trace2index -d "|" "trace" "prefix"
 Creating GUFI Index prefix with 1 threads
-Dirs:                5 (0 empty)
+Dirs:                6 (1 empty)
 Files:               14
-Total:               19
+Total:               20
 
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 # generate the trace (single thread)
 $ gufi_dir2trace -d "|" -n 1 -x "prefix" "trace"
 Creating GUFI Traces trace with 1 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 # missing trace (Fail)

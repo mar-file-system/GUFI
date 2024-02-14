@@ -1,4 +1,4 @@
 $ groupfilespacehog "prefix" 2
 query to get total file count and total file size grouped by group using the entries table
-group 12 1049668
+group 12 1049673
 

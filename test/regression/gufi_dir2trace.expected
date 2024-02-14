@@ -17,11 +17,11 @@ output_prefix        prefix of output files (<prefix>.<tid>)
 
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 Expecting 2 trace files. Found 2.
-Expecting 19 lines. Got 19.
+Expecting 20 lines. Got 20.
 Expecting 23 columns per row. Got 23.
 Source Directory:
     prefix
@@ -35,6 +35,7 @@ Source Directory:
     prefix/directory/subdirectory/directory_symlink
     prefix/directory/subdirectory/repeat_name
     prefix/directory/writable
+    prefix/empty_directory
     prefix/file_symlink
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
@@ -55,6 +56,7 @@ Trace File:
     prefix/directory/subdirectory/directory_symlink
     prefix/directory/subdirectory/repeat_name
     prefix/directory/writable
+    prefix/empty_directory
     prefix/file_symlink
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
@@ -98,7 +100,7 @@ $ gufi_dir2trace -d "|" -n 2 -k "skip" "prefix" "trace"
 "trace.0" Already exists!
 "trace.1" Already exists!
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          3
+Total Dirs:          4
 Total Files:         9
 
 $ cat trace.0 trace.1 | awk -F "|" '{print $1}'
@@ -106,6 +108,7 @@ prefix
 prefix/.hidden
 prefix/1KB
 prefix/1MB
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1

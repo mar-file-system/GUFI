@@ -1,139 +1,145 @@
 $ "gufi_dir2index"   -x -e "prefix" "prefix.d2i"
 Creating GUFI Index prefix.d2i with 1 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 $ "gufi_dir2trace"   -x -e "prefix" "trace"
 Creating GUFI Traces trace with 1 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 $ "gufi_trace2index"       "trace.0" "prefix.t2i"
 Creating GUFI Index prefix.t2i with 1 threads
-Dirs:                5 (0 empty)
+Dirs:                6 (1 empty)
 Files:               14
-Total:               19
+Total:               20
 
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 $ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix"
-.hidden 9 9
+.hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
 directory 7 7
 directory_symlink 4 4
+empty_directory 8 8
 executable 1 1
-file_symlink 8 8
-leaf_directory 12 12
-leaf_file1 10 10
-leaf_file2 11 11
+file_symlink 9 9
+leaf_directory 13 13
+leaf_file1 11 11
+leaf_file2 12 12
 old_file 0 0
-prefix 16 16
+prefix 17 17
 readonly 2 2
-repeat_name 13 13
+repeat_name 14 14
 repeat_name 5 5
 subdirectory 6 6
-unusual#? directory , 15 15
-unusual, name?# 14 14
+unusual#? directory , 16 16
+unusual, name?# 15 15
 writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix"
-.hidden 9 9
+.hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
 directory 7 7
 directory_symlink 4 4
+empty_directory 8 8
 executable 1 1
-file_symlink 8 8
-leaf_directory 12 12
-leaf_file1 10 10
-leaf_file2 11 11
+file_symlink 9 9
+leaf_directory 13 13
+leaf_file1 11 11
+leaf_file2 12 12
 old_file 0 0
-prefix 16 16
+prefix 17 17
 readonly 2 2
-repeat_name 13 13
+repeat_name 14 14
 repeat_name 5 5
 subdirectory 6 6
-unusual#? directory , 15 15
-unusual, name?# 14 14
+unusual#? directory , 16 16
+unusual, name?# 15 15
 writable 3 3' | remove_e)
 
 $ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.d2i/prefix"
-.hidden 9 9
+.hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
 directory 7 7
 directory_symlink 4 4
+empty_directory 8 8
 executable 1 1
-file_symlink 8 8
-leaf_directory 12 12
-leaf_file1 10 10
-leaf_file2 11 11
+file_symlink 9 9
+leaf_directory 13 13
+leaf_file1 11 11
+leaf_file2 12 12
 old_file 0 0
-prefix 16 16
+prefix 17 17
 readonly 2 2
-repeat_name 13 13
+repeat_name 14 14
 repeat_name 5 5
 subdirectory 6 6
-unusual#? directory , 15 15
-unusual, name?# 14 14
+unusual#? directory , 16 16
+unusual, name?# 15 15
 writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.d2i/prefix"
-.hidden 9 9
+.hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
 directory 7 7
 directory_symlink 4 4
+empty_directory 8 8
 executable 1 1
-file_symlink 8 8
-leaf_directory 12 12
-leaf_file1 10 10
-leaf_file2 11 11
+file_symlink 9 9
+leaf_directory 13 13
+leaf_file1 11 11
+leaf_file2 12 12
 old_file 0 0
-prefix 16 16
+prefix 17 17
 readonly 2 2
-repeat_name 13 13
+repeat_name 14 14
 repeat_name 5 5
 subdirectory 6 6
-unusual#? directory , 15 15
-unusual, name?# 14 14
+unusual#? directory , 16 16
+unusual, name?# 15 15
 writable 3 3' | remove_e)
 
 $ diff <(echo '$ "gufi_query" -d " "    -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.t2i/prefix"
-.hidden 9 9
+.hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
 directory 7 7
 directory_symlink 4 4
+empty_directory 8 8
 executable 1 1
-file_symlink 8 8
-leaf_directory 12 12
-leaf_file1 10 10
-leaf_file2 11 11
+file_symlink 9 9
+leaf_directory 13 13
+leaf_file1 11 11
+leaf_file2 12 12
 old_file 0 0
-prefix 16 16
+prefix 17 17
 readonly 2 2
-repeat_name 13 13
+repeat_name 14 14
 repeat_name 5 5
 subdirectory 6 6
-unusual#? directory , 15 15
-unusual, name?# 14 14
+unusual#? directory , 16 16
+unusual, name?# 15 15
 writable 3 3') <(echo '$ "gufi_query" -d " " -e -S "SELECT name, size, mtime FROM summary;" -E "SELECT name, size, mtime FROM entries;" "prefix.t2i/prefix"
-.hidden 9 9
+.hidden 10 10
 1KB 1024 1024
 1MB 1048576 1048576
 directory 7 7
 directory_symlink 4 4
+empty_directory 8 8
 executable 1 1
-file_symlink 8 8
-leaf_directory 12 12
-leaf_file1 10 10
-leaf_file2 11 11
+file_symlink 9 9
+leaf_directory 13 13
+leaf_file1 11 11
+leaf_file2 12 12
 old_file 0 0
-prefix 16 16
+prefix 17 17
 readonly 2 2
-repeat_name 13 13
+repeat_name 14 14
 repeat_name 5 5
 subdirectory 6 6
-unusual#? directory , 15 15
-unusual, name?# 14 14
+unusual#? directory , 16 16
+unusual, name?# 15 15
 writable 3 3' | remove_e)
 

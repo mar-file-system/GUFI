@@ -36,6 +36,7 @@ $ gufi_query "prefix"
 # Get only directories
 $ gufi_query -d " " -S "SELECT name FROM vrsummary;" "prefix"
 directory
+empty_directory
 leaf_directory
 prefix
 subdirectory
@@ -65,6 +66,7 @@ $ gufi_query -d " " -S "SELECT name FROM vrsummary;" -E "SELECT name FROM vrpent
 1MB
 directory
 directory_symlink
+empty_directory
 executable
 file_symlink
 leaf_directory
@@ -82,9 +84,10 @@ writable
 
 # Get number of subdirectories
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll), subdirs(srollsubdirs, sroll) FROM vrsummary;" "prefix"
-prefix 3
+prefix 4
 prefix/directory 1
 prefix/directory/subdirectory 0
+prefix/empty_directory 0
 prefix/leaf_directory 0
 prefix/unusual#? directory , 0
 
@@ -101,6 +104,7 @@ prefix/directory/subdirectory
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 prefix/directory/writable
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
@@ -120,6 +124,7 @@ prefix/leaf_directory/leaf_file2
 prefix/leaf_directory/leaf_file1
 prefix/leaf_directory
 prefix/file_symlink
+prefix/empty_directory
 prefix/directory/writable
 prefix/directory/subdirectory/repeat_name
 prefix/directory/subdirectory/directory_symlink
@@ -168,6 +173,7 @@ prefix
 prefix/.hidden
 prefix/1KB
 prefix/1MB
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory
 prefix/leaf_directory/leaf_file1
@@ -191,6 +197,7 @@ prefix/directory/subdirectory user.type dir
 prefix/directory/subdirectory/directory_symlink
 prefix/directory/subdirectory/repeat_name
 prefix/directory/writable
+prefix/empty_directory
 prefix/file_symlink
 prefix/leaf_directory user.name leaf
 prefix/leaf_directory user.type dir
@@ -308,6 +315,8 @@ Error: attempt to write a readonly database: prefix/directory/db.db: "UPDATE ent
 Error: attempt to write a readonly database: prefix/directory/db.db: "UPDATE summary SET inode = 0;"
 Error: attempt to write a readonly database: prefix/directory/subdirectory/db.db: "UPDATE entries SET inode = 0;"
 Error: attempt to write a readonly database: prefix/directory/subdirectory/db.db: "UPDATE summary SET inode = 0;"
+Error: attempt to write a readonly database: prefix/empty_directory/db.db: "UPDATE entries SET inode = 0;"
+Error: attempt to write a readonly database: prefix/empty_directory/db.db: "UPDATE summary SET inode = 0;"
 Error: attempt to write a readonly database: prefix/leaf_directory/db.db: "UPDATE entries SET inode = 0;"
 Error: attempt to write a readonly database: prefix/leaf_directory/db.db: "UPDATE summary SET inode = 0;"
 Error: attempt to write a readonly database: prefix/unusual%23%3f directory ,/db.db: "UPDATE entries SET inode = 0;"
@@ -332,6 +341,7 @@ prefix/directory/subdirectory 0
 prefix/directory/subdirectory/directory_symlink 0
 prefix/directory/subdirectory/repeat_name 0
 prefix/directory/writable 0
+prefix/empty_directory 0
 prefix/file_symlink 0
 prefix/leaf_directory 0
 prefix/leaf_directory/leaf_file1 0

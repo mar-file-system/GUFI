@@ -16,16 +16,16 @@ $ generatetree prefix
 
 $ gufi_dir2trace -d "|" -n 2 -x "prefix" "trace"
 Creating GUFI Traces trace with 2 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 $ gufi_trace2index -d "|" trace.0 trace.1 "prefix"
 Creating GUFI Index prefix with 1 threads
-Dirs:                5 (0 empty)
+Dirs:                6 (1 empty)
 Files:               14
-Total:               19
+Total:               20
 
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 Source Directory:
@@ -40,6 +40,7 @@ Source Directory:
     prefix/directory/subdirectory/directory_symlink
     prefix/directory/subdirectory/repeat_name
     prefix/directory/writable
+    prefix/empty_directory
     prefix/file_symlink
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1
@@ -61,6 +62,7 @@ GUFI Index:
     prefix/directory/subdirectory/directory_symlink
     prefix/directory/subdirectory/repeat_name
     prefix/directory/writable
+    prefix/empty_directory
     prefix/file_symlink
     prefix/leaf_directory
     prefix/leaf_directory/leaf_file1

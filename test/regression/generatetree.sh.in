@@ -74,6 +74,7 @@
 #       |---- subdirectory/        (user.type=dir, user.name=sub)
 #             |---- directory_symlink -> subdirectory
 #             |---- repeat_name
+# |---- empty_directory/
 # |---- file_symlink -> 1KB
 # |---- .hidden
 # |---- leaf_directory/            (user.type=dir, user.name=leaf)
@@ -142,11 +143,14 @@ mkdir directory
 )
 touch -amt 197001010000.07 directory
 
-ln -f -s "$(realpath 1KB)" file_symlink
-touch -hamt 197001010000.08 file_symlink
+mkdir empty_directory
+touch -amt 197001010000.08 empty_directory
 
-truncate -s 9 .hidden
-touch -amt 197001010000.09 .hidden
+ln -f -s "$(realpath 1KB)" file_symlink
+touch -hamt 197001010000.09 file_symlink
+
+truncate -s 10 .hidden
+touch -amt 197001010000.10 .hidden
 
 mkdir leaf_directory
 os_setfattr "user.type" "dir"  leaf_directory
@@ -154,32 +158,32 @@ os_setfattr "user.name" "leaf" leaf_directory
 (
     cd leaf_directory
 
-    truncate -s 10 leaf_file1
+    truncate -s 11 leaf_file1
     os_setfattr "user.name1" "value1" leaf_file1
     os_setfattr "user.name2" "value2" leaf_file1
     os_setfattr "user.name3" "value3" leaf_file1
-    touch -amt 197001010000.10 leaf_file1
+    touch -amt 197001010000.11 leaf_file1
 
-    truncate -s 11 leaf_file2
+    truncate -s 12 leaf_file2
     os_setfattr "user.name4" "value4" leaf_file2
     os_setfattr "user.name5" "value5" leaf_file2
     os_setfattr "user.name6" "value6" leaf_file2
-    touch -amt 197001010000.11 leaf_file2
+    touch -amt 197001010000.12 leaf_file2
 )
-touch -amt 197001010000.12 leaf_directory
+touch -amt 197001010000.13 leaf_directory
 
 truncate -s 0 old_file
 touch -amt 197001010000 old_file
 
-truncate -s 13 repeat_name
-touch -amt 197001010000.13 repeat_name
+truncate -s 14 repeat_name
+touch -amt 197001010000.14 repeat_name
 
 mkdir "unusual#? directory ,"
 (
     cd "unusual#? directory ,"
-    truncate -s 14 "unusual, name?#"
-    touch -amt 197001010000.14 "unusual, name?#"
+    truncate -s 15 "unusual, name?#"
+    touch -amt 197001010000.15 "unusual, name?#"
 )
-touch -amt 197001010000.15 "unusual#? directory ,"
+touch -amt 197001010000.16 "unusual#? directory ,"
 
-touch -amt 197001010000.16 "${DIR}"
+touch -amt 197001010000.17 "${DIR}"

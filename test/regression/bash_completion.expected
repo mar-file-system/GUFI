@@ -11,7 +11,7 @@ Search entries:
 prefix/
 
 Index root entries:
-.hidden 1KB 1MB directory/ file_symlink leaf_directory/ old_file repeat_name unusual#? directory ,/
+.hidden 1KB 1MB directory/ empty_directory/ file_symlink leaf_directory/ old_file repeat_name unusual#? directory ,/
 
 Index root entries starting with ".":
 prefix/.hidden 

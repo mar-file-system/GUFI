@@ -23,11 +23,11 @@ directory/executable|1|
 directory/readonly|2|
 directory/writable|3|
 directory/subdirectory/repeat_name|5|
-.hidden|9|
-leaf_directory/leaf_file1|10|
-leaf_directory/leaf_file2|11|
-repeat_name|13|
-unusual#? directory ,/unusual, name?#|14|
+.hidden|10|
+leaf_directory/leaf_file1|11|
+leaf_directory/leaf_file2|12|
+repeat_name|14|
+unusual#? directory ,/unusual, name?#|15|
 1KB|1024|
 1MB|1048576|
 query returned 12 records

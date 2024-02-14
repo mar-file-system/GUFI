@@ -1,4 +1,4 @@
 $ userfilespacehog "prefix" 2
 query to get total file count and total file size grouped by user using the entries table
-user 12 1049668
+user 12 1049673
 

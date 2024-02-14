@@ -68,14 +68,18 @@ OUTPUT="genuidsummaryavoidentriesscan.out"
 
 (
     run_no_sort "${GENERATEUIDSUMMARY} \"${INDEXROOT}\" ${THREADS}"
-    expected=$(pull_ug_summary_columns "uid" "summary" " WHERE rectype == 1";
-               pull_ug_summary_columns "uid" "vsummaryuser")
+    expected=$(
+        pull_ug_summary_columns "uid" "summary" " WHERE rectype == 1";
+        pull_ug_summary_columns "uid" "vsummaryuser"
+    )
     echo "${expected}"
     echo
 
     run_no_sort "${GENUIDSUMMARYAVOIDENTRIESSCAN} \"${INDEXROOT}\" ${THREADS}"
-    results=$(pull_ug_summary_columns "uid" "summary" " WHERE rectype == 1";
-              pull_ug_summary_columns "uid" "vsummaryuser")
+    results=$(
+        pull_ug_summary_columns "uid" "summary" " WHERE rectype == 1";
+        pull_ug_summary_columns "uid" "vsummaryuser"
+    )
     echo "${results}"
     echo
 

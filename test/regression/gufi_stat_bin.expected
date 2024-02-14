@@ -24,21 +24,21 @@ path                 path to stat
   File: 'unusual#? directory ,/unusual, name?#'
 
 # first two columns of terse format
-.hidden 9
+.hidden 10
 1KB 1024
 1MB 1048576
 directory/executable 1
 directory/readonly 2
 directory/subdirectory/repeat_name 5
 directory/writable 3
-leaf_directory/leaf_file1 10
-leaf_directory/leaf_file2 11
+leaf_directory/leaf_file1 11
+leaf_directory/leaf_file2 12
 old_file 0
-repeat_name 13
+repeat_name 14
 unusual#? directory
 
 # custom print format
-'.hidden'                                                                             .hidden                                      '.hidden' 664 -rw-rw-r-- ? ? 81b4 regular file   9 - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
+'.hidden'                                                                             .hidden                                      '.hidden' 664 -rw-rw-r-- ? ? 81b4 regular file   10 - 0 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
 '1KB'                                                                                     1KB                                          '1KB' 664 -rw-rw-r-- ? ? 81b4 regular file   1024 - 0 1970-01-01 00:17:04 +0000 1024 1970-01-01 00:17:04 +0000 1024
 '1MB'                                                                                     1MB                                          '1MB' 664 -rw-rw-r-- ? ? 81b4 regular file   1048576 - 0 1970-01-13 03:16:16 +0000 1048576 1970-01-13 03:16:16 +0000 1048576
 'directory'                                                                         directory                                    'directory' 775 drwxrwxr-x ? ? 41fd directory   'directory' - 0 1970-01-01 00:00:07 +0000 7 1970-01-01 00:00:07 +0000 7
@@ -47,18 +47,18 @@ unusual#? directory
 'directory/subdirectory'                                               directory/subdirectory                       'directory/subdirectory' 775 drwxrwxr-x ? ? 41fd directory   'directory/subdirectory' - 0 1970-01-01 00:00:06 +0000 6 1970-01-01 00:00:06 +0000 6
 'directory/subdirectory/repeat_name'                       directory/subdirectory/repeat_name           'directory/subdirectory/repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   5 - 0 1970-01-01 00:00:05 +0000 5 1970-01-01 00:00:05 +0000 5
 'directory/writable'                                                       directory/writable                           'directory/writable' 666 -rw-rw-rw- ? ? 81b6 regular file   3 - 0 1970-01-01 00:00:03 +0000 3 1970-01-01 00:00:03 +0000 3
-'leaf_directory'                                                               leaf_directory                               'leaf_directory' 775 drwxrwxr-x ? ? 41fd directory   'leaf_directory' - 0 1970-01-01 00:00:12 +0000 12 1970-01-01 00:00:12 +0000 12
-'leaf_directory/leaf_file1'                                         leaf_directory/leaf_file1                    'leaf_directory/leaf_file1' 664 -rw-rw-r-- ? ? 81b4 regular file   10 - 0 1970-01-01 00:00:10 +0000 10 1970-01-01 00:00:10 +0000 10
-'leaf_directory/leaf_file2'                                         leaf_directory/leaf_file2                    'leaf_directory/leaf_file2' 664 -rw-rw-r-- ? ? 81b4 regular file   11 - 0 1970-01-01 00:00:11 +0000 11 1970-01-01 00:00:11 +0000 11
+'leaf_directory'                                                               leaf_directory                               'leaf_directory' 775 drwxrwxr-x ? ? 41fd directory   'leaf_directory' - 0 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13
+'leaf_directory/leaf_file1'                                         leaf_directory/leaf_file1                    'leaf_directory/leaf_file1' 664 -rw-rw-r-- ? ? 81b4 regular file   11 - 0 1970-01-01 00:00:11 +0000 11 1970-01-01 00:00:11 +0000 11
+'leaf_directory/leaf_file2'                                         leaf_directory/leaf_file2                    'leaf_directory/leaf_file2' 664 -rw-rw-r-- ? ? 81b4 regular file   12 - 0 1970-01-01 00:00:12 +0000 12 1970-01-01 00:00:12 +0000 12
 'old_file'                                                                           old_file                                     'old_file' 664 -rw-rw-r-- ? ? 81b4 regular file   0 - 0 1970-01-01 00:00:00 +0000 0 1970-01-01 00:00:00 +0000 0
-'repeat_name'                                                                     repeat_name                                  'repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   13 - 0 1970-01-01 00:00:13 +0000 13 1970-01-01 00:00:13 +0000 13
-'unusual#? directory ,/unusual, name?#'                 unusual#? directory ,/unusual, name?#        'unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- ? ? 81b4 regular file   14 - 0 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14
+'repeat_name'                                                                     repeat_name                                  'repeat_name' 664 -rw-rw-r-- ? ? 81b4 regular file   14 - 0 1970-01-01 00:00:14 +0000 14 1970-01-01 00:00:14 +0000 14
+'unusual#? directory ,/unusual, name?#'                 unusual#? directory ,/unusual, name?#        'unusual#? directory ,/unusual, name?#' 664 -rw-rw-r-- ? ? 81b4 regular file   15 - 0 1970-01-01 00:00:15 +0000 15 1970-01-01 00:00:15 +0000 15
 
 # bad print format specifier
 ?
 
 'directory/subdirectory/directory_symlink' -> 'directory/subdirectory' directory/subdirectory/directory_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'directory/subdirectory/directory_symlink' -> 'directory/subdirectory' - 0 1970-01-01 00:00:04 +0000 4 1970-01-01 00:00:04 +0000 4
-'file_symlink' -> '1KB' file_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'file_symlink' -> '1KB' - 0 1970-01-01 00:00:08 +0000 8 1970-01-01 00:00:08 +0000 8
+'file_symlink' -> '1KB' file_symlink 777 lrwxrwxrwx ? ? a1ff symbolic link   'file_symlink' -> '1KB' - 0 1970-01-01 00:00:09 +0000 9 1970-01-01 00:00:09 +0000 9
 
 # escape character parsing
 \a -> 07

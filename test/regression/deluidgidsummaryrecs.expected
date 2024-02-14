@@ -1,5 +1,6 @@
 $ gufi_query -d " " -S "SELECT name, rectype FROM summary" "prefix"
 directory 0
+empty_directory 0
 leaf_directory 0
 prefix 0
 subdirectory 0
@@ -23,6 +24,7 @@ $ gufi_query -d " " -S "SELECT name, rectype FROM summary" "prefix"
  2
  2
 directory 0
+empty_directory 0
 leaf_directory 0
 prefix 0
 subdirectory 0
@@ -33,6 +35,7 @@ delete all uid and gid summary records from summary tables in prefix
 
 $ gufi_query -d " " -S "SELECT name, rectype FROM summary" "prefix"
 directory 0
+empty_directory 0
 leaf_directory 0
 prefix 0
 subdirectory 0

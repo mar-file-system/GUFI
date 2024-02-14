@@ -10,7 +10,7 @@ Expecting 0 trace files. Found 0.
 $ gufi_dir2trace -d "|" -n 1 -x "prefix" "trace"
 "trace.0" Already exists!
 Creating GUFI Traces trace with 1 threads
-Total Dirs:          5
+Total Dirs:          6
 Total Files:         14
 
 $ split_trace "trace.0" "|" "4" "split" "2"
