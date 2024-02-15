@@ -76,7 +76,7 @@ extern "C" {
 #endif
 
 #define MAXPATH 4096
-#define MAXSQL 2048
+#define MAXSQL 8192
 #define MAXRECS 100000
 #define MAXSTRIDE 1000000000   /* maximum records per stripe */
 #define DBNAME "db.db"

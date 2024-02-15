@@ -409,7 +409,7 @@ TEST(histogram, category) {
     // no buckets
     {
         char *hist_str = nullptr;
-        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category) FROM test;",
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
                                get_str, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
@@ -428,59 +428,95 @@ TEST(histogram, category) {
     }
 
     char *hist_str = nullptr;
-    ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category) FROM test;",
-                           get_str, &hist_str, nullptr), SQLITE_OK);
-    ASSERT_NE(hist_str, nullptr);
-
-    // normal usage
     {
-        category_hist *hist = category_hist_parse(hist_str);
-        ASSERT_NE(hist, nullptr);
-        ASSERT_NE(hist->buckets, nullptr);
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
 
-        EXPECT_EQ(hist->count, (std::size_t) 4);
+        // normal usage
+        {
+            category_hist *hist = category_hist_parse(hist_str);
+            ASSERT_NE(hist, nullptr);
+            ASSERT_NE(hist->buckets, nullptr);
 
-        EXPECT_STREQ(hist->buckets[0].name, "3x");
-        EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
+            EXPECT_EQ(hist->count, (std::size_t) 5);
 
-        EXPECT_STREQ(hist->buckets[1].name, "abcd");
-        EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+            EXPECT_STREQ(hist->buckets[0].name, "3x");
+            EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
 
-        EXPECT_STREQ(hist->buckets[2].name, "str");
-        EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+            EXPECT_STREQ(hist->buckets[1].name, "abcd");
+            EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
 
-        EXPECT_STREQ(hist->buckets[3].name, "string");
-        EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2);
+            EXPECT_STREQ(hist->buckets[2].name, "str");
+            EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
 
-        // category "once" does not show up
+            EXPECT_STREQ(hist->buckets[3].name, "string");
+            EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2);
 
-        category_hist_free(hist);
+            EXPECT_STREQ(hist->buckets[4].name, "once");
+            EXPECT_EQ(hist->buckets[4].count, (std::size_t) 1);
+
+            category_hist_free(hist);
+        }
+
+        free(hist_str);
+        hist_str = nullptr;
+
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
+                               get_str, &hist_str, nullptr), SQLITE_OK);
+        ASSERT_NE(hist_str, nullptr);
+
+        // normal usage
+        {
+            category_hist *hist = category_hist_parse(hist_str);
+            ASSERT_NE(hist, nullptr);
+            ASSERT_NE(hist->buckets, nullptr);
+
+            EXPECT_EQ(hist->count, (std::size_t) 4);
+
+            EXPECT_STREQ(hist->buckets[0].name, "3x");
+            EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
+
+            EXPECT_STREQ(hist->buckets[1].name, "abcd");
+            EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[2].name, "str");
+            EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[3].name, "string");
+            EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2);
+
+            // category "once" does not show up
+
+            category_hist_free(hist);
+        }
+
+        {
+            hist_str[0] = '3'; // incorrect count
+
+            category_hist_t *hist = category_hist_parse(hist_str);
+            ASSERT_NE(hist, nullptr);
+            ASSERT_NE(hist->buckets, nullptr);
+
+            EXPECT_EQ(hist->count, (std::size_t) 3);
+
+            EXPECT_STREQ(hist->buckets[0].name, "3x");
+            EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
+
+            // category "abcd" does not show up due to ordering of categories
+
+            EXPECT_STREQ(hist->buckets[1].name, "str");
+            EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
+
+            EXPECT_STREQ(hist->buckets[2].name, "string");
+            EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
+
+            category_hist_free(hist);
+        }
+
+        free(hist_str);
     }
 
-    {
-        hist_str[0] = '3'; // incorrect count
-
-        category_hist_t *hist = category_hist_parse(hist_str);
-        ASSERT_NE(hist, nullptr);
-        ASSERT_NE(hist->buckets, nullptr);
-
-        EXPECT_EQ(hist->count, (std::size_t) 3);
-
-        EXPECT_STREQ(hist->buckets[0].name, "3x");
-        EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3);
-
-        // category "abcd" does not show up due to ordering of categories
-
-        EXPECT_STREQ(hist->buckets[1].name, "str");
-        EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2);
-
-        EXPECT_STREQ(hist->buckets[2].name, "string");
-        EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2);
-
-        category_hist_free(hist);
-    }
-
-    free(hist_str);
     sqlite3_close(db);
 
     // bad strings

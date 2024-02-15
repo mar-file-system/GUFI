@@ -90,7 +90,7 @@ do_tests() {
     # shellcheck disable=SC2294
     eval "$@"
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 

@@ -91,7 +91,7 @@ int serialize_bucket(sqlite3_context *context,
     if (wrote >= avail) {
         /* increase buffer size */
         *size += 2 * wrote;
-        char *new_ptr = realloc(*curr, *size);
+        char *new_ptr = realloc(*buf, *size);
 
         /* could not realloc, so try allocating new buffer */
         if (!new_ptr) {
@@ -407,10 +407,11 @@ void time_hist_free(time_hist_t *hist) {
     free(hist);
 }
 
-/* category_hist(string) */
+/* category_hist(string, keep_1) */
 typedef struct sqlite_category_hist {
     trie_t *trie;
     sll_t categories; /* categories are collected as they appear, not preset */
+    int keep_1;
 } sqlite_category_hist_t;
 
 static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -419,6 +420,9 @@ static void category_hist_step(sqlite3_context *context, int argc, sqlite3_value
     if (!hist->trie) {
         hist->trie = trie_alloc();
         sll_init(&hist->categories);
+        if (argc > 1) { /* mode_count does not pass in second arg */
+            hist->keep_1 = sqlite3_value_int(argv[1]);
+        }
     }
 
     const char *cat = (char *) sqlite3_value_text(argv[0]);
@@ -472,8 +476,8 @@ static void category_hist_final(sqlite3_context *context) {
     char *serialized = malloc(size);
     char *curr = serialized;
 
-    sll_t gt1;
-    sll_init(&gt1);
+    sll_t keep;
+    sll_init(&keep);
 
     /* keep categories with counts > 1 */
     sll_loop(&hist->categories, node) {
@@ -484,23 +488,19 @@ static void category_hist_final(sqlite3_context *context) {
         /* not checking return value since all categories should be found */
         trie_search(hist->trie, cat->data, cat->len, (void **) &count);
 
-        /*
-         * everything that shows up must have a count of at least 1,
-         * so adding categories that show up once is not useful
-         */
-        if (*count > 1) {
+        if (hist->keep_1 || (!hist->keep_1 && (*count > 1))) {
             category_t *ref = malloc(sizeof(*ref));
             ref->name = *cat;
             ref->count = *count;
 
-            sll_push(&gt1, ref);
+            sll_push(&keep, ref);
         }
     }
 
-    curr += SNPRINTF(serialized, size, "%zu;", sll_get_size(&gt1));
+    curr += SNPRINTF(serialized, size, "%zu;", sll_get_size(&keep));
 
     /* serialize categories with counts > 1 */
-    sll_loop(&gt1, node) {
+    sll_loop(&keep, node) {
         category_t *ref = sll_node_data(node);
 
         if (serialize_bucket(context, &serialized, &curr, &size,
@@ -513,7 +513,7 @@ static void category_hist_final(sqlite3_context *context) {
     sqlite3_result_text(context, serialized, curr - serialized, free);
 
   cleanup:
-    sll_destroy(&gt1, free);
+    sll_destroy(&keep, free);
     sll_destroy(&hist->categories, free_str);
     trie_free(hist->trie);
 }
@@ -701,7 +701,7 @@ int addhistfuncs(sqlite3 *db) {
                                  NULL, NULL,  mode_hist_step,     mode_hist_final)     == SQLITE_OK) &&
         (sqlite3_create_function(db,   "time_hist",           2,  SQLITE_UTF8,
                                  NULL, NULL,  time_hist_step,     time_hist_final)     == SQLITE_OK) &&
-        (sqlite3_create_function(db,   "category_hist",       1,  SQLITE_UTF8,
+        (sqlite3_create_function(db,   "category_hist",       2,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step, category_hist_final) == SQLITE_OK) &&
         (sqlite3_create_function(db,   "mode_count",          1,  SQLITE_UTF8,
                                  NULL, NULL,  category_hist_step, mode_count_final)    == SQLITE_OK)

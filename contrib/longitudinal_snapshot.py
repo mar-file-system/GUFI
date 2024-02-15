@@ -70,7 +70,6 @@ import time
 import sys
 
 from gufi_common import build_query, get_positive, print_query, VRXPENTRIES, SUMMARY, VRXSUMMARY, TREESUMMARY
-import gufi_config
 
 METADATA       = 'metadata'
 SNAPSHOT       = 'snapshot'
@@ -87,25 +86,26 @@ SQLITE3_BLOB   = 'BLOB'
 # used to generate timestamp columns
 def gen_time_cols(col, reftime):
     return [
-        ['min',    ['{0}.dmin{1}'.format(VRXPENTRIES, col),                              SQLITE3_INT64]],
-        ['max',    ['{0}.dmax{1}'.format(VRXPENTRIES, col),                              SQLITE3_INT64]],
-        ['mean',   ['AVG({0}.{1})'.format(VRXPENTRIES, col),                             SQLITE3_DOUBLE]],
-        ['median', ['median({0}.{1})'.format(VRXPENTRIES, col),                          SQLITE3_DOUBLE]],
-        ['mode',   ['mode_count({0}.{1})'.format(VRXPENTRIES, col),                      SQLITE3_TEXT]],
-        ['stdev',  ['stdevp({0}.{1})'.format(VRXPENTRIES, col),                          SQLITE3_DOUBLE]],
-        ['hist',   ['time_hist({0}.{1}, {2})'.format(VRXPENTRIES, col, reftime),         SQLITE3_TEXT]],
+        ['min',       ['{0}.dmin{1}'.format(VRXPENTRIES, col),                                 SQLITE3_INT64]],
+        ['max',       ['{0}.dmax{1}'.format(VRXPENTRIES, col),                                 SQLITE3_INT64]],
+        ['mean',      ['AVG({0}.{1})'.format(VRXPENTRIES, col),                                SQLITE3_DOUBLE]],
+        ['median',    ['median({0}.{1})'.format(VRXPENTRIES, col),                             SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count({0}.{1})'.format(VRXPENTRIES, col),                         SQLITE3_TEXT]],
+        ['stdev',     ['stdevp({0}.{1})'.format(VRXPENTRIES, col),                             SQLITE3_DOUBLE]],
+        ['age_hist',  ['time_hist({0}.{1}, {2})'.format(VRXPENTRIES, col, reftime),            SQLITE3_TEXT]],
+        ['hour_hist', ['category_hist(strftime(\'%H\', {0}.{1}), 1)'.format(VRXPENTRIES, col), SQLITE3_TEXT]],
     ]
 
 # used to generate columns for name, linkname, xattr_name, and xattr_value
 def gen_str_cols(col, buckets):
     return [
-        ['min',    ['MIN(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_INT64]],
-        ['max',    ['MAX(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_INT64]],
-        ['mean',   ['AVG(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_DOUBLE]],
-        ['median', ['median(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                  SQLITE3_DOUBLE]],
-        ['mode',   ['mode_count(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),              SQLITE3_TEXT]],
-        ['stdev',  ['stdevp(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                  SQLITE3_DOUBLE]],
-        ['hist',   ['log2_hist(LENGTH({0}.{1}), {2})'.format(VRXPENTRIES, col, buckets), SQLITE3_TEXT]],
+        ['min',       ['MIN(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                        SQLITE3_INT64]],
+        ['max',       ['MAX(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                        SQLITE3_INT64]],
+        ['mean',      ['AVG(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                        SQLITE3_DOUBLE]],
+        ['median',    ['median(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                 SQLITE3_TEXT]],
+        ['stdev',     ['stdevp(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_DOUBLE]],
+        ['hist',      ['log2_hist(LENGTH({0}.{1}), {2})'.format(VRXPENTRIES, col, buckets),    SQLITE3_TEXT]],
     ]
 
 def parse_args(argv, now):
@@ -117,23 +117,27 @@ def parse_args(argv, now):
                         help='index to snapshot')
     parser.add_argument('outname',
                         help='output db file name')
-    parser.add_argument('--reftime',      metavar='seconds', type=int,           default=now,
+    parser.add_argument('--reftime',       metavar='seconds', type=int,           default=now,
                         help='reference point for age (since UNIX epoch)')
-    parser.add_argument('--max_size',     metavar='pos_int', type=get_positive,  default=1 << 50,
+    parser.add_argument('--max_size',      metavar='pos_int', type=get_positive,  default=1 << 50,
                         help='the maximum expected size')
-    parser.add_argument('--max_name_len', metavar='pos_int', type=get_positive,  default=1 << 8,
+    parser.add_argument('--max_name_len',  metavar='pos_int', type=get_positive,  default=1 << 8,
                         help='the maximum expected length of a name/linkname')
-    parser.add_argument('--notes',        metavar='text',    type=str,           default=None,
+    parser.add_argument('--notes',         metavar='text',    type=str,           default=None,
                         help='freeform text of any extra information to add to the snapshot')
+
+    parser.add_argument('--gufi_query',    metavar='path',    type=str,           default='gufi_query',
+                        help='path to gufi_query executable')
+    parser.add_argument('--threads', '-n', metavar='count',   type=get_positive,   default=1,
+                        help='thread count')
 
     return parser.parse_args(argv[1:])
 
 # pylint: disable=too-many-locals, too-many-statements
-def run(argv, config_path):
+def run(argv):
     timestamp = int(time.time())
 
     args = parse_args(argv, timestamp)
-    config = gufi_config.Server(config_path)
 
     log2_size_bucket_count = int(math.ceil(math.log(args.max_size, 2)))
     log2_name_len_bucket_count = int(math.ceil(math.log(args.max_name_len, 2)))
@@ -162,28 +166,29 @@ def run(argv, config_path):
     ]
 
     UID_COLS = [
-        ['min',        ['{0}.dminuid'.format(VRXPENTRIES),                                  SQLITE3_INT64]],
-        ['max',        ['{0}.dmaxuid'.format(VRXPENTRIES),                                  SQLITE3_INT64]],
-        ['hist',       ['category_hist({0}.uid)'.format(VRXPENTRIES),                       SQLITE3_INT64]],
-        ['num_unique', ['COUNT(DISTINCT {0}.uid)'.format(VRXPENTRIES),                      SQLITE3_INT64]],
+        ['min',             ['{0}.dminuid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
+        ['max',             ['{0}.dmaxuid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
+        ['hist',            ['category_hist({0}.uid, 1)'.format(VRXPENTRIES),               SQLITE3_TEXT]],
+        ['num_unique',      ['COUNT(DISTINCT {0}.uid)'.format(VRXPENTRIES),                 SQLITE3_INT64]],
     ]
 
     GID_COLS = [
-        ['min',        ['{0}.dmingid'.format(VRXPENTRIES),                                  SQLITE3_INT64]],
-        ['max',        ['{0}.dmaxgid'.format(VRXPENTRIES),                                  SQLITE3_INT64]],
-        ['hist',       ['category_hist({0}.gid)'.format(VRXPENTRIES),                       SQLITE3_TEXT]],
-        ['num_unique', ['COUNT(DISTINCT {0}.gid)'.format(VRXPENTRIES),                      SQLITE3_INT64]],
+        ['min',             ['{0}.dmingid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
+        ['max',             ['{0}.dmaxgid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
+        ['hist',            ['category_hist({0}.gid, 1)'.format(VRXPENTRIES),               SQLITE3_TEXT]],
+        ['num_unique',      ['COUNT(DISTINCT {0}.gid)'.format(VRXPENTRIES),                 SQLITE3_INT64]],
     ]
 
     SIZE_COLS = [
-        ['min',    ['{0}.dminsize'.format(VRXPENTRIES),                                     SQLITE3_INT64]],
-        ['max',    ['{0}.dmaxsize'.format(VRXPENTRIES),                                     SQLITE3_INT64]],
-        ['mean',   ['AVG({0}.size)'.format(VRXPENTRIES),                                    SQLITE3_DOUBLE]],
-        ['median', ['median({0}.size)'.format(VRXPENTRIES),                                 SQLITE3_DOUBLE]],
-        ['mode',   ['mode_count(CAST({0}.size AS TEXT))'.format(VRXPENTRIES),               SQLITE3_TEXT]],
-        ['stdev',  ['stdevp({0}.size)'.format(VRXPENTRIES),                                 SQLITE3_DOUBLE]],
-        ['sum',    ['{0}.dtotsize'.format(VRXPENTRIES),                                     SQLITE3_INT64]],
-        ['hist',   ['log2_hist({0}.size, {1})'.format(VRXPENTRIES, log2_size_bucket_count), SQLITE3_TEXT]],
+        ['min',             ['{0}.dminsize'.format(VRXPENTRIES),                            SQLITE3_INT64]],
+        ['max',             ['{0}.dmaxsize'.format(VRXPENTRIES),                            SQLITE3_INT64]],
+        ['mean',            ['AVG({0}.size)'.format(VRXPENTRIES),                           SQLITE3_DOUBLE]],
+        ['median',          ['median({0}.size)'.format(VRXPENTRIES),                        SQLITE3_DOUBLE]],
+        ['mode',            ['mode_count(CAST({0}.size AS TEXT))'.format(VRXPENTRIES),      SQLITE3_TEXT]],
+        ['stdev',           ['stdevp({0}.size)'.format(VRXPENTRIES),                        SQLITE3_DOUBLE]],
+        ['sum',             ['{0}.dtotsize'.format(VRXPENTRIES),                            SQLITE3_INT64]],
+        ['hist',            ['log2_hist({0}.size, {1})'.format(VRXPENTRIES,
+                                                               log2_size_bucket_count),     SQLITE3_TEXT]],
     ]
 
     PERM_COLS = [
@@ -206,7 +211,7 @@ def run(argv, config_path):
                                        {1}
                                    ELSE
                                        REPLACE({0}.name, RTRIM({0}.name, REPLACE({0}.name, '.', '')), '')
-                                   END)'''.format(VRXPENTRIES, SQLITE3_NULL),
+                                   END, 1)'''.format(VRXPENTRIES, SQLITE3_NULL),
                  SQLITE3_TEXT]]
     ]
 
@@ -259,9 +264,9 @@ def run(argv, config_path):
 
     # construct full command to run
     cmd = [
-        config.query,
+        args.gufi_query,
         args.index,
-        '-n', str(config.threads),
+        '-n', str(args.threads),
         '-x',
         '-O', args.outname,
         '-I', 'CREATE TABLE {0}({1}); {2};'.format(
@@ -334,4 +339,4 @@ def run(argv, config_path):
     return 0
 
 if __name__ == '__main__':
-    sys.exit(run(sys.argv, gufi_config.PATH))
+    sys.exit(run(sys.argv))
