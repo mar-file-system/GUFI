@@ -92,6 +92,12 @@ do_tests() {
 
     run_no_sort "${LONGITUDINAL_SNAPSHOT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
 
+    echo "# running a second time on the same target will error because the tables already exist"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
+
+    echo "# use --replace to replace existing data"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace"
+
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(metadata);\""

@@ -110,8 +110,7 @@ def gen_str_cols(col, buckets):
 
 def parse_args(argv, now):
     parser = argparse.ArgumentParser(description='GUFI Longitudinal Snapshot Generator')
-    parser.add_argument('--verbose', '-V',
-                        action='store_true',
+    parser.add_argument('--verbose', '-V', action='store_true',
                         help='Show the gufi_query being executed')
     parser.add_argument('index',
                         help='index to snapshot')
@@ -125,10 +124,12 @@ def parse_args(argv, now):
                         help='the maximum expected length of a name/linkname')
     parser.add_argument('--notes',         metavar='text',    type=str,           default=None,
                         help='freeform text of any extra information to add to the snapshot')
+    parser.add_argument('--replace',       action='store_true',
+                        help='replace existing tables')
 
     parser.add_argument('--gufi_query',    metavar='path',    type=str,           default='gufi_query',
                         help='path to gufi_query executable')
-    parser.add_argument('--threads', '-n', metavar='count',   type=get_positive,   default=1,
+    parser.add_argument('--threads', '-n', metavar='count',   type=get_positive,  default=1,
                         help='thread count')
 
     return parser.parse_args(argv[1:])
@@ -262,6 +263,20 @@ def run(argv):
     INTERMEDIATE_TREESUMMARY = 'intermediate_treesummary'
     # ###############################################################
 
+    K = 'CREATE TABLE {0}({1}); {2};'.format(
+        SUMMARY, table_cols_sql, TREESUMMARY_CREATE(TREESUMMARY))
+
+    if args.replace:
+        K = 'DROP TABLE IF EXISTS {0}; DROP TABLE IF EXISTS {1}; {2}'.format(
+            SUMMARY, TREESUMMARY, K)
+
+    G = 'CREATE VIEW {0} AS SELECT * FROM {1} LEFT JOIN {2} ON {1}.{3} == {2}.{3};'.format(
+        SNAPSHOT, SUMMARY, TREESUMMARY, INODE)
+
+    if args.replace:
+        G = 'DROP VIEW IF EXISTS {0}; {1}'.format(
+            SNAPSHOT, G)
+
     # construct full command to run
     cmd = [
         args.gufi_query,
@@ -292,14 +307,12 @@ def run(argv):
                                       None,
                                       ['{0}.{1}'.format(VRXSUMMARY, INODE)])),
 
-        '-K', 'CREATE TABLE {0}({1}); {2};'.format(
-            SUMMARY, table_cols_sql, TREESUMMARY_CREATE(TREESUMMARY)),
+        '-K', K,
 
         '-J', 'INSERT INTO {0} SELECT * FROM {1}; INSERT INTO {2} SELECT * FROM {3};'.format(
             SUMMARY, INTERMEDIATE, TREESUMMARY, INTERMEDIATE_TREESUMMARY),
 
-        '-G', 'CREATE VIEW {0} AS SELECT * FROM {1} LEFT JOIN {2} ON {1}.{3} == {2}.{3};'.format(
-            SNAPSHOT, SUMMARY, TREESUMMARY, INODE),
+        '-G', G,
     ]
 
     if args.verbose:
@@ -319,6 +332,10 @@ def run(argv):
         return rc
 
     with sqlite3.connect(args.outname) as conn:
+        if args.replace:
+            conn.execute('DROP TABLE IF EXISTS {0};'.format(
+                METADATA))
+
         # create the metadata table (one row of data)
         conn.execute('''
             CREATE TABLE {0} (

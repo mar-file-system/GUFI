@@ -1,7 +1,7 @@
 $ longitudinal_snapshot --help
 usage: longitudinal_snapshot.py [-h] [--verbose] [--reftime seconds]
                                 [--max_size pos_int] [--max_name_len pos_int]
-                                [--notes text] [--gufi_query path]
+                                [--notes text] [--replace] [--gufi_query path]
                                 [--threads count]
                                 index outname
 
@@ -20,6 +20,7 @@ options:
                         the maximum expected length of a name/linkname
   --notes text          freeform text of any extra information to add to the
                         snapshot
+  --replace             replace existing tables
   --gufi_query path     path to gufi_query executable
   --threads count, -n count
                         thread count
@@ -41,6 +42,13 @@ GUFI query is
     -J 'INSERT INTO summary SELECT * FROM intermediate; INSERT INTO treesummary SELECT * FROM intermediate_treesummary;' \
     -G \
     'CREATE VIEW snapshot AS SELECT * FROM summary LEFT JOIN treesummary ON summary.inode == treesummary.inode;'
+
+# running a second time on the same target will error because the tables already exist
+$ longitudinal_snapshot "prefix" "longitudinal_snapshot.db" --gufi_query="gufi_query" --notes 'test notes'
+Could not create aggregation table "CREATE TABLE summary(name TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, depth INT64, filesystem_type BLOB, pinode TEXT, totfiles INT64, totlinks INT64, totsubdirs INT64, uid_min INT64, uid_max INT64, uid_hist TEXT, uid_num_unique INT64, gid_min INT64, gid_max INT64, gid_hist TEXT, gid_num_unique INT64, size_min INT64, size_max INT64, size_mean DOUBLE, size_median DOUBLE, size_mode TEXT, size_stdev DOUBLE, size_sum INT64, size_hist TEXT, permissions_hist TEXT, ctime_min INT64, ctime_max INT64, ctime_mean DOUBLE, ctime_median DOUBLE, ctime_mode TEXT, ctime_stdev DOUBLE, ctime_age_hist TEXT, ctime_hour_hist TEXT, atime_min INT64, atime_max INT64, atime_mean DOUBLE, atime_median DOUBLE, atime_mode TEXT, atime_stdev DOUBLE, atime_age_hist TEXT, atime_hour_hist TEXT, mtime_min INT64, mtime_max INT64, mtime_mean DOUBLE, mtime_median DOUBLE, mtime_mode TEXT, mtime_stdev DOUBLE, mtime_age_hist TEXT, mtime_hour_hist TEXT, crtime_min INT64, crtime_max INT64, crtime_mean DOUBLE, crtime_median DOUBLE, crtime_mode TEXT, crtime_stdev DOUBLE, crtime_age_hist TEXT, crtime_hour_hist TEXT, name_min INT64, name_max INT64, name_mean DOUBLE, name_median DOUBLE, name_mode TEXT, name_stdev DOUBLE, name_hist TEXT, linkname_min INT64, linkname_max INT64, linkname_mean DOUBLE, linkname_median DOUBLE, linkname_mode TEXT, linkname_stdev DOUBLE, linkname_hist TEXT, xattr_name_min INT64, xattr_name_max INT64, xattr_name_mean DOUBLE, xattr_name_median DOUBLE, xattr_name_mode TEXT, xattr_name_stdev DOUBLE, xattr_name_hist TEXT, xattr_value_min INT64, xattr_value_max INT64, xattr_value_mean DOUBLE, xattr_value_median DOUBLE, xattr_value_mode TEXT, xattr_value_stdev DOUBLE, xattr_value_hist TEXT, extensions_hist TEXT); CREATE TABLE treesummary (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);;" on longitudinal_snapshot.db: table summary already exists
+
+# use --replace to replace existing data
+$ longitudinal_snapshot "prefix" "longitudinal_snapshot.db" --gufi_query="gufi_query" --notes 'test notes' --replace
 
 $ sqlite3 "longitudinal_snapshot.db" ".tables"
 metadata     snapshot     summary      treesummary
