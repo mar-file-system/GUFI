@@ -236,21 +236,19 @@ int create_treesummary_tables(const char *name, sqlite3 *db, void *args) {
 }
 
 int set_db_pragmas(sqlite3 *db) {
-    int rc = 0;
+    /* https://www.sqlite.org/pragma.html */
+    /* no errors will be returned by the PRAGMA itself */
 
-    // try to turn journaling off
-    if (sqlite3_exec(db, "PRAGMA journal_mode = OFF", NULL, NULL, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Could not turn off journaling\n");
-        rc = 1;
-    }
+    return !(sqlite3_exec(db,
+                        /* https://www.sqlite.org/pragma.html#pragma_journal_mode */
+                        "PRAGMA journal_mode = OFF;"
 
-    // try to increase the page size
-    if (sqlite3_exec(db, "PRAGMA page_size = 16777216", NULL, NULL, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Could not set page size\n");
-        rc = 1;
-    }
+                        /* https://www.sqlite.org/pragma.html#pragma_page_size */
+                        /* The page size must be a power of two between 512 and 65536 inclusive. */
+                        "PRAGMA page_size = 65536;"
 
-    return rc;
+                        ,
+                        NULL, NULL, NULL) == SQLITE_OK);
 }
 
 sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int load_extensions,
