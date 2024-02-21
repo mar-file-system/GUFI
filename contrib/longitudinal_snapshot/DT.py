@@ -71,8 +71,8 @@ import sys
 
 from gufi_common import build_query, get_positive, print_query, VRXPENTRIES, SUMMARY, VRXSUMMARY, TREESUMMARY
 
-METADATA       = 'metadata'
-SNAPSHOT       = 'snapshot' # SUMMARY LEFT JOIN TREESUMMARY on SUMMARY.inode == TREESUMMARY.inode
+METADATA       = 'metadata' # user data
+SNAPSHOT       = 'snapshot' # SUMMARY left joined with optional TREESUMMARY
 
 INODE          = 'inode'
 PINODE         = 'pinode'
@@ -109,6 +109,9 @@ def parse_args(argv, now):
 
     return parser.parse_args(argv[1:])
 
+def gen_value_hist_col(col):
+    return ['category_hist(CAST({0} AS TEXT), 1)'.format(col), SQLITE3_TEXT]
+
 # used to generate timestamp columns
 def gen_time_cols(col, reftime):
     return [
@@ -119,7 +122,7 @@ def gen_time_cols(col, reftime):
         ['mode',      ['mode_count({{0}}.{0})'.format(col),                         SQLITE3_TEXT]],
         ['stdev',     ['stdevp({{0}}.{0})'.format(col),                             SQLITE3_DOUBLE]],
         ['age_hist',  ['time_hist({{0}}.{0}, {1})'.format(col, reftime),            SQLITE3_TEXT]],
-        ['hour_hist', ['category_hist(strftime(\'%H\', {{0}}.{0}), 1)'.format(col), SQLITE3_TEXT]],
+        ['hour_hist', gen_value_hist_col('strftime(\'%H\', {{0}}.{0})'.format(col))],
     ]
 
 # used to generate columns for name, linkname, xattr_name, and xattr_value
@@ -133,6 +136,18 @@ def gen_str_cols(col, buckets):
         ['stdev',     ['stdevp(LENGTH({{0}}.{0}))'.format(col),                     SQLITE3_DOUBLE]],
         ['hist',      ['log2_hist(LENGTH({{0}}.{0}), {1})'.format(col, buckets),    SQLITE3_TEXT]],
     ]
+
+def treesummary():
+    # copied from dbutils.h
+    TREESUMMARY_CREATE = 'CREATE TABLE {0} (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64)'
+
+    INTERMEDIATE = 'intermediate_treesummary'
+
+    return (
+        INTERMEDIATE,
+        TREESUMMARY_CREATE.format(INTERMEDIATE),
+        TREESUMMARY_CREATE.format(TREESUMMARY),
+    )
 
 # pylint: disable=too-many-locals
 def summary(reftime,
@@ -161,14 +176,14 @@ def summary(reftime,
     UID_COLS = [
         ['min',             ['{0}.dminuid',                          SQLITE3_INT64]],
         ['max',             ['{0}.dmaxuid',                          SQLITE3_INT64]],
-        ['hist',            ['category_hist({0}.uid, 1)',            SQLITE3_TEXT]],
+        ['hist',            gen_value_hist_col('{0}.uid')],
         ['num_unique',      ['COUNT(DISTINCT {0}.uid)',              SQLITE3_INT64]],
     ]
 
     GID_COLS = [
         ['min',             ['{0}.dmingid',                          SQLITE3_INT64]],
         ['max',             ['{0}.dmaxgid',                          SQLITE3_INT64]],
-        ['hist',            ['category_hist({0}.gid, 1)',            SQLITE3_TEXT]],
+        ['hist',            gen_value_hist_col('{0}.gid')],
         ['num_unique',      ['COUNT(DISTINCT {0}.gid)',              SQLITE3_INT64]],
     ]
 
@@ -188,9 +203,9 @@ def summary(reftime,
         ['hist',            ['mode_hist({0}.mode)',                  SQLITE3_TEXT]],
     ]
 
-    CTIME_COLS       = gen_time_cols('ctime',      reftime)
     ATIME_COLS       = gen_time_cols('atime',      reftime)
     MTIME_COLS       = gen_time_cols('mtime',      reftime)
+    CTIME_COLS       = gen_time_cols('ctime',      reftime)
     CRTIME_COLS      = gen_time_cols('crtime',     reftime)
 
     NAME_COLS        = gen_str_cols('name',        log2_name_len_bucket_count)
@@ -226,41 +241,30 @@ def summary(reftime,
 
     # generate SUMMARY columns for selecting and inserting into
 
-    create_summary_cols = [] # used for creating intermediate tables and aggregating
-    select_summary_cols = [] # SELECT cols FROM VRXSUMMARY LEFT JOIN VRXPENTRIES ON VRXSUMMARY.inode == VRXPENTRIES.pinode
+    IK = [] # used for creating intermediate tables and aggregating
+    E  = [] # SELECT cols FROM VRXSUMMARY LEFT JOIN VRXPENTRIES ON VRXSUMMARY.inode == VRXPENTRIES.pinode
 
     for col_name, stat in SUMMARY_COLS:
         sql, col_type = stat
-        create_summary_cols += ['{0} {1}'.format(col_name, col_type)]
-        select_summary_cols += [sql.format(VRXSUMMARY)]
+        IK += ['{0} {1}'.format(col_name, col_type)]
+        E  += [sql.format(VRXSUMMARY)]
 
     for col_name, stats_pulled in ENTRIES_COLS:
         for stat_name, stat in stats_pulled:
             sql, col_type = stat
-            create_summary_cols += ['{0}_{1} {2}'.format(col_name, stat_name, col_type)]
-            select_summary_cols += [sql.format(VRXPENTRIES)]
+            IK += ['{0}_{1} {2}'.format(col_name, stat_name, col_type)]
+            E  += [sql.format(VRXPENTRIES)]
 
     # same for intermediate and aggregate
-    SUMMARY_CREATE = 'CREATE TABLE {{0}}({0})'.format(', '.join(create_summary_cols))
-    INTERMEDIATE = 'intermediate'
+    SUMMARY_CREATE = 'CREATE TABLE {{0}}({0})'.format(', '.join(IK))
+
+    INTERMEDIATE = 'intermediate_summary'
 
     return (
         INTERMEDIATE,
         SUMMARY_CREATE.format(INTERMEDIATE),
         SUMMARY_CREATE.format(SUMMARY),
-        select_summary_cols
-    )
-
-def treesummary():
-    # copied from dbutils.h
-    TREESUMMARY_CREATE = 'CREATE TABLE {0} (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64)'
-
-    INTERMEDIATE = 'intermediate_treesummary'
-
-    return (
-        INTERMEDIATE,
-        TREESUMMARY_CREATE.format(INTERMEDIATE),
-        TREESUMMARY_CREATE.format(TREESUMMARY)
+        E
     )
 
 def run(argv):
@@ -271,59 +275,86 @@ def run(argv):
     log2_size_bucket_count = int(math.ceil(math.log(args.max_size, 2)))
     log2_name_len_bucket_count = int(math.ceil(math.log(args.max_name_len, 2)))
 
-    sum_int, sum_create_int, sum_create_agg, sum_cols = summary(args.reftime,
-                                                                log2_size_bucket_count,
-                                                                log2_name_len_bucket_count)
-    ts_int, ts_create_int, ts_create_agg = treesummary()
-
-    K = '{0}; {1};'.format(sum_create_agg, ts_create_agg)
-
-    if args.replace:
-        K = 'DROP TABLE IF EXISTS {0}; DROP TABLE IF EXISTS {1}; {2}'.format(
-            SUMMARY, TREESUMMARY, K)
-
-    G = 'CREATE VIEW {0} AS SELECT * FROM {1} LEFT JOIN {2} ON {1}.{3} == {2}.{3};'.format(
-        SNAPSHOT, SUMMARY, TREESUMMARY, INODE)
-
-    if args.replace:
-        G = 'DROP VIEW IF EXISTS {0}; {1}'.format(
-            SNAPSHOT, G)
+    # ############################################################################
+    # get SQL strings for constructing command
+    ts_int, ts_I, ts_K = treesummary()
+    sum_int, sum_I, sum_K, sum_cols = summary(args.reftime,
+                                              log2_size_bucket_count,
+                                              log2_name_len_bucket_count)
+    # ############################################################################
 
     # construct full command to run
+
+    # ############################################################################
+    I = '{0}; {1};'.format(sum_I, ts_I)
+    # ############################################################################
+
+    # ############################################################################
+    # if TREESUMMARY tables are present in the index, this table
+    # will likely have 1 more row than the snapshot table due to
+    # pulling the row from the top-level db that should otherwise
+    # be empty
+    T = 'INSERT INTO {0} SELECT * FROM {1}; SELECT 1;'.format(ts_int, TREESUMMARY)
+    # ############################################################################
+
+    # ############################################################################
+    # Have to left join here to keep at least 1 record if there are no entries
+    #
+    # This has the side effect of getting rid of the the top-level entry if
+    # the path passed into this script was root of multiple indexes instead of
+    # the root of a single index because the common parent of multiple indexes
+    # should not have anything in the summary table.
+    E = 'INSERT INTO {0} {1};'.format(
+        sum_int, build_query(sum_cols,
+                             ['{0} LEFT JOIN {1} ON {0}.{2} == {1}.{3}'.format(
+                                 VRXSUMMARY, VRXPENTRIES, INODE, PINODE)],
+                             None,
+                             ['{0}.{1}'.format(VRXSUMMARY, INODE)]))
+    # ############################################################################
+
+    # ############################################################################
+    K = '{0}; {1};'.format(ts_K, sum_K)
+
+    if args.replace:
+        K = '''
+            DROP TABLE IF EXISTS {0};
+            DROP TABLE IF EXISTS {1};
+            {2}
+            '''.format(TREESUMMARY, SUMMARY, K)
+    # ############################################################################
+
+    # ############################################################################
+    J = '''
+        INSERT INTO {0} SELECT * FROM {1};
+        INSERT INTO {2} SELECT * FROM {3};
+        '''.format(TREESUMMARY, ts_int, SUMMARY, sum_int)
+    # ############################################################################
+
+    # ############################################################################
+    G = '''
+        CREATE VIEW {0}
+        AS
+          SELECT *
+          FROM   {2}
+                 LEFT JOIN {3}
+                        ON {2}.{1} == {3}.{1};
+        '''.format(SNAPSHOT, INODE, SUMMARY, TREESUMMARY)
+
+    if args.replace:
+        G = 'DROP VIEW IF EXISTS {0}; {1}'.format(SNAPSHOT, G)
+    # ############################################################################
+
     cmd = [
         args.gufi_query,
         args.index,
         '-n', str(args.threads),
         '-x',
         '-O', args.outname,
-        '-I', '{0}; {1};'.format(
-            sum_create_int, ts_create_int),
-
-        # if TREESUMMARY tables are present in the index, this table
-        # will likely have 1 more row than the snapshot table due to
-        # pulling the row from the top-level db that should otherwise
-        # be empty
-        '-T', 'INSERT INTO {0} SELECT * FROM {1}; SELECT 1 FROM {1};'.format(
-            ts_int, TREESUMMARY),
-
-        # Have to left join here to keep at least 1 record if there are no entries
-        #
-        # This has the side effect of getting rid of the the top-level entry if
-        # the path passed into this script was root of multiple indexes instead of
-        # the root of a single index because the common parent of multiple indexes
-        # should not have anything in the summary table.
-        '-E', 'INSERT INTO {0} {1};'.format(
-            sum_int, build_query(sum_cols,
-                                 ['{0} LEFT JOIN {1} ON {0}.{2} == {1}.{3}'.format(
-                                     VRXSUMMARY, VRXPENTRIES, INODE, PINODE)],
-                                 None,
-                                 ['{0}.{1}'.format(VRXSUMMARY, INODE)])),
-
+        '-I', I,
+        '-T', T,
+        '-E', E,
         '-K', K,
-
-        '-J', 'INSERT INTO {0} SELECT * FROM {1}; INSERT INTO {2} SELECT * FROM {3};'.format(
-            SUMMARY, sum_int, TREESUMMARY, ts_int),
-
+        '-J', J,
         '-G', G,
     ]
 

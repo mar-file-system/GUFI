@@ -130,13 +130,14 @@ set(USEFUL
   canned_queries.sh
   gentrace.py
   hashes.py
-  longitudinal_snapshot.py
   trace_anonymizer.py
   )
 
 foreach(file ${USEFUL})
     configure_file("${file}" "${file}" @ONLY)
 endforeach()
+
+add_subdirectory(longitudinal_snapshot)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_subdirectory(debug)

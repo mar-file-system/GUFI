@@ -1,0 +1,384 @@
+$ longitudinal_snapshot/DT.py --help
+usage: DT.py [-h] [--verbose] [--reftime seconds] [--max_size pos_int]
+             [--max_name_len pos_int] [--notes text] [--replace]
+             [--gufi_query path] [--threads count]
+             index outname
+
+GUFI Longitudinal Snapshot Generator
+
+positional arguments:
+  index                 index to snapshot
+  outname               output db file name
+
+options:
+  -h, --help            show this help message and exit
+  --verbose, -V         Show the gufi_query being executed
+  --reftime seconds     reference point for age (since UNIX epoch)
+  --max_size pos_int    the maximum expected size
+  --max_name_len pos_int
+                        the maximum expected length of a name/linkname
+  --notes text          freeform text of any extra information to add to the
+                        snapshot
+  --replace             replace existing tables
+  --gufi_query path     path to gufi_query executable
+  --threads count, -n count
+                        thread count
+
+$ longitudinal_snapshot/DT.py "prefix" "longitudinal_snapshot_DT.db" --gufi_query="gufi_query" --verbose --notes 'test notes'
+GUFI query is
+   gufi_query prefix \
+    -n 1 \
+    -x \
+    -O longitudinal_snapshot_DT.db \
+    -I 'CREATE TABLE intermediate_summary(name TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, depth INT64, filesystem_type BLOB, pinode TEXT, totfiles INT64, totlinks INT64, totsubdirs INT64, uid_min INT64, uid_max INT64, uid_hist TEXT, uid_num_unique INT64, gid_min INT64, gid_max INT64, gid_hist TEXT, gid_num_unique INT64, size_min INT64, size_max INT64, size_mean DOUBLE, size_median DOUBLE, size_mode TEXT, size_stdev DOUBLE, size_sum INT64, size_hist TEXT, permissions_hist TEXT, ctime_min INT64, ctime_max INT64, ctime_mean DOUBLE, ctime_median DOUBLE, ctime_mode TEXT, ctime_stdev DOUBLE, ctime_age_hist TEXT, ctime_hour_hist TEXT, atime_min INT64, atime_max INT64, atime_mean DOUBLE, atime_median DOUBLE, atime_mode TEXT, atime_stdev DOUBLE, atime_age_hist TEXT, atime_hour_hist TEXT, mtime_min INT64, mtime_max INT64, mtime_mean DOUBLE, mtime_median DOUBLE, mtime_mode TEXT, mtime_stdev DOUBLE, mtime_age_hist TEXT, mtime_hour_hist TEXT, crtime_min INT64, crtime_max INT64, crtime_mean DOUBLE, crtime_median DOUBLE, crtime_mode TEXT, crtime_stdev DOUBLE, crtime_age_hist TEXT, crtime_hour_hist TEXT, name_min INT64, name_max INT64, name_mean DOUBLE, name_median DOUBLE, name_mode TEXT, name_stdev DOUBLE, name_hist TEXT, linkname_min INT64, linkname_max INT64, linkname_mean DOUBLE, linkname_median DOUBLE, linkname_mode TEXT, linkname_stdev DOUBLE, linkname_hist TEXT, xattr_name_min INT64, xattr_name_max INT64, xattr_name_mean DOUBLE, xattr_name_median DOUBLE, xattr_name_mode TEXT, xattr_name_stdev DOUBLE, xattr_name_hist TEXT, xattr_value_min INT64, xattr_value_max INT64, xattr_value_mean DOUBLE, xattr_value_median DOUBLE, xattr_value_mode TEXT, xattr_value_stdev DOUBLE, xattr_value_hist TEXT, extensions_hist TEXT); CREATE TABLE intermediate_treesummary (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);' \
+    -T 'INSERT INTO intermediate_treesummary SELECT * FROM treesummary; SELECT 1;' \
+    -E 'INSERT INTO intermediate_summary SELECT basename(vrxsummary.name), vrxsummary.inode, vrxsummary.mode, vrxsummary.nlink, vrxsummary.uid, vrxsummary.gid, vrxsummary.blksize, vrxsummary.blocks, vrxsummary.atime, vrxsummary.mtime, vrxsummary.ctime, level(), NULL, vrxsummary.pinode, vrxsummary.totfiles, vrxsummary.totlinks, subdirs(vrxsummary.srollsubdirs, vrxsummary.sroll), vrxpentries.dminuid, vrxpentries.dmaxuid, category_hist(CAST(vrxpentries.uid AS TEXT), 1), COUNT(DISTINCT vrxpentries.uid), vrxpentries.dmingid, vrxpentries.dmaxgid, category_hist(CAST(vrxpentries.gid AS TEXT), 1), COUNT(DISTINCT vrxpentries.gid), vrxpentries.dminsize, vrxpentries.dmaxsize, AVG(vrxpentries.size), median(vrxpentries.size), mode_count(CAST(vrxpentries.size AS TEXT)), stdevp(vrxpentries.size), vrxpentries.dtotsize, log2_hist(vrxpentries.size, 50), mode_hist(vrxpentries.mode), vrxpentries.dminctime, vrxpentries.dmaxctime, AVG(vrxpentries.ctime), median(vrxpentries.ctime), mode_count(vrxpentries.ctime), stdevp(vrxpentries.ctime), time_hist(vrxpentries.ctime), now, category_hist(CAST(strftime('"'"'%H'"'"', vrxpentries.ctime) AS TEXT), 1), vrxpentries.dminatime, vrxpentries.dmaxatime, AVG(vrxpentries.atime), median(vrxpentries.atime), mode_count(vrxpentries.atime), stdevp(vrxpentries.atime), time_hist(vrxpentries.atime), now, category_hist(CAST(strftime('"'"'%H'"'"', vrxpentries.atime) AS TEXT), 1), vrxpentries.dminmtime, vrxpentries.dmaxmtime, AVG(vrxpentries.mtime), median(vrxpentries.mtime), mode_count(vrxpentries.mtime), stdevp(vrxpentries.mtime), time_hist(vrxpentries.mtime), now, category_hist(CAST(strftime('"'"'%H'"'"', vrxpentries.mtime) AS TEXT), 1), vrxpentries.dmincrtime, vrxpentries.dmaxcrtime, AVG(vrxpentries.crtime), median(vrxpentries.crtime), mode_count(vrxpentries.crtime), stdevp(vrxpentries.crtime), time_hist(vrxpentries.crtime), now, category_hist(CAST(strftime('"'"'%H'"'"', vrxpentries.crtime) AS TEXT), 1), MIN(LENGTH(vrxpentries.name)), MAX(LENGTH(vrxpentries.name)), AVG(LENGTH(vrxpentries.name)), median(LENGTH(vrxpentries.name)), mode_count(LENGTH(vrxpentries.name)), stdevp(LENGTH(vrxpentries.name)), log2_hist(LENGTH(vrxpentries.name), 8), MIN(LENGTH(vrxpentries.linkname)), MAX(LENGTH(vrxpentries.linkname)), AVG(LENGTH(vrxpentries.linkname)), median(LENGTH(vrxpentries.linkname)), mode_count(LENGTH(vrxpentries.linkname)), stdevp(LENGTH(vrxpentries.linkname)), log2_hist(LENGTH(vrxpentries.linkname), 8), MIN(LENGTH(vrxpentries.xattr_name)), MAX(LENGTH(vrxpentries.xattr_name)), AVG(LENGTH(vrxpentries.xattr_name)), median(LENGTH(vrxpentries.xattr_name)), mode_count(LENGTH(vrxpentries.xattr_name)), stdevp(LENGTH(vrxpentries.xattr_name)), log2_hist(LENGTH(vrxpentries.xattr_name), 8), MIN(LENGTH(vrxpentries.xattr_value)), MAX(LENGTH(vrxpentries.xattr_value)), AVG(LENGTH(vrxpentries.xattr_value)), median(LENGTH(vrxpentries.xattr_value)), mode_count(LENGTH(vrxpentries.xattr_value)), stdevp(LENGTH(vrxpentries.xattr_value)), log2_hist(LENGTH(vrxpentries.xattr_value), 8), category_hist(CASE WHEN vrxpentries.name NOT LIKE '"'"'%.%'"'"' THEN
+                                       NULL
+                                   ELSE
+                                       REPLACE(vrxpentries.name, RTRIM(vrxpentries.name, REPLACE(vrxpentries.name, '"'"'.'"'"', '"'"''"'"')), '"'"''"'"')
+                                   END, 1) FROM vrxsummary LEFT JOIN vrxpentries ON vrxsummary.inode == vrxpentries.pinode GROUP BY vrxsummary.inode;' \
+    -K 'CREATE TABLE treesummary (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64); CREATE TABLE summary(name TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, depth INT64, filesystem_type BLOB, pinode TEXT, totfiles INT64, totlinks INT64, totsubdirs INT64, uid_min INT64, uid_max INT64, uid_hist TEXT, uid_num_unique INT64, gid_min INT64, gid_max INT64, gid_hist TEXT, gid_num_unique INT64, size_min INT64, size_max INT64, size_mean DOUBLE, size_median DOUBLE, size_mode TEXT, size_stdev DOUBLE, size_sum INT64, size_hist TEXT, permissions_hist TEXT, ctime_min INT64, ctime_max INT64, ctime_mean DOUBLE, ctime_median DOUBLE, ctime_mode TEXT, ctime_stdev DOUBLE, ctime_age_hist TEXT, ctime_hour_hist TEXT, atime_min INT64, atime_max INT64, atime_mean DOUBLE, atime_median DOUBLE, atime_mode TEXT, atime_stdev DOUBLE, atime_age_hist TEXT, atime_hour_hist TEXT, mtime_min INT64, mtime_max INT64, mtime_mean DOUBLE, mtime_median DOUBLE, mtime_mode TEXT, mtime_stdev DOUBLE, mtime_age_hist TEXT, mtime_hour_hist TEXT, crtime_min INT64, crtime_max INT64, crtime_mean DOUBLE, crtime_median DOUBLE, crtime_mode TEXT, crtime_stdev DOUBLE, crtime_age_hist TEXT, crtime_hour_hist TEXT, name_min INT64, name_max INT64, name_mean DOUBLE, name_median DOUBLE, name_mode TEXT, name_stdev DOUBLE, name_hist TEXT, linkname_min INT64, linkname_max INT64, linkname_mean DOUBLE, linkname_median DOUBLE, linkname_mode TEXT, linkname_stdev DOUBLE, linkname_hist TEXT, xattr_name_min INT64, xattr_name_max INT64, xattr_name_mean DOUBLE, xattr_name_median DOUBLE, xattr_name_mode TEXT, xattr_name_stdev DOUBLE, xattr_name_hist TEXT, xattr_value_min INT64, xattr_value_max INT64, xattr_value_mean DOUBLE, xattr_value_median DOUBLE, xattr_value_mode TEXT, xattr_value_stdev DOUBLE, xattr_value_hist TEXT, extensions_hist TEXT);' \
+    -J '
+        INSERT INTO treesummary SELECT * FROM intermediate_treesummary;
+        INSERT INTO summary SELECT * FROM intermediate_summary;
+        ' \
+    -G \
+    '
+        CREATE VIEW snapshot
+        AS
+          SELECT *
+          FROM   summary
+                 LEFT JOIN treesummary
+                        ON summary.inode == treesummary.inode;
+        '
+
+# running a second time on the same target will error because the tables already exist
+$ longitudinal_snapshot/DT.py "prefix" "longitudinal_snapshot_DT.db" --gufi_query="gufi_query" --notes 'test notes'
+Could not create aggregation table "CREATE TABLE treesummary (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64); CREATE TABLE summary(name TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, depth INT64, filesystem_type BLOB, pinode TEXT, totfiles INT64, totlinks INT64, totsubdirs INT64, uid_min INT64, uid_max INT64, uid_hist TEXT, uid_num_unique INT64, gid_min INT64, gid_max INT64, gid_hist TEXT, gid_num_unique INT64, size_min INT64, size_max INT64, size_mean DOUBLE, size_median DOUBLE, size_mode TEXT, size_stdev DOUBLE, size_sum INT64, size_hist TEXT, permissions_hist TEXT, ctime_min INT64, ctime_max INT64, ctime_mean DOUBLE, ctime_median DOUBLE, ctime_mode TEXT, ctime_stdev DOUBLE, ctime_age_hist TEXT, ctime_hour_hist TEXT, atime_min INT64, atime_max INT64, atime_mean DOUBLE, atime_median DOUBLE, atime_mode TEXT, atime_stdev DOUBLE, atime_age_hist TEXT, atime_hour_hist TEXT, mtime_min INT64, mtime_max INT64, mtime_mean DOUBLE, mtime_median DOUBLE, mtime_mode TEXT, mtime_stdev DOUBLE, mtime_age_hist TEXT, mtime_hour_hist TEXT, crtime_min INT64, crtime_max INT64, crtime_mean DOUBLE, crtime_median DOUBLE, crtime_mode TEXT, crtime_stdev DOUBLE, crtime_age_hist TEXT, crtime_hour_hist TEXT, name_min INT64, name_max INT64, name_mean DOUBLE, name_median DOUBLE, name_mode TEXT, name_stdev DOUBLE, name_hist TEXT, linkname_min INT64, linkname_max INT64, linkname_mean DOUBLE, linkname_median DOUBLE, linkname_mode TEXT, linkname_stdev DOUBLE, linkname_hist TEXT, xattr_name_min INT64, xattr_name_max INT64, xattr_name_mean DOUBLE, xattr_name_median DOUBLE, xattr_name_mode TEXT, xattr_name_stdev DOUBLE, xattr_name_hist TEXT, xattr_value_min INT64, xattr_value_max INT64, xattr_value_mean DOUBLE, xattr_value_median DOUBLE, xattr_value_mode TEXT, xattr_value_stdev DOUBLE, xattr_value_hist TEXT, extensions_hist TEXT);" on longitudinal_snapshot_DT.db: table treesummary already exists
+
+# use --replace to replace existing data
+$ longitudinal_snapshot/DT.py "prefix" "longitudinal_snapshot_DT.db" --gufi_query="gufi_query" --notes 'test notes' --replace
+
+$ sqlite3 "longitudinal_snapshot_DT.db" ".tables"
+metadata     snapshot     summary      treesummary
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "PRAGMA TABLE_INFO(metadata);"
+0|timestamp|INT|0||0
+1|src|TEXT|0||0
+2|notes|TEXT|0||0
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "PRAGMA TABLE_INFO(summary);"
+0|name|TEXT|0||0
+1|inode|TEXT|0||0
+2|mode|INT64|0||0
+3|nlink|INT64|0||0
+4|uid|INT64|0||0
+5|gid|INT64|0||0
+6|blksize|INT64|0||0
+7|blocks|INT64|0||0
+8|atime|INT64|0||0
+9|mtime|INT64|0||0
+10|ctime|INT64|0||0
+11|depth|INT64|0||0
+12|filesystem_type|BLOB|0||0
+13|pinode|TEXT|0||0
+14|totfiles|INT64|0||0
+15|totlinks|INT64|0||0
+16|totsubdirs|INT64|0||0
+17|uid_min|INT64|0||0
+18|uid_max|INT64|0||0
+19|uid_hist|TEXT|0||0
+20|uid_num_unique|INT64|0||0
+21|gid_min|INT64|0||0
+22|gid_max|INT64|0||0
+23|gid_hist|TEXT|0||0
+24|gid_num_unique|INT64|0||0
+25|size_min|INT64|0||0
+26|size_max|INT64|0||0
+27|size_mean|DOUBLE|0||0
+28|size_median|DOUBLE|0||0
+29|size_mode|TEXT|0||0
+30|size_stdev|DOUBLE|0||0
+31|size_sum|INT64|0||0
+32|size_hist|TEXT|0||0
+33|permissions_hist|TEXT|0||0
+34|ctime_min|INT64|0||0
+35|ctime_max|INT64|0||0
+36|ctime_mean|DOUBLE|0||0
+37|ctime_median|DOUBLE|0||0
+38|ctime_mode|TEXT|0||0
+39|ctime_stdev|DOUBLE|0||0
+40|ctime_age_hist|TEXT|0||0
+41|ctime_hour_hist|TEXT|0||0
+42|atime_min|INT64|0||0
+43|atime_max|INT64|0||0
+44|atime_mean|DOUBLE|0||0
+45|atime_median|DOUBLE|0||0
+46|atime_mode|TEXT|0||0
+47|atime_stdev|DOUBLE|0||0
+48|atime_age_hist|TEXT|0||0
+49|atime_hour_hist|TEXT|0||0
+50|mtime_min|INT64|0||0
+51|mtime_max|INT64|0||0
+52|mtime_mean|DOUBLE|0||0
+53|mtime_median|DOUBLE|0||0
+54|mtime_mode|TEXT|0||0
+55|mtime_stdev|DOUBLE|0||0
+56|mtime_age_hist|TEXT|0||0
+57|mtime_hour_hist|TEXT|0||0
+58|crtime_min|INT64|0||0
+59|crtime_max|INT64|0||0
+60|crtime_mean|DOUBLE|0||0
+61|crtime_median|DOUBLE|0||0
+62|crtime_mode|TEXT|0||0
+63|crtime_stdev|DOUBLE|0||0
+64|crtime_age_hist|TEXT|0||0
+65|crtime_hour_hist|TEXT|0||0
+66|name_min|INT64|0||0
+67|name_max|INT64|0||0
+68|name_mean|DOUBLE|0||0
+69|name_median|DOUBLE|0||0
+70|name_mode|TEXT|0||0
+71|name_stdev|DOUBLE|0||0
+72|name_hist|TEXT|0||0
+73|linkname_min|INT64|0||0
+74|linkname_max|INT64|0||0
+75|linkname_mean|DOUBLE|0||0
+76|linkname_median|DOUBLE|0||0
+77|linkname_mode|TEXT|0||0
+78|linkname_stdev|DOUBLE|0||0
+79|linkname_hist|TEXT|0||0
+80|xattr_name_min|INT64|0||0
+81|xattr_name_max|INT64|0||0
+82|xattr_name_mean|DOUBLE|0||0
+83|xattr_name_median|DOUBLE|0||0
+84|xattr_name_mode|TEXT|0||0
+85|xattr_name_stdev|DOUBLE|0||0
+86|xattr_name_hist|TEXT|0||0
+87|xattr_value_min|INT64|0||0
+88|xattr_value_max|INT64|0||0
+89|xattr_value_mean|DOUBLE|0||0
+90|xattr_value_median|DOUBLE|0||0
+91|xattr_value_mode|TEXT|0||0
+92|xattr_value_stdev|DOUBLE|0||0
+93|xattr_value_hist|TEXT|0||0
+94|extensions_hist|TEXT|0||0
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "PRAGMA TABLE_INFO(treesummary);"
+0|inode|TEXT|0||0
+1|totsubdirs|INT64|0||0
+2|maxsubdirfiles|INT64|0||0
+3|maxsubdirlinks|INT64|0||0
+4|maxsubdirsize|INT64|0||0
+5|totfiles|INT64|0||0
+6|totlinks|INT64|0||0
+7|minuid|INT64|0||0
+8|maxuid|INT64|0||0
+9|mingid|INT64|0||0
+10|maxgid|INT64|0||0
+11|minsize|INT64|0||0
+12|maxsize|INT64|0||0
+13|totzero|INT64|0||0
+14|totltk|INT64|0||0
+15|totmtk|INT64|0||0
+16|totltm|INT64|0||0
+17|totmtm|INT64|0||0
+18|totmtg|INT64|0||0
+19|totmtt|INT64|0||0
+20|totsize|INT64|0||0
+21|minctime|INT64|0||0
+22|maxctime|INT64|0||0
+23|minmtime|INT64|0||0
+24|maxmtime|INT64|0||0
+25|minatime|INT64|0||0
+26|maxatime|INT64|0||0
+27|minblocks|INT64|0||0
+28|maxblocks|INT64|0||0
+29|totxattr|INT64|0||0
+30|depth|INT64|0||0
+31|mincrtime|INT64|0||0
+32|maxcrtime|INT64|0||0
+33|minossint1|INT64|0||0
+34|maxossint1|INT64|0||0
+35|totossint1|INT64|0||0
+36|minossint2|INT64|0||0
+37|maxossint2|INT64|0||0
+38|totossint2|INT64|0||0
+39|minossint3|INT64|0||0
+40|maxossint3|INT64|0||0
+41|totossint3|INT64|0||0
+42|minossint4|INT64|0||0
+43|maxossint4|INT64|0||0
+44|totossint4|INT64|0||0
+45|rectype|INT64|0||0
+46|uid|INT64|0||0
+47|gid|INT64|0||0
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "PRAGMA TABLE_INFO(snapshot);"
+0|name|TEXT|0||0
+1|inode|TEXT|0||0
+2|mode|INT64|0||0
+3|nlink|INT64|0||0
+4|uid|INT64|0||0
+5|gid|INT64|0||0
+6|blksize|INT64|0||0
+7|blocks|INT64|0||0
+8|atime|INT64|0||0
+9|mtime|INT64|0||0
+10|ctime|INT64|0||0
+11|depth|INT64|0||0
+12|filesystem_type|BLOB|0||0
+13|pinode|TEXT|0||0
+14|totfiles|INT64|0||0
+15|totlinks|INT64|0||0
+16|totsubdirs|INT64|0||0
+17|uid_min|INT64|0||0
+18|uid_max|INT64|0||0
+19|uid_hist|TEXT|0||0
+20|uid_num_unique|INT64|0||0
+21|gid_min|INT64|0||0
+22|gid_max|INT64|0||0
+23|gid_hist|TEXT|0||0
+24|gid_num_unique|INT64|0||0
+25|size_min|INT64|0||0
+26|size_max|INT64|0||0
+27|size_mean|DOUBLE|0||0
+28|size_median|DOUBLE|0||0
+29|size_mode|TEXT|0||0
+30|size_stdev|DOUBLE|0||0
+31|size_sum|INT64|0||0
+32|size_hist|TEXT|0||0
+33|permissions_hist|TEXT|0||0
+34|ctime_min|INT64|0||0
+35|ctime_max|INT64|0||0
+36|ctime_mean|DOUBLE|0||0
+37|ctime_median|DOUBLE|0||0
+38|ctime_mode|TEXT|0||0
+39|ctime_stdev|DOUBLE|0||0
+40|ctime_age_hist|TEXT|0||0
+41|ctime_hour_hist|TEXT|0||0
+42|atime_min|INT64|0||0
+43|atime_max|INT64|0||0
+44|atime_mean|DOUBLE|0||0
+45|atime_median|DOUBLE|0||0
+46|atime_mode|TEXT|0||0
+47|atime_stdev|DOUBLE|0||0
+48|atime_age_hist|TEXT|0||0
+49|atime_hour_hist|TEXT|0||0
+50|mtime_min|INT64|0||0
+51|mtime_max|INT64|0||0
+52|mtime_mean|DOUBLE|0||0
+53|mtime_median|DOUBLE|0||0
+54|mtime_mode|TEXT|0||0
+55|mtime_stdev|DOUBLE|0||0
+56|mtime_age_hist|TEXT|0||0
+57|mtime_hour_hist|TEXT|0||0
+58|crtime_min|INT64|0||0
+59|crtime_max|INT64|0||0
+60|crtime_mean|DOUBLE|0||0
+61|crtime_median|DOUBLE|0||0
+62|crtime_mode|TEXT|0||0
+63|crtime_stdev|DOUBLE|0||0
+64|crtime_age_hist|TEXT|0||0
+65|crtime_hour_hist|TEXT|0||0
+66|name_min|INT64|0||0
+67|name_max|INT64|0||0
+68|name_mean|DOUBLE|0||0
+69|name_median|DOUBLE|0||0
+70|name_mode|TEXT|0||0
+71|name_stdev|DOUBLE|0||0
+72|name_hist|TEXT|0||0
+73|linkname_min|INT64|0||0
+74|linkname_max|INT64|0||0
+75|linkname_mean|DOUBLE|0||0
+76|linkname_median|DOUBLE|0||0
+77|linkname_mode|TEXT|0||0
+78|linkname_stdev|DOUBLE|0||0
+79|linkname_hist|TEXT|0||0
+80|xattr_name_min|INT64|0||0
+81|xattr_name_max|INT64|0||0
+82|xattr_name_mean|DOUBLE|0||0
+83|xattr_name_median|DOUBLE|0||0
+84|xattr_name_mode|TEXT|0||0
+85|xattr_name_stdev|DOUBLE|0||0
+86|xattr_name_hist|TEXT|0||0
+87|xattr_value_min|INT64|0||0
+88|xattr_value_max|INT64|0||0
+89|xattr_value_mean|DOUBLE|0||0
+90|xattr_value_median|DOUBLE|0||0
+91|xattr_value_mode|TEXT|0||0
+92|xattr_value_stdev|DOUBLE|0||0
+93|xattr_value_hist|TEXT|0||0
+94|extensions_hist|TEXT|0||0
+95|inode:1|TEXT|0||0
+96|totsubdirs:1|INT64|0||0
+97|maxsubdirfiles|INT64|0||0
+98|maxsubdirlinks|INT64|0||0
+99|maxsubdirsize|INT64|0||0
+100|totfiles:1|INT64|0||0
+101|totlinks:1|INT64|0||0
+102|minuid|INT64|0||0
+103|maxuid|INT64|0||0
+104|mingid|INT64|0||0
+105|maxgid|INT64|0||0
+106|minsize|INT64|0||0
+107|maxsize|INT64|0||0
+108|totzero|INT64|0||0
+109|totltk|INT64|0||0
+110|totmtk|INT64|0||0
+111|totltm|INT64|0||0
+112|totmtm|INT64|0||0
+113|totmtg|INT64|0||0
+114|totmtt|INT64|0||0
+115|totsize|INT64|0||0
+116|minctime|INT64|0||0
+117|maxctime|INT64|0||0
+118|minmtime|INT64|0||0
+119|maxmtime|INT64|0||0
+120|minatime|INT64|0||0
+121|maxatime|INT64|0||0
+122|minblocks|INT64|0||0
+123|maxblocks|INT64|0||0
+124|totxattr|INT64|0||0
+125|depth:1|INT64|0||0
+126|mincrtime|INT64|0||0
+127|maxcrtime|INT64|0||0
+128|minossint1|INT64|0||0
+129|maxossint1|INT64|0||0
+130|totossint1|INT64|0||0
+131|minossint2|INT64|0||0
+132|maxossint2|INT64|0||0
+133|totossint2|INT64|0||0
+134|minossint3|INT64|0||0
+135|maxossint3|INT64|0||0
+136|totossint3|INT64|0||0
+137|minossint4|INT64|0||0
+138|maxossint4|INT64|0||0
+139|totossint4|INT64|0||0
+140|rectype|INT64|0||0
+141|uid:1|INT64|0||0
+142|gid:1|INT64|0||0
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "SELECT COUNT(*) FROM metadata;"
+1
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "SELECT COUNT(*) FROM summary;"
+6
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "SELECT COUNT(*) FROM treesummary;"
+6
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "SELECT COUNT(*) FROM snapshot;"
+6
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "SELECT notes FROM metadata;"
+test notes
+
+$ sqlite3 "longitudinal_snapshot_DT.db" "SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM summary AS s, treesummary AS t WHERE s.inode == t.inode;"
+directory|6|11|3|4
+empty_directory||0|0|0
+leaf_directory|23|23|2|2
+prefix|1049624|1049673|5|12
+subdirectory|5|5|1|1
+unusual#? directory ,|15|15|1|1
+

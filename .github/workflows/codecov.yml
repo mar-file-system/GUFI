@@ -123,12 +123,13 @@ jobs:
             ${{ github.workspace }}/build/test/unit/python/test_gufi_config.py
 
             export GUFI_PYTHON_TEST_COVERAGE="coverage run -a"
-            (${{ github.workspace }}/build/test/regression/gufi_find.sh             || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_getfattr.sh         || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_ls.sh               || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_stat.sh             || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/gufi_stats.sh            || true) > /dev/null 2>&1
-            (${{ github.workspace }}/build/test/regression/longitudinal_snapshot.sh || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_find.sh                || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_getfattr.sh            || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_ls.sh                  || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_stat.sh                || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/gufi_stats.sh               || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/longitudinal_snapshot_DT.sh || true) > /dev/null 2>&1
+            (${{ github.workspace }}/build/test/regression/longitudinal_snapshot_LT.sh || true) > /dev/null 2>&1
 
             coverage xml --omit="${{ github.workspace }}/build/contrib/hashes.py,${{ github.workspace }}/build/contrib/performance/performance_pkg/tests/*,${{ github.workspace }}/build/test/*,${{ github.workspace }}/build/test/regression/*,${{ github.workspace }}/build/test/unit/python/*"
             rm .coverage  # If not removed, codecov will attempt to run coverage xml which will not account for our omissions

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -60,149 +61,66 @@
 
 
 
-cmake_minimum_required(VERSION 3.1.0)
+set -e
+source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-# regression test specific files
-set(CORE
-  generatetree.sh
-  os_setfattr.sh
-  setup.sh
+OUTPUT="longitudinal_snapshot_DT.out"
+
+SNAPSHOT="longitudinal_snapshot_DT.db"
+
+cleanup() {
+    rm -rf "${SNAPSHOT}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
+
+(
+do_tests() {
+    cleanup
+
+    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} --help" | replace_argparse
+
+    # shellcheck disable=SC2294
+    eval "$@"
+
+    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
+
+    echo "# running a second time on the same target will error because the tables already exist"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
+
+    echo "# use --replace to replace existing data"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace"
+
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
+
+    tables=("metadata" "summary" "treesummary" "snapshot")
+    for table in "${tables[@]}"
+    do
+        run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(${table});\""
+    done
+
+    for table in "${tables[@]}"
+    do
+        run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT COUNT(*) FROM ${table};\""
+    done
+
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT notes FROM metadata;\""
+
+    run_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT s.name, s.size_sum, t.totsize, s.totfiles, t.totfiles FROM summary AS s, treesummary AS t WHERE s.inode == t.inode;\""
+}
+
+do_tests "run_no_sort \"${GUFI_TREESUMMARY_ALL} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot_DT.expected "${OUTPUT}"
+
+do_tests "run_no_sort \"${GUFI_ROLLUP} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot_DT.expected "${OUTPUT}"
 )
 
-foreach(NAME ${CORE})
-  configure_file("${NAME}.in" "${NAME}" @ONLY)
-endforeach()
-
-set(BINARIES
-  gufi_dir2index
-  gufi_dir2trace
-  gufi_trace2index
-  gufi_treesummary
-  gufi_treesummary_all
-  gufi_query
-  gufi_stat_bin
-  querydbs
-)
-
-set(PYTHON
-  gufi_find
-  gufi_getfattr
-  gufi_ls
-  gufi_stat
-  gufi_stats
-)
-
-set(EXAMPLES
-  deluidgidsummaryrecs
-  generategidsummary
-  generateuidsummary
-  gengidsummaryavoidentriesscan
-  genuidsummaryavoidentriesscan
-  groupfilespacehog
-  groupfilespacehogusesummary
-  oldbigfiles
-  userfilespacehog
-  userfilespacehogusesummary
-)
-
-set(OTHERS
-  bash_completion
-  deploy
-  longitudinal_snapshot_DT
-  longitudinal_snapshot_LT
-  split_trace
-  treediff
-)
-
-if (ZLIB_FOUND)
-  list(APPEND OTHERS
-    compression
-  )
-endif()
-
-if (CMAKE_CXX_COMPILER)
-  list(APPEND OTHERS
-    verifytrace
-    verifytraceintree
-  )
-endif()
-
-# .sh and .expected
-set(SH_AND_EXPECTED
-  ${BINARIES}
-  ${PYTHON}
-  ${EXAMPLES}
-  ${OTHERS}
-)
-
-configure_file(gufi_tool.py.in gufi_tool.py)
-
-foreach(NAME ${SH_AND_EXPECTED})
-  configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-  configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-  add_test(NAME "${NAME}" COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
-    WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-endforeach()
-
-foreach(NAME ${BINARIES})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;binary")
-endforeach()
-
-foreach(NAME ${EXAMPLES})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;examples")
-endforeach()
-
-foreach(NAME ${OTHERS})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression")
-endforeach()
-
-foreach(NAME ${PYTHON})
-  set_tests_properties("${NAME}" PROPERTIES LABELS "regression;python")
-endforeach()
-
-find_program(SUDO sudo)
-if (SUDO)
-  if (APPLE)
-    set(SUDO sudo)
-  endif()
-
-  set(ENABLE_SUDO_TESTS Off CACHE BOOL "Whether or not to enable tests that need sudo")
-  if (ENABLE_SUDO_TESTS)
-    configure_file("rollup_tree.sh.in" "rollup_tree.sh" @ONLY)
-
-    set(SUDO_BINARIES
-      gufi_rollup
-      gufi_unrollup
-    )
-
-    set(SUDO_OTHERS
-      xattrs
-    )
-
-    # .sh and .expected
-    set(NEED_SUDO
-      ${SUDO_BINARIES}
-      ${SUDO_OTHERS}
-    )
-
-    foreach(NAME ${NEED_SUDO})
-      configure_file("${NAME}.sh.in"    "${NAME}.sh"       @ONLY)
-      configure_file("${NAME}.expected" "${NAME}.expected" COPYONLY)
-
-      add_test(NAME "${NAME}" COMMAND ${SUDO} "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.sh"
-        WORKING_DIRECTORY "${TEST_WORKING_DIRECTORY}")
-    endforeach()
-
-    foreach(NAME ${SUDO_BINARIES})
-      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo;binary")
-    endforeach()
-
-    foreach(NAME ${SUDO_OTHERS})
-      set_tests_properties("${NAME}" PROPERTIES LABELS "regression;sudo")
-    endforeach()
-
-  endif()
-else()
-  message(STATUS "sudo executable not found. Not running tests requiring sudo.")
-endif()
+rm "${OUTPUT}"
