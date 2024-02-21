@@ -579,6 +579,61 @@ category_hist_t *category_hist_parse(const char *str) {
     return hist;
 }
 
+category_hist_t *category_hist_combine(category_hist_t *lhs, category_hist_t *rhs) {
+    sll_t refs;
+    sll_init(&refs);
+
+    trie_t *counts = trie_alloc();
+    for(size_t i = 0; i < lhs->count; i++) {
+        category_bucket_t *bucket = &lhs->buckets[i];
+        size_t *count = malloc(sizeof(*count));
+        *count = bucket->count;
+        trie_insert(counts, bucket->name, bucket->len, count, free);
+        sll_push(&refs, bucket);
+    }
+
+    /* add rhs into lhs */
+    for(size_t i = 0; i < rhs->count; i++) {
+        category_bucket_t *bucket = &rhs->buckets[i];
+
+        size_t *count = NULL;
+        if (trie_search(counts, bucket->name, bucket->len, (void **) &count) == 1) {
+            *count += bucket->count;
+        }
+        else {
+            count = malloc(sizeof(*count));
+            *count = bucket->count;
+            trie_insert(counts, bucket->name, bucket->len, count, free);
+            sll_push(&refs, bucket);
+        }
+    }
+
+    /* copy buckets out into array */
+    category_hist_t *hist = malloc(sizeof(*hist));
+    hist->count = 0;
+    hist->buckets = calloc(sll_get_size(&refs), sizeof(hist->buckets[0]));
+
+    sll_loop(&refs, node) {
+        category_bucket_t *ref = (category_bucket_t *) sll_node_data(node);
+        category_bucket_t *bucket = &hist->buckets[hist->count++];
+
+        size_t *count = NULL;
+
+        /* not checking return value since all categories should be found */
+        trie_search(counts, ref->name, ref->len, (void **) &count);
+
+        bucket->name = malloc(ref->len + 1);
+        memcpy(bucket->name, ref->name, ref->len);
+        bucket->name[ref->len] = '\0';
+        bucket->len = ref->len;
+        bucket->count = *count;
+    }
+
+    trie_free(counts);
+    sll_destroy(&refs, NULL);
+    return hist;
+}
+
 void category_hist_free(category_hist_t *hist) {
     if (hist->buckets) {
         for(size_t i = 0; i < hist->count; i++) {

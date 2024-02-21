@@ -193,6 +193,7 @@ typedef struct category_hist {
 } category_hist_t;
 
 category_hist_t *category_hist_parse(const char *str);
+category_hist_t *category_hist_combine(category_hist_t *lhs, category_hist_t *rhs);
 void category_hist_free(category_hist_t *hist);
 /* ********************************************* */
 

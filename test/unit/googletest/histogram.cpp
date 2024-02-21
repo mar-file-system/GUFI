@@ -413,7 +413,7 @@ TEST(histogram, category) {
                                get_str, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
-        category_hist *hist = category_hist_parse(hist_str);
+        category_hist_t *hist = category_hist_parse(hist_str);
         ASSERT_NE(hist, nullptr);
         ASSERT_NE(hist->buckets, nullptr);
 
@@ -427,15 +427,15 @@ TEST(histogram, category) {
         insert(db, "category", category);
     }
 
-    char *hist_str = nullptr;
     {
+        char *hist_str = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
                                get_str, &hist_str, nullptr), SQLITE_OK);
         ASSERT_NE(hist_str, nullptr);
 
         // normal usage
         {
-            category_hist *hist = category_hist_parse(hist_str);
+            category_hist_t *hist = category_hist_parse(hist_str);
             ASSERT_NE(hist, nullptr);
             ASSERT_NE(hist->buckets, nullptr);
 
@@ -468,7 +468,7 @@ TEST(histogram, category) {
 
         // normal usage
         {
-            category_hist *hist = category_hist_parse(hist_str);
+            category_hist_t *hist = category_hist_parse(hist_str);
             ASSERT_NE(hist, nullptr);
             ASSERT_NE(hist->buckets, nullptr);
 
@@ -515,6 +515,53 @@ TEST(histogram, category) {
         }
 
         free(hist_str);
+    }
+
+    // combine histograms
+    {
+        char *with = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
+                               get_str, &with, nullptr), SQLITE_OK);
+        ASSERT_NE(with, nullptr);
+
+        char *without = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 0) FROM test;",
+                               get_str, &without, nullptr), SQLITE_OK);
+        ASSERT_NE(without, nullptr);
+
+        category_hist_t *w_hist = category_hist_parse(with);
+        ASSERT_NE(w_hist, nullptr);
+        ASSERT_EQ(w_hist->count, (std::size_t) 5);
+
+        category_hist_t *wo_hist = category_hist_parse(without);
+        ASSERT_NE(wo_hist, nullptr);
+        ASSERT_EQ(wo_hist->count, (std::size_t) 4);
+
+        category_hist_t *sum = category_hist_combine(w_hist, wo_hist);
+        ASSERT_NE(sum, nullptr);
+        ASSERT_EQ(sum->count, (std::size_t) 5);
+
+        EXPECT_STREQ(sum->buckets[0].name, "3x");
+        EXPECT_EQ(sum->buckets[0].count, (std::size_t) 3 * 2);
+
+        EXPECT_STREQ(sum->buckets[1].name, "abcd");
+        EXPECT_EQ(sum->buckets[1].count, (std::size_t) 2 * 2);
+
+        EXPECT_STREQ(sum->buckets[2].name, "str");
+        EXPECT_EQ(sum->buckets[2].count, (std::size_t) 2 * 2);
+
+        EXPECT_STREQ(sum->buckets[3].name, "string");
+        EXPECT_EQ(sum->buckets[3].count, (std::size_t) 2 * 2);
+
+        EXPECT_STREQ(sum->buckets[4].name, "once");
+        EXPECT_EQ(sum->buckets[4].count, (std::size_t) 1);
+
+        category_hist_free(sum);
+        category_hist_free(wo_hist);
+        category_hist_free(w_hist);
+
+        free(without);
+        free(with);
     }
 
     sqlite3_close(db);
