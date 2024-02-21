@@ -72,7 +72,7 @@ import sys
 from gufi_common import build_query, get_positive, print_query, VRXPENTRIES, SUMMARY, VRXSUMMARY, TREESUMMARY
 
 METADATA       = 'metadata'
-SNAPSHOT       = 'snapshot'
+SNAPSHOT       = 'snapshot' # SUMMARY LEFT JOIN TREESUMMARY on SUMMARY.inode == TREESUMMARY.inode
 
 INODE          = 'inode'
 PINODE         = 'pinode'
@@ -82,31 +82,6 @@ SQLITE3_INT64  = 'INT64'
 SQLITE3_DOUBLE = 'DOUBLE'
 SQLITE3_TEXT   = 'TEXT'
 SQLITE3_BLOB   = 'BLOB'
-
-# used to generate timestamp columns
-def gen_time_cols(col, reftime):
-    return [
-        ['min',       ['{0}.dmin{1}'.format(VRXPENTRIES, col),                                 SQLITE3_INT64]],
-        ['max',       ['{0}.dmax{1}'.format(VRXPENTRIES, col),                                 SQLITE3_INT64]],
-        ['mean',      ['AVG({0}.{1})'.format(VRXPENTRIES, col),                                SQLITE3_DOUBLE]],
-        ['median',    ['median({0}.{1})'.format(VRXPENTRIES, col),                             SQLITE3_DOUBLE]],
-        ['mode',      ['mode_count({0}.{1})'.format(VRXPENTRIES, col),                         SQLITE3_TEXT]],
-        ['stdev',     ['stdevp({0}.{1})'.format(VRXPENTRIES, col),                             SQLITE3_DOUBLE]],
-        ['age_hist',  ['time_hist({0}.{1}, {2})'.format(VRXPENTRIES, col, reftime),            SQLITE3_TEXT]],
-        ['hour_hist', ['category_hist(strftime(\'%H\', {0}.{1}), 1)'.format(VRXPENTRIES, col), SQLITE3_TEXT]],
-    ]
-
-# used to generate columns for name, linkname, xattr_name, and xattr_value
-def gen_str_cols(col, buckets):
-    return [
-        ['min',       ['MIN(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                        SQLITE3_INT64]],
-        ['max',       ['MAX(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                        SQLITE3_INT64]],
-        ['mean',      ['AVG(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                        SQLITE3_DOUBLE]],
-        ['median',    ['median(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_DOUBLE]],
-        ['mode',      ['mode_count(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                 SQLITE3_TEXT]],
-        ['stdev',     ['stdevp(LENGTH({0}.{1}))'.format(VRXPENTRIES, col),                     SQLITE3_DOUBLE]],
-        ['hist',      ['log2_hist(LENGTH({0}.{1}), {2})'.format(VRXPENTRIES, col, buckets),    SQLITE3_TEXT]],
-    ]
 
 def parse_args(argv, now):
     parser = argparse.ArgumentParser(description='GUFI Longitudinal Snapshot Generator')
@@ -134,72 +109,89 @@ def parse_args(argv, now):
 
     return parser.parse_args(argv[1:])
 
-# pylint: disable=too-many-locals, too-many-statements
-def run(argv):
-    timestamp = int(time.time())
+# used to generate timestamp columns
+def gen_time_cols(col, reftime):
+    return [
+        ['min',       ['{{0}}.dmin{0}'.format(col),                                 SQLITE3_INT64]],
+        ['max',       ['{{0}}.dmax{0}'.format(col),                                 SQLITE3_INT64]],
+        ['mean',      ['AVG({{0}}.{0})'.format(col),                                SQLITE3_DOUBLE]],
+        ['median',    ['median({{0}}.{0})'.format(col),                             SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count({{0}}.{0})'.format(col),                         SQLITE3_TEXT]],
+        ['stdev',     ['stdevp({{0}}.{0})'.format(col),                             SQLITE3_DOUBLE]],
+        ['age_hist',  ['time_hist({{0}}.{0}, {1})'.format(col, reftime),            SQLITE3_TEXT]],
+        ['hour_hist', ['category_hist(strftime(\'%H\', {{0}}.{0}), 1)'.format(col), SQLITE3_TEXT]],
+    ]
 
-    args = parse_args(argv, timestamp)
+# used to generate columns for name, linkname, xattr_name, and xattr_value
+def gen_str_cols(col, buckets):
+    return [
+        ['min',       ['MIN(LENGTH({{0}}.{0}))'.format(col),                        SQLITE3_INT64]],
+        ['max',       ['MAX(LENGTH({{0}}.{0}))'.format(col),                        SQLITE3_INT64]],
+        ['mean',      ['AVG(LENGTH({{0}}.{0}))'.format(col),                        SQLITE3_DOUBLE]],
+        ['median',    ['median(LENGTH({{0}}.{0}))'.format(col),                     SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count(LENGTH({{0}}.{0}))'.format(col),                 SQLITE3_TEXT]],
+        ['stdev',     ['stdevp(LENGTH({{0}}.{0}))'.format(col),                     SQLITE3_DOUBLE]],
+        ['hist',      ['log2_hist(LENGTH({{0}}.{0}), {1})'.format(col, buckets),    SQLITE3_TEXT]],
+    ]
 
-    log2_size_bucket_count = int(math.ceil(math.log(args.max_size, 2)))
-    log2_name_len_bucket_count = int(math.ceil(math.log(args.max_name_len, 2)))
-
-    # ###############################################################
-    # the following contain mappings from the GUFI tree to the longitudinal snapshot
-
+# pylint: disable=too-many-locals
+def summary(reftime,
+            log2_size_bucket_count,
+            log2_name_len_bucket_count):
     SUMMARY_COLS = [
-        ['name',            ['basename({0}.name)'.format(VRXSUMMARY),                       SQLITE3_TEXT]],
-        [INODE,             ['{0}.{1}'.format(VRXSUMMARY, INODE),                           SQLITE3_TEXT]],
-        ['mode',            ['{0}.mode'.format(VRXSUMMARY),                                 SQLITE3_INT64]],
-        ['nlink',           ['{0}.nlink'.format(VRXSUMMARY),                                SQLITE3_INT64]],
-        ['uid',             ['{0}.uid'.format(VRXSUMMARY),                                  SQLITE3_INT64]],
-        ['gid',             ['{0}.gid'.format(VRXSUMMARY),                                  SQLITE3_INT64]],
-        ['blksize',         ['{0}.blksize'.format(VRXSUMMARY),                              SQLITE3_INT64]],
-        ['blocks',          ['{0}.blocks'.format(VRXSUMMARY),                               SQLITE3_INT64]],
-        ['atime',           ['{0}.atime'.format(VRXSUMMARY),                                SQLITE3_INT64]],
-        ['mtime',           ['{0}.mtime'.format(VRXSUMMARY),                                SQLITE3_INT64]],
-        ['ctime',           ['{0}.ctime'.format(VRXSUMMARY),                                SQLITE3_INT64]],
-        ['depth',           ['level()',                                                     SQLITE3_INT64]],
-        ['filesystem_type', [SQLITE3_NULL,                                                  SQLITE3_BLOB]],
-        [PINODE,            ['{0}.{1}'.format(VRXSUMMARY, PINODE),                          SQLITE3_TEXT]],
-        ['totfiles',        ['{0}.totfiles'.format(VRXSUMMARY),                             SQLITE3_INT64]],
-        ['totlinks',        ['{0}.totlinks'.format(VRXSUMMARY),                             SQLITE3_INT64]],
-        ['totsubdirs',      ['subdirs({0}.srollsubdirs, {0}.sroll)'.format(VRXSUMMARY),     SQLITE3_INT64]],
+        ['name',            ['basename({0}.name)',                   SQLITE3_TEXT]],
+        [INODE,             ['{{0}}.{0}'.format(INODE),              SQLITE3_TEXT]],
+        ['mode',            ['{0}.mode',                             SQLITE3_INT64]],
+        ['nlink',           ['{0}.nlink',                            SQLITE3_INT64]],
+        ['uid',             ['{0}.uid',                              SQLITE3_INT64]],
+        ['gid',             ['{0}.gid',                              SQLITE3_INT64]],
+        ['blksize',         ['{0}.blksize',                          SQLITE3_INT64]],
+        ['blocks',          ['{0}.blocks',                           SQLITE3_INT64]],
+        ['atime',           ['{0}.atime',                            SQLITE3_INT64]],
+        ['mtime',           ['{0}.mtime',                            SQLITE3_INT64]],
+        ['ctime',           ['{0}.ctime',                            SQLITE3_INT64]],
+        ['depth',           ['level()',                              SQLITE3_INT64]],
+        ['filesystem_type', [SQLITE3_NULL,                           SQLITE3_BLOB]],
+        [PINODE,            ['{{0}}.{0}'.format(PINODE),             SQLITE3_TEXT]],
+        ['totfiles',        ['{0}.totfiles',                         SQLITE3_INT64]],
+        ['totlinks',        ['{0}.totlinks',                         SQLITE3_INT64]],
+        ['totsubdirs',      ['subdirs({0}.srollsubdirs, {0}.sroll)', SQLITE3_INT64]],
     ]
 
     UID_COLS = [
-        ['min',             ['{0}.dminuid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
-        ['max',             ['{0}.dmaxuid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
-        ['hist',            ['category_hist({0}.uid, 1)'.format(VRXPENTRIES),               SQLITE3_TEXT]],
-        ['num_unique',      ['COUNT(DISTINCT {0}.uid)'.format(VRXPENTRIES),                 SQLITE3_INT64]],
+        ['min',             ['{0}.dminuid',                          SQLITE3_INT64]],
+        ['max',             ['{0}.dmaxuid',                          SQLITE3_INT64]],
+        ['hist',            ['category_hist({0}.uid, 1)',            SQLITE3_TEXT]],
+        ['num_unique',      ['COUNT(DISTINCT {0}.uid)',              SQLITE3_INT64]],
     ]
 
     GID_COLS = [
-        ['min',             ['{0}.dmingid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
-        ['max',             ['{0}.dmaxgid'.format(VRXPENTRIES),                             SQLITE3_INT64]],
-        ['hist',            ['category_hist({0}.gid, 1)'.format(VRXPENTRIES),               SQLITE3_TEXT]],
-        ['num_unique',      ['COUNT(DISTINCT {0}.gid)'.format(VRXPENTRIES),                 SQLITE3_INT64]],
+        ['min',             ['{0}.dmingid',                          SQLITE3_INT64]],
+        ['max',             ['{0}.dmaxgid',                          SQLITE3_INT64]],
+        ['hist',            ['category_hist({0}.gid, 1)',            SQLITE3_TEXT]],
+        ['num_unique',      ['COUNT(DISTINCT {0}.gid)',              SQLITE3_INT64]],
     ]
 
     SIZE_COLS = [
-        ['min',             ['{0}.dminsize'.format(VRXPENTRIES),                            SQLITE3_INT64]],
-        ['max',             ['{0}.dmaxsize'.format(VRXPENTRIES),                            SQLITE3_INT64]],
-        ['mean',            ['AVG({0}.size)'.format(VRXPENTRIES),                           SQLITE3_DOUBLE]],
-        ['median',          ['median({0}.size)'.format(VRXPENTRIES),                        SQLITE3_DOUBLE]],
-        ['mode',            ['mode_count(CAST({0}.size AS TEXT))'.format(VRXPENTRIES),      SQLITE3_TEXT]],
-        ['stdev',           ['stdevp({0}.size)'.format(VRXPENTRIES),                        SQLITE3_DOUBLE]],
-        ['sum',             ['{0}.dtotsize'.format(VRXPENTRIES),                            SQLITE3_INT64]],
-        ['hist',            ['log2_hist({0}.size, {1})'.format(VRXPENTRIES,
-                                                               log2_size_bucket_count),     SQLITE3_TEXT]],
+        ['min',             ['{0}.dminsize',                         SQLITE3_INT64]],
+        ['max',             ['{0}.dmaxsize',                         SQLITE3_INT64]],
+        ['mean',            ['AVG({0}.size)',                        SQLITE3_DOUBLE]],
+        ['median',          ['median({0}.size)',                     SQLITE3_DOUBLE]],
+        ['mode',            ['mode_count(CAST({0}.size AS TEXT))',   SQLITE3_TEXT]],
+        ['stdev',           ['stdevp({0}.size)',                     SQLITE3_DOUBLE]],
+        ['sum',             ['{0}.dtotsize',                         SQLITE3_INT64]],
+        ['hist',            ['log2_hist({{0}}.size, {0})'.format(log2_size_bucket_count),
+                                                                     SQLITE3_TEXT]],
     ]
 
     PERM_COLS = [
-        ['hist', ['mode_hist({0}.mode)'.format(VRXPENTRIES), SQLITE3_TEXT]],
+        ['hist',            ['mode_hist({0}.mode)',                  SQLITE3_TEXT]],
     ]
 
-    CTIME_COLS       = gen_time_cols('ctime',      args.reftime)
-    ATIME_COLS       = gen_time_cols('atime',      args.reftime)
-    MTIME_COLS       = gen_time_cols('mtime',      args.reftime)
-    CRTIME_COLS      = gen_time_cols('crtime',     args.reftime)
+    CTIME_COLS       = gen_time_cols('ctime',      reftime)
+    ATIME_COLS       = gen_time_cols('atime',      reftime)
+    MTIME_COLS       = gen_time_cols('mtime',      reftime)
+    CRTIME_COLS      = gen_time_cols('crtime',     reftime)
 
     NAME_COLS        = gen_str_cols('name',        log2_name_len_bucket_count)
     LINKNAME_COLS    = gen_str_cols('linkname',    log2_name_len_bucket_count)
@@ -208,11 +200,11 @@ def run(argv):
 
     EXT_COLS = [
         # filenames without extensions pass in NULL
-        ['hist', ['''category_hist(CASE WHEN {0}.name NOT LIKE '%.%' THEN
-                                       {1}
+        ['hist', ['''category_hist(CASE WHEN {{0}}.name NOT LIKE '%.%' THEN
+                                       {0}
                                    ELSE
-                                       REPLACE({0}.name, RTRIM({0}.name, REPLACE({0}.name, '.', '')), '')
-                                   END, 1)'''.format(VRXPENTRIES, SQLITE3_NULL),
+                                       REPLACE({{0}}.name, RTRIM({{0}}.name, REPLACE({{0}}.name, '.', '')), '')
+                                   END, 1)'''.format(SQLITE3_NULL),
                  SQLITE3_TEXT]]
     ]
 
@@ -232,39 +224,59 @@ def run(argv):
         ['extensions',  EXT_COLS],
     ]
 
-    # generate columns for selecting and inserting into
+    # generate SUMMARY columns for selecting and inserting into
 
-    create_cols = [] # used for creating intermediate tables and aggregating
-    select_cols = [] # SELECT cols FROM VRXSUMMARY LEFT JOIN VRXPENTRIES ON VRXSUMMARY.inode == VRXPENTRIES.pinode
+    create_summary_cols = [] # used for creating intermediate tables and aggregating
+    select_summary_cols = [] # SELECT cols FROM VRXSUMMARY LEFT JOIN VRXPENTRIES ON VRXSUMMARY.inode == VRXPENTRIES.pinode
 
-    # summary column names are already prefixed
     for col_name, stat in SUMMARY_COLS:
         sql, col_type = stat
-        create_cols += ['{0} {1}'.format(col_name, col_type)]
-        select_cols += [sql]
+        create_summary_cols += ['{0} {1}'.format(col_name, col_type)]
+        select_summary_cols += [sql.format(VRXSUMMARY)]
 
     for col_name, stats_pulled in ENTRIES_COLS:
         for stat_name, stat in stats_pulled:
             sql, col_type = stat
-            create_cols += ['{0}_{1} {2}'.format(col_name, stat_name, col_type)]
-            select_cols += [sql]
+            create_summary_cols += ['{0}_{1} {2}'.format(col_name, stat_name, col_type)]
+            select_summary_cols += [sql.format(VRXPENTRIES)]
 
     # same for intermediate and aggregate
-    table_cols_sql = ', '.join(create_cols)
-
+    SUMMARY_CREATE = 'CREATE TABLE {{0}}({0})'.format(', '.join(create_summary_cols))
     INTERMEDIATE = 'intermediate'
-    # ###############################################################
 
-    # ###############################################################
-    # treesummary
+    return (
+        INTERMEDIATE,
+        SUMMARY_CREATE.format(INTERMEDIATE),
+        SUMMARY_CREATE.format(SUMMARY),
+        select_summary_cols
+    )
+
+def treesummary():
     # copied from dbutils.h
-    TREESUMMARY_CREATE = 'CREATE TABLE {0} (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64);'.format
+    TREESUMMARY_CREATE = 'CREATE TABLE {0} (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64)'
 
-    INTERMEDIATE_TREESUMMARY = 'intermediate_treesummary'
-    # ###############################################################
+    INTERMEDIATE = 'intermediate_treesummary'
 
-    K = 'CREATE TABLE {0}({1}); {2};'.format(
-        SUMMARY, table_cols_sql, TREESUMMARY_CREATE(TREESUMMARY))
+    return (
+        INTERMEDIATE,
+        TREESUMMARY_CREATE.format(INTERMEDIATE),
+        TREESUMMARY_CREATE.format(TREESUMMARY)
+    )
+
+def run(argv):
+    timestamp = int(time.time())
+
+    args = parse_args(argv, timestamp)
+
+    log2_size_bucket_count = int(math.ceil(math.log(args.max_size, 2)))
+    log2_name_len_bucket_count = int(math.ceil(math.log(args.max_name_len, 2)))
+
+    sum_int, sum_create_int, sum_create_agg, sum_cols = summary(args.reftime,
+                                                                log2_size_bucket_count,
+                                                                log2_name_len_bucket_count)
+    ts_int, ts_create_int, ts_create_agg = treesummary()
+
+    K = '{0}; {1};'.format(sum_create_agg, ts_create_agg)
 
     if args.replace:
         K = 'DROP TABLE IF EXISTS {0}; DROP TABLE IF EXISTS {1}; {2}'.format(
@@ -284,15 +296,15 @@ def run(argv):
         '-n', str(args.threads),
         '-x',
         '-O', args.outname,
-        '-I', 'CREATE TABLE {0}({1}); {2};'.format(
-            INTERMEDIATE, table_cols_sql, TREESUMMARY_CREATE(INTERMEDIATE_TREESUMMARY)),
+        '-I', '{0}; {1};'.format(
+            sum_create_int, ts_create_int),
 
         # if TREESUMMARY tables are present in the index, this table
         # will likely have 1 more row than the snapshot table due to
         # pulling the row from the top-level db that should otherwise
         # be empty
         '-T', 'INSERT INTO {0} SELECT * FROM {1}; SELECT 1 FROM {1};'.format(
-            INTERMEDIATE_TREESUMMARY, TREESUMMARY),
+            ts_int, TREESUMMARY),
 
         # Have to left join here to keep at least 1 record if there are no entries
         #
@@ -301,16 +313,16 @@ def run(argv):
         # the root of a single index because the common parent of multiple indexes
         # should not have anything in the summary table.
         '-E', 'INSERT INTO {0} {1};'.format(
-            INTERMEDIATE, build_query(select_cols,
-                                      ['{0} LEFT JOIN {1} ON {0}.{2} == {1}.{3}'.format(
-                                          VRXSUMMARY, VRXPENTRIES, INODE, PINODE)],
-                                      None,
-                                      ['{0}.{1}'.format(VRXSUMMARY, INODE)])),
+            sum_int, build_query(sum_cols,
+                                 ['{0} LEFT JOIN {1} ON {0}.{2} == {1}.{3}'.format(
+                                     VRXSUMMARY, VRXPENTRIES, INODE, PINODE)],
+                                 None,
+                                 ['{0}.{1}'.format(VRXSUMMARY, INODE)])),
 
         '-K', K,
 
         '-J', 'INSERT INTO {0} SELECT * FROM {1}; INSERT INTO {2} SELECT * FROM {3};'.format(
-            SUMMARY, INTERMEDIATE, TREESUMMARY, INTERMEDIATE_TREESUMMARY),
+            SUMMARY, sum_int, TREESUMMARY, ts_int),
 
         '-G', G,
     ]
