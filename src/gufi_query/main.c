@@ -333,23 +333,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamps_init(&ts, &pa->start_time);
     #endif
 
-    /* lstat first to not affect atime and mtime */
-    thread_timestamp_start(ts.tts, lstat_call);
-    struct stat st;
-    if (lstat(gqw->work.name, &st) != 0) {
-        const int err = errno;
-
-        char buf[MAXPATH];
-        present_user_path(gqw->work.name, gqw->work.name_len,
-                          &gqw->work.root_parent, gqw->work.root_basename_len, &gqw->work.orig_root,
-                          buf, sizeof(buf));
-
-        fprintf(stderr, "Could not stat directory \"%s\": %s (%d)\n",
-                buf, strerror(err), err);
-        goto out_free;
-    }
-    thread_timestamp_end(lstat_call);
-
     /* keep opendir near opendb to help speed up sqlite3_open_v2 */
     thread_timestamp_start(ts.tts, opendir_call);
     dir = opendir(gqw->work.name);
@@ -892,7 +875,6 @@ int main(int argc, char *argv[])
     print_stats("set up globals:                             %.2Lfs", "%Lf", sec(setup_globals_time));
     print_stats("set up intermediate databases:              %.2Lfs", "%Lf", sec(setup_aggregate_time));
     print_stats("thread pool:                                %.2Lfs", "%Lf", sec(work_time));
-    print_stats("    lstat:                                  %.2Lfs", "%Lf", sec(tt->lstat));
     print_stats("    open directories:                       %.2Lfs", "%Lf", sec(tt->opendir));
     print_stats("    attach index:                           %.2Lfs", "%Lf", sec(tt->attachdb));
     print_stats("    xattrprep:                              %.2Lfs", "%Lf", sec(tt->xattrprep));

@@ -74,7 +74,7 @@ void total_time_init(total_time_t *tt) {
 }
 
 uint64_t total_time_sum(total_time_t *tt) {
-    return (tt->lstat + tt->opendir + tt->lstat_db +
+    return (tt->opendir + tt->lstat_db +
             tt->attachdb + tt->addqueryfuncs +
             tt->xattrprep + tt->get_rollupscore +
             tt->sqltsumcheck + tt->sqltsum + tt->descend +
@@ -120,7 +120,6 @@ static void print_descend(struct OutputBuffers *obufs, const size_t id,
 void timestamps_print(struct OutputBuffers *obs, const size_t id,
                       timestamps_t *ts, void *dir, void *db) {
     thread_timestamp_start(ts->tts, output_timestamps);
-    print_timer          (obs, id, "lstat",              &ts->tts[tts_lstat_call]);
     print_timer          (obs, id, "opendir",            &ts->tts[tts_opendir_call]);
     if (dir) {
         print_timer      (obs, id, "lstat_db",           &ts->tts[tts_lstat_db_call]);
@@ -175,7 +174,6 @@ static uint64_t nsec_descend(sll_t *sll) {
 
 void timestamps_sum(total_time_t *tt, timestamps_t *ts) {
     pthread_mutex_lock(&tt->mutex);
-    tt->lstat             += nsec(&ts->tts[tts_lstat_call]);
     tt->opendir           += nsec(&ts->tts[tts_opendir_call]);
     tt->lstat_db          += nsec(&ts->tts[tts_lstat_db_call]);
     tt->attachdb          += nsec(&ts->tts[tts_attachdb_call]);
