@@ -628,8 +628,7 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
             return 1;
         }
 
-        /* copy the template file */
-        if (copy_template(ca->xattr, xattr_db_name, uid, gid)) {
+        if (template_to_file(ca->xattr, xattr_db_name, uid, gid) != 0) {
             return 1;
         }
     }

@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "flush_queue.h"
 #include "template_db.h"
 #include "trie.h"
 #include "utils.h"
@@ -85,6 +86,8 @@ struct PoolArgs {
     trie_t *skip;
     struct template_db db;
     struct template_db xattr;
+
+    sll_t *unflushed; /* per-thread lists of unflushed_db_t */
 
     uint64_t *total_files;
 };
@@ -116,6 +119,13 @@ struct NonDirArgs {
     /* list of xattr dbs */
     sll_t xattr_db_list;
 };
+
+static int flush_dbs(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+    (void) ctx;
+
+    struct PoolArgs *pa = (struct PoolArgs *) args;
+    return enqueue_and_flush(pa->unflushed, id, data);
+}
 
 static int process_nondir(struct work *entry, struct entry_data *ed, void *args) {
     struct NonDirArgs *nda = (struct NonDirArgs *) args;
@@ -208,14 +218,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
-    /* create the database name */
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 3,
-               nda.topath, nda.topath_len,
-               "/", (size_t) 1,
-               DBNAME, DBNAME_LEN);
-
-    nda.db = template_to_db(nda.temp_db, dbname, nda.ed.statuso.st_uid, nda.ed.statuso.st_gid);
+    nda.db = template_to_mem_db(nda.temp_db);
     if (!nda.db) {
         rc = 1;
         goto cleanup;
@@ -268,6 +271,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     if (in->external_enabled) {
         xattrs_cleanup(&nda.ed.xattrs);
     }
+
+    unflushed_db_t *udb = unflushed_db_init(nda.topath, nda.topath_len,
+                                            nda.ed.statuso.st_uid, nda.ed.statuso.st_gid,
+                                            nda.db);
+
+    QPTPool_enqueue(ctx, id, flush_dbs, udb);
 
     closedb(nda.db);
     nda.db = NULL;
@@ -409,6 +418,8 @@ int main(int argc, char *argv[]) {
         goto free_db;
     }
 
+    pa.unflushed = flush_queue_init(pa.in.maxthreads);
+
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct work) / pa.in.maxthreads;
     QPTPool_t *pool = QPTPool_init_with_props(pa.in.maxthreads, &pa, NULL, NULL, queue_depth, 1, 2
                                               #if defined(DEBUG) && defined(PER_THREAD_STATS)
@@ -418,6 +429,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
+        flush_queue_destroy(pa.unflushed, pa.in.maxthreads, NULL);
         rc = EXIT_FAILURE;
         goto free_xattr;
     }
@@ -460,12 +472,14 @@ int main(int argc, char *argv[]) {
 
     QPTPool_wait(pool);
 
+    flush_queue_destroy(pa.unflushed, pa.in.maxthreads, flush_db);
+
     clock_gettime(CLOCK_MONOTONIC, &after_init.end);
     const long double processtime = sec(nsec(&after_init));
 
     /* don't count as part of processtime */
 
-    const uint64_t thread_count = QPTPool_threads_completed(pool);
+    const uint64_t thread_count = QPTPool_threads_completed(pool) / 2;
 
     QPTPool_destroy(pool);
 

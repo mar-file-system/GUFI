@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "debug.h"
 #include "dbutils.h"
+#include "flush_queue.h"
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
@@ -105,7 +106,15 @@ struct PoolArgs {
     struct input in;
     struct template_db db;
     struct template_db xattr;
+    sll_t *unflushed; /* per-thread lists of unflushed_db_t */
 };
+
+static int flush_dbs(QPTPool_t *ctx, const size_t id, void *data, void *args) {
+    (void) ctx;
+
+    struct PoolArgs *pa = (struct PoolArgs *) args;
+    return enqueue_and_flush(pa->unflushed, id, data);
+}
 
 /* Data stored during first pass of input file */
 struct row {
@@ -235,14 +244,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_set_end(dupdir);
 
     timestamp_create_start(template_to_db);
-
-    /* create the database name */
-    char dbname[MAXPATH];
-    SNFORMAT_S(dbname, MAXPATH, 2,
-               topath, topath_len,
-               "/" DBNAME, (size_t) (DBNAME_LEN + 1));
-
-    sqlite3 *db = template_to_db(&pa->db, dbname, ed.statuso.st_uid, ed.statuso.st_gid);
+    sqlite3 *db = template_to_mem_db(&pa->db);
     timestamp_set_end(template_to_db);
 
     if (db) {
@@ -383,6 +385,13 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         timestamp_set_end(insertsumdb);
 
         timestamp_create_start(closedb);
+
+        unflushed_db_t *udb = unflushed_db_init(topath, topath_len,
+                                                ed.statuso.st_uid, ed.statuso.st_gid,
+                                                db);
+
+        QPTPool_enqueue(ctx, id, flush_dbs, udb);
+
         closedb(db); /* don't set to nullptr */
         timestamp_set_end(closedb);
 
@@ -688,6 +697,8 @@ int main(int argc, char *argv[]) {
         goto free_db;
     }
 
+    pa.unflushed = flush_queue_init(pa.in.maxthreads);
+
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     OutputBuffers_init(&debug_output_buffers, pa.in.maxthreads, 1073741824ULL, &print_mutex);
     #endif
@@ -701,6 +712,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
+        flush_queue_destroy(pa.unflushed, pa.in.maxthreads, NULL);
         rc = -1;
         goto free_xattr;
     }
@@ -729,6 +741,8 @@ int main(int argc, char *argv[]) {
     }
 
     QPTPool_wait(pool);
+
+    flush_queue_destroy(pa.unflushed, pa.in.maxthreads, flush_db);
 
     clock_gettime(CLOCK_MONOTONIC, &main_func.end);
     const long double processtime = sec(nsec(&main_func));

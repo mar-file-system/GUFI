@@ -63,71 +63,69 @@ OF SUCH DAMAGE.
 
 
 #include <stdlib.h>
-#include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
-#include <gtest/gtest.h>
-
+#include "bf.h"
 #include "dbutils.h"
-#include "template_db.h"
+#include "flush_queue.h"
 
-#define TABLE_NAME "test_table"
-#define TABLE_CREATE "CREATE TABLE " TABLE_NAME "(A INT, B TEXT);"
+const size_t UNFLUSHED_LIMIT = 100; /* magic number */
 
-static int sql_callback(void *args, int, char **data, char **) {
-    std::string **cols = (std::string **) args;
-    **cols = data[1];
-    (*cols)++;
-    return 0;
+unflushed_db_t *unflushed_db_init(const char *topath, const size_t topath_len,
+                                  uid_t uid, gid_t gid, sqlite3 *db) {
+    unflushed_db_t *udb = malloc(sizeof(*udb));
+    udb->path = malloc(topath_len + 1);
+    udb->path_len = SNFORMAT_S(udb->path, topath_len + 1, 1,
+                               topath, topath_len);
+    udb->uid = uid;
+    udb->gid = gid;
+    udb->db.buf = sqlite3_serialize(db, "main", &udb->db.size, 0);
+    return udb;
 }
 
-static int create_test_tables(const char *name, sqlite3 *db, void *args) {
-    (void) args;
+sll_t *flush_queue_init(const size_t threads) {
+    sll_t *udbs = malloc(threads * sizeof(*udbs));
+    for(size_t i = 0; i < threads; i++) {
+        sll_init(&udbs[i]);
+    }
+    return udbs;
+}
 
-    if (create_table_wrapper(name, db, TABLE_NAME, TABLE_CREATE) != SQLITE_OK) {
-        return -1;
+/* sll destructor function */
+void flush_db(void *ptr) {
+    if (!ptr) {
+        return;
+    }
+
+    unflushed_db_t *udb = (unflushed_db_t *) ptr;
+    char dbname[MAXPATH];
+    SNFORMAT_S(dbname, sizeof(dbname), 3,
+               udb->path, udb->path_len,
+               "/", (size_t) 1,
+               DBNAME, DBNAME_LEN);
+
+    write_db_file(udb->db.buf, udb->db.size, dbname, udb->uid, udb->gid);
+    sqlite3_free(udb->db.buf);
+    free(udb->path);
+    free(udb);
+}
+
+int enqueue_and_flush(sll_t *udbs, const size_t id, unflushed_db_t *udb) {
+    if (udb) {
+        sll_push(&udbs[id], udb);
+    }
+
+    if (sll_get_size(&udbs[id]) >= UNFLUSHED_LIMIT) {
+        sll_destroy(&udbs[id], flush_db);
+        /* no need to init */
     }
 
     return 0;
 }
 
-TEST(template_db, create_copy) {
-    struct template_db tdb;
-    ASSERT_EQ(init_template_db(&tdb), 0);
+void flush_queue_destroy(sll_t *udbs, const size_t threads, void (*cleanup)(void *)) {
+    for(size_t i = 0; i < threads; i++) {
+        sll_destroy(&udbs[i], cleanup);
+    }
 
-    ASSERT_EQ(create_template(&tdb, create_test_tables), 0);
-    EXPECT_NE(tdb.buf,  nullptr);
-    EXPECT_GT(tdb.size, 0);
-
-    sqlite3 *db = template_to_mem_db(&tdb);
-    EXPECT_NE(db, nullptr);
-
-    // make sure the columns are correct
-    std::string cols[2];
-    std::string *ptr = cols;
-    EXPECT_EQ(sqlite3_exec(db, "PRAGMA TABLE_INFO(" TABLE_NAME ");",
-                           sql_callback, &ptr, nullptr),
-              SQLITE_OK);
-    EXPECT_EQ(cols[0], "A");
-    EXPECT_EQ(cols[1], "B");
-
-    closedb(db);
-    ASSERT_EQ(close_template_db(&tdb), 0);
-}
-
-TEST(create_empty_dbdb, path_is_file) {
-    char filename[] = "XXXXXX" ;
-    const int fd = mkstemp(filename);
-    ASSERT_GT(fd, -1);
-    EXPECT_EQ(close(fd), 0);
-
-    refstr_t dst;
-    dst.data = filename;
-    dst.len  = strlen(filename);
-
-    // attempt to create file under file
-    EXPECT_EQ(create_empty_dbdb(nullptr, &dst, -1, -1), -1);
-    EXPECT_EQ(remove(filename), 0);
+    free(udbs);
 }

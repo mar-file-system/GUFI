@@ -78,8 +78,8 @@ OF SUCH DAMAGE.
 int init_template_db(struct template_db *tdb) {
     /* Not checking argument */
 
-    tdb->fd = -1;
-    tdb->size = -1;
+    tdb->buf = NULL;
+    tdb->size = 0;
     return 0;
 }
 
@@ -112,94 +112,67 @@ int create_dbdb_tables(const char *name, sqlite3 *db, void *args) {
 int close_template_db(struct template_db *tdb) {
     /* Not checking argument */
 
-    close(tdb->fd);
+    sqlite3_free(tdb->buf);
     return init_template_db(tdb);
 }
 
 /* create the database file to copy from */
-int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
-                    const char *name) {
-    if (!tdb || (tdb->fd != -1) ||
-        !create_tables || !name) {
-        return -1;
-    }
+int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *)) {
+    /* Not checking arguments */
 
-    sqlite3 *db = opendb(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0, create_tables, NULL);
-
-    /*
-     * open before sqlite3_close to prevent potential race
-     * condition where file is deleted before being reopened
-     */
-    tdb->fd = open(name, O_RDONLY);
-
+    sqlite3 *db = opendb(":memory:", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0, 0, create_tables, NULL);
+    tdb->buf = sqlite3_serialize(db, "main", &tdb->size, 0);
     sqlite3_close(db);
 
-    /* no need for the file to remain on the filesystem */
-    remove(name);
-
-    if (tdb->fd == -1) {
-        fprintf(stderr, "Could not open template file '%s'\n", name);
-        return -1;
-    }
-
-    tdb->size = lseek(tdb->fd, 0, SEEK_END);
-    return !tdb->size;
+    return -!tdb->buf;
 }
 
 /* create the initial xattrs database file to copy from */
 int create_xattrs_template(struct template_db *tdb) {
-    static const char name[] = "xattrs_tmp.db";
-    return create_template(tdb, create_xattr_tables, name);
+    return create_template(tdb, create_xattr_tables);
 }
 
 /* create the initial main database file to copy from */
 int create_dbdb_template(struct template_db *tdb) {
-    static const char name[] = "tmp.db";
-    return create_template(tdb, create_dbdb_tables, name);
+    return create_template(tdb, create_dbdb_tables);
 }
 
-/* copy the template file instead of creating a new database and new tables for each work item */
-/* the ownership and permissions are set too */
-int copy_template(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
-    /* Not checking arguments */
+sqlite3 *template_to_mem_db(struct template_db *tdb) {
+    /* create in-memory db for overwriting */
+    sqlite3 *db = opendb(":memory:", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0, NULL, NULL);
 
-    int err = 0;
-    const int src_db = dup(tdb->fd);
-    err = err?err:errno;
-    const int dst_db = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-    err = err?err:errno;
-    const ssize_t sf = copyfd(src_db, 0, dst_db, 0, tdb->size);
-    err = err?err:errno;
-    fchown(dst_db, uid, gid);
-    err = err?err:errno;
-    close(src_db);
-    err = err?err:errno;
-    close(dst_db);
-    err = err?err:errno;
+    /* copy the template to a new buffer */
+    unsigned char *serialized = sqlite3_malloc64(tdb->size);
+    memcpy(serialized, tdb->buf, tdb->size);
 
-    if (sf == -1) {
-        fprintf(stderr, "Could not copy template file (%d) to %s (%d): %s (%d)\n",
-                src_db, dst, dst_db, strerror(err), err);
-        remove(dst);
-        return -1;
-    }
-
-    return 0;
-}
-
-sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid) {
-    if (copy_template(tdb, dst, uid, gid)) {
+    /* takes ownership of serialized */
+    if (sqlite3_deserialize(db, "main", serialized, tdb->size, tdb->size,
+                            SQLITE_DESERIALIZE_RESIZEABLE | SQLITE_DESERIALIZE_FREEONCLOSE) != SQLITE_OK) {
+        sqlite3_free(serialized);
         return NULL;
     }
 
-    return opendb(dst, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 1, 0, NULL, NULL);
+    return db;
 }
 
-/* create db.db with empty tables at the given directory (and leave it on the filesystem) */
-int create_empty_dbdb(struct template_db *tdb, refstr_t *dst, uid_t uid, gid_t gid) {
+/* wrapper for template_to_mem_db + mem_db_to_file */
+int template_to_file(struct template_db *tdb, char *dst, uid_t uid, gid_t gid) {
+    sqlite3 *db = template_to_mem_db(tdb);
+    if (!db) {
+        return -1;
+    }
+
+    const int rc = mem_db_to_file(db, dst, uid, gid);
+    closedb(db);
+    return rc;
+}
+
+int create_empty_dbdb(struct template_db *tdb, refstr_t *path, uid_t uid, gid_t gid) {
+    /* Not checking arguments */
+
     char dbname[MAXPATH];
     SNFORMAT_S(dbname, sizeof(dbname), 3,
-               dst->data, dst->len,
+               path->data, path->len,
                "/", (size_t) 1,
                DBNAME, DBNAME_LEN);
 
@@ -214,9 +187,9 @@ int create_empty_dbdb(struct template_db *tdb, refstr_t *dst, uid_t uid, gid_t g
     /* if the parent's database file is not found, create it */
     if (err != ENOENT) {
         fprintf(stderr, "Error: Empty db.db path '%s': %s (%d)\n",
-                dst->data, strerror(err), err);
+                dbname, strerror(err), err);
         return -1;
     }
 
-    return copy_template(tdb, dbname, uid, gid);
+    return template_to_file(tdb, dbname, uid, gid);
 }

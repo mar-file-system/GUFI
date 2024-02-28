@@ -75,13 +75,12 @@ extern "C" {
 #endif
 
 struct template_db {
-    int fd;
-    off_t size;
+    unsigned char *buf;
+    sqlite3_int64 size;
 };
 
 int init_template_db(struct template_db *tdb);
-int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *),
-                    const char *name);
+int create_template(struct template_db *tdb, int (*create_tables)(const char *, sqlite3 *, void *));
 
 int create_xattr_tables(const char *name, sqlite3 *db, void *args);
 int create_xattrs_template(struct template_db *tdb);
@@ -91,11 +90,11 @@ int create_dbdb_template(struct template_db *tdb);
 
 int close_template_db(struct template_db *tdb);
 
-int copy_template(struct template_db *tdb, const char * dst, uid_t uid, gid_t gid);
-sqlite3 *template_to_db(struct template_db *tdb, const char *dst, uid_t uid, gid_t gid);
+sqlite3 *template_to_mem_db(struct template_db *tdb);
 
-/* create db.db with empty tables at the given directory (and leave it on the filesystem) */
-int create_empty_dbdb(struct template_db *tdb, refstr_t *dst, uid_t uid, gid_t gid);
+/* wrapper for template_to_mem_db + mem_db_to_file */
+int template_to_file(struct template_db *tdb, char *dst, uid_t uid, gid_t gid);
+int create_empty_dbdb(struct template_db *tdb, refstr_t *path, uid_t uid, gid_t gid);
 
 #ifdef __cplusplus
 }

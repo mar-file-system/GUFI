@@ -62,72 +62,26 @@ OF SUCH DAMAGE.
 
 
 
-#include <stdlib.h>
-#include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#ifndef GUFI_FLUSH_QUEUE_H
+#define GUFI_FLUSH_QUEUE_H
 
-#include <gtest/gtest.h>
-
-#include "dbutils.h"
+#include "SinglyLinkedList.h"
 #include "template_db.h"
 
-#define TABLE_NAME "test_table"
-#define TABLE_CREATE "CREATE TABLE " TABLE_NAME "(A INT, B TEXT);"
+typedef struct unflushed_db {
+    char *path;
+    size_t path_len;
+    uid_t uid;
+    gid_t gid;
+    struct template_db db;
+} unflushed_db_t;
 
-static int sql_callback(void *args, int, char **data, char **) {
-    std::string **cols = (std::string **) args;
-    **cols = data[1];
-    (*cols)++;
-    return 0;
-}
+unflushed_db_t *unflushed_db_init(const char *topath, const size_t topath_len,
+                                  uid_t uid, gid_t gid, sqlite3 *db);
 
-static int create_test_tables(const char *name, sqlite3 *db, void *args) {
-    (void) args;
+sll_t *flush_queue_init(const size_t threads);
+void flush_db(void *ptr);
+int enqueue_and_flush(sll_t *udbs, const size_t id, unflushed_db_t *udb); /* call in QPTPool function */
+void flush_queue_destroy(sll_t *udbs, const size_t threads, void (*cleanup)(void *));
 
-    if (create_table_wrapper(name, db, TABLE_NAME, TABLE_CREATE) != SQLITE_OK) {
-        return -1;
-    }
-
-    return 0;
-}
-
-TEST(template_db, create_copy) {
-    struct template_db tdb;
-    ASSERT_EQ(init_template_db(&tdb), 0);
-
-    ASSERT_EQ(create_template(&tdb, create_test_tables), 0);
-    EXPECT_NE(tdb.buf,  nullptr);
-    EXPECT_GT(tdb.size, 0);
-
-    sqlite3 *db = template_to_mem_db(&tdb);
-    EXPECT_NE(db, nullptr);
-
-    // make sure the columns are correct
-    std::string cols[2];
-    std::string *ptr = cols;
-    EXPECT_EQ(sqlite3_exec(db, "PRAGMA TABLE_INFO(" TABLE_NAME ");",
-                           sql_callback, &ptr, nullptr),
-              SQLITE_OK);
-    EXPECT_EQ(cols[0], "A");
-    EXPECT_EQ(cols[1], "B");
-
-    closedb(db);
-    ASSERT_EQ(close_template_db(&tdb), 0);
-}
-
-TEST(create_empty_dbdb, path_is_file) {
-    char filename[] = "XXXXXX" ;
-    const int fd = mkstemp(filename);
-    ASSERT_GT(fd, -1);
-    EXPECT_EQ(close(fd), 0);
-
-    refstr_t dst;
-    dst.data = filename;
-    dst.len  = strlen(filename);
-
-    // attempt to create file under file
-    EXPECT_EQ(create_empty_dbdb(nullptr, &dst, -1, -1), -1);
-    EXPECT_EQ(remove(filename), 0);
-}
+#endif

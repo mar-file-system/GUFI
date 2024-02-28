@@ -194,6 +194,9 @@ struct xattr_db {
     char filename[MAXPATH];
     size_t filename_len;
 
+    char fullpath[MAXPATH];
+    size_t fullpath_len;
+
     char attach[MAXPATH];
     size_t attach_len;
 
@@ -231,6 +234,9 @@ enum CheckRollupScore {
 
 int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdirs,
                                  const enum CheckRollupScore check_rollupscore);
+
+int write_db_file(unsigned char *buf, sqlite3_int64 size, const char *dst, uid_t uid, gid_t gid);
+int mem_db_to_file(sqlite3 *db, const char *dst, uid_t uid, gid_t gid);
 
 #ifdef __cplusplus
 }

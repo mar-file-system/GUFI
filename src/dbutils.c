@@ -63,12 +63,15 @@ OF SUCH DAMAGE.
 
 
 #include <errno.h>
+#include <fcntl.h>
 #include <grp.h>
 #include <math.h>
 #include <pwd.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "pcre.h"
 
@@ -1327,11 +1330,10 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     }
 
     /* store full path here */
-    char filename[MAXPATH];
-    SNFORMAT_S(filename, MAXPATH, 3,
-               path, path_len,
-               "/", (size_t) 1,
-               xdb->filename, xdb->filename_len);
+    xdb->fullpath_len = SNFORMAT_S(xdb->fullpath, MAXPATH, 3,
+                                   path, path_len,
+                                   "/", (size_t) 1,
+                                   xdb->filename, xdb->filename_len);
 
     xdb->db  = NULL;
     xdb->res = NULL;
@@ -1340,17 +1342,7 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     xdb->st.st_gid = gid;
     xdb->st.st_mode = xattr_db_mode;
 
-    if (copy_template(tdb, filename, xdb->st.st_uid, xdb->st.st_gid) != 0) {
-        destroy_xattr_db(xdb);
-        return NULL;
-    }
-
-    if (chmod(filename, xdb->st.st_mode) != 0) {
-        const int err = errno;
-        fprintf(stderr, "Warning: Unable to set permissions for %s: %d\n", filename, err);
-    }
-
-    xdb->db = opendb(filename, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+    xdb->db = template_to_mem_db(tdb);
 
     if (!xdb->db) {
         destroy_xattr_db(xdb);
@@ -1366,6 +1358,7 @@ void destroy_xattr_db(void *ptr) {
 
     /* write out per-user/per-group xattrs */
     sqlite3_finalize(xdb->res);
+    mem_db_to_file(xdb->db, xdb->fullpath, xdb->st.st_uid, xdb->st.st_gid);
     closedb(xdb->db);
 
     /* add this xattr db to the list of dbs to open when creating view */
@@ -1563,4 +1556,56 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
     tsum.totsubdirs--;
 
     return inserttreesumdb(dirname, db, &tsum, 0, 0, 0);
+}
+
+int write_db_file(unsigned char *buf, sqlite3_int64 size, const char *dst, uid_t uid, gid_t gid) {
+    /* Not checking arguments */
+
+    int err = 0;
+
+    const int fd = open(dst, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    err = (fd < 0)?errno:0;
+
+    err = (!err && (ftruncate(fd, size) < 0))?errno:0;
+
+    size_t written = 0;
+    while (written < (size_t) size) {
+        const ssize_t w = pwrite(fd, buf + written, size - written, written);
+
+        if (w < 1) {
+            err = err?err:errno;
+            break;
+        }
+
+        written += w;
+    }
+
+    err = (!err && (fchown(fd, uid, gid) < 0))?errno:err;
+
+    err = (!err && (close(fd) < 0))?errno:err;
+
+    if (err) {
+        fprintf(stderr, "Could not copy template to %s (%d): %s (%d)\n",
+                dst, fd, strerror(err), err);
+        remove(dst);
+        return -1;
+    }
+
+    return 0;
+}
+
+int mem_db_to_file(sqlite3 *db, const char *dst, uid_t uid, gid_t gid) {
+    /* Not checking arguments */
+
+    sqlite3_int64 size = 0;
+    unsigned char *serialized = sqlite3_serialize(db, "main", &size, 0);
+    if (!serialized) {
+        return -1;
+    }
+
+    const int rc = write_db_file(serialized, size, dst, uid, gid);
+
+    sqlite3_free(serialized);
+
+    return rc;
 }
