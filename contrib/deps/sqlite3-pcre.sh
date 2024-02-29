@@ -73,11 +73,11 @@ set -e
 pcre_name="sqlite3-pcre"
 pcre_prefix="${INSTALL_DIR}/${pcre_name}"
 if [[ ! -d "${pcre_prefix}" ]]; then
-    pcre_build="${BUILD_DIR}/sqlite3-pcre-master"
+    pcre_build="${BUILD_DIR}/sqlite3-pcre-pcre2"
     if [[ ! -d "${pcre_build}" ]]; then
         pcre_tarball="${DOWNLOAD_DIR}/sqlite3-pcre.tar.gz"
         if [[ ! -f "${pcre_tarball}" ]]; then
-            wget https://github.com/mar-file-system/sqlite3-pcre/archive/master.tar.gz -O "${pcre_tarball}"
+            wget https://github.com/mar-file-system/sqlite3-pcre/archive/pcre2.tar.gz -O "${pcre_tarball}"
         fi
 
         tar -xf "${pcre_tarball}" -C "${BUILD_DIR}"

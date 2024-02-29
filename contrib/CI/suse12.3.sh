@@ -76,7 +76,7 @@ mkdir /run/systemd
 zypper --non-interactive --no-gpg-checks update
 
 # install libraries
-zypper --non-interactive install fuse-devel libattr-devel libuuid-devel pcre-devel zlib-devel
+zypper --non-interactive install fuse-devel libattr-devel libuuid-devel pcre2-devel zlib-devel
 
 # install extra packages
 zypper --non-interactive install autoconf binutils cmake libgcc_s1 patch pkg-config python3 python3-setuptools python3-xattr

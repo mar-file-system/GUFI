@@ -144,7 +144,7 @@ echo "Installing SQLite3"
 source "${SCRIPT_PATH}/sqlite3.sh" "${PATCH_SQLITE3_OPEN}"
 
 echo "Installing SQLite3 PCRE"
-source "${SCRIPT_PATH}/sqlite3_pcre.sh"
+source "${SCRIPT_PATH}/sqlite3-pcre.sh"
 
 if [[ "${JEMALLOC}" == "true" ]]; then
     echo "Installing jemalloc"

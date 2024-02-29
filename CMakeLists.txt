@@ -271,11 +271,9 @@ set(LIB "lib" CACHE PATH "Directory under \${CMAKE_INSTALL_PREFIX} to install bi
 # Need pthread
 find_package(Threads REQUIRED)
 
-# Need PCRE for linking only
-pkg_search_module(PCRE REQUIRED libpcre)
-# if (NOT EXISTS PCRE_STATIC_LIBS)
-#   message(FATAL_ERROR "Could not find static library files for libpcre.")
-# endif()
+# Need PCRE2 for linking only
+pkg_search_module(PCRE2 REQUIRED libpcre2-8)
+
 set(CPACK_RPM_PACKAGE_REQUIRES "${CPACK_RPM_PACKAGE_REQUIRES}")
 
 # Download and build all non-system dependencies
@@ -391,7 +389,7 @@ set(COMMON_LIBRARIES
   GUFI
   ${DEP_INSTALL_PREFIX}/sqlite3-pcre/libsqlite3-pcre.a
   ${DEP_INSTALL_PREFIX}/sqlite3/lib/libsqlite3.a
-  pcre
+  ${PCRE2_LDFLAGS}
   Threads::Threads
   m
 )
