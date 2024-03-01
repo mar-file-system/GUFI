@@ -204,8 +204,8 @@ def summary(reftime,
 
     NAME_COLS        = gen_str_cols('name',        log2_name_len_bucket_count)
     LINKNAME_COLS    = gen_str_cols('linkname',    log2_name_len_bucket_count)
-    XATTR_NAME_COLS  = gen_str_cols('xattr_name',  log2_name_len_bucket_count)
-    XATTR_VALUE_COLS = gen_str_cols('xattr_value', log2_name_len_bucket_count)
+    # XATTR_NAME_COLS  = gen_str_cols('xattr_name',  log2_name_len_bucket_count)
+    # XATTR_VALUE_COLS = gen_str_cols('xattr_value', log2_name_len_bucket_count)
 
     EXT_COLS = [
         # filenames without extensions pass in NULL
@@ -228,8 +228,8 @@ def summary(reftime,
         ['crtime',      CRTIME_COLS],
         ['name',        NAME_COLS],
         ['linkname',    LINKNAME_COLS],
-        ['xattr_name',  XATTR_NAME_COLS],
-        ['xattr_value', XATTR_VALUE_COLS],
+        # ['xattr_name',  XATTR_NAME_COLS],
+        # ['xattr_value', XATTR_VALUE_COLS],
         ['extensions',  EXT_COLS],
     ]
 
