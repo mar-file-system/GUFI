@@ -72,6 +72,26 @@ if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.versio
 else:
     from shlex import quote as sanitize # new in Python 3.3
 
+# sqlite3 types (not defined in standard sqlite3.py)
+# https://www.sqlite.org/datatype3.html
+# 2. Storage Classes and Datatypes
+SQLITE3_NULL    = 'NULL'
+SQLITE3_INTEGER = 'INTEGER'
+SQLITE3_REAL    = 'REAL'
+SQLITE3_TEXT    = 'TEXT'
+SQLITE3_BLOB    = 'BLOB'
+
+# 2.1. Boolean Datatype
+SQLITE3_FALSE   = 'FALSE'
+SQLITE3_TRUE    = 'TRUE'
+
+# others common types that are recognized
+SQLITE3_INT     = 'INT'
+SQLITE3_INT64   = 'INT64'
+SQLITE3_FLOAT   = 'FLOAT'
+SQLITE3_DOUBLE  = 'DOUBLE'
+
+# GUFI
 # table names
 ENTRIES     = 'entries'
 SUMMARY     = 'summary'
@@ -92,12 +112,17 @@ SUMMARY_NAMES = [
 ]
 
 ENTRIES_NAMES = [
-    'entries',
+    ENTRIES,
     PENTRIES,
     XPENTRIES,
     VRPENTRIES,
     VRXPENTRIES,
 ]
+
+# some common column names
+DEPTH  = 'depth'
+INODE  = 'inode'
+PINODE = 'pinode'
 
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)

@@ -69,20 +69,13 @@ import subprocess
 import time
 import sys
 
-from gufi_common import build_query, get_positive, print_query, ENTRIES, VRXPENTRIES, SUMMARY, VRXSUMMARY, TREESUMMARY
+from gufi_common import SQLITE3_NULL, SQLITE3_INT64, SQLITE3_DOUBLE, SQLITE3_TEXT
+from gufi_common import build_query, get_positive, print_query
+from gufi_common import ENTRIES, VRXPENTRIES, SUMMARY, VRXSUMMARY, TREESUMMARY
+from gufi_common import DEPTH, INODE
 
-METADATA       = 'metadata' # user data
-SNAPSHOT       = 'snapshot' # SUMMARY left joined with optional ENTRIES and TREESUMMARY data
-
-INODE          = 'inode'
-PINODE         = 'pinode'
-DEPTH          = 'depth'
-
-SQLITE3_NULL   = 'NULL'
-SQLITE3_INT64  = 'INT64'
-SQLITE3_DOUBLE = 'DOUBLE'
-SQLITE3_TEXT   = 'TEXT'
-SQLITE3_BLOB   = 'BLOB'
+METADATA = 'metadata' # user data
+SNAPSHOT = 'snapshot' # SUMMARY left joined with ENTRIES and optional TREESUMMARY data
 
 def parse_args(argv, now):
     parser = argparse.ArgumentParser(description='GUFI Longitudinal Snapshot Generator')
