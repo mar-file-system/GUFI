@@ -324,12 +324,25 @@ def gen_value_hist_col(col):
 def gen_time_cols(col, reftime):
     return [
         # min/max already captured by SUMMARY
-        ['mean',      ['AVG({0})'.format(col),                                SQLITE3_DOUBLE]],
-        ['median',    ['median({0})'.format(col),                             SQLITE3_DOUBLE]],
-        ['mode',      ['mode_count({0})'.format(col),                         SQLITE3_TEXT]],
-        ['stdev',     ['stdevp({0})'.format(col),                             SQLITE3_DOUBLE]],
-        ['age_hist',  ['time_hist({0}, {1})'.format(col, reftime),            SQLITE3_TEXT]],
+        ['mean',      ['AVG({0})'.format(col),                       SQLITE3_DOUBLE]],
+        ['median',    ['median({0})'.format(col),                    SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count({0})'.format(col),                SQLITE3_TEXT]],
+        ['stdev',     ['stdevp({0})'.format(col),                    SQLITE3_DOUBLE]],
+        ['age_hist',  ['time_hist({0}, {1})'.format(col, reftime),   SQLITE3_TEXT]],
         ['hour_hist', gen_value_hist_col('strftime(\'%H\', {0})'.format(col))],
+    ]
+
+def gen_f_time_cols():
+    # Satyanarayanan, Mahadev. "A study of file sizes and functional lifetimes."
+    # ACM SIGOPS Operating Systems Review 15.5 (1981): 96-108.
+    ftime = 'atime - mtime'
+    return [
+        ['min',       ['MIN({0})'.format(ftime),                     SQLITE3_INT64]],
+        ['max',       ['MAX({0})'.format(ftime),                     SQLITE3_INT64]],
+        ['mean',      ['AVG({0})'.format(ftime),                     SQLITE3_DOUBLE]],
+        ['median',    ['median({0})'.format(ftime),                  SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count({0})'.format(ftime),              SQLITE3_TEXT]],
+        ['stdev',     ['stdevp({0})'.format(ftime),                  SQLITE3_DOUBLE]],
     ]
 
 # used to generate columns for name, linkname, xattr_name, and xattr_value
@@ -431,6 +444,8 @@ def entries(reftime,                           # pylint: disable=too-many-locals
     CTIME_COLS       = gen_time_cols('ctime',                    reftime)
     CRTIME_COLS      = gen_time_cols('crtime',                   reftime)
 
+    FTIME_COLS       = gen_f_time_cols()
+
     NAME_COLS        = gen_str_cols('name_len',                  log2_name_len_bucket_count)
     LINKNAME_COLS    = gen_str_cols('linkname_len',              log2_name_len_bucket_count)
     # TODO: need to pull xattrs separately since there might be multiple pairs per entry # pylint: disable=fixme
@@ -452,6 +467,7 @@ def entries(reftime,                           # pylint: disable=too-many-locals
         ['atime',           ATIME_COLS],
         ['mtime',           MTIME_COLS],
         ['crtime',          CRTIME_COLS],
+        ['ftime',           FTIME_COLS],
         ['name_len',        NAME_COLS],
         ['linkname_len',    LINKNAME_COLS],
         # ['xattr_name_len',  XATTR_NAME_COLS],

@@ -119,6 +119,19 @@ def gen_time_cols(col, reftime):
         ['hour_hist', gen_value_hist_col('strftime(\'%H\', {{0}}.{0})'.format(col))],
     ]
 
+def gen_f_time_cols():
+    # Satyanarayanan, Mahadev. "A study of file sizes and functional lifetimes."
+    # ACM SIGOPS Operating Systems Review 15.5 (1981): 96-108.
+    ftime = '{0}.atime - {0}.mtime'
+    return [
+        ['min',       ['MIN({0})'.format(ftime),                                    SQLITE3_INT64]],
+        ['max',       ['MAX({0})'.format(ftime),                                    SQLITE3_INT64]],
+        ['mean',      ['AVG({0})'.format(ftime),                                    SQLITE3_DOUBLE]],
+        ['median',    ['median({0})'.format(ftime),                                 SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count({0})'.format(ftime),                             SQLITE3_TEXT]],
+        ['stdev',     ['stdevp({0})'.format(ftime),                                 SQLITE3_DOUBLE]],
+    ]
+
 # used to generate columns for name, linkname, xattr_name, and xattr_value
 def gen_str_cols(col, buckets):
     return [
@@ -202,6 +215,8 @@ def summary(reftime,
     CTIME_COLS       = gen_time_cols('ctime',      reftime)
     CRTIME_COLS      = gen_time_cols('crtime',     reftime)
 
+    FTIME_COLS       = gen_f_time_cols()
+
     NAME_COLS        = gen_str_cols('name',        log2_name_len_bucket_count)
     LINKNAME_COLS    = gen_str_cols('linkname',    log2_name_len_bucket_count)
     # XATTR_NAME_COLS  = gen_str_cols('xattr_name',  log2_name_len_bucket_count)
@@ -226,6 +241,7 @@ def summary(reftime,
         ['atime',       ATIME_COLS],
         ['mtime',       MTIME_COLS],
         ['crtime',      CRTIME_COLS],
+        ['ftime',       FTIME_COLS],
         ['name',        NAME_COLS],
         ['linkname',    LINKNAME_COLS],
         # ['xattr_name',  XATTR_NAME_COLS],
