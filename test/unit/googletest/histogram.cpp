@@ -400,6 +400,26 @@ static const std::string CATEGORIES[] = {
     "'once'",
 };
 
+static void check_combined(category_hist_t *hist) {
+    ASSERT_NE(hist, nullptr);
+    ASSERT_EQ(hist->count, (std::size_t) 5);
+
+    EXPECT_STREQ(hist->buckets[0].name, "3x");
+    EXPECT_EQ(hist->buckets[0].count, (std::size_t) 3 * 2);
+
+    EXPECT_STREQ(hist->buckets[1].name, "abcd");
+    EXPECT_EQ(hist->buckets[1].count, (std::size_t) 2 * 2);
+
+    EXPECT_STREQ(hist->buckets[2].name, "str");
+    EXPECT_EQ(hist->buckets[2].count, (std::size_t) 2 * 2);
+
+    EXPECT_STREQ(hist->buckets[3].name, "string");
+    EXPECT_EQ(hist->buckets[3].count, (std::size_t) 2 * 2);
+
+    EXPECT_STREQ(hist->buckets[4].name, "once");
+    EXPECT_EQ(hist->buckets[4].count, (std::size_t) 1);
+}
+
 TEST(histogram, category) {
     sqlite3 *db = nullptr;
     setup_db(&db);
@@ -517,7 +537,7 @@ TEST(histogram, category) {
         free(hist_str);
     }
 
-    // combine histograms
+    // combine histograms in C
     {
         char *with = nullptr;
         ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist(category, 1) FROM test;",
@@ -537,31 +557,36 @@ TEST(histogram, category) {
         ASSERT_NE(wo_hist, nullptr);
         ASSERT_EQ(wo_hist->count, (std::size_t) 4);
 
-        category_hist_t *sum = category_hist_combine(w_hist, wo_hist);
-        ASSERT_NE(sum, nullptr);
-        ASSERT_EQ(sum->count, (std::size_t) 5);
+        category_hist_t *c_sum = category_hist_combine(w_hist, wo_hist);
+        check_combined(c_sum);
 
-        EXPECT_STREQ(sum->buckets[0].name, "3x");
-        EXPECT_EQ(sum->buckets[0].count, (std::size_t) 3 * 2);
-
-        EXPECT_STREQ(sum->buckets[1].name, "abcd");
-        EXPECT_EQ(sum->buckets[1].count, (std::size_t) 2 * 2);
-
-        EXPECT_STREQ(sum->buckets[2].name, "str");
-        EXPECT_EQ(sum->buckets[2].count, (std::size_t) 2 * 2);
-
-        EXPECT_STREQ(sum->buckets[3].name, "string");
-        EXPECT_EQ(sum->buckets[3].count, (std::size_t) 2 * 2);
-
-        EXPECT_STREQ(sum->buckets[4].name, "once");
-        EXPECT_EQ(sum->buckets[4].count, (std::size_t) 1);
-
-        category_hist_free(sum);
+        category_hist_free(c_sum);
         category_hist_free(wo_hist);
         category_hist_free(w_hist);
 
         free(without);
         free(with);
+    }
+
+    // combine histograms in SQL
+    {
+        ASSERT_EQ(sqlite3_exec(db, "CREATE TABLE hists(str TEXT);",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists  SELECT category_hist(category, 1) FROM test;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+        ASSERT_EQ(sqlite3_exec(db, "INSERT INTO hists SELECT category_hist(category, 0) FROM test;",
+                               nullptr, nullptr, nullptr), SQLITE_OK);
+
+        char *combined_str = nullptr;
+        ASSERT_EQ(sqlite3_exec(db, "SELECT category_hist_combine(str) FROM hists;",
+                               get_str, &combined_str, nullptr), SQLITE_OK);
+
+        category_hist_t *sql_sum = category_hist_parse(combined_str);
+        check_combined(sql_sum);
+
+        category_hist_free(sql_sum);
+
+        free(combined_str);
     }
 
     sqlite3_close(db);
