@@ -145,8 +145,59 @@ def gen_str_cols(col, buckets):
     ]
 
 def treesummary():
-    # copied from dbutils.h
-    TREESUMMARY_CREATE = 'CREATE TABLE {0} (inode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, depth INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, rectype INT64, uid INT64, gid INT64)'
+    COLS = [
+        ['inode',          SQLITE3_TEXT],
+        ['totsubdirs',     SQLITE3_INT64],
+        ['maxsubdirfiles', SQLITE3_INT64],
+        ['maxsubdirlinks', SQLITE3_INT64],
+        ['maxsubdirsize',  SQLITE3_INT64],
+        ['totfiles',       SQLITE3_INT64],
+        ['totlinks',       SQLITE3_INT64],
+        ['minuid',         SQLITE3_INT64],
+        ['maxuid',         SQLITE3_INT64],
+        ['mingid',         SQLITE3_INT64],
+        ['maxgid',         SQLITE3_INT64],
+        ['minsize',        SQLITE3_INT64],
+        ['maxsize',        SQLITE3_INT64],
+        ['totzero',        SQLITE3_INT64],
+        ['totltk',         SQLITE3_INT64],
+        ['totmtk',         SQLITE3_INT64],
+        ['totltm',         SQLITE3_INT64],
+        ['totmtm',         SQLITE3_INT64],
+        ['totmtg',         SQLITE3_INT64],
+        ['totmtt',         SQLITE3_INT64],
+        ['totsize',        SQLITE3_INT64],
+        ['minctime',       SQLITE3_INT64],
+        ['maxctime',       SQLITE3_INT64],
+        ['minmtime',       SQLITE3_INT64],
+        ['maxmtime',       SQLITE3_INT64],
+        ['minatime',       SQLITE3_INT64],
+        ['maxatime',       SQLITE3_INT64],
+        ['minblocks',      SQLITE3_INT64],
+        ['maxblocks',      SQLITE3_INT64],
+        ['totxattr',       SQLITE3_INT64],
+        ['depth',          SQLITE3_INT64],
+        ['mincrtime',      SQLITE3_INT64],
+        ['maxcrtime',      SQLITE3_INT64],
+        ['minossint1',     SQLITE3_INT64],
+        ['maxossint1',     SQLITE3_INT64],
+        ['totossint1',     SQLITE3_INT64],
+        ['minossint2',     SQLITE3_INT64],
+        ['maxossint2',     SQLITE3_INT64],
+        ['totossint2',     SQLITE3_INT64],
+        ['minossint3',     SQLITE3_INT64],
+        ['maxossint3',     SQLITE3_INT64],
+        ['totossint3',     SQLITE3_INT64],
+        ['minossint4',     SQLITE3_INT64],
+        ['maxossint4',     SQLITE3_INT64],
+        ['totossint4',     SQLITE3_INT64],
+        ['rectype',        SQLITE3_INT64],
+        ['uid',            SQLITE3_INT64],
+        ['gid',            SQLITE3_INT64],
+    ]
+
+    TREESUMMARY_CREATE = 'CREATE TABLE {{0}} ({0})'.format(', '.join(['{0} {1}'.format(col_name, col_type)
+                                                                      for col_name, col_type in COLS]))
 
     INTERMEDIATE = 'intermediate_treesummary'
 
@@ -154,6 +205,9 @@ def treesummary():
         INTERMEDIATE,
         TREESUMMARY_CREATE.format(INTERMEDIATE),
         TREESUMMARY_CREATE.format(TREESUMMARY),
+        build_query(['{0} AS ts_{0}'.format(col_name) # rename oolumns for view
+                     for col_name, _ in COLS],
+                    [TREESUMMARY])
     )
 
 # pylint: disable=too-many-locals
@@ -172,7 +226,8 @@ def summary(reftime,
         ['atime',           ['{0}.atime',                            SQLITE3_INT64]],
         ['mtime',           ['{0}.mtime',                            SQLITE3_INT64]],
         ['ctime',           ['{0}.ctime',                            SQLITE3_INT64]],
-        ['depth',           ['level()',                              SQLITE3_INT64]],
+        ['depth',           ['level() + LENGTH({0}.name) - LENGTH(REPLACE({0}.name, \'/\', \'\'))',
+                                                                     SQLITE3_INT64]],
         ['filesystem_type', [SQLITE3_NULL,                           SQLITE3_BLOB]],
         [PINODE,            ['{{0}}.{0}'.format(PINODE),             SQLITE3_TEXT]],
         ['totfiles',        ['{0}.totfiles',                         SQLITE3_INT64]],
@@ -287,7 +342,7 @@ def run(argv):
 
     # ############################################################################
     # get SQL strings for constructing command
-    ts_int, ts_I, ts_K = treesummary()
+    ts_int, ts_I, ts_K, ts_G = treesummary()
     sum_int, sum_I, sum_K, sum_cols = summary(args.reftime,
                                               log2_size_bucket_count,
                                               log2_name_len_bucket_count)
@@ -296,7 +351,7 @@ def run(argv):
     # construct full command to run
 
     # ############################################################################
-    I = '{0}; {1};'.format(sum_I, ts_I)
+    I = '{0}; {1};'.format(ts_I, sum_I)
     # ############################################################################
 
     # ############################################################################
@@ -346,9 +401,9 @@ def run(argv):
         AS
           SELECT *
           FROM   {2}
-                 LEFT JOIN {3}
-                        ON {2}.{1} == {3}.{1};
-        '''.format(SNAPSHOT, INODE, SUMMARY, TREESUMMARY)
+                 LEFT JOIN ({3}) AS ts
+                        ON {2}.{1} == ts.ts_{1};
+        '''.format(SNAPSHOT, INODE, SUMMARY, ts_G)
 
     if args.replace:
         G = 'DROP VIEW IF EXISTS {0}; {1}'.format(SNAPSHOT, G)
