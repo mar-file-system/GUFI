@@ -113,7 +113,7 @@ do_tests() {
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT notes FROM metadata;\""
 
-    run_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT depth, totfiles, totsize, ts_totsize, totlinks, ts_totlinks FROM snapshot;\""
+    run_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT depth, totsize, ts_totsize, totdirs, totsubdirs, totfiles, ts_totfiles, totlinks, ts_totlinks FROM snapshot;\""
 }
 
 do_tests "run_no_sort \"${GUFI_TREESUMMARY_ALL} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"

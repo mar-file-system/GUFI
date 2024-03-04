@@ -110,6 +110,55 @@ def create_table(name, cols, temp):
         ', '.join(cols)
     )
 
+def gen_minmax_cols(col):
+    return [
+        ['min',       ['MIN({0})'.format(col),                       SQLITE3_INT64]],
+        ['max',       ['MAX({0})'.format(col),                       SQLITE3_INT64]],
+    ]
+
+def gen_avg_cols(col):
+    return [
+        ['mean',      ['AVG({0})'.format(col),                       SQLITE3_DOUBLE]],
+        ['median',    ['median({0})'.format(col),                    SQLITE3_DOUBLE]],
+        ['mode',      ['mode_count({0})'.format(col),                SQLITE3_TEXT]],
+    ]
+
+def gen_stdev_col(col):
+    return [
+        ['stdev',     ['stdevp({0})'.format(col),                    SQLITE3_DOUBLE]],
+    ]
+
+def gen_stat_cols(col):
+    return gen_minmax_cols(col) + gen_avg_cols(col) + gen_stdev_col(col)
+
+def gen_log2_hist_col(col, buckets):
+    return [
+        ['hist',   ['log2_hist({0}, {1})'.format(col, buckets),      SQLITE3_TEXT]],
+    ]
+
+def gen_value_hist_col(col):
+    return ['category_hist(CAST({0} AS TEXT), 1)'.format(col),       SQLITE3_TEXT]
+
+# used to generate timestamp columns
+def gen_time_cols(col, reftime):
+    # min/max already captured by SUMMARY
+    return gen_avg_cols(col) + gen_stdev_col(col) + [
+        ['age_hist',  ['time_hist({0}, {1})'.format(col, reftime),   SQLITE3_TEXT]],
+        ['hour_hist', gen_value_hist_col('strftime(\'%H\', {0})'.format(col))],
+    ]
+
+def gen_ftime_cols():
+    # Satyanarayanan, Mahadev. "A study of file sizes and functional lifetimes."
+    # ACM SIGOPS Operating Systems Review 15.5 (1981): 96-108.
+    ftime = 'atime - mtime'
+    return gen_stat_cols(ftime)
+
+# used to generate columns for name, linkname, xattr_name, and xattr_value
+def gen_str_cols(col, buckets):
+    return gen_stat_cols(col) + [
+        ['hist',      ['log2_hist({0}, {1})'.format(col, buckets),   SQLITE3_TEXT]],
+    ]
+
 def agg(col):
     TOT = 'tot'
     MIN = 'min'
@@ -177,22 +226,18 @@ def treesummary():
         # ['gid',                SQLITE3_INT64],
     ]
 
-    # -I
     I = [
         '{0} {1}'.format(DEPTH, SQLITE3_INT64),
     ]
 
-    # -T
     T = [
         'level()',
     ]
 
-    # -K
     K = [
         '{0} {1}'.format(DEPTH, SQLITE3_INT64),
     ]
 
-    # -J and -G
     JG = [
         DEPTH,
     ]
@@ -240,10 +285,41 @@ def treesummary():
         build_query(V, [TREESUMMARY])
     )
 
-def summary():
-    COLS = [
-        # not keeping stats of directory itself
+def summary(reftime,                           # pylint: disable=too-many-locals
+            log2_size_bucket_count,
+            log2_name_len_bucket_count):
+    DIR_COLS = [
+        ['name_len',       ['LENGTH(name)',                     SQLITE3_INT64,
+                            lambda col : gen_str_cols(col, log2_name_len_bucket_count)]],
+        ['mode',           ['mode',                             SQLITE3_INT64,
+                            lambda col : [['hist', ['mode_hist({0})'.format(col), SQLITE3_TEXT]]]]],
+        ['nlink',          ['nlink',                            SQLITE3_INT64,
+                            gen_stat_cols]],
+        ['uid',            ['uid',                              SQLITE3_INT64,
+                            gen_minmax_cols]],
+        ['gid',            ['gid',                              SQLITE3_INT64,
+                            gen_minmax_cols]],
+        ['size',           ['size',                             SQLITE3_INT64,
+                            lambda col : gen_stat_cols(col) + gen_log2_hist_col(col, log2_size_bucket_count)]],
+        ['blksize',        ['blksize',                          SQLITE3_INT64,
+                            lambda col : gen_stat_cols(col) + gen_log2_hist_col(col, log2_size_bucket_count)]],
+        ['blocks',         ['blocks',                           SQLITE3_INT64,
+                            lambda col : gen_stat_cols(col) + gen_log2_hist_col(col, log2_size_bucket_count)]],
+        ['atime',          ['atime',                            SQLITE3_INT64,
+                            lambda col : gen_minmax_cols(col) + gen_time_cols(col, reftime)]],
+        ['mtime',          ['mtime',                            SQLITE3_INT64,
+                            lambda col : gen_minmax_cols(col) + gen_time_cols(col, reftime)]],
+        ['ctime',          ['ctime',                            SQLITE3_INT64,
+                            lambda col : gen_minmax_cols(col) + gen_time_cols(col, reftime)]],
+    ]
+
+    SUM_COLS = [
+        ['totdirs',        ['1',                                SQLITE3_INT64]],
+        ['minfiles',       ['totfiles',                         SQLITE3_INT64]],
+        ['maxfiles',       ['totfiles',                         SQLITE3_INT64]],
         ['totfiles',       ['totfiles',                         SQLITE3_INT64]],
+        ['minlinks',       ['totlinks',                         SQLITE3_INT64]],
+        ['maxlinks',       ['totlinks',                         SQLITE3_INT64]],
         ['totlinks',       ['totlinks',                         SQLITE3_INT64]],
         ['totsubdirs',     ['subdirs(srollsubdirs, sroll)',     SQLITE3_INT64]],
         ['minuid',         ['minuid',                           SQLITE3_INT64]],
@@ -253,6 +329,13 @@ def summary():
         ['minsize',        ['minsize',                          SQLITE3_INT64]],
         ['maxsize',        ['maxsize',                          SQLITE3_INT64]],
         ['totsize',        ['totsize',                          SQLITE3_INT64]],
+        ['totzero',        ['totzero',                          SQLITE3_INT64]],
+        ['totltk',         ['totltk',                           SQLITE3_INT64]],
+        ['totmtk',         ['totmtk',                           SQLITE3_INT64]],
+        ['totltm',         ['totltm',                           SQLITE3_INT64]],
+        ['totmtm',         ['totmtm',                           SQLITE3_INT64]],
+        ['totmtg',         ['totmtg',                           SQLITE3_INT64]],
+        ['totmtt',         ['totmtt',                           SQLITE3_INT64]],
         ['minossint1',     ['minossint1',                       SQLITE3_INT64]],
         ['maxossint1',     ['maxossint1',                       SQLITE3_INT64]],
         ['totossint1',     ['totossint1',                       SQLITE3_INT64]],
@@ -267,26 +350,49 @@ def summary():
         ['totossint4',     ['totossint4',                       SQLITE3_INT64]],
     ]
 
-    # -I and -K
-    IK = [
+    IJ = [
         '{0} {1}'.format(DEPTH, SQLITE3_INT64),
     ]
 
-    # -S
     S = [
         'level()',
     ]
 
-    # -J and -G
-    JG = [
+    K = [
+        '{0} {1}'.format(DEPTH, SQLITE3_INT64),
+    ]
+
+    J = [
         DEPTH,
     ]
 
-    for col_name, props in COLS:
-        sql, col_type = props
-        IK += ['{0} {1}'.format(col_name, col_type)]
+    G = [
+        DEPTH,
+    ]
+
+    for col_name, props in DIR_COLS:
+        sql, col_type, g = props
+        IJ += ['{0} {1}'.format(col_name, col_type)]
         S  += [sql]             # pull raw data
-        JG += [agg(col_name)]   # aggregate data
+        J  += [col_name]        # concatenate raw data
+
+        for g_type, g_props in g(col_name):
+            g_sql, g_col_type = g_props
+            K += ['dir_{0}_{1} {2}'.format(col_name, g_type, g_col_type)]
+            G += [g_sql]       # calculate statistics
+
+    for col_name, props in gen_ftime_cols():
+        sql, col_type = props
+        K += ['dir_ftime_{0} {1}'.format(col_name, col_type)]
+        G += [sql]
+
+    for col_name, props in SUM_COLS:
+        sql, col_type = props
+        IJ += ['{0} {1}'.format(col_name, col_type)]
+        S  += [sql]             # pull raw data
+        K  += ['{0} {1}'.format(col_name, col_type)]
+        J  += [col_name]        # per-thread data
+        G  += [agg(col_name)]   # aggregate per-thread data
 
     INTERMEDIATE = 'intermediate_summary'
 
@@ -294,7 +400,7 @@ def summary():
 
     return (
         # -I
-        create_table(INTERMEDIATE, IK, False),
+        create_table(INTERMEDIATE, IJ, False),
 
         # -S
         'INSERT INTO {0} {1}; SELECT 1'.format(INTERMEDIATE,
@@ -302,65 +408,24 @@ def summary():
                                                            None, [INODE])),
 
         # -K
-        '{0}; {1}'.format(create_table(J_name,  IK, True),
-                          create_table(SUMMARY, IK, False)),
+        '{0}; {1}'.format(create_table(J_name,  IJ, True),
+                          create_table(SUMMARY, K, False)),
 
         # -J
-        'INSERT INTO {0} {1};'.format(J_name,
-                                     build_query(JG, [INTERMEDIATE],
-                                                 None, [DEPTH])),
+        # don't GROUP BY depth here - will lose directory stats
+        'INSERT INTO {0} {1}'.format(J_name,
+                                     build_query(J, [INTERMEDIATE])),
 
         # -G
         'INSERT INTO {0} {1}; DROP TABLE {2}'.format(SUMMARY,
-                                                     build_query(JG, [J_name],
+                                                     build_query(G, [J_name],
                                                                  None, [DEPTH]),
                                                      J_name),
     )
 
-def gen_value_hist_col(col):
-    return ['category_hist(CAST({0} AS TEXT), 1)'.format(col), SQLITE3_TEXT]
-
-# used to generate timestamp columns
-def gen_time_cols(col, reftime):
-    return [
-        # min/max already captured by SUMMARY
-        ['mean',      ['AVG({0})'.format(col),                       SQLITE3_DOUBLE]],
-        ['median',    ['median({0})'.format(col),                    SQLITE3_DOUBLE]],
-        ['mode',      ['mode_count({0})'.format(col),                SQLITE3_TEXT]],
-        ['stdev',     ['stdevp({0})'.format(col),                    SQLITE3_DOUBLE]],
-        ['age_hist',  ['time_hist({0}, {1})'.format(col, reftime),   SQLITE3_TEXT]],
-        ['hour_hist', gen_value_hist_col('strftime(\'%H\', {0})'.format(col))],
-    ]
-
-def gen_f_time_cols():
-    # Satyanarayanan, Mahadev. "A study of file sizes and functional lifetimes."
-    # ACM SIGOPS Operating Systems Review 15.5 (1981): 96-108.
-    ftime = 'atime - mtime'
-    return [
-        ['min',       ['MIN({0})'.format(ftime),                     SQLITE3_INT64]],
-        ['max',       ['MAX({0})'.format(ftime),                     SQLITE3_INT64]],
-        ['mean',      ['AVG({0})'.format(ftime),                     SQLITE3_DOUBLE]],
-        ['median',    ['median({0})'.format(ftime),                  SQLITE3_DOUBLE]],
-        ['mode',      ['mode_count({0})'.format(ftime),              SQLITE3_TEXT]],
-        ['stdev',     ['stdevp({0})'.format(ftime),                  SQLITE3_DOUBLE]],
-    ]
-
-# used to generate columns for name, linkname, xattr_name, and xattr_value
-def gen_str_cols(col, buckets):
-    return [
-        ['min',       ['MIN({0})'.format(col),                       SQLITE3_INT64]],
-        ['max',       ['MAX({0})'.format(col),                       SQLITE3_INT64]],
-        ['mean',      ['AVG({0})'.format(col),                       SQLITE3_DOUBLE]],
-        ['median',    ['median({0})'.format(col),                    SQLITE3_DOUBLE]],
-        ['mode',      ['mode_count({0})'.format(col),                SQLITE3_TEXT]],
-        ['stdev',     ['stdevp({0})'.format(col),                    SQLITE3_DOUBLE]],
-        ['hist',      ['log2_hist({0}, {1})'.format(col, buckets),   SQLITE3_TEXT]],
-    ]
-
 def entries(reftime,                           # pylint: disable=too-many-locals
             log2_size_bucket_count,
             log2_name_len_bucket_count):
-    # -E
     E_COLS = [
         ['name_len',         ['LENGTH(name)',        SQLITE3_INT64]],
         # type and inode are already captured by SUMMARY
@@ -410,30 +475,20 @@ def entries(reftime,                           # pylint: disable=too-many-locals
                                                      SQLITE3_TEXT]],
     ]
 
-    # -G
-
     UID_COLS = [
         # min/max already captured by SUMMARY
         ['hist',            gen_value_hist_col('uid')],
-        # use hist to get num_unique
+        ['num_unique',      ['COUNT(DISTINCT uid)',              SQLITE3_INT64]],
     ]
 
     GID_COLS = [
         # min/max already captured by SUMMARY
         ['hist',            gen_value_hist_col('gid')],
-        # use hist to get num_unique
+        ['num_unique',      ['COUNT(DISTINCT gid)',              SQLITE3_INT64]],
     ]
 
-    SIZE_COLS = [
-        # min/max already captured by SUMMARY
-        ['mean',            ['AVG(size)',                        SQLITE3_DOUBLE]],
-        ['median',          ['median(size)',                     SQLITE3_DOUBLE]],
-        ['mode',            ['mode_count(CAST(size AS TEXT))',   SQLITE3_TEXT]],
-        ['stdev',           ['stdevp(size)',                     SQLITE3_DOUBLE]],
-        # sum already captured by SUMMARY
-        ['hist',            ['log2_hist(size, {0})'.format(log2_size_bucket_count),
-                                                                 SQLITE3_TEXT]],
-    ]
+    # min, max, and sum already captured by SUMMARY
+    SIZE_COLS = gen_avg_cols('size') + gen_stdev_col('size') + gen_log2_hist_col('size', log2_size_bucket_count)
 
     PERM_COLS = [
         ['hist',            ['mode_hist(mode)',                  SQLITE3_TEXT]],
@@ -444,7 +499,7 @@ def entries(reftime,                           # pylint: disable=too-many-locals
     CTIME_COLS       = gen_time_cols('ctime',                    reftime)
     CRTIME_COLS      = gen_time_cols('crtime',                   reftime)
 
-    FTIME_COLS       = gen_f_time_cols()
+    FTIME_COLS       = gen_ftime_cols()
 
     NAME_COLS        = gen_str_cols('name_len',                  log2_name_len_bucket_count)
     LINKNAME_COLS    = gen_str_cols('linkname_len',              log2_name_len_bucket_count)
@@ -476,22 +531,18 @@ def entries(reftime,                           # pylint: disable=too-many-locals
         ['extensions_len',  EXT_LEN_COLS],
     ]
 
-    # -I
     I = [
         '{0} {1}'.format(DEPTH, SQLITE3_INT64),
     ]
 
-    # -E
     E = [
         'level()',
     ]
 
-    # -K
     K = [
         '{0} {1}'.format(DEPTH, SQLITE3_INT64),
     ]
 
-    # -G
     G = [
         DEPTH,
     ]
@@ -546,7 +597,9 @@ def run(argv): # pylint: disable=too-many-locals
     # ############################################################################
     # get SQL strings for constructing command
     ts_I, T, ts_K, ts_J, ts_G, ts_V = treesummary()
-    sum_I, S, sum_K, sum_J, sum_G = summary()
+    sum_I, S, sum_K, sum_J, sum_G = summary(args.reftime,
+                                            log2_size_bucket_count,
+                                            log2_name_len_bucket_count)
     ent_I, E, ent_K, ent_J, ent_G = entries(args.reftime,
                                             log2_size_bucket_count,
                                             log2_name_len_bucket_count)
