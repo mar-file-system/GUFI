@@ -120,9 +120,12 @@ ENTRIES_NAMES = [
 ]
 
 # some common column names
-DEPTH  = 'depth'
-INODE  = 'inode'
-PINODE = 'pinode'
+LEVEL   = 'level'
+INODE   = 'inode'
+PINODE  = 'pinode'
+PPINODE = 'ppinode'
+UID     = 'uid'
+GID     = 'gid'
 
 # ###############################################
 # useful functions for using in ArgumentParser.add_argument(type=function_name)

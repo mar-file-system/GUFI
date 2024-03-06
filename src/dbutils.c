@@ -670,20 +670,23 @@ int insertsumdb(sqlite3 *sdb, const char *path, struct work *pwork, struct entry
     return 0;
 }
 
-static int get_inode_callback(void *args, int count, char **data, char **columns) {
+static int get_str_callback(void *args, int count, char **data, char **columns) {
     (void) count;
     (void) columns;
 
-    char **inode = (char **) args;
+    char **str = (char **) args;
 
     if (data[0]) {
-        const size_t len = strlen(data[0]) + 2;
-        *inode = malloc(len + 1);
-        snprintf(*inode, len + 1, "'%s'", data[0]); /* quotation marks are set here, not in inserttreesumdb */
+        const size_t len = strlen(data[0]) + 2; /* + 2 for quotation marks */
+        *str = malloc(len + 1);
+        SNFORMAT_S(*str, len + 1, 3,
+                   "'", (size_t) 1,
+                   data[0], len - 2,
+                   "'", (size_t) 1);
     }
     else {
-        *inode = malloc(5);
-        snprintf(*inode, 5, "NULL");
+        *str = malloc(5);
+        snprintf(*str, 5, "NULL");
     }
 
     return 0;
@@ -696,26 +699,37 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
         depth += (*c == '/');
     }
 
-    char *inode = NULL;
     char *err = NULL;
+
+    char *inode = NULL;
     if (sqlite3_exec(sdb, "SELECT inode FROM " SUMMARY " WHERE isroot == 1;",
-                     get_inode_callback, &inode, &err) != SQLITE_OK ) {
+                     get_str_callback, &inode, &err) != SQLITE_OK ) {
         fprintf(stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
         sqlite3_free(err);
         return 1;
     }
 
+    char *pinode = NULL;
+    if (sqlite3_exec(sdb, "SELECT pinode FROM " SUMMARY " WHERE isroot == 1;",
+                     get_str_callback, &pinode, &err) != SQLITE_OK ) {
+        fprintf(stderr, "Could not get inode from %s: %s\n", SUMMARY, err);
+        free(inode);
+        sqlite3_free(err);
+        return 1;
+    }
+
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%s, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
-             inode, su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, rectype, uid, gid);
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%s, %s, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+             inode, pinode, su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, rectype, uid, gid);
+
+    free(pinode);
+    free(inode);
 
     err = NULL;
     if (sqlite3_exec(sdb, sqlstmt, 0, 0, &err) != SQLITE_OK ) {
-        fprintf(stderr, "SQL error on insert (treesummary): %s\n", err);
+        fprintf(stderr, "SQL error on insert (treesummary): %s %s\n", err, sqlstmt);
         sqlite3_free(err);
     }
-
-    free(inode);
 
     return !!err;
 }
@@ -1493,7 +1507,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
          * -1 because a directory is not a subdirectory of itself
          */
         static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
-            "INSERT INTO " TREESUMMARY " SELECT (SELECT inode FROM " SUMMARY " WHERE isroot == 1), COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totzero), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), rectype, uid, gid FROM " SUMMARY ";";
+            "INSERT INTO " TREESUMMARY " SELECT (SELECT inode FROM " SUMMARY " WHERE isroot == 1), (SELECT pinode FROM " SUMMARY " WHERE isroot == 1), COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totzero), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), rectype, uid, gid FROM " SUMMARY ";";
 
         char *err = NULL;
         if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {

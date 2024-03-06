@@ -64,9 +64,9 @@
 set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
-OUTPUT="longitudinal_snapshot_DT.out"
+OUTPUT="longitudinal_snapshot.out"
 
-SNAPSHOT="longitudinal_snapshot_DT.db"
+SNAPSHOT="longitudinal_snapshot.db"
 
 cleanup() {
     rm -rf "${SNAPSHOT}"
@@ -81,46 +81,60 @@ trap cleanup_exit EXIT
 
 cleanup
 
-(
-do_tests() {
-    cleanup
+tables=("metadata" "entries" "summary" "treesummary" "snapshot")
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} --help" | replace_argparse
+show_schema() {
+    grouping="$1"
 
-    # shellcheck disable=SC2294
-    eval "$@"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --verbose --replace" | sed 's/time, [0-9]*)/time), now/g'
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --verbose --notes 'test notes'" | sed 's/time, [0-9]*)/time), now/g'
-
-    echo "# running a second time on the same target will error because the tables already exist"
-    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
-
-    echo "# use --replace to replace existing data"
-    run_no_sort "${LONGITUDINAL_SNAPSHOT_DT} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace"
+    echo "# running a without replacing will error because the tables already exist"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
-    tables=("metadata" "summary" "treesummary" "snapshot")
     for table in "${tables[@]}"
     do
         run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"PRAGMA TABLE_INFO(${table});\""
     done
+
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT notes FROM metadata;\""
+}
+
+do_tests() {
+    grouping="$1"
+
+    rm -f "${SNAPSHOT}"
+
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
 
     for table in "${tables[@]}"
     do
         run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT COUNT(*) FROM ${table};\""
     done
 
-    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT notes FROM metadata;\""
+    # graph does not have a corresponding column
+    if [[ "${grouping}" == "graph" ]]
+    then
+        grouping="NULL"
+    fi
 
-    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT depth, name, size_sum, ts_totsize, totsubdirs, ts_totsubdirs, totfiles, ts_totfiles, totlinks, ts_totlinks FROM snapshot ORDER BY depth ASC, name ASC;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT ${grouping}, totsize, ts_totsize, totdirs, totsubdirs, totfiles, ts_totfiles, totlinks, ts_totlinks FROM snapshot ORDER BY ${grouping} ASC;\""
 }
 
-do_tests "run_no_sort \"${GUFI_TREESUMMARY_ALL} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot_DT.expected "${OUTPUT}"
+(
+"${GUFI_TREESUMMARY_ALL}" "${INDEXROOT}" >/dev/null 2>&1
 
-do_tests "run_no_sort \"${GUFI_ROLLUP} ${INDEXROOT}\" 2>&1 > /dev/null" | tee "${OUTPUT}"
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot_DT.expected "${OUTPUT}"
-)
+run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
+
+do_tests "graph"
+do_tests "level"
+do_tests "pinode"                      # parent
+do_tests "inode" | sed "s/${DIR}/6/g"  # directory
+
+show_schema "level"
+
+) | tee "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
 
 rm "${OUTPUT}"

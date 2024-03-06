@@ -70,7 +70,6 @@ export PYTHONPATH="${BUILD}/contrib:${BUILD}/scripts:${BUILD}/test:${PYTHONPATH}
 
 PATHS=(
     "${BUILD}/contrib"
-    "${BUILD}/contrib/longitudinal_snapshot"
     "${BUILD}/scripts"
     "${BUILD}/test"
 )

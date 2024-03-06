@@ -108,8 +108,7 @@ set(EXAMPLES
 set(OTHERS
   bash_completion
   deploy
-  longitudinal_snapshot_DT
-  longitudinal_snapshot_LT
+  longitudinal_snapshot
   split_trace
   treediff
 )
