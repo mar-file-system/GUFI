@@ -69,7 +69,54 @@ TABLE_NAME = 'cumulative_times'
 # from gufi_query
 COLUMN_FORMATS = [
 
-    # commit 908c161 "reorganize gufi_query" -> Most recent commit
+    # commit c42ee8a "remove lstat at beginning of gufi_query processdir" -> Most recent commit
+    # Removed: lstat
+    {
+        'set up globals':                             float,
+        'set up intermediate databases':              float,
+        'thread pool':                                float,
+        'open directories':                           float,
+        'attach index':                               float,
+        'xattrprep':                                  float,
+        'addqueryfuncs':                              float,
+        'get_rollupscore':                            float,
+        'descend':                                    float,
+        'check args':                                 float,
+        'check level':                                float,
+        'check level <= max_level branch':            float,
+        'while true':                                 float,
+        'readdir':                                    float,
+        'readdir != null branch':                     float,
+        'strncmp':                                    float,
+        'strncmp != . or ..':                         float,
+        'snprintf':                                   float,
+        'isdir':                                      float,
+        'isdir branch':                               float,
+        'access':                                     float,
+        'set':                                        float,
+        'clone':                                      float,
+        'pushdir':                                    float,
+        'check if treesummary table exists':          float,
+        'sqltsum':                                    float,
+        'sqlsum':                                     float,
+        'sqlent':                                     float,
+        'xattrdone':                                  float,
+        'detach index':                               float,
+        'close directories':                          float,
+        'restore timestamps':                         float,
+        'free work':                                  float,
+        'output timestamps':                          float,
+        'aggregate into final databases':             float,
+        'print aggregated results':                   float,
+        'clean up globals':                           float,
+        'Threads run':                                  int,
+        'Queries performed':                            int,
+        'Rows printed to stdout or outfiles':           int,
+        'Total Thread Time (not including main)':     float,
+        'Real time (main)':                           float,
+    },
+
+    # commit 908c161 "reorganize gufi_query" -> d743512 "update to sqlite3-pcre with pcre2"
     # Added: attach index, xattrdone, detach index
     # Removed: open databases, sqlite3_open_v2, setpragmas, load extensions,
     #          attach intermediate databases, detach intermediate databases, close databases

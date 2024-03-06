@@ -75,7 +75,7 @@ def check_exists(path):
         sys.exit(1)
 
     if not os.path.isfile(path):
-        print("'{0}' is not a file!".format(path)) # pylint: disable=superfluous-parens
+        print("'{0}' is not a file!".format(path))  # pylint: disable=superfluous-parens
         sys.exit(2)
 
 def check_not_exists(path):
@@ -104,8 +104,9 @@ def create_tables(con):
         raw_data.TABLE_NAME, raw_data_col_str))
 
     # the commits table gets created and filled
+    # not using TYPE_TO_SQLITE
     commits_col_str = ', '.join('"{0}" {1}'.format(
-        name if name else col, common.TYPE_TO_SQLITE[type]) for col, name, type in commits.COLS)
+        name if name else col, type) for col, name, type in commits.COLS)
 
     con.execute('CREATE TABLE {0} ({1});'.format(
         commits.TABLE_NAME, commits_col_str))
@@ -150,7 +151,7 @@ def insert(con, args, hash, table_name, cols_hashed, cols_not_hashed):
 def get_config(con, user_raw_data_hash):
     # figure out what configurations this hash points to
     hashes_cur = con.execute('SELECT hash, machine_hash, gufi_hash ' +
-                             'FROM {0} WHERE hash GLOB "*{1}*";'.format(
+                             'FROM {0} WHERE hash GLOB \'*{1}*\';'.format(
                                  raw_data.TABLE_NAME, user_raw_data_hash))
     records = hashes_cur.fetchall()
     count = len(records)

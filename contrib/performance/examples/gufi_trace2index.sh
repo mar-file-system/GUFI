@@ -90,7 +90,7 @@ cleanup() {
     rm -rf "${INDEX}"
 
     # delete generated graph
-    rm -f "$(grep path ${CONFIG_FILE} | awk '{ print $3 }')"
+    rm -f "$(@GREP@ path ${CONFIG_FILE} | awk '{ print $3 }')"
 }
 
 cleanup

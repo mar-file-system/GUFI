@@ -11,7 +11,8 @@ Below is a table (possibly not up to date) listing commit ranges grouped by form
 
 |      Commits   | Number of commits  |  Comments  |
 | :------------: | :----------------: | :--------: |
-| [908c161](https://github.com/mar-file-system/GUFI/commit/908c161), [HEAD](https://github.com/mar-file-system/GUFI/commit/HEAD) | 313+ | |
+| [c42ee8a](https://github.com/mar-file-system/GUFI/commit/c42ee8a), [HEAD](https://github.com/mar-file-system/GUFI/commit/HEAD) | 2+ | |
+| [908c161](https://github.com/mar-file-system/GUFI/commit/908c161), [d743512](https://github.com/mar-file-system/GUFI/commit/d743512) | 681 | |
 | [61c0a9d](https://github.com/mar-file-system/GUFI/commit/61c0a9d), [8060d30](https://github.com/mar-file-system/GUFI/commit/8060d30)| 5 | |
 | [7cd35f8](https://github.com/mar-file-system/GUFI/commit/7cd35f8), [4164985](https://github.com/mar-file-system/GUFI/commit/4164985)| 20 | |
 | [a13a330](https://github.com/mar-file-system/GUFI/commit/a13a330), [216ef5b](https://github.com/mar-file-system/GUFI/commit/216ef5b)| 52 | Performance increase, Last occurrence of Missed NULL bug ([See notes](#a13a330-216ef5b)) |
@@ -85,7 +86,7 @@ Each line of the cumulative_times output has the following format:
 * Sub range `5ec5386, 1a95766`
     * `entries` table required for -E query ([See `Aggregation Error`](#aggregation-error))
 
-* On commit [`d6ec34f`](https://github.com/mar-file-system/GUFI/commit/d6ec34f) 
+* On commit [`d6ec34f`](https://github.com/mar-file-system/GUFI/commit/d6ec34f)
     * Last instance of [`Epoch Error`](#multiple-definitions-of-epoch)
 
 #### 54bfc53, 90b21bc

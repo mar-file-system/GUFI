@@ -118,10 +118,6 @@ case "${key}" in
         REPO="$2"
         shift
         ;;
-    --src-dir)
-        SRCDIR2="$(realpath -m $2)"
-        shift
-        ;;
     --dep-install-prefix)
         DEP_INSTALL_PREFIX="$(realpath -m $2)"
         shift
@@ -159,17 +155,13 @@ HASHES_DB=$(realpath -e "$2")
 RAW_DATA_HASH="$3"
 RAW_DATA_DB=$(realpath -e "$4")
 
-# if the user didn't provide a source directory
-if [[ -z "${SRCDIR2}" ]]
+# try to find source directory of second GUFI repo
+if [[ -f "${GUFI}/CMakeCache.txt" ]]
 then
-    # try to find source directory of second GUFI repo
-    if [[ -f "${GUFI}/CMakeCache.txt" ]]
-    then
-        # shellcheck disable=SC2016
-        SRCDIR2="$(@GREP@ SOURCE_DIR ${GUFI}/CMakeCache.txt | @AWK@ -F '=' '{ printf $2 }' )"
-    else
-        SRCDIR2="$(dirname ${GUFI})"
-    fi
+    # shellcheck disable=SC2016
+    SRCDIR2="$(@GREP@ SOURCE_DIR ${GUFI}/CMakeCache.txt | @AWK@ -F '=' '{ printf $2 }')"
+else
+    SRCDIR2="$(dirname ${GUFI})"
 fi
 
 # not checking if the SRCDIR2 exists - will clone later
@@ -221,8 +213,8 @@ do
 done
 
 export PATH="@DEP_INSTALL_PREFIX@/sqlite3/bin:${PATH}"
-export LD_LIBRARY_PATH="@DEP_INSTALL_PREFIX@/sqlite3/lib:${LD_LIBRARY_PATH}"
-export PYTHONPATH="@CMAKE_CURRENT_BINARY_DIR@/..:${PYTHONPATH}"
+# shellcheck disable=SC2155
+export PYTHONPATH="$(realpath @CMAKE_CURRENT_BINARY_DIR@/..):${PYTHONPATH}"
 
 # reconstruct the original command
 # shellcheck disable=SC2034,SC2046,SC2154
@@ -233,7 +225,7 @@ function generate_cmd() {
     for col in cmd x a n d outfile outdb I T S E F y z J K G m B w terse tree
     do
         # shellcheck disable=SC2229
-        read -r "${col}" <<<$(sqlite3 "${HASHES_DB}" "SELECT ${col} FROM gufi_command WHERE hash == \"${gufi_hash}\";")
+        read -r "${col}" <<<$(sqlite3 "${HASHES_DB}" "SELECT ${col} FROM gufi_command WHERE hash == '${gufi_hash}';")
     done
 
     # booleans
@@ -273,7 +265,7 @@ function generate_cmd() {
     echo "${GUFI}/src/${cmd} ${flags} \"${tree}\""
 }
 
-gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data WHERE hash == \"${RAW_DATA_HASH}\";")
+gufi_hash=$(sqlite3 "${HASHES_DB}" "SELECT gufi_hash FROM raw_data WHERE hash == '${RAW_DATA_HASH}';")
 gufi_cmd=$(generate_cmd "${gufi_hash}")
 
 echo -e "Collecting numbers for\n${gufi_cmd}"
@@ -286,7 +278,7 @@ function drop_caches() {
 if [[ -d "${SRCDIR2}" ]]
 then
     # make sure existing SRCDIR2 is at least tracked by git
-    "${GIT}" -C "${SRCDIR2}" rev-parse --is-inside-work-tree
+    "${GIT}" -C "${SRCDIR2}" rev-parse --is-inside-work-tree > /dev/null
 else
     # if the second copy's source directory doesn't
     # exist, clone a new copy of the repo

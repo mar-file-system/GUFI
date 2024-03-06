@@ -65,20 +65,28 @@ import argparse
 import sqlite3
 import sys
 
+from performance_pkg.hashdb import commits
 from performance_pkg.hashdb import utils as hashdb
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('database', help='Hash database path')
+    parser.add_argument('database',                      help='Hash database path')
+    parser.add_argument('--update', action='store_true', help='Update existing hash database')
     return parser.parse_args(argv)
 
 def run(argv):
     args = parse_args(argv)
 
-    hashdb.check_not_exists(args.database)
-    with sqlite3.connect(args.database) as con:
-        hashdb.create_tables(con)
-        con.commit()
+    if not args.update:
+        hashdb.check_not_exists(args.database)
+        with sqlite3.connect(args.database) as con:
+            hashdb.create_tables(con)
+            con.commit()
+    else:
+        hashdb.check_exists(args.database)
+        with sqlite3.connect(args.database) as con:
+            commits.fill_table(con)
+            con.commit()
 
 if __name__ == '__main__':
     run(sys.argv[1:])

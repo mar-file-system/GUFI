@@ -178,6 +178,7 @@ VERIFYTRACEINTREE="@CMAKE_BINARY_DIR@/contrib/verifytraceintree"
 
 AWK="@AWK@"
 DIFF="@DIFF@"
+GREP="@GREP@"
 
 # common strings that need replacing
 replace() {
@@ -227,6 +228,7 @@ replace() {
 
     s/${AWK//\//\\/}/awk/g;
     s/${DIFF//\//\\/}/diff/g;
+    s/${GREP//\//\\/}/grep/g;
 
     s/[[:space:]]*$//g;
     "
@@ -258,20 +260,20 @@ run_no_sort() {
 
 # somewhat force ordering of trace file
 order_tracefile() {
-    grep "^${SRCDIR}${DELIM}"              "$1"
-    grep "^${SRCDIR}/.hidden${DELIM}"      "$1"
-    grep "^${SRCDIR}/1KB${DELIM}"          "$1"
-    grep "^${SRCDIR}/1MB${DELIM}"          "$1"
-    grep "^${SRCDIR}/file_symlink${DELIM}" "$1"
-    grep "^${SRCDIR}/old_file${DELIM}"     "$1"
-    grep "^${SRCDIR}/repeat_name${DELIM}"  "$1"
-    grep "^${SRCDIR}/directory.*${DELIM}"  "$1"
-    grep "^${SRCDIR}/leaf.*${DELIM}"       "$1"
-    grep "^${SRCDIR}/unusual.*${DELIM}"    "$1"
+    @GREP@ "^${SRCDIR}${DELIM}"              "$1"
+    @GREP@ "^${SRCDIR}/.hidden${DELIM}"      "$1"
+    @GREP@ "^${SRCDIR}/1KB${DELIM}"          "$1"
+    @GREP@ "^${SRCDIR}/1MB${DELIM}"          "$1"
+    @GREP@ "^${SRCDIR}/file_symlink${DELIM}" "$1"
+    @GREP@ "^${SRCDIR}/old_file${DELIM}"     "$1"
+    @GREP@ "^${SRCDIR}/repeat_name${DELIM}"  "$1"
+    @GREP@ "^${SRCDIR}/directory.*${DELIM}"  "$1"
+    @GREP@ "^${SRCDIR}/leaf.*${DELIM}"       "$1"
+    @GREP@ "^${SRCDIR}/unusual.*${DELIM}"    "$1"
 }
 
 remove_indexing_time() {
-    grep -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
+    @GREP@ -v "Scouts took total of\|Time Spent Indexing:\|Dirs/Sec:\|Files/Sec"
 }
 
 pull_ug_summary_columns() {

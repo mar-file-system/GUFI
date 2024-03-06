@@ -136,7 +136,7 @@ def gather_raw_numbers(con, table, columns, commitdata):
     # get raw numbers grouped by commit
     for cd in commitdata:
         # get benchmark numbers
-        get_data_sql = 'SELECT {0} FROM {1} WHERE "commit" == "{2}";'.format(
+        get_data_sql = 'SELECT {0} FROM {1} WHERE "commit" == \'{2}\';'.format(
             col_str, table, cd.commit
         )
         cur = con.execute(get_data_sql)
@@ -180,15 +180,20 @@ def run(argv):
 
         # collect commit metadata using user inputted order
         for commit in commits:
-            # get id, commit, and timestamp from the commit metadata table
-            get_metadata_sql = 'SELECT * FROM {0} WHERE "commit" == "{1}";'.format(commits_table.TABLE_NAME, commit)
+            # get commit and timestamp from the commit metadata table
+            get_metadata_sql = 'SELECT * FROM {0} WHERE "commit" == \'{1}\';'.format(
+                commits_table.TABLE_NAME, commit)
             cur = con.execute(get_metadata_sql)
             metadata = cur.fetchall()
+
+            if len(metadata) == 0:
+                continue
+
             if len(metadata) != 1:
                 raise ValueError('Expected 1 metadata row for commit {0}. Got {1}.'.format(commit, len(metadata)))
 
-            idx, commit, timestamp = metadata[0]
-            ordered_commits += [stats.CommitData(idx, commit, timestamp)]
+            commit, timestamp = metadata[0]
+            ordered_commits += [stats.CommitData(None, commit, timestamp)]
 
     # if user requested for the commits to be sorted in history order, sort them
     # otherwise, use the user inputted order as is

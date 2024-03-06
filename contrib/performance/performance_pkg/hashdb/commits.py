@@ -65,14 +65,14 @@ from performance_pkg import common
 
 TABLE_NAME = 'commits'
 
-# arg attr, sql column name, column type
+# not using TYPE_TO_SQLITE
 COLS = [
-    ['id',        None, None],
-    ['commit',    None, str],
-    ['timestamp', None, int],
+    # ['id',        None, None],
+    ['commit',    None, 'TEXT PRIMARY KEY'],
+    ['timestamp', None, 'INTEGER'],
 ]
 
-INSERT_PREFIX = 'INSERT INTO {0} ({1}) VALUES (NULL, "{{0}}", {{1}});'.format(
+INSERT_COMMIT = 'INSERT OR IGNORE INTO {0} ({1}) VALUES ("{{0}}", {{1}});'.format(
     TABLE_NAME,
     ', '.join(['"{0}"'.format(col) for col, _, _ in COLS]),
 )
@@ -93,5 +93,5 @@ def fill_table(con):
     # complain that there are too many values
     for commit in commits:
         timestamp = common.run_get_stdout(['git', 'show', '-s', '--format=%ct', commit], cwd)[:-1]
-        sql = INSERT_PREFIX.format(commit, timestamp)
+        sql = INSERT_COMMIT.format(commit, timestamp)
         con.execute(sql)

@@ -105,7 +105,11 @@ def parse_args(argv):
 def run(argv):
     args = parse_args(argv)
 
-    gufi_cmd, debug_name = hashdb.get_config(args.database, args.raw_data_hash)
+    gufi_cmd = None
+    debug_name = None
+    with sqlite3.connect(args.database) as con:
+        gufi_cmd, debug_name = hashdb.get_config(con, args.raw_data_hash)
+
     print('{0} was run with {1}, debug name {2}'.format(args.raw_data_hash, gufi_cmd, debug_name)) # pylint: disable=superfluous-parens
 
     # find functions for handling these debug prints
