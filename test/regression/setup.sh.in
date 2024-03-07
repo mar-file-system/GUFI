@@ -298,16 +298,18 @@ clean_index() {
     # set some columns to make test easier
 
     # update xattrs to point to updated inodes
-    "${GUFI_QUERY}" -d " " -a -x -w "${INDEX}" \
+    "${GUFI_QUERY}" -d " " -a -x -w \
         -I "CREATE TABLE temp_xattrs (inode TEXT, name TEXT, value TEXT);" \
         -S "INSERT INTO temp_xattrs (inode, name, value) SELECT CAST(mtime AS TEXT), xattr_name, xattr_value FROM xsummary WHERE xattr_name IS NOT NULL UNION ALL SELECT CAST(mtime AS TEXT), xattr_name, xattr_value FROM xpentries WHERE xattr_name IS NOT NULL;" \
-        -E "DELETE FROM xattrs_pwd; INSERT INTO xattrs_pwd SELECT * FROM temp_xattrs; DELETE from temp_xattrs;"
+        -E "DELETE FROM xattrs_pwd; INSERT INTO xattrs_pwd SELECT * FROM temp_xattrs; DELETE from temp_xattrs;" \
+        "${INDEX}"
 
     # update inodes
     # ${INDEXROOT} has inode == 17
-    "${GUFI_QUERY}" -a -w "${INDEX}" \
+    "${GUFI_QUERY}" -a -w \
         -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, pinode = '17';" \
-        -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;"
+        -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
+        "${INDEX}"
 
     # ${INDEXROOT} is not a child of itself
     "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = '18' WHERE name == '${BASENAME}';"

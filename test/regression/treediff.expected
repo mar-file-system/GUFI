@@ -45,6 +45,6 @@ $ treediff "prefix" ""
 Error: Could not stat right directory "": No such file or directory (2)
 
 # Bad skip
-$ treediff "prefix" "prefix" -k ""
+$ treediff -k "" "prefix" "prefix"
 Error: Cannot open skip file ""
 

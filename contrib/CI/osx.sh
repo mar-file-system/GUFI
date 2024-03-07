@@ -80,7 +80,6 @@ then
     brew install python3 zlib
 fi
 
-
 # get osxfuse from homebrew/cask
 brew tap homebrew/cask
 brew install --cask osxfuse || true # brew 4.0.0 switches to macfuse, but pkg-config can't find it

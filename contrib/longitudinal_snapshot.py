@@ -649,7 +649,6 @@ def run(argv): # pylint: disable=too-many-locals
 
     cmd = [
         args.gufi_query,
-        args.index,
         '-n', str(args.threads),
         '-x',
         '-O', args.outname,
@@ -660,6 +659,7 @@ def run(argv): # pylint: disable=too-many-locals
         '-K', K,
         '-J', J,
         '-G', G,
+        args.index,
     ]
 
     if args.verbose:

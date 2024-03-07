@@ -117,7 +117,7 @@ jobs:
   macOS:
     strategy:
       matrix:
-        os: [ "macos-12", "macos-13", "macos-14" ]
+        os: [ "macos-12", "macos-14" ]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
