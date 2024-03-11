@@ -158,6 +158,7 @@ GUFI_GETFATTR="${GUFI_TOOL} getfattr"
 GUFI_LS="${GUFI_TOOL} ls"
 GUFI_QUERY="@CMAKE_BINARY_DIR@/src/gufi_query"
 GUFI_ROLLUP="@CMAKE_BINARY_DIR@/src/gufi_rollup"
+GUFI_SQLITE="@CMAKE_BINARY_DIR@/contrib/gufi_sqlite"
 GUFI_STAT="${GUFI_TOOL} stat"
 GUFI_STATS="${GUFI_TOOL} stats"
 GUFI_STAT_BIN="@CMAKE_BINARY_DIR@/src/gufi_stat_bin"
@@ -198,6 +199,7 @@ replace() {
     s/${GUFI_LS//\//\\/}/gufi_ls/g;
     s/${GUFI_QUERY//\//\\/}/gufi_query/g;
     s/${GUFI_ROLLUP//\//\\/}/gufi_rollup/g;
+    s/${GUFI_SQLITE//\//\\/}/gufi_sqlite/g
     s/${GUFI_STAT//\//\\/}/gufi_stat/g
     s/${GUFI_STATS//\//\\/}/gufi_stats/g;
     s/${GUFI_STAT_BIN//\//\\/}/gufi_stat_bin/g

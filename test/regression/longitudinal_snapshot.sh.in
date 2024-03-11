@@ -66,10 +66,11 @@ source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 1
 
 OUTPUT="longitudinal_snapshot.out"
 
+FLATDB="flattened_index.db"
 SNAPSHOT="longitudinal_snapshot.db"
 
 cleanup() {
-    rm -rf "${SNAPSHOT}"
+    rm -rf "${FLATDB}" "${SNAPSHOT}"
 }
 
 cleanup_exit() {
@@ -86,10 +87,10 @@ tables=("metadata" "entries" "summary" "treesummary" "snapshot")
 show_schema() {
     grouping="$1"
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --verbose --replace" | sed 's/time, [0-9]*)/time), now/g'
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --verbose --replace-flatdb --replace-outdb" | sed 's/time, [0-9]*)/time), now/g'
 
     echo "# running a without replacing will error because the tables already exist"
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
@@ -106,7 +107,14 @@ do_tests() {
 
     rm -f "${SNAPSHOT}"
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
+    if [[ -f "${FLATDB}" ]]
+    then
+        echo "${FLATDB} already exists"
+    else
+        echo "${FLATDB} does not exist"
+    fi
+
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
 
     for table in "${tables[@]}"
     do
@@ -116,10 +124,12 @@ do_tests() {
     # graph does not have a corresponding column
     if [[ "${grouping}" == "graph" ]]
     then
-        grouping="NULL"
+        group_by="NULL"
+    else
+        group_by="CAST(${grouping} AS INT)"
     fi
 
-    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT ${grouping}, totsize, ts_totsize, totdirs, totsubdirs, totfiles, ts_totfiles, totlinks, ts_totlinks FROM snapshot ORDER BY ${grouping} ASC;\""
+    run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT ${group_by}, totsize, tsum_totsize, totdirs, totsubdirs, totfiles, tsum_totfiles, totlinks, tsum_totlinks FROM snapshot ORDER BY ${group_by} ASC;\""
 }
 
 (
@@ -134,6 +144,13 @@ do_tests "inode" | sed "s/${DIR}/6/g"  # directory
 
 show_schema "level"
 
+echo "${FLATDB}:"
+echo
+run_no_sort "${SQLITE3} \"${FLATDB}\" \".tables\""
+run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries;\""
+run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries WHERE type == 'f';\""
+run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM summary;\""
+run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM treesummary;\""
 ) | tee "${OUTPUT}"
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
 
