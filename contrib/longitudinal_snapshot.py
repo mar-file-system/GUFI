@@ -376,6 +376,8 @@ def flatten_index(args):
 
     return run(cmd)
 
+# ###############################################
+# primitives
 def gen_minmax_cols(col):
     return [
         Stat('min',        sql='MIN({0})'.format(col)),
@@ -394,14 +396,51 @@ def gen_stdev_col(col):
         Stat('stdev',      SQLITE3_DOUBLE, sql='stdevp({0})'.format(col)),
     ]
 
-def gen_stat_cols(col):
-    return gen_minmax_cols(col) + gen_avg_cols(col) + gen_stdev_col(col)
+def gen_num_unique_col(col):
+    return [
+        Stat('num_unique',  sql='COUNT(DISTINCT {0})'.format(col)),
+    ]
 
 def gen_log2_hist_col(col, buckets):
     return [
         Stat('hist',       SQLITE3_TEXT, 'log2_hist({0}, {1})'.format(col, buckets)),
     ]
 
+def gen_category_hist_col(col):
+    return [
+        Stat('hist',  SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1)'.format(col)),
+    ]
+
+def gen_mode_count_col(col):
+    return [
+        Stat('mode_count', SQLITE3_TEXT, 'mode_count({0})'.format(col)),
+    ]
+
+# ###############################################
+
+# ###############################################
+# combine primitives to get common columns
+# generic stats
+def gen_stat_cols(col):
+    return gen_minmax_cols(col) + gen_avg_cols(col) + gen_stdev_col(col)
+
+# permissions
+def gen_mode_cols(col):
+    # compute num_unique here to have easily accessible value
+    return [
+        Stat('hist',       SQLITE3_TEXT, 'mode_hist({0})'.format(col)),
+    ] + gen_num_unique_col(col)
+
+# uid/gid
+def gen_id_cols(col):
+    # min, max, mode, and num_unique can all be derived from
+    # hist, but computing here to have easily accesible values
+    #
+    # min and max are also found in SUMMARY
+    return gen_minmax_cols(col) + gen_mode_count_col(col) + gen_category_hist_col(col) + gen_num_unique_col(col)
+
+# values that can be bucketed into log2 buckets
+# sizes and string lengths
 def gen_log2_cols(col, buckets):
     return gen_stat_cols(col) + gen_log2_hist_col(col, buckets)
 
@@ -413,6 +452,7 @@ def gen_time_cols(col, reftime):
         Stat('hour_hist',  SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1)'.format(
             'strftime(\'%H\', {0})'.format(col))),
     ]
+# ###############################################
 
 def agg(name, sql):
     TOT = 'tot'
@@ -494,19 +534,14 @@ def summary(group_by,                            # pylint: disable=too-many-loca
     ]
 
     DIR_COLS = [
-        ['name_len',
-                      lambda col : gen_log2_cols(col, log2_name_len_bucket_count)],
-        ['mode',      lambda col : [
-                                       Stat('hist', SQLITE3_TEXT, 'mode_hist({0})'.format(col)),
-                                       Stat('num_unique', sql='COUNT(DISTINCT {0})'.format(col)),
-                                   ]
-        ],
+        ['name_len',  lambda col : gen_log2_cols(col, log2_name_len_bucket_count)],
+        ['mode',      gen_mode_cols],
         ['nlink',     gen_stat_cols],
-        [UID,         gen_minmax_cols],
-        [GID,         gen_minmax_cols],
-        ['size',      lambda col : gen_stat_cols(col)   + gen_log2_hist_col(col, log2_size_bucket_count)],
-        ['blksize',   lambda col : gen_stat_cols(col)   + gen_log2_hist_col(col, log2_size_bucket_count)],
-        ['blocks',    lambda col : gen_stat_cols(col)   + gen_log2_hist_col(col, log2_size_bucket_count)],
+        [UID,         gen_id_cols],
+        [GID,         gen_id_cols],
+        ['size',      lambda col : gen_log2_cols(col, log2_size_bucket_count)],
+        ['blksize',   lambda col : gen_log2_cols(col, log2_size_bucket_count)],
+        ['blocks',    lambda col : gen_log2_cols(col, log2_size_bucket_count)],
         ['atime',     lambda col : gen_time_cols(col, reftime)],
         ['mtime',     lambda col : gen_time_cols(col, reftime)],
         ['ctime',     lambda col : gen_time_cols(col, reftime)],
@@ -568,47 +603,22 @@ def entries(group_by,                            # pylint: disable=too-many-loca
             reftime,
             log2_size_bucket_count,
             log2_name_len_bucket_count):
-    UID_COLS = [
-        # min, max, mode, and num_unique can all be derived from
-        # hist, but computing here to have easily accesible values
-        #
-        # min and max are also found in SUMMARY
-        Stat('min',         sql='MIN({0})'.format(UID)),
-        Stat('max',         sql='MAX({0})'.format(UID)),
-        Stat('mode_count',  SQLITE3_TEXT, 'mode_count(CAST({0} AS {1}))'.format(UID, SQLITE3_TEXT)),
-        Stat('hist',        SQLITE3_TEXT, 'category_hist(CAST({0} AS {1}), 1)'.format(UID, SQLITE3_TEXT)),
-        Stat('num_unique',  sql='COUNT(DISTINCT {0})'.format(UID)),
-    ]
-
-    GID_COLS = [
-        # min, max, mode, and num_unique can all be derived from
-        # hist, but computing here to have easily accesible values
-        #
-        # min and max are also found in SUMMARY
-        Stat('min',         sql='MIN({0})'.format(GID)),
-        Stat('max',         sql='MAX({0})'.format(GID)),
-        Stat('mode_count',  SQLITE3_TEXT, 'mode_count(CAST({0} AS {1}))'.format(GID, SQLITE3_TEXT)),
-        Stat('hist',        SQLITE3_TEXT, 'category_hist(CAST({0} AS {1}), 1)'.format(GID, SQLITE3_TEXT)),
-        Stat('num_unique',  sql='COUNT(DISTINCT {0})'.format(GID)),
-    ]
+    UID_COLS = gen_id_cols(UID)
+    GID_COLS = gen_id_cols(GID)
 
     SIZE_COLS = gen_log2_cols('size',                   log2_size_bucket_count) + [
         # compute total here to not need to join with SUMMARY data
         Stat('total',       sql='SUM(size)'),
     ]
 
-    PERM_COLS = [
-        # compute num_unique here to have easily accessible value
-        Stat('hist',        SQLITE3_TEXT, 'mode_hist(mode)'),
-        Stat('num_unique',  sql='COUNT(DISTINCT mode)'),
-    ]
+    PERM_COLS = gen_mode_cols('mode')
 
-    ATIME_COLS  = gen_time_cols('atime',                reftime)
-    MTIME_COLS  = gen_time_cols('mtime',                reftime)
-    CTIME_COLS  = gen_time_cols('ctime',                reftime)
-    CRTIME_COLS = gen_time_cols('crtime',               reftime)
+    ATIME_COLS       = gen_time_cols('atime',           reftime)
+    MTIME_COLS       = gen_time_cols('mtime',           reftime)
+    CTIME_COLS       = gen_time_cols('ctime',           reftime)
+    CRTIME_COLS      = gen_time_cols('crtime',          reftime)
 
-    FTIME_COLS  = gen_stat_cols(FTIME.name)
+    FTIME_COLS       = gen_stat_cols(FTIME.name)
 
     NAME_COLS        = gen_log2_cols('name_len',        log2_name_len_bucket_count)
     LINKNAME_COLS    = gen_log2_cols('linkname_len',    log2_name_len_bucket_count)
@@ -616,9 +626,7 @@ def entries(group_by,                            # pylint: disable=too-many-loca
     # XATTR_NAME_COLS  = gen_log2_cols('xattr_name_len',  log2_name_len_bucket_count)
     # XATTR_VALUE_COLS = gen_log2_cols('xattr_value_len', log2_name_len_bucket_count)
 
-    EXT_COLS = [
-        Stat('hist', SQLITE3_TEXT, 'category_hist(extension, 1)'),
-    ]
+    EXT_COLS         = gen_category_hist_col('extension') + gen_num_unique_col('extension')
 
     EXT_LEN_COLS     = gen_log2_cols('extension_len',   log2_name_len_bucket_count)
 
@@ -642,7 +650,7 @@ def entries(group_by,                            # pylint: disable=too-many-loca
 
     select = [
         LEVEL,
-        '{0} AS {1}'.format(PINODE, INODE),
+        '{0} AS {1}'.format(PINODE,  INODE),
         '{0} AS {1}'.format(PPINODE, PINODE)
     ]
 

@@ -70,7 +70,7 @@ FLATDB="flattened_index.db"
 SNAPSHOT="longitudinal_snapshot.db"
 
 cleanup() {
-    rm -rf "${FLATDB}" "${SNAPSHOT}"
+    rm -f "${FLATDB}" "${SNAPSHOT}"
 }
 
 cleanup_exit() {
@@ -87,10 +87,23 @@ tables=("metadata" "entries" "summary" "treesummary" "snapshot")
 show_schema() {
     grouping="$1"
 
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --verbose --replace-flatdb --replace-outdb" | sed 's/time, [0-9]*)/time), now/g'
+    # no need to delete FLATDB since this function is run before generating it
 
-    echo "# running a without replacing will error because the tables already exist"
-    run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
+    (
+        echo "# bad flat db path"
+        run_no_sort "ln -s \"${INDEXROOT}\" \"${FLATDB}\""
+        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" |& tail -n 2 | head -n 1"
+        run_no_sort "rm \"${FLATDB}\""
+
+        echo "# generate good flat db and snapshot db"
+        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --verbose"
+
+        echo "# running without replacing snapshot db will error because the tables already exist"
+        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
+
+        echo "# running with snapshot db replacement will overwrite the previous data"
+        run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes' --replace-outdb"
+    ) | sed 's/time, [0-9]*)/time, now)/g'
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \".tables\""
 
@@ -100,6 +113,8 @@ show_schema() {
     done
 
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT notes FROM metadata;\""
+
+    cleanup
 }
 
 do_tests() {
@@ -109,10 +124,11 @@ do_tests() {
 
     if [[ -f "${FLATDB}" ]]
     then
-        echo "${FLATDB} already exists"
+        echo "# ${FLATDB} already exists"
     else
-        echo "${FLATDB} does not exist"
+        echo "# ${FLATDB} does not exist"
     fi
+    echo
 
     run_no_sort "${LONGITUDINAL_SNAPSHOT} ${grouping} \"${INDEXROOT}\" \"${FLATDB}\" \"${SNAPSHOT}\" --gufi_query=\"${GUFI_QUERY}\" --notes 'test notes'"
 
@@ -137,14 +153,14 @@ do_tests() {
 
 run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
 
+show_schema "level"
+
 do_tests "graph"
 do_tests "level"
 do_tests "pinode"                      # parent
 do_tests "inode" | sed "s/${DIR}/6/g"  # directory
 
-show_schema "level"
-
-echo "${FLATDB}:"
+echo "# ${FLATDB}:"
 echo
 run_no_sort "${SQLITE3} \"${FLATDB}\" \".tables\""
 run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries;\""
