@@ -117,7 +117,7 @@ show_schema() {
     cleanup
 }
 
-do_tests() {
+get_view() {
     grouping="$1"
 
     rm -f "${SNAPSHOT}"
@@ -148,26 +148,37 @@ do_tests() {
     run_no_sort "${SQLITE3} \"${SNAPSHOT}\" \"SELECT ${group_by}, totsize, tsum_totsize, totdirs, totsubdirs, totfiles, tsum_totfiles, totlinks, tsum_totlinks FROM snapshot ORDER BY ${group_by} ASC;\""
 }
 
+do_test() {
+    cleanup
+
+    run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
+
+    show_schema "level"
+
+    get_view "graph"
+    get_view "level"
+    get_view "pinode"                      # parent
+    get_view "inode" | sed "s/${DIR}/6/g"  # directory
+
+    echo "# ${FLATDB}:"
+    echo
+    run_no_sort "${SQLITE3} \"${FLATDB}\" \".tables\""
+    run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries;\""
+    run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries WHERE type == 'f';\""
+    run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM summary;\""
+    run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM treesummary;\""
+}
+
 (
 "${GUFI_TREESUMMARY_ALL}" "${INDEXROOT}" >/dev/null 2>&1
 
-run_no_sort "${LONGITUDINAL_SNAPSHOT} --help" | replace_argparse
-
-show_schema "level"
-
-do_tests "graph"
-do_tests "level"
-do_tests "pinode"                      # parent
-do_tests "inode" | sed "s/${DIR}/6/g"  # directory
-
-echo "# ${FLATDB}:"
-echo
-run_no_sort "${SQLITE3} \"${FLATDB}\" \".tables\""
-run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries;\""
-run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM entries WHERE type == 'f';\""
-run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM summary;\""
-run_no_sort "${SQLITE3} \"${FLATDB}\" \"SELECT COUNT(*) FROM treesummary;\""
-) | tee "${OUTPUT}"
+do_test | tee "${OUTPUT}"
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+
+"${GUFI_ROLLUP}" "${INDEXROOT}"
+
+do_test | tee "${OUTPUT}"
+@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+)
 
 rm "${OUTPUT}"
