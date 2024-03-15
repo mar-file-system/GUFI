@@ -138,162 +138,36 @@ def run(cmd):
     # nothing should be printed to stdout
     # however, due to how gufi_query is implemented, -T
     # will print some text that is not used, so drop it
-    with open(os.devnull, 'w') as DEVNULL:                    # pylint: disable=unspecified-encoding
-        query = subprocess.Popen(cmd, stdout=DEVNULL)         # pylint: disable=consider-using-with
-        query.communicate()                                   # block until query finishes
+    with open(os.devnull, 'w') as DEVNULL:                        # pylint: disable=unspecified-encoding
+        query = subprocess.Popen(cmd, stdout=DEVNULL)             # pylint: disable=consider-using-with
+        query.communicate()                                       # block until query finishes
         rc = query.returncode
 
     return rc
 
-class Stat: # pylint: disable=too-few-public-methods,redefined-builtin
-    def __init__(self, name, type=SQLITE3_INT64, sql=None, prefix=None):
+class Stat(object):                                               # pylint: disable=too-few-public-methods,useless-object-inheritance
+    def __init__(self, name, type=SQLITE3_INT64,                  # pylint: disable=redefined-builtin
+                 sql=None, prefix=None):
         self.name = name
         self.type = type
 
         sql_fmt = 'CAST({0} AS {1})'
 
         if sql:
-            self.sql = sql_fmt.format(sql, self.type)
+            self.sql = sql_fmt.format(sql, type)
         else:
             if prefix:
-                self.sql = sql_fmt.format('{0}.{1}'.format(prefix, name), self.type)
+                self.sql = sql_fmt.format('{0}.{1}'.format(prefix, name), type)
             else:
-                self.sql = sql_fmt.format(name, self.type)
+                self.sql = sql_fmt.format(name, type)
 
+class TStat(Stat):                                                # pylint: disable=too-few-public-methods
+    def __init__(self, name, type=SQLITE3_INT64, sql=None):       # pylint: disable=redefined-builtin
+        super(TStat, self).__init__(name, type, sql, TREESUMMARY) # pylint: disable=super-with-arguments
 
 # Satyanarayanan, Mahadev. "A study of file sizes and functional lifetimes."
 # ACM SIGOPS Operating Systems Review 15.5 (1981): 96-108.
-FTIME = Stat('ftime',      sql='atime - mtime')
-
-T_COLS = [
-    Stat(LEVEL,            sql='level() + LENGTH({0}.name) - LENGTH(REPLACE({0}.name, \'/\', \'\'))'.format(SUMMARY)),
-    Stat(INODE,            SQLITE3_TEXT, prefix=TREESUMMARY),
-    Stat(PINODE,           SQLITE3_TEXT, prefix=TREESUMMARY),
-    Stat('totsubdirs',     prefix=TREESUMMARY),
-    Stat('maxsubdirfiles', prefix=TREESUMMARY),
-    Stat('maxsubdirlinks', prefix=TREESUMMARY),
-    Stat('maxsubdirsize',  prefix=TREESUMMARY),
-    Stat('totfiles',       prefix=TREESUMMARY),
-    Stat('totlinks',       prefix=TREESUMMARY),
-    Stat('minuid',         prefix=TREESUMMARY),   Stat('maxuid',     prefix=TREESUMMARY),
-    Stat('mingid',         prefix=TREESUMMARY),   Stat('maxgid',     prefix=TREESUMMARY),
-    Stat('minsize',        prefix=TREESUMMARY),   Stat('maxsize',    prefix=TREESUMMARY),
-    Stat('totzero',        prefix=TREESUMMARY),
-    Stat('totltk',         prefix=TREESUMMARY),
-    Stat('totmtk',         prefix=TREESUMMARY),
-    Stat('totltm',         prefix=TREESUMMARY),
-    Stat('totmtm',         prefix=TREESUMMARY),
-    Stat('totmtg',         prefix=TREESUMMARY),
-    Stat('totmtt',         prefix=TREESUMMARY),
-    Stat('totsize',        prefix=TREESUMMARY),
-    Stat('minctime',       prefix=TREESUMMARY),   Stat('maxctime',   prefix=TREESUMMARY),
-    Stat('minmtime',       prefix=TREESUMMARY),   Stat('maxmtime',   prefix=TREESUMMARY),
-    Stat('minatime',       prefix=TREESUMMARY),   Stat('maxatime',   prefix=TREESUMMARY),
-    Stat('minblocks',      prefix=TREESUMMARY),   Stat('maxblocks',  prefix=TREESUMMARY),
-    Stat('totxattr',       prefix=TREESUMMARY),
-    # Stat('depth',          prefix=TREESUMMARY),
-    Stat('mincrtime',      prefix=TREESUMMARY),   Stat('maxcrtime',  prefix=TREESUMMARY),
-    Stat('minossint1',     prefix=TREESUMMARY),   Stat('maxossint1', prefix=TREESUMMARY), Stat('totossint1', prefix=TREESUMMARY),
-    Stat('minossint2',     prefix=TREESUMMARY),   Stat('maxossint2', prefix=TREESUMMARY), Stat('totossint2', prefix=TREESUMMARY),
-    Stat('minossint3',     prefix=TREESUMMARY),   Stat('maxossint3', prefix=TREESUMMARY), Stat('totossint3', prefix=TREESUMMARY),
-    Stat('minossint4',     prefix=TREESUMMARY),   Stat('maxossint4', prefix=TREESUMMARY), Stat('totossint4', prefix=TREESUMMARY),
-    # Stat('rectype',        prefix=TREESUMMARY),
-    # Stat(UID,              prefix=TREESUMMARY),
-    # Stat(GID,              prefix=TREESUMMARY),
-]
-
-S_COLS = [
-    Stat(LEVEL,          sql='level() + LENGTH(name) - LENGTH(REPLACE(name, \'/\', \'\'))'),
-    Stat('fs_type',      SQLITE3_BLOB,
-                         sql=SQLITE3_NULL),
-    Stat('name_len',     sql='LENGTH(basename(name))'),
-    Stat(INODE),
-    Stat('mode'),
-    Stat('nlink'),
-    Stat(UID),
-    Stat(GID),
-    Stat('size'),
-    Stat('blksize'),
-    Stat('blocks'),
-    Stat('atime'),
-    Stat('mtime'),
-    Stat('ctime'),
-    FTIME,
-    # Stat('linkname'),
-    # Stat('xattr_names'),
-    Stat('totfiles',     sql='totfiles'),
-    Stat('totlinks',     sql='totlinks'),
-    Stat('totsubdirs',   sql='subdirs(srollsubdirs, sroll)'),
-    Stat('minuid'),      Stat('maxuid'),
-    Stat('mingid'),      Stat('maxgid'),
-    Stat('minsize'),     Stat('maxsize'),    Stat('totsize'),
-    Stat('totzero'),
-    Stat('totltk'),
-    Stat('totmtk'),
-    Stat('totltm'),
-    Stat('totmtm'),
-    Stat('totmtg'),
-    Stat('totmtt'),
-    Stat('minossint1'),  Stat('maxossint1'), Stat('totossint1'),
-    Stat('minossint2'),  Stat('maxossint2'), Stat('totossint2'),
-    Stat('minossint3'),  Stat('maxossint3'), Stat('totossint3'),
-    Stat('minossint4'),  Stat('maxossint4'), Stat('totossint4'),
-    # Stat('rectype'),
-    Stat(PINODE),
-    # Stat('isroot'),
-    # Stat('rollupscore'),
-
-    # TODO: add some VRXSUMMARY columns # pylint: disable=fixme
-]
-
-E_COLS = [
-    Stat(LEVEL,          sql='level() + LENGTH(sname) - LENGTH(REPLACE(sname, \'/\', \'\'))'),
-    Stat('name_len',     sql='LENGTH(name)'),
-    # filenames without extensions pass in NULL
-    Stat('extension',    SQLITE3_TEXT,
-                         sql='''
-                             CASE WHEN name LIKE '%.%' THEN
-                                 REPLACE(name, RTRIM(name, REPLACE(name, '.', '')), '')
-                             ELSE
-                                 {0}
-                             END
-                             '''.format(SQLITE3_NULL)),
-    # extension length is calculated later
-    Stat('type',         SQLITE3_TEXT),
-    Stat(INODE,          SQLITE3_TEXT),
-    Stat('mode'),
-    Stat('nlink'),
-    Stat(UID),
-    Stat(GID),
-    Stat('size'),
-    Stat('blksize'),
-    Stat('blocks'),
-    Stat('atime'),
-    Stat('mtime'),
-    Stat('ctime'),
-    FTIME,
-    Stat('linkname_len', sql='''
-                             CASE WHEN type == 'l' THEN
-                                 LENGTH(linkname)
-                             ELSE
-                                 {0}
-                             END
-                             '''.format(SQLITE3_NULL)),
-    # Stat('xattr_name_len',  sql='LENGTH(xattr_name)'),
-    # Stat('xattr_value_len', sql='LENGTH(xattr_value)'),
-    Stat('crtime'),
-    Stat('ossint1'),
-    Stat('ossint2'),
-    Stat('ossint3'),
-    Stat('ossint4'),
-    Stat('osstext1_len', sql='LENGTH(osstext1)'),
-    Stat('osstext2_len', sql='LENGTH(osstext2)'),
-
-    Stat(PINODE,     SQLITE3_TEXT, PINODE),
-    Stat(PPINODE,    SQLITE3_TEXT, PPINODE),
-
-    # TODO: add some VRXPENTRIES columns # pylint: disable=fixme
-]
+FTIME = Stat('ftime', sql='atime - mtime')
 
 def create_table(name, cols):
     return '''DROP TABLE IF EXISTS {0};
@@ -301,10 +175,147 @@ def create_table(name, cols):
                   name, ', ' .join(['{0} {1}'.format(col.name, col.type)
                                     for col in cols]))
 
+T_COLS = [
+    TStat('totsubdirs'),
+    TStat('maxsubdirfiles'),
+    TStat('maxsubdirlinks'),
+    TStat('maxsubdirsize'),
+    TStat('totfiles'),
+    TStat('totlinks'),
+    TStat('minuid'),       TStat('maxuid'),
+    TStat('mingid'),       TStat('maxgid'),
+    TStat('minsize'),      TStat('maxsize'),
+    TStat('totzero'),
+    TStat('totltk'),
+    TStat('totmtk'),
+    TStat('totltm'),
+    TStat('totmtm'),
+    TStat('totmtg'),
+    TStat('totmtt'),
+    TStat('totsize'),
+    TStat('minctime'),     TStat('maxctime'),
+    TStat('minmtime'),     TStat('maxmtime'),
+    TStat('minatime'),     TStat('maxatime'),
+    TStat('minblocks'),    TStat('maxblocks'),
+    TStat('totxattr'),
+    # TStat('depth'),
+    TStat('mincrtime'),    TStat('maxcrtime'),
+    TStat('minossint1'),   TStat('maxossint1'), TStat('totossint1'),
+    TStat('minossint2'),   TStat('maxossint2'), TStat('totossint2'),
+    TStat('minossint3'),   TStat('maxossint3'), TStat('totossint3'),
+    TStat('minossint4'),   TStat('maxossint4'), TStat('totossint4'),
+    # TStat('rectype'),
+    # TStat(UID),
+    # TStat(GID),
+]
+
 # pull raw values from the index
 # transform any non-numeric values to numeric data points
 # amortizes cost of walking index multiple times
-def flatten_index(args):
+def flatten_index(args):                         # pylint: disable=too-many-locals
+    T_EXTRA = [
+        Stat(LEVEL,          sql='level() + LENGTH({0}.name) - LENGTH(REPLACE({0}.name, \'/\', \'\'))'.format(SUMMARY)),
+        TStat(INODE,         SQLITE3_TEXT),
+        TStat(PINODE,        SQLITE3_TEXT),
+    ]
+
+    S_COLS = [
+        Stat(LEVEL,          sql='level() + LENGTH(name) - LENGTH(REPLACE(name, \'/\', \'\'))'),
+        Stat('fs_type',      SQLITE3_BLOB,
+                             sql=SQLITE3_NULL),
+        Stat('name_len',     sql='LENGTH(basename(name))'),
+        Stat(INODE),
+        Stat('mode'),
+        Stat('nlink'),
+        Stat(UID),
+        Stat(GID),
+        Stat('size'),
+        Stat('blksize'),
+        Stat('blocks'),
+        Stat('atime'),
+        Stat('mtime'),
+        Stat('ctime'),
+        FTIME,
+        # Stat('linkname'),
+        # Stat('xattr_names'),
+        Stat('totfiles',     sql='totfiles'),
+        Stat('totlinks',     sql='totlinks'),
+        Stat('totsubdirs',   sql='subdirs(srollsubdirs, sroll)'),
+        Stat('minuid'),      Stat('maxuid'),
+        Stat('mingid'),      Stat('maxgid'),
+        Stat('minsize'),     Stat('maxsize'),
+        Stat('totzero'),
+        Stat('totltk'),
+        Stat('totmtk'),
+        Stat('totltm'),
+        Stat('totmtm'),
+        Stat('totmtg'),
+        Stat('totmtt'),
+        Stat('totsize'),
+        Stat('minctime'),    Stat('maxctime'),
+        Stat('minmtime'),    Stat('maxmtime'),
+        Stat('minatime'),    Stat('maxatime'),
+        Stat('minblocks'),   Stat('maxblocks'),
+        # Stat('totxattrs'),
+        # Stat('depth'),
+        Stat('mincrtime'),   Stat('maxcrtime'),
+        Stat('minossint1'),  Stat('maxossint1'), Stat('totossint1'),
+        Stat('minossint2'),  Stat('maxossint2'), Stat('totossint2'),
+        Stat('minossint3'),  Stat('maxossint3'), Stat('totossint3'),
+        Stat('minossint4'),  Stat('maxossint4'), Stat('totossint4'),
+        # Stat('rectype'),
+        Stat(PINODE),
+        # Stat('isroot'),
+        # Stat('rollupscore'),
+    ]
+
+    E_COLS = [
+        Stat(LEVEL,          sql='level() + LENGTH(sname) - LENGTH(REPLACE(sname, \'/\', \'\'))'),
+        Stat('name_len',     sql='LENGTH(name)'),
+        # filenames without extensions pass in NULL
+        Stat('extension',    SQLITE3_TEXT,
+                             sql='''
+                                 CASE WHEN name LIKE '%.%' THEN
+                                     REPLACE(name, RTRIM(name, REPLACE(name, '.', '')), '')
+                                 ELSE
+                                     {0}
+                                 END
+                                 '''.format(SQLITE3_NULL)),
+        # extension length is calculated later
+        Stat('type',         SQLITE3_TEXT),
+        Stat(INODE,          SQLITE3_TEXT),
+        Stat('mode'),
+        Stat('nlink'),
+        Stat(UID),
+        Stat(GID),
+        Stat('size'),
+        Stat('blksize'),
+        Stat('blocks'),
+        Stat('atime'),
+        Stat('mtime'),
+        Stat('ctime'),
+        FTIME,
+        Stat('linkname_len', sql='''
+                                 CASE WHEN type == 'l' THEN
+                                     LENGTH(linkname)
+                                 ELSE
+                                     {0}
+                                 END
+                                 '''.format(SQLITE3_NULL)),
+        # Stat('xattr_name_len',  sql='LENGTH(xattr_name)'),
+        # Stat('xattr_value_len', sql='LENGTH(xattr_value)'),
+        Stat('crtime'),
+        Stat('ossint1'),
+        Stat('ossint2'),
+        Stat('ossint3'),
+        Stat('ossint4'),
+        Stat('osstext1_len', sql='LENGTH(osstext1)'),
+        Stat('osstext2_len', sql='LENGTH(osstext2)'),
+
+        Stat(PINODE,         SQLITE3_TEXT),
+        Stat(PPINODE,        SQLITE3_TEXT),
+    ]
+
     query = False
 
     st = None
@@ -333,12 +344,12 @@ def flatten_index(args):
 
     I = '''{0}
            {1}
-           {2}'''.format(create_table(IT, T_COLS),
+           {2}'''.format(create_table(IT, T_EXTRA + T_COLS),
                          create_table(IS, S_COLS),
                          create_table(IE, E_COLS))
 
     T = 'INSERT INTO {0} {1}; SELECT 1;'.format(
-        IT, build_query([col.sql for col in T_COLS],
+        IT, build_query([col.sql for col in T_EXTRA + T_COLS],
                         ['{0} LEFT JOIN {1} ON {0}.{2} == {1}.{2}'.format(SUMMARY, TREESUMMARY, INODE)]))
 
     S = 'INSERT INTO {0} {1}; SELECT 1;'.format(
@@ -353,14 +364,14 @@ def flatten_index(args):
 
     K = '''{0}
            {1}
-           {2}'''.format(create_table(TREESUMMARY, T_COLS),
+           {2}'''.format(create_table(TREESUMMARY, T_EXTRA + T_COLS),
                          create_table(SUMMARY,     S_COLS),
                          create_table(ENTRIES,     E_COLS + [Stat('extension_len')]))
 
     J = '''INSERT INTO {0} SELECT {1} FROM {2};
            INSERT INTO {3} SELECT {4} FROM {5};
            INSERT INTO {6} SELECT {7} FROM {8}; '''.format(
-               TREESUMMARY, ', '.join([col.name for col in T_COLS]), IT,
+               TREESUMMARY, ', '.join([col.name for col in T_EXTRA + T_COLS]), IT,
                SUMMARY,     ', '.join([col.name for col in S_COLS]), IS,
                ENTRIES,     ', '.join([col.name for col in E_COLS + [Stat('LENGTH(extension)')]]), IE)
 
@@ -407,7 +418,7 @@ def gen_stdev_col(col):
 
 def gen_num_unique_col(col):
     return [
-        Stat('num_unique',  sql='COUNT(DISTINCT {0})'.format(col)),
+        Stat('num_unique', sql='COUNT(DISTINCT {0})'.format(col)),
     ]
 
 def gen_log2_hist_col(col, buckets):
@@ -417,14 +428,13 @@ def gen_log2_hist_col(col, buckets):
 
 def gen_category_hist_col(col):
     return [
-        Stat('hist',  SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1)'.format(col)),
+        Stat('hist',       SQLITE3_TEXT, 'category_hist(CAST({0} AS TEXT), 1)'.format(col)),
     ]
 
 def gen_mode_count_col(col):
     return [
         Stat('mode_count', SQLITE3_TEXT, 'mode_count({0})'.format(col)),
     ]
-
 # ###############################################
 
 # ###############################################
@@ -464,70 +474,33 @@ def gen_time_cols(col, reftime):
 # ###############################################
 
 def agg(name, sql):
-    TOT = 'tot'
-    MIN = 'min'
-    MAX = 'max'
+    op = '{0}'
+    if name[:3] == 'min':
+        op = 'MIN({0})'
+    if name[:3] == 'max':
+        op = 'MAX({0})'
+    if name[:3] == 'tot':
+        op = 'SUM({0})'
 
-    if name[:3] == MIN:
-        return 'CAST(MIN({0}) AS {1})'.format(sql, SQLITE3_INT64)
-    if name[:3] == MAX:
-        return 'CAST(MAX({0}) AS {1})'.format(sql, SQLITE3_INT64)
-    if name[:3] == TOT:
-        return 'CAST(TOTAL({0}) AS {1})'.format(sql, SQLITE3_INT64)
-
-    return sql
+    return 'CAST({0} AS {1})'.format(op.format(sql), SQLITE3_INT64)
 
 def treesummary(group_by):
-    COLS = [
-        'totsubdirs',
-        'maxsubdirfiles',
-        'maxsubdirlinks',
-        'maxsubdirsize',
-        'totfiles',
-        'totlinks',
-        'minuid',     'maxuid',
-        'mingid',     'maxgid',
-        'minsize',    'maxsize',
-        'totzero',
-        'totltk',
-        'totmtk',
-        'totltm',
-        'totmtm',
-        'totmtg',
-        'totmtt',
-        'totsize',
-        'minctime',   'maxctime',
-        'minmtime',   'maxmtime',
-        'minatime',   'maxatime',
-        'minblocks',  'maxblocks',
-        'totxattr',
-        'mincrtime',  'maxcrtime',
-        'minossint1', 'maxossint1', 'totossint1',
-        'minossint2', 'maxossint2', 'totossint2',
-        'minossint3', 'maxossint3', 'totossint3',
-        'minossint4', 'maxossint4', 'totossint4',
-        # 'rectype',
-        # UID,
-        # GID,
-    ]
-
     select = [
         LEVEL,
         INODE,
         PINODE,
     ]
 
-    for col in COLS:
-        select += ['{0} AS {1}'.format(agg(col, col), col)]
+    for col in T_COLS:
+        select += ['{0} AS {1}'.format(agg(col.name, col.name), col.name)]
 
     return (
         'DROP TABLE IF EXISTS main.{0}; CREATE TABLE main.{0} AS {1}'.format(
             TREESUMMARY,
-            build_query(select, [TREESUMMARY],
-                        None, group_by)),
+            build_query(select, [TREESUMMARY], None, group_by)),
 
-        build_query([LEVEL, INODE, PINODE] + ['{0} AS {1}_{0}'.format(col, TSUM)
-                                              for col in COLS],
+        build_query([LEVEL, INODE, PINODE] + ['{0} AS {1}_{0}'.format(col.name, TSUM)
+                                              for col in T_COLS],
                     [TREESUMMARY]),
     )
 
@@ -543,18 +516,18 @@ def summary(group_by,                            # pylint: disable=too-many-loca
     ]
 
     DIR_COLS = [
-        ['name_len',  lambda col : gen_log2_cols(col, log2_name_len_bucket_count)],
-        ['mode',      gen_mode_cols],
-        ['nlink',     gen_stat_cols],
-        [UID,         gen_id_cols],
-        [GID,         gen_id_cols],
-        ['size',      lambda col : gen_log2_cols(col, log2_size_bucket_count)],
-        ['blksize',   lambda col : gen_log2_cols(col, log2_size_bucket_count)],
-        ['blocks',    lambda col : gen_log2_cols(col, log2_size_bucket_count)],
-        ['atime',     lambda col : gen_time_cols(col, reftime)],
-        ['mtime',     lambda col : gen_time_cols(col, reftime)],
-        ['ctime',     lambda col : gen_time_cols(col, reftime)],
-        ['ftime',     gen_stat_cols],
+        ['name_len',        lambda col : gen_log2_cols(col, log2_name_len_bucket_count)],
+        ['mode',            gen_mode_cols],
+        ['nlink',           gen_stat_cols],
+        [UID,               gen_id_cols],
+        [GID,               gen_id_cols],
+        ['size',            lambda col : gen_log2_cols(col, log2_size_bucket_count)],
+        ['blksize',         lambda col : gen_log2_cols(col, log2_size_bucket_count)],
+        ['blocks',          lambda col : gen_log2_cols(col, log2_size_bucket_count)],
+        ['atime',           lambda col : gen_time_cols(col, reftime)],
+        ['mtime',           lambda col : gen_time_cols(col, reftime)],
+        ['ctime',           lambda col : gen_time_cols(col, reftime)],
+        [FTIME.name,        gen_stat_cols],
     ]
 
     SUM_COLS = [
@@ -568,7 +541,7 @@ def summary(group_by,                            # pylint: disable=too-many-loca
         Stat('totlinks',    sql='totlinks'),
         Stat('minuid'),     Stat('maxuid'),
         Stat('mingid'),     Stat('maxgid'),
-        Stat('minsize'),    Stat('maxsize'),    Stat('totsize'),
+        Stat('minsize'),    Stat('maxsize'),
         Stat('totzero'),
         Stat('totltk'),
         Stat('totmtk'),
@@ -576,18 +549,22 @@ def summary(group_by,                            # pylint: disable=too-many-loca
         Stat('totmtm'),
         Stat('totmtg'),
         Stat('totmtt'),
+        Stat('totsize'),
+        Stat('minctime'),   Stat('maxctime'),
+        Stat('minmtime'),   Stat('maxmtime'),
+        Stat('minatime'),   Stat('maxatime'),
+        Stat('minblocks'),  Stat('maxblocks'),
+        # Stat('totxattrs'),
+        # Stat('depth'),
+        Stat('mincrtime'),  Stat('maxcrtime'),
         Stat('minossint1'), Stat('maxossint1'), Stat('totossint1'),
         Stat('minossint2'), Stat('maxossint2'), Stat('totossint2'),
         Stat('minossint3'), Stat('maxossint3'), Stat('totossint3'),
         Stat('minossint4'), Stat('maxossint4'), Stat('totossint4'),
     ]
 
-    select = []
-    alias  = []
-
-    for col in CONST_COLS:
-        select += [col]
-        alias  += [col]
+    select = CONST_COLS[:]
+    alias  = CONST_COLS[:]
 
     for col, g in DIR_COLS:
         for g_stat in g(col):
@@ -601,12 +578,10 @@ def summary(group_by,                            # pylint: disable=too-many-loca
     return (
         'DROP TABLE IF EXISTS main.{0}; CREATE TABLE main.{0} AS {1}'.format(
             SUMMARY,
-            build_query(select, [SUMMARY],
-                        None, group_by)),
+            build_query(select, [SUMMARY], None, group_by)),
 
-        build_query(alias, [SUMMARY],
-                    None, group_by),
-        )
+        build_query(alias, [SUMMARY], None, group_by),
+    )
 
 def entries(group_by,                            # pylint: disable=too-many-locals
             reftime,
@@ -640,21 +615,21 @@ def entries(group_by,                            # pylint: disable=too-many-loca
     EXT_LEN_COLS     = gen_log2_cols('extension_len',   log2_name_len_bucket_count)
 
     COLS = [
-        ['uid',             UID_COLS],
-        ['gid',             GID_COLS],
+        [UID,               UID_COLS],
+        [GID,               GID_COLS],
         ['size',            SIZE_COLS],
         ['mode',            PERM_COLS],
         ['ctime',           CTIME_COLS],
         ['atime',           ATIME_COLS],
         ['mtime',           MTIME_COLS],
         ['crtime',          CRTIME_COLS],
-        ['ftime',           FTIME_COLS],
+        [FTIME.name,        FTIME_COLS],
         ['name_len',        NAME_COLS],
         ['linkname_len',    LINKNAME_COLS],
         # ['xattr_name_len',  XATTR_NAME_COLS],
         # ['xattr_value_len', XATTR_VALUE_COLS],
-        ['extension',        EXT_COLS],
-        ['extension_len',    EXT_LEN_COLS],
+        ['extension',       EXT_COLS],
+        ['extension_len',   EXT_LEN_COLS],
     ]
 
     select = [

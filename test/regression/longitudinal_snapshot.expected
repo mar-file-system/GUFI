@@ -56,45 +56,45 @@ GUFI query is
     -I 'DROP TABLE IF EXISTS intermediate_treesummary;
               CREATE TABLE intermediate_treesummary(level INT64, inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64);
            DROP TABLE IF EXISTS intermediate_summary;
-              CREATE TABLE intermediate_summary(level INT64, fs_type BLOB, name_len INT64, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, ftime INT64, totfiles INT64, totlinks INT64, totsubdirs INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, pinode INT64);
+              CREATE TABLE intermediate_summary(level INT64, fs_type BLOB, name_len INT64, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, ftime INT64, totfiles INT64, totlinks INT64, totsubdirs INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, pinode INT64);
            DROP TABLE IF EXISTS intermediate_entries;
               CREATE TABLE intermediate_entries(level INT64, name_len INT64, extension TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, ftime INT64, linkname_len INT64, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1_len INT64, osstext2_len INT64, pinode TEXT, ppinode TEXT);' \
     -T 'INSERT INTO intermediate_treesummary SELECT CAST(level() + LENGTH(summary.name) - LENGTH(REPLACE(summary.name, '"'"'/'"'"', '"'"''"'"')) AS INT64), CAST(treesummary.inode AS TEXT), CAST(treesummary.pinode AS TEXT), CAST(treesummary.totsubdirs AS INT64), CAST(treesummary.maxsubdirfiles AS INT64), CAST(treesummary.maxsubdirlinks AS INT64), CAST(treesummary.maxsubdirsize AS INT64), CAST(treesummary.totfiles AS INT64), CAST(treesummary.totlinks AS INT64), CAST(treesummary.minuid AS INT64), CAST(treesummary.maxuid AS INT64), CAST(treesummary.mingid AS INT64), CAST(treesummary.maxgid AS INT64), CAST(treesummary.minsize AS INT64), CAST(treesummary.maxsize AS INT64), CAST(treesummary.totzero AS INT64), CAST(treesummary.totltk AS INT64), CAST(treesummary.totmtk AS INT64), CAST(treesummary.totltm AS INT64), CAST(treesummary.totmtm AS INT64), CAST(treesummary.totmtg AS INT64), CAST(treesummary.totmtt AS INT64), CAST(treesummary.totsize AS INT64), CAST(treesummary.minctime AS INT64), CAST(treesummary.maxctime AS INT64), CAST(treesummary.minmtime AS INT64), CAST(treesummary.maxmtime AS INT64), CAST(treesummary.minatime AS INT64), CAST(treesummary.maxatime AS INT64), CAST(treesummary.minblocks AS INT64), CAST(treesummary.maxblocks AS INT64), CAST(treesummary.totxattr AS INT64), CAST(treesummary.mincrtime AS INT64), CAST(treesummary.maxcrtime AS INT64), CAST(treesummary.minossint1 AS INT64), CAST(treesummary.maxossint1 AS INT64), CAST(treesummary.totossint1 AS INT64), CAST(treesummary.minossint2 AS INT64), CAST(treesummary.maxossint2 AS INT64), CAST(treesummary.totossint2 AS INT64), CAST(treesummary.minossint3 AS INT64), CAST(treesummary.maxossint3 AS INT64), CAST(treesummary.totossint3 AS INT64), CAST(treesummary.minossint4 AS INT64), CAST(treesummary.maxossint4 AS INT64), CAST(treesummary.totossint4 AS INT64) FROM summary LEFT JOIN treesummary ON summary.inode == treesummary.inode; SELECT 1;' \
-    -S 'INSERT INTO intermediate_summary SELECT CAST(level() + LENGTH(name) - LENGTH(REPLACE(name, '"'"'/'"'"', '"'"''"'"')) AS INT64), CAST(NULL AS BLOB), CAST(LENGTH(basename(name)) AS INT64), CAST(inode AS INT64), CAST(mode AS INT64), CAST(nlink AS INT64), CAST(uid AS INT64), CAST(gid AS INT64), CAST(size AS INT64), CAST(blksize AS INT64), CAST(blocks AS INT64), CAST(atime AS INT64), CAST(mtime AS INT64), CAST(ctime AS INT64), CAST(atime - mtime AS INT64), CAST(totfiles AS INT64), CAST(totlinks AS INT64), CAST(subdirs(srollsubdirs, sroll) AS INT64), CAST(minuid AS INT64), CAST(maxuid AS INT64), CAST(mingid AS INT64), CAST(maxgid AS INT64), CAST(minsize AS INT64), CAST(maxsize AS INT64), CAST(totsize AS INT64), CAST(totzero AS INT64), CAST(totltk AS INT64), CAST(totmtk AS INT64), CAST(totltm AS INT64), CAST(totmtm AS INT64), CAST(totmtg AS INT64), CAST(totmtt AS INT64), CAST(minossint1 AS INT64), CAST(maxossint1 AS INT64), CAST(totossint1 AS INT64), CAST(minossint2 AS INT64), CAST(maxossint2 AS INT64), CAST(totossint2 AS INT64), CAST(minossint3 AS INT64), CAST(maxossint3 AS INT64), CAST(totossint3 AS INT64), CAST(minossint4 AS INT64), CAST(maxossint4 AS INT64), CAST(totossint4 AS INT64), CAST(pinode AS INT64) FROM vrxsummary GROUP BY inode; SELECT 1;' \
+    -S 'INSERT INTO intermediate_summary SELECT CAST(level() + LENGTH(name) - LENGTH(REPLACE(name, '"'"'/'"'"', '"'"''"'"')) AS INT64), CAST(NULL AS BLOB), CAST(LENGTH(basename(name)) AS INT64), CAST(inode AS INT64), CAST(mode AS INT64), CAST(nlink AS INT64), CAST(uid AS INT64), CAST(gid AS INT64), CAST(size AS INT64), CAST(blksize AS INT64), CAST(blocks AS INT64), CAST(atime AS INT64), CAST(mtime AS INT64), CAST(ctime AS INT64), CAST(atime - mtime AS INT64), CAST(totfiles AS INT64), CAST(totlinks AS INT64), CAST(subdirs(srollsubdirs, sroll) AS INT64), CAST(minuid AS INT64), CAST(maxuid AS INT64), CAST(mingid AS INT64), CAST(maxgid AS INT64), CAST(minsize AS INT64), CAST(maxsize AS INT64), CAST(totzero AS INT64), CAST(totltk AS INT64), CAST(totmtk AS INT64), CAST(totltm AS INT64), CAST(totmtm AS INT64), CAST(totmtg AS INT64), CAST(totmtt AS INT64), CAST(totsize AS INT64), CAST(minctime AS INT64), CAST(maxctime AS INT64), CAST(minmtime AS INT64), CAST(maxmtime AS INT64), CAST(minatime AS INT64), CAST(maxatime AS INT64), CAST(minblocks AS INT64), CAST(maxblocks AS INT64), CAST(mincrtime AS INT64), CAST(maxcrtime AS INT64), CAST(minossint1 AS INT64), CAST(maxossint1 AS INT64), CAST(totossint1 AS INT64), CAST(minossint2 AS INT64), CAST(maxossint2 AS INT64), CAST(totossint2 AS INT64), CAST(minossint3 AS INT64), CAST(maxossint3 AS INT64), CAST(totossint3 AS INT64), CAST(minossint4 AS INT64), CAST(maxossint4 AS INT64), CAST(totossint4 AS INT64), CAST(pinode AS INT64) FROM vrxsummary GROUP BY inode; SELECT 1;' \
     -E 'INSERT INTO intermediate_entries SELECT CAST(level() + LENGTH(sname) - LENGTH(REPLACE(sname, '"'"'/'"'"', '"'"''"'"')) AS INT64), CAST(LENGTH(name) AS INT64), CAST(
-                             CASE WHEN name LIKE '"'"'%.%'"'"' THEN
-                                 REPLACE(name, RTRIM(name, REPLACE(name, '"'"'.'"'"', '"'"''"'"')), '"'"''"'"')
-                             ELSE
-                                 NULL
-                             END
-                              AS TEXT), CAST(type AS TEXT), CAST(inode AS TEXT), CAST(mode AS INT64), CAST(nlink AS INT64), CAST(uid AS INT64), CAST(gid AS INT64), CAST(size AS INT64), CAST(blksize AS INT64), CAST(blocks AS INT64), CAST(atime AS INT64), CAST(mtime AS INT64), CAST(ctime AS INT64), CAST(atime - mtime AS INT64), CAST(
-                             CASE WHEN type == '"'"'l'"'"' THEN
-                                 LENGTH(linkname)
-                             ELSE
-                                 NULL
-                             END
-                              AS INT64), CAST(crtime AS INT64), CAST(ossint1 AS INT64), CAST(ossint2 AS INT64), CAST(ossint3 AS INT64), CAST(ossint4 AS INT64), CAST(LENGTH(osstext1) AS INT64), CAST(LENGTH(osstext2) AS INT64), CAST(pinode AS TEXT), CAST(ppinode AS TEXT) FROM vrxpentries GROUP BY inode; SELECT 1;' \
+                                 CASE WHEN name LIKE '"'"'%.%'"'"' THEN
+                                     REPLACE(name, RTRIM(name, REPLACE(name, '"'"'.'"'"', '"'"''"'"')), '"'"''"'"')
+                                 ELSE
+                                     NULL
+                                 END
+                                  AS TEXT), CAST(type AS TEXT), CAST(inode AS TEXT), CAST(mode AS INT64), CAST(nlink AS INT64), CAST(uid AS INT64), CAST(gid AS INT64), CAST(size AS INT64), CAST(blksize AS INT64), CAST(blocks AS INT64), CAST(atime AS INT64), CAST(mtime AS INT64), CAST(ctime AS INT64), CAST(atime - mtime AS INT64), CAST(
+                                 CASE WHEN type == '"'"'l'"'"' THEN
+                                     LENGTH(linkname)
+                                 ELSE
+                                     NULL
+                                 END
+                                  AS INT64), CAST(crtime AS INT64), CAST(ossint1 AS INT64), CAST(ossint2 AS INT64), CAST(ossint3 AS INT64), CAST(ossint4 AS INT64), CAST(LENGTH(osstext1) AS INT64), CAST(LENGTH(osstext2) AS INT64), CAST(pinode AS TEXT), CAST(ppinode AS TEXT) FROM vrxpentries GROUP BY inode; SELECT 1;' \
     -K 'DROP TABLE IF EXISTS treesummary;
               CREATE TABLE treesummary(level INT64, inode TEXT, pinode TEXT, totsubdirs INT64, maxsubdirfiles INT64, maxsubdirlinks INT64, maxsubdirsize INT64, totfiles INT64, totlinks INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, totxattr INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64);
            DROP TABLE IF EXISTS summary;
-              CREATE TABLE summary(level INT64, fs_type BLOB, name_len INT64, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, ftime INT64, totfiles INT64, totlinks INT64, totsubdirs INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, pinode INT64);
+              CREATE TABLE summary(level INT64, fs_type BLOB, name_len INT64, inode INT64, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, ftime INT64, totfiles INT64, totlinks INT64, totsubdirs INT64, minuid INT64, maxuid INT64, mingid INT64, maxgid INT64, minsize INT64, maxsize INT64, totzero INT64, totltk INT64, totmtk INT64, totltm INT64, totmtm INT64, totmtg INT64, totmtt INT64, totsize INT64, minctime INT64, maxctime INT64, minmtime INT64, maxmtime INT64, minatime INT64, maxatime INT64, minblocks INT64, maxblocks INT64, mincrtime INT64, maxcrtime INT64, minossint1 INT64, maxossint1 INT64, totossint1 INT64, minossint2 INT64, maxossint2 INT64, totossint2 INT64, minossint3 INT64, maxossint3 INT64, totossint3 INT64, minossint4 INT64, maxossint4 INT64, totossint4 INT64, pinode INT64);
            DROP TABLE IF EXISTS entries;
               CREATE TABLE entries(level INT64, name_len INT64, extension TEXT, type TEXT, inode TEXT, mode INT64, nlink INT64, uid INT64, gid INT64, size INT64, blksize INT64, blocks INT64, atime INT64, mtime INT64, ctime INT64, ftime INT64, linkname_len INT64, crtime INT64, ossint1 INT64, ossint2 INT64, ossint3 INT64, ossint4 INT64, osstext1_len INT64, osstext2_len INT64, pinode TEXT, ppinode TEXT, extension_len INT64);' \
     -J 'INSERT INTO treesummary SELECT level, inode, pinode, totsubdirs, maxsubdirfiles, maxsubdirlinks, maxsubdirsize, totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 FROM intermediate_treesummary;
-           INSERT INTO summary SELECT level, fs_type, name_len, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, ftime, totfiles, totlinks, totsubdirs, minuid, maxuid, mingid, maxgid, minsize, maxsize, totsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, pinode FROM intermediate_summary;
+           INSERT INTO summary SELECT level, fs_type, name_len, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, ftime, totfiles, totlinks, totsubdirs, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, pinode FROM intermediate_summary;
            INSERT INTO entries SELECT level, name_len, extension, type, inode, mode, nlink, uid, gid, size, blksize, blocks, atime, mtime, ctime, ftime, linkname_len, crtime, ossint1, ossint2, ossint3, ossint4, osstext1_len, osstext2_len, pinode, ppinode, LENGTH(extension) FROM intermediate_entries; ' \
     prefix
 gufi_sqlite \
     "longitudinal_snapshot.db" \
     "ATTACH 'file:flattened_index.db?mode=ro' AS flatdb;" \
-    "DROP TABLE IF EXISTS main.treesummary; CREATE TABLE main.treesummary AS SELECT level, inode, pinode, CAST(TOTAL(totsubdirs) AS INT64) AS totsubdirs, CAST(MAX(maxsubdirfiles) AS INT64) AS maxsubdirfiles, CAST(MAX(maxsubdirlinks) AS INT64) AS maxsubdirlinks, CAST(MAX(maxsubdirsize) AS INT64) AS maxsubdirsize, CAST(TOTAL(totfiles) AS INT64) AS totfiles, CAST(TOTAL(totlinks) AS INT64) AS totlinks, CAST(MIN(minuid) AS INT64) AS minuid, CAST(MAX(maxuid) AS INT64) AS maxuid, CAST(MIN(mingid) AS INT64) AS mingid, CAST(MAX(maxgid) AS INT64) AS maxgid, CAST(MIN(minsize) AS INT64) AS minsize, CAST(MAX(maxsize) AS INT64) AS maxsize, CAST(TOTAL(totzero) AS INT64) AS totzero, CAST(TOTAL(totltk) AS INT64) AS totltk, CAST(TOTAL(totmtk) AS INT64) AS totmtk, CAST(TOTAL(totltm) AS INT64) AS totltm, CAST(TOTAL(totmtm) AS INT64) AS totmtm, CAST(TOTAL(totmtg) AS INT64) AS totmtg, CAST(TOTAL(totmtt) AS INT64) AS totmtt, CAST(TOTAL(totsize) AS INT64) AS totsize, CAST(MIN(minctime) AS INT64) AS minctime, CAST(MAX(maxctime) AS INT64) AS maxctime, CAST(MIN(minmtime) AS INT64) AS minmtime, CAST(MAX(maxmtime) AS INT64) AS maxmtime, CAST(MIN(minatime) AS INT64) AS minatime, CAST(MAX(maxatime) AS INT64) AS maxatime, CAST(MIN(minblocks) AS INT64) AS minblocks, CAST(MAX(maxblocks) AS INT64) AS maxblocks, CAST(TOTAL(totxattr) AS INT64) AS totxattr, CAST(MIN(mincrtime) AS INT64) AS mincrtime, CAST(MAX(maxcrtime) AS INT64) AS maxcrtime, CAST(MIN(minossint1) AS INT64) AS minossint1, CAST(MAX(maxossint1) AS INT64) AS maxossint1, CAST(TOTAL(totossint1) AS INT64) AS totossint1, CAST(MIN(minossint2) AS INT64) AS minossint2, CAST(MAX(maxossint2) AS INT64) AS maxossint2, CAST(TOTAL(totossint2) AS INT64) AS totossint2, CAST(MIN(minossint3) AS INT64) AS minossint3, CAST(MAX(maxossint3) AS INT64) AS maxossint3, CAST(TOTAL(totossint3) AS INT64) AS totossint3, CAST(MIN(minossint4) AS INT64) AS minossint4, CAST(MAX(maxossint4) AS INT64) AS maxossint4, CAST(TOTAL(totossint4) AS INT64) AS totossint4 FROM treesummary GROUP BY level" \
-    "DROP TABLE IF EXISTS main.summary; CREATE TABLE main.summary AS SELECT level, inode, pinode, fs_type, CAST(MIN(name_len) AS INT64) AS name_len_min, CAST(MAX(name_len) AS INT64) AS name_len_max, CAST(AVG(name_len) AS DOUBLE) AS name_len_mean, CAST(median(name_len) AS DOUBLE) AS name_len_median, CAST(mode_count(name_len) AS TEXT) AS name_len_mode, CAST(stdevp(name_len) AS DOUBLE) AS name_len_stdev, CAST(log2_hist(name_len, 8) AS TEXT) AS name_len_hist, CAST(mode_hist(mode) AS TEXT) AS mode_hist, CAST(COUNT(DISTINCT mode) AS INT64) AS mode_num_unique, CAST(MIN(nlink) AS INT64) AS nlink_min, CAST(MAX(nlink) AS INT64) AS nlink_max, CAST(AVG(nlink) AS DOUBLE) AS nlink_mean, CAST(median(nlink) AS DOUBLE) AS nlink_median, CAST(mode_count(nlink) AS TEXT) AS nlink_mode, CAST(stdevp(nlink) AS DOUBLE) AS nlink_stdev, CAST(MIN(uid) AS INT64) AS uid_min, CAST(MAX(uid) AS INT64) AS uid_max, CAST(mode_count(uid) AS TEXT) AS uid_mode_count, CAST(category_hist(CAST(uid AS TEXT), 1) AS TEXT) AS uid_hist, CAST(COUNT(DISTINCT uid) AS INT64) AS uid_num_unique, CAST(MIN(gid) AS INT64) AS gid_min, CAST(MAX(gid) AS INT64) AS gid_max, CAST(mode_count(gid) AS TEXT) AS gid_mode_count, CAST(category_hist(CAST(gid AS TEXT), 1) AS TEXT) AS gid_hist, CAST(COUNT(DISTINCT gid) AS INT64) AS gid_num_unique, CAST(MIN(size) AS INT64) AS size_min, CAST(MAX(size) AS INT64) AS size_max, CAST(AVG(size) AS DOUBLE) AS size_mean, CAST(median(size) AS DOUBLE) AS size_median, CAST(mode_count(size) AS TEXT) AS size_mode, CAST(stdevp(size) AS DOUBLE) AS size_stdev, CAST(log2_hist(size, 50) AS TEXT) AS size_hist, CAST(MIN(blksize) AS INT64) AS blksize_min, CAST(MAX(blksize) AS INT64) AS blksize_max, CAST(AVG(blksize) AS DOUBLE) AS blksize_mean, CAST(median(blksize) AS DOUBLE) AS blksize_median, CAST(mode_count(blksize) AS TEXT) AS blksize_mode, CAST(stdevp(blksize) AS DOUBLE) AS blksize_stdev, CAST(log2_hist(blksize, 50) AS TEXT) AS blksize_hist, CAST(MIN(blocks) AS INT64) AS blocks_min, CAST(MAX(blocks) AS INT64) AS blocks_max, CAST(AVG(blocks) AS DOUBLE) AS blocks_mean, CAST(median(blocks) AS DOUBLE) AS blocks_median, CAST(mode_count(blocks) AS TEXT) AS blocks_mode, CAST(stdevp(blocks) AS DOUBLE) AS blocks_stdev, CAST(log2_hist(blocks, 50) AS TEXT) AS blocks_hist, CAST(MIN(atime) AS INT64) AS atime_min, CAST(MAX(atime) AS INT64) AS atime_max, CAST(AVG(atime) AS DOUBLE) AS atime_mean, CAST(median(atime) AS DOUBLE) AS atime_median, CAST(mode_count(atime) AS TEXT) AS atime_mode, CAST(stdevp(atime) AS DOUBLE) AS atime_stdev, CAST(time_hist(atime, now) AS TEXT) AS atime_age_hist, CAST(category_hist(CAST(strftime('%H', atime) AS TEXT), 1) AS TEXT) AS atime_hour_hist, CAST(MIN(mtime) AS INT64) AS mtime_min, CAST(MAX(mtime) AS INT64) AS mtime_max, CAST(AVG(mtime) AS DOUBLE) AS mtime_mean, CAST(median(mtime) AS DOUBLE) AS mtime_median, CAST(mode_count(mtime) AS TEXT) AS mtime_mode, CAST(stdevp(mtime) AS DOUBLE) AS mtime_stdev, CAST(time_hist(mtime, now) AS TEXT) AS mtime_age_hist, CAST(category_hist(CAST(strftime('%H', mtime) AS TEXT), 1) AS TEXT) AS mtime_hour_hist, CAST(MIN(ctime) AS INT64) AS ctime_min, CAST(MAX(ctime) AS INT64) AS ctime_max, CAST(AVG(ctime) AS DOUBLE) AS ctime_mean, CAST(median(ctime) AS DOUBLE) AS ctime_median, CAST(mode_count(ctime) AS TEXT) AS ctime_mode, CAST(stdevp(ctime) AS DOUBLE) AS ctime_stdev, CAST(time_hist(ctime, now) AS TEXT) AS ctime_age_hist, CAST(category_hist(CAST(strftime('%H', ctime) AS TEXT), 1) AS TEXT) AS ctime_hour_hist, CAST(MIN(ftime) AS INT64) AS ftime_min, CAST(MAX(ftime) AS INT64) AS ftime_max, CAST(AVG(ftime) AS DOUBLE) AS ftime_mean, CAST(median(ftime) AS DOUBLE) AS ftime_median, CAST(mode_count(ftime) AS TEXT) AS ftime_mode, CAST(stdevp(ftime) AS DOUBLE) AS ftime_stdev, CAST(TOTAL(CAST(1 AS INT64)) AS INT64) AS totdirs, CAST(TOTAL(CAST(totsubdirs AS INT64)) AS INT64) AS totsubdirs, CAST(MIN(CAST(totfiles AS INT64)) AS INT64) AS minfiles, CAST(MAX(CAST(totfiles AS INT64)) AS INT64) AS maxfiles, CAST(TOTAL(CAST(totfiles AS INT64)) AS INT64) AS totfiles, CAST(MIN(CAST(totlinks AS INT64)) AS INT64) AS minlinks, CAST(MAX(CAST(totlinks AS INT64)) AS INT64) AS maxlinks, CAST(TOTAL(CAST(totlinks AS INT64)) AS INT64) AS totlinks, CAST(MIN(CAST(minuid AS INT64)) AS INT64) AS minuid, CAST(MAX(CAST(maxuid AS INT64)) AS INT64) AS maxuid, CAST(MIN(CAST(mingid AS INT64)) AS INT64) AS mingid, CAST(MAX(CAST(maxgid AS INT64)) AS INT64) AS maxgid, CAST(MIN(CAST(minsize AS INT64)) AS INT64) AS minsize, CAST(MAX(CAST(maxsize AS INT64)) AS INT64) AS maxsize, CAST(TOTAL(CAST(totsize AS INT64)) AS INT64) AS totsize, CAST(TOTAL(CAST(totzero AS INT64)) AS INT64) AS totzero, CAST(TOTAL(CAST(totltk AS INT64)) AS INT64) AS totltk, CAST(TOTAL(CAST(totmtk AS INT64)) AS INT64) AS totmtk, CAST(TOTAL(CAST(totltm AS INT64)) AS INT64) AS totltm, CAST(TOTAL(CAST(totmtm AS INT64)) AS INT64) AS totmtm, CAST(TOTAL(CAST(totmtg AS INT64)) AS INT64) AS totmtg, CAST(TOTAL(CAST(totmtt AS INT64)) AS INT64) AS totmtt, CAST(MIN(CAST(minossint1 AS INT64)) AS INT64) AS minossint1, CAST(MAX(CAST(maxossint1 AS INT64)) AS INT64) AS maxossint1, CAST(TOTAL(CAST(totossint1 AS INT64)) AS INT64) AS totossint1, CAST(MIN(CAST(minossint2 AS INT64)) AS INT64) AS minossint2, CAST(MAX(CAST(maxossint2 AS INT64)) AS INT64) AS maxossint2, CAST(TOTAL(CAST(totossint2 AS INT64)) AS INT64) AS totossint2, CAST(MIN(CAST(minossint3 AS INT64)) AS INT64) AS minossint3, CAST(MAX(CAST(maxossint3 AS INT64)) AS INT64) AS maxossint3, CAST(TOTAL(CAST(totossint3 AS INT64)) AS INT64) AS totossint3, CAST(MIN(CAST(minossint4 AS INT64)) AS INT64) AS minossint4, CAST(MAX(CAST(maxossint4 AS INT64)) AS INT64) AS maxossint4, CAST(TOTAL(CAST(totossint4 AS INT64)) AS INT64) AS totossint4 FROM summary GROUP BY level" \
+    "DROP TABLE IF EXISTS main.treesummary; CREATE TABLE main.treesummary AS SELECT level, inode, pinode, CAST(SUM(totsubdirs) AS INT64) AS totsubdirs, CAST(MAX(maxsubdirfiles) AS INT64) AS maxsubdirfiles, CAST(MAX(maxsubdirlinks) AS INT64) AS maxsubdirlinks, CAST(MAX(maxsubdirsize) AS INT64) AS maxsubdirsize, CAST(SUM(totfiles) AS INT64) AS totfiles, CAST(SUM(totlinks) AS INT64) AS totlinks, CAST(MIN(minuid) AS INT64) AS minuid, CAST(MAX(maxuid) AS INT64) AS maxuid, CAST(MIN(mingid) AS INT64) AS mingid, CAST(MAX(maxgid) AS INT64) AS maxgid, CAST(MIN(minsize) AS INT64) AS minsize, CAST(MAX(maxsize) AS INT64) AS maxsize, CAST(SUM(totzero) AS INT64) AS totzero, CAST(SUM(totltk) AS INT64) AS totltk, CAST(SUM(totmtk) AS INT64) AS totmtk, CAST(SUM(totltm) AS INT64) AS totltm, CAST(SUM(totmtm) AS INT64) AS totmtm, CAST(SUM(totmtg) AS INT64) AS totmtg, CAST(SUM(totmtt) AS INT64) AS totmtt, CAST(SUM(totsize) AS INT64) AS totsize, CAST(MIN(minctime) AS INT64) AS minctime, CAST(MAX(maxctime) AS INT64) AS maxctime, CAST(MIN(minmtime) AS INT64) AS minmtime, CAST(MAX(maxmtime) AS INT64) AS maxmtime, CAST(MIN(minatime) AS INT64) AS minatime, CAST(MAX(maxatime) AS INT64) AS maxatime, CAST(MIN(minblocks) AS INT64) AS minblocks, CAST(MAX(maxblocks) AS INT64) AS maxblocks, CAST(SUM(totxattr) AS INT64) AS totxattr, CAST(MIN(mincrtime) AS INT64) AS mincrtime, CAST(MAX(maxcrtime) AS INT64) AS maxcrtime, CAST(MIN(minossint1) AS INT64) AS minossint1, CAST(MAX(maxossint1) AS INT64) AS maxossint1, CAST(SUM(totossint1) AS INT64) AS totossint1, CAST(MIN(minossint2) AS INT64) AS minossint2, CAST(MAX(maxossint2) AS INT64) AS maxossint2, CAST(SUM(totossint2) AS INT64) AS totossint2, CAST(MIN(minossint3) AS INT64) AS minossint3, CAST(MAX(maxossint3) AS INT64) AS maxossint3, CAST(SUM(totossint3) AS INT64) AS totossint3, CAST(MIN(minossint4) AS INT64) AS minossint4, CAST(MAX(maxossint4) AS INT64) AS maxossint4, CAST(SUM(totossint4) AS INT64) AS totossint4 FROM treesummary GROUP BY level" \
+    "DROP TABLE IF EXISTS main.summary; CREATE TABLE main.summary AS SELECT level, inode, pinode, fs_type, CAST(MIN(name_len) AS INT64) AS name_len_min, CAST(MAX(name_len) AS INT64) AS name_len_max, CAST(AVG(name_len) AS DOUBLE) AS name_len_mean, CAST(median(name_len) AS DOUBLE) AS name_len_median, CAST(mode_count(name_len) AS TEXT) AS name_len_mode, CAST(stdevp(name_len) AS DOUBLE) AS name_len_stdev, CAST(log2_hist(name_len, 8) AS TEXT) AS name_len_hist, CAST(mode_hist(mode) AS TEXT) AS mode_hist, CAST(COUNT(DISTINCT mode) AS INT64) AS mode_num_unique, CAST(MIN(nlink) AS INT64) AS nlink_min, CAST(MAX(nlink) AS INT64) AS nlink_max, CAST(AVG(nlink) AS DOUBLE) AS nlink_mean, CAST(median(nlink) AS DOUBLE) AS nlink_median, CAST(mode_count(nlink) AS TEXT) AS nlink_mode, CAST(stdevp(nlink) AS DOUBLE) AS nlink_stdev, CAST(MIN(uid) AS INT64) AS uid_min, CAST(MAX(uid) AS INT64) AS uid_max, CAST(mode_count(uid) AS TEXT) AS uid_mode_count, CAST(category_hist(CAST(uid AS TEXT), 1) AS TEXT) AS uid_hist, CAST(COUNT(DISTINCT uid) AS INT64) AS uid_num_unique, CAST(MIN(gid) AS INT64) AS gid_min, CAST(MAX(gid) AS INT64) AS gid_max, CAST(mode_count(gid) AS TEXT) AS gid_mode_count, CAST(category_hist(CAST(gid AS TEXT), 1) AS TEXT) AS gid_hist, CAST(COUNT(DISTINCT gid) AS INT64) AS gid_num_unique, CAST(MIN(size) AS INT64) AS size_min, CAST(MAX(size) AS INT64) AS size_max, CAST(AVG(size) AS DOUBLE) AS size_mean, CAST(median(size) AS DOUBLE) AS size_median, CAST(mode_count(size) AS TEXT) AS size_mode, CAST(stdevp(size) AS DOUBLE) AS size_stdev, CAST(log2_hist(size, 50) AS TEXT) AS size_hist, CAST(MIN(blksize) AS INT64) AS blksize_min, CAST(MAX(blksize) AS INT64) AS blksize_max, CAST(AVG(blksize) AS DOUBLE) AS blksize_mean, CAST(median(blksize) AS DOUBLE) AS blksize_median, CAST(mode_count(blksize) AS TEXT) AS blksize_mode, CAST(stdevp(blksize) AS DOUBLE) AS blksize_stdev, CAST(log2_hist(blksize, 50) AS TEXT) AS blksize_hist, CAST(MIN(blocks) AS INT64) AS blocks_min, CAST(MAX(blocks) AS INT64) AS blocks_max, CAST(AVG(blocks) AS DOUBLE) AS blocks_mean, CAST(median(blocks) AS DOUBLE) AS blocks_median, CAST(mode_count(blocks) AS TEXT) AS blocks_mode, CAST(stdevp(blocks) AS DOUBLE) AS blocks_stdev, CAST(log2_hist(blocks, 50) AS TEXT) AS blocks_hist, CAST(MIN(atime) AS INT64) AS atime_min, CAST(MAX(atime) AS INT64) AS atime_max, CAST(AVG(atime) AS DOUBLE) AS atime_mean, CAST(median(atime) AS DOUBLE) AS atime_median, CAST(mode_count(atime) AS TEXT) AS atime_mode, CAST(stdevp(atime) AS DOUBLE) AS atime_stdev, CAST(time_hist(atime, now) AS TEXT) AS atime_age_hist, CAST(category_hist(CAST(strftime('%H', atime) AS TEXT), 1) AS TEXT) AS atime_hour_hist, CAST(MIN(mtime) AS INT64) AS mtime_min, CAST(MAX(mtime) AS INT64) AS mtime_max, CAST(AVG(mtime) AS DOUBLE) AS mtime_mean, CAST(median(mtime) AS DOUBLE) AS mtime_median, CAST(mode_count(mtime) AS TEXT) AS mtime_mode, CAST(stdevp(mtime) AS DOUBLE) AS mtime_stdev, CAST(time_hist(mtime, now) AS TEXT) AS mtime_age_hist, CAST(category_hist(CAST(strftime('%H', mtime) AS TEXT), 1) AS TEXT) AS mtime_hour_hist, CAST(MIN(ctime) AS INT64) AS ctime_min, CAST(MAX(ctime) AS INT64) AS ctime_max, CAST(AVG(ctime) AS DOUBLE) AS ctime_mean, CAST(median(ctime) AS DOUBLE) AS ctime_median, CAST(mode_count(ctime) AS TEXT) AS ctime_mode, CAST(stdevp(ctime) AS DOUBLE) AS ctime_stdev, CAST(time_hist(ctime, now) AS TEXT) AS ctime_age_hist, CAST(category_hist(CAST(strftime('%H', ctime) AS TEXT), 1) AS TEXT) AS ctime_hour_hist, CAST(MIN(ftime) AS INT64) AS ftime_min, CAST(MAX(ftime) AS INT64) AS ftime_max, CAST(AVG(ftime) AS DOUBLE) AS ftime_mean, CAST(median(ftime) AS DOUBLE) AS ftime_median, CAST(mode_count(ftime) AS TEXT) AS ftime_mode, CAST(stdevp(ftime) AS DOUBLE) AS ftime_stdev, CAST(SUM(CAST(1 AS INT64)) AS INT64) AS totdirs, CAST(SUM(CAST(totsubdirs AS INT64)) AS INT64) AS totsubdirs, CAST(MIN(CAST(totfiles AS INT64)) AS INT64) AS minfiles, CAST(MAX(CAST(totfiles AS INT64)) AS INT64) AS maxfiles, CAST(SUM(CAST(totfiles AS INT64)) AS INT64) AS totfiles, CAST(MIN(CAST(totlinks AS INT64)) AS INT64) AS minlinks, CAST(MAX(CAST(totlinks AS INT64)) AS INT64) AS maxlinks, CAST(SUM(CAST(totlinks AS INT64)) AS INT64) AS totlinks, CAST(MIN(CAST(minuid AS INT64)) AS INT64) AS minuid, CAST(MAX(CAST(maxuid AS INT64)) AS INT64) AS maxuid, CAST(MIN(CAST(mingid AS INT64)) AS INT64) AS mingid, CAST(MAX(CAST(maxgid AS INT64)) AS INT64) AS maxgid, CAST(MIN(CAST(minsize AS INT64)) AS INT64) AS minsize, CAST(MAX(CAST(maxsize AS INT64)) AS INT64) AS maxsize, CAST(SUM(CAST(totzero AS INT64)) AS INT64) AS totzero, CAST(SUM(CAST(totltk AS INT64)) AS INT64) AS totltk, CAST(SUM(CAST(totmtk AS INT64)) AS INT64) AS totmtk, CAST(SUM(CAST(totltm AS INT64)) AS INT64) AS totltm, CAST(SUM(CAST(totmtm AS INT64)) AS INT64) AS totmtm, CAST(SUM(CAST(totmtg AS INT64)) AS INT64) AS totmtg, CAST(SUM(CAST(totmtt AS INT64)) AS INT64) AS totmtt, CAST(SUM(CAST(totsize AS INT64)) AS INT64) AS totsize, CAST(MIN(CAST(minctime AS INT64)) AS INT64) AS minctime, CAST(MAX(CAST(maxctime AS INT64)) AS INT64) AS maxctime, CAST(MIN(CAST(minmtime AS INT64)) AS INT64) AS minmtime, CAST(MAX(CAST(maxmtime AS INT64)) AS INT64) AS maxmtime, CAST(MIN(CAST(minatime AS INT64)) AS INT64) AS minatime, CAST(MAX(CAST(maxatime AS INT64)) AS INT64) AS maxatime, CAST(MIN(CAST(minblocks AS INT64)) AS INT64) AS minblocks, CAST(MAX(CAST(maxblocks AS INT64)) AS INT64) AS maxblocks, CAST(MIN(CAST(mincrtime AS INT64)) AS INT64) AS mincrtime, CAST(MAX(CAST(maxcrtime AS INT64)) AS INT64) AS maxcrtime, CAST(MIN(CAST(minossint1 AS INT64)) AS INT64) AS minossint1, CAST(MAX(CAST(maxossint1 AS INT64)) AS INT64) AS maxossint1, CAST(SUM(CAST(totossint1 AS INT64)) AS INT64) AS totossint1, CAST(MIN(CAST(minossint2 AS INT64)) AS INT64) AS minossint2, CAST(MAX(CAST(maxossint2 AS INT64)) AS INT64) AS maxossint2, CAST(SUM(CAST(totossint2 AS INT64)) AS INT64) AS totossint2, CAST(MIN(CAST(minossint3 AS INT64)) AS INT64) AS minossint3, CAST(MAX(CAST(maxossint3 AS INT64)) AS INT64) AS maxossint3, CAST(SUM(CAST(totossint3 AS INT64)) AS INT64) AS totossint3, CAST(MIN(CAST(minossint4 AS INT64)) AS INT64) AS minossint4, CAST(MAX(CAST(maxossint4 AS INT64)) AS INT64) AS maxossint4, CAST(SUM(CAST(totossint4 AS INT64)) AS INT64) AS totossint4 FROM summary GROUP BY level" \
     "DROP TABLE IF EXISTS main.entries; CREATE TABLE main.entries AS SELECT level, pinode AS inode, ppinode AS pinode, CAST(MIN(uid) AS INT64) AS uid_min, CAST(MAX(uid) AS INT64) AS uid_max, CAST(mode_count(uid) AS TEXT) AS uid_mode_count, CAST(category_hist(CAST(uid AS TEXT), 1) AS TEXT) AS uid_hist, CAST(COUNT(DISTINCT uid) AS INT64) AS uid_num_unique, CAST(MIN(gid) AS INT64) AS gid_min, CAST(MAX(gid) AS INT64) AS gid_max, CAST(mode_count(gid) AS TEXT) AS gid_mode_count, CAST(category_hist(CAST(gid AS TEXT), 1) AS TEXT) AS gid_hist, CAST(COUNT(DISTINCT gid) AS INT64) AS gid_num_unique, CAST(MIN(size) AS INT64) AS size_min, CAST(MAX(size) AS INT64) AS size_max, CAST(AVG(size) AS DOUBLE) AS size_mean, CAST(median(size) AS DOUBLE) AS size_median, CAST(mode_count(size) AS TEXT) AS size_mode, CAST(stdevp(size) AS DOUBLE) AS size_stdev, CAST(log2_hist(size, 50) AS TEXT) AS size_hist, CAST(SUM(size) AS INT64) AS size_total, CAST(mode_hist(mode) AS TEXT) AS mode_hist, CAST(COUNT(DISTINCT mode) AS INT64) AS mode_num_unique, CAST(MIN(ctime) AS INT64) AS ctime_min, CAST(MAX(ctime) AS INT64) AS ctime_max, CAST(AVG(ctime) AS DOUBLE) AS ctime_mean, CAST(median(ctime) AS DOUBLE) AS ctime_median, CAST(mode_count(ctime) AS TEXT) AS ctime_mode, CAST(stdevp(ctime) AS DOUBLE) AS ctime_stdev, CAST(time_hist(ctime, now) AS TEXT) AS ctime_age_hist, CAST(category_hist(CAST(strftime('%H', ctime) AS TEXT), 1) AS TEXT) AS ctime_hour_hist, CAST(MIN(atime) AS INT64) AS atime_min, CAST(MAX(atime) AS INT64) AS atime_max, CAST(AVG(atime) AS DOUBLE) AS atime_mean, CAST(median(atime) AS DOUBLE) AS atime_median, CAST(mode_count(atime) AS TEXT) AS atime_mode, CAST(stdevp(atime) AS DOUBLE) AS atime_stdev, CAST(time_hist(atime, now) AS TEXT) AS atime_age_hist, CAST(category_hist(CAST(strftime('%H', atime) AS TEXT), 1) AS TEXT) AS atime_hour_hist, CAST(MIN(mtime) AS INT64) AS mtime_min, CAST(MAX(mtime) AS INT64) AS mtime_max, CAST(AVG(mtime) AS DOUBLE) AS mtime_mean, CAST(median(mtime) AS DOUBLE) AS mtime_median, CAST(mode_count(mtime) AS TEXT) AS mtime_mode, CAST(stdevp(mtime) AS DOUBLE) AS mtime_stdev, CAST(time_hist(mtime, now) AS TEXT) AS mtime_age_hist, CAST(category_hist(CAST(strftime('%H', mtime) AS TEXT), 1) AS TEXT) AS mtime_hour_hist, CAST(MIN(crtime) AS INT64) AS crtime_min, CAST(MAX(crtime) AS INT64) AS crtime_max, CAST(AVG(crtime) AS DOUBLE) AS crtime_mean, CAST(median(crtime) AS DOUBLE) AS crtime_median, CAST(mode_count(crtime) AS TEXT) AS crtime_mode, CAST(stdevp(crtime) AS DOUBLE) AS crtime_stdev, CAST(time_hist(crtime, now) AS TEXT) AS crtime_age_hist, CAST(category_hist(CAST(strftime('%H', crtime) AS TEXT), 1) AS TEXT) AS crtime_hour_hist, CAST(MIN(ftime) AS INT64) AS ftime_min, CAST(MAX(ftime) AS INT64) AS ftime_max, CAST(AVG(ftime) AS DOUBLE) AS ftime_mean, CAST(median(ftime) AS DOUBLE) AS ftime_median, CAST(mode_count(ftime) AS TEXT) AS ftime_mode, CAST(stdevp(ftime) AS DOUBLE) AS ftime_stdev, CAST(MIN(name_len) AS INT64) AS name_len_min, CAST(MAX(name_len) AS INT64) AS name_len_max, CAST(AVG(name_len) AS DOUBLE) AS name_len_mean, CAST(median(name_len) AS DOUBLE) AS name_len_median, CAST(mode_count(name_len) AS TEXT) AS name_len_mode, CAST(stdevp(name_len) AS DOUBLE) AS name_len_stdev, CAST(log2_hist(name_len, 8) AS TEXT) AS name_len_hist, CAST(MIN(linkname_len) AS INT64) AS linkname_len_min, CAST(MAX(linkname_len) AS INT64) AS linkname_len_max, CAST(AVG(linkname_len) AS DOUBLE) AS linkname_len_mean, CAST(median(linkname_len) AS DOUBLE) AS linkname_len_median, CAST(mode_count(linkname_len) AS TEXT) AS linkname_len_mode, CAST(stdevp(linkname_len) AS DOUBLE) AS linkname_len_stdev, CAST(log2_hist(linkname_len, 8) AS TEXT) AS linkname_len_hist, CAST(category_hist(CAST(extension AS TEXT), 1) AS TEXT) AS extension_hist, CAST(COUNT(DISTINCT extension) AS INT64) AS extension_num_unique, CAST(MIN(extension_len) AS INT64) AS extension_len_min, CAST(MAX(extension_len) AS INT64) AS extension_len_max, CAST(AVG(extension_len) AS DOUBLE) AS extension_len_mean, CAST(median(extension_len) AS DOUBLE) AS extension_len_median, CAST(mode_count(extension_len) AS TEXT) AS extension_len_mode, CAST(stdevp(extension_len) AS DOUBLE) AS extension_len_stdev, CAST(log2_hist(extension_len, 8) AS TEXT) AS extension_len_hist FROM entries GROUP BY level" \
     "
     CREATE VIEW snapshot
     AS
       SELECT *
-      FROM   (SELECT level, inode, pinode, fs_type, name_len_min AS dir_name_len_min, name_len_max AS dir_name_len_max, name_len_mean AS dir_name_len_mean, name_len_median AS dir_name_len_median, name_len_mode AS dir_name_len_mode, name_len_stdev AS dir_name_len_stdev, name_len_hist AS dir_name_len_hist, mode_hist AS dir_mode_hist, mode_num_unique AS dir_mode_num_unique, nlink_min AS dir_nlink_min, nlink_max AS dir_nlink_max, nlink_mean AS dir_nlink_mean, nlink_median AS dir_nlink_median, nlink_mode AS dir_nlink_mode, nlink_stdev AS dir_nlink_stdev, uid_min AS dir_uid_min, uid_max AS dir_uid_max, uid_mode_count AS dir_uid_mode_count, uid_hist AS dir_uid_hist, uid_num_unique AS dir_uid_num_unique, gid_min AS dir_gid_min, gid_max AS dir_gid_max, gid_mode_count AS dir_gid_mode_count, gid_hist AS dir_gid_hist, gid_num_unique AS dir_gid_num_unique, size_min AS dir_size_min, size_max AS dir_size_max, size_mean AS dir_size_mean, size_median AS dir_size_median, size_mode AS dir_size_mode, size_stdev AS dir_size_stdev, size_hist AS dir_size_hist, blksize_min AS dir_blksize_min, blksize_max AS dir_blksize_max, blksize_mean AS dir_blksize_mean, blksize_median AS dir_blksize_median, blksize_mode AS dir_blksize_mode, blksize_stdev AS dir_blksize_stdev, blksize_hist AS dir_blksize_hist, blocks_min AS dir_blocks_min, blocks_max AS dir_blocks_max, blocks_mean AS dir_blocks_mean, blocks_median AS dir_blocks_median, blocks_mode AS dir_blocks_mode, blocks_stdev AS dir_blocks_stdev, blocks_hist AS dir_blocks_hist, atime_min AS dir_atime_min, atime_max AS dir_atime_max, atime_mean AS dir_atime_mean, atime_median AS dir_atime_median, atime_mode AS dir_atime_mode, atime_stdev AS dir_atime_stdev, atime_age_hist AS dir_atime_age_hist, atime_hour_hist AS dir_atime_hour_hist, mtime_min AS dir_mtime_min, mtime_max AS dir_mtime_max, mtime_mean AS dir_mtime_mean, mtime_median AS dir_mtime_median, mtime_mode AS dir_mtime_mode, mtime_stdev AS dir_mtime_stdev, mtime_age_hist AS dir_mtime_age_hist, mtime_hour_hist AS dir_mtime_hour_hist, ctime_min AS dir_ctime_min, ctime_max AS dir_ctime_max, ctime_mean AS dir_ctime_mean, ctime_median AS dir_ctime_median, ctime_mode AS dir_ctime_mode, ctime_stdev AS dir_ctime_stdev, ctime_age_hist AS dir_ctime_age_hist, ctime_hour_hist AS dir_ctime_hour_hist, ftime_min AS dir_ftime_min, ftime_max AS dir_ftime_max, ftime_mean AS dir_ftime_mean, ftime_median AS dir_ftime_median, ftime_mode AS dir_ftime_mode, ftime_stdev AS dir_ftime_stdev, totdirs, totsubdirs, minfiles, maxfiles, totfiles, minlinks, maxlinks, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 FROM summary GROUP BY level) AS sum
+      FROM   (SELECT level, inode, pinode, fs_type, name_len_min AS dir_name_len_min, name_len_max AS dir_name_len_max, name_len_mean AS dir_name_len_mean, name_len_median AS dir_name_len_median, name_len_mode AS dir_name_len_mode, name_len_stdev AS dir_name_len_stdev, name_len_hist AS dir_name_len_hist, mode_hist AS dir_mode_hist, mode_num_unique AS dir_mode_num_unique, nlink_min AS dir_nlink_min, nlink_max AS dir_nlink_max, nlink_mean AS dir_nlink_mean, nlink_median AS dir_nlink_median, nlink_mode AS dir_nlink_mode, nlink_stdev AS dir_nlink_stdev, uid_min AS dir_uid_min, uid_max AS dir_uid_max, uid_mode_count AS dir_uid_mode_count, uid_hist AS dir_uid_hist, uid_num_unique AS dir_uid_num_unique, gid_min AS dir_gid_min, gid_max AS dir_gid_max, gid_mode_count AS dir_gid_mode_count, gid_hist AS dir_gid_hist, gid_num_unique AS dir_gid_num_unique, size_min AS dir_size_min, size_max AS dir_size_max, size_mean AS dir_size_mean, size_median AS dir_size_median, size_mode AS dir_size_mode, size_stdev AS dir_size_stdev, size_hist AS dir_size_hist, blksize_min AS dir_blksize_min, blksize_max AS dir_blksize_max, blksize_mean AS dir_blksize_mean, blksize_median AS dir_blksize_median, blksize_mode AS dir_blksize_mode, blksize_stdev AS dir_blksize_stdev, blksize_hist AS dir_blksize_hist, blocks_min AS dir_blocks_min, blocks_max AS dir_blocks_max, blocks_mean AS dir_blocks_mean, blocks_median AS dir_blocks_median, blocks_mode AS dir_blocks_mode, blocks_stdev AS dir_blocks_stdev, blocks_hist AS dir_blocks_hist, atime_min AS dir_atime_min, atime_max AS dir_atime_max, atime_mean AS dir_atime_mean, atime_median AS dir_atime_median, atime_mode AS dir_atime_mode, atime_stdev AS dir_atime_stdev, atime_age_hist AS dir_atime_age_hist, atime_hour_hist AS dir_atime_hour_hist, mtime_min AS dir_mtime_min, mtime_max AS dir_mtime_max, mtime_mean AS dir_mtime_mean, mtime_median AS dir_mtime_median, mtime_mode AS dir_mtime_mode, mtime_stdev AS dir_mtime_stdev, mtime_age_hist AS dir_mtime_age_hist, mtime_hour_hist AS dir_mtime_hour_hist, ctime_min AS dir_ctime_min, ctime_max AS dir_ctime_max, ctime_mean AS dir_ctime_mean, ctime_median AS dir_ctime_median, ctime_mode AS dir_ctime_mode, ctime_stdev AS dir_ctime_stdev, ctime_age_hist AS dir_ctime_age_hist, ctime_hour_hist AS dir_ctime_hour_hist, ftime_min AS dir_ftime_min, ftime_max AS dir_ftime_max, ftime_mean AS dir_ftime_mean, ftime_median AS dir_ftime_median, ftime_mode AS dir_ftime_mode, ftime_stdev AS dir_ftime_stdev, totdirs, totsubdirs, minfiles, maxfiles, totfiles, minlinks, maxlinks, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 FROM summary GROUP BY level) AS sum
              LEFT JOIN entries
                     ON sum.level == entries.level
              LEFT JOIN (SELECT level, inode, pinode, totsubdirs AS tsum_totsubdirs, maxsubdirfiles AS tsum_maxsubdirfiles, maxsubdirlinks AS tsum_maxsubdirlinks, maxsubdirsize AS tsum_maxsubdirsize, totfiles AS tsum_totfiles, totlinks AS tsum_totlinks, minuid AS tsum_minuid, maxuid AS tsum_maxuid, mingid AS tsum_mingid, maxgid AS tsum_maxgid, minsize AS tsum_minsize, maxsize AS tsum_maxsize, totzero AS tsum_totzero, totltk AS tsum_totltk, totmtk AS tsum_totmtk, totltm AS tsum_totltm, totmtm AS tsum_totmtm, totmtg AS tsum_totmtg, totmtt AS tsum_totmtt, totsize AS tsum_totsize, minctime AS tsum_minctime, maxctime AS tsum_maxctime, minmtime AS tsum_minmtime, maxmtime AS tsum_maxmtime, minatime AS tsum_minatime, maxatime AS tsum_maxatime, minblocks AS tsum_minblocks, maxblocks AS tsum_maxblocks, totxattr AS tsum_totxattr, mincrtime AS tsum_mincrtime, maxcrtime AS tsum_maxcrtime, minossint1 AS tsum_minossint1, maxossint1 AS tsum_maxossint1, totossint1 AS tsum_totossint1, minossint2 AS tsum_minossint2, maxossint2 AS tsum_maxossint2, totossint2 AS tsum_totossint2, minossint3 AS tsum_minossint3, maxossint3 AS tsum_maxossint3, totossint3 AS tsum_totossint3, minossint4 AS tsum_minossint4, maxossint4 AS tsum_maxossint4, totossint4 AS tsum_totossint4 FROM treesummary) AS tsum
@@ -296,26 +296,36 @@ $ sqlite3 "longitudinal_snapshot.db" "PRAGMA TABLE_INFO(summary);"
 91|maxgid|INT|0||0
 92|minsize|INT|0||0
 93|maxsize|INT|0||0
-94|totsize|INT|0||0
-95|totzero|INT|0||0
-96|totltk|INT|0||0
-97|totmtk|INT|0||0
-98|totltm|INT|0||0
-99|totmtm|INT|0||0
-100|totmtg|INT|0||0
-101|totmtt|INT|0||0
-102|minossint1|INT|0||0
-103|maxossint1|INT|0||0
-104|totossint1|INT|0||0
-105|minossint2|INT|0||0
-106|maxossint2|INT|0||0
-107|totossint2|INT|0||0
-108|minossint3|INT|0||0
-109|maxossint3|INT|0||0
-110|totossint3|INT|0||0
-111|minossint4|INT|0||0
-112|maxossint4|INT|0||0
-113|totossint4|INT|0||0
+94|totzero|INT|0||0
+95|totltk|INT|0||0
+96|totmtk|INT|0||0
+97|totltm|INT|0||0
+98|totmtm|INT|0||0
+99|totmtg|INT|0||0
+100|totmtt|INT|0||0
+101|totsize|INT|0||0
+102|minctime|INT|0||0
+103|maxctime|INT|0||0
+104|minmtime|INT|0||0
+105|maxmtime|INT|0||0
+106|minatime|INT|0||0
+107|maxatime|INT|0||0
+108|minblocks|INT|0||0
+109|maxblocks|INT|0||0
+110|mincrtime|INT|0||0
+111|maxcrtime|INT|0||0
+112|minossint1|INT|0||0
+113|maxossint1|INT|0||0
+114|totossint1|INT|0||0
+115|minossint2|INT|0||0
+116|maxossint2|INT|0||0
+117|totossint2|INT|0||0
+118|minossint3|INT|0||0
+119|maxossint3|INT|0||0
+120|totossint3|INT|0||0
+121|minossint4|INT|0||0
+122|maxossint4|INT|0||0
+123|totossint4|INT|0||0
 
 $ sqlite3 "longitudinal_snapshot.db" "PRAGMA TABLE_INFO(treesummary);"
 0|level|INT|0||0
@@ -460,156 +470,166 @@ $ sqlite3 "longitudinal_snapshot.db" "PRAGMA TABLE_INFO(snapshot);"
 91|maxgid|INT|0||0
 92|minsize|INT|0||0
 93|maxsize|INT|0||0
-94|totsize|INT|0||0
-95|totzero|INT|0||0
-96|totltk|INT|0||0
-97|totmtk|INT|0||0
-98|totltm|INT|0||0
-99|totmtm|INT|0||0
-100|totmtg|INT|0||0
-101|totmtt|INT|0||0
-102|minossint1|INT|0||0
-103|maxossint1|INT|0||0
-104|totossint1|INT|0||0
-105|minossint2|INT|0||0
-106|maxossint2|INT|0||0
-107|totossint2|INT|0||0
-108|minossint3|INT|0||0
-109|maxossint3|INT|0||0
-110|totossint3|INT|0||0
-111|minossint4|INT|0||0
-112|maxossint4|INT|0||0
-113|totossint4|INT|0||0
-114|level:1|INT|0||0
-115|inode:1|TEXT|0||0
-116|pinode:1|TEXT|0||0
-117|uid_min|INT|0||0
-118|uid_max|INT|0||0
-119|uid_mode_count|TEXT|0||0
-120|uid_hist|TEXT|0||0
-121|uid_num_unique|INT|0||0
-122|gid_min|INT|0||0
-123|gid_max|INT|0||0
-124|gid_mode_count|TEXT|0||0
-125|gid_hist|TEXT|0||0
-126|gid_num_unique|INT|0||0
-127|size_min|INT|0||0
-128|size_max|INT|0||0
-129|size_mean|REAL|0||0
-130|size_median|REAL|0||0
-131|size_mode|TEXT|0||0
-132|size_stdev|REAL|0||0
-133|size_hist|TEXT|0||0
-134|size_total|INT|0||0
-135|mode_hist|TEXT|0||0
-136|mode_num_unique|INT|0||0
-137|ctime_min|INT|0||0
-138|ctime_max|INT|0||0
-139|ctime_mean|REAL|0||0
-140|ctime_median|REAL|0||0
-141|ctime_mode|TEXT|0||0
-142|ctime_stdev|REAL|0||0
-143|ctime_age_hist|TEXT|0||0
-144|ctime_hour_hist|TEXT|0||0
-145|atime_min|INT|0||0
-146|atime_max|INT|0||0
-147|atime_mean|REAL|0||0
-148|atime_median|REAL|0||0
-149|atime_mode|TEXT|0||0
-150|atime_stdev|REAL|0||0
-151|atime_age_hist|TEXT|0||0
-152|atime_hour_hist|TEXT|0||0
-153|mtime_min|INT|0||0
-154|mtime_max|INT|0||0
-155|mtime_mean|REAL|0||0
-156|mtime_median|REAL|0||0
-157|mtime_mode|TEXT|0||0
-158|mtime_stdev|REAL|0||0
-159|mtime_age_hist|TEXT|0||0
-160|mtime_hour_hist|TEXT|0||0
-161|crtime_min|INT|0||0
-162|crtime_max|INT|0||0
-163|crtime_mean|REAL|0||0
-164|crtime_median|REAL|0||0
-165|crtime_mode|TEXT|0||0
-166|crtime_stdev|REAL|0||0
-167|crtime_age_hist|TEXT|0||0
-168|crtime_hour_hist|TEXT|0||0
-169|ftime_min|INT|0||0
-170|ftime_max|INT|0||0
-171|ftime_mean|REAL|0||0
-172|ftime_median|REAL|0||0
-173|ftime_mode|TEXT|0||0
-174|ftime_stdev|REAL|0||0
-175|name_len_min|INT|0||0
-176|name_len_max|INT|0||0
-177|name_len_mean|REAL|0||0
-178|name_len_median|REAL|0||0
-179|name_len_mode|TEXT|0||0
-180|name_len_stdev|REAL|0||0
-181|name_len_hist|TEXT|0||0
-182|linkname_len_min|INT|0||0
-183|linkname_len_max|INT|0||0
-184|linkname_len_mean|REAL|0||0
-185|linkname_len_median|REAL|0||0
-186|linkname_len_mode|TEXT|0||0
-187|linkname_len_stdev|REAL|0||0
-188|linkname_len_hist|TEXT|0||0
-189|extension_hist|TEXT|0||0
-190|extension_num_unique|INT|0||0
-191|extension_len_min|INT|0||0
-192|extension_len_max|INT|0||0
-193|extension_len_mean|REAL|0||0
-194|extension_len_median|REAL|0||0
-195|extension_len_mode|TEXT|0||0
-196|extension_len_stdev|REAL|0||0
-197|extension_len_hist|TEXT|0||0
-198|level:2|INT|0||0
-199|inode:2|TEXT|0||0
-200|pinode:2|TEXT|0||0
-201|tsum_totsubdirs|INT|0||0
-202|tsum_maxsubdirfiles|INT|0||0
-203|tsum_maxsubdirlinks|INT|0||0
-204|tsum_maxsubdirsize|INT|0||0
-205|tsum_totfiles|INT|0||0
-206|tsum_totlinks|INT|0||0
-207|tsum_minuid|INT|0||0
-208|tsum_maxuid|INT|0||0
-209|tsum_mingid|INT|0||0
-210|tsum_maxgid|INT|0||0
-211|tsum_minsize|INT|0||0
-212|tsum_maxsize|INT|0||0
-213|tsum_totzero|INT|0||0
-214|tsum_totltk|INT|0||0
-215|tsum_totmtk|INT|0||0
-216|tsum_totltm|INT|0||0
-217|tsum_totmtm|INT|0||0
-218|tsum_totmtg|INT|0||0
-219|tsum_totmtt|INT|0||0
-220|tsum_totsize|INT|0||0
-221|tsum_minctime|INT|0||0
-222|tsum_maxctime|INT|0||0
-223|tsum_minmtime|INT|0||0
-224|tsum_maxmtime|INT|0||0
-225|tsum_minatime|INT|0||0
-226|tsum_maxatime|INT|0||0
-227|tsum_minblocks|INT|0||0
-228|tsum_maxblocks|INT|0||0
-229|tsum_totxattr|INT|0||0
-230|tsum_mincrtime|INT|0||0
-231|tsum_maxcrtime|INT|0||0
-232|tsum_minossint1|INT|0||0
-233|tsum_maxossint1|INT|0||0
-234|tsum_totossint1|INT|0||0
-235|tsum_minossint2|INT|0||0
-236|tsum_maxossint2|INT|0||0
-237|tsum_totossint2|INT|0||0
-238|tsum_minossint3|INT|0||0
-239|tsum_maxossint3|INT|0||0
-240|tsum_totossint3|INT|0||0
-241|tsum_minossint4|INT|0||0
-242|tsum_maxossint4|INT|0||0
-243|tsum_totossint4|INT|0||0
+94|totzero|INT|0||0
+95|totltk|INT|0||0
+96|totmtk|INT|0||0
+97|totltm|INT|0||0
+98|totmtm|INT|0||0
+99|totmtg|INT|0||0
+100|totmtt|INT|0||0
+101|totsize|INT|0||0
+102|minctime|INT|0||0
+103|maxctime|INT|0||0
+104|minmtime|INT|0||0
+105|maxmtime|INT|0||0
+106|minatime|INT|0||0
+107|maxatime|INT|0||0
+108|minblocks|INT|0||0
+109|maxblocks|INT|0||0
+110|mincrtime|INT|0||0
+111|maxcrtime|INT|0||0
+112|minossint1|INT|0||0
+113|maxossint1|INT|0||0
+114|totossint1|INT|0||0
+115|minossint2|INT|0||0
+116|maxossint2|INT|0||0
+117|totossint2|INT|0||0
+118|minossint3|INT|0||0
+119|maxossint3|INT|0||0
+120|totossint3|INT|0||0
+121|minossint4|INT|0||0
+122|maxossint4|INT|0||0
+123|totossint4|INT|0||0
+124|level:1|INT|0||0
+125|inode:1|TEXT|0||0
+126|pinode:1|TEXT|0||0
+127|uid_min|INT|0||0
+128|uid_max|INT|0||0
+129|uid_mode_count|TEXT|0||0
+130|uid_hist|TEXT|0||0
+131|uid_num_unique|INT|0||0
+132|gid_min|INT|0||0
+133|gid_max|INT|0||0
+134|gid_mode_count|TEXT|0||0
+135|gid_hist|TEXT|0||0
+136|gid_num_unique|INT|0||0
+137|size_min|INT|0||0
+138|size_max|INT|0||0
+139|size_mean|REAL|0||0
+140|size_median|REAL|0||0
+141|size_mode|TEXT|0||0
+142|size_stdev|REAL|0||0
+143|size_hist|TEXT|0||0
+144|size_total|INT|0||0
+145|mode_hist|TEXT|0||0
+146|mode_num_unique|INT|0||0
+147|ctime_min|INT|0||0
+148|ctime_max|INT|0||0
+149|ctime_mean|REAL|0||0
+150|ctime_median|REAL|0||0
+151|ctime_mode|TEXT|0||0
+152|ctime_stdev|REAL|0||0
+153|ctime_age_hist|TEXT|0||0
+154|ctime_hour_hist|TEXT|0||0
+155|atime_min|INT|0||0
+156|atime_max|INT|0||0
+157|atime_mean|REAL|0||0
+158|atime_median|REAL|0||0
+159|atime_mode|TEXT|0||0
+160|atime_stdev|REAL|0||0
+161|atime_age_hist|TEXT|0||0
+162|atime_hour_hist|TEXT|0||0
+163|mtime_min|INT|0||0
+164|mtime_max|INT|0||0
+165|mtime_mean|REAL|0||0
+166|mtime_median|REAL|0||0
+167|mtime_mode|TEXT|0||0
+168|mtime_stdev|REAL|0||0
+169|mtime_age_hist|TEXT|0||0
+170|mtime_hour_hist|TEXT|0||0
+171|crtime_min|INT|0||0
+172|crtime_max|INT|0||0
+173|crtime_mean|REAL|0||0
+174|crtime_median|REAL|0||0
+175|crtime_mode|TEXT|0||0
+176|crtime_stdev|REAL|0||0
+177|crtime_age_hist|TEXT|0||0
+178|crtime_hour_hist|TEXT|0||0
+179|ftime_min|INT|0||0
+180|ftime_max|INT|0||0
+181|ftime_mean|REAL|0||0
+182|ftime_median|REAL|0||0
+183|ftime_mode|TEXT|0||0
+184|ftime_stdev|REAL|0||0
+185|name_len_min|INT|0||0
+186|name_len_max|INT|0||0
+187|name_len_mean|REAL|0||0
+188|name_len_median|REAL|0||0
+189|name_len_mode|TEXT|0||0
+190|name_len_stdev|REAL|0||0
+191|name_len_hist|TEXT|0||0
+192|linkname_len_min|INT|0||0
+193|linkname_len_max|INT|0||0
+194|linkname_len_mean|REAL|0||0
+195|linkname_len_median|REAL|0||0
+196|linkname_len_mode|TEXT|0||0
+197|linkname_len_stdev|REAL|0||0
+198|linkname_len_hist|TEXT|0||0
+199|extension_hist|TEXT|0||0
+200|extension_num_unique|INT|0||0
+201|extension_len_min|INT|0||0
+202|extension_len_max|INT|0||0
+203|extension_len_mean|REAL|0||0
+204|extension_len_median|REAL|0||0
+205|extension_len_mode|TEXT|0||0
+206|extension_len_stdev|REAL|0||0
+207|extension_len_hist|TEXT|0||0
+208|level:2|INT|0||0
+209|inode:2|TEXT|0||0
+210|pinode:2|TEXT|0||0
+211|tsum_totsubdirs|INT|0||0
+212|tsum_maxsubdirfiles|INT|0||0
+213|tsum_maxsubdirlinks|INT|0||0
+214|tsum_maxsubdirsize|INT|0||0
+215|tsum_totfiles|INT|0||0
+216|tsum_totlinks|INT|0||0
+217|tsum_minuid|INT|0||0
+218|tsum_maxuid|INT|0||0
+219|tsum_mingid|INT|0||0
+220|tsum_maxgid|INT|0||0
+221|tsum_minsize|INT|0||0
+222|tsum_maxsize|INT|0||0
+223|tsum_totzero|INT|0||0
+224|tsum_totltk|INT|0||0
+225|tsum_totmtk|INT|0||0
+226|tsum_totltm|INT|0||0
+227|tsum_totmtm|INT|0||0
+228|tsum_totmtg|INT|0||0
+229|tsum_totmtt|INT|0||0
+230|tsum_totsize|INT|0||0
+231|tsum_minctime|INT|0||0
+232|tsum_maxctime|INT|0||0
+233|tsum_minmtime|INT|0||0
+234|tsum_maxmtime|INT|0||0
+235|tsum_minatime|INT|0||0
+236|tsum_maxatime|INT|0||0
+237|tsum_minblocks|INT|0||0
+238|tsum_maxblocks|INT|0||0
+239|tsum_totxattr|INT|0||0
+240|tsum_mincrtime|INT|0||0
+241|tsum_maxcrtime|INT|0||0
+242|tsum_minossint1|INT|0||0
+243|tsum_maxossint1|INT|0||0
+244|tsum_totossint1|INT|0||0
+245|tsum_minossint2|INT|0||0
+246|tsum_maxossint2|INT|0||0
+247|tsum_totossint2|INT|0||0
+248|tsum_minossint3|INT|0||0
+249|tsum_maxossint3|INT|0||0
+250|tsum_totossint3|INT|0||0
+251|tsum_minossint4|INT|0||0
+252|tsum_maxossint4|INT|0||0
+253|tsum_totossint4|INT|0||0
 
 $ sqlite3 "longitudinal_snapshot.db" "SELECT notes FROM metadata;"
 test notes
