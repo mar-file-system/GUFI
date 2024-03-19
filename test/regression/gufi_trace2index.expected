@@ -72,6 +72,16 @@ GUFI Index:
     prefix/unusual#? directory ,
     prefix/unusual#? directory ,/unusual, name?#
 
+# create index from a trace file whose last item is an empty directory
+$ gufi_trace2index -d "|" -n "2" "empty_last_dir.trace" "prefix"
+Creating GUFI Index prefix with 2 threads
+Dirs:                7 (2 empty)
+Files:               14
+Total:               21
+
+Total Dirs:          7
+Total Files:         14
+
 # bad trace path
 $ gufi_trace2index -d "|" -n "2" "" "prefix"
 Could not open "": No such file or directory (2)

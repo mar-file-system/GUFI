@@ -65,6 +65,20 @@ set -e
 source @CMAKE_CURRENT_BINARY_DIR@/setup.sh 0
 
 OUTPUT="gufi_trace2index.out"
+EMPTY_LAST_DIR_TRACE="empty_last_dir.trace"
+
+cleanup() {
+    rm -rf "${EMPTY_LAST_DIR_TRACE}"
+}
+
+cleanup_exit() {
+    cleanup
+    setup_cleanup
+}
+
+trap cleanup_exit EXIT
+
+cleanup
 
 (
 echo "# ${GUFI_TRACE2INDEX} help" | replace
@@ -93,6 +107,13 @@ echo "${index_contents}" | @AWK@ '{ printf "    " $0 "\n" }'
 echo
 
 cat "${TRACES[@]}" > "${TRACE}"
+
+(
+    cat "${TRACE}"
+    @GREP@ "^.*/empty_directory${DELIM}d${DELIM}.*$" "${TRACE}" | sed 's/empty_directory/empty_directory2/g;'
+) > "${EMPTY_LAST_DIR_TRACE}"
+echo "# create index from a trace file whose last item is an empty directory"
+run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"${EMPTY_LAST_DIR_TRACE}\" \"${SEARCH}\""
 
 echo "# bad trace path"
 run_no_sort "${GUFI_TRACE2INDEX} -d \"${DELIM}\" -n \"${THREADS}\" \"\" \"${SEARCH}\""

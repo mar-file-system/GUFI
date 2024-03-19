@@ -514,7 +514,7 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
     struct row *work = row_init(sa->trace, first_delim - line, line, len, offset);
 
     size_t file_count = 0;
-    size_t dir_count = 1; /* always start with a directory */
+    size_t dir_count = 0;
     size_t empty = 0;
 
     /* don't free line - the pointer is now owned by work */
@@ -569,7 +569,9 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
 
     free(line);
 
-    /* insert the last work item */
+    /* handle the last work item */
+    dir_count++;
+    empty += !work->entries;
     QPTPool_enqueue(ctx, id, processdir, work);
 
     clock_gettime(CLOCK_MONOTONIC, &scouting.end);
