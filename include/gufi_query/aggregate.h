@@ -65,11 +65,11 @@ OF SUCH DAMAGE.
 #ifndef GUFI_QUERY_AGGREGATE_H
 #define GUFI_QUERY_AGGREGATE_H
 
-#include <sqlite3.h>
 #include <stdio.h>
 
 #include "OutputBuffers.h"
 #include "bf.h"
+#include "dbutils.h"
 #include "gufi_query/PoolArgs.h"
 
 typedef struct Aggregate {

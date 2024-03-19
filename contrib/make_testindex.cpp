@@ -80,16 +80,10 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 #include <vector>
 
-extern "C" {
-
-#include <sqlite3.h>
 #include "QueuePerThreadPool.h"
-
 #include "bf.h"
 #include "dbutils.h"
 #include "utils.h"
-
-}
 
 // File size min, max, and weight to choose from
 struct Bucket {

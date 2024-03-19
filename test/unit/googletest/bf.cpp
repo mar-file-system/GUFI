@@ -65,9 +65,9 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include <gtest/gtest.h>
-#include <sqlite3.h>
 
 #include "bf.h"
+#include "dbutils.h"
 
 static const std::string exec = "exec"; // argv[0]
 

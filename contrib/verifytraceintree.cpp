@@ -73,10 +73,9 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <vector>
 
-#include <sqlite3.h>
-
 #include "QueuePerThreadPool.h"
 #include "config.h"
+#include "dbutils.h"
 #include "trace.h"
 
 // Data stored during first pass of input file

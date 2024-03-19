@@ -68,7 +68,7 @@ OF SUCH DAMAGE.
 #include <stddef.h>
 #include <time.h>
 
-#include <sqlite3.h>
+#include "dbutils.h"
 
 #ifdef __cplusplus
 extern "C" {

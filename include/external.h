@@ -65,10 +65,10 @@ OF SUCH DAMAGE.
 #ifndef EXTERNAL_H
 #define EXTERNAL_H
 
-#include <sqlite3.h>
 #include <stdlib.h>
 
 #include "bf.h"
+#include "dbutils.h"
 
 #ifdef __cplusplus
 extern "C" {

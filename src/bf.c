@@ -63,7 +63,6 @@ OF SUCH DAMAGE.
 
 
 #include <pwd.h>
-#include <sqlite3.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,6 +70,7 @@ OF SUCH DAMAGE.
 #include <unistd.h>
 
 #include "bf.h"
+#include "dbutils.h"
 #include "utils.h"
 
 #ifdef __CYGWIN__

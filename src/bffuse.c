@@ -82,7 +82,6 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <sqlite3.h>
 #include <sys/xattr.h>
 
 #include <bf.h>

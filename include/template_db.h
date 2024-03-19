@@ -65,10 +65,10 @@ OF SUCH DAMAGE.
 #ifndef TEMPLATE_DB_H
 #define TEMPLATE_DB_H
 
-#include <sqlite3.h>
 #include <sys/types.h>
 
 #include "bf.h"
+#include "dbutils.h"
 
 #ifdef __cplusplus
 extern "C" {
