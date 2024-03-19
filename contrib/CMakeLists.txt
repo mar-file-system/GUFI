@@ -67,19 +67,16 @@ set(CONTRIB_SOURCES
   gufi_sqlite.c           # simple wrapper around sqlite3 to enable GUFI modifications
   split_trace.c           # utility for spliting large traces into smaller files for parallel processing
   treediff.c              # walk two trees and print the names that don't match
-  )
+)
 
 # potentially useful C++ executables
 if (CMAKE_CXX_COMPILER)
   list(APPEND CONTRIB_SOURCES
     make_testindex.cpp    # a more complex index generator
-    )
+    verifytraceintree.cpp
+  )
 
   add_executable(verifytrace verifytrace.cpp)
-
-  add_executable(verifytraceintree verifytraceintree.cpp)
-  target_link_libraries(verifytraceintree ${COMMON_LIBRARIES})
-  add_dependencies(verifytraceintree install_dependencies)
 endif()
 
 # build C/C++ sources that depend on libGUFI
@@ -88,7 +85,6 @@ foreach(SOURCE ${CONTRIB_SOURCES})
   get_filename_component(TARGET "${SOURCE}" NAME_WE)
   add_executable("${TARGET}" "${SOURCE}")
   target_link_libraries("${TARGET}" ${COMMON_LIBRARIES})
-  add_dependencies("${TARGET}" GUFI)
 endforeach()
 
 set(CHECKSTYLE)
@@ -133,7 +129,7 @@ set(USEFUL
   hashes.py
   longitudinal_snapshot.py
   trace_anonymizer.py
-  )
+)
 
 foreach(file ${USEFUL})
     configure_file("${file}" "${file}" @ONLY)
