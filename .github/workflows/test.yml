@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04", "ubuntu:22.04" ]
+        img: [ "centos:7", "centos:8", "rockylinux:8", "ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04" ]
       fail-fast: true
     container:
       image: ${{ matrix.img }}

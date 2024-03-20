@@ -182,11 +182,11 @@ def build_where(args, name=None):
 
             # everything that's not hidden
             else:
-                where += ['name REGEXP \'^(?![\.]).*$\'']
+                where += ['name REGEXP \'^(?![\\.]).*$\'']
 
         # -B: ignore files that end with ~
         if args.ignore_backups is True:
-            where += ['name REGEXP \'^.*(?<![\~])$\'']
+            where += ['name REGEXP \'^.*(?<![\\~])$\'']
 
     return where
 
@@ -208,7 +208,6 @@ def get_blocksize(value):
     blocksize = re.match(r'^(\+?[0-9]*)({0})?$'.format('|'.join(SIZES)), value)
     if (blocksize is None) or ((blocksize.group(1) != '') and (int(blocksize.group(1)) == 0)):
         raise argparse.ArgumentTypeError('Invalid --block-size argument: \'{0}\''.format(value))
-
 
     return value
 
