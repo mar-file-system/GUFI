@@ -188,16 +188,16 @@ fi
 ) |& remove_root | tee "${OUTPUT}"
 
 EXPECTED="@CMAKE_CURRENT_BINARY_DIR@/gufi_stats.expected"
-COPY="${EXPECTED}.copy"
+ACTUAL="${EXPECTED}.actual"
 
 # shellcheck disable=SC2050
 if [[ "@CMAKE_SYSTEM_NAME@" == "APPLE" ]] || [[ "@CMAKE_SYSTEM_NAME@" == "CYGWIN" ]]
 then
     # shellcheck disable=SC2016
-    sed '/^\$ gufi_stats    leaf-dirs$/Q' "${EXPECTED}" > "${COPY}"
+    sed '/^\$ gufi_stats    leaf-dirs/Q' "${EXPECTED}" > "${ACTUAL}"
 else
-    cp "${EXPECTED}" "${COPY}"
+    cp "${EXPECTED}" "${ACTUAL}"
 fi
 
-@DIFF@ "${COPY}" "${OUTPUT}"
-rm "${OUTPUT}"
+@DIFF@ "${ACTUAL}" "${OUTPUT}"
+rm "${ACTUAL}" "${OUTPUT}"

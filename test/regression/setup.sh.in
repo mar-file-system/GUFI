@@ -260,16 +260,16 @@ run_no_sort() {
 
 # somewhat force ordering of trace file
 order_tracefile() {
-    @GREP@ "^${SRCDIR}${DELIM}"              "$1"
-    @GREP@ "^${SRCDIR}/.hidden${DELIM}"      "$1"
-    @GREP@ "^${SRCDIR}/1KB${DELIM}"          "$1"
-    @GREP@ "^${SRCDIR}/1MB${DELIM}"          "$1"
-    @GREP@ "^${SRCDIR}/file_symlink${DELIM}" "$1"
-    @GREP@ "^${SRCDIR}/old_file${DELIM}"     "$1"
-    @GREP@ "^${SRCDIR}/repeat_name${DELIM}"  "$1"
-    @GREP@ "^${SRCDIR}/directory.*${DELIM}"  "$1"
-    @GREP@ "^${SRCDIR}/leaf.*${DELIM}"       "$1"
-    @GREP@ "^${SRCDIR}/unusual.*${DELIM}"    "$1"
+    @GREP@ -a "^${SRCDIR}${DELIM}"              "$1"
+    @GREP@ -a "^${SRCDIR}/.hidden${DELIM}"      "$1"
+    @GREP@ -a "^${SRCDIR}/1KB${DELIM}"          "$1"
+    @GREP@ -a "^${SRCDIR}/1MB${DELIM}"          "$1"
+    @GREP@ -a "^${SRCDIR}/file_symlink${DELIM}" "$1"
+    @GREP@ -a "^${SRCDIR}/old_file${DELIM}"     "$1"
+    @GREP@ -a "^${SRCDIR}/repeat_name${DELIM}"  "$1"
+    @GREP@ -a "^${SRCDIR}/directory.*${DELIM}"  "$1"
+    @GREP@ -a "^${SRCDIR}/leaf.*${DELIM}"       "$1"
+    @GREP@ -a "^${SRCDIR}/unusual.*${DELIM}"    "$1"
 }
 
 remove_indexing_time() {
