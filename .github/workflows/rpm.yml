@@ -72,22 +72,22 @@ env:
 
 jobs:
   RPMs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         client: [ Off, On ]
     container:
-      image: centos:7
+      image: centos:8
     steps:
     - uses: actions/checkout@v3
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ${{ env.DEP_INSTALL_PREFIX }}
-        key:  ${{ runner.os }}-Client-${{ matrix.type }}
+        key:  ${{ runner.os }}-Client-${{ matrix.client }}
 
-    - name: CentOS 7 Prerequisites
-      run:  contrib/CI/centos7.sh
+    - name: CentOS 8 Prerequisites
+      run:  contrib/CI/centos8.sh
 
     - name: Configure CMake
       run:  |
@@ -104,3 +104,9 @@ jobs:
       if:   matrix.client == 'On'
       working-directory: build
       run:  contrib/CI/rpms.sh
+
+    - name: Upload RPMs
+      uses: softprops/action-gh-release@v2
+      if:   startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{ github.workspace }}/build/*.rpm

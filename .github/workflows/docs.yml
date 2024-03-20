@@ -66,9 +66,9 @@ on: [push, pull_request]
 
 jobs:
   Documentation:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Ubuntu:20.04 Prerequisites
       run:  sudo contrib/CI/ubuntu.sh
@@ -83,9 +83,7 @@ jobs:
       run:  cmake --build ${{ github.workspace }}/build --target gufi_user gufi_administrator gufi_developer
 
     - name: Upload PDFs
-      uses: actions/upload-artifact@v4
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
       with:
-        name: guides
-        path: ${{ github.workspace }}/build/docs/latex/pdfs/*.pdf
-        retention-days: 14
-      if: github.ref == 'refs/heads/main'
+        files: ${{ github.workspace }}/build/docs/latex/pdfs/*.pdf
