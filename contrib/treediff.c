@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 #include <string.h>
 
 #include "QueuePerThreadPool.h"
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "print.h"
 #include "trie.h"
@@ -91,32 +92,28 @@ typedef struct str {
     size_t len;
 } str_t;
 
-static inline str_t str_copy_construct(const char *str, const size_t len) {
-    str_t dst;
-    dst.len = len;
-    dst.data = malloc(len + 1);
-    SNFORMAT_S(dst.data, dst.len + 1, 1, str, len);
-    return dst;
+static inline void str_copy_construct(str_t *dst, const char *str, const size_t len) {
+    dst->len = len;
+    dst->data = malloc(len + 1);
+    SNFORMAT_S(dst->data, dst->len + 1, 1, str, len);
 }
 
-static inline void str_destruct(str_t str) {
-    free(str.data);
+static inline void str_destruct(str_t *str) {
+    free(str->data);
 }
 
 static int str_cmp(const void *l, const void *r) {
-    str_t *lhs = (str_t *) l;
-    str_t *rhs = (str_t *) r;
+    str_t **lhs = (str_t **) l;
+    str_t **rhs = (str_t **) r;
 
-    const size_t len = (lhs->len < rhs->len)?lhs->len:rhs->len;
-    return strncmp(lhs->data, rhs->data, len + 1);
+    const size_t len = ((*lhs)->len < (*rhs)->len)?(*lhs)->len:(*rhs)->len;
+    return strncmp((*lhs)->data, (*rhs)->data, len + 1);
 }
 
 static int get_entries(DIR *dir, trie_t *skip_db,
-                       str_t *subdirs, const nlink_t spaces) {
-    nlink_t found = 0;
-
+                       sll_t *subdirs) {
     struct dirent *entry = NULL;
-    while (((entry = readdir(dir))) && (found < spaces)) {
+    while ((entry = readdir(dir))) {
         const size_t len = strlen(entry->d_name);
 
         /* skip . and .. and *.db */
@@ -131,11 +128,12 @@ static int get_entries(DIR *dir, trie_t *skip_db,
             continue;
         }
 
-        subdirs[found++] = str_copy_construct(entry->d_name, len);
+        str_t *subdir = malloc(sizeof(*subdir));
+        str_copy_construct(subdir, entry->d_name, len);
+        sll_push(subdirs, subdir);
     }
 
-    /* should return found, but found does not say whther there are unprocessed entries */
-    return !!entry;
+    return sll_get_size(subdirs);
 }
 
 /*
@@ -152,7 +150,7 @@ static int get_entries(DIR *dir, trie_t *skip_db,
  *         Rollups
  *     Handle/Detect directory moves
  */
-static int compare_paths(str_t lhs, str_t rhs) {
+static int compare_paths(str_t *lhs, str_t *rhs) {
     return str_cmp(&lhs, &rhs);
 }
 
@@ -218,15 +216,31 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* ********************************************** */
 
     /* hard link count without . and .. */
-    const nlink_t lcount = lst.st_nlink - 2;
-    const nlink_t rcount = rst.st_nlink - 2;
+    sll_t lsubdirs;
+    sll_init(&lsubdirs);
+    sll_t rsubdirs;
+    sll_init(&rsubdirs);
 
     /* ********************************************** */
     /* get list of subdirs in each directory */
-    str_t *lsubdir = calloc(lcount, sizeof(*lsubdir));
-    str_t *rsubdir = calloc(rcount, sizeof(*rsubdir));
-    get_entries(ldir, pa->skip, lsubdir, lcount);
-    get_entries(rdir, pa->skip, rsubdir, rcount);
+    const size_t lcount = get_entries(ldir, pa->skip, &lsubdirs);
+    const size_t rcount = get_entries(rdir, pa->skip, &rsubdirs);
+    /* ********************************************** */
+
+    /* ********************************************** */
+    /* convert lists to arrays of references */
+    size_t i = 0;
+
+    str_t **lsubdir = calloc(lcount, sizeof(*lsubdir));
+    sll_loop(&lsubdirs, node) {
+        lsubdir[i++] = sll_node_data(node);
+    }
+
+    i = 0;
+    str_t **rsubdir = calloc(rcount, sizeof(*rsubdir));
+    sll_loop(&rsubdirs, node) {
+        rsubdir[i++] = sll_node_data(node);
+    }
     /* ********************************************** */
 
     /* ********************************************** */
@@ -248,8 +262,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     char *buf[] = {NULL, NULL};     /* passed to print_parallel */
 
     /* mergesort */
-    nlink_t lidx = 0;
-    nlink_t ridx = 0;
+    size_t lidx = 0;
+    size_t ridx = 0;
     while ((lidx < lcount) && (ridx < rcount)) {
         const int diff = compare_paths(lsubdir[lidx], rsubdir[ridx]);
 
@@ -264,7 +278,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
         if (diff < 0) {
             buf[0] = cp->lhs.data;
-            buf[1] = lsubdir[lidx].data;
+            buf[1] = lsubdir[lidx]->data;
             print_parallel(&print, 2, buf, NULL);
             str_destruct(lsubdir[lidx]);
             lidx++;
@@ -273,19 +287,19 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             struct ComparePaths *match = malloc(sizeof(*match));
             match->level = next_level;
 
-            match->lhs.len = cp->lhs.len + 1 + lsubdir[lidx].len;
+            match->lhs.len = cp->lhs.len + 1 + lsubdir[lidx]->len;
             match->lhs.data = malloc(match->lhs.len + 1);
             SNFORMAT_S(match->lhs.data, match->lhs.len + 1, 3,
                        cp->lhs.data, cp->lhs.len,
                        "/", (size_t) 1,
-                       lsubdir[lidx].data, lsubdir[lidx].len);
+                       lsubdir[lidx]->data, lsubdir[lidx]->len);
 
-            match->rhs.len = cp->rhs.len + 1 + rsubdir[ridx].len;
+            match->rhs.len = cp->rhs.len + 1 + rsubdir[ridx]->len;
             match->rhs.data = malloc(match->rhs.len + 1);
             SNFORMAT_S(match->rhs.data, match->rhs.len + 1, 3,
                        cp->rhs.data, cp->rhs.len,
                        "/", (size_t) 1,
-                       rsubdir[ridx].data, rsubdir[ridx].len);
+                       rsubdir[ridx]->data, rsubdir[ridx]->len);
 
             QPTPool_enqueue(ctx, id, processdir, match);
 
@@ -297,38 +311,41 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
         else if (diff > 0) {
             buf[0] = cp->rhs.data;
-            buf[1] = rsubdir[ridx].data;
+            buf[1] = rsubdir[ridx]->data;
             print_parallel(&print, 2, buf, NULL);
             str_destruct(rsubdir[ridx]);
             ridx++;
         }
     }
 
-    for(nlink_t i = lidx; i < lcount; i++) {
+    for(size_t l = lidx; l < lcount; l++) {
         buf[0] = cp->lhs.data;
-        buf[1] = lsubdir[i].data;
+        buf[1] = lsubdir[l]->data;
         print_parallel(&print, 2, buf, NULL);
-        str_destruct(lsubdir[i]);
+        str_destruct(lsubdir[l]);
     }
 
-    for(nlink_t i = ridx; i < rcount; i++) {
+    for(size_t r = ridx; r < rcount; r++) {
         buf[0] = cp->rhs.data;
-        buf[1] = rsubdir[i].data;
+        buf[1] = rsubdir[r]->data;
         print_parallel(&print, 2, buf, NULL);
-        str_destruct(rsubdir[i]);
+        str_destruct(rsubdir[r]);
     }
     /* ********************************************** */
 
     free(rsubdir);
     free(lsubdir);
 
+    sll_destroy(&rsubdirs, free);
+    sll_destroy(&lsubdirs, free);
+
   closedir:
     closedir(rdir);
     closedir(ldir);
 
   cleanup:
-    str_destruct(cp->rhs);
-    str_destruct(cp->lhs);
+    str_destruct(&cp->rhs);
+    str_destruct(&cp->lhs);
     free(cp);
 
     return rc;
@@ -380,8 +397,8 @@ int main(int argc, char *argv[]) {
 
     struct ComparePaths *cp = malloc(sizeof(*cp));
     cp->level = 0;
-    cp->lhs   = str_copy_construct(pa.in.name.data,   pa.in.name.len);
-    cp->rhs   = str_copy_construct(pa.in.nameto.data, pa.in.nameto.len);
+    str_copy_construct(&cp->lhs, pa.in.name.data,   pa.in.name.len);
+    str_copy_construct(&cp->rhs, pa.in.nameto.data, pa.in.nameto.len);
 
     QPTPool_enqueue(pool, 0, processdir, cp);
 
