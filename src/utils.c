@@ -816,7 +816,8 @@ ssize_t copyfd(int src_fd, off_t src_off,
 
     ssize_t copied = 0;
     while ((size_t) copied < size) {
-        const ssize_t r = pread(src_fd, buf, buf_size, src_off);
+        const size_t rem = size - copied;
+        const ssize_t r = pread(src_fd, buf, (rem < buf_size)?rem:buf_size, src_off);
         if (r == 0) {
             break;
         }
