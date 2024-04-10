@@ -80,37 +80,40 @@ set(LIBRARIES
 if (CLIENT)
   # add the paramiko source for installing
   # keep the trailing / to rename the directory
-  install(DIRECTORY "${DEP_BUILD_PREFIX}/paramiko-master/" DESTINATION lib/GUFI/paramiko COMPONENT Client)
+  install(DIRECTORY "${DEP_BUILD_PREFIX}/paramiko-master/" DESTINATION "${LIB}/GUFI/paramiko" COMPONENT Client)
 endif()
 
 foreach(TOOL ${TOOLS})
-  configure_file("gufi_${TOOL}" "gufi_${TOOL}" @ONLY)
+  set(USER_TOOL "gufi_${TOOL}")
+  configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_${TOOL}" DESTINATION bin COMPONENT Server)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${USER_TOOL}" DESTINATION "${BIN}" COMPONENT Server)
 
-  # when building, client files WILL NOT overwrite server files
-  # when installing, client files WILL overwrite server files
   if (CLIENT)
-    configure_file("gufi_client" "gufi_client_${TOOL}" @ONLY)
-    install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_${TOOL}"
-      RENAME "gufi_${TOOL}"
-      DESTINATION bin
-      COMPONENT Client)
+    # client files WILL NOT overwrite server files in build directory
+    set(CLIENT_TOOL "${CMAKE_CURRENT_BINARY_DIR}/gufi_client_${TOOL}")
+    configure_file("gufi_client" "${CLIENT_TOOL}" @ONLY)
+
+    # client files WILL NOT overwrite server files when installing
+    install(PROGRAMS "${CLIENT_TOOL}"
+      RENAME "${USER_TOOL}"
+      DESTINATION "${BIN}"
+      COMPONENT Client) # this is always needed for make package
   endif()
 endforeach()
 
 # gufi_jail is used by sshd_config to prevent commands other than gufi_* from running
 configure_file(gufi_jail gufi_jail @ONLY)
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION bin COMPONENT Server)
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/gufi_jail" DESTINATION "${BIN}" COMPONENT Server)
 
-foreach(LIB ${LIBRARIES})
-  configure_file("${LIB}" "${LIB}" @ONLY)
+foreach(LIBRARY ${LIBRARIES})
+  configure_file("${LIBRARY}" "${LIBRARY}" @ONLY)
 
-  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIB}" DESTINATION bin COMPONENT Server)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${BIN}" COMPONENT Server)
 
   # when running make install, client files will not overwrite server files
   if (CLIENT)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${LIB}" DESTINATION bin COMPONENT Client)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${LIBRARY}" DESTINATION "${BIN}" COMPONENT Client)
   endif()
 endforeach()
 
