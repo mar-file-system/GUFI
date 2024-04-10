@@ -1,0 +1,23 @@
+$ parallel_rmr -h
+usage: parallel_rmr [options] directory ...
+options:
+  -h                     help
+  -H                     show assigned input values (debugging)
+  -n <threads>           number of threads
+
+directory        directory to delete
+
+
+$ ls -1 prefix
+db.db
+directory
+empty_directory
+leaf_directory
+unusual#? directory ,
+
+$ parallel_rmr "prefix/directory" "prefix/empty_directory" "prefix/leaf_directory"
+
+$ ls -1 prefix
+db.db
+unusual#? directory ,
+

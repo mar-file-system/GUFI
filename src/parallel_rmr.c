@@ -85,9 +85,6 @@ static int rm_dir(void *args timestamp_sig) {
 
     struct BottomUp *dir = (struct BottomUp *) args;
 
-    char db_name[MAXPATH];
-    SNPRINTF(db_name, MAXPATH, "%s/" DBNAME, dir->name);
-
     int rc = 0;
     sll_loop(&dir->subnondirs, node) {
         struct BottomUp * entry = (struct BottomUp *) sll_node_data(node);

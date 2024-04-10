@@ -311,45 +311,42 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
         );
     timestamp_end_print(ua->timestamp_buffers, id, "run_user_descend_function", run_user_desc_func);
 
-    /* if there are subdirectories, this directory cannot go back up just yet */
     bu->refs.remaining = bu->subdir_count;
-    if ((desc_rc == 0) && bu->subdir_count) {
-        timestamp_create_start(enqueue_subdirs);
-        /* have to lock to prevent subdirs from getting popped */
-        /* off before all of them have been enqueued */
-        pthread_mutex_lock(&bu->refs.mutex);
-        sll_loop(&bu->subdirs, node)  {
-            struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
-            child->parent = bu;
-            child->extra_args = bu->extra_args;
+    if (desc_rc == 0) {
+        /* if there are subdirectories, this directory cannot go back up just yet */
+        if (bu->subdir_count) {
+            timestamp_create_start(enqueue_subdirs);
+            /* have to lock to prevent subdirs from getting popped */
+            /* off before all of them have been enqueued */
+            pthread_mutex_lock(&bu->refs.mutex);
+            sll_loop(&bu->subdirs, node)  {
+                struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
+                child->parent = bu;
+                child->extra_args = bu->extra_args;
 
-            /* keep going down */
-            timestamp_create_start(enqueue_subdir);
-            QPTPool_enqueue(ctx, id, descend_to_bottom, child);
-            timestamp_end_print(ua->timestamp_buffers, id, "enqueue_subdir", enqueue_subdir);
+                /* keep going down */
+                timestamp_create_start(enqueue_subdir);
+                QPTPool_enqueue(ctx, id, descend_to_bottom, child);
+                timestamp_end_print(ua->timestamp_buffers, id, "enqueue_subdir", enqueue_subdir);
+            }
+            pthread_mutex_unlock(&bu->refs.mutex);
+            timestamp_end_print(ua->timestamp_buffers, id, "enqueue_subdirs", enqueue_subdirs);
         }
-        pthread_mutex_unlock(&bu->refs.mutex);
-        timestamp_end_print(ua->timestamp_buffers, id, "enqueue_subdirs", enqueue_subdirs);
-    }
-    else {
-        if (desc_rc != 0) {
-            sll_destroy(&bu->subdirs, free);
-            sll_destroy(&bu->subnondirs, free);
-            bu->subdir_count = 0;
-            bu->subnondir_count = 0;
-        }
-
-        if (bu->parent) {
-            /* start working upwards */
+        /* start working upwards */
+        else {
             timestamp_create_start(enqueue_ascend);
             QPTPool_enqueue(ctx, id, ascend_to_top, bu);
             timestamp_end_print(ua->timestamp_buffers, id, "enqueue_ascend", enqueue_ascend);
         }
-        else {
-            timestamp_create_start(free_root);
-            free(bu);
-            timestamp_end_print(ua->timestamp_buffers, id, "free_root", free_root);
-        }
+    }
+    else {
+        timestamp_create_start(cleanup_after_error);
+        sll_destroy(&bu->subdirs, free);
+        sll_destroy(&bu->subnondirs, free);
+        bu->subdir_count = 0;
+        bu->subnondir_count = 0;
+        free(bu);
+        timestamp_end_print(ua->timestamp_buffers, id, "cleanup_after_error", cleanup_after_error);
     }
 
     timestamp_end_print(ua->timestamp_buffers, id, "descend_to_bottom", descend);
