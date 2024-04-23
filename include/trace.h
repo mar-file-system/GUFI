@@ -73,11 +73,15 @@ OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+/* write a mapping from an external db path to an attach name */
+int externaltofile(FILE *file, const char delim, const char *path, const char *attachname);
+
 /* write a work struct to a file */
 int worktofile(FILE *file, const char delim, const size_t prefix_len, struct work *work, struct entry_data *ed);
 
-/* convert a formatted string to a work struct */
-int linetowork(char *line, const size_t len, const char delim, struct work *work, struct entry_data *ed);
+/* convert a formatted string to a work struct or attach name */
+int linetowork(char *line, const size_t len, const char delim,
+               struct work *work, struct entry_data *ed, refstr_t *attachname);
 
 #ifdef __cplusplus
 }

@@ -112,8 +112,10 @@ int main(int argc, char * argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:", 1, "directory ...", &in);
     if (in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
+    }
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     struct timespec now;
@@ -136,6 +138,8 @@ int main(int argc, char * argv[]) {
         );
 
     timestamp_print_destroy(timestamp_buffers);
+
+    input_fini(&in);
 
     return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

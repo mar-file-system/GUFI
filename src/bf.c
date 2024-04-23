@@ -71,6 +71,7 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
+#include "external.h"
 #include "utils.h"
 
 #ifdef __CYGWIN__
@@ -83,6 +84,45 @@ __declspec(dllimport)
 extern int optind, opterr, optopt;
 
 const char fielddelim = '\x1E';     /* ASCII Record Separator */
+
+struct input *input_init(struct input *in) {
+    if (in) {
+        memset(in, 0, sizeof(*in));
+        in->maxthreads              = 1;                      // don't default to zero threads
+        in->delim                   = fielddelim;
+        in->andor                   = AND;
+        in->max_level               = -1;                     // default to all the way down
+        in->nobody.uid              = 65534;
+        in->nobody.gid              = 65534;
+        struct passwd *passwd       = getpwnam("nobody");
+        if (passwd) {
+            in->nobody.uid          = passwd->pw_uid;
+            in->nobody.gid          = passwd->pw_gid;
+        }
+        in->output                  = STDOUT;
+        in->output_buffer_size      = 4096;
+        in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
+        in->skip                    = trie_alloc();
+
+        /* always skip . and .. */
+        trie_insert(in->skip, ".",  1, NULL, NULL);
+        trie_insert(in->skip, "..", 2, NULL, NULL);
+
+        in->map_external            = trie_alloc();
+
+        sll_init(&in->external_attach);
+    }
+
+    return in;
+}
+
+void input_fini(struct input *in) {
+    if (in) {
+        sll_destroy(&in->external_attach, free);
+        trie_free(in->map_external);
+        trie_free(in->skip);
+    }
+}
 
 void print_help(const char* prog_name,
                 const char* getopt_str,
@@ -99,7 +139,7 @@ void print_help(const char* prog_name,
       case ':': continue;
       case 'h': printf("  -h                     help"); break;
       case 'H': printf("  -H                     show assigned input values (debugging)"); break;
-      case 'x': printf("  -x                     enable external database processing"); break;
+      case 'x': printf("  -x                     index/query xattrs"); break;
       case 'p': printf("  -p                     print file-names"); break;
       case 'P': printf("  -P                     print directories as they are encountered"); break;
       case 'N': printf("  -N                     print column-names (header) for DB results"); break;
@@ -141,6 +181,12 @@ void print_help(const char* prog_name,
       case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
       case 'e': printf("  -e                     compress work items"); break;
+      case 'q': printf("  -q <basename>\n"
+                       "     <attachname>        Mapping of basename of file to keep track of during indexing to attachname at query time"); break;
+      case 'Q': printf("  -Q <basename>\n"
+                       "     <table>\n"
+                       "     <template>.<table>\n"
+                       "     <view>              External database file basename, per-attach table name, template + table name, and the resultant view"); break;
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -161,7 +207,7 @@ void show_input(struct input* in, int retval) {
    printf("in.name_len                 = '%zu'\n",         in->name.len);
    printf("in.nameto                   = '%s'\n",          in->nameto.data);
    printf("in.andor                    = %d\n",            (int) in->andor);
-   printf("in.external_enabled         = %d\n",            in->external_enabled);
+   printf("in.process_xattrs           = %d\n",            in->process_xattrs);
    printf("in.nobody.uid               = %" STAT_uid "\n", in->nobody.uid);
    printf("in.nobody.gid               = %" STAT_gid "\n", in->nobody.gid);
    printf("in.sql.init                 = '%s'\n",          in->sql.init.data);
@@ -191,12 +237,19 @@ void show_input(struct input* in, int retval) {
    printf("in.terse                    = %d\n",            in->terse);
    printf("in.dry_run                  = %d\n",            in->dry_run);
    printf("in.max_in_dir               = %zu\n",           in->max_in_dir);
-   printf("in.skip                     = %s\n",            in->skip.data);
+   printf("in.skip_count               = '%zu'\n",         in->skip_count);
    printf("in.target_memory_footprint  = %" PRIu64 "\n",   in->target_memory_footprint);
    printf("in.subdir_limit             = %zu\n",           in->subdir_limit);
    printf("in.compress                 = %d\n",            in->compress);
+   printf("in.external_db_count        = %zu\n",           in->map_external_count);
+   size_t i = 0;
+   sll_loop(&in->external_attach, node) {
+       eus_t *eus = (eus_t *) sll_node_data(node);
+       printf("in.external_attach[%zu]     = ('%s', '%s', '%s', '%s')\n",
+              i++, eus->basename.data, eus->table.data, eus->template_table.data, eus->view.data);
+   }
    printf("\n");
-   printf("retval                      = %d\n",    retval);
+   printf("retval                      = %d\n",            retval);
    printf("\n");
 }
 
@@ -206,6 +259,9 @@ void show_input(struct input* in, int retval) {
 //    which is placed after "[options]" in the output produced for the '-h'
 //    option.  In other words, you end up with a picture of the
 //    command-line, for the help text.
+//
+// Do not call this function multiple times without calling
+//    input_fini between calls.
 //
 // return: -1 for error.  Otherwise, we return the index of the first
 //    positional argument in <argv>.  This allows the caller to do a custom
@@ -217,24 +273,12 @@ int parse_cmd_line(int         argc,
                    int         n_positional,
                    const char* positional_args_help_str,
                    struct input *in) {
-   memset(in, 0, sizeof(*in));
-   in->maxthreads              = 1;                      // don't default to zero threads
-   in->delim                   = fielddelim;
-   in->andor                   = AND;
-   in->max_level               = -1;                     // default to all the way down
-   in->nobody.uid              = 65534;
-   in->nobody.gid              = 65534;
-   struct passwd *passwd       = getpwnam("nobody");
-   if (passwd) {
-       in->nobody.uid          = passwd->pw_uid;
-       in->nobody.gid          = passwd->pw_gid;
-   }
-   in->output                  = STDOUT;
-   in->output_buffer_size      = 4096;
-   in->open_flags              = SQLITE_OPEN_READONLY;   // default to read-only opens
+
+   input_init(in);
 
    int show                    = 0;
    int retval                  = 0;
+   int bad_skipfile            = 0;
    int ch;
    optind = 1; // reset to 1, not 0 (man 3 getopt)
    while ( (ch = getopt(argc, argv, getopt_str)) != -1) {
@@ -251,8 +295,8 @@ int parse_cmd_line(int         argc,
          retval = -1;
          break;
 
-      case 'x':               // enable external database processing
-         in->external_enabled = 1;
+      case 'x':               // enable xattr processing
+         in->process_xattrs = 1;
          break;
 
       case 'p':               // print file name/path?
@@ -413,7 +457,19 @@ int parse_cmd_line(int         argc,
           break;
 
       case 'k':
-          INSTALL_STR(&in->skip, optarg);
+          {
+              refstr_t skipfile;
+              INSTALL_STR(&skipfile, optarg);
+              const ssize_t added = setup_directory_skip(in->skip, skipfile.data);
+              if (added < 0) {
+                  retval = -1;
+                  bad_skipfile = 1;
+                  /* cannot return here - expected behavior is to parse remaining options first */
+              }
+              else {
+                  in->skip_count += added;
+              }
+          }
           break;
 
       case 'M':
@@ -426,6 +482,44 @@ int parse_cmd_line(int         argc,
 
       case 'e':
           in->compress = 1;
+          break;
+
+      case 'q':               // file basename -> attach name
+          {
+              refstr_t basename;
+              INSTALL_STR(&basename, optarg);
+
+              optarg = argv[optind];
+              refstr_t *attach = malloc(sizeof(*attach));
+              INSTALL_STR(attach, optarg);
+
+              optarg = argv[++optind];
+
+              const int found = trie_search(in->map_external, basename.data, basename.len, NULL);
+              trie_insert(in->map_external, basename.data, basename.len, attach, free);
+              in->map_external_count += !found;
+          }
+          break;
+
+      case 'Q':
+          {
+              eus_t *user = malloc(sizeof(*user));
+
+              INSTALL_STR(&user->basename, optarg);
+
+              optarg = argv[optind];
+              INSTALL_STR(&user->table, optarg);
+
+              optarg = argv[++optind];
+              INSTALL_STR(&user->template_table, optarg);
+
+              optarg = argv[++optind];
+              INSTALL_STR(&user->view, optarg);
+
+              optarg = argv[++optind];
+
+              sll_push(&in->external_attach, user);
+          }
           break;
 
       case '?':
@@ -453,7 +547,7 @@ int parse_cmd_line(int         argc,
    //       value > n_positional is okay (?)
    if (retval
        || ((argc - optind) < n_positional)) {
-      if (! in->helped) {
+      if (!in->helped && !bad_skipfile) {
          print_help(argv[0], getopt_str, positional_args_help_str);
          in->helped = 1;
       }

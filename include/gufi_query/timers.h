@@ -81,6 +81,7 @@ typedef struct total_time {
     uint64_t attachdb;
     uint64_t lstat_db;
     uint64_t addqueryfuncs;
+    uint64_t attach_external;
     uint64_t xattrprep;
     uint64_t get_rollupscore;
     uint64_t sqltsumcheck;
@@ -104,6 +105,7 @@ typedef struct total_time {
     uint64_t sqlsum;
     uint64_t sqlent;
     uint64_t xattrdone;
+    uint64_t detach_external;
     uint64_t detachdb;
     uint64_t closedir;
     uint64_t utime;
@@ -172,6 +174,7 @@ enum {
     tts_lstat_db_call,
     tts_attachdb_call,
     tts_addqueryfuncs_call,
+    tts_attach_external,
     tts_xattrprep_call,
     tts_sqltsumcheck,
     tts_sqltsum,
@@ -180,6 +183,7 @@ enum {
     tts_sqlsum,
     tts_sqlent,
     tts_xattrdone_call,
+    tts_detach_external,
     tts_detachdb_call,
     tts_closedir_call,
     tts_utime_call,

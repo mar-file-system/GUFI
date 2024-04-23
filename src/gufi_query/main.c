@@ -285,6 +285,11 @@ static int count_rows(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
+typedef struct external_db_mapping {
+    char path[MAXSQL];
+    char attachname[MAXSQL];
+} edm_t;
+
 /*
  * SELECT subdirs(srollsubdirs, sroll) FROM vrsummary;
  *
@@ -385,24 +390,39 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     thread_timestamp_end(addqueryfuncs_call);
     #endif
 
-    /* set up XATTRS so that it can be used by -T, -S, and -E */
-    if (db && in->external_enabled) {
-        static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
-
-        thread_timestamp_start(ts.tts, xattrprep_call);
-        external_loop(&gqw->work, db,
-                      XATTRS, sizeof(XATTRS) - 1,
-                      XATTR_COLS, sizeof(XATTR_COLS) - 1,
-                      XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
-                      xattr_modify_filename);
-        xattr_create_views(db query_count_arg);
-        thread_timestamp_end(xattrprep_call);
-    }
-
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* if it fails then this will be set to 1 and will go on */
 
+    sll_t external_dbs;
+    sll_init(&external_dbs);
+
     if (gqw->work.level >= in->min_level) {
+        /* set up external databases for use with -T, -S, and -E */
+        if (db) {
+            /* user dbs */
+            thread_timestamp_start(ts.tts, attach_external);
+            external_with_template(&gqw->work, db,
+                                   EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
+                                   &in->external_attach
+                                   query_count_arg);
+            thread_timestamp_end(attach_external);
+
+            /* xattrs */
+            if (in->process_xattrs) {
+                static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
+
+                thread_timestamp_start(ts.tts, xattrprep_call);
+                external_concatenate(&gqw->work, db,
+                                     EXTERNAL_TYPE_XATTRS, EXTERNAL_TYPE_XATTRS_LEN,
+                                     XATTRS, sizeof(XATTRS) - 1,
+                                     XATTR_COLS, sizeof(XATTR_COLS) - 1,
+                                     XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
+                                     xattr_modify_filename);
+                xattr_create_views(db query_count_arg);
+                thread_timestamp_end(xattrprep_call);
+            }
+        }
+
         if (db && in->sql.tsum.len) {
             /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
             /* if this is OR, as well as no-sql-to-run, skip this query */
@@ -452,7 +472,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         if (rollupscore == 0) {
             thread_timestamp_start(ts.tts, descend_call);
             subdirs_walked_count =
-                descend2(ctx, id, gqw, dir, pa->skip, processdir, in->max_level, in->compress
+                descend2(ctx, id, gqw, dir, in->skip, processdir, in->max_level, in->compress
                          #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                          , ts.dts
                          #endif
@@ -500,12 +520,25 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         }
     }
 
-    /* detach xattr dbs */
-    thread_timestamp_start(ts.tts, xattrdone_call);
-    if (db && in->external_enabled) {
-        external_done(db, "DROP VIEW " XATTRS ";" query_count_arg);
+    if (db) {
+        /* detach xattr dbs */
+        thread_timestamp_start(ts.tts, xattrdone_call);
+        if (in->process_xattrs) {
+            external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
+                                         EXTERNAL_TYPE_XATTRS, EXTERNAL_TYPE_XATTRS_LEN
+                                         query_count_arg);
+        }
+        thread_timestamp_end(xattrdone_call);
+
+        thread_timestamp_start(ts.tts, detach_external);
+        external_with_template_cleanup(&gqw->work, db,
+                                     EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
+                                     &in->external_attach
+                                     query_count_arg);
+        thread_timestamp_end(detach_external);
     }
-    thread_timestamp_end(xattrdone_call);
+
+    sll_destroy(&external_dbs, free);
 
     #ifdef OPENDB
     thread_timestamp_start(ts.tts, detachdb_call);
@@ -623,6 +656,14 @@ static int validate_inputs(struct input *in) {
         /* -G can be called when aggregating, but is not necessary */
     }
 
+    /* -Q requires -I */
+    if (sll_get_size(&in->external_attach)) {
+        if (!in->sql.init.len) {
+            fprintf(stderr, "External databases require template files attached with -I [%s]\n", in->sql.init.data);
+            return -1;
+        }
+    }
+
     return 0;
 }
 
@@ -638,7 +679,7 @@ int main(int argc, char *argv[])
     /* Callers provide the options-string for get_opt(), which will */
     /* control which options are parsed for each program. */
     struct input in;
-    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT, 1, "GUFI_index ...", &in);
+    int idx = parse_cmd_line(argc, argv, "hHT:S:E:an:jo:d:O:I:F:y:z:J:K:G:mB:wxk:M:" COMPRESS_OPT "Q:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
     if (idx < 0)

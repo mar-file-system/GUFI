@@ -67,8 +67,10 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
+#include "SinglyLinkedList.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "trie.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,28 +85,40 @@ extern "C" {
  * matter the usage of the external databases
  */
 
-#define EXTERNAL_DBS_PWD      "external_dbs_pwd"    /* *.db files found during indexing */
+#define EXTERNAL_DBS_PWD           "external_dbs_pwd"    /* *.db files found during indexing */
 extern const char EXTERNAL_DBS_PWD_CREATE[];
 extern const char EXTERNAL_DBS_PWD_INSERT[];
 
-#define EXTERNAL_DBS_ROLLUP   "external_dbs_rollup" /* *.db files brought up during rollup */
+#define EXTERNAL_DBS_ROLLUP        "external_dbs_rollup" /* *.db files brought up during rollup */
 extern const char EXTERNAL_DBS_ROLLUP_CREATE[];
 extern const char EXTERNAL_DBS_ROLLUP_INSERT[];
 
-#define EXTERNAL_DBS          "external_dbs"
-extern const char EXTERNAL_DBS_CREATE[];
+#define EXTERNAL_DBS               "external_dbs"
+#define EXTERNAL_DBS_LEN           (sizeof(EXTERNAL_DBS) - 1)
+
+#define EXTERNAL_TYPE_XATTRS       "xattrs"
+#define EXTERNAL_TYPE_XATTRS_LEN   (sizeof(EXTERNAL_TYPE_XATTRS) - 1)
+
+#define EXTERNAL_TYPE_USER_DB      "user_db"
+#define EXTERNAL_TYPE_USER_DB_LEN  (sizeof(EXTERNAL_TYPE_USER_DB) - 1)
 
 int create_external_tables(const char *name, sqlite3 *db, void *args);
 
+int external_insert(sqlite3 *db, const char *type, const char *filename, const char *attachname);
+
 /*
- * external_loop
+ * external_concatenate
  *
- * Attach the databases listed in the external databases table to
- * db.db and create a temporary view of all data accessible by the
- * caller.
+ * Attach the databases selected from the external databases table
+ * to db.db and concatenate all of the data into one view.
+ *
+ * "type" is associated with EXTERNAL_DBS, not with the databases
+ * being attached, so the arguments come before create_view.
  *
  * @in work               the current work context
  * @in db                 handle to the main db
+ * @in type               external database type (xattrs, user, etc.)
+ * @in type_len           length of type
  * @in view_name          the name of the view to create
  * @in view_name_len      length of view_name
  * @in select             string containing "SELECT <columns> FROM "
@@ -115,16 +129,18 @@ int create_external_tables(const char *name, sqlite3 *db, void *args);
  *                        returns the length of the new filename
  * @return the number of external databases attached
  */
-int external_loop(struct work *work, sqlite3 *db,
-                  const char *view_name, const size_t view_name_len,
-                  const char *select, const size_t select_len,
-                  const char *table_name, const size_t table_name_len,
-                  size_t (*modify_filename)(char **dst, const size_t dst_size,
-                                            const char *src, const size_t src_len,
-                                            struct work *work));
+int external_concatenate(struct work *work, sqlite3 *db,
+                         const char *type, const size_t type_len,
+                         const char *view_name, const size_t view_name_len,
+                         const char *select, const size_t select_len,
+                         const char *table_name, const size_t table_name_len,
+                         size_t (*modify_filename)(char **dst, const size_t dst_size,
+                                                   const char *src, const size_t src_len,
+                                                   struct work *work));
 
 /*
- * drop view and detach external databases
+ * external_concatenate_cleanup
+ * Drop combined view and detach external databases.
  *
  * @in db           the current working context
  * @in drop_view    SQL statement of the format "DROP VIEW <view name>;"
@@ -132,10 +148,66 @@ int external_loop(struct work *work, sqlite3 *db,
  *                  memcpys that would be done if the query were
  8                  generated instead of provided.
  */
-void external_done(sqlite3 *db, const char *drop_view
-                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                   , size_t *query_count
-                   #endif
+void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
+                                  const char *type, const size_t type_len
+                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                  , size_t *query_count
+                                  #endif
+    );
+
+typedef struct external_user_setup {
+    refstr_t basename;
+    /* refstr_t attachname (pulled from table) */
+    refstr_t table;
+    refstr_t template_table;
+    refstr_t view;
+} eus_t;
+
+/*
+ * external_with_template
+ *
+ * For each view requested by the user:
+ *     If there is a cooresponding entry in the
+ *     external database table, attach it
+ *
+ *     Create a view out of the template and the
+ *     attached external database file.
+ *
+ * Assumes template_table_name is already available
+ *
+ * @in work                    the current work context
+ * @in db                      handle to the main db
+ * @in type                    external database type (xattrs, user, etc.)
+ * @in type_len                length of type
+ * @in eus                     list of external user db setup configs
+ * @return the number of views created
+ */
+int external_with_template(struct work *work, sqlite3 *db,
+                         const char *type, const size_t type_len,
+                         sll_t *eus
+                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                         , size_t *query_count
+                         #endif
+    );
+
+/*
+ * external_with_template_cleanup
+ *
+ * Drop each view followed by the user db if it exists.
+ *
+ * @in work                    the current work context
+ * @in db                      handle to the main db
+ * @in type                    external database type (xattrs, user, etc.)
+ * @in type_len                length of type
+ * @in eus                     list of external user db setup configs
+ * @return 0
+ */
+int external_with_template_cleanup(struct work *work, sqlite3 *db,
+                                 const char *type, const size_t type_len,
+                                 sll_t *eus
+                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                 , size_t *query_count
+                                 #endif
     );
 
 #ifdef __cplusplus

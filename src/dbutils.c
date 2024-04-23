@@ -74,6 +74,7 @@ OF SUCH DAMAGE.
 
 #include "BottomUp.h"
 #include "dbutils.h"
+#include "external.h"
 #include "histogram.h"
 
 const char READDIRPLUS_CREATE[] =
@@ -1059,7 +1060,7 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     /* remove trailing slashes */
     const size_t trimmed_len = trailing_non_match_index(path, path_len, "/", 1);
     if (!trimmed_len) {
-        sqlite3_result_text(context, "/", 1, SQLITE_TRANSIENT);
+        sqlite3_result_text(context, "/", 1, SQLITE_STATIC);
         return;
     }
 
@@ -1069,7 +1070,7 @@ static void sqlite_basename(sqlite3_context *context, int argc, sqlite3_value **
     const size_t bn_len = trimmed_len - offset;
     char *bn = path + offset;
 
-    sqlite3_result_text(context, bn, bn_len, SQLITE_TRANSIENT);
+    sqlite3_result_text(context, bn, bn_len, SQLITE_STATIC);
 }
 
 /*
@@ -1350,9 +1351,9 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     xdb->db  = NULL;
     xdb->res = NULL;
     xdb->file_list = file_list;
+    xdb->st.st_mode = xattr_db_mode;
     xdb->st.st_uid = uid;
     xdb->st.st_gid = gid;
-    xdb->st.st_mode = xattr_db_mode;
 
     if (copy_template(tdb, filename, xdb->st.st_uid, xdb->st.st_gid) != 0) {
         destroy_xattr_db(xdb);
@@ -1383,11 +1384,12 @@ void destroy_xattr_db(void *ptr) {
     closedb(xdb->db);
 
     /* add this xattr db to the list of dbs to open when creating view */
-    sqlite3_bind_text( xdb->file_list, 1, xdb->filename, xdb->filename_len, SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 2, xdb->attach, xdb->attach_len, SQLITE_STATIC);
-    sqlite3_bind_int64(xdb->file_list, 3, xdb->st.st_mode);
-    sqlite3_bind_int64(xdb->file_list, 4, xdb->st.st_uid);
-    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_gid);
+    sqlite3_bind_text( xdb->file_list, 1, EXTERNAL_TYPE_XATTRS, EXTERNAL_TYPE_XATTRS_LEN, SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 2, xdb->filename, xdb->filename_len,               SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 3, xdb->attach, xdb->attach_len,                   SQLITE_STATIC);
+    sqlite3_bind_int64(xdb->file_list, 4, xdb->st.st_mode);
+    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_uid);
+    sqlite3_bind_int64(xdb->file_list, 6, xdb->st.st_gid);
 
     sqlite3_step(xdb->file_list);
     sqlite3_reset(xdb->file_list);

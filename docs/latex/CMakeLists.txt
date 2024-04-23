@@ -90,6 +90,7 @@ set(gufi_developer_inputs
     sections/rollup.tex
     sections/treesummary.tex
     sections/xattrs.tex
+    sections/external_databases.tex
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex
@@ -118,6 +119,7 @@ set(gufi_administrator_inputs
     sections/rollup.tex
     sections/treesummary.tex
     sections/xattrs.tex
+    sections/external_databases.tex
     sections/querying.tex
     sections/gufi_query.tex
     sections/querydbs.tex

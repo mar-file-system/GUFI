@@ -68,7 +68,9 @@ OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <sys/stat.h>
 
+#include "SinglyLinkedList.h"
 #include "compress.h"
+#include "trie.h"
 #include "xattrs.h"
 
 #ifdef __cplusplus
@@ -147,7 +149,7 @@ typedef struct refstring {
 struct input {
    refstr_t  name;
    refstr_t  nameto;
-   int external_enabled;
+   int process_xattrs;
    struct {
        uid_t uid;
        gid_t gid;
@@ -214,8 +216,9 @@ struct input {
    /* only used by rollup */
    size_t max_in_dir;
 
-   /* filename containing strings to skip during tree traversal */
-   refstr_t skip;
+   /* trie containing directory basenames to skip during tree traversal */
+   trie_t *skip;
+   size_t skip_count;
 
    /* attempt to drain QPTPool work items until this memory footprint is reached */
    uint64_t target_memory_footprint;
@@ -233,7 +236,17 @@ struct input {
 
    /* compress work items (if compression library was found) */
    int compress;
+
+   /* used when indexing (-q) */
+   trie_t *map_external;      /* full path -> attach name */
+   size_t map_external_count; /* only keeps track of unique full paths */
+
+   /* used when querying (-Q) */
+   sll_t external_attach;     /* list of eus_t */
 };
+
+struct input *input_init(struct input *in);
+void input_fini(struct input *in);
 
 void print_help(const char *prog_name,
                 const char *getopt_str,

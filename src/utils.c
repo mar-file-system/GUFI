@@ -379,21 +379,23 @@ size_t SNFORMAT_S(char *dst, const size_t dst_len, size_t count, ...) {
  * If work->recursion_level > 0, the work item that is passed
  * into the processdir function will be allocated on the stack
  * instead of on the heap, so do not free it.
+ *
+ * if a child file/link is selected for external tracking, add
+ * it to EXTERNAL_DBS_PWD in addition to ENTRIES.
+ *
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, trie_t *skip_names, const int skip_db,
-            const int stat_entries, QPTPoolFunc_t processdir,
-            processnondir_f processnondir, void *nondir_args,
-            size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed) {
+            DIR *dir, trie_t *skip_names, const int skip_db, const int stat_entries,
+            QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
+            process_external_db_f process_external_db, void *external_db_args,
+            struct descend_counters *counters) {
     if (!work) {
         return 1;
     }
 
-    size_t dirs = 0;
-    size_t insitu = 0;
-    size_t nondirs = 0;
-    size_t processed = 0;
+    struct descend_counters ctrs;
+    memset(&ctrs, 0, sizeof(ctrs));
 
     if (work->level < in->max_level) {
         /* calculate once */
@@ -454,7 +456,7 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
             if (S_ISDIR(child_ed.statuso.st_mode)) {
                 child_ed.type = 'd';
 
-                if (!in->subdir_limit || (dirs < in->subdir_limit)) {
+                if (!in->subdir_limit || (ctrs.dirs < in->subdir_limit)) {
                     struct work *copy = compress_struct(in->compress, &child, sizeof(child));
                     QPTPool_enqueue(ctx, id, processdir, copy);
                 }
@@ -475,10 +477,10 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                      */
                     child.recursion_level = recursion_level;
                     processdir(ctx, id, &child, args);
-                    insitu++;
+                    ctrs.dirs_insitu++;
                 }
 
-                dirs++;
+                ctrs.dirs++;
 
                 continue;
             }
@@ -497,38 +499,31 @@ int descend(QPTPool_t *ctx, const size_t id, void *args,
                 continue;
             }
 
-            nondirs++;
+            ctrs.nondirs++;
 
             if (processnondir) {
-                if (in->external_enabled) {
+                if (in->process_xattrs) {
                     xattrs_setup(&child_ed.xattrs);
                     xattrs_get(child.name, &child_ed.xattrs);
                 }
 
                 processnondir(&child, &child_ed, nondir_args);
-                processed++;
+                ctrs.nondirs_processed++;
 
-                if (in->external_enabled) {
+                if (in->process_xattrs) {
                     xattrs_cleanup(&child_ed.xattrs);
                 }
+            }
+
+            /* process external databases (not xattrs) */
+            if (process_external_db) {
+                ctrs.external_dbs += process_external_db(in, &child, external_db_args);
             }
         }
     }
 
-    if (dir_count) {
-        *dir_count = dirs;
-    }
-
-    if (dirs_insitu) {
-        *dirs_insitu = insitu;
-    }
-
-    if (nondir_count) {
-        *nondir_count = nondirs;
-    }
-
-    if (nondirs_processed) {
-        *nondirs_processed = processed;
+    if (counters) {
+        *counters = ctrs;
     }
 
     return 0;
@@ -625,43 +620,38 @@ size_t dirname_len(const char *path, size_t len) {
 }
 
 /* create a trie of directory names to skip from a file */
-int setup_directory_skip(const char *filename, trie_t **skip) {
-    if (!skip) {
+ssize_t setup_directory_skip(trie_t *skip, const char *filename) {
+    if (!skip || !filename) {
         return -1;
     }
 
-    *skip = trie_alloc();
-
-    /* always skip . and .. */
-    trie_insert(*skip, ".",  1, NULL, NULL);
-    trie_insert(*skip, "..", 2, NULL, NULL);
-
     /* add user defined directory names to skip */
-    if (filename) {
-        FILE *skipfile = fopen(filename, "r");
-        if (!skipfile) {
-            fprintf(stderr, "Error: Cannot open skip file \"%s\"\n", filename);
-            trie_free(*skip);
-            *skip = NULL;
-            return -1;
-        }
-
-        /* read line */
-        char line[MAXPATH];
-        while (fgets(line, MAXPATH, skipfile) == line) {
-            /* only keep first word */
-            char name[MAXPATH];
-            if (sscanf(line, "%s", name) != 1) {
-                continue;
-            }
-
-            trie_insert(*skip, name, strlen(name), NULL, NULL);
-        }
-
-        fclose(skipfile);
+    FILE *skipfile = fopen(filename, "r");
+    if (!skipfile) {
+        fprintf(stderr, "Error: Cannot open skip file \"%s\"\n", filename);
+        return -1;
     }
 
-    return 0;
+    ssize_t count = 0;
+    char line[MAXPATH];
+    while (fgets(line, MAXPATH, skipfile) == line) {
+        /* only keep first word */
+        char name[MAXPATH];
+        if (sscanf(line, "%s", name) != 1) {
+            continue;
+        }
+
+        const size_t len = strlen(name);
+
+        if (!trie_search(skip, name, len, NULL)) {
+            trie_insert(skip, name, len, NULL, NULL);
+            count++;
+        }
+    }
+
+    fclose(skipfile);
+
+    return count;
 }
 
 /* strstr/strtok replacement */

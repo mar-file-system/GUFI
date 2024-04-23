@@ -69,10 +69,11 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "QueuePerThreadPool.h"
 #include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
-#include "QueuePerThreadPool.h"
+#include "external.h"
 #include "utils.h"
 
 struct Unrollup {
@@ -88,7 +89,7 @@ static int count_pwd(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
-/* Delete all entries in each file found in the XATTR_FILES_ROLLUP table */
+/* Delete all entries in each file found in the XATTR_ROLLUP table */
 static int process_xattrs(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
@@ -207,7 +208,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                          "DELETE FROM " SUMMARY " WHERE isroot != 1;"
                          "UPDATE " SUMMARY " SET rollupscore = 0 WHERE isroot == 1;"
                          "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT filename FROM " EXTERNAL_DBS_ROLLUP ";"
+                         "SELECT filename FROM " EXTERNAL_DBS_ROLLUP " WHERE type == '" EXTERNAL_TYPE_XATTRS "';"
                          "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
                          "END TRANSACTION;"
                          /*
@@ -246,8 +247,10 @@ int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:", 1, "GUFI_index ...", &in);
     if (in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
+    }
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     epoch = since_epoch(NULL);
@@ -259,6 +262,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
+        input_fini(&in);
         return EXIT_FAILURE;
     }
 
@@ -303,6 +307,8 @@ int main(int argc, char *argv[]) {
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     timestamp_print_destroy(timestamp_buffers);
     #endif
+
+    input_fini(&in);
 
     return EXIT_SUCCESS;
 }

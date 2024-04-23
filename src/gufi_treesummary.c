@@ -121,7 +121,6 @@ static int printits(struct input *in, struct work *pwork, struct entry_data *ed,
 
 struct PoolArgs {
     struct input in;
-    trie_t *skip;     /* paths to skip during descent (only . and ..) */
     struct sum *sums; /* per thread summary data */
 };
 
@@ -193,8 +192,10 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                  */
                 descend(ctx, id, pa,
                         &pa->in, passmywork, ed.statuso.st_ino,
-                        dir, pa->skip, 0, 0, processdir,
-                        NULL, NULL, NULL, NULL, NULL, NULL);
+                        dir, pa->in.skip, 0, 0,
+                        processdir, NULL, NULL,
+                        NULL, NULL,
+                        NULL);
 
                 /* add summary data from this directory */
                 querytsdb(passmywork->name, &sum, db, 0);
@@ -311,14 +312,13 @@ int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHPn:d:X", 1, "GUFI_index", &pa.in);
     if (pa.in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&pa.in);
         return EXIT_FAILURE;
+    }
     else {
         INSTALL_STR(&pa.in.name, argv[idx++]);
     }
-
-    /* skip . and .. only */
-    setup_directory_skip(NULL, &pa.skip);
 
     /* not an error, but you might want to know ... */
     if (pa.in.dry_run) {
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]) {
     if (QPTPool_start(pool) != 0) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
-        trie_free(pa.skip);
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
@@ -348,7 +348,8 @@ int main(int argc, char *argv[]) {
 
     compute_treesummary(&pa);
     free(pa.sums);
-    trie_free(pa.skip);
+
+    input_fini(&pa.in);
 
     return EXIT_SUCCESS;
 }

@@ -499,8 +499,10 @@ int main(int argc, char *argv[])
     int idx = parse_cmd_line(argc, argv, "hHf:j", 1, "path ...", &in);
     if (in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
+    }
 
     const char *format = DEFAULT_FORMAT;
 
@@ -517,6 +519,8 @@ int main(int argc, char *argv[])
     for(int i = idx; i < argc; i++) {
         rc |= process_path(argv[i], stdout, format);
     }
+
+    input_fini(&in);
 
     return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

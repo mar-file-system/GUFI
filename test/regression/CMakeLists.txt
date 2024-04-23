@@ -114,6 +114,12 @@ set(OTHERS
   treediff
 )
 
+if (NOT CYGWIN)
+  list(APPEND OTHERS
+    external_databases
+  )
+endif()
+
 if (ZLIB_FOUND)
   list(APPEND OTHERS
     compression

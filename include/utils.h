@@ -103,7 +103,21 @@ int dupdir(const char *path, struct stat *stat);
 
 int shortpath(const char *name, char *nameout, char *endname);
 
-typedef int (*processnondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+/* ******************************************************* */
+/* descend */
+typedef int (*process_nondir_f)(struct work *nondir, struct entry_data *ed, void *nondir_args);
+
+/* returns 1 for success, 0 for failure */
+typedef int (*process_external_db_f)(struct input *in,
+                                     struct work *child, void *args);
+
+struct descend_counters {
+    size_t dirs;
+    size_t dirs_insitu;
+    size_t nondirs;
+    size_t nondirs_processed;
+    size_t external_dbs;
+};
 
 /*
  * Push the subdirectories in the current directory onto the queue
@@ -111,10 +125,12 @@ typedef int (*processnondir_f)(struct work *nondir, struct entry_data *ed, void 
  */
 int descend(QPTPool_t *ctx, const size_t id, void *args,
             struct input *in, struct work *work, ino_t inode,
-            DIR *dir, trie_t *skip, const int skip_db,
-            const int stat_entries,  QPTPoolFunc_t processdir,
-            processnondir_f processnondir, void *nondir_args,
-            size_t *dir_count, size_t *dirs_insitu, size_t *nondir_count, size_t *nondirs_processed);
+            DIR *dir, trie_t *skip, const int skip_db, const int stat_entries,
+            QPTPoolFunc_t processdir, process_nondir_f processnondir, void *nondir_args,
+            process_external_db_f process_external_db, void *external_db_args,
+            struct descend_counters *counters);
+
+/* ******************************************************* */
 
 /* convert a mode to a human readable string */
 char *modetostr(char *str, const size_t size, const mode_t mode);
@@ -134,7 +150,8 @@ size_t trailing_non_match_index(const char *str, size_t len,
  */
 size_t dirname_len(const char *path, size_t len);
 
-int setup_directory_skip(const char *filename, trie_t **skip);
+/* add contents of filename into skip */
+ssize_t setup_directory_skip(trie_t *skip, const char *filename);
 
 /* strstr/strtok replacement */
 char *split(char *src, const char *delim, const size_t delim_len, const char *end);

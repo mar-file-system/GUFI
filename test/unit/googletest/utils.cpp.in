@@ -651,27 +651,28 @@ TEST(descend, builddir) {
     ASSERT_NE(pool, nullptr);
     EXPECT_EQ(QPTPool_start(pool), 0);
 
-    size_t dir_count = 0;
-    size_t dirs_insitu = 0;
-    size_t nondir_count = 0;
-    size_t nondirs_processed = 0;
+    struct descend_counters ctrs;
 
     // bad work; rest of inputs don't matter
     EXPECT_EQ(descend(nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr,
-                      nullptr, 0, 0, nullptr, nullptr, nullptr,
-                      nullptr, nullptr, nullptr, nullptr), 1);
+                      nullptr, 0, 0,
+                      nullptr, nullptr, nullptr,
+                      nullptr, nullptr,
+                      nullptr), 1);
 
     // work->level == in->max_level - not descending
     {
         EXPECT_EQ(descend(nullptr, 0, nullptr, &in, &work, 0, dir,
-                          nullptr, 0, 0, nullptr,
+                          nullptr, 0, 0,
+                          nullptr,
                           nullptr, nullptr,
-                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+                          nullptr, nullptr,
+                          &ctrs), 0);
 
-        EXPECT_EQ(dir_count,         (std::size_t) 0);
-        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
-        EXPECT_EQ(nondir_count,      (std::size_t) 0);
-        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
     }
 
     // good descend
@@ -685,12 +686,13 @@ TEST(descend, builddir) {
                               return 0;
                           },
                           nullptr, nullptr,
-                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+                          nullptr, nullptr,
+                          &ctrs), 0);
 
-        EXPECT_NE(dir_count,         (std::size_t) 0);
-        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(nondir_count,      (std::size_t) 0);
-        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
         in.max_level = (size_t) -1;
     }
 
@@ -704,12 +706,13 @@ TEST(descend, builddir) {
                               return 0;
                           },
                           nullptr, nullptr,
-                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+                          nullptr, nullptr,
+                          &ctrs), 0);
 
-        EXPECT_NE(dir_count,         (std::size_t) 0);
-        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(nondir_count,      (std::size_t) 0);
-        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
     }
 
     // good descend with lstat
@@ -722,12 +725,13 @@ TEST(descend, builddir) {
                               return 0;
                           },
                           nullptr, nullptr,
-                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+                          nullptr, nullptr,
+                          &ctrs), 0);
 
-        EXPECT_NE(dir_count,         (std::size_t) 0);
-        EXPECT_EQ(dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(nondir_count,      (std::size_t) 0);
-        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_EQ(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
     }
 
     // good descend with some in-situ processing
@@ -744,12 +748,13 @@ TEST(descend, builddir) {
                               return 0;
                           },
                           nullptr, nullptr,
-                          &dir_count, &dirs_insitu, &nondir_count, &nondirs_processed), 0);
+                          nullptr, nullptr,
+                          &ctrs), 0);
 
-        EXPECT_NE(dir_count,         (std::size_t) 0);
-        EXPECT_NE(dirs_insitu,       (std::size_t) 0);
-        EXPECT_NE(nondir_count,      (std::size_t) 0);
-        EXPECT_EQ(nondirs_processed, (std::size_t) 0);
+        EXPECT_NE(ctrs.dirs,              (std::size_t) 0);
+        EXPECT_NE(ctrs.dirs_insitu,       (std::size_t) 0);
+        EXPECT_NE(ctrs.nondirs,           (std::size_t) 0);
+        EXPECT_EQ(ctrs.nondirs_processed, (std::size_t) 0);
     }
 
     QPTPool_wait(pool);
@@ -878,10 +883,9 @@ TEST(setup_directory_skip, file) {
         }
     }
 
-    trie_t *skip = nullptr;
-    EXPECT_EQ(setup_directory_skip(skip_name, &skip), 0);
-    EXPECT_EQ(trie_search(skip, ".",  1, nullptr), 1);
-    EXPECT_EQ(trie_search(skip, "..", 2, nullptr), 1);
+    trie_t *skip = trie_alloc();
+    ASSERT_NE(skip, nullptr);
+    EXPECT_EQ(setup_directory_skip(skip, skip_name), (ssize_t) (sizeof(skip_dirs) / sizeof(skip_dirs[0])));
     for(std::string const & skip_dir : skip_dirs) {
         EXPECT_EQ(trie_search(skip, skip_dir.c_str(), skip_dir.size(), nullptr), 1);
     }
@@ -890,31 +894,23 @@ TEST(setup_directory_skip, file) {
     EXPECT_EQ(remove(skip_name), 0);
 }
 
-TEST(setup_directory_skip, bad_file) {
+TEST(setup_directory_skip, bad) {
+    trie_t *skip = trie_alloc();
+    ASSERT_NE(skip, nullptr);
+
     char name[] = "XXXXXX";
     const int fd = mkstemp(name);
     ASSERT_GT(fd, -1);
+    EXPECT_EQ(setup_directory_skip(skip, name), 0);
     EXPECT_EQ(close(fd), 0);
     EXPECT_EQ(remove(name), 0);
 
-    trie_t *skip = nullptr;
-    EXPECT_EQ(setup_directory_skip(name, &skip), -1);
-    EXPECT_EQ(skip, nullptr);
+    EXPECT_EQ(setup_directory_skip(skip, ""), -1);
+    EXPECT_EQ(setup_directory_skip(skip, nullptr), -1);
 
-    EXPECT_EQ(setup_directory_skip("", &skip), -1);
-    EXPECT_EQ(skip, nullptr);
-}
-
-TEST(setup_directory_skip, no_file) {
-    trie_t *skip = nullptr;
-    EXPECT_EQ(setup_directory_skip(nullptr, &skip), 0);
-    EXPECT_EQ(trie_search(skip, ".",  1, nullptr), 1);
-    EXPECT_EQ(trie_search(skip, "..", 2, nullptr), 1);
     trie_free(skip);
-}
 
-TEST(setup_directory_skip, no_trie) {
-    EXPECT_EQ(setup_directory_skip("", nullptr), -1);
+    EXPECT_EQ(setup_directory_skip(nullptr, ""), -1);
 }
 
 TEST(split, delims) {

@@ -5,11 +5,14 @@ options:
   -h                     help
   -H                     show assigned input values (debugging)
   -n <threads>           number of threads
-  -x                     enable external database processing
+  -x                     index/query xattrs
   -d <delim>             delimiter (one char)  [use 'x' for 0x1E]
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
+  -e                     compress work items
+  -q <basename>
+     <attachname>        Mapping of basename of file to keep track of during indexing to attachname at query time
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)

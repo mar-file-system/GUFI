@@ -76,17 +76,18 @@ void total_time_init(total_time_t *tt) {
 uint64_t total_time_sum(total_time_t *tt) {
     return (tt->opendir + tt->lstat_db +
             tt->attachdb + tt->addqueryfuncs +
-            tt->xattrprep + tt->get_rollupscore +
-            tt->sqltsumcheck + tt->sqltsum + tt->descend +
-            tt->check_args + tt->level + tt->level_branch +
+            tt->attach_external + tt->xattrprep +
+            tt->get_rollupscore + tt->sqltsumcheck +
+            tt->sqltsum + tt->descend + tt->check_args +
+            tt->level + tt->level_branch +
             tt->while_branch + tt->readdir +
             tt->readdir_branch + tt->strncmp +
             tt->strncmp_branch + tt->snprintf + tt->isdir +
             tt->isdir_branch + tt->access + tt->set +
             tt->clone + tt->pushdir + tt->sqlsum +
-            tt->sqlent + tt->xattrdone + tt->detachdb +
-            tt->closedir + tt->utime + tt->free_work +
-            tt->output_timestamps);
+            tt->sqlent + tt->xattrdone + tt->detach_external +
+            tt->detachdb + tt->closedir + tt->utime +
+            tt->free_work + tt->output_timestamps);
 }
 
 void total_time_destroy(total_time_t *tt) {
@@ -126,6 +127,7 @@ void timestamps_print(struct OutputBuffers *obs, const size_t id,
         print_timer      (obs, id, "attachdb",           &ts->tts[tts_attachdb_call]);
         if (db) {
             print_timer  (obs, id, "addqueryfuncs",      &ts->tts[tts_addqueryfuncs_call]);
+            print_timer  (obs, id, "attach_external",    &ts->tts[tts_attach_external]);
             print_timer  (obs, id, "xattrprep",          &ts->tts[tts_xattrprep_call]);
             print_timer  (obs, id, "sqltsumcheck",       &ts->tts[tts_sqltsumcheck]);
             print_timer  (obs, id, "sqltsum",            &ts->tts[tts_sqltsum]);
@@ -150,6 +152,7 @@ void timestamps_print(struct OutputBuffers *obs, const size_t id,
             print_timer  (obs, id, "sqlsum",             &ts->tts[tts_sqlsum]);
             print_timer  (obs, id, "sqlent",             &ts->tts[tts_sqlent]);
             print_timer  (obs, id, "xattrdone",          &ts->tts[tts_xattrdone_call]);
+            print_timer  (obs, id, "detach_external",    &ts->tts[tts_detach_external]);
             print_timer  (obs, id, "detachdb",           &ts->tts[tts_detachdb_call]);
             print_timer  (obs, id, "utime",              &ts->tts[tts_utime_call]);
         }
@@ -177,6 +180,7 @@ void timestamps_sum(total_time_t *tt, timestamps_t *ts) {
     tt->opendir           += nsec(&ts->tts[tts_opendir_call]);
     tt->lstat_db          += nsec(&ts->tts[tts_lstat_db_call]);
     tt->attachdb          += nsec(&ts->tts[tts_attachdb_call]);
+    tt->attach_external   += nsec(&ts->tts[tts_attach_external]);
     tt->xattrprep         += nsec(&ts->tts[tts_xattrprep_call]);
     tt->sqltsumcheck      += nsec(&ts->tts[tts_sqltsumcheck]);
     tt->sqltsum           += nsec(&ts->tts[tts_sqltsum]);
@@ -200,6 +204,7 @@ void timestamps_sum(total_time_t *tt, timestamps_t *ts) {
     tt->sqlsum            += nsec(&ts->tts[tts_sqlsum]);
     tt->sqlent            += nsec(&ts->tts[tts_sqlent]);
     tt->xattrdone         += nsec(&ts->tts[tts_xattrdone_call]);
+    tt->detach_external   += nsec(&ts->tts[tts_detach_external]);
     tt->detachdb          += nsec(&ts->tts[tts_detachdb_call]);
     tt->utime             += nsec(&ts->tts[tts_utime_call]);
     tt->closedir          += nsec(&ts->tts[tts_closedir_call]);

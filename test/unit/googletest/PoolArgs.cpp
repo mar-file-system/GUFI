@@ -100,7 +100,6 @@ void setup_input(struct input *in, OutputMethod om, bool aggregate) {
 
 void test_common(PoolArgs *pa) {
     EXPECT_NE(pa->in, nullptr);
-    EXPECT_NE(pa->skip, nullptr);
     ASSERT_NE(pa->ta, nullptr);
 
     for(size_t i = 0; i < (size_t) pa->in->maxthreads; i++) {
@@ -330,25 +329,11 @@ TEST(PoolArgs, OUTDB_aggregate) {
     // final database file is created by aggregate, so don't test here
 }
 
-TEST(PoolArgs, bad_skip) {
-    struct input in;
-    setup_input(&in, OUTDB, false);
-    in.skip.data = "";
-
-    PoolArgs pa;
-    EXPECT_EQ(PoolArgs_init(&pa, &in, &mutex), 1);
-    EXPECT_EQ(pa.in, &in);
-    EXPECT_EQ(pa.ta, nullptr);
-    EXPECT_EQ(pa.skip, nullptr);
-    EXPECT_EQ(pa.stdout_mutex, nullptr);
-}
-
 static void check_poolargs_init_failed(struct input &in, pthread_mutex_t *expected_mutex) {
     PoolArgs pa;
     EXPECT_EQ(PoolArgs_init(&pa, &in, &mutex), 1);
     EXPECT_EQ(pa.in, &in);
     EXPECT_EQ(pa.ta, nullptr);
-    EXPECT_EQ(pa.skip, nullptr);
     EXPECT_EQ(pa.stdout_mutex, expected_mutex);
 }
 

@@ -375,7 +375,6 @@ unusual#? directory , 2
 
 $ gufi_stats --skip "skip.bad" -r depth "prefix"
 Error: Cannot open skip file "skip.bad"
-Error: Bad input skip list
 
 $ gufi_stats    leaf-dirs "prefix"
 empty_directory

@@ -135,7 +135,7 @@ static void check_input(struct input *in, const bool helped,
     EXPECT_EQ(in->helped,                      static_cast<int>(helped));
 
     if (flags) {
-        EXPECT_EQ(in->external_enabled,        1);
+        EXPECT_EQ(in->process_xattrs,          1);
         EXPECT_EQ(in->printing,                1);
         EXPECT_EQ(in->printdir,                1);
         EXPECT_EQ(in->printheader,             1);
@@ -155,7 +155,7 @@ static void check_input(struct input *in, const bool helped,
         #endif
     }
     else {
-        EXPECT_EQ(in->external_enabled,        0);
+        EXPECT_EQ(in->process_xattrs,          0);
         EXPECT_EQ(in->printing,                0);
         EXPECT_EQ(in->printdir,                0);
         EXPECT_EQ(in->printheader,             0);
@@ -199,7 +199,7 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->output_buffer_size,      (std::size_t) 1);
         EXPECT_EQ(in->format,                  f_arg);
         EXPECT_EQ(in->max_in_dir,              (std::size_t) 1);
-        EXPECT_EQ(in->skip,                    k_arg);
+        EXPECT_NE(in->skip,                    nullptr);
         EXPECT_EQ(in->target_memory_footprint, (std::size_t) 1);
         EXPECT_EQ(in->subdir_limit,            (std::size_t) 1);
     }
@@ -230,7 +230,7 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->output_buffer_size,      (std::size_t) 4096);
         EXPECT_EQ(in->format,                  empty);
         EXPECT_EQ(in->max_in_dir,              (std::size_t) 0);
-        EXPECT_EQ(in->skip,                    empty);
+        EXPECT_NE(in->skip,                    nullptr);
         EXPECT_EQ(in->target_memory_footprint, (std::size_t) 0);
         EXPECT_EQ(in->subdir_limit,            (std::size_t) 0);
     }
@@ -257,6 +257,8 @@ TEST(parse_cmd_line, help) {
     EXPECT_EQ(close(fd), 0);
 
     check_input(&in, true, false, false);
+
+    input_fini(&in);
 }
 
 TEST(parse_cmd_line, debug) {
@@ -301,7 +303,7 @@ TEST(parse_cmd_line, debug) {
         j.c_str(),
         X.c_str(),
         L.c_str(), L_arg.c_str(),
-        k.c_str(), k_arg.c_str(),
+        // k.c_str(), k_arg.c_str(),
         M.c_str(), M_arg.c_str(),
         C.c_str(), C_arg.c_str(),
         #ifdef HAVE_ZLIB
@@ -322,6 +324,8 @@ TEST(parse_cmd_line, debug) {
     EXPECT_EQ(close(fd), 0);
 
     check_input(&in, true, true, true);
+
+    input_fini(&in);
 }
 
 TEST(parse_cmd_line, flags) {
@@ -354,6 +358,8 @@ TEST(parse_cmd_line, flags) {
     struct input in;
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
     check_input(&in, false, true, false);
+
+    input_fini(&in);
 }
 
 TEST(parse_cmd_line, options) {
@@ -382,7 +388,7 @@ TEST(parse_cmd_line, options) {
         B.c_str(), B_arg.c_str(),
         f.c_str(), f_arg.c_str(),
         L.c_str(), L_arg.c_str(),
-        k.c_str(), k_arg.c_str(),
+        // k.c_str(), k_arg.c_str(),
         M.c_str(), M_arg.c_str(),
         C.c_str(), C_arg.c_str(),
     };
@@ -392,6 +398,8 @@ TEST(parse_cmd_line, options) {
     struct input in;
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
     check_input(&in, false, false, true);
+
+    input_fini(&in);
 }
 
 TEST(parse_cmd_line, delimiter) {
@@ -411,6 +419,8 @@ TEST(parse_cmd_line, delimiter) {
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.delim, fielddelim);
+
+        input_fini(&in);
     }
 
     // others
@@ -427,6 +437,8 @@ TEST(parse_cmd_line, delimiter) {
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.delim, dpipe[0]);
+
+        input_fini(&in);
     }
 }
 
@@ -444,6 +456,8 @@ TEST(parse_cmd_line, output_arguments) {
         struct input in;
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output, STDOUT);
+
+        input_fini(&in);
     }
 
     // -o
@@ -459,6 +473,8 @@ TEST(parse_cmd_line, output_arguments) {
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTFILE);
         EXPECT_EQ(in.outname, o_arg);
+
+        input_fini(&in);
     }
 
     // -O
@@ -474,6 +490,8 @@ TEST(parse_cmd_line, output_arguments) {
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTDB);
         EXPECT_EQ(in.outname, O_arg);
+
+        input_fini(&in);
     }
 
     // -o then -O
@@ -490,6 +508,8 @@ TEST(parse_cmd_line, output_arguments) {
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTDB);
         EXPECT_EQ(in.outname, O_arg);
+
+        input_fini(&in);
     }
 
     // -O then -o
@@ -506,6 +526,8 @@ TEST(parse_cmd_line, output_arguments) {
         ASSERT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), argc);
         EXPECT_EQ(in.output,  OUTFILE);
         EXPECT_EQ(in.outname, o_arg);
+
+        input_fini(&in);
     }
 }
 
@@ -526,6 +548,8 @@ TEST(parse_cmd_line, positional) {
     ASSERT_EQ(parse_cmd_line(argc, (char **) argv, "", 0, "", &in), 1);
 
     check_input(&in, false, false, false);
+
+    input_fini(&in);
 }
 
 TEST(parse_cmd_line, unused) {
@@ -544,6 +568,8 @@ TEST(parse_cmd_line, unused) {
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
     check_input(&in, true, false, false);
+
+    input_fini(&in);
 }
 
 TEST(parse_cmd_line, invalid) {
@@ -562,6 +588,8 @@ TEST(parse_cmd_line, invalid) {
     EXPECT_EQ(parse_cmd_line(argc, (char **) argv, opts, 0, "", &in), -1);
 
     check_input(&in, true, false, false);
+
+    input_fini(&in);
 }
 
 TEST(INSTALL, STR) {

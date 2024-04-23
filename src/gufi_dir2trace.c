@@ -76,6 +76,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
+#include "external.h"
 #include "trace.h"
 #include "trie.h"
 #include "utils.h"
@@ -83,7 +84,6 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    trie_t *skip;
     FILE **outfiles;
 
     size_t *total_files;
@@ -105,6 +105,48 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     return 0;
 }
 
+static int track_external(struct input *in,
+                          struct work *child,
+                          void *args) {
+    FILE *file = (FILE *) args;
+
+    refstr_t *ext = NULL;
+    if (!trie_search(in->map_external, child->name + child->name_len - child->basename_len,
+                     child->basename_len, (void **) &ext)) {
+        return 0;
+    }
+
+    int rc = 1;
+
+    /* open the path to make sure it eventually resolves to a file */
+    sqlite3 *extdb = opendb(child->name, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
+    char *err = NULL;
+
+    /* make sure this file is a sqlite3 db */
+    /* can probably skip this check */
+    if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
+        char track_sql[MAXSQL];
+        SNPRINTF(track_sql, sizeof(track_sql),
+                 "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s', '%s');",
+                 EXTERNAL_TYPE_USER_DB, child->name, ext->data);
+
+        if (externaltofile(file, in->delim, child->name, ext->data) < 3) {
+            fprintf(stderr, "Warning: Could not track requested external db: %s: %s\n",
+                    child->name, err);
+            rc = 0;
+        }
+    }
+    else {
+        fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",
+                child->name, err);
+        rc = 0;
+    }
+    sqlite3_free(err);
+    closedb(extdb);
+
+    return rc;
+}
+
 /* process the work under one directory (no recursion) */
 /* deletes work */
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
@@ -115,7 +157,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct work work_src;
     struct work *work = (struct work *) data;
     struct entry_data ed;
-    size_t nondirs_processed = 0;
     int rc = 0;
 
     if (work->compressed.yes) {
@@ -137,7 +178,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     }
 
     /* get source directory xattrs */
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         xattrs_setup(&ed.xattrs);
         xattrs_get(work->name, &ed.xattrs);
     }
@@ -147,7 +188,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* write start of stanza */
     worktofile(pa->outfiles[id], in->delim, work->root_parent.len, work, &ed);
 
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         xattrs_cleanup(&ed.xattrs);
     }
 
@@ -155,18 +196,21 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         .in = in,
         .fp = pa->outfiles[id],
     };
+
+    struct descend_counters ctrs;
     descend(ctx, id, pa,
             in, work, ed.statuso.st_ino,
-            dir, pa->skip, 0, 0,
+            dir, pa->in.skip, 0, 0,
             processdir, process_nondir, &nda,
-            NULL, NULL, NULL, &nondirs_processed);
+            track_external, pa->outfiles[id],
+            &ctrs);
 
   cleanup:
     closedir(dir);
 
     free_struct(work, data, work->recursion_level);
 
-    pa->total_files[id] += nondirs_processed;
+    pa->total_files[id] += ctrs.nondirs_processed;
 
     return rc;
 }
@@ -245,23 +289,21 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:" COMPRESS_OPT, 2, "input_dir... output_prefix", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xd:k:M:C:" COMPRESS_OPT "q:", 2, "input_dir... output_prefix", &pa.in);
     if (pa.in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&pa.in);
         return EXIT_FAILURE;
+    }
     else {
         /* parse positional args, following the options */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
     }
 
-    if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-        return EXIT_FAILURE;
-    }
-
     pa.outfiles = outfiles_init(pa.in.nameto.data, pa.in.maxthreads);
     if (!pa.outfiles) {
-        trie_free(pa.skip);
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
@@ -275,7 +317,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error: Failed to start thread pool\n");
         QPTPool_destroy(pool);
         outfiles_fin(pa.outfiles, pa.in.maxthreads);
-        trie_free(pa.skip);
         return EXIT_FAILURE;
     }
 
@@ -325,7 +366,6 @@ int main(int argc, char *argv[]) {
     }
     free(roots);
     outfiles_fin(pa.outfiles, pa.in.maxthreads);
-    trie_free(pa.skip);
 
     size_t total_files = 0;
     for(size_t i = 0; i < pa.in.maxthreads; i++) {
@@ -333,6 +373,7 @@ int main(int argc, char *argv[]) {
     }
 
     free(pa.total_files);
+    input_fini(&pa.in);
 
     fprintf(stdout, "Total Dirs:          %" PRIu64 "\n", thread_count);
     fprintf(stdout, "Total Files:         %zu\n",         total_files);

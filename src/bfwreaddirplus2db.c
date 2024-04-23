@@ -165,7 +165,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
     }
 
     /* need to fill this in for the directory as we dont need to do this unless we are making a new gufi db */
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         xattrs_setup(&ed.xattrs);
         xattrs_get(passmywork->name, &ed.xattrs);
     }
@@ -230,7 +230,7 @@ static int reprocessdir(struct input *in, void *passv, DIR *dir) {
 
         lstat(qwork.name, &qwork_ed.statuso);
         xattrs_setup(&qwork_ed.xattrs);
-        if (in->external_enabled) {
+        if (in->process_xattrs) {
             xattrs_get(qwork.name, &qwork_ed.xattrs);
         }
 

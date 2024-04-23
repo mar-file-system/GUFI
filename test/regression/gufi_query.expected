@@ -23,9 +23,14 @@ options:
   -m                     Keep mtime and atime same on the database files
   -B <buffer size>       size of each thread's output buffer in bytes
   -w                     open the database files in read-write mode instead of read only mode
-  -x                     enable external database processing
+  -x                     index/query xattrs
   -k <filename>          file containing directory names to skip
   -M <bytes>             target memory footprint
+  -e                     compress work items
+  -Q <basename>
+     <table>
+     <template>.<table>
+     <view>              External database file basename, per-attach table name, template + table name, and the resultant view
 
 GUFI_index        find GUFI index here
 
@@ -265,7 +270,6 @@ Could not create aggregation table "create;" on file:aggregatedb?mode=memory&cac
 
 # Bad skip file
 $ gufi_query -d " " -S "SELECT rpath(sname, sroll) FROM vrsummary;" -E "SELECT rpath(sname, sroll) || '/' || name FROM vrpentries;" -k "skip.bad" "prefix"
-Error: Bad input skip list
 Error: Cannot open skip file "skip.bad"
 
 # Bad path

@@ -60,48 +60,42 @@
 
 
 
-\subsubsection{\gufidirindex}
-\gufidirindex is used to directly create an index based off of the
-contents of a provided directory.
+\subsection{External Databases}
+In addition to extended attributes, user mays place SQLite3 database
+files into the source file system, indexed, and attached into GUFI for
+querying\footnote{An alternative method might be to allow for users to
+place simple text files into the index directly, and have \gufiquery
+process them instead of tracking the external database files at index
+time. This would remove the requirement that the administrator for the
+index knows what external database file names exist. However, this
+would also mean that users would have to update their sections of the
+index after every update.}. This effectively allows for users to
+associate and query aribitrary data with filesystem metadata.
 
-\begin{table} [h!]
-  \centering
-  \begin{tabular}{l|l}
-    Flag & Functionality \\
-    \hline
-    -h & help manual \\
-    \hline
-    -H & Show assigned input values \\
-    \hline
-    -n \textless num\_threads\textgreater & define number of threads to use \\
-    \hline
-    -x & pull xattrs from source file-sys into GUFI \\
-    \hline
-    -z \textless max\_level\textgreater & maximum level to go down to \\
-    \hline
-    -k \textless filename\textgreater & file containing directory names to skip \\
-    \hline
-    -M \textless bytes\textgreater & target memory footprint \\
-    \hline
-    -C \textless count\textgreater & Number of subdirectories allowed to be \\
-                                   & enqueued for parallel processing. Any \\
-                                   & remainders will be processed in-situ \\
-    \hline
-    -e & compress work items \\
-    \hline
-    -q \textless basename\textgreater & Mapping of basename of file to keep track of \\
-    \ \ \ \ \textless attachname\textgreater & during indexing to attachname at query time \\
-    \hline
-  \end{tabular}
-  \caption{\label{fig:Flags_for_dir2index} \gufidirindex Flags and Arguments}
-\end{table}
+The extended attribute code uses the more generic external database
+infrastructure to track the extended attributes that were not rolled
+in.
 
-\begin{figure} [h!]
-  \centering
-  \includegraphics[width=1.0\textwidth]{images/gufi_dir2index.png}
-  \caption{\label{fig:gufi_dir2index} \gufidirindex workflow}
-\end{figure}
+\subsubsection{Usage}
+In order to index a set of external database files that serve the same
+purpose, they should have the same basename that will be discovered
+during indexing by passing \texttt{-q} to \gufidirindex or
+\gufidirtrace.
 
-\paragraph{Usage} ~\\\\
-\gufidirindex \texttt{[flags] input\_dir... output\_dir} \\\\
-The index of \texttt{input\_dir\textsubscript{i}} will be placed in \texttt{output\_dir/\$(basename input\_dir\textsubscript{i})}.
+For example, if SQLite3 files with the name ``external.db" are placed
+into various directories in the source filesystem, the call to index
+the source tree should look like:
+
+\hspace*{\fill} \gufidirindex \texttt{-q "external.db" "ext" ...} \hspace*{\fill}
+
+which will result in each ``external.db" file being attached with the
+name ``ext".
+
+An additional database file, referred to as the ``schema template", or
+"template", containing a copy of the ``external.db" schema should be
+maintained somewhere for usage when querying. This template file
+should generally have empty tables, but nothing prevents non-empty
+files from being provided.
+
+Note that the external databases will also be included as an entry in
+the index (this may change in the future).

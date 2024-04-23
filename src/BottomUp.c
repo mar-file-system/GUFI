@@ -145,10 +145,8 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
     /* call user ascend function */
     timestamp_create_start(run_user_asc_func);
     const int asc_rc = ua->ascend(bu
-                                  #ifdef DEBUG
-                                  #ifdef PER_THREAD_STATS
+                                  #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                   , ua->timestamp_buffers
-                                  #endif
                                   #endif
         );
     timestamp_end_print(ua->timestamp_buffers, id, "run_user_ascend_function", run_user_asc_func);
@@ -303,10 +301,8 @@ static int descend_to_bottom(QPTPool_t *ctx, const size_t id, void *data, void *
     /* be queued/processed while the descend function runs */
     timestamp_create_start(run_user_desc_func);
     const int desc_rc = ua->descend(bu
-                                    #ifdef DEBUG
-                                    #ifdef PER_THREAD_STATS
+                                    #if defined(DEBUG) && defined(PER_THREAD_STATS)
                                     , ua->timestamp_buffers
-                                    #endif
                                     #endif
         );
     timestamp_end_print(ua->timestamp_buffers, id, "run_user_descend_function", run_user_desc_func);
@@ -378,7 +374,9 @@ int parallel_bottomup(char **root_names, const size_t root_count,
     ua.generate_alt_name = generate_alt_name;
 
     /* only skip . and .. */
-    setup_directory_skip(NULL, &ua.skip);
+    ua.skip = trie_alloc();
+    trie_insert(ua.skip, ".",  1, NULL, NULL);
+    trie_insert(ua.skip, "..", 2, NULL, NULL);
 
     #if defined(DEBUG) && defined(PER_THREAD_STATS)
     ua.timestamp_buffers = timestamp_buffers;

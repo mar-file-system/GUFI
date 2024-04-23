@@ -75,6 +75,7 @@ OF SUCH DAMAGE.
 #include "SinglyLinkedList.h"
 #include "bf.h"
 #include "dbutils.h"
+#include "external.h"
 #include "template_db.h"
 #include "trie.h"
 #include "utils.h"
@@ -82,7 +83,6 @@ OF SUCH DAMAGE.
 struct PoolArgs {
     struct input in;
 
-    trie_t *skip;
     struct template_db db;
     struct template_db xattr;
 
@@ -130,7 +130,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
         /* error? */
     }
 
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         insertdbgo_xattrs(in, &nda->ed.statuso, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
@@ -153,6 +153,39 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     return 0;
 }
 
+static int track_external(struct input *in,
+                          struct work *child,
+                          void *args) {
+    sqlite3 *db = (sqlite3 *) args;
+
+    refstr_t *ext = NULL;
+    if (!trie_search(in->map_external, child->name + child->name_len - child->basename_len,
+                     child->basename_len, (void **) &ext)) {
+        return 0;
+    }
+
+    int rc = 1;
+
+    /* open the path to make sure it eventually resolves to a file */
+    sqlite3 *extdb = opendb(child->name, SQLITE_OPEN_READONLY, 0, 0, NULL, NULL);
+    char *err = NULL;
+
+    /* make sure this file is a sqlite3 db */
+    /* can probably skip this check */
+    if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
+        rc = !external_insert(db, EXTERNAL_TYPE_USER_DB, child->name, ext->data);
+    }
+    else {
+        fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",
+                child->name, err);
+        sqlite3_free(err);
+        rc = 0;
+    }
+    closedb(extdb);
+
+    return rc;
+}
+
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* Not checking arguments */
 
@@ -162,7 +195,6 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     struct input *in = &pa->in;
 
     struct work work_src;
-    size_t nondirs_processed = 0;
 
     struct NonDirArgs nda;
     nda.in         = &pa->in;
@@ -229,7 +261,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     nda.xattrs_res = NULL;
     nda.xattr_files_res = NULL;
 
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         nda.xattrs_res = insertdbprep(nda.db, XATTRS_PWD_INSERT);
         nda.xattr_files_res = insertdbprep(nda.db, EXTERNAL_DBS_PWD_INSERT);
 
@@ -237,14 +269,18 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         sll_init(&nda.xattr_db_list);
     }
 
+    struct descend_counters ctrs;
     startdb(nda.db);
-    descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir, pa->skip, 0, 0,
-            processdir, process_nondir, &nda, NULL, NULL, NULL, &nondirs_processed);
+    descend(ctx, id, pa, in, nda.work, nda.ed.statuso.st_ino, dir,
+            in->skip, 0, 0,
+            processdir, process_nondir, &nda,
+            track_external, nda.db,
+            &ctrs);
     stopdb(nda.db);
 
     /* entries and xattrs have been inserted */
 
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         /* write out per-user and per-group xattrs */
         sll_destroy(&nda.xattr_db_list, destroy_xattr_db);
 
@@ -265,7 +301,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* the xattrs go into the xattrs_avail table in db.db */
     insertsumdb(nda.db, nda.work->name + nda.work->name_len - nda.work->basename_len,
                 nda.work, &nda.ed, &nda.summary);
-    if (in->external_enabled) {
+    if (in->process_xattrs) {
         xattrs_cleanup(&nda.ed.xattrs);
     }
 
@@ -281,7 +317,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     free_struct(nda.work, data, nda.work->recursion_level);
 
-    pa->total_files[id] += nondirs_processed;
+    pa->total_files[id] += ctrs.nondirs_processed;
 
     return rc;
 }
@@ -363,33 +399,31 @@ static void sub_help(void) {
 
 int main(int argc, char *argv[]) {
     struct PoolArgs pa;
-    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:M:C:" COMPRESS_OPT, 2, "input_dir... output_dir", &pa.in);
+    int idx = parse_cmd_line(argc, argv, "hHn:xz:k:M:C:" COMPRESS_OPT "q:", 2, "input_dir... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&pa.in);
         return EXIT_FAILURE;
+    }
     else {
         /* parse positional args, following the options */
         /* does not have to be canonicalized */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
     }
 
-    if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-        return EXIT_FAILURE;
-    }
-
     int rc = EXIT_SUCCESS;
 
     if (setup_dst(pa.in.nameto.data) != 0) {
         rc = EXIT_FAILURE;
-        goto free_skip;
+        goto cleanup;
     }
 
     init_template_db(&pa.db);
     if (create_dbdb_template(&pa.db) != 0) {
         fprintf(stderr, "Could not create template file\n");
         rc = EXIT_FAILURE;
-        goto free_skip;
+        goto cleanup;
     }
 
     /*
@@ -399,7 +433,7 @@ int main(int argc, char *argv[]) {
      */
     if (create_empty_dbdb(&pa.db, &pa.in.nameto, geteuid(), getegid()) != 0) {
         rc = EXIT_FAILURE;
-        goto free_skip;
+        goto free_db;
     }
 
     init_template_db(&pa.xattr);
@@ -491,8 +525,8 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.xattr);
   free_db:
     close_template_db(&pa.db);
-  free_skip:
-    trie_free(pa.skip);
+  cleanup:
+    input_fini(&pa.in);
 
     return rc;
 }

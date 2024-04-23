@@ -72,11 +72,6 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     memset(pa, 0, sizeof(*pa));
     pa->in = in;
 
-    if (setup_directory_skip(in->skip.data, &pa->skip)) {
-        fprintf(stderr, "Error: Bad input skip list\n");
-        return 1;
-    }
-
     /* only STDOUT writes to the same destination */
     /* aggregate does not need mutex since aggregation is done serially */
     if (in->output == STDOUT) {
@@ -182,9 +177,8 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
         }
     }
 
-    trie_free(pa->skip);
-    pa->skip = NULL;
-
     free(pa->ta);
     pa->ta = NULL;
+
+    input_fini(pa->in);
 }

@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "debug.h"
 #include "dbutils.h"
+#include "external.h"
 #include "template_db.h"
 #include "trace.h"
 #include "utils.h"
@@ -150,6 +151,7 @@ uint64_t total_read_entries     = 0;
 uint64_t total_getline          = 0;
 uint64_t total_memset_row       = 0;
 uint64_t total_entry_linetowork = 0;
+uint64_t total_external_db      = 0;
 uint64_t total_sumit            = 0;
 uint64_t total_insertdbgo       = 0;
 uint64_t total_free             = 0;
@@ -178,6 +180,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     uint64_t thread_getline          = 0;
     uint64_t thread_memset_row       = 0;
     uint64_t thread_entry_linetowork = 0;
+    uint64_t thread_external_db      = 0;
     uint64_t thread_sumit            = 0;
     uint64_t thread_insertdbgo       = 0;
     uint64_t thread_free             = 0;
@@ -210,11 +213,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_start(memset_work);
     struct work dir; /* name and name_len are not used */
     struct entry_data ed;
+    refstr_t attachname;
     timestamp_set_end(memset_work);
 
     /* parse the directory data */
     timestamp_create_start(dir_linetowork);
-    linetowork(w->line, w->len, in->delim, &dir, &ed);
+    linetowork(w->line, w->len, in->delim, &dir, &ed, &attachname);
     timestamp_set_end(dir_linetowork);
 
     /* create the directory */
@@ -280,71 +284,93 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_create_start(memset_row);
             struct work row;
             struct entry_data row_ed;
+            refstr_t attachname;
             timestamp_set_end(memset_row);
 
             timestamp_create_start(entry_linetowork);
-            linetowork(line, len, in->delim, &row, &row_ed);
+            linetowork(line, len, in->delim, &row, &row_ed, &attachname);
             timestamp_set_end(entry_linetowork);
 
-            /* update summary table */
-            timestamp_create_start(sumit);
-            sumit(&summary, &row_ed);
-            timestamp_set_end(sumit);
+            timestamp_create(external_db);
+            timestamp_create(sumit);
+            timestamp_create(insertdbgo);
 
-            /* don't record pinode */
-            row.pinode = 0;
+            if (attachname.data) {
+                /* insert right here (instead of bulk inserting) since this is likely to be very rare */
+                timestamp_set_start(external_db);
+                external_insert(db, dir.name, row.name + row.name_len - row.basename_len, attachname.data);
+                timestamp_set_end(external_db);
+            }
+            else {
+                /* update summary table */
+                timestamp_set_start(sumit);
+                sumit(&summary, &row_ed);
+                timestamp_set_end(sumit);
 
-            /* add row to bulk insert */
-            timestamp_create_start(insertdbgo);
-            insertdbgo(&row, &row_ed, entries_res);
-            insertdbgo_xattrs(in, &ed.statuso, &row_ed,
-                              &xattr_db_list, &pa->xattr,
-                              topath, topath_len,
-                              xattrs_res, xattr_files_res);
-            timestamp_set_end(insertdbgo);
+                /* don't record pinode */
+                row.pinode = 0;
 
-            xattrs_cleanup(&row_ed.xattrs);
+                /* add row to bulk insert */
+                timestamp_set_start(insertdbgo);
+                insertdbgo(&row, &row_ed, entries_res);
+                insertdbgo_xattrs(in, &ed.statuso, &row_ed,
+                                  &xattr_db_list, &pa->xattr,
+                                  topath, topath_len,
+                                  xattrs_res, xattr_files_res);
+                timestamp_set_end(insertdbgo);
 
-            row_count++;
-            if (row_count > 100000) {
-                timestamp_create_start(stopdb);
-                stopdb(db);
-                timestamp_set_end(stopdb);
+                xattrs_cleanup(&row_ed.xattrs);
 
-                timestamp_create_start(startdb);
-                startdb(db);
-                timestamp_set_end(startdb);
+                row_count++;
+                if (row_count > 100000) {
+                    timestamp_create_start(stopdb);
+                    stopdb(db);
+                    timestamp_set_end(stopdb);
 
-                #ifdef DEBUG
-                timestamp_create_start(print_timestamps);
-                timestamp_print    (debug_buffers, id, "startdb",          startdb);
-                timestamp_print    (debug_buffers, id, "stopdb",           stopdb);
-                timestamp_end_print(debug_buffers, id, "print_timestamps", print_timestamps);
+                    timestamp_create_start(startdb);
+                    startdb(db);
+                    timestamp_set_end(startdb);
 
-                #ifdef CUMULATIVE_TIMES
-                thread_startdb += timestamp_elapsed(startdb);
-                thread_stopdb  += timestamp_elapsed(stopdb);
-                #endif
-                #endif
+                    #ifdef DEBUG
+                    timestamp_create_start(print_timestamps);
+                    timestamp_print    (debug_buffers, id, "startdb",          startdb);
+                    timestamp_print    (debug_buffers, id, "stopdb",           stopdb);
+                    timestamp_end_print(debug_buffers, id, "print_timestamps", print_timestamps);
 
-                row_count = 0;
+                    #ifdef CUMULATIVE_TIMES
+                    thread_startdb += timestamp_elapsed(startdb);
+                    thread_stopdb  += timestamp_elapsed(stopdb);
+                    #endif
+                    #endif
+
+                    row_count = 0;
+                }
             }
 
             #ifdef DEBUG
             timestamp_create_start(print_timestamps);
-            timestamp_print    (debug_buffers, id, "getline",          getline);
-            timestamp_print    (debug_buffers, id, "memset_row",       memset_row);
-            timestamp_print    (debug_buffers, id, "entry_linetowork", entry_linetowork);
-            timestamp_print    (debug_buffers, id, "sumit",            sumit);
-            timestamp_print    (debug_buffers, id, "insertdbgo",       insertdbgo);
-            timestamp_end_print(debug_buffers, id, "print_timestamps", print_timestamps);
-
+            timestamp_print        (debug_buffers, id, "getline",          getline);
+            timestamp_print        (debug_buffers, id, "memset_row",       memset_row);
+            timestamp_print        (debug_buffers, id, "entry_linetowork", entry_linetowork);
+            if (attachname.data) {
+                timestamp_print    (debug_buffers, id, "external_db",      external_db);
+            }
+            else {
+                timestamp_print    (debug_buffers, id, "sumit",            sumit);
+                timestamp_print    (debug_buffers, id, "insertdbgo",       insertdbgo);
+                timestamp_end_print(debug_buffers, id, "print_timestamps", print_timestamps);
+            }
             #ifdef CUMULATIVE_TIMES
             thread_getline          += timestamp_elapsed(getline);
             thread_memset_row       += timestamp_elapsed(memset_row);
             thread_entry_linetowork += timestamp_elapsed(entry_linetowork);
-            thread_sumit            += timestamp_elapsed(sumit);
-            thread_insertdbgo       += timestamp_elapsed(insertdbgo);
+            if (attachname.data) {
+                thread_external_db  += timestamp_elapsed(external_db);
+            }
+            else {
+                thread_sumit        += timestamp_elapsed(sumit);
+                thread_insertdbgo   += timestamp_elapsed(insertdbgo);
+            }
             #endif
 
             #endif
@@ -450,6 +476,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     total_getline          += thread_getline;
     total_memset_row       += thread_memset_row;
     total_entry_linetowork += thread_entry_linetowork;
+    total_external_db      += thread_external_db;
     total_sumit            += thread_sumit;
     total_insertdbgo       += thread_insertdbgo;
     total_free             += thread_free;
@@ -637,8 +664,10 @@ int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:d:M:", 2, "trace_file... output_dir", &pa.in);
     if (pa.in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&pa.in);
         return EXIT_FAILURE;
+    }
     else {
         /* parse positional args, following the options */
         INSTALL_STR(&pa.in.nameto, argv[argc - 1]);
@@ -650,6 +679,7 @@ int main(int argc, char *argv[]) {
     int *traces = open_traces(&argv[idx], trace_count);
     if (!traces) {
         fprintf(stderr, "Failed to open trace file for each thread\n");
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
@@ -782,6 +812,8 @@ int main(int argc, char *argv[]) {
     close_template_db(&pa.db);
   free_traces:
     close_traces(traces, trace_count);
+
+    input_fini(&pa.in);
 
     return rc;
 }

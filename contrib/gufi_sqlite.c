@@ -62,6 +62,8 @@ OF SUCH DAMAGE.
 
 
 
+#include <stdlib.h>
+
 #include "dbutils.h"
 #include "histogram.h"
 

@@ -721,5 +721,4 @@ unusual#? directory ,/unusual, name?#
 
 $ gufi_find --skip "skip.bad"
 Error: Cannot open skip file "skip.bad"
-Error: Bad input skip list
 

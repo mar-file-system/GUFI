@@ -106,6 +106,10 @@ void trie_insert(trie_t *head, const char *str, const size_t len,
 
     // mark current node as leaf
     curr->isLeaf = 1;
+
+    if (curr->free_user) {
+        curr->free_user(curr->user_data);
+    }
     curr->user_data = user_data;
     curr->free_user = free_user;
 }
@@ -214,7 +218,8 @@ static int trie_delete_recursive(trie_t **curr, const char *str, const size_t i,
     return 0;
 }
 
-int trie_delete(trie_t *head, const char *str, const size_t len) {
+int trie_delete(trie_t *head, const char *str, const size_t len)
+{
     if (!head || !str) {
         return 0;
     }
@@ -226,7 +231,8 @@ int trie_delete(trie_t *head, const char *str, const size_t len) {
     return trie_delete_recursive(&(head->character[(uint8_t) str[0]]), str, 1, len);
 }
 
-void trie_free(trie_t *head) {
+void trie_free(trie_t *head)
+{
     if (head) {
         for(int i = 0; i < 256; i++) {
             trie_free(head->character[i]);

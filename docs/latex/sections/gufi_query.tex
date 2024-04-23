@@ -220,6 +220,82 @@ also dropped at the end of directory processing.
 Note that entries with multiple extended attributes will return
 multiple times in this view.
 
+\subsubsection{External Databases}
+Attaching external data to GUFI allows for arbitrary data to be
+associated with filesystem data. In order to remain flexible and not
+prescribe schema requirements, using this feature is more complex than
+using other GUFI features.
+
+Each external database file is presented as a view concatentating it
+to a table in the template database file. When a directory does not
+have a database file specified for attaching to a given view, the view
+is comprised of only the table from the template file.
+
+Pass \texttt{-I} and \texttt{-Q} to \gufiquery. \texttt{-Q} has 4
+positional arguments:
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    \texttt{-Q} Argument & Explaination \\
+    \hline
+    \texttt{basename} & The basename of the database file in the current directory \\
+                      & to attach \\
+    \hline
+    \texttt{table} & The table in the database file to attach \\
+    \hline
+    \texttt{template.table} & The template file's attach name (specified in \texttt{-I}) and table \\
+                            & name with a matching schema \\
+    \hline
+    \texttt{view} & The name of the view that will be made available for \\
+                  & \texttt{-T}, \texttt{-S}, and \texttt{-E} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+Additionally, the caller should create views that attach to the
+various tables that exist, run queries, and destroy the views within
+\texttt{-T}, \texttt{-S}, and \texttt{-E}.
+\\\\
+Example Usage:
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ll}
+    \gufiquery & \texttt{-I "ATTACH template.db AS template;"} \\
+               & \texttt{-Q "external.db" "table" "template.table" "ext"} \\
+               & \texttt{-E "CREATE TEMP VIEW vrepentries AS} \\
+               & \texttt{\ \ \ \ SELECT * FROM pentries LEFT JOIN ext} \\
+               & \texttt{\ \ \ \ ON pentries.name == ext.name;} \\
+               & \texttt{\ \ \ \ SELECT * FROM vrepentries;} \\
+               & \texttt{\ \ \ \ DROP VIEW vrepentries;"} \\
+               & \texttt{index\_root} \\
+  \end{tabular}
+\end{table}
+
+For each \texttt{view} that is to be made available for querying,
+\texttt{-I} should be updated with more \texttt{ATTACH} SQL
+statements, another \texttt{-Q} should be passed in, and each query
+flag should be updated to use the new views.
+\\\\
+Multiple External Databases Example:
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ll}
+    \gufiquery & \texttt{-I "ATTACH template1.db AS template1;} \\
+               & \texttt{\ \ \ \ ATTACH template2.db AS template2;"} \\
+               & \texttt{-Q "externall.db" "table" "template1.table" "ext1"} \\
+               & \texttt{-Q "external2.db" "table" "template2.table" "ext2"} \\
+               & \texttt{-E "CREATE TEMP VIEW vrepentries AS} \\
+               & \texttt{\ \ \ \ SELECT * FROM pentries LEFT JOIN ext1} \\
+               & \texttt{\ \ \ \ ON pentries.name == ext1.name AND} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext2 ON pentries.type == ext2.type;} \\
+               & \texttt{\ \ \ \ SELECT * FROM vrepentries;} \\
+               & \texttt{\ \ \ \ DROP VIEW vrepentries;"} \\
+               & \texttt{index\_root} \\
+  \end{tabular}
+\end{table}
+
 \subsubsection{Aggregation}
 There are cases where independent per-thread results are not
 desirable, such as when sorting or summing, where the results from

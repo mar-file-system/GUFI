@@ -69,11 +69,12 @@ OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "bf.h"
 #include "BottomUp.h"
+#include "SinglyLinkedList.h"
+#include "bf.h"
 #include "dbutils.h"
 #include "debug.h"
-#include "SinglyLinkedList.h"
+#include "external.h"
 #include "template_db.h"
 #include "utils.h"
 
@@ -884,12 +885,15 @@ int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:L:X", 1, "GUFI_index ...", &pa.in);
     if (pa.in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&pa.in);
         return EXIT_FAILURE;
+    }
 
     init_template_db(&pa.xattr_template);
     if (create_xattrs_template(&pa.xattr_template) != 0) {
         fprintf(stderr, "Could not create xattr template file\n");
+        input_fini(&pa.in);
         return EXIT_FAILURE;
     }
 
@@ -958,6 +962,8 @@ int main(int argc, char *argv[]) {
 
     timestamp_set_end_raw(runtime);
     fprintf(stderr, "Took %.2Lf seconds\n", sec(nsec(&runtime)));
+
+    input_fini(&pa.in);
 
     return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

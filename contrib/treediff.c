@@ -79,7 +79,6 @@ OF SUCH DAMAGE.
 
 struct PoolArgs {
     struct input in;
-    trie_t *skip;
     struct OutputBuffers obufs;
 };
 
@@ -223,8 +222,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* ********************************************** */
     /* get list of subdirs in each directory */
-    const size_t lcount = get_entries(ldir, pa->skip, &lsubdirs);
-    const size_t rcount = get_entries(rdir, pa->skip, &rsubdirs);
+    const size_t lcount = get_entries(ldir, pa->in.skip, &lsubdirs);
+    const size_t rcount = get_entries(rdir, pa->in.skip, &rsubdirs);
     /* ********************************************** */
 
     /* ********************************************** */
@@ -371,16 +370,10 @@ int main(int argc, char *argv[]) {
 
     int rc = 0;
 
-    /* skip . and .. */
-    if (setup_directory_skip(pa.in.skip.data, &pa.skip) != 0) {
-        rc = 1;
-        goto done;
-    }
-
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     if (!OutputBuffers_init(&pa.obufs, pa.in.maxthreads, pa.in.output_buffer_size, &mutex)) {
         rc = 1;
-        goto cleanup_trie;
+        goto done;
     }
 
     const uint64_t queue_depth = pa.in.target_memory_footprint / sizeof(struct ComparePaths) / pa.in.maxthreads;
@@ -408,9 +401,6 @@ int main(int argc, char *argv[]) {
 
     OutputBuffers_flush_to_single(&pa.obufs, stdout);
     OutputBuffers_destroy(&pa.obufs);
-
-  cleanup_trie:
-    trie_free(pa.skip);
 
   done:
     return rc;

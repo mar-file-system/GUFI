@@ -160,6 +160,14 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
 
         // need at least 23 columns
         const int child_columns = std::count(line.begin(), line.end(), delim);
+        if (line[child_first_delim + 1] == 'e') {
+            if (child_columns != 3) {
+                std::cerr << "Error: Wrong number of columns: " << line << std::endl;
+                return false;
+            }
+            continue;
+        }
+
         if (child_columns < 23) {
             std::cerr << "Error: Not enough columns: " << line << std::endl;
             return false;

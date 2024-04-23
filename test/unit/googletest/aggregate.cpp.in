@@ -73,6 +73,7 @@ OF SUCH DAMAGE.
 
 extern "C" {
 
+#include "SinglyLinkedList.h"
 #include "gufi_query/aggregate.h"
 
 }
@@ -96,16 +97,15 @@ TEST(gufi_query, aggregate) {
     const size_t row_count = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
 
     struct input in;
-    in.output                = STDOUT;
-    in.maxthreads            = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
-    in.delim                 = ' ';
-    in.sql.init.data         = I.c_str(); in.sql.init.len = strlen(in.sql.init.data);
-    in.sql.ent.data          = E.c_str(); in.sql.ent.len = strlen(in.sql.ent.data);
-    in.sql.init_agg.data     = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
-    in.sql.intermediate.data = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
-    in.sql.agg.data          = G.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
-    in.output_buffer_size    = 1024;
-    in.skip.data             = nullptr;
+    input_init(&in);
+    in.maxthreads             = std::uniform_int_distribution <uint32_t> (1, 8)(gen);
+    in.delim                  = ' ';
+    in.sql.init.data          = I.c_str(); in.sql.init.len = strlen(in.sql.init.data);
+    in.sql.ent.data           = E.c_str(); in.sql.ent.len = strlen(in.sql.ent.data);
+    in.sql.init_agg.data      = K.c_str(); in.sql.init_agg.len = strlen(in.sql.init_agg.data);
+    in.sql.intermediate.data  = J.c_str(); in.sql.intermediate.len = strlen(in.sql.intermediate.data);
+    in.sql.agg.data           = G.c_str(); in.sql.agg.len = strlen(in.sql.agg.data);
+    in.output_buffer_size     = 1024;
 
     PoolArgs_t pa;
     ASSERT_EQ(PoolArgs_init(&pa, &in, nullptr), 0);

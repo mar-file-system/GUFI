@@ -397,5 +397,4 @@ unusual#? directory ,
 
 $ gufi_ls --skip "skip.bad" prefix
 Error: Cannot open skip file "skip.bad"
-Error: Bad input skip list
 

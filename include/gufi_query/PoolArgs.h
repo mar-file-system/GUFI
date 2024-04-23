@@ -95,7 +95,6 @@ typedef struct PoolArgs {
     struct input *in;                  /* save a reference here for convenience */
     ThreadArgs_t *ta;
 
-    trie_t *skip;
     pthread_mutex_t *stdout_mutex;
 
     char detach[MAXSQL];               /* cache SQL statement for detaching index dbs */

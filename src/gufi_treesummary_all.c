@@ -62,6 +62,7 @@ OF SUCH DAMAGE.
 
 
 
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "BottomUp.h"
@@ -109,10 +110,12 @@ int main(int argc, char *argv[]) {
     int idx = parse_cmd_line(argc, argv, "hHn:", 1, "GUFI_index", &in);
     if (in.helped)
         sub_help();
-    if (idx < 0)
+    if (idx < 0) {
+        input_fini(&in);
         return EXIT_FAILURE;
+    }
 
-    return parallel_bottomup(argv + idx, argc - idx,
+    const int rc = parallel_bottomup(argv + idx, argc - idx,
                              in.maxthreads,
                              sizeof(struct BottomUp),
                              NULL, treesummary,
@@ -122,5 +125,9 @@ int main(int argc, char *argv[]) {
                              #if defined(DEBUG) && defined(PER_THREAD_STATS)
                              , NULL
                              #endif
-        )?EXIT_FAILURE:EXIT_SUCCESS;
+        );
+
+    input_fini(&in);
+
+    return rc?EXIT_FAILURE:EXIT_SUCCESS;
 }

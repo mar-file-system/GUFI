@@ -257,7 +257,8 @@ TEST(trace, linetowork) {
     // read the string
     struct work work;
     struct entry_data ed;
-    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed), 0);
+    refstr_t attachname;
+    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed, &attachname), 0);
 
     COMPARE(src, src_ed, work, ed);
 
@@ -268,7 +269,8 @@ TEST(trace, linetowork) {
 
     xattrs_cleanup(&ed.xattrs);
 
-    EXPECT_EQ(linetowork(NULL, rc, delim, &work, &ed),  -1);
-    EXPECT_EQ(linetowork(line, rc, delim, NULL,  &ed),  -1);
-    EXPECT_EQ(linetowork(line, rc, delim, &work, NULL), -1);
+    EXPECT_EQ(linetowork(NULL, rc, delim, &work, &ed,  &attachname), -1);
+    EXPECT_EQ(linetowork(line, rc, delim, NULL,  &ed,  &attachname), -1);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, NULL, &attachname), -1);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed,  NULL), -1);
 }
