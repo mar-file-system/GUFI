@@ -195,9 +195,9 @@ static bool verify_stanza(std::istream & stream, Tree & tree, const char delim =
         }
         child_pinode_pos++;
 
-        // make sure the child pinode is 0
+        // make sure the child pinode matches the parent's inode
         const std::string child_pinode = line.substr(child_pinode_pos, line.find(delim, child_pinode_pos + 1) - child_pinode_pos);
-        if (child_pinode != "0") {
+        if (child_pinode != inode) {
             std::cerr << "Error: Bad child pinode: " << line << std::endl;
             return false;
         }
