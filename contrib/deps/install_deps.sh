@@ -81,7 +81,6 @@ fi
 
 THREADS="1"
 BUILD_CXX="false"
-PARAMIKO="false"
 PATCH_SQLITE3_OPEN="false"
 JEMALLOC="false"
 
@@ -99,9 +98,6 @@ case $key in
         ;;
     --cxx)
         BUILD_CXX="true"
-        ;;
-    --paramiko)
-        PARAMIKO="true"
         ;;
     --patch-sqlite3-open)
         PATCH_SQLITE3_OPEN="true"
@@ -160,9 +156,4 @@ if [[ "${CMAKE_VERSION}" == "${HIGHEST_VERSION}" ]]; then
         echo "Installing GoogleTest"
         source "${SCRIPT_PATH}/googletest.sh"
     fi
-fi
-
-if [[ "${PARAMIKO}" == "true" ]]; then
-    echo "Installing Paramiko"
-    source "${SCRIPT_PATH}/paramiko.sh"
 fi

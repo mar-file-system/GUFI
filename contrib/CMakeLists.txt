@@ -167,7 +167,3 @@ if (GIT_FOUND)
     endif()
   endif()
 endif()
-
-if (CLIENT)
-  add_subdirectory(deps)
-endif()

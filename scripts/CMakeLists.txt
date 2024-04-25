@@ -77,12 +77,6 @@ set(LIBRARIES
   gufi_common.py # library only
 )
 
-if (CLIENT)
-  # add the paramiko source for installing
-  # keep the trailing / to rename the directory
-  install(DIRECTORY "${DEP_BUILD_PREFIX}/paramiko-master/" DESTINATION "${LIB}/GUFI/paramiko" COMPONENT Client)
-endif()
-
 foreach(TOOL ${TOOLS})
   set(USER_TOOL "gufi_${TOOL}")
   configure_file("${USER_TOOL}" "${USER_TOOL}" @ONLY)

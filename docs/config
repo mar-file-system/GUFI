@@ -66,25 +66,26 @@ The GUFI configuration file is a simple text file with the format
 
     key=value
 
-It is located at `/etc/GUFI/config`.
+By default, it is located at `/etc/GUFI/config`, and can be changed with CMake.
 
 The server and client sides have different keys and values:
 
 Server:
-| Key         | ValueType           | Description                                          |
-| ----------- | ------------------- | ---------------------------------------------------- |
-| `Threads`   | Positive Integer    | Number of threads to use when running gufi_query     |
-| `Exec`      | Single Path String  | Absolute path of gufi_query                          |
-| `IndexRoot` | Single Path String  | Absolute path of root directory for GUFI to traverse |
+| Key            | ValueType            | Description                                          |
+| -------------- | -------------------- | ---------------------------------------------------- |
+| `Threads`      | Positive Integer     | Number of threads to use when running gufi_query     |
+| `Query`        | Single Path String   | Absolute path of gufi_query                          |
+| `Stat`         | Single Path String   | Absolute path of gufi_stat_bin                       |
+| `IndexRoot`    | Single Path String   | Absolute path of root directory for GUFI to traverse |
+| `OutputBuffer` | Non-negative Integer | Amount of data to buffer before printing             |
 
 Client:
-| Key         | ValueType           | Description                                         |
-| ----------- | ------------------- | --------------------------------------------------- |
-| `Server`    | String              | Hostname                                            |
-| `Port`      | Positive Integer    | SSH port                                            |
-| `Paramiko`  | Single Path String  | Absolute path of the Paramiko install               |
+| Key            | ValueType            | Description                                          |
+| -------------- | -------------------- | ---------------------------------------------------- |
+| `Server`       | String               | Hostname                                             |
+| `Port`         | Positive Integer     | SSH port                                             |
 
 Comments are lines that begin with `#`.
 
 When running `make install` or `rpm --install`, an example configurations will be written
-to `/etc/GUFI/config.example`.
+to `/etc/GUFI/server.example` or `/etc/GIFU/client.example`.

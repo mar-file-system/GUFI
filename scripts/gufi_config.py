@@ -166,13 +166,11 @@ class Server(Config):
 class Client(Config):
     SERVER       = 'Server'       # hostname
     PORT         = 'Port'         # ssh port
-    PARAMIKO     = 'Paramiko'     # location of paramiko installation
 
     # key -> str to value converter
     SETTINGS = {
         SERVER   : None,
         PORT     : gufi_common.get_port,
-        PARAMIKO : os.path.normpath,
     }
 
     def __init__(self, config_reference):
@@ -188,11 +186,6 @@ class Client(Config):
     def port(self):
         '''return ssh port'''
         return self.config[Client.PORT]
-
-    @property
-    def paramiko(self):
-        '''return location of paramiko installation'''
-        return self.config[Client.PARAMIKO]
 
 def run(args):
     # simple config validator

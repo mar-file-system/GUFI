@@ -1,4 +1,4 @@
-#!/usr/bin/env @PYTHON_INTERPRETER@
+#!/usr/bin/env bash
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,52 +61,16 @@
 
 
 
-import getpass
-import sys
+GUFI_CONFIG="@CONFIG_FILE@"
+GUFI_HOST=$(grep "Server=" "${GUFI_CONFIG}" | tail -n 1 | awk -F= '{print $2}')
+GUFI_PORT=$(grep "Port="   "${GUFI_CONFIG}" | tail -n 1 | awk -F= '{print $2}')
 
-if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.version_info.minor < 3):
-    from pipes import quote as sanitize
-else:
-    from shlex import quote as sanitize # new in Python 3.3
-
-import gufi_config # pylint: disable=wrong-import-position
-
-def talk_to_server(config, args):
-    '''
-    Send all arguments to gufi_@TOOL@ on the server side
-    '''
-
-    # build the command
-    cmd = sanitize('gufi_@TOOL@') + ' ' + ' '.join([sanitize(arg) for arg in args])
-
-    # import paramiko from provided path
-    sys.path.append(config.paramiko)
-    import paramiko # pylint: disable=import-error,import-outside-toplevel
-
-    try:
-        ssh = paramiko.client.SSHClient()
-
-        # load known server host keys
-        ssh.load_system_host_keys('/etc/ssh/ssh_known_hosts')
-
-        # connect to the server
-        ssh.connect(hostname=config.server,
-                    port=config.port,
-                    username=getpass.getuser(),
-                    hostkey=paramiko.opensshkey.load_pubkey_from_file('/etc/ssh/ssh_host_rsa_key.pub'))
-
-        # run the command
-        _, stdout, stderr = ssh.exec_command(cmd)
-        sys.stdout.write(stdout.read())
-        sys.stderr.write(stderr.read())
-    except Exception as err: # pylint: disable=broad-except
-        sys.stderr.write(str(err) + '\n')
-    finally:
-        ssh.close()
-
-def run(args):
-    config = gufi_config.Client(gufi_config.PATH)
-    talk_to_server(config, args)
-
-if __name__  == '__main__':
-    run(sys.argv[1:])
+ssh "${GUFI_HOST}"                     \
+    -p "${GUFI_PORT}"                  \
+    -o BatchMode=yes                   \
+    -o GSSAPIAuthentication=no         \
+    -o HostbasedAuthentication=yes     \
+    -o KbdInteractiveAuthentication=no \
+    -o PasswordAuthentication=no       \
+    -o PubkeyAuthentication=no         \
+    "@USER_TOOL@" "$@"

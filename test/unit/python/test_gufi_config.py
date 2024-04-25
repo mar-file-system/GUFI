@@ -140,7 +140,6 @@ class TestClientConfig(unittest.TestCase):
     default = {
         gufi_config.Client.SERVER   : 'hostname',
         gufi_config.Client.PORT     : 22,
-        gufi_config.Client.PARAMIKO : 'paramiko',
     }
 
     def setUp(self):
@@ -151,8 +150,6 @@ class TestClientConfig(unittest.TestCase):
                          config.server)
         self.assertEqual(TestClientConfig.default[gufi_config.Client.PORT],
                          config.port)
-        self.assertEqual(TestClientConfig.default[gufi_config.Client.PARAMIKO],
-                         config.paramiko)
 
     def test_iterable(self):
         try:
