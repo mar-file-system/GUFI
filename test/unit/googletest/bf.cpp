@@ -150,7 +150,7 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->open_flags,              SQLITE_OPEN_READWRITE);
         EXPECT_EQ(in->terse,                   1);
         EXPECT_EQ(in->dry_run,                 1);
-        #ifdef HAVE_ZLIB
+        #if HAVE_ZLIB
         EXPECT_EQ(in->compress,                1);
         #endif
     }
@@ -170,7 +170,7 @@ static void check_input(struct input *in, const bool helped,
         EXPECT_EQ(in->open_flags,              SQLITE_OPEN_READONLY);
         EXPECT_EQ(in->terse,                   0);
         EXPECT_EQ(in->dry_run,                 0);
-        #ifdef HAVE_ZLIB
+        #if HAVE_ZLIB
         EXPECT_EQ(in->compress,                0);
         #endif
     }

@@ -140,9 +140,7 @@ void print_help(const char* prog_name,
       case 'k': printf("  -k <filename>          file containing directory names to skip"); break;
       case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
-#if HAVE_ZLIB
       case 'e': printf("  -e                     compress work items"); break;
-#endif
       default: printf("print_help(): unrecognized option '%c'", (char)ch);
       }
       printf("\n");
@@ -426,11 +424,9 @@ int parse_cmd_line(int         argc,
           INSTALL_SIZE(&in->subdir_limit, optarg, (size_t) 0, (size_t) -1, "-C", &retval);
           break;
 
-#if HAVE_ZLIB
       case 'e':
           in->compress = 1;
           break;
-#endif
 
       case '?':
          // getopt returns '?' when there is a problem.  In this case it
