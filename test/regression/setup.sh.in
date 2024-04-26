@@ -222,6 +222,7 @@ replace() {
     s/&vfs=.*//g;
     /gufi_tool/d;
     /-e                     compress work items/d;
+    /Started [0-9]* threads. Successfully completed [0-9]* threads./d;
 
     s/${SEARCH//\//\\/}\\///g;
     s/${SEARCH//\//\\/}/${SRCDIR//\//\\/}/g;
