@@ -65,6 +65,7 @@ GUFI_CONFIG="@CONFIG_FILE@"
 GUFI_HOST=$(grep "Server=" "${GUFI_CONFIG}" | tail -n 1 | awk -F= '{print $2}')
 GUFI_PORT=$(grep "Port="   "${GUFI_CONFIG}" | tail -n 1 | awk -F= '{print $2}')
 
+# shellcheck disable=SC2029
 ssh "${GUFI_HOST}"                     \
     -p "${GUFI_PORT}"                  \
     -o BatchMode=yes                   \
