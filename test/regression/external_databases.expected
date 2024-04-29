@@ -3,39 +3,43 @@ $ generatetree "prefix"
 # create in-source-tree user db files and fill in tables
 
 #########################################
-$ sqlite3 "prefix/faction1.db" "CREATE TABLE user_table(name TEXT, external_data TEXT);"
+$ sqlite3 "prefix/faction1.db" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
 
-$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('old_file', 'faction1 old file data');"
+$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('prefix', 'd', 'faction1 root directory');"
 
-$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('1MB', 'faction1 1MB file');"
+$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('old_file', 'f', 'faction1 old file data');"
 
-$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('repeat_name', 'faction1 repeat_name');"
+$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('1MB', 'f', 'faction1 1MB file');"
 
-#########################################
-$ sqlite3 "prefix/directory/faction1.db" "CREATE TABLE user_table(name TEXT, external_data TEXT);"
-
-$ sqlite3 "prefix/directory/faction1.db" "INSERT INTO user_table VALUES ('directory', 'faction1 directory');"
-
-$ sqlite3 "prefix/directory/faction1.db" "INSERT INTO user_table VALUES ('executable', 'faction1 executable file');"
+$ sqlite3 "prefix/faction1.db" "INSERT INTO user_table VALUES ('repeat_name', 'f', 'faction1 repeat_name');"
 
 #########################################
-$ sqlite3 "prefix/leaf_directory/faction1.db" "CREATE TABLE user_table(name TEXT, external_data TEXT);"
+$ sqlite3 "prefix/directory/faction1.db" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
 
-$ sqlite3 "prefix/leaf_directory/faction1.db" "INSERT INTO user_table VALUES ('no match', 'this should not show up in the index');"
+$ sqlite3 "prefix/directory/faction1.db" "INSERT INTO user_table VALUES ('directory', 'd', 'faction1 directory');"
+
+$ sqlite3 "prefix/directory/faction1.db" "INSERT INTO user_table VALUES ('executable', 'f', 'faction1 executable file');"
+
+#########################################
+$ sqlite3 "prefix/leaf_directory/faction1.db" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
+
+$ sqlite3 "prefix/leaf_directory/faction1.db" "INSERT INTO user_table VALUES ('no match', 'f', 'this should not show up in the index');"
+
+$ sqlite3 "prefix/leaf_directory/faction1.db" "INSERT INTO user_table VALUES ('leaf_file1', 'f', 'faction1 leaf file 1');"
 
 #########################################
 
 #########################################
-$ sqlite3 "prefix/faction2.db" "CREATE TABLE user_table(type TEXT, external_data TEXT);"
+$ sqlite3 "prefix/faction2.db" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
 
-$ sqlite3 "prefix/faction2.db" "INSERT INTO user_table VALUES ('d', 'faction2 root directory');"
+$ sqlite3 "prefix/faction2.db" "INSERT INTO user_table VALUES ('prefix', 'd', 'faction2 root directory');"
 
-$ sqlite3 "prefix/faction2.db" "INSERT INTO user_table VALUES ('f', 'faction2 file type data in root');"
+$ sqlite3 "prefix/faction2.db" "INSERT INTO user_table VALUES ('1KB', 'f', 'faction2 1KB file');"
 
 #########################################
-$ sqlite3 "prefix/directory/subdirectory/faction2.db" "CREATE TABLE user_table(type TEXT, external_data TEXT);"
+$ sqlite3 "prefix/directory/subdirectory/faction2.db" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
 
-$ sqlite3 "prefix/directory/subdirectory/faction2.db" "INSERT INTO user_table VALUES ('d', 'faction2 subdirectory');"
+$ sqlite3 "prefix/directory/subdirectory/faction2.db" "INSERT INTO user_table VALUES ('subdirectory', 'd', 'faction2 subdirectory');"
 
 #########################################
 
@@ -88,14 +92,14 @@ prefix/leaf_directory/faction1.db|faction1
 $ sqlite3 "prefix/leaf_directory/db.db" "INSERT INTO external_dbs_pwd VALUES ('user_db', 'no match', 'this should not show up when querying', NULL, NULL, NULL);"
 
 # create empty template for providing default data
-$ sqlite3 "template.faction1" "CREATE TABLE user_table(name TEXT, external_data TEXT);"
+$ sqlite3 "template.faction1" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
 
 # create empty template for providing default data
-$ sqlite3 "template.faction2" "CREATE TABLE user_table(type TEXT, external_data TEXT);"
+$ sqlite3 "template.faction2" "CREATE TABLE user_table(name TEXT, type TEXT, external_data TEXT);"
 
 # get faction1 user data
 # SELECT rpath(), type, faction1 user data
-$ gufi_query -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -S "SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, faction1_view.external_data FROM vrsummary LEFT JOIN faction1_view ON vrsummary.name == faction1_view.name;" -E "SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, faction1_view.external_data FROM vrpentries LEFT JOIN faction1_view ON vrpentries.name == faction1_view.name;" "prefix"
+$ gufi_query -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -S "SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, faction1_view.external_data FROM vrsummary LEFT JOIN faction1_view ON (vrsummary.name == faction1_view.name) AND (vrsummary.type == faction1_view.type);" -E "SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, faction1_view.external_data FROM vrpentries LEFT JOIN faction1_view ON (vrpentries.name == faction1_view.name) AND (vrpentries.type == faction1_view.type);" "prefix"
 prefix/.hidden|f|
 prefix/1KB|f|
 prefix/1MB|f|faction1 1MB file
@@ -113,18 +117,18 @@ prefix/faction1.db|f|
 prefix/faction2.db|f|
 prefix/file_symlink|l|
 prefix/leaf_directory/faction1.db|f|
-prefix/leaf_directory/leaf_file1|f|
+prefix/leaf_directory/leaf_file1|f|faction1 leaf file 1
 prefix/leaf_directory/leaf_file2|f|
 prefix/leaf_directory|d|
 prefix/old_file|f|faction1 old file data
 prefix/repeat_name|f|faction1 repeat_name
 prefix/unusual#? directory ,/unusual, name?#|f|
 prefix/unusual#? directory ,|d|
-prefix|d|
+prefix|d|faction1 root directory
 
 # again, but with xattrs
 # SELECT rpath(), type, xattr_name, xattr_value, faction1 user data
-$ gufi_query -x -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -S "SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, faction1_view.external_data FROM vrxsummary LEFT JOIN faction1_view ON vrxsummary.name == faction1_view.name;" -E "SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value, faction1_view.external_data FROM vrxpentries LEFT JOIN faction1_view ON vrxpentries.name == faction1_view.name;" "prefix"
+$ gufi_query -x -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -S "SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, faction1_view.external_data FROM vrxsummary LEFT JOIN faction1_view ON (vrxsummary.name == faction1_view.name) AND (vrxsummary.type == faction1_view.type);" -E "SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value, faction1_view.external_data FROM vrxpentries LEFT JOIN faction1_view ON (vrxpentries.name == faction1_view.name) AND (vrxpentries.type == faction1_view.type);" "prefix"
 prefix/.hidden|f|||
 prefix/1KB|f|||
 prefix/1MB|f|user.size|1MB|faction1 1MB file
@@ -143,9 +147,9 @@ prefix/faction1.db|f|||
 prefix/faction2.db|f|||
 prefix/file_symlink|l|||
 prefix/leaf_directory/faction1.db|f|||
-prefix/leaf_directory/leaf_file1|f|user.name1|value1|
-prefix/leaf_directory/leaf_file1|f|user.name2|value2|
-prefix/leaf_directory/leaf_file1|f|user.name3|value3|
+prefix/leaf_directory/leaf_file1|f|user.name1|value1|faction1 leaf file 1
+prefix/leaf_directory/leaf_file1|f|user.name2|value2|faction1 leaf file 1
+prefix/leaf_directory/leaf_file1|f|user.name3|value3|faction1 leaf file 1
 prefix/leaf_directory/leaf_file2|f|user.name4|value4|
 prefix/leaf_directory/leaf_file2|f|user.name5|value5|
 prefix/leaf_directory/leaf_file2|f|user.name6|value6|
@@ -155,14 +159,14 @@ prefix/old_file|f|||faction1 old file data
 prefix/repeat_name|f|||faction1 repeat_name
 prefix/unusual#? directory ,/unusual, name?#|f|||
 prefix/unusual#? directory ,|d|||
-prefix|d|||
+prefix|d|||faction1 root directory
 
 # get faction2 user data
 # SELECT rpath(), type, faction2 user data
-$ gufi_query -d '|' -I "ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, faction2_view.external_data FROM vrsummary LEFT JOIN faction2_view ON vrsummary.type == faction2_view.type;;" -E "SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, faction2_view.external_data FROM vrpentries LEFT JOIN faction2_view ON vrpentries.type == faction2_view.type;" "prefix"
-prefix/.hidden|f|faction2 file type data in root
-prefix/1KB|f|faction2 file type data in root
-prefix/1MB|f|faction2 file type data in root
+$ gufi_query -d '|' -I "ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, faction2_view.external_data FROM vrsummary LEFT JOIN faction2_view ON (vrsummary.name == faction2_view.name) AND (vrsummary.type == faction2_view.type);" -E "SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, faction2_view.external_data FROM vrpentries LEFT JOIN faction2_view ON (vrpentries.name == faction2_view.name) AND (vrpentries.type == faction2_view.type);" "prefix"
+prefix/.hidden|f|
+prefix/1KB|f|faction2 1KB file
+prefix/1MB|f|
 prefix/directory/executable|f|
 prefix/directory/faction1.db|f|
 prefix/directory/readonly|f|
@@ -173,25 +177,25 @@ prefix/directory/subdirectory|d|faction2 subdirectory
 prefix/directory/writable|f|
 prefix/directory|d|
 prefix/empty_directory|d|
-prefix/faction1.db|f|faction2 file type data in root
-prefix/faction2.db|f|faction2 file type data in root
+prefix/faction1.db|f|
+prefix/faction2.db|f|
 prefix/file_symlink|l|
 prefix/leaf_directory/faction1.db|f|
 prefix/leaf_directory/leaf_file1|f|
 prefix/leaf_directory/leaf_file2|f|
 prefix/leaf_directory|d|
-prefix/old_file|f|faction2 file type data in root
-prefix/repeat_name|f|faction2 file type data in root
+prefix/old_file|f|
+prefix/repeat_name|f|
 prefix/unusual#? directory ,/unusual, name?#|f|
 prefix/unusual#? directory ,|d|
 prefix|d|faction2 root directory
 
 # again, but with xattrs
 # SELECT rpath(), type, xattr_name, xattr_value, faction2 user data
-$ gufi_query -x -d '|' -I "ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, faction2_view.external_data FROM vrxsummary LEFT JOIN faction2_view ON vrxsummary.type == faction2_view.type;" -E "SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value, faction2_view.external_data FROM vrxpentries LEFT JOIN faction2_view ON vrxpentries.type == faction2_view.type;" "prefix"
-prefix/.hidden|f|||faction2 file type data in root
-prefix/1KB|f|||faction2 file type data in root
-prefix/1MB|f|user.size|1MB|faction2 file type data in root
+$ gufi_query -x -d '|' -I "ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, faction2_view.external_data FROM vrxsummary LEFT JOIN faction2_view ON (vrxsummary.name == faction2_view.name) AND (vrxsummary.type == faction2_view.type);" -E "SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value, faction2_view.external_data FROM vrxpentries LEFT JOIN faction2_view ON (vrxpentries.name == faction2_view.name) AND (vrxpentries.type == faction2_view.type);" "prefix"
+prefix/.hidden|f|||
+prefix/1KB|f|||faction2 1KB file
+prefix/1MB|f|user.size|1MB|
 prefix/directory/executable|f|||
 prefix/directory/faction1.db|f|||
 prefix/directory/readonly|f|||
@@ -203,8 +207,8 @@ prefix/directory/subdirectory|d|user.type|dir|faction2 subdirectory
 prefix/directory/writable|f|||
 prefix/directory|d|||
 prefix/empty_directory|d|||
-prefix/faction1.db|f|||faction2 file type data in root
-prefix/faction2.db|f|||faction2 file type data in root
+prefix/faction1.db|f|||
+prefix/faction2.db|f|||
 prefix/file_symlink|l|||
 prefix/leaf_directory/faction1.db|f|||
 prefix/leaf_directory/leaf_file1|f|user.name1|value1|
@@ -215,18 +219,18 @@ prefix/leaf_directory/leaf_file2|f|user.name5|value5|
 prefix/leaf_directory/leaf_file2|f|user.name6|value6|
 prefix/leaf_directory|d|user.name|leaf|
 prefix/leaf_directory|d|user.type|dir|
-prefix/old_file|f|||faction2 file type data in root
-prefix/repeat_name|f|||faction2 file type data in root
+prefix/old_file|f|||
+prefix/repeat_name|f|||
 prefix/unusual#? directory ,/unusual, name?#|f|||
 prefix/unusual#? directory ,|d|||
 prefix|d|||faction2 root directory
 
 # get faction1 and faction2 user data at the same time
 # SELECT rpath(), type, faction1 user data, faction2 user data
-$ gufi_query -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty'; ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, faction1_view.external_data, faction2_view.external_data FROM vrsummary LEFT JOIN faction1_view ON vrsummary.name == faction1_view.name LEFT JOIN faction2_view ON vrsummary.type == faction2_view.type;" -E "SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, faction1_view.external_data, faction2_view.external_data FROM vrpentries LEFT JOIN faction1_view ON vrpentries.name == faction1_view.name LEFT JOIN faction2_view ON vrpentries.type == faction2_view.type;" "prefix"
-prefix/.hidden|f||faction2 file type data in root
-prefix/1KB|f||faction2 file type data in root
-prefix/1MB|f|faction1 1MB file|faction2 file type data in root
+$ gufi_query -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty'; ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, faction1_view.external_data, faction2_view.external_data FROM vrsummary LEFT JOIN faction1_view ON (vrsummary.name == faction1_view.name) AND (vrsummary.type == faction1_view.type) LEFT JOIN faction2_view ON (vrsummary.name == faction2_view.name) AND (vrsummary.type == faction2_view.type);" -E "SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, faction1_view.external_data, faction2_view.external_data FROM vrpentries LEFT JOIN faction1_view ON (vrpentries.name == faction1_view.name) AND (vrpentries.type == faction1_view.type) LEFT JOIN faction2_view ON (vrpentries.name == faction2_view.name) AND (vrpentries.type == faction2_view.type);" "prefix"
+prefix/.hidden|f||
+prefix/1KB|f||faction2 1KB file
+prefix/1MB|f|faction1 1MB file|
 prefix/directory/executable|f|faction1 executable file|
 prefix/directory/faction1.db|f||
 prefix/directory/readonly|f||
@@ -237,25 +241,25 @@ prefix/directory/subdirectory|d||faction2 subdirectory
 prefix/directory/writable|f||
 prefix/directory|d|faction1 directory|
 prefix/empty_directory|d||
-prefix/faction1.db|f||faction2 file type data in root
-prefix/faction2.db|f||faction2 file type data in root
+prefix/faction1.db|f||
+prefix/faction2.db|f||
 prefix/file_symlink|l||
 prefix/leaf_directory/faction1.db|f||
-prefix/leaf_directory/leaf_file1|f||
+prefix/leaf_directory/leaf_file1|f|faction1 leaf file 1|
 prefix/leaf_directory/leaf_file2|f||
 prefix/leaf_directory|d||
-prefix/old_file|f|faction1 old file data|faction2 file type data in root
-prefix/repeat_name|f|faction1 repeat_name|faction2 file type data in root
+prefix/old_file|f|faction1 old file data|
+prefix/repeat_name|f|faction1 repeat_name|
 prefix/unusual#? directory ,/unusual, name?#|f||
 prefix/unusual#? directory ,|d||
-prefix|d||faction2 root directory
+prefix|d|faction1 root directory|faction2 root directory
 
 # again, but with xattrs
 # SELECT rpath(), type, xattr_name, xattr_value, faction1 user data, faction2 user data
-$ gufi_query -x -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty'; ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, faction1_view.external_data, faction2_view.external_data FROM vrxsummary LEFT JOIN faction1_view ON vrxsummary.name == faction1_view.name LEFT JOIN faction2_view ON vrxsummary.type == faction2_view.type;" -E "SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value,faction1_view.external_data, faction2_view.external_data FROM vrxpentries LEFT JOIN faction1_view ON vrxpentries.name == faction1_view.name LEFT JOIN faction2_view ON vrxpentries.type == faction2_view.type;" "prefix"
-prefix/.hidden|f||||faction2 file type data in root
-prefix/1KB|f||||faction2 file type data in root
-prefix/1MB|f|user.size|1MB|faction1 1MB file|faction2 file type data in root
+$ gufi_query -x -d '|' -I "ATTACH 'template.faction1' AS 'faction1_empty'; ATTACH 'template.faction2' AS 'faction2_empty';" -Q "faction1.db" "user_table" "faction1_empty.user_table" "faction1_view" -Q "faction2.db" "user_table" "faction2_empty.user_table" "faction2_view" -S "SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, faction1_view.external_data, faction2_view.external_data FROM vrxsummary LEFT JOIN faction1_view ON (vrxsummary.name == faction1_view.name) AND (vrxsummary.type == faction1_view.type) LEFT JOIN faction2_view ON (vrxsummary.name == faction2_view.name) AND (vrxsummary.type == faction2_view.type);" -E "SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value,faction1_view.external_data, faction2_view.external_data FROM vrxpentries LEFT JOIN faction1_view ON (vrxpentries.name == faction1_view.name) and (vrxpentries.type == faction1_view.type) LEFT JOIN faction2_view ON (vrxpentries.name == faction2_view.name) AND (vrxpentries.type == faction2_view.type);" "prefix"
+prefix/.hidden|f||||
+prefix/1KB|f||||faction2 1KB file
+prefix/1MB|f|user.size|1MB|faction1 1MB file|
 prefix/directory/executable|f|||faction1 executable file|
 prefix/directory/faction1.db|f||||
 prefix/directory/readonly|f||||
@@ -267,21 +271,22 @@ prefix/directory/subdirectory|d|user.type|dir||faction2 subdirectory
 prefix/directory/writable|f||||
 prefix/directory|d|||faction1 directory|
 prefix/empty_directory|d||||
-prefix/faction1.db|f||||faction2 file type data in root
-prefix/faction2.db|f||||faction2 file type data in root
+prefix/faction1.db|f||||
+prefix/faction2.db|f||||
 prefix/file_symlink|l||||
 prefix/leaf_directory/faction1.db|f||||
-prefix/leaf_directory/leaf_file1|f|user.name1|value1||
-prefix/leaf_directory/leaf_file1|f|user.name2|value2||
-prefix/leaf_directory/leaf_file1|f|user.name3|value3||
+prefix/leaf_directory/leaf_file1|f|user.name1|value1|faction1 leaf file 1|
+prefix/leaf_directory/leaf_file1|f|user.name2|value2|faction1 leaf file 1|
+prefix/leaf_directory/leaf_file1|f|user.name3|value3|faction1 leaf file 1|
 prefix/leaf_directory/leaf_file2|f|user.name4|value4||
 prefix/leaf_directory/leaf_file2|f|user.name5|value5||
 prefix/leaf_directory/leaf_file2|f|user.name6|value6||
 prefix/leaf_directory|d|user.name|leaf||
 prefix/leaf_directory|d|user.type|dir||
-prefix/old_file|f|||faction1 old file data|faction2 file type data in root
-prefix/repeat_name|f|||faction1 repeat_name|faction2 file type data in root
+prefix/old_file|f|||faction1 old file data|
+prefix/repeat_name|f|||faction1 repeat_name|
 prefix/unusual#? directory ,/unusual, name?#|f||||
 prefix/unusual#? directory ,|d||||
-prefix|d||||faction2 root directory
+prefix|d|||faction1 root directory|faction2 root directory
 
+# with xattrs and aggregation
