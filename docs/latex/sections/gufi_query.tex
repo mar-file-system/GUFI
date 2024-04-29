@@ -238,7 +238,7 @@ positional arguments:
   \centering
   \begin{tabular}{|l|l|}
     \hline
-    \texttt{-Q} Argument & Explaination \\
+    \texttt{-Q} Argument & Explanation \\
     \hline
     \texttt{basename} & The basename of the database file in the current directory \\
                       & to attach \\
@@ -254,9 +254,9 @@ positional arguments:
   \end{tabular}
 \end{table}
 
-Additionally, the caller should create views that attach to the
-various tables that exist, run queries, and destroy the views within
-\texttt{-T}, \texttt{-S}, and \texttt{-E}.
+Finally, in \texttt{-T}, \texttt{-S}, and \texttt{-E}, the caller
+should join the view created in \texttt{-Q} with GUFI data to pull
+what they are looking for.
 \\\\
 Example Usage:
 \begin{table}[H]
@@ -264,11 +264,8 @@ Example Usage:
   \begin{tabular}{ll}
     \gufiquery & \texttt{-I "ATTACH template.db AS template;"} \\
                & \texttt{-Q "external.db" "table" "template.table" "ext"} \\
-               & \texttt{-E "CREATE TEMP VIEW vrepentries AS} \\
-               & \texttt{\ \ \ \ SELECT * FROM pentries LEFT JOIN ext} \\
-               & \texttt{\ \ \ \ ON pentries.name == ext.name;} \\
-               & \texttt{\ \ \ \ SELECT * FROM vrepentries;} \\
-               & \texttt{\ \ \ \ DROP VIEW vrepentries;"} \\
+               & \texttt{-E "SELECT * FROM pentries} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext ON pentries.name == ext.name;"} \\
                & \texttt{index\_root} \\
   \end{tabular}
 \end{table}
@@ -286,12 +283,9 @@ Multiple External Databases Example:
                & \texttt{\ \ \ \ ATTACH template2.db AS template2;"} \\
                & \texttt{-Q "externall.db" "table" "template1.table" "ext1"} \\
                & \texttt{-Q "external2.db" "table" "template2.table" "ext2"} \\
-               & \texttt{-E "CREATE TEMP VIEW vrepentries AS} \\
-               & \texttt{\ \ \ \ SELECT * FROM pentries LEFT JOIN ext1} \\
-               & \texttt{\ \ \ \ ON pentries.name == ext1.name AND} \\
-               & \texttt{\ \ \ \ LEFT JOIN ext2 ON pentries.type == ext2.type;} \\
-               & \texttt{\ \ \ \ SELECT * FROM vrepentries;} \\
-               & \texttt{\ \ \ \ DROP VIEW vrepentries;"} \\
+               & \texttt{-E "SELECT * FROM pentries} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext1 ON pentries.name == ext1.name} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext2 ON pentries.type == ext2.type;"} \\
                & \texttt{index\_root} \\
   \end{tabular}
 \end{table}
