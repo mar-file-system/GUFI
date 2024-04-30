@@ -96,8 +96,8 @@ extern const char EXTERNAL_DBS_ROLLUP_INSERT[];
 #define EXTERNAL_DBS               "external_dbs"
 #define EXTERNAL_DBS_LEN           (sizeof(EXTERNAL_DBS) - 1)
 
-#define EXTERNAL_TYPE_XATTRS       "xattrs"
-#define EXTERNAL_TYPE_XATTRS_LEN   (sizeof(EXTERNAL_TYPE_XATTRS) - 1)
+#define EXTERNAL_TYPE_XATTR        "xattrs"
+#define EXTERNAL_TYPE_XATTR_LEN    (sizeof(EXTERNAL_TYPE_XATTR) - 1)
 
 #define EXTERNAL_TYPE_USER_DB      "user_db"
 #define EXTERNAL_TYPE_USER_DB_LEN  (sizeof(EXTERNAL_TYPE_USER_DB) - 1)
@@ -112,44 +112,61 @@ int external_insert(sqlite3 *db, const char *type, const char *filename, const c
  * Attach the databases selected from the external databases table
  * to db.db and concatenate all of the data into one view.
  *
- * "type" is associated with EXTERNAL_DBS, not with the databases
- * being attached, so the arguments come before create_view.
+ * type and extra are associated with EXTERNAL_DBS, not with the
+ * databases being attached, so the arguments come before viewname.
  *
- * @in work               the current work context
  * @in db                 handle to the main db
- * @in type               external database type (xattrs, user, etc.)
- * @in type_len           length of type
- * @in view_name          the name of the view to create
- * @in view_name_len      length of view_name
+ * @in type               external database type (xattrs, user_db, etc.)
+ * @in extra              extra conditions to check to select external database rows
+ * ----------------------------------------------------------------------------------
+ * @in viewname           the name of the view to create
  * @in select             string containing "SELECT <columns> FROM "
- * @in select_len         length of select
  * @in table_name         the table to extract from each external database
- * @in table_name_len     length of table_name
  * @in modify_filename    if provided, modify the filename to attach into db.db
+ *                        returns the length of the new filename
+ * @in modify_attachname  if provided, modify the attach name
  *                        returns the length of the new filename
  * @return the number of external databases attached
  */
-int external_concatenate(struct work *work, sqlite3 *db,
-                         const char *type, const size_t type_len,
-                         const char *view_name, const size_t view_name_len,
-                         const char *select, const size_t select_len,
-                         const char *table_name, const size_t table_name_len,
+int external_concatenate(sqlite3 *db,
+                         const char *type,          const size_t type_len,
+                         const char *extra,         const size_t extra_len,
+                         const char *viewname,      const size_t viewname_len,
+                         const char *select,        const size_t select_len,
+                         const char *tablename,     const size_t tablename_len,
+                         const char *default_table, const size_t default_table_len,
                          size_t (*modify_filename)(char **dst, const size_t dst_size,
                                                    const char *src, const size_t src_len,
-                                                   struct work *work));
+                                                   void *args),
+                         void *filename_args,
+                         size_t (*modify_attachname)(char **dst, const size_t dst_size,
+                                                   const char *src, const size_t src_len,
+                                                   void *args),
+                         void *attachname_args
+                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                         , size_t *query_count
+                         #endif
+    );
 
 /*
  * external_concatenate_cleanup
  * Drop combined view and detach external databases.
  *
- * @in db           the current working context
- * @in drop_view    SQL statement of the format "DROP VIEW <view name>;"
- *                  This string is not validated. This is done to avoid
- *                  memcpys that would be done if the query were
- 8                  generated instead of provided.
+ * @in db                 the current working context
+ * @in drop_view          SQL statement of the format "DROP VIEW <view name>;"
+ *                        This string is not validated. This is done to avoid
+ *                        memcpys that would be done if the query were
+ *                        generated instead of provided.
+ * @in type               external database type (xattrs, user_db, etc.)
+ * @in extra              extra conditions to check to select external database rows
  */
 void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
-                                  const char *type, const size_t type_len
+                                  const char *type, const size_t type_len,
+                                  const char *extra, const size_t extra_len,
+                                  size_t (*modify_attachname)(char **dst, const size_t dst_size,
+                                                              const char *src, const size_t src_len,
+                                                              void *args),
+                                  void *attachname_args
                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                   , size_t *query_count
                                   #endif
@@ -167,27 +184,25 @@ typedef struct external_user_setup {
  * external_with_template
  *
  * For each view requested by the user:
- *     If there is a cooresponding entry in the
- *     external database table, attach it
- *
- *     Create a view out of the template and the
- *     attached external database file.
+ *     Call external_concatenate
+ *         Select all database matches
+ *         Attach all databases
+ *         Create view for databases
  *
  * Assumes template_table_name is already available
  *
- * @in work                    the current work context
  * @in db                      handle to the main db
  * @in type                    external database type (xattrs, user, etc.)
  * @in type_len                length of type
  * @in eus                     list of external user db setup configs
  * @return the number of views created
  */
-int external_with_template(struct work *work, sqlite3 *db,
-                         const char *type, const size_t type_len,
-                         sll_t *eus
-                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                         , size_t *query_count
-                         #endif
+int external_with_template(sqlite3 *db,
+                           const char *type, const size_t type_len,
+                           sll_t *eus
+                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                           , size_t *query_count
+                           #endif
     );
 
 /*
@@ -195,19 +210,18 @@ int external_with_template(struct work *work, sqlite3 *db,
  *
  * Drop each view followed by the user db if it exists.
  *
- * @in work                    the current work context
  * @in db                      handle to the main db
  * @in type                    external database type (xattrs, user, etc.)
  * @in type_len                length of type
  * @in eus                     list of external user db setup configs
  * @return 0
  */
-int external_with_template_cleanup(struct work *work, sqlite3 *db,
-                                 const char *type, const size_t type_len,
-                                 sll_t *eus
-                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                 , size_t *query_count
-                                 #endif
+int external_with_template_cleanup(sqlite3 *db,
+                                   const char *type, const size_t type_len,
+                                   sll_t *eus
+                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                   , size_t *query_count
+                                   #endif
     );
 
 #ifdef __cplusplus

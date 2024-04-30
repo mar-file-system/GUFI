@@ -100,8 +100,8 @@ compare_output() {
     run_no_sort "\"${GUFI_DIR2TRACE}\"   -x -e \"${SRCDIR}\" \"${TRACE}\""
     run_no_sort "\"${GUFI_TRACE2INDEX}\"       \"${TRACE}.0\" \"${T2I}\""
 
-    clean_index "${D2I}/${BASENAME}"
-    clean_index "${T2I}/${BASENAME}"
+    clean_index "${D2I}/${BASENAME}" 1
+    clean_index "${T2I}/${BASENAME}" 1
 
     compare_output "${INDEXROOT}"
     compare_output "${D2I}/${BASENAME}"

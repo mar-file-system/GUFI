@@ -213,12 +213,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     timestamp_create_start(memset_work);
     struct work dir; /* name and name_len are not used */
     struct entry_data ed;
-    refstr_t attachname;
     timestamp_set_end(memset_work);
 
     /* parse the directory data */
     timestamp_create_start(dir_linetowork);
-    linetowork(w->line, w->len, in->delim, &dir, &ed, &attachname);
+    linetowork(w->line, w->len, in->delim, &dir, &ed, NULL);
     timestamp_set_end(dir_linetowork);
 
     /* create the directory */

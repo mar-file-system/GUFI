@@ -1384,9 +1384,9 @@ void destroy_xattr_db(void *ptr) {
     closedb(xdb->db);
 
     /* add this xattr db to the list of dbs to open when creating view */
-    sqlite3_bind_text( xdb->file_list, 1, EXTERNAL_TYPE_XATTRS, EXTERNAL_TYPE_XATTRS_LEN, SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 2, xdb->filename, xdb->filename_len,               SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 3, xdb->attach, xdb->attach_len,                   SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 1, EXTERNAL_TYPE_XATTR, EXTERNAL_TYPE_XATTR_LEN, SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 2, xdb->filename, xdb->filename_len,             SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 3, xdb->attach, xdb->attach_len,                 SQLITE_STATIC);
     sqlite3_bind_int64(xdb->file_list, 4, xdb->st.st_mode);
     sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_uid);
     sqlite3_bind_int64(xdb->file_list, 6, xdb->st.st_gid);

@@ -297,35 +297,49 @@ pull_ug_summary_columns() {
     run_sort "${GUFI_QUERY} -d \" \" -S \"SELECT path(), level(), totfiles, totlinks, '[', ${UG}, minuid, maxuid, mingid, maxgid, ']', minsize, maxsize, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minmtime, maxmtime, minatime, maxatime, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, rectype FROM ${RELATION}${WHERE};\" \"${INDEXROOT}\"" | sed "s/\[ ${SRC} ${USER_ID} ${USER_ID} ${GROUP_ID} ${GROUP_ID} \]/${DST} ${TEST_USER_ID} ${TEST_USER_ID} ${TEST_GROUP_ID} ${TEST_GROUP_ID}/g;"
 }
 
+# set some columns to make test easier
 clean_index() {
     INDEX="$1"
-
-    # set some columns to make test easier
+    ACTUAL="$2"
 
     # update xattrs to point to updated inodes
-    "${GUFI_QUERY}" -d " " -a -x -w \
+    # do this before updating summary/entries to be able to use actual inodes
+    "${GUFI_QUERY}" \
+        -a \
+        -x \
+        -w \
         -I "CREATE TABLE temp_xattrs (inode TEXT, name TEXT, value TEXT);" \
         -S "INSERT INTO temp_xattrs (inode, name, value) SELECT CAST(mtime AS TEXT), xattr_name, xattr_value FROM xsummary WHERE xattr_name IS NOT NULL UNION ALL SELECT CAST(mtime AS TEXT), xattr_name, xattr_value FROM xpentries WHERE xattr_name IS NOT NULL;" \
         -E "DELETE FROM xattrs_pwd; INSERT INTO xattrs_pwd SELECT * FROM temp_xattrs; DELETE from temp_xattrs;" \
         "${INDEX}"
 
-    # update inodes
-    # ${INDEXROOT} has inode == 17
-    "${GUFI_QUERY}" -a -w \
-        -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime, pinode = '17';" \
+    # update sumamry and entries columns
+    "${GUFI_QUERY}" \
+        -a \
+        -w \
+        -d " " \
+        -S "UPDATE summary SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
         -E "UPDATE entries SET inode = CAST(mtime AS TEXT), size = mtime, atime = mtime, ctime = mtime;" \
         "${INDEX}"
 
-    # ${INDEXROOT} is not a child of itself
-    "${SQLITE3}" "${INDEXROOT}/db.db" "UPDATE summary SET pinode = '18' WHERE name == '${BASENAME}';"
+    # set parent pinodes
+    "${SQLITE3}" "${INDEX}/db.db"                        "UPDATE summary SET pinode = '18';"
+    "${SQLITE3}" "${INDEX}/directory/db.db"              "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET pinode = '7';"
+    "${SQLITE3}" "${INDEX}/empty_directory/db.db"        "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/leaf_directory/db.db"         "UPDATE summary SET pinode = '17';"
+    "${SQLITE3}" "${INDEX}/unusual#? directory ,/db.db"  "UPDATE summary SET pinode = '17';"
 
-    # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
-    DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"
-    FILE="$(stat -c '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
-    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE summary SET inode = '${DIR}', pinode = '7' WHERE name == 'subdirectory';"
-    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE entries SET inode = '${FILE}' WHERE name == 'repeat_name';"
-    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = '${DIR}' WHERE inode == '6';"
-    "${SQLITE3}" "${INDEXROOT}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = '${FILE}' WHERE inode == '5';"
+    if [[ "${ACTUAL}" == "1" ]]
+    then
+        # directory/subdirectory and directory/subdirectory/repeat_name need their actual inodes
+        DIR="$(stat -c '%i' ${SRCDIR}/directory/subdirectory)"
+        FILE="$(stat -c '%i' ${SRCDIR}/directory/subdirectory/repeat_name)"
+        "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE summary SET inode = '${DIR}' WHERE name == 'subdirectory';"
+        "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE entries SET inode = '${FILE}' WHERE name == 'repeat_name';"
+        "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = '${DIR}' WHERE inode == '6';"
+        "${SQLITE3}" "${INDEX}/directory/subdirectory/db.db" "UPDATE xattrs_pwd SET inode = '${FILE}' WHERE inode == '5';"
+    fi
 }
 
 if [[ "${GENERATE_INDEX}" == "1" ]]
@@ -336,5 +350,5 @@ then
     # generate the index
     "${GUFI_DIR2INDEX}" -x "${SRCDIR}" "${SEARCH}" > /dev/null
 
-    clean_index "${INDEXROOT}"
+    clean_index "${INDEXROOT}" 1
 fi

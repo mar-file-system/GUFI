@@ -272,5 +272,8 @@ TEST(trace, linetowork) {
     EXPECT_EQ(linetowork(NULL, rc, delim, &work, &ed,  &attachname), -1);
     EXPECT_EQ(linetowork(line, rc, delim, NULL,  &ed,  &attachname), -1);
     EXPECT_EQ(linetowork(line, rc, delim, &work, NULL, &attachname), -1);
-    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed,  NULL), -1);
+
+    src_ed.type = 'e';
+    EXPECT_EQ(to_string(line, sizeof(line), &src, &src_ed), rc);
+    EXPECT_EQ(linetowork(line, rc, delim, &work, &ed, NULL), -1);
 }

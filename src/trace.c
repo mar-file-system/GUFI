@@ -118,7 +118,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 
 int linetowork(char *line, const size_t len, const char delim,
                struct work *work, struct entry_data *ed, refstr_t *attachname) {
-    if (!line || !work || !ed || !attachname) {
+    if (!line || !work || !ed) {
         return -1;
     }
 
@@ -127,13 +127,16 @@ int linetowork(char *line, const size_t len, const char delim,
     char *p;
     char *q;
 
-    memset(attachname, 0, sizeof(*attachname));
-
     p=line; q = split(p, &delim, 1, end); work->name_len = SNPRINTF(work->name, MAXPATH, "%s", p);
     p = q;  q = split(p, &delim, 1, end); ed->type = *p;
 
     if (ed->type == 'e') {
+        if (!attachname) {
+            return -1;
+        }
+
         p = q; q = split(p, &delim, 1, end);
+
         attachname->data = p;
         attachname->len = q - p;
         return 0;

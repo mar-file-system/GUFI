@@ -121,8 +121,10 @@ typedef struct gufi_query_work {
 
 /* prepend the current directory to the database filenamee */
 static size_t xattr_modify_filename(char **dst, const size_t dst_size,
-                             const char *src, const size_t src_len,
-                             struct work *work) {
+                                    const char *src, const size_t src_len,
+                                    void *args) {
+    struct work *work = (struct work *) args;
+
     if (src[0] == '/') {
         *dst = (char *) src;
         return src_len;
@@ -285,11 +287,6 @@ static int count_rows(void *args, int count, char **data, char **columns) {
     return 0;
 }
 
-typedef struct external_db_mapping {
-    char path[MAXSQL];
-    char attachname[MAXSQL];
-} edm_t;
-
 /*
  * SELECT subdirs(srollsubdirs, sroll) FROM vrsummary;
  *
@@ -393,15 +390,12 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
             /* if it fails then this will be set to 1 and will go on */
 
-    sll_t external_dbs;
-    sll_init(&external_dbs);
-
     if (gqw->work.level >= in->min_level) {
         /* set up external databases for use with -T, -S, and -E */
         if (db) {
             /* user dbs */
             thread_timestamp_start(ts.tts, attach_external);
-            external_with_template(&gqw->work, db,
+            external_with_template(db,
                                    EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
                                    &in->external_attach
                                    query_count_arg);
@@ -412,12 +406,16 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
 
                 thread_timestamp_start(ts.tts, xattrprep_call);
-                external_concatenate(&gqw->work, db,
-                                     EXTERNAL_TYPE_XATTRS, EXTERNAL_TYPE_XATTRS_LEN,
-                                     XATTRS, sizeof(XATTRS) - 1,
-                                     XATTR_COLS, sizeof(XATTR_COLS) - 1,
+                external_concatenate(db,
+                                     EXTERNAL_TYPE_XATTR, EXTERNAL_TYPE_XATTR_LEN,
+                                     NULL,         0,
+                                     XATTRS,       sizeof(XATTRS) - 1,
+                                     XATTR_COLS,   sizeof(XATTR_COLS) - 1,
                                      XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
-                                     xattr_modify_filename);
+                                     XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
+                                     xattr_modify_filename, &gqw->work,
+                                     NULL, NULL
+                                     query_count_arg);
                 xattr_create_views(db query_count_arg);
                 thread_timestamp_end(xattrprep_call);
             }
@@ -525,20 +523,20 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
         thread_timestamp_start(ts.tts, xattrdone_call);
         if (in->process_xattrs) {
             external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
-                                         EXTERNAL_TYPE_XATTRS, EXTERNAL_TYPE_XATTRS_LEN
+                                         EXTERNAL_TYPE_XATTR, EXTERNAL_TYPE_XATTR_LEN,
+                                         NULL, 0,
+                                         NULL, NULL
                                          query_count_arg);
         }
         thread_timestamp_end(xattrdone_call);
 
         thread_timestamp_start(ts.tts, detach_external);
-        external_with_template_cleanup(&gqw->work, db,
-                                     EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
-                                     &in->external_attach
-                                     query_count_arg);
+        external_with_template_cleanup(db,
+                                       EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
+                                       &in->external_attach
+                                       query_count_arg);
         thread_timestamp_end(detach_external);
     }
-
-    sll_destroy(&external_dbs, free);
 
     #ifdef OPENDB
     thread_timestamp_start(ts.tts, detachdb_call);
