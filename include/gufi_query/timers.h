@@ -70,6 +70,7 @@ OF SUCH DAMAGE.
 #include <time.h>
 
 #include "SinglyLinkedList.h"
+#include "debug.h"
 
 /* ************************************************************************* */
 /* global/pool variables */

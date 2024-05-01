@@ -190,8 +190,11 @@ build_and_install_one("${BIN}" TRUE gufi_stat_bin gufi_stat.c)
 add_library(gufi_query_lib OBJECT
   gufi_query/PoolArgs.c
   gufi_query/aggregate.c
+  gufi_query/processdir.c
+  gufi_query/process_queries.c
   gufi_query/query.c
   gufi_query/timers.c
+  gufi_query/validate_inputs.c
   gufi_query/xattrs.c
 )
 
