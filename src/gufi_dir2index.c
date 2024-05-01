@@ -173,7 +173,7 @@ static int track_external(struct input *in,
     /* make sure this file is a sqlite3 db */
     /* can probably skip this check */
     if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
-        rc = !external_insert(db, EXTERNAL_TYPE_USER_DB, child->name, ext->data);
+        rc = !external_insert(db, EXTERNAL_TYPE_USER_DB.data, child->name, ext->data);
     }
     else {
         fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",

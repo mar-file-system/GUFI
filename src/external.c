@@ -85,6 +85,16 @@ const char EXTERNAL_DBS_ROLLUP_CREATE[] =
 const char EXTERNAL_DBS_ROLLUP_INSERT[] =
     "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, @filename, @attachname, @mode, @uid, @gid);";
 
+const refstr_t EXTERNAL_TYPE_XATTR = {
+    .data = EXTERNAL_TYPE_XATTR_NAME,
+    .len  = EXTERNAL_TYPE_XATTR_LEN,
+};
+
+const refstr_t EXTERNAL_TYPE_USER_DB = {
+    .data = EXTERNAL_TYPE_USER_DB_NAME,
+    .len  = EXTERNAL_TYPE_USER_DB_LEN,
+};
+
 int create_external_tables(const char *name, sqlite3 *db, void *args) {
     (void) args;
 
@@ -101,36 +111,34 @@ int create_external_tables(const char *name, sqlite3 *db, void *args) {
 static size_t create_external_query(char *sql,         const size_t sql_size,
                                     const char *cols,  const size_t cols_len,
                                     const char *table, const size_t table_len,
-                                    const char *type,  const size_t type_len,
-                                    const char *extra, const size_t extra_len) {
+                                    const refstr_t *type,
+                                    const refstr_t *extra) {
     size_t len = SNFORMAT_S(sql, sql_size, 4,
                             "SELECT ", (size_t) 7,
                             cols, cols_len,
                             " FROM ", (size_t) 6,
                             table, table_len);
 
-    if ((type && type_len) ||
-        (extra && extra_len)) {
+    if (type || extra) {
         len += SNFORMAT_S(sql + len, sql_size - len, 1,
                           " WHERE", 6);
     }
 
-    if (type && type_len) {
+    if (type) {
         len += SNFORMAT_S(sql + len, sql_size - len, 3,
                           " (type == '", (size_t) 11,
-                          type, type_len,
+                          type->data, type->len,
                           "')", (size_t) 2);
     }
 
-    if ((type && type_len) &&
-        (extra && extra_len)) {
+    if (type && extra) {
         len += SNFORMAT_S(sql + len, sql_size - len, 1,
                           " AND ", (size_t) 5);
     }
 
-    if (extra && extra_len) {
+    if (extra) {
         len += SNFORMAT_S(sql + len, sql_size - len, 1,
-                          extra, extra_len);
+                          extra->data, extra->len);
     }
 
     len += SNFORMAT_S(sql + len, sql_size - len, 1,
@@ -159,12 +167,12 @@ int external_insert(sqlite3 *db, const char *type, const char *filename, const c
 }
 
 int external_concatenate(sqlite3 *db,
-                         const char *type,          const size_t type_len,
-                         const char *extra,         const size_t extra_len,
-                         const char *viewname,      const size_t viewname_len,
-                         const char *select,        const size_t select_len,
-                         const char *tablename,     const size_t tablename_len,
-                         const char *default_table, const size_t default_table_len,
+                         const refstr_t *type,
+                         const refstr_t *extra,
+                         const refstr_t *viewname,
+                         const refstr_t *select,
+                         const refstr_t *tablename,
+                         const refstr_t *default_table,
                          size_t (*modify_filename)(char **dst, const size_t dst_size,
                                                    const char *src, const size_t src_len,
                                                    void *args),
@@ -185,7 +193,7 @@ int external_concatenate(sqlite3 *db,
     char          unioncmd[MAXSQL];
     char         *unioncmdp = unioncmd + SNFORMAT_S(unioncmd, sizeof(unioncmd), 3,
                                                     "CREATE TEMP VIEW ", (size_t) 17,
-                                                    viewname, viewname_len,
+                                                    viewname->data, viewname->len,
                                                     " AS", (size_t) 3);
 
     /* find external databases of given type */
@@ -193,8 +201,8 @@ int external_concatenate(sqlite3 *db,
     const size_t get_mappings_len = create_external_query(get_mappings, sizeof(get_mappings),
                                                           "filename, attachname", 20,
                                                           EXTERNAL_DBS, EXTERNAL_DBS_LEN,
-                                                          type, type_len,
-                                                          extra, extra_len);
+                                                          type,
+                                                          extra);
 
     /* step through each external file recorded in the main database */
     int rc = sqlite3_prepare_v2(db, get_mappings, get_mappings_len, &res, NULL);
@@ -234,11 +242,11 @@ int external_concatenate(sqlite3 *db,
         if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0)) {
             /* SELECT * FROM <attach name>.<table name> UNION */
             unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
-                                    select, select_len,
+                                    select->data, select->len,
                                     "'", (size_t) 1,
                                     attachname, attachname_len,
                                     "'.", (size_t) 2,
-                                    tablename, tablename_len,
+                                    tablename->data, tablename->len,
                                     " UNION", (size_t) 6);
             rec_count++;
         }
@@ -253,8 +261,8 @@ int external_concatenate(sqlite3 *db,
      * this assumes theres a table already in the db
      */
     unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 3,
-                            select, select_len,
-                            default_table, default_table_len,
+                            select->data, select->len,
+                            default_table->data, default_table->len,
                             ";", (size_t) 1);
 
     /* create view */
@@ -265,22 +273,12 @@ int external_concatenate(sqlite3 *db,
     #endif
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Create external data view \"%s\" failed: %s: %s\n",
-                viewname, err, unioncmd);
+                viewname->data, err, unioncmd);
         sqlite3_free(err);
         return -1;
     }
 
     return rec_count;
-}
-
-static size_t enumerate_attachname(char **dst, const size_t dst_size,
-                                   const char *src, const size_t src_len,
-                                   void *args) {
-    (void) src_len;
-
-    size_t *rec_count = (size_t *) args;
-
-    return SNPRINTF(*dst, dst_size, "%s.%zu", src, (*rec_count)++);
 }
 
 typedef struct external_detach_args {
@@ -309,8 +307,8 @@ static int external_detach(void *args, int count, char **data, char **columns) {
 }
 
 void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
-                                  const char *type, const size_t type_len,
-                                  const char *extra, const size_t extra_len,
+                                  const refstr_t *type,
+                                  const refstr_t *extra,
                                   size_t (*modify_attachname)(char **dst, const size_t dst_size,
                                                               const char *src, const size_t src_len,
                                                               void *args),
@@ -321,18 +319,23 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
     )
 {
     if (drop_view) {
-        sqlite3_exec(db, drop_view, NULL, NULL, NULL);
+        char *err = NULL;
+        const int rc = sqlite3_exec(db, drop_view, NULL, NULL, &err);
         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
         (*query_count)++;
         #endif
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Warning: Could not drop view: %s\n", err);
+            sqlite3_free(err);
+        }
     }
 
     char get_attachnames[MAXSQL];
     create_external_query(get_attachnames, sizeof(get_attachnames),
                           "attachname", 10,
                           EXTERNAL_DBS, EXTERNAL_DBS_LEN,
-                          type, type_len,
-                          extra, extra_len);
+                          type,
+                          extra);
 
     eda_t args = {
         .db = db,
@@ -346,15 +349,23 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
     #endif
 }
 
+static size_t enumerate_attachname(char **dst, const size_t dst_size,
+                                   const char *src, const size_t src_len,
+                                   void *args) {
+    (void) src_len;
+
+    size_t *rec_count = (size_t *) args;
+
+    return SNPRINTF(*dst, dst_size, "%s.%zu", src, (*rec_count)++);
+}
+
 int external_with_template(sqlite3 *db,
-                           const char *type, const size_t type_len,
+                           const refstr_t *type,
                            sll_t *eus
                            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                            , size_t *query_count
                            #endif
     ) {
-    (void) type_len;
-
     /* Not checking arguments */
 
     int external_count = 0;
@@ -368,16 +379,25 @@ int external_with_template(sqlite3 *db,
                                                     "basename(filename) == '", (size_t) 23,
                                                     user->basename.data, user->basename.len,
                                                     "'", (size_t) 1);
+        const refstr_t basename_comp_ref = {
+            .data = basename_comp,
+            .len  = basename_comp_len,
+        };
+
+        static const refstr_t select = {
+            .data = " SELECT * FROM ",
+            .len  = 15,
+        };
 
         size_t rec_count = 0; /* reset for each match */
         external_concatenate(db,
-                             type, type_len,
-                             basename_comp, basename_comp_len,
-                             user->view.data, user->view.len,
-                             " SELECT * FROM ", 15,
-                             user->table.data, user->table.len,
-                             user->template_table.data, user->template_table.len,
-                             NULL, 0,
+                             type,
+                             &basename_comp_ref,
+                             &user->view,
+                             &select,
+                             &user->table,
+                             &user->template_table,
+                             NULL, NULL,
                              enumerate_attachname, &rec_count
                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                              , query_count
@@ -390,14 +410,12 @@ int external_with_template(sqlite3 *db,
 }
 
 int external_with_template_cleanup(sqlite3 *db,
-                                   const char *type, const size_t type_len,
+                                   const refstr_t *type,
                                    sll_t *eus
                                    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                    , size_t *query_count
                                    #endif
     ) {
-    (void) type_len;
-
     sll_loop(eus, node) {
         eus_t *user = (eus_t *) sll_node_data(node);
 
@@ -413,10 +431,15 @@ int external_with_template_cleanup(sqlite3 *db,
                                                     user->basename.data, user->basename.len,
                                                     "'", (size_t) 1);
 
+        const refstr_t basename_comp_ref = {
+            .data = basename_comp,
+            .len = basename_comp_len,
+        };
+
         size_t rec_count = 0;
         external_concatenate_cleanup(db, drop_view,
-                                     type, type_len,
-                                     basename_comp, basename_comp_len,
+                                     type,
+                                     &basename_comp_ref,
                                      enumerate_attachname, &rec_count
                                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                      , query_count

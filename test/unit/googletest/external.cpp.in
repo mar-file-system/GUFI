@@ -78,14 +78,27 @@ static size_t bad_filename(char **dst, const size_t dst_size,
 TEST(external, concatenate) {
     // type is used when querying the external database table,
     // not for attching the individual external databases
-    const char type[] = "test";
-    const std::size_t type_len = sizeof(type) - 1;
-
     #define VIEWNAME "testview"
-    const std::size_t viewname_len = sizeof(VIEWNAME) - 1;
-    const char select[] = " SELECT * FROM ";
-    const std::size_t select_len = sizeof(select) - 1;
-    const std::size_t externaldbs_len = sizeof(EXTERNAL_DBS) - 1;
+    const refstr_t type = {
+        VIEWNAME,
+        sizeof(VIEWNAME) - 1,
+    };
+
+    const refstr_t viewname = {
+        VIEWNAME,
+        sizeof(VIEWNAME) - 1,
+    };
+
+    const refstr_t select = {
+        " SELECT * FROM ",
+        15,
+    };
+
+    const refstr_t external_dbs = {
+        EXTERNAL_DBS,
+        sizeof(EXTERNAL_DBS) - 1,
+    };
+
     const char drop_view[] = "DROP VIEW " VIEWNAME ";";
 
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -95,12 +108,12 @@ TEST(external, concatenate) {
     int rc = 0;
 
     rc = external_concatenate(nullptr,
-                              type, type_len,
-                              nullptr, 0,
-                              VIEWNAME, viewname_len,
-                              select, select_len,
-                              EXTERNAL_DBS, externaldbs_len,
-                              EXTERNAL_DBS, externaldbs_len,
+                              &type,
+                              nullptr,
+                              &viewname,
+                              &select,
+                              &external_dbs,
+                              &external_dbs,
                               nullptr, nullptr,
                               nullptr, nullptr
                               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -115,12 +128,12 @@ TEST(external, concatenate) {
 
     // nothing in external_dbs, so goes directly to create empty view
     rc = external_concatenate(db,
-                              type, type_len,
-                              nullptr, 0,
-                              VIEWNAME, viewname_len,
-                              select, select_len,
-                              EXTERNAL_DBS, externaldbs_len,
-                              EXTERNAL_DBS, externaldbs_len,
+                              &type,
+                              nullptr,
+                              &viewname,
+                              &select,
+                              &external_dbs,
+                              &external_dbs,
                               nullptr, nullptr,
                               nullptr, nullptr
                               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -130,8 +143,8 @@ TEST(external, concatenate) {
     EXPECT_EQ(rc, 0);
 
     external_concatenate_cleanup(db, drop_view,
-                                 type, type_len,
-                                 NULL, 0,
+                                 &type,
+                                 NULL,
                                  NULL, NULL
                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                  , &query_count
@@ -147,12 +160,12 @@ TEST(external, concatenate) {
 
     // no modify_filename, so attempt to attach CMAKE_CURRENT_BINARY_DIR and fail
     rc = external_concatenate(db,
-                              type, type_len,
-                              nullptr, 0,
-                              VIEWNAME, viewname_len,
-                              select, select_len,
-                              EXTERNAL_DBS, externaldbs_len,
-                              EXTERNAL_DBS, externaldbs_len,
+                              &type,
+                              nullptr,
+                              &viewname,
+                              &select,
+                              &external_dbs,
+                              &external_dbs,
                               nullptr, nullptr,
                               nullptr, nullptr
                               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -162,8 +175,8 @@ TEST(external, concatenate) {
     EXPECT_EQ(rc, 0);
 
     external_concatenate_cleanup(db, drop_view,
-                                 type, type_len,
-                                 NULL, 0,
+                                 &type,
+                                 NULL,
                                  NULL, NULL
                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                  , &query_count
@@ -172,12 +185,12 @@ TEST(external, concatenate) {
 
     // modify_filename changes the filename to CMAKE_BINARY_DIR which fails to attach
     rc = external_concatenate(db,
-                              type, type_len,
-                              nullptr, 0,
-                              VIEWNAME, viewname_len,
-                              select, select_len,
-                              EXTERNAL_DBS, externaldbs_len,
-                              EXTERNAL_DBS, externaldbs_len,
+                              &type,
+                              nullptr,
+                              &viewname,
+                              &select,
+                              &external_dbs,
+                              &external_dbs,
                               bad_filename, nullptr,
                               nullptr, nullptr
                               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
@@ -187,8 +200,8 @@ TEST(external, concatenate) {
     EXPECT_EQ(rc, 0);
 
     external_concatenate_cleanup(db, drop_view,
-                                 type, type_len,
-                                 NULL, 0,
+                                 &type,
+                                 NULL,
                                  NULL, NULL
                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                  , &query_count

@@ -288,23 +288,37 @@ int process_queries(PoolArgs_t *pa,
             /* user dbs */
             thread_timestamp_start(ts->tts, attach_external);
             external_with_template(db,
-                                   EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
+                                   &EXTERNAL_TYPE_USER_DB,
                                    &in->external_attach
                                    query_count_arg);
             thread_timestamp_end(attach_external);
 
             /* xattrs */
             if (in->process_xattrs) {
-                static const char XATTR_COLS[] = " SELECT inode, name, value FROM ";
+                static const refstr_t XATTRS_REF = {
+                    .data = XATTRS,
+                    .len  = sizeof(XATTRS) - 1,
+                };
+
+                #define XATTRS_COLS " SELECT inode, name, value FROM "
+                static const refstr_t XATTRS_COLS_REF = {
+                    .data = XATTRS_COLS,
+                    .len  = sizeof(XATTRS_COLS) - 1,
+                };
+
+                static const refstr_t XATTRS_AVAIL_REF = {
+                    .data = XATTRS_AVAIL,
+                    .len  = sizeof(XATTRS_AVAIL) - 1,
+                };
 
                 thread_timestamp_start(ts->tts, xattrprep_call);
                 external_concatenate(db,
-                                     EXTERNAL_TYPE_XATTR, EXTERNAL_TYPE_XATTR_LEN,
-                                     NULL,         0,
-                                     XATTRS,       sizeof(XATTRS)       - 1,
-                                     XATTR_COLS,   sizeof(XATTR_COLS)   - 1,
-                                     XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
-                                     XATTRS_AVAIL, sizeof(XATTRS_AVAIL) - 1,
+                                     &EXTERNAL_TYPE_XATTR,
+                                     NULL,
+                                     &XATTRS_REF,
+                                     &XATTRS_COLS_REF,
+                                     &XATTRS_AVAIL_REF,
+                                     &XATTRS_AVAIL_REF,
                                      xattr_modify_filename, &gqw->work,
                                      NULL, NULL
                                      query_count_arg);
@@ -420,8 +434,8 @@ int process_queries(PoolArgs_t *pa,
             thread_timestamp_start(ts->tts, xattrdone_call);
             if (in->process_xattrs) {
                 external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
-                                             EXTERNAL_TYPE_XATTR, EXTERNAL_TYPE_XATTR_LEN,
-                                             NULL, 0,
+                                             &EXTERNAL_TYPE_XATTR,
+                                             NULL,
                                              NULL, NULL
                                              query_count_arg);
             }
@@ -429,7 +443,7 @@ int process_queries(PoolArgs_t *pa,
 
             thread_timestamp_start(ts->tts, detach_external);
             external_with_template_cleanup(db,
-                                           EXTERNAL_TYPE_USER_DB, EXTERNAL_TYPE_USER_DB_LEN,
+                                           &EXTERNAL_TYPE_USER_DB,
                                            &in->external_attach
                                            query_count_arg);
             thread_timestamp_end(detach_external);

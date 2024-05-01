@@ -159,6 +159,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     #endif
 
     size_t subdirs_walked_count = 0;
+
     process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
                     #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                     , &ts
