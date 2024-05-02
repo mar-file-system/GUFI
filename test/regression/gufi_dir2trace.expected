@@ -11,8 +11,7 @@ options:
   -M <bytes>             target memory footprint
   -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ
   -e                     compress work items
-  -q <basename>
-     <attachname>        Mapping of basename of file to keep track of during indexing to attachname at query time
+  -q <basename>          Basename of file to keep track of during indexing
 
 input_dir...         walk one or more trees to produce trace file
 output_prefix        prefix of output files (<prefix>.<tid>)

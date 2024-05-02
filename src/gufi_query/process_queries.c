@@ -285,14 +285,6 @@ int process_queries(PoolArgs_t *pa,
     if (gqw->work.level >= in->min_level) {
         /* set up external databases for use with -T, -S, and -E */
         if (db) {
-            /* user dbs */
-            thread_timestamp_start(ts->tts, attach_external);
-            external_with_template(db,
-                                   &EXTERNAL_TYPE_USER_DB,
-                                   &in->external_attach
-                                   query_count_arg);
-            thread_timestamp_end(attach_external);
-
             /* xattrs */
             if (in->process_xattrs) {
                 static const refstr_t XATTRS_REF = {
@@ -440,13 +432,6 @@ int process_queries(PoolArgs_t *pa,
                                              query_count_arg);
             }
             thread_timestamp_end(xattrdone_call);
-
-            thread_timestamp_start(ts->tts, detach_external);
-            external_with_template_cleanup(db,
-                                           &EXTERNAL_TYPE_USER_DB,
-                                           &in->external_attach
-                                           query_count_arg);
-            thread_timestamp_end(detach_external);
         }
     }
 

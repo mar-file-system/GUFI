@@ -131,7 +131,7 @@ static int process_nondir(struct work *entry, struct entry_data *ed, void *args)
     }
 
     if (in->process_xattrs) {
-        insertdbgo_xattrs(in, &nda->ed.statuso, ed,
+        insertdbgo_xattrs(in, &nda->ed.statuso, entry, ed,
                           &nda->xattr_db_list, nda->temp_xattr,
                           nda->topath, nda->topath_len,
                           nda->xattrs_res, nda->xattr_files_res);
@@ -173,7 +173,7 @@ static int track_external(struct input *in,
     /* make sure this file is a sqlite3 db */
     /* can probably skip this check */
     if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
-        rc = !external_insert(db, EXTERNAL_TYPE_USER_DB.data, child->name, ext->data);
+        rc = !external_insert(db, EXTERNAL_TYPE_USER_DB.data, child->pinode, child->name);
     }
     else {
         fprintf(stderr, "Warning: Not tracking requested external db: %s: %s\n",

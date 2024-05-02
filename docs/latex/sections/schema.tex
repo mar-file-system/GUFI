@@ -69,18 +69,19 @@ metadata.
 \subsection{\entries}
 The \entries table contains file and link metadata extracted from the
 source filesystem using \stat, \readlink, and \listxattr. There are
-also a few OS specific columns (\texttt{oss*}) that are unused in
-base GUFI. Note that the inode column is a string and not an integer
-as one might expect.
+also a few OS specific columns (\texttt{oss*}) that are unused in base
+GUFI. Note that the inode column is a string and not an integer as one
+might expect. As a general rule, do not query this table directly.
 
 \subsection{Directory \summary}
 The directory \summary table contains the metadata of the current
 directory. Additionally, it contains columns that summarizes the
 \entries table located in the same database file, such as minimum and
 maximum file sizes, uids, and gids. These summary columns can be used
-to determine whether or not the \entries table needs to be queried
-at all. Note that the inode and pinode colums are strings and not
-integers as one might expect.
+to determine whether or not the \entries table needs to be queried at
+all. Note that the inode and pinode colums are strings and not
+integers as one might expect. As a general rule, do not query this
+table directly.
 
 \begin{figure} [h!]
 \centering
@@ -97,8 +98,8 @@ The original \pentries view was defined as:
 This was done in order to not store the parent inode of each entry,
 which would be the same for every entry.
 
-In general, users should query the \pentries view over the \entries
-table in order to obtain complete sets of data to query on.
+Users should prefer query the \pentries view over the \entries table
+in order to obtain complete sets of data to query on.
 
 \subsubsection{\pentriesrollup}
 In order to simplify rolling up indexes (see
@@ -166,3 +167,10 @@ With the addition of extended attributes support, several more tables
 and views were added into db.db. Additional database files with
 different schemas were also added. See Section~\ref{sec:xattr_schema}
 for details.
+
+\subsection{External Databases}
+With the addition of external (user) database support, several more
+views were added into db.db. External database \texttt{e} variants of
+\vrsummary, \vrxsummary, \vrpentries, and \vrxpentries were added:
+\evrsummary, \evrxsummary, \evrpentries, \evrxpentries. These views
+should be joined with the external databases that were attached.

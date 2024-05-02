@@ -71,11 +71,10 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
-int externaltofile(FILE *file, const char delim, const char *path, const char *attachname) {
-    return fprintf(file, "%s%ce%c%s%c\n",
+int externaltofile(FILE *file, const char delim, const char *path) {
+    return fprintf(file, "%s%ce%c\n",
                    path,       delim,
-                               delim,
-                   attachname, delim);
+                               delim);
 }
 
 int worktofile(FILE *file, const char delim, const size_t prefix_len, struct work *work, struct entry_data *ed) {
@@ -117,7 +116,7 @@ int worktofile(FILE *file, const char delim, const size_t prefix_len, struct wor
 }
 
 int linetowork(char *line, const size_t len, const char delim,
-               struct work *work, struct entry_data *ed, refstr_t *attachname) {
+               struct work *work, struct entry_data *ed) {
     if (!line || !work || !ed) {
         return -1;
     }
@@ -131,14 +130,6 @@ int linetowork(char *line, const size_t len, const char delim,
     p = q;  q = split(p, &delim, 1, end); ed->type = *p;
 
     if (ed->type == 'e') {
-        if (!attachname) {
-            return -1;
-        }
-
-        p = q; q = split(p, &delim, 1, end);
-
-        attachname->data = p;
-        attachname->len = q - p;
         return 0;
     }
 

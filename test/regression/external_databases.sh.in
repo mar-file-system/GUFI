@@ -71,14 +71,14 @@ TABLE="user_table"
 
 # faction1 joins on name
 FACTION1_DB="faction1.db"
-FACTION1_CREATE_TABLE="CREATE TABLE ${TABLE}(name TEXT, type TEXT, pinode TEXT, external_data TEXT);"
+FACTION1_CREATE_TABLE="CREATE TABLE ${TABLE}(name TEXT, type TEXT, data TEXT);"
 FACTION1_TEMPLATE_DB="template.faction1"
 FACTION1_TEMPLATE_ATTACH="faction1_empty"
 FACTION1_VIEW="faction1_view"
 
 # faction2 joins on type
 FACTION2_DB="faction2.db"
-FACTION2_CREATE_TABLE="CREATE TABLE ${TABLE}(name TEXT, type TEXT, pinode TEXT, external_data TEXT);"
+FACTION2_CREATE_TABLE="CREATE TABLE ${TABLE}(name TEXT, type TEXT, data TEXT);"
 FACTION2_TEMPLATE_DB="template.faction2"
 FACTION2_TEMPLATE_ATTACH="faction2_empty"
 FACTION2_VIEW="faction2_view"
@@ -97,70 +97,7 @@ trap cleanup_exit EXIT
 cleanup
 
 (
-do_tests() {
-    echo "# get faction1 user data"
-    echo "# SELECT rpath(), type, faction1 user data"
-    run_sort "${GUFI_QUERY}" \
-             "-d '|'" \
-             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
-             "-S \"SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, ${FACTION1_VIEW}.external_data FROM vrsummary LEFT JOIN ${FACTION1_VIEW} ON (vrsummary.name == ${FACTION1_VIEW}.name) AND (vrsummary.type == ${FACTION1_VIEW}.type);\"" \
-             "-E \"SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, ${FACTION1_VIEW}.external_data FROM vrpentries LEFT JOIN ${FACTION1_VIEW} ON (vrpentries.name == ${FACTION1_VIEW}.name) AND (vrpentries.type == ${FACTION1_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
-
-    echo "# again, but with xattrs"
-    echo "# SELECT rpath(), type, xattr_name, xattr_value, faction1 user data"
-    run_sort "${GUFI_QUERY}" \
-             "-x" \
-             "-d '|'" \
-             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
-             "-S \"SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, ${FACTION1_VIEW}.external_data FROM vrxsummary LEFT JOIN ${FACTION1_VIEW} ON (vrxsummary.name == ${FACTION1_VIEW}.name) AND (vrxsummary.type == ${FACTION1_VIEW}.type);\"" \
-             "-E \"SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value, ${FACTION1_VIEW}.external_data FROM vrxpentries LEFT JOIN ${FACTION1_VIEW} ON (vrxpentries.name == ${FACTION1_VIEW}.name) AND (vrxpentries.type == ${FACTION1_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
-
-    echo "# get faction2 user data"
-    echo "# SELECT rpath(), type, faction2 user data"
-    run_sort "${GUFI_QUERY}" \
-             "-d '|'" \
-             "-I \"ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
-             "-S \"SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, ${FACTION2_VIEW}.external_data FROM vrsummary LEFT JOIN ${FACTION2_VIEW} ON (vrsummary.name == ${FACTION2_VIEW}.name) AND (vrsummary.type == ${FACTION2_VIEW}.type);\"" \
-             "-E \"SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, ${FACTION2_VIEW}.external_data FROM vrpentries LEFT JOIN ${FACTION2_VIEW} ON (vrpentries.name == ${FACTION2_VIEW}.name) AND (vrpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
-
-    echo "# again, but with xattrs"
-    echo "# SELECT rpath(), type, xattr_name, xattr_value, faction2 user data"
-    run_sort "${GUFI_QUERY}" \
-             "-x" \
-             "-d '|'" \
-             "-I \"ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
-             "-S \"SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, ${FACTION2_VIEW}.external_data FROM vrxsummary LEFT JOIN ${FACTION2_VIEW} ON (vrxsummary.name == ${FACTION2_VIEW}.name) AND (vrxsummary.type == ${FACTION2_VIEW}.type);\"" \
-             "-E \"SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value, ${FACTION2_VIEW}.external_data FROM vrxpentries LEFT JOIN ${FACTION2_VIEW} ON (vrxpentries.name == ${FACTION2_VIEW}.name) AND (vrxpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
-
-    echo "# get faction1 and faction2 user data at the same time"
-    echo "# SELECT rpath(), type, faction1 user data, faction2 user data"
-    run_sort "${GUFI_QUERY}" \
-             "-d '|'" \
-             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
-             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
-             "-S \"SELECT rpath(vrsummary.sname, vrsummary.sroll), vrsummary.type, ${FACTION1_VIEW}.external_data, ${FACTION2_VIEW}.external_data FROM vrsummary LEFT JOIN ${FACTION1_VIEW} ON (vrsummary.name == ${FACTION1_VIEW}.name) AND (vrsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (vrsummary.name == ${FACTION2_VIEW}.name) AND (vrsummary.type == ${FACTION2_VIEW}.type);\"" \
-             "-E \"SELECT rpath(vrpentries.sname, vrpentries.sroll) || '/' || vrpentries.name, vrpentries.type, ${FACTION1_VIEW}.external_data, ${FACTION2_VIEW}.external_data FROM vrpentries LEFT JOIN ${FACTION1_VIEW} ON (vrpentries.name == ${FACTION1_VIEW}.name) AND (vrpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (vrpentries.name == ${FACTION2_VIEW}.name) AND (vrpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
-
-    echo "# again, but with xattrs"
-    echo "# SELECT rpath(), type, xattr_name, xattr_value, faction1 user data, faction2 user data"
-    run_sort "${GUFI_QUERY}" \
-             "-x" \
-             "-d '|'" \
-             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\" -Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
-             "-S \"SELECT rpath(vrxsummary.sname, vrxsummary.sroll), vrxsummary.type, vrxsummary.xattr_name, vrxsummary.xattr_value, ${FACTION1_VIEW}.external_data, ${FACTION2_VIEW}.external_data FROM vrxsummary LEFT JOIN ${FACTION1_VIEW} ON (vrxsummary.name == ${FACTION1_VIEW}.name) AND (vrxsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (vrxsummary.name == ${FACTION2_VIEW}.name) AND (vrxsummary.type == ${FACTION2_VIEW}.type);\"" \
-             "-E \"SELECT rpath(vrxpentries.sname, vrxpentries.sroll) || '/' || vrxpentries.name, vrxpentries.type, vrxpentries.xattr_name, vrxpentries.xattr_value,${FACTION1_VIEW}.external_data, ${FACTION2_VIEW}.external_data FROM vrxpentries LEFT JOIN ${FACTION1_VIEW} ON (vrxpentries.name == ${FACTION1_VIEW}.name) and (vrxpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (vrxpentries.name == ${FACTION2_VIEW}.name) AND (vrxpentries.type == ${FACTION2_VIEW}.type);\"" \
-             "\"${INDEXROOT}\""
-}
-
+setup() {
 run_no_sort "${GENERATETREE} \"${SRCDIR}\""
 
 echo "# create in-source-tree user db files and fill in tables"
@@ -173,33 +110,33 @@ echo
 
 echo "#########################################"
 run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('${SRCDIR}', 'd', '17', 'faction1 root directory');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('old_file', 'f', '17', 'faction1 old file data');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('1MB', 'f', '17', 'faction1 1MB file');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('repeat_name', 'f', '17', 'faction1 repeat_name');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('${BASENAME}', 'd', 'faction1 root directory');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('old_file', 'f', 'faction1 old file data');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('1MB', 'f', 'faction1 1MB file');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('repeat_name', 'f', 'faction1 repeat_name');\""
 echo "#########################################"
 run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('directory', 'd', '7', 'faction1 directory');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('executable', 'f', '7', 'faction1 executable file');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('directory', 'd', 'faction1 directory');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('executable', 'f', 'faction1 executable file');\""
 echo "#########################################"
 run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"${FACTION1_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('no match', 'f', '', 'this should not show up in the index');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('leaf_file1', 'f', '13', 'faction1 leaf file 1');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('no match', 'f', 'this should not show up in the index');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/leaf_directory/${FACTION1_DB}\" \"INSERT INTO ${TABLE} VALUES ('leaf_file1', 'f', 'faction1 leaf file 1');\""
 echo "#########################################"
 echo
 echo "#########################################"
 run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('${SRCDIR}', 'd', '17', 'faction2 root directory');\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('1KB', 'f', '17', 'faction2 1KB file');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('${BASENAME}', 'd', 'faction2 root directory');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('1KB', 'f', 'faction2 1KB file');\""
 echo "#########################################"
 run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"${FACTION2_CREATE_TABLE}\""
-run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('subdirectory', 'd', '6', 'faction2 subdirectory');\""
+run_no_sort "${SQLITE3} \"${SRCDIR}/directory/subdirectory/${FACTION2_DB}\" \"INSERT INTO ${TABLE} VALUES ('subdirectory', 'd', 'faction2 subdirectory');\""
 echo "#########################################"
 echo
 
 run_sort "find \"${SRCDIR}\""
 
-run_no_sort "${GUFI_DIR2INDEX} -x -q \"${FACTION1_DB}\" \"faction1\" -q \"${FACTION2_DB}\" \"faction2\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
+run_no_sort "${GUFI_DIR2INDEX} -x -q \"${FACTION1_DB}\" -q \"${FACTION2_DB}\" \"${SRCDIR}\" \"${SEARCH}\"" | remove_indexing_time
 
 # fix timestamps
 "${SQLITE3}" "${INDEXROOT}/db.db"                        "UPDATE summary SET mtime = '17';"
@@ -209,9 +146,15 @@ run_no_sort "${GUFI_DIR2INDEX} -x -q \"${FACTION1_DB}\" \"faction1\" -q \"${FACT
 
 clean_index "${INDEXROOT}" 0
 
+# fix pinode in external_dbs
+run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"UPDATE external_dbs_pwd SET pinode = '17'\""
+run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"UPDATE external_dbs_pwd SET pinode = '7'\""
+run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"UPDATE external_dbs_pwd SET pinode = '6'\""
+run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"UPDATE external_dbs_pwd SET pinode = '13'\""
+
 # output from these point to the source tree, not the index
 # (output was mangled with test text cleanup)
-SELECT_EXTERNAL_DBS="SELECT filename, attachname FROM external_dbs;"
+SELECT_EXTERNAL_DBS="SELECT pinode, filename FROM external_dbs;"
 run_sort "${SQLITE3} \"${INDEXROOT}/db.db\"                        \"${SELECT_EXTERNAL_DBS}\""
 run_sort "${SQLITE3} \"${INDEXROOT}/directory/db.db\"              \"${SELECT_EXTERNAL_DBS}\""
 run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"${SELECT_EXTERNAL_DBS}\""
@@ -224,7 +167,73 @@ echo "# create empty template for providing default data"
 run_no_sort "${SQLITE3} \"${FACTION1_TEMPLATE_DB}\" \"${FACTION1_CREATE_TABLE}\""
 echo "# create empty template for providing default data"
 run_no_sort "${SQLITE3} \"${FACTION2_TEMPLATE_DB}\" \"${FACTION2_CREATE_TABLE}\""
+}
 
+do_tests() {
+    echo "# get faction1 user data"
+    echo "# SELECT rpath(), type, faction1 user data"
+    run_sort "${GUFI_QUERY}" \
+             "-d '|'" \
+             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}';\"" \
+             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
+             "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION1_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION1_VIEW} ON (evrsummary.name == ${FACTION1_VIEW}.name) AND (evrsummary.type == ${FACTION1_VIEW}.type);\"" \
+             "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION1_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION1_VIEW} ON (evrpentries.name == ${FACTION1_VIEW}.name) AND (evrpentries.type == ${FACTION1_VIEW}.type);\"" \
+             "\"${INDEXROOT}\""
+
+    echo "# again, but with xattrs"
+    echo "# SELECT rpath(), type, xattr_name, xattr_value, faction1 user data"
+    run_sort "${GUFI_QUERY}" \
+             "-x" \
+             "-d '|'" \
+             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}';\"" \
+             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\"" \
+             "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION1_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION1_VIEW} ON (evrxsummary.name == ${FACTION1_VIEW}.name) AND (evrxsummary.type == ${FACTION1_VIEW}.type);\"" \
+             "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value, ${FACTION1_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION1_VIEW} ON (evrxpentries.name == ${FACTION1_VIEW}.name) AND (evrxpentries.type == ${FACTION1_VIEW}.type);\"" \
+             "\"${INDEXROOT}\""
+
+    echo "# get faction2 user data"
+    echo "# SELECT rpath(), type, faction2 user data"
+    run_sort "${GUFI_QUERY}" \
+             "-d '|'" \
+             "-I \"ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
+             "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION2_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION2_VIEW} ON (evrsummary.name == ${FACTION2_VIEW}.name) AND (evrsummary.type == ${FACTION2_VIEW}.type);\"" \
+             "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION2_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION2_VIEW} ON (evrpentries.name == ${FACTION2_VIEW}.name) AND (evrpentries.type == ${FACTION2_VIEW}.type);\"" \
+             "\"${INDEXROOT}\""
+
+    echo "# again, but with xattrs"
+    echo "# SELECT rpath(), type, xattr_name, xattr_value, faction2 user data"
+    run_sort "${GUFI_QUERY}" \
+             "-x" \
+             "-d '|'" \
+             "-I \"ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
+             "-Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION2_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION2_VIEW} ON (evrxsummary.name == ${FACTION2_VIEW}.name) AND (evrxsummary.type == ${FACTION2_VIEW}.type);\"" \
+             "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value, ${FACTION2_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION2_VIEW} ON (evrxpentries.name == ${FACTION2_VIEW}.name) AND (evrxpentries.type == ${FACTION2_VIEW}.type);\"" \
+             "\"${INDEXROOT}\""
+
+    echo "# get faction1 and faction2 user data at the same time"
+    echo "# SELECT rpath(), type, faction1 user data, faction2 user data"
+    run_sort "${GUFI_QUERY}" \
+             "-d '|'" \
+             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\"" \
+             "-Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "-S \"SELECT rpath(evrsummary.sname, evrsummary.sroll), evrsummary.type, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrsummary LEFT JOIN ${FACTION1_VIEW} ON (evrsummary.name == ${FACTION1_VIEW}.name) AND (evrsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrsummary.name == ${FACTION2_VIEW}.name) AND (evrsummary.type == ${FACTION2_VIEW}.type);\"" \
+             "-E \"SELECT rpath(evrpentries.sname, evrpentries.sroll) || '/' || evrpentries.name, evrpentries.type, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrpentries LEFT JOIN ${FACTION1_VIEW} ON (evrpentries.name == ${FACTION1_VIEW}.name) AND (evrpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrpentries.name == ${FACTION2_VIEW}.name) AND (evrpentries.type == ${FACTION2_VIEW}.type);\"" \
+             "\"${INDEXROOT}\""
+
+    echo "# again, but with xattrs"
+    echo "# SELECT rpath(), type, xattr_name, xattr_value, faction1 user data, faction2 user data"
+    run_sort "${GUFI_QUERY}" \
+             "-x" \
+             "-d '|'" \
+             "-I \"ATTACH '${FACTION1_TEMPLATE_DB}' AS '${FACTION1_TEMPLATE_ATTACH}'; ATTACH '${FACTION2_TEMPLATE_DB}' AS '${FACTION2_TEMPLATE_ATTACH}';\" -Q \"${FACTION1_DB}\" \"${TABLE}\" \"${FACTION1_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION1_VIEW}\" -Q \"${FACTION2_DB}\" \"${TABLE}\" \"${FACTION2_TEMPLATE_ATTACH}.${TABLE}\" \"${FACTION2_VIEW}\"" \
+             "-S \"SELECT rpath(evrxsummary.sname, evrxsummary.sroll), evrxsummary.type, evrxsummary.xattr_name, evrxsummary.xattr_value, ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrxsummary LEFT JOIN ${FACTION1_VIEW} ON (evrxsummary.name == ${FACTION1_VIEW}.name) AND (evrxsummary.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrxsummary.name == ${FACTION2_VIEW}.name) AND (evrxsummary.type == ${FACTION2_VIEW}.type);\"" \
+             "-E \"SELECT rpath(evrxpentries.sname, evrxpentries.sroll) || '/' || evrxpentries.name, evrxpentries.type, evrxpentries.xattr_name, evrxpentries.xattr_value,  ${FACTION1_VIEW}.data, ${FACTION2_VIEW}.data FROM evrxpentries LEFT JOIN ${FACTION1_VIEW} ON (evrxpentries.name == ${FACTION1_VIEW}.name) AND (evrxpentries.type == ${FACTION1_VIEW}.type) LEFT JOIN ${FACTION2_VIEW} ON (evrxpentries.name == ${FACTION2_VIEW}.name) AND (evrxpentries.type == ${FACTION2_VIEW}.type);\"" \
+             "\"${INDEXROOT}\""
+}
+
+setup
 do_tests
 
 run_no_sort "${GUFI_ROLLUP} \"${INDEXROOT}\"" | sed '/Started/d; /Took /d;'

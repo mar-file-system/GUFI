@@ -181,8 +181,7 @@ void print_help(const char* prog_name,
       case 'M': printf("  -M <bytes>             target memory footprint"); break;
       case 'C': printf("  -C <count>             Number of subdirectories allowed to be enqueued for parallel processing. Any remainders will be processed in-situ"); break;
       case 'e': printf("  -e                     compress work items"); break;
-      case 'q': printf("  -q <basename>\n"
-                       "     <attachname>        Mapping of basename of file to keep track of during indexing to attachname at query time"); break;
+      case 'q': printf("  -q <basename>          Basename of file to keep track of during indexing"); break;
       case 'Q': printf("  -Q <basename>\n"
                        "     <table>\n"
                        "     <template>.<table>\n"
@@ -489,15 +488,8 @@ int parse_cmd_line(int         argc,
               refstr_t basename;
               INSTALL_STR(&basename, optarg);
 
-              optarg = argv[optind];
-              refstr_t *attach = malloc(sizeof(*attach));
-              INSTALL_STR(attach, optarg);
-
-              optarg = argv[++optind];
-
-              const int found = trie_search(in->map_external, basename.data, basename.len, NULL);
-              trie_insert(in->map_external, basename.data, basename.len, attach, free);
-              in->map_external_count += !found;
+              in->map_external_count += !trie_search(in->map_external, basename.data, basename.len, NULL);
+              trie_insert(in->map_external, basename.data, basename.len, NULL, NULL);
           }
           break;
 

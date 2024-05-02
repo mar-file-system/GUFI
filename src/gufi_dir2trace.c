@@ -110,9 +110,8 @@ static int track_external(struct input *in,
                           void *args) {
     FILE *file = (FILE *) args;
 
-    refstr_t *ext = NULL;
     if (!trie_search(in->map_external, child->name + child->name_len - child->basename_len,
-                     child->basename_len, (void **) &ext)) {
+                     child->basename_len, NULL)) {
         return 0;
     }
 
@@ -127,10 +126,10 @@ static int track_external(struct input *in,
     if (sqlite3_exec(extdb, "SELECT '' FROM sqlite_master;", NULL, NULL, &err) == SQLITE_OK) {
         char track_sql[MAXSQL];
         SNPRINTF(track_sql, sizeof(track_sql),
-                 "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s', '%s');",
-                 EXTERNAL_TYPE_USER_DB, child->name, ext->data);
+                 "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s');",
+                 EXTERNAL_TYPE_USER_DB, child->name);
 
-        if (externaltofile(file, in->delim, child->name, ext->data) < 3) {
+        if (externaltofile(file, in->delim, child->name) < 3) {
             fprintf(stderr, "Warning: Could not track requested external db: %s: %s\n",
                     child->name, err);
             rc = 0;

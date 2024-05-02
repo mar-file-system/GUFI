@@ -255,10 +255,11 @@ positional arguments:
 \end{table}
 
 Finally, in \texttt{-T}, \texttt{-S}, and \texttt{-E}, the caller
-should join the view created in \texttt{-Q} with GUFI data to pull
-what they are looking for. The recommended columns to join on are
-\texttt{name} and \texttt{type} to reduce the likelihood of joining
-to the wrong rows.
+should join the view named in \texttt{-Q} with new GUFI views
+\evrsummary, \evrxsummary, \evrpentries, \evrxpentries to pull what
+they are looking for. The recommended columns to join on are
+\texttt{name} and \texttt{type} to reduce the likelihood of joining to
+the wrong rows.
 \\\\
 Example Usage:
 \begin{table}[H]
@@ -266,9 +267,9 @@ Example Usage:
   \begin{tabular}{ll}
     \gufiquery & \texttt{-I "ATTACH template.db AS template;"} \\
                & \texttt{-Q "external.db" "table" "template.table" "ext"} \\
-               & \texttt{-E "SELECT * FROM pentries} \\
-               & \texttt{\ \ \ \ LEFT JOIN ext ON (pentries.name == ext.name)} \\
-               & \texttt{\ \ \ \ AND (pentries.type == ext.type);"} \\
+               & \texttt{-E "SELECT * FROM evrpentries} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext ON (evrpentries.name == ext.name)} \\
+               & \texttt{\ \ \ \ AND (evrpentries.type == ext.type);"} \\
                & \texttt{index\_root} \\
   \end{tabular}
 \end{table}
@@ -286,11 +287,11 @@ Multiple External Databases Example:
                & \texttt{\ \ \ \ ATTACH template2.db AS template2;"} \\
                & \texttt{-Q "externall.db" "table" "template1.table" "ext1"} \\
                & \texttt{-Q "external2.db" "table" "template2.table" "ext2"} \\
-               & \texttt{-E "SELECT * FROM pentries} \\
-               & \texttt{\ \ \ \ LEFT JOIN ext1 ON (pentries.name == ext1.name)} \\
-               & \texttt{\ \ \ \ AND (pentries.type == ext1.type)} \\
-               & \texttt{\ \ \ \ LEFT JOIN ext2 ON (pentries.name == ext2.name)} \\
-               & \texttt{\ \ \ \ AND (pentries.type == ext2.type);"} \\
+               & \texttt{-E "SELECT * FROM evrpentries} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext1 ON (evrpentries.name == ext1.name)} \\
+               & \texttt{\ \ \ \ AND (evrpentries.type == ext1.type)} \\
+               & \texttt{\ \ \ \ LEFT JOIN ext2 ON (evrpentries.name == ext2.name)} \\
+               & \texttt{\ \ \ \ AND (evrpentries.type == ext2.type);"} \\
                & \texttt{index\_root} \\
   \end{tabular}
 \end{table}

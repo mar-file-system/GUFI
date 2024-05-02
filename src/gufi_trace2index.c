@@ -217,7 +217,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* parse the directory data */
     timestamp_create_start(dir_linetowork);
-    linetowork(w->line, w->len, in->delim, &dir, &ed, NULL);
+    linetowork(w->line, w->len, in->delim, &dir, &ed);
     timestamp_set_end(dir_linetowork);
 
     /* create the directory */
@@ -283,21 +283,20 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_create_start(memset_row);
             struct work row;
             struct entry_data row_ed;
-            refstr_t attachname;
             timestamp_set_end(memset_row);
 
             timestamp_create_start(entry_linetowork);
-            linetowork(line, len, in->delim, &row, &row_ed, &attachname);
+            linetowork(line, len, in->delim, &row, &row_ed);
             timestamp_set_end(entry_linetowork);
 
             timestamp_create(external_db);
             timestamp_create(sumit);
             timestamp_create(insertdbgo);
 
-            if (attachname.data) {
+            if (row_ed.type == 'e') {
                 /* insert right here (instead of bulk inserting) since this is likely to be very rare */
                 timestamp_set_start(external_db);
-                external_insert(db, dir.name, row.name + row.name_len - row.basename_len, attachname.data);
+                external_insert(db, dir.name, dir.pinode, row.name + row.name_len - row.basename_len);
                 timestamp_set_end(external_db);
             }
             else {
@@ -312,7 +311,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                 /* add row to bulk insert */
                 timestamp_set_start(insertdbgo);
                 insertdbgo(&row, &row_ed, entries_res);
-                insertdbgo_xattrs(in, &ed.statuso, &row_ed,
+                insertdbgo_xattrs(in, &ed.statuso, &row, &row_ed,
                                   &xattr_db_list, &pa->xattr,
                                   topath, topath_len,
                                   xattrs_res, xattr_files_res);
@@ -351,7 +350,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             timestamp_print        (debug_buffers, id, "getline",          getline);
             timestamp_print        (debug_buffers, id, "memset_row",       memset_row);
             timestamp_print        (debug_buffers, id, "entry_linetowork", entry_linetowork);
-            if (attachname.data) {
+            if (row_ed.type == 'e') {
                 timestamp_print    (debug_buffers, id, "external_db",      external_db);
             }
             else {
@@ -363,7 +362,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             thread_getline          += timestamp_elapsed(getline);
             thread_memset_row       += timestamp_elapsed(memset_row);
             thread_entry_linetowork += timestamp_elapsed(entry_linetowork);
-            if (attachname.data) {
+            if (row_ed.type == 'e') {
                 thread_external_db  += timestamp_elapsed(external_db);
             }
             else {

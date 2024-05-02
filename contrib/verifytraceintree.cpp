@@ -189,8 +189,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         memcpy(buf, sa->line.c_str(), sa->line.size());
         struct work work;
         struct entry_data ed;
-        refstr_t attachname;
-        linetowork(buf, sa->line.size(), csa->delim, &work, &ed, &attachname);
+        linetowork(buf, sa->line.size(), csa->delim, &work, &ed);
         xattrs_cleanup(&ed.xattrs);
 
         // make sure the permissions are correct
@@ -271,8 +270,7 @@ static int check_stanza(QPTPool_t *, const size_t id, void *data, void *args) {
         memcpy(buf, line.c_str(), line.size());
         struct work work;
         struct entry_data ed;
-        refstr_t attachname;
-        linetowork(buf, line.size(), csa->delim, &work, &ed, &attachname);
+        linetowork(buf, line.size(), csa->delim, &work, &ed);
         xattrs_cleanup(&ed.xattrs);
 
         // extract the basename from the entry name

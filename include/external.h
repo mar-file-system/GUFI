@@ -104,9 +104,17 @@ extern const refstr_t EXTERNAL_TYPE_XATTR;               /* convenience struct *
 #define EXTERNAL_TYPE_USER_DB_LEN  (sizeof(EXTERNAL_TYPE_USER_DB_NAME) - 1)
 extern const refstr_t EXTERNAL_TYPE_USER_DB;             /* convenience struct */
 
+#define EXTERNAL_ATTACH_PREFIX "extdb"
+
 int create_external_tables(const char *name, sqlite3 *db, void *args);
 
-int external_insert(sqlite3 *db, const char *type, const char *filename, const char *attachname);
+size_t external_create_query(char *sql,         const size_t sql_size,
+                             const char *cols,  const size_t cols_len,
+                             const char *table, const size_t table_len,
+                             const refstr_t *type,
+                             const refstr_t *extra);
+
+int external_insert(sqlite3 *db, const char *type, const long long int pinode, const char *filename);
 
 /*
  * external_concatenate
@@ -173,6 +181,10 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
                                   , size_t *query_count
                                   #endif
     );
+
+size_t external_enumerate_attachname(char **dst, const size_t dst_size,
+                                     const char *src, const size_t src_len,
+                                     void *args);
 
 typedef struct external_user_setup {
     refstr_t basename;

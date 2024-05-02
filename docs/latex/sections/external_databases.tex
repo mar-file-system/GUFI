@@ -61,16 +61,14 @@
 
 
 \subsection{External Databases}
-In addition to extended attributes, user mays place SQLite3 database
-files into the source file system, indexed, and attached into GUFI for
-querying\footnote{An alternative method might be to allow for users to
-place simple text files into the index directly, and have \gufiquery
-process them instead of tracking the external database files at index
-time. This would remove the requirement that the administrator for the
-index knows what external database file names exist. However, this
-would also mean that users would have to update their sections of the
-index after every update.}. This effectively allows for users to
-associate and query aribitrary data with filesystem metadata.
+In addition to extended attributes, users may place SQLite3 database
+files into the source file system to be indexed and attached into GUFI
+for querying\footnote{An alternative method might be to allow for
+users to place simple text files of known names into the source
+filesystem for automatic indexing. This would remove the requirement
+that the administrator for the index knows what external database file
+names exist.}. This effectively allows for users to associate and
+query aribitrary data with filesystem metadata.
 
 The extended attribute code uses the more generic external database
 infrastructure to track the extended attributes that were not rolled

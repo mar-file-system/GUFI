@@ -505,7 +505,8 @@ int insertdbgo_xattrs_avail(struct entry_data *ed, sqlite3_stmt *res)
     return error;
 }
 
-int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
+int insertdbgo_xattrs(struct input *in, struct stat *dir,
+                      struct work *work, struct entry_data *ed,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res) {
@@ -545,6 +546,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
             xattr_uid_db = create_xattr_db(xattr_template,
                                            topath, topath_len,
                                            in,
+                                           work->pinode,
                                            ed->statuso.st_uid,
                                            in->nobody.gid,
                                            ed->statuso.st_mode,
@@ -560,6 +562,7 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir, struct entry_data *ed,
             xattr_gid_db = create_xattr_db(xattr_template,
                                            topath, topath_len,
                                            in,
+                                           work->pinode,
                                            in->nobody.uid,
                                            ed->statuso.st_gid,
                                            ed->statuso.st_mode,
@@ -1304,6 +1307,7 @@ int addqueryfuncs_with_context(sqlite3 *db, struct work *work) {
 struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  const char *path, const size_t path_len,
                                  struct input *in,
+                                 long long int pinode,
                                  uid_t uid, gid_t gid, mode_t mode,
                                  sqlite3_stmt *file_list) {
     /* /\* make sure only one of uid or gid is set *\/ */
@@ -1340,6 +1344,8 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
             xattr_db_mode = 0000;
         }
     }
+
+    xdb->pinode = pinode;
 
     /* store full path here */
     char filename[MAXPATH];
@@ -1385,11 +1391,12 @@ void destroy_xattr_db(void *ptr) {
 
     /* add this xattr db to the list of dbs to open when creating view */
     sqlite3_bind_text( xdb->file_list, 1, EXTERNAL_TYPE_XATTR.data, EXTERNAL_TYPE_XATTR.len, SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 2, xdb->filename, xdb->filename_len,                  SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 3, xdb->attach, xdb->attach_len,                      SQLITE_STATIC);
-    sqlite3_bind_int64(xdb->file_list, 4, xdb->st.st_mode);
-    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_uid);
-    sqlite3_bind_int64(xdb->file_list, 6, xdb->st.st_gid);
+    sqlite3_bind_int64(xdb->file_list, 2, xdb->pinode);
+    sqlite3_bind_text( xdb->file_list, 3, xdb->filename, xdb->filename_len,                  SQLITE_STATIC);
+    sqlite3_bind_text( xdb->file_list, 4, xdb->attach, xdb->attach_len,                      SQLITE_STATIC);
+    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_mode);
+    sqlite3_bind_int64(xdb->file_list, 6, xdb->st.st_uid);
+    sqlite3_bind_int64(xdb->file_list, 7, xdb->st.st_gid);
 
     sqlite3_step(xdb->file_list);
     sqlite3_reset(xdb->file_list);

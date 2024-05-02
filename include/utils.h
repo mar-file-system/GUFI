@@ -73,7 +73,6 @@ OF SUCH DAMAGE.
 #include "bf.h"
 #include "config.h"
 #include "trie.h"
-#include "xattrs.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -68,22 +68,22 @@ OF SUCH DAMAGE.
 #include "utils.h"
 
 /*
- * mode, uid, and gid are not strictly necessary but can be useful
+ * attachname, mode, uid, and gid are not strictly necessary but can be useful
  */
 
 const char EXTERNAL_DBS_PWD_CREATE[] =
     "DROP TABLE IF EXISTS " EXTERNAL_DBS_PWD ";"
-    "CREATE TABLE " EXTERNAL_DBS_PWD "(type TEXT, filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, filename, attachname));";
+    "CREATE TABLE " EXTERNAL_DBS_PWD "(type TEXT, pinode TEXT, filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, pinode, filename));";
 
 const char EXTERNAL_DBS_PWD_INSERT[] =
-    "INSERT INTO " EXTERNAL_DBS_PWD " VALUES (@type, @filename, @attachname, @mode, @uid, @gid);";
+    "INSERT INTO " EXTERNAL_DBS_PWD " VALUES (@type, @pinode, @filename, @attachname, @mode, @uid, @gid);";
 
 const char EXTERNAL_DBS_ROLLUP_CREATE[] =
     "DROP TABLE IF EXISTS " EXTERNAL_DBS_ROLLUP ";"
-    "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(type TEXT, filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, filename, attachname));";
+    "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(type TEXT, pinode TEXT, filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, filename));";
 
 const char EXTERNAL_DBS_ROLLUP_INSERT[] =
-    "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, @filename, @attachname, @mode, @uid, @gid);";
+    "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, pinode, @filename, @attachname, @mode, @uid, @gid);";
 
 const refstr_t EXTERNAL_TYPE_XATTR = {
     .data = EXTERNAL_TYPE_XATTR_NAME,
@@ -108,11 +108,11 @@ int create_external_tables(const char *name, sqlite3 *db, void *args) {
 }
 
 /* SELECT <cols> FROM <table> [WHERE (type == '<type>') AND [extra]]; */
-static size_t create_external_query(char *sql,         const size_t sql_size,
-                                    const char *cols,  const size_t cols_len,
-                                    const char *table, const size_t table_len,
-                                    const refstr_t *type,
-                                    const refstr_t *extra) {
+size_t external_create_query(char *sql,         const size_t sql_size,
+                             const char *cols,  const size_t cols_len,
+                             const char *table, const size_t table_len,
+                             const refstr_t *type,
+                             const refstr_t *extra) {
     size_t len = SNFORMAT_S(sql, sql_size, 4,
                             "SELECT ", (size_t) 7,
                             cols, cols_len,
@@ -147,13 +147,13 @@ static size_t create_external_query(char *sql,         const size_t sql_size,
     return len;
 }
 
-int external_insert(sqlite3 *db, const char *type, const char *filename, const char *attachname) {
+int external_insert(sqlite3 *db, const char *type, const long long int pinode, const char *filename) {
     char sql[MAXSQL];
     SNPRINTF(sql, sizeof(sql),
-             "INSERT INTO " EXTERNAL_DBS_PWD " (type, filename, attachname) "
+             "INSERT INTO " EXTERNAL_DBS_PWD " (type, pinode, filename) "
              "VALUES "
-             "('%s', '%s', '%s');",
-             type, filename, attachname);
+             "('%s', '%lld', '%s');",
+             type, pinode, filename);
 
     char *err = NULL;
     if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
@@ -198,7 +198,7 @@ int external_concatenate(sqlite3 *db,
 
     /* find external databases of given type */
     char get_mappings[MAXSQL];
-    const size_t get_mappings_len = create_external_query(get_mappings, sizeof(get_mappings),
+    const size_t get_mappings_len = external_create_query(get_mappings, sizeof(get_mappings),
                                                           "filename, attachname", 20,
                                                           EXTERNAL_DBS, EXTERNAL_DBS_LEN,
                                                           type,
@@ -229,7 +229,7 @@ int external_concatenate(sqlite3 *db,
         }
 
         char *attachname = (char *) src_attachname;
-        size_t attachname_len = strlen(src_attachname);
+        size_t attachname_len = attachname?strlen(attachname):0;
         char dst_attachname[MAXSQL];
         if (modify_attachname) {
             attachname = dst_attachname;
@@ -331,7 +331,7 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
     }
 
     char get_attachnames[MAXSQL];
-    create_external_query(get_attachnames, sizeof(get_attachnames),
+    external_create_query(get_attachnames, sizeof(get_attachnames),
                           "attachname", 10,
                           EXTERNAL_DBS, EXTERNAL_DBS_LEN,
                           type,
@@ -349,103 +349,13 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
     #endif
 }
 
-static size_t enumerate_attachname(char **dst, const size_t dst_size,
-                                   const char *src, const size_t src_len,
-                                   void *args) {
+size_t external_enumerate_attachname(char **dst, const size_t dst_size,
+                                     const char *src, const size_t src_len,
+                                     void *args) {
+    (void) src;
     (void) src_len;
 
     size_t *rec_count = (size_t *) args;
 
-    return SNPRINTF(*dst, dst_size, "%s.%zu", src, (*rec_count)++);
-}
-
-int external_with_template(sqlite3 *db,
-                           const refstr_t *type,
-                           sll_t *eus
-                           #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                           , size_t *query_count
-                           #endif
-    ) {
-    /* Not checking arguments */
-
-    int external_count = 0;
-
-    /* for each basename match, attach all databases */
-    sll_loop(eus, node) {
-        eus_t *user = (eus_t *) sll_node_data(node);
-
-        char basename_comp[MAXSQL];
-        const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 3,
-                                                    "basename(filename) == '", (size_t) 23,
-                                                    user->basename.data, user->basename.len,
-                                                    "'", (size_t) 1);
-        const refstr_t basename_comp_ref = {
-            .data = basename_comp,
-            .len  = basename_comp_len,
-        };
-
-        static const refstr_t select = {
-            .data = " SELECT * FROM ",
-            .len  = 15,
-        };
-
-        size_t rec_count = 0; /* reset for each match */
-        external_concatenate(db,
-                             type,
-                             &basename_comp_ref,
-                             &user->view,
-                             &select,
-                             &user->table,
-                             &user->template_table,
-                             NULL, NULL,
-                             enumerate_attachname, &rec_count
-                             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                             , query_count
-                             #endif
-            );
-        external_count += rec_count;
-    }
-
-    return external_count;
-}
-
-int external_with_template_cleanup(sqlite3 *db,
-                                   const refstr_t *type,
-                                   sll_t *eus
-                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                   , size_t *query_count
-                                   #endif
-    ) {
-    sll_loop(eus, node) {
-        eus_t *user = (eus_t *) sll_node_data(node);
-
-        char drop_view[MAXSQL];
-        SNFORMAT_S(drop_view, sizeof(drop_view), 3,
-                   "DROP VIEW ", (size_t) 10,
-                   user->view.data, user->view.len,
-                   ";", (size_t) 1);
-
-        char basename_comp[MAXSQL];
-        const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 3,
-                                                    "basename(filename) == '", (size_t) 23,
-                                                    user->basename.data, user->basename.len,
-                                                    "'", (size_t) 1);
-
-        const refstr_t basename_comp_ref = {
-            .data = basename_comp,
-            .len = basename_comp_len,
-        };
-
-        size_t rec_count = 0;
-        external_concatenate_cleanup(db, drop_view,
-                                     type,
-                                     &basename_comp_ref,
-                                     enumerate_attachname, &rec_count
-                                     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                     , query_count
-                                     #endif
-            );
-    }
-
-    return 0;
+    return SNPRINTF(*dst, dst_size, EXTERNAL_ATTACH_PREFIX "%zu", (*rec_count)++);
 }
