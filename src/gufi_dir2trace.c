@@ -127,7 +127,7 @@ static int track_external(struct input *in,
         char track_sql[MAXSQL];
         SNPRINTF(track_sql, sizeof(track_sql),
                  "INSERT INTO " EXTERNAL_DBS_PWD " VALUES ('%s', '%s');",
-                 EXTERNAL_TYPE_USER_DB, child->name);
+                 EXTERNAL_TYPE_USER_DB.data, child->name);
 
         if (externaltofile(file, in->delim, child->name) < 3) {
             fprintf(stderr, "Warning: Could not track requested external db: %s: %s\n",
