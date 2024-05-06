@@ -108,17 +108,12 @@ set(EXAMPLES
 set(OTHERS
   bash_completion
   deploy
+  external_databases
   longitudinal_snapshot
   parallel_rmr
   split_trace
   treediff
 )
-
-if (NOT CYGWIN)
-  list(APPEND OTHERS
-    external_databases
-  )
-endif()
 
 if (ZLIB_FOUND)
   list(APPEND OTHERS
