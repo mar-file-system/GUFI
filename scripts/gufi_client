@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env @PYTHON_INTERPRETER@
 # This file is part of GUFI, which is part of MarFS, which is released
 # under the BSD license.
 #
@@ -61,17 +61,40 @@
 
 
 
-GUFI_CONFIG="@CONFIG_FILE@"
-GUFI_HOST=$(grep "Server=" "${GUFI_CONFIG}" | tail -n 1 | awk -F= '{print $2}')
-GUFI_PORT=$(grep "Port="   "${GUFI_CONFIG}" | tail -n 1 | awk -F= '{print $2}')
+import subprocess
+import sys
 
-# shellcheck disable=SC2029
-ssh "${GUFI_HOST}"                     \
-    -p "${GUFI_PORT}"                  \
-    -o BatchMode=yes                   \
-    -o GSSAPIAuthentication=no         \
-    -o HostbasedAuthentication=yes     \
-    -o KbdInteractiveAuthentication=no \
-    -o PasswordAuthentication=no       \
-    -o PubkeyAuthentication=no         \
-    "@USER_TOOL@" "$@"
+if (sys.version_info.major < 3) or ((sys.version_info.major == 3) and sys.version_info.minor < 3):
+    from pipes import quote as sanitize
+else:
+    from shlex import quote as sanitize # new in Python 3.3
+
+import gufi_config # pylint: disable=wrong-import-position
+
+def run(args):
+    '''
+    Send all arguments to gufi_@TOOL@ on the server side
+    '''
+
+    config = gufi_config.Client(gufi_config.PATH)
+
+    # build the ssh command
+    cmd = [
+        'ssh',
+        config.server,
+        '-p', str(config.port),
+        '--',
+        'gufi_@TOOL@',
+    ] + args
+
+    # sanitize the command
+    sanitized = [sanitize(arg) for arg in cmd]
+
+    # run the command
+    query = subprocess.Popen(sanitized) # pylint: disable=consider-using-with
+    query.communicate()                 # block until query finishes
+
+    return query.returncode
+
+if __name__  == '__main__':
+    sys.exit(run(sys.argv[1:]))
