@@ -91,6 +91,9 @@ echo "# Start with no treesummary tables"
 query
 echo
 
+echo "# Insert an external database"
+run_no_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"INSERT INTO external_dbs_rollup (type, pinode, filename) VALUES ('test', '\${inode}', 'test path')\""
+
 echo "# Dry Run (7 xattrs because directory xattrs are not counted in treesummary)"
 remove_extra "${GUFI_TREESUMMARY} -X -d \" \" \"${INDEXROOT}\""
 echo

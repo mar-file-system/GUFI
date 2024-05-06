@@ -119,6 +119,7 @@ int zeroit(struct sum *summary)
   summary->minossint4=LLONG_MAX;
   summary->maxossint4=LLONG_MIN;
   summary->totossint4=0;
+  summary->totextdbs=0;
   return 0;
 }
 
@@ -239,6 +240,8 @@ int tsumit(struct sum *sumin, struct sum *smout) {
   smout->totossint2 += sumin->totossint2;
   smout->totossint3 += sumin->totossint3;
   smout->totossint4 += sumin->totossint4;
+
+  smout->totextdbs  += sumin->totextdbs;
 
   return 0;
 }

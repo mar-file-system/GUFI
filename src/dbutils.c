@@ -291,9 +291,9 @@ sqlite3 *opendb(const char *name, int flags, const int setpragmas, const int loa
 
 int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
     static const char *ts_str[] = {
-        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4 "
+        "SELECT totfiles, totlinks, minuid, maxuid, mingid, maxgid, minsize, maxsize, totzero, totltk, totmtk, totltm, totmtm, totmtg, totmtt, totsize, minctime, maxctime, minmtime, maxmtime, minatime, maxatime, minblocks, maxblocks, totxattr, mincrtime, maxcrtime, minossint1, maxossint1, totossint1, minossint2, maxossint2, totossint2, minossint3, maxossint3, totossint3, minossint4, maxossint4, totossint4, (SELECT COUNT(*) FROM " EXTERNAL_DBS ") "
         "FROM " SUMMARY " WHERE rectype == 0;",
-        "SELECT t.totfiles, t.totlinks, t.minuid, t.maxuid, t.mingid, t.maxgid, t.minsize, t.maxsize, t.totzero, t.totltk, t.totmtk, t.totltm, t.totmtm, t.totmtg, t.totmtt, t.totsize, t.minctime, t.maxctime, t.minmtime, t.maxmtime, t.minatime, t.maxatime, t.minblocks, t.maxblocks, t.totxattr, t.mincrtime, t.maxcrtime, t.minossint1, t.maxossint1, t.totossint1, t.minossint2, t.maxossint2, t.totossint2, t.minossint3, t.maxossint3, t.totossint3, t.minossint4, t.maxossint4, t.totossint4, t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.maxsubdirsize "
+        "SELECT t.totfiles, t.totlinks, t.minuid, t.maxuid, t.mingid, t.maxgid, t.minsize, t.maxsize, t.totzero, t.totltk, t.totmtk, t.totltm, t.totmtm, t.totmtg, t.totmtt, t.totsize, t.minctime, t.maxctime, t.minmtime, t.maxmtime, t.minatime, t.maxatime, t.minblocks, t.maxblocks, t.totxattr, t.mincrtime, t.maxcrtime, t.minossint1, t.maxossint1, t.totossint1, t.minossint2, t.maxossint2, t.totossint2, t.minossint3, t.maxossint3, t.totossint3, t.minossint4, t.maxossint4, t.totossint4, t.totextdbs, t.totsubdirs, t.maxsubdirfiles, t.maxsubdirlinks, t.maxsubdirsize "
         "FROM " TREESUMMARY " AS t, " SUMMARY " AS s WHERE (s.isroot == 1) AND (s.inode == t.inode) AND (t.rectype == 0);",
     };
 
@@ -351,11 +351,13 @@ int querytsdb(const char *name, struct sum *sum, sqlite3 *db, int ts) {
         curr.maxossint4 = sqlite3_column_int64(res, 37);
         curr.totossint4 = sqlite3_column_int64(res, 38);
 
+        curr.totextdbs  = sqlite3_column_int64(res, 39);
+
         if (ts) {
-            curr.totsubdirs     = sqlite3_column_int64(res, 39);
-            curr.maxsubdirfiles = sqlite3_column_int64(res, 40);
-            curr.maxsubdirlinks = sqlite3_column_int64(res, 41);
-            curr.maxsubdirsize  = sqlite3_column_int64(res, 42);
+            curr.totsubdirs     = sqlite3_column_int64(res, 40);
+            curr.maxsubdirfiles = sqlite3_column_int64(res, 41);
+            curr.maxsubdirlinks = sqlite3_column_int64(res, 42);
+            curr.maxsubdirsize  = sqlite3_column_int64(res, 43);
         }
         else {
             curr.totsubdirs     = 0;
@@ -723,8 +725,8 @@ int inserttreesumdb(const char *name, sqlite3 *sdb, struct sum *su,int rectype,i
     }
 
     char sqlstmt[MAXSQL];
-    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%s, %s, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
-             inode, pinode, su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, rectype, uid, gid);
+    SNPRINTF(sqlstmt, MAXSQL, "INSERT INTO " TREESUMMARY " VALUES (%s, %s, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %lld, %d, %d, %d);",
+             inode, pinode, su->totsubdirs, su->maxsubdirfiles, su->maxsubdirlinks, su->maxsubdirsize, su->totfiles, su->totlinks, su->minuid, su->maxuid, su->mingid, su->maxgid, su->minsize, su->maxsize, su->totzero, su->totltk, su->totmtk, su->totltm, su->totmtm, su->totmtg, su->totmtt, su->totsize, su->minctime, su->maxctime, su->minmtime, su->maxmtime, su->minatime, su->maxatime, su->minblocks, su->maxblocks, su->totxattr, depth, su->mincrtime, su->maxcrtime, su->minossint1, su->maxossint1, su->totossint1, su->minossint2, su->maxossint2, su->totossint2, su->minossint3, su->maxossint3, su->totossint3, su->minossint4, su->maxossint4, su->totossint4, su->totextdbs, rectype, uid, gid);
 
     free(pinode);
     free(inode);
@@ -1516,7 +1518,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
          * -1 because a directory is not a subdirectory of itself
          */
         static const char TREESUMMARY_ROLLUP_COMPUTE_INSERT[] =
-            "INSERT INTO " TREESUMMARY " SELECT (SELECT inode FROM " SUMMARY " WHERE isroot == 1), (SELECT pinode FROM " SUMMARY " WHERE isroot == 1), COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totzero), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), rectype, uid, gid FROM " SUMMARY ";";
+            "INSERT INTO " TREESUMMARY " SELECT (SELECT inode FROM " SUMMARY " WHERE isroot == 1), (SELECT pinode FROM " SUMMARY " WHERE isroot == 1), COUNT(*) - 1, MAX(totfiles), MAX(totlinks), MAX(size), TOTAL(totfiles), TOTAL(totlinks), MIN(minuid), MAX(maxuid), MIN(mingid), MAX(maxgid), MIN(minsize), MAX(maxsize), TOTAL(totzero), TOTAL(totltk), TOTAL(totmtk), TOTAL(totltm), TOTAL(totmtm), TOTAL(totmtg), TOTAL(totmtt), TOTAL(totsize), MIN(minctime), MAX(maxctime), MIN(minmtime), MAX(maxmtime), MIN(minatime), MAX(maxatime), MIN(minblocks), MAX(maxblocks), TOTAL(totxattr), TOTAL(depth), MIN(mincrtime), MAX(maxcrtime), MIN(minossint1), MAX(maxossint1), TOTAL(totossint1), MIN(minossint2), MAX(maxossint2), TOTAL(totossint2), MIN(minossint3), MAX(maxossint3), TOTAL(totossint3), MIN(minossint4), MAX(maxossint4), TOTAL(totossint4), (SELECT COUNT(*) FROM " EXTERNAL_DBS "), rectype, uid, gid FROM " SUMMARY ";";
 
         char *err = NULL;
         if (sqlite3_exec(db, TREESUMMARY_ROLLUP_COMPUTE_INSERT, NULL, NULL, &err) != SQLITE_OK) {

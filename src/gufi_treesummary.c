@@ -292,6 +292,8 @@ static int compute_treesummary(struct PoolArgs *pa) {
            sumout.minossint4, sumout.maxossint4, sumout.totossint4);
     printf("totsubdirs %lld maxsubdirfiles %lld maxsubdirlinks %lld maxsubdirsize %lld\n",
            sumout.totsubdirs, sumout.maxsubdirfiles, sumout.maxsubdirlinks, sumout.maxsubdirsize);
+    printf("totextdbs %lld\n",
+           sumout.totextdbs);
 
     return 0;
 }

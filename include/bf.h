@@ -128,6 +128,7 @@ struct sum {
   long long int minossint4;
   long long int maxossint4;
   long long int totossint4;
+  long long int totextdbs; /* only tracked in treesummary, not summary */
 };
 
 typedef enum AndOr {

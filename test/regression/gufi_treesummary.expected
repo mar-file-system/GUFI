@@ -15,6 +15,9 @@ GUFI_index               path to GUFI index
 # Start with no treesummary tables
 $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
 
+# Insert an external database
+$ sqlite3 "prefix/directory/subdirectory/db.db" "INSERT INTO external_dbs_rollup (type, pinode, filename) VALUES ('test', '${inode}', 'test path')"
+
 # Dry Run (7 xattrs because directory xattrs are not counted in treesummary)
 $ gufi_treesummary -X -d " " "prefix"
 WARNING: Not [re]generating tree-summary table with '-X'
@@ -23,6 +26,7 @@ totfiles 12 totlinks 2
 totsize 1049673
 totzero 1 totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
+totextdbs 1
 
 # Traversed paths (5)
 $ gufi_treesummary -P -X -d "|" "prefix"
@@ -44,6 +48,7 @@ totfiles 4 totlinks 1
 totsize 11
 totzero 0 totltk 4 totmtk 0 totltm 4 totmtm 0 totmtg 0 totmtt 0
 totxattr 0
+totextdbs 1
 
 # One treesummary table
 $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
@@ -56,6 +61,7 @@ totfiles 2 totlinks 0
 totsize 23
 totzero 0 totltk 2 totmtk 0 totltm 2 totmtm 0 totmtg 0 totmtt 0
 totxattr 6
+totextdbs 0
 
 # Two treesummary tables
 $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
@@ -78,6 +84,7 @@ totfiles 12 totlinks 2
 totsize 1049673
 totzero 1 totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
+totextdbs 1
 
 # Three treesummary tables
 $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
@@ -95,6 +102,7 @@ totfiles 111 totlinks 2
 totsize 1049673
 totzero 1 totltk 11 totmtk 1 totltm 12 totmtm 0 totmtg 0 totmtt 0
 totxattr 7
+totextdbs 1
 
 # Still three treesummary tables
 $ gufi_query -d " " -S "SELECT '' FROM tree.sqlite_master WHERE (type == 'table') AND (name == 'treesummary');" -E "SELECT rpath(sname, sroll) FROM vrsummary WHERE isroot == 1;" "prefix"
@@ -128,4 +136,5 @@ totfiles 0 totlinks 0
 totsize 0
 totzero 0 totltk 0 totmtk 0 totltm 0 totmtm 0 totmtg 0 totmtt 0
 totxattr 0
+totextdbs 0
 
