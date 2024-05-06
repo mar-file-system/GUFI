@@ -93,16 +93,6 @@ static size_t xattr_modify_filename(char **dst, const size_t dst_size,
                       src, src_len);
 }
 
-static int count_rows(void *args, int count, char **data, char **columns) {
-    (void) count;
-    (void) data;
-    (void) columns;
-
-    PrintArgs_t *print = (PrintArgs_t *) args;
-    print->rows++;
-    return 0;
-}
-
 /* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(QPTPool_t *ctx,
                        const size_t id,
@@ -263,6 +253,14 @@ static void subdirs(sqlite3_context *context, int argc, sqlite3_value **argv) {
     }
 }
 
+/*
+ * process -S and -E
+ *
+ * AND mode (default):
+ *     if -S returns at least 1 row, run -E
+ * OR  mode:
+ *     whether or not -S returns anything, run -E
+ */
 int process_queries(PoolArgs_t *pa,
                     QPTPool_t *ctx, const int id,
                     DIR *dir,
@@ -279,161 +277,122 @@ int process_queries(PoolArgs_t *pa,
     ThreadArgs_t *ta = &(pa->ta[id]);
     #endif
 
+    if (descend) {
+        /* get the rollup score
+         * ignore errors - if the db wasn't opened, or if
+         * summary is missing the columns, keep descending
+         */
+        thread_timestamp_start(ts->tts, get_rollupscore_call);
+        int rollupscore = 0;
+        if (db) {
+            get_rollupscore(db, &rollupscore);
+            increment_query_count(ta);
+        }
+        thread_timestamp_end(get_rollupscore_call);
+
+        /* push subdirectories into the queue */
+        if (rollupscore == 0) {
+            thread_timestamp_start(ts->tts, descend_call);
+            *subdirs_walked_count =
+                descend2(ctx, id, gqw, dir, in->skip, processdir, in->max_level, in->compress
+                         #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                         , ts->dts
+                         #endif
+                    );
+            thread_timestamp_end(descend_call);
+        }
+    }
+
+    if (!db) {
+        return 1;
+    }
+
+    /* xattrs */
+    if (in->process_xattrs) {
+        static const refstr_t XATTRS_REF = {
+            .data = XATTRS,
+            .len  = sizeof(XATTRS) - 1,
+        };
+
+        #define XATTRS_COLS " SELECT inode, name, value FROM "
+        static const refstr_t XATTRS_COLS_REF = {
+            .data = XATTRS_COLS,
+            .len  = sizeof(XATTRS_COLS) - 1,
+        };
+
+        static const refstr_t XATTRS_AVAIL_REF = {
+            .data = XATTRS_AVAIL,
+            .len  = sizeof(XATTRS_AVAIL) - 1,
+        };
+
+        thread_timestamp_start(ts->tts, xattrprep_call);
+        external_concatenate(db,
+                             &EXTERNAL_TYPE_XATTR,
+                             NULL,
+                             &XATTRS_REF,
+                             &XATTRS_COLS_REF,
+                             &XATTRS_AVAIL_REF,
+                             &XATTRS_AVAIL_REF,
+                             xattr_modify_filename, &gqw->work,
+                             NULL, NULL
+                             query_count_arg);
+        xattr_create_views(db query_count_arg);
+        thread_timestamp_end(xattrprep_call);
+    }
+
     int recs = 1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                   /* if it fails then this will be set to 1 and will go on */
 
+    /* only query this level if the min_level has been reached */
     if (gqw->work.level >= in->min_level) {
-        /* set up external databases for use with -T, -S, and -E */
-        if (db) {
-            /* xattrs */
-            if (in->process_xattrs) {
-                static const refstr_t XATTRS_REF = {
-                    .data = XATTRS,
-                    .len  = sizeof(XATTRS) - 1,
-                };
+        if (sqlite3_create_function(db, "subdirs", 2, SQLITE_UTF8,
+                                    subdirs_walked_count, &subdirs,
+                                    NULL, NULL) != SQLITE_OK) {
+            fprintf(stderr, "Warning: Could not create subdirs_walked function: %s (%d)\n",
+                    sqlite3_errmsg(db), sqlite3_errcode(db));
+        }
 
-                #define XATTRS_COLS " SELECT inode, name, value FROM "
-                static const refstr_t XATTRS_COLS_REF = {
-                    .data = XATTRS_COLS,
-                    .len  = sizeof(XATTRS_COLS) - 1,
-                };
+        char shortname[MAXPATH];
+        char endname[MAXPATH];
 
-                static const refstr_t XATTRS_AVAIL_REF = {
-                    .data = XATTRS_AVAIL,
-                    .len  = sizeof(XATTRS_AVAIL) - 1,
-                };
+        /* run query on summary, print it if printing is needed, if returns none */
+        /* and we are doing AND, skip querying the entries db */
+        shortpath(gqw->work.name, shortname, endname);
 
-                thread_timestamp_start(ts->tts, xattrprep_call);
-                external_concatenate(db,
+        if (in->sql.sum.len) {
+            recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
+            /* put in the path relative to the user's input */
+            thread_timestamp_start(ts->tts, sqlsum);
+            querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
+            thread_timestamp_end(sqlsum);
+            increment_query_count(ta);
+        } else {
+            recs = 1;
+        }
+        if (in->andor == OR) {
+            recs = 1;
+        }
+        /* if we have recs (or are running an OR) query the entries table */
+        if (recs > 0) {
+            if (in->sql.ent.len) {
+                thread_timestamp_start(ts->tts, sqlent);
+                querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
+                thread_timestamp_end(sqlent);
+                increment_query_count(ta);
+            }
+        }
+    }
+
+    /* detach xattr dbs */
+    thread_timestamp_start(ts->tts, xattrdone_call);
+    if (in->process_xattrs) {
+        external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
                                      &EXTERNAL_TYPE_XATTR,
                                      NULL,
-                                     &XATTRS_REF,
-                                     &XATTRS_COLS_REF,
-                                     &XATTRS_AVAIL_REF,
-                                     &XATTRS_AVAIL_REF,
-                                     xattr_modify_filename, &gqw->work,
                                      NULL, NULL
                                      query_count_arg);
-                xattr_create_views(db query_count_arg);
-                thread_timestamp_end(xattrprep_call);
-            }
-        }
-
-        if (db && in->sql.tsum.len) {
-            /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
-            /* if this is OR, as well as no-sql-to-run, skip this query */
-            if (in->andor == AND) {
-                /* make sure the treesummary table exists */
-                thread_timestamp_start(ts->tts, sqltsumcheck);
-                querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
-                        "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
-                        pa, id, count_rows, &recs);
-                thread_timestamp_end(sqltsumcheck);
-                increment_query_count(ta);
-                if (recs < 1) {
-                    recs = -1;
-                }
-                else {
-                    /* run in->sql.tsum */
-                    thread_timestamp_start(ts->tts, sqltsum);
-                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
-                    thread_timestamp_end(sqltsum);
-                    increment_query_count(ta);
-                }
-            }
-            /* this is an OR or we got a record back. go on to summary/entries */
-            /* queries, if not done with this dir and all dirs below it */
-            /* this means that no tree table exists so assume we have to go on */
-            if (recs < 0) {
-                recs=1;
-            }
-        }
     }
-    /* so we have to go on and query summary and entries possibly */
-    if (recs > 0) {
-        if (descend) {
-            /* get the rollup score
-             * ignore errors - if the db wasn't opened, or if
-             * summary is missing the columns, keep descending
-             */
-            thread_timestamp_start(ts->tts, get_rollupscore_call);
-            int rollupscore = 0;
-            if (db) {
-                get_rollupscore(db, &rollupscore);
-                increment_query_count(ta);
-            }
-            thread_timestamp_end(get_rollupscore_call);
-
-            /* push subdirectories into the queue */
-            if (rollupscore == 0) {
-                thread_timestamp_start(ts->tts, descend_call);
-                *subdirs_walked_count =
-                    descend2(ctx, id, gqw, dir, in->skip, processdir, in->max_level, in->compress
-                             #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                             , ts->dts
-                             #endif
-                        );
-                thread_timestamp_end(descend_call);
-            }
-        }
-
-        if (db) {
-            /* only query this level if the min_level has been reached */
-            if (gqw->work.level >= in->min_level) {
-                if (sqlite3_create_function(db, "subdirs", 2, SQLITE_UTF8,
-                                            subdirs_walked_count, &subdirs,
-                                            NULL, NULL) != SQLITE_OK) {
-                    fprintf(stderr, "Warning: Could not create subdirs_walked function: %s (%d)\n",
-                            sqlite3_errmsg(db), sqlite3_errcode(db));
-                }
-
-                char shortname[MAXPATH];
-                char endname[MAXPATH];
-
-                /* run query on summary, print it if printing is needed, if returns none */
-                /* and we are doing AND, skip querying the entries db */
-                shortpath(gqw->work.name, shortname, endname);
-
-                if (in->sql.sum.len) {
-                    recs=1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
-                    /* put in the path relative to the user's input */
-                    thread_timestamp_start(ts->tts, sqlsum);
-                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.sum.data, pa, id, print_parallel, &recs);
-                    thread_timestamp_end(sqlsum);
-                    increment_query_count(ta);
-                } else {
-                    recs = 1;
-                }
-                if (in->andor == OR) {
-                    recs = 1;
-                }
-                /* if we have recs (or are running an OR) query the entries table */
-                if (recs > 0) {
-                    if (in->sql.ent.len) {
-                        thread_timestamp_start(ts->tts, sqlent);
-                        querydb(&gqw->work, dbname, dbname_len, db, in->sql.ent.data, pa, id, print_parallel, &recs); /* recs is not used */
-                        thread_timestamp_end(sqlent);
-                        increment_query_count(ta);
-                    }
-                }
-            }
-        }
-    }
-
-    if (gqw->work.level >= in->min_level) {
-        if (db) {
-            /* detach xattr dbs */
-            thread_timestamp_start(ts->tts, xattrdone_call);
-            if (in->process_xattrs) {
-                external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
-                                             &EXTERNAL_TYPE_XATTR,
-                                             NULL,
-                                             NULL, NULL
-                                             query_count_arg);
-            }
-            thread_timestamp_end(xattrdone_call);
-        }
-    }
+    thread_timestamp_end(xattrdone_call);
 
     return recs;
 }

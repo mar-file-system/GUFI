@@ -77,14 +77,10 @@ OF SUCH DAMAGE.
 #include "gufi_query/gqw.h"
 #include "gufi_query/process_queries.h"
 #include "gufi_query/processdir.h"
+#include "gufi_query/query.h"
 #include "gufi_query/timers.h"
+#include "print.h"
 #include "utils.h"
-#include "xattrs.h"
-
-#define EVRSUMMARY      "e" VRSUMMARY
-#define EVRXSUMMARY     "e" VRXSUMMARY
-#define EVRPENTRIES     "e" VRPENTRIES
-#define EVRXPENTRIES    "e" VRXPENTRIES
 
 static int save_matime(gqw_t *gqw,
                        char *dbpath, const size_t dbpath_size,
@@ -123,6 +119,16 @@ static int restore_matime(const char *dbpath, struct utimbuf *dbtime) {
     return 0;
 }
 
+static int count_rows(void *args, int count, char **data, char **columns) {
+    (void) count;
+    (void) data;
+    (void) columns;
+
+    PrintArgs_t *print = (PrintArgs_t *) args;
+    print->rows++;
+    return 0;
+}
+
 static int collect_dir_inodes(void *args, int count, char **data, char **columns) {
     (void) count;
     (void) columns;
@@ -139,18 +145,146 @@ static int collect_dir_inodes(void *args, int count, char **data, char **columns
     return 0;
 }
 
-/* drop view for attaching external dbs to */
-static void drop_extdb_views(sqlite3 *db) {
+static void attach_extdbs(struct input *in, sqlite3 *db,
+                          const char *dir_inode, const size_t dir_inode_len,
+                          size_t *extdb_count
+                          #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                          , size_t *query_count
+                          #endif
+    ) {
+    /*
+     * for each external database basename provided by the
+     * caller, create a view
+     *
+     * if an external db is not found, only the template is used
+     *
+     * assumes there won't be more than 125 attaches in total
+     * if necessary, change this to attach+query+detach one at a time
+     */
+    sll_loop(&in->external_attach, node) {
+        eus_t *user = (eus_t *) sll_node_data(node);
+
+        char basename_comp[MAXSQL];
+        const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 7,
+                                                    "(pinode == '", (size_t) 12,
+                                                    dir_inode, dir_inode_len,
+                                                    "')", (size_t) 2,
+                                                    " AND ", (size_t) 5,
+                                                    "(basename(filename) == '", (size_t) 24,
+                                                    user->basename.data, user->basename.len,
+                                                    "')", (size_t) 2);
+        const refstr_t basename_comp_ref = {
+            .data = basename_comp,
+            .len  = basename_comp_len,
+        };
+
+        static const refstr_t SELECT_STAR = {
+            .data = " SELECT * FROM ",
+            .len  = 15,
+        };
+
+        /*
+         * attach database for current directory (if it
+         * exists) and concatenate with empty template table
+         * into one view
+         */
+        external_concatenate(db,
+                             &EXTERNAL_TYPE_USER_DB,
+                             &basename_comp_ref,
+                             &user->view,
+                             &SELECT_STAR,
+                             &user->table,
+                             &user->template_table,
+                             NULL, NULL,
+                             external_enumerate_attachname, extdb_count
+                             #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                             , query_count
+                             #endif
+                             );
+
+    }
+}
+
+/* create views without iterating through tables */
+static void create_extdb_views_noiter(struct input *in, sqlite3 *db) {
     char *err = NULL;
-    if (sqlite3_exec(db,
-                     "DROP VIEW " EVRXPENTRIES ";"
-                     "DROP VIEW " EVRPENTRIES  ";"
-                     "DROP VIEW " EVRXSUMMARY  ";"
-                     "DROP VIEW " EVRSUMMARY   ";",
-                     NULL, NULL, &err) != SQLITE_OK) {
+    int rc = SQLITE_ERROR;
+    if (in->process_xattrs) {
+        rc = sqlite3_exec(db,
+                          "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   ";"
+                          "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  ";"
+                          "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  ";"
+                          "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES ";",
+                          NULL, NULL, &err);
+    }
+    else {
+        rc = sqlite3_exec(db,
+                          "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   ";"
+                          "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  ";",
+                          NULL, NULL, &err);
+    }
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n",
+                err);
+        sqlite3_free(err);
+    }
+}
+
+/* drop view for attaching external dbs to */
+static void drop_extdb_views(struct input *in, sqlite3 *db) {
+    char *err = NULL;
+    int rc = SQLITE_ERROR;
+
+    if (in->process_xattrs) {
+        rc = sqlite3_exec(db,
+                          "DROP VIEW " EVRXPENTRIES ";"
+                          "DROP VIEW " EVRXSUMMARY  ";"
+                          "DROP VIEW " EVRPENTRIES  ";"
+                          "DROP VIEW " EVRSUMMARY   ";",
+                          NULL, NULL, &err);
+    }
+    else {
+        rc = sqlite3_exec(db,
+                          "DROP VIEW " EVRPENTRIES  ";"
+                          "DROP VIEW " EVRSUMMARY   ";",
+                          NULL, NULL, &err);
+
+    }
+
+    if (rc != SQLITE_OK) {
         fprintf(stderr, "Warning: Could not drop views for attaching with external databases: %s\n",
                 err);
         sqlite3_free(err);
+    }
+}
+
+/*
+ * use this function instead of external_concatenate_cleanup because
+ * the view names and external database list are already known
+ */
+static void detach_extdbs(struct input *in, sqlite3 *db, size_t *extdb_count) {
+    sll_loop(&in->external_attach, node) {
+        eus_t *user = (eus_t *) sll_node_data(node);
+
+        /* drop view */
+        char drop_extdb_view[MAXSQL];
+        SNFORMAT_S(drop_extdb_view, sizeof(drop_extdb_view), 3,
+                   "DROP VIEW ", (size_t) 10,
+                   user->view.data, user->view.len,
+                   ";", (size_t) 1);
+
+        char *err = NULL;
+        if (sqlite3_exec(db, drop_extdb_view, NULL, NULL, &err) != SQLITE_OK) {
+            fprintf(stderr, "Could not drop view %s: %s\n",
+                    user->view.data, err);
+            sqlite3_free(err);
+        }
+
+        /* detach associated external database */
+        char attachname[MAXSQL];
+        SNPRINTF(attachname, sizeof(attachname), EXTERNAL_ATTACH_PREFIX "%zu", --(*extdb_count));
+        detachdb(user->basename.data, db, attachname, 0);
     }
 }
 
@@ -225,205 +359,163 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     /* get number of subdirs walked on first call to process_queries */
     size_t subdirs_walked_count = 0;
 
-    /*
-     * handle external databases
-     *
-     * this should be moved into process_queries
-     */
-    if (db && sll_get_size(&in->external_attach)) {
-        char *err = NULL;
+    if (db) {
+        int recs = 1;
 
-        sll_t dir_inodes;
-        sll_init(&dir_inodes);
-
-        if (sqlite3_exec(db, "SELECT inode FROM " ATTACH_NAME "." SUMMARY ";",
-                         collect_dir_inodes, &dir_inodes, &err) != SQLITE_OK) {
-            fprintf(stderr, "Error: Could not pull directory inodes: %s\n", err);
-            sqlite3_free(err);
-            err = NULL;
-            /* ignore errors (still have to descend) */
-        }
-
-        /* the only time there are no rows in the summary table is at the index root's parent */
-        if (sll_get_size(&dir_inodes) == 0) {
-            sll_loop(&in->external_attach, node) {
-                eus_t *user = (eus_t *) sll_node_data(node);
-
-                char create_view[MAXSQL];
-                SNPRINTF(create_view, sizeof(create_view),
-                         "CREATE TEMP VIEW %s AS SELECT * FROM %s;",
-                         user->view.data, user->template_table.data
-                    );
-
-                if (sqlite3_exec(db, create_view, NULL, NULL, &err) != SQLITE_OK) {
-                    fprintf(stderr, "Warning: Could not create view from template at %s: %s\n",
-                            gqw->work.name, err);
-                    sqlite3_free(err);
-                    err = NULL;
+        /*
+         * can iterate over treesummary, but not creating external
+         * database view for treesummary, so run once here to not
+         * get duplicate results when querying treesummary
+         */
+        if ((gqw->work.level >= in->min_level) &&
+            in->sql.tsum.len) {
+            /* if AND operation, and sqltsum is there, run a query to see if there is a match. */
+            /* if this is OR, as well as no-sql-to-run, skip this query */
+            if (in->andor == AND) {
+                /* make sure the treesummary table exists */
+                thread_timestamp_start(ts.tts, sqltsumcheck);
+                querydb(&gqw->work, dbname, dbname_len, db, "SELECT name FROM " ATTACH_NAME ".sqlite_master "
+                        "WHERE (type == 'table') AND (name == '" TREESUMMARY "');",
+                        pa, id, count_rows, &recs);
+                thread_timestamp_end(sqltsumcheck);
+                increment_query_count(ta);
+                if (recs < 1) {
+                    recs = -1;
+                }
+                else {
+                    /* run in->sql.tsum */
+                    thread_timestamp_start(ts.tts, sqltsum);
+                    querydb(&gqw->work, dbname, dbname_len, db, in->sql.tsum.data, pa, id, print_parallel, &recs);
+                    thread_timestamp_end(sqltsum);
+                    increment_query_count(ta);
                 }
             }
-
-            /* create view for attaching external dbs to */
-            if (sqlite3_exec(db,
-                             "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   ";"
-                             "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  ";"
-                             "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  ";"
-                             "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES ";",
-                             NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n", err);
-                sqlite3_free(err);
-            }
-
-            process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
-                            #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                            , &ts
-                            #endif
-                );
-
-            drop_extdb_views(db);
-
-            sll_loop(&in->external_attach, node) {
-                eus_t *user = (eus_t *) sll_node_data(node);
-
-                char drop_view[MAXSQL];
-                SNPRINTF(drop_view, sizeof(drop_view),
-                         "DROP VIEW %s;",
-                         user->view.data
-                    );
-
-                if (sqlite3_exec(db, drop_view, NULL, NULL, &err) != SQLITE_OK) {
-                    fprintf(stderr, "Warning: Could not drop view at %s: %s\n",
-                            gqw->work.name, err);
-                    sqlite3_free(err);
-                    err = NULL;
-                }
+            /* this is an OR or we got a record back. go on to summary/entries */
+            /* queries, if not done with this dir and all dirs below it */
+            /* this means that no tree table exists so assume we have to go on */
+            if (recs < 0) {
+                recs=1;
             }
         }
-        else {
-            /* don't want to shadow descend function */
-            int desc = 1;
 
-            /*
-             * for each directory in the summary table, create views
-             *
-             * each view consists of the empty template table and one
-             * external database associated with the current directory
-             *
-             * there should always be at least one directory (the current one)
-             * except at the index root's parent
-             */
-            sll_loop(&dir_inodes, dir_inode_node) {
-                const char *dir_inode = (const char *) sll_node_data(dir_inode_node);
-                const size_t dir_inode_len = strlen(dir_inode);
+        if (recs > 0) {
+            /* set up external user databases for use with -S and -E */
+            if (sll_get_size(&in->external_attach)) {
+                char *err = NULL;
 
-                size_t rec_count = 0;
+                /* get list of directory inodes in the current directory */
+                sll_t dir_inodes;
+                sll_init(&dir_inodes);
+                if (sqlite3_exec(db, "SELECT inode FROM " ATTACH_NAME "." SUMMARY ";",
+                                 collect_dir_inodes, &dir_inodes, &err) != SQLITE_OK) {
+                    fprintf(stderr, "Error: Could not pull directory inodes: %s\n", err);
+                    sqlite3_free(err);
+                    err = NULL;
+                    /* ignore errors (still have to descend) */
+                }
 
-                /*
-                 * for each external database basename provided by the
-                 * caller, create a view
-                 *
-                 * if an external db is not found, only the template is used
-                 *
-                 * assumes there won't be more than 125 attaches in total
-                 * if necessary, change this to attach+query+detach one at a time
-                 */
-                sll_loop(&in->external_attach, node) {
-                    eus_t *user = (eus_t *) sll_node_data(node);
+                /* the only time there are no rows in the summary table is at the index root's parent */
+                if (sll_get_size(&dir_inodes) == 0) {
+                    size_t extdb_count = 0;
+                    attach_extdbs(in, db, "", 0, &extdb_count
+                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                  , &ta->queries
+                                  #endif
+                        );
 
-                    char basename_comp[MAXSQL];
-                    const size_t basename_comp_len = SNFORMAT_S(basename_comp, sizeof(basename_comp), 7,
-                                                                "(pinode == '", (size_t) 12,
-                                                                dir_inode, dir_inode_len,
-                                                                "')", (size_t) 2,
-                                                                " AND ", (size_t) 5,
-                                                                "(basename(filename) == '", (size_t) 24,
-                                                                user->basename.data, user->basename.len,
-                                                                "')", (size_t) 2);
-                    const refstr_t basename_comp_ref = {
-                        .data = basename_comp,
-                        .len  = basename_comp_len,
-                    };
+                    /* create view for attaching external dbs to */
+                    create_extdb_views_noiter(in, db);
 
-                    static const refstr_t SELECT_STAR = {
-                        .data = " SELECT * FROM ",
-                        .len  = 15,
-                    };
+                    process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
+                                    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                                    , &ts
+                                    #endif
+                        );
+
+                    drop_extdb_views(in, db);
+                    detach_extdbs(in, db, &extdb_count);
+                }
+                else {
+                    /* don't want to shadow descend function */
+                    int desc = 1;
 
                     /*
-                     * attach database for current directory (if it
-                     * exists) and concatenate with empty template table
-                     * into one view
+                     * for each directory in the summary table, create views
+                     *
+                     * each view consists of the empty template table and one
+                     * external database associated with the current directory
+                     *
+                     * there should always be at least one directory (the current one)
+                     * except at the index root's parent
                      */
-                    external_concatenate(db,
-                                         &EXTERNAL_TYPE_USER_DB,
-                                         &basename_comp_ref,
-                                         &user->view,
-                                         &SELECT_STAR,
-                                         &user->table,
-                                         &user->template_table,
-                                         NULL, NULL,
-                                         external_enumerate_attachname, &rec_count
-                                         query_count_arg);
+                    sll_loop(&dir_inodes, dir_inode_node) {
+                        const char *dir_inode = (const char *) sll_node_data(dir_inode_node);
+                        const size_t dir_inode_len = strlen(dir_inode);
 
+                        size_t extdb_count = 0;
+
+                        attach_extdbs(in, db, dir_inode, dir_inode_len, &extdb_count
+                                      #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                      , &ta->queries
+                                      #endif
+                            );
+
+                        /* create view for attaching external dbs to */
+                        char extdb_views[MAXSQL];
+                        const int extdb_views_len = SNPRINTF(extdb_views, sizeof(extdb_views),
+                                                             "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   " WHERE  inode == '%s';"
+                                                             "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  " WHERE pinode == '%s';",
+                                                             dir_inode, dir_inode);
+
+                        if (in->process_xattrs) {
+                            SNPRINTF(extdb_views + extdb_views_len, sizeof(extdb_views) - extdb_views_len,
+                                     "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  " WHERE  inode == '%s';"
+                                     "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES " WHERE pinode == '%s';",
+                                     dir_inode, dir_inode);
+                        }
+
+
+                        if (sqlite3_exec(db, extdb_views, NULL, NULL, &err) != SQLITE_OK) {
+                            fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n", err);
+                            sqlite3_free(err);
+                        }
+
+                        /* run queries */
+                        process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, desc, &subdirs_walked_count
+                                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                                        , &ts
+                                        #endif
+                            );
+
+                        drop_extdb_views(in, db);
+                        detach_extdbs(in, db, &extdb_count);
+
+                        desc = 0;
+                    }
                 }
 
-                /* create view for attaching external dbs to */
-                char extdb_views[MAXSQL];
-                SNPRINTF(extdb_views, sizeof(extdb_views),
-                         "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   " WHERE  inode == '%s';"
-                         "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  " WHERE  inode == '%s';"
-                         "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  " WHERE pinode == '%s';"
-                         "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES " WHERE pinode == '%s';",
-                         dir_inode, dir_inode, dir_inode, dir_inode);
-
-                if (sqlite3_exec(db, extdb_views, NULL, NULL, &err) != SQLITE_OK) {
-                    fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n", err);
-                    sqlite3_free(err);
+                sll_destroy(&dir_inodes, free);
+            }
+            else {
+                /* if no external databases were listed, still create views */
+                if (db) {
+                    create_extdb_views_noiter(in, db);
                 }
 
-                /* run queries */
-                process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, desc, &subdirs_walked_count
+                process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
                                 #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                                 , &ts
                                 #endif
                     );
 
-                drop_extdb_views(db);
-
-                rec_count = 0;
-                sll_loop(&in->external_attach, node) {
-                    eus_t *user = (eus_t *) sll_node_data(node);
-
-                    /* drop view */
-                    char drop_extdb_view[MAXSQL];
-                    SNFORMAT_S(drop_extdb_view, sizeof(drop_extdb_view), 3,
-                               "DROP VIEW ", (size_t) 10,
-                               user->view.data, user->view.len,
-                               ";", (size_t) 1);
-
-                    if (sqlite3_exec(db, drop_extdb_view, NULL, NULL, &err) != SQLITE_OK) {
-                        fprintf(stderr, "Could not drop view %s: %s\n",
-                                user->view.data, err);
-                        sqlite3_free(err);
-                    }
-
-                    /* detatch associated external database */
-                    char attachname[MAXSQL];
-                    SNPRINTF(attachname, sizeof(attachname), EXTERNAL_ATTACH_PREFIX "%zu", rec_count++);
-                    detachdb(user->basename.data, db, attachname, 0);
+                if (db) {
+                    drop_extdb_views(in, db);
                 }
-
-                desc = 0;
             }
         }
-
-        sll_destroy(&dir_inodes, free);
     }
     else {
-        /*
-         * if the database was not opened, still have to descend
-         * if no external databases, still have to query
-         */
+        /* if the database was not opened, still have to descend */
         process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
                         #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                         , &ts

@@ -144,6 +144,12 @@ extern const char SUMMARYLONG_CREATE[];
 #define VRSUMMARYLONG     "vrsummarylong"
 extern const char VRSUMMARYLONG_CREATE[];
 
+/* views to join external databases to */
+#define EVRSUMMARY        "e" VRSUMMARY
+#define EVRPENTRIES       "e" VRPENTRIES
+#define EVRXSUMMARY       "e" VRXSUMMARY
+#define EVRXPENTRIES      "e" VRXPENTRIES
+
 /* name doesn't matter, so long as it is not used by callers */
 #define ATTACH_NAME "tree"
 sqlite3 *attachdb_raw   (const char *name, sqlite3 *db, const char *dbn,                  const int print_err);
