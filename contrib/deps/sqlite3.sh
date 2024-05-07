@@ -82,7 +82,7 @@ if [[ ! -d "${sqlite3_prefix}" ]]; then
         tar -xf "${sqlite3_tarball}" -C "${BUILD_DIR}"
 
         echo "Patching SQLite3 Pathname Length"
-        patch -p1 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3270200.pathname.patch"
+        patch -p1 -d "${sqlite3_build}" < "${SCRIPT_PATH}/sqlite-autoconf-3430100.pathname.patch"
 
         if [[ "${PATCH_SQLITE3_OPEN}" == "true" ]]
         then

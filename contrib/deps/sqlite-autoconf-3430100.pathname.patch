@@ -1,8 +1,8 @@
 diff --git a/sqlite3.c b/sqlite3.c
-index 4729f45..c7d76ea 100644
+index 1884b08..c206bfa 100644
 --- a/sqlite3.c
 +++ b/sqlite3.c
-@@ -32356,7 +32356,7 @@ SQLITE_PRIVATE const char *sqlite3OpcodeName(int i){
+@@ -37814,7 +37814,7 @@ SQLITE_PRIVATE int sqlite3KvvfsInit(void){
  /*
  ** Maximum supported path-length.
  */
