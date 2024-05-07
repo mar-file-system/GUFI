@@ -74,4 +74,5 @@ for any set of input databases with the same schema. For example,
 from an index.
 
 Note that there is a hard limit of 125 databases that can be queried
-by querydbs that is set by SQLite3.
+by querydbs that is set by SQLite3. This has been patched to 254,
+making it less likely that directories run out of attaches.

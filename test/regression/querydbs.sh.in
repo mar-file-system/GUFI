@@ -99,13 +99,17 @@ run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"SELECT name, size FROM v${TABLE} 
 echo "# Bad Query"
 run_no_sort "${QUERYDBS} -d '|' \"${TABLE}\" \"Bad Query\" ${OUTDB}.*"
 
-echo "# Attach too many database files"
-too_many=""
-for (( i = 0; i < 126 / THREADS; i++))
+many=""
+for (( i = 0; i < 254 / THREADS; i++))
 do
-    too_many+="${OUTDB}.* "
+    many+="${OUTDB}.* "
 done
-run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${too_many}"
+
+echo "# Attach maximum number of database files"
+run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many}|tail -n 1"
+
+echo "# Attach too many database files"
+run_no_sort "${QUERYDBS} -d '|' -NV \"${TABLE}\" \"SELECT name, size FROM v${TABLE} ORDER BY size ASC, name ASC\" ${many} ${OUTDB}.*"
 ) | sed "s/${SRCDIR//\//\\/}\\///g;" | tee "${OUTPUT}"
 
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/querydbs.expected "${OUTPUT}"

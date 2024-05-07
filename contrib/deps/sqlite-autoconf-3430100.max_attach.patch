@@ -1,0 +1,15 @@
+diff --git a/sqlite3.c b/sqlite3.c
+index 1884b08..7538652 100644
+--- a/sqlite3.c
++++ b/sqlite3.c
+@@ -179222,8 +179222,8 @@ static const int aHardLimit[] = {
+ #if SQLITE_MAX_FUNCTION_ARG<0 || SQLITE_MAX_FUNCTION_ARG>127
+ # error SQLITE_MAX_FUNCTION_ARG must be between 0 and 127
+ #endif
+-#if SQLITE_MAX_ATTACHED<0 || SQLITE_MAX_ATTACHED>125
+-# error SQLITE_MAX_ATTACHED must be between 0 and 125
++#if SQLITE_MAX_ATTACHED<0 || SQLITE_MAX_ATTACHED>254
++# error SQLITE_MAX_ATTACHED must be between 0 and 254
+ #endif
+ #if SQLITE_MAX_LIKE_PATTERN_LENGTH<1
+ # error SQLITE_MAX_LIKE_PATTERN_LENGTH must be at least 1
