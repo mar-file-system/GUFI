@@ -97,7 +97,7 @@ $ sqlite3 "prefix/leaf_directory/db.db"         "SELECT pinode, filename FROM ex
 13|prefix/leaf_directory/faction1.db
 
 # insert an external db that should not show up in queries
-$ sqlite3 "prefix/leaf_directory/db.db" "INSERT INTO external_dbs_pwd (type, filename, attachname) VALUES ('user_db', 'no match', 'this should not show up when querying');"
+$ sqlite3 "prefix/leaf_directory/db.db" "INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');"
 
 # create empty template for providing default data
 $ sqlite3 "template.faction1" "CREATE TABLE user_table(name TEXT, type TEXT, data TEXT);"
@@ -333,22 +333,22 @@ Total:          25
 Remaining Dirs: 1 (16.67%)
 
 $ sqlite3 "prefix/db.db" "SELECT * FROM external_dbs;"
-user_db|13|prefix/leaf_directory/faction1.db||||
-user_db|17|prefix/faction1.db||||
-user_db|17|prefix/faction2.db||||
-user_db|6|prefix/directory/subdirectory/faction2.db||||
-user_db|7|prefix/directory/faction1.db||||
-user_db||no match|this should not show up when querying|||
+user_db|13|prefix/leaf_directory/faction1.db|||
+user_db|17|prefix/faction1.db|||
+user_db|17|prefix/faction2.db|||
+user_db|6|prefix/directory/subdirectory/faction2.db|||
+user_db|7|prefix/directory/faction1.db|||
+user_db||this should not show up when querying|||
 
 $ sqlite3 "prefix/db.db" "SELECT * FROM external_dbs_pwd;"
-user_db|17|prefix/faction1.db||||
-user_db|17|prefix/faction2.db||||
+user_db|17|prefix/faction1.db|||
+user_db|17|prefix/faction2.db|||
 
 $ sqlite3 "prefix/db.db" "SELECT * FROM external_dbs_rollup;"
-user_db|13|prefix/leaf_directory/faction1.db||||
-user_db|6|prefix/directory/subdirectory/faction2.db||||
-user_db|7|prefix/directory/faction1.db||||
-user_db||no match|this should not show up when querying|||
+user_db|13|prefix/leaf_directory/faction1.db|||
+user_db|6|prefix/directory/subdirectory/faction2.db|||
+user_db|7|prefix/directory/faction1.db|||
+user_db||this should not show up when querying|||
 
 # get faction1 user data
 # SELECT rpath(), type, faction1 user data

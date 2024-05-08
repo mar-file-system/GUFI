@@ -124,11 +124,8 @@ extern const char XATTRS_AVAIL_CREATE[];
 
 /* format to pass into snprintf */
 extern const char XATTR_UID_FILENAME_FORMAT[];
-extern const char XATTR_UID_ATTACH_FORMAT[];
 extern const char XATTR_GID_W_READ_FILENAME_FORMAT[];
-extern const char XATTR_GID_W_READ_ATTACH_FORMAT[];
 extern const char XATTR_GID_WO_READ_FILENAME_FORMAT[];
-extern const char XATTR_GID_WO_READ_ATTACH_FORMAT[];
 
 #define XENTRIES  "xentries"
 #define XPENTRIES "xpentries"

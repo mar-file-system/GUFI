@@ -170,14 +170,16 @@ directory's information and subdirectories are not traversed. The
 \summary table was updated directly, so querying it will return all
 directory information.
 
-However, instead of querying the \summary table and switching between
-querying \entries and \pentries, the \vrpentries and \vrsummary views
-should always be used. These views contain data from the \summary
-table that allow for the path of each row relative to the starting
-path to be generated using the \rpath SQL function, whether or not the
-index has been rolled up, with consistent input arguments (see
-Table~\ref{tab:sqlwcontext} for details). These views and function
-were set up to help simpliy the queries that users provide.
+When querying, the caller should choose tables and views based on
+whether or not full paths will be queried. If no, the \summary table
+and \pentries, \xpentries, or \epentries views should be used. If yes,
+the \vrpentries and \vrsummary views and their variants should be
+used. The \vrpentries and \vrsummary views contain data from the
+\summary table that allow for the path of each row relative to the
+starting path to be generated using the \rpath SQL function, whether
+or not the index has been rolled up, with consistent input arguments
+(see Table~\ref{tab:sqlwcontext} for details). These views and
+function were set up to help simpliy the queries that users provide.
 
 \subsubsection{Short Circuiting with Compound Queries}
 At each directory, the set of user provided SQL statements run on the
@@ -203,8 +205,8 @@ directory, pass the \texttt{-a} flag to \gufiquery.
 
 \subsubsection{Extended Attributes}
 When querying for xattrs, pass \texttt{-x} to \gufiquery to build the
-\xattrs view for querying. This view is a SQL union of rolled in
-xattrs and any external databases that successfully
+\xattrs view for querying. This view is a SQL \texttt{UNION} of rolled
+in xattrs and any external databases that successfully
 attaches. Attaching the database files checks the permissions of the
 xattrs. \texttt{UNION} removes duplicate entries that showed up in
 multiple external databases, leaving a unique set of xattrs accessible
@@ -249,17 +251,17 @@ positional arguments:
                             & name with a matching schema \\
     \hline
     \texttt{view} & The name of the view that will be made available for \\
-                  & \texttt{-T}, \texttt{-S}, and \texttt{-E} \\
+                  & \texttt{-S} and \texttt{-E} \\
     \hline
   \end{tabular}
 \end{table}
 
-Finally, in \texttt{-T}, \texttt{-S}, and \texttt{-E}, the caller
+Finally, in \texttt{-S} and \texttt{-E}, the caller
 should join the view named in \texttt{-Q} with new GUFI views
-\evrsummary, \evrxsummary, \evrpentries, \evrxpentries to pull what
-they are looking for. The recommended columns to join on are
-\texttt{name} and \texttt{type} to reduce the likelihood of joining to
-the wrong rows.
+\esummary, \epentries, \exsummary, \expentries, \evrsummary,
+\evrxsummary, \evrpentries, and \evrxpentries to pull data. The
+recommended columns to join on are \texttt{name} and \texttt{type} to
+reduce the likelihood of joining to the wrong rows.
 \\\\
 Example Usage:
 \begin{table}[H]

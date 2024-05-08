@@ -153,9 +153,9 @@ TEST(external, concatenate) {
 
     // add one external db to run attach concatenate
     EXPECT_EQ(sqlite3_exec(db,
-                           "INSERT INTO " EXTERNAL_DBS_PWD " (type, filename, attachname) "
+                           "INSERT INTO " EXTERNAL_DBS_PWD " (type, filename) "
                            "VALUES "
-                           "('test', '@CMAKE_CURRENT_BINARY_DIR@', 'attachname');",
+                           "('test', '@CMAKE_CURRENT_BINARY_DIR@');",
                            nullptr, nullptr, nullptr), SQLITE_OK);
 
     // no modify_filename, so attempt to attach CMAKE_CURRENT_BINARY_DIR and fail

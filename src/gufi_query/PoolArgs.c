@@ -105,8 +105,8 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         #endif
 
         /* run -I */
+        char *err = NULL;
         if (in->sql.init.len) {
-            char *err = NULL;
             if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
                 fprintf(stderr, "Error: Could not run SQL Init \"%s\" on %s: %s\n",
                         in->sql.init.data, ta->dbname, err);

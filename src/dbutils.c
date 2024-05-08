@@ -1324,8 +1324,6 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
     if (uid != in->nobody.uid) {
         xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
                                      XATTR_UID_FILENAME_FORMAT, uid);
-        xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
-                                     XATTR_UID_ATTACH_FORMAT, uid);
         xattr_db_mode = 0600;
     }
     else if (gid != in->nobody.gid) {
@@ -1333,16 +1331,12 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
         if ((mode & 0040) == 0040) {
             xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
                                          XATTR_GID_W_READ_FILENAME_FORMAT, gid);
-            xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
-                                         XATTR_GID_W_READ_ATTACH_FORMAT, gid);
             xattr_db_mode = 0040;
         }
         /* g-r */
         else {
             xdb->filename_len = SNPRINTF(xdb->filename, MAXPATH,
                                          XATTR_GID_WO_READ_FILENAME_FORMAT, gid);
-            xdb->attach_len   = SNPRINTF(xdb->attach, MAXPATH,
-                                         XATTR_GID_WO_READ_ATTACH_FORMAT, gid);
             xattr_db_mode = 0000;
         }
     }
@@ -1395,10 +1389,9 @@ void destroy_xattr_db(void *ptr) {
     sqlite3_bind_text( xdb->file_list, 1, EXTERNAL_TYPE_XATTR.data, EXTERNAL_TYPE_XATTR.len, SQLITE_STATIC);
     sqlite3_bind_int64(xdb->file_list, 2, xdb->pinode);
     sqlite3_bind_text( xdb->file_list, 3, xdb->filename, xdb->filename_len,                  SQLITE_STATIC);
-    sqlite3_bind_text( xdb->file_list, 4, xdb->attach, xdb->attach_len,                      SQLITE_STATIC);
-    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_mode);
-    sqlite3_bind_int64(xdb->file_list, 6, xdb->st.st_uid);
-    sqlite3_bind_int64(xdb->file_list, 7, xdb->st.st_gid);
+    sqlite3_bind_int64(xdb->file_list, 4, xdb->st.st_mode);
+    sqlite3_bind_int64(xdb->file_list, 5, xdb->st.st_uid);
+    sqlite3_bind_int64(xdb->file_list, 6, xdb->st.st_gid);
 
     sqlite3_step(xdb->file_list);
     sqlite3_reset(xdb->file_list);

@@ -362,7 +362,7 @@ def total_entries_count(_config, args, where, type): # pylint: disable=redefined
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL', 'uid', 'pinode',
                                                                     'COUNT(inode) AS count'],
-                                                                   [gufi_common.VRPENTRIES],
+                                                                   [gufi_common.PENTRIES],
                                                                    where + ['type == \'{0}\''.format(type)],
                                                                    E_group_by,
                                                                    ['count {0}'.format(ORDER[args.order]),
@@ -470,7 +470,7 @@ def total_dircount(_config, args, where):
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL', 'name', 'uid', '1 as count'],
-                                                                   [gufi_common.VRSUMMARY],
+                                                                   [gufi_common.SUMMARY],
                                                                    where +
                                                                    [] if args.cumulative else [gufi_common.ROLLUP_SUMMARY_WHERE],
                                                                    group_by,
@@ -668,7 +668,7 @@ def total_leaf(_config, args, where, type): # pylint: disable=redefined-builtin
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['uid', '(SELECT COUNT(*) FROM entries WHERE type== \'{0}\') AS count'.format(type)],
-                                                                   [gufi_common.VRSUMMARY],
+                                                                   [gufi_common.SUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    group_by,
                                                                    ['uid {0}'.format(ORDER[args.order]),
@@ -717,7 +717,7 @@ def average_leaf(_config, args, where, col):
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query([col],
-                                                                   [gufi_common.VRSUMMARY],
+                                                                   [gufi_common.SUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -764,7 +764,7 @@ def median_leaf(_config, args, where, col):
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query([col],
-                                                                   [gufi_common.VRSUMMARY],
+                                                                   [gufi_common.SUMMARY],
                                                                    where + ['nlink == 2'],
                                                                    None,
                                                                    None,
@@ -825,7 +825,7 @@ def per_level(_config, args, where, type): # pylint: disable=redefined-builtin
 
         '-S', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
                                            gufi_common.build_query(['NULL'] + uid + ['level()', count],
-                                                                   [gufi_common.VRSUMMARY],
+                                                                   [gufi_common.SUMMARY],
                                                                    where,
                                                                    ['uid'],
                                                                    None,
@@ -1007,11 +1007,13 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
 
     exponent = 'exponent'
 
+    table = []
+    field = gufi_common.SQLITE3_NULL
     if type in ['f', 'l']:
-        table = gufi_common.VRPENTRIES
+        table = [gufi_common.PENTRIES]
         field = 'size'
     elif type == 'd':
-        table = gufi_common.VRSUMMARY
+        table = [gufi_common.SUMMARY]
         field = 'totfiles'
 
     pinode_col = 'pinode'
@@ -1021,8 +1023,8 @@ def size_bins(args, base, type): # pylint: disable=redefined-builtin
     queries = [
         '-I', build_create(args.inmemory_name, pinode_create + ['{0} INTEGER'.format(exponent)]),
         '-E', 'INSERT INTO {0} {1}'.format(args.inmemory_name,
-                                           gufi_common.build_query(pinode + ['CASE WHEN {0} == 0 THEN -1 ELSE CAST(FLOOR(LOG({1}, {0})) AS INTEGER) END'.format(field,base)],
-                                                                   [table],
+                                           gufi_common.build_query(pinode + ['CASE WHEN {0} == 0 THEN -1 ELSE CAST(FLOOR(LOG({1}, {0})) AS INTEGER) END'.format(field, base)],
+                                                                   table,
                                                                    ['type == \'{0}\''.format(type)],
                                                                    None, # cannot GROUP BY here because value would be aggregate
                                                                    None,

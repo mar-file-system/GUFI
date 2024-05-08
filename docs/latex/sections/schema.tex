@@ -99,7 +99,8 @@ This was done in order to not store the parent inode of each entry,
 which would be the same for every entry.
 
 Users should prefer query the \pentries view over the \entries table
-in order to obtain complete sets of data to query on.
+in order to obtain complete sets of data to query on, and should use
+\pentries whenever paths are not required.
 
 \subsubsection{\pentriesrollup}
 In order to simplify rolling up indexes (see
@@ -164,13 +165,22 @@ easily populatable via a query)).
 
 \subsection{\xattrs}
 With the addition of extended attributes support, several more tables
-and views were added into db.db. Additional database files with
-different schemas were also added. See Section~\ref{sec:xattr_schema}
-for details.
+and views were added into db.db. From the user's perspective, the
+\xattrs view has been created and joined with \pentries, \summary,
+\vrpentries, and \vrsummary to create the convenience views \xentries,
+\xpentries, \xsummary, \vrxpentries, and \vrxsummary. These views are
+always available whether or not extended attribute processing has been
+enabled. See Sections~\ref{sec:xattr_schema} and
+\ref{sec:query_xattrs} for details. Using \vrxpentries and \vrxsummary
+should be preferred over all previously mentioned views when paths are
+required.
 
 \subsection{External Databases}
 With the addition of external (user) database support, several more
 views were added into db.db. External database \texttt{e} variants of
-\vrsummary, \vrxsummary, \vrpentries, and \vrxpentries were added:
-\evrsummary, \evrxsummary, \evrpentries, \evrxpentries. These views
-should be joined with the external databases that were attached.
+\summary, \pentries, \xsummary, \xpentries, \vrsummary, \vrxsummary,
+\vrpentries, and \vrxpentries were added: \esummary, \epentries,
+\exsummary, \expentries \evrsummary, \evrxsummary, \evrpentries,
+\evrxpentries. These views should be joined with the external
+databases that were attached. Using these views should be preferred
+over all previously mentioned views when paths are required.

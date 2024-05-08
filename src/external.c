@@ -73,17 +73,17 @@ OF SUCH DAMAGE.
 
 const char EXTERNAL_DBS_PWD_CREATE[] =
     "DROP TABLE IF EXISTS " EXTERNAL_DBS_PWD ";"
-    "CREATE TABLE " EXTERNAL_DBS_PWD "(type TEXT, pinode TEXT, filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, pinode, filename));";
+    "CREATE TABLE " EXTERNAL_DBS_PWD "(type TEXT, pinode TEXT, filename TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, pinode, filename));";
 
 const char EXTERNAL_DBS_PWD_INSERT[] =
-    "INSERT INTO " EXTERNAL_DBS_PWD " VALUES (@type, @pinode, @filename, @attachname, @mode, @uid, @gid);";
+    "INSERT INTO " EXTERNAL_DBS_PWD " VALUES (@type, @pinode, @filename, @mode, @uid, @gid);";
 
 const char EXTERNAL_DBS_ROLLUP_CREATE[] =
     "DROP TABLE IF EXISTS " EXTERNAL_DBS_ROLLUP ";"
-    "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(type TEXT, pinode TEXT, filename TEXT, attachname TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, filename));";
+    "CREATE TABLE " EXTERNAL_DBS_ROLLUP "(type TEXT, pinode TEXT, filename TEXT, mode INT64, uid INT64, gid INT64, PRIMARY KEY(type, filename));";
 
 const char EXTERNAL_DBS_ROLLUP_INSERT[] =
-    "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, pinode, @filename, @attachname, @mode, @uid, @gid);";
+    "INSERT INTO " EXTERNAL_DBS_ROLLUP " VALUES (@type, pinode, @filename, @mode, @uid, @gid);";
 
 const refstr_t EXTERNAL_TYPE_XATTR = {
     .data = EXTERNAL_TYPE_XATTR_NAME,
@@ -177,9 +177,8 @@ int external_concatenate(sqlite3 *db,
                                                    const char *src, const size_t src_len,
                                                    void *args),
                          void *filename_args,
-                         size_t (*modify_attachname)(char **dst, const size_t dst_size,
-                                                   const char *src, const size_t src_len,
-                                                   void *args),
+                         size_t (*set_attachname)(char *dst, const size_t dst_size,
+                                                  void *args),
                          void *attachname_args
                          #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                          , size_t *query_count
@@ -188,7 +187,6 @@ int external_concatenate(sqlite3 *db,
     /* Not checking arguments */
 
     int           rec_count = 0;
-    sqlite3_stmt *res = NULL;
     /* not checking if the view exists - if it does, it's an error and will error */
     char          unioncmd[MAXSQL];
     char         *unioncmdp = unioncmd + SNFORMAT_S(unioncmd, sizeof(unioncmd), 3,
@@ -196,62 +194,58 @@ int external_concatenate(sqlite3 *db,
                                                     viewname->data, viewname->len,
                                                     " AS", (size_t) 3);
 
-    /* find external databases of given type */
-    char get_mappings[MAXSQL];
-    const size_t get_mappings_len = external_create_query(get_mappings, sizeof(get_mappings),
-                                                          "filename, attachname", 20,
-                                                          EXTERNAL_DBS, EXTERNAL_DBS_LEN,
-                                                          type,
-                                                          extra);
+    if (type) {
+        /* find external databases of given type */
+        char get_mappings[MAXSQL];
+        const size_t get_mappings_len = external_create_query(get_mappings, sizeof(get_mappings),
+                                                                "filename", 8,
+                                                                EXTERNAL_DBS, EXTERNAL_DBS_LEN,
+                                                                type,
+                                                                extra);
 
-    /* step through each external file recorded in the main database */
-    int rc = sqlite3_prepare_v2(db, get_mappings, get_mappings_len, &res, NULL);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Could not get external file names from table '%s': '%s': err %s (%d)\n",
-                EXTERNAL_DBS, get_mappings, sqlite3_errmsg(db), rc);
-        return -1;
+        /* step through each external file recorded in the main database */
+        sqlite3_stmt *res = NULL;
+        const int rc = sqlite3_prepare_v2(db, get_mappings, get_mappings_len, &res, NULL);
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        (*query_count)++;
+        #endif
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Error: Could not get external file names from table '%s': '%s': err %s (%d)\n",
+                    EXTERNAL_DBS, get_mappings, sqlite3_errmsg(db), rc);
+            return -1;
+        }
+
+        while (sqlite3_step(res) == SQLITE_ROW) {
+            const char *src_filename = (const char *) sqlite3_column_text(res, 0);
+
+            char *filename = (char *) src_filename;
+            char dst_filename[MAXSQL];
+            if (modify_filename) {
+                filename = dst_filename;
+                modify_filename(&filename, sizeof(dst_filename),
+                                src_filename, strlen(src_filename),
+                                filename_args);
+            }
+
+            char attachname[MAXSQL];
+            const size_t attachname_len = set_attachname(attachname, sizeof(attachname),
+                                                         attachname_args);
+
+            /* if attach fails, you don't have access to the database - just continue */
+            if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0)) {
+                /* SELECT * FROM <attach name>.<table name> UNION */
+                unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
+                                        select->data, select->len,
+                                        "'", (size_t) 1,
+                                        attachname, attachname_len,
+                                        "'.", (size_t) 2,
+                                        tablename->data, tablename->len,
+                                        " UNION", (size_t) 6);
+                rec_count++;
+            }
+        }
+        sqlite3_finalize(res);
     }
-
-    while (sqlite3_step(res) == SQLITE_ROW) {
-        const char *src_filename   = (const char *) sqlite3_column_text(res, 0);
-        const char *src_attachname = (const char *) sqlite3_column_text(res, 1);
-
-        char *filename = (char *) src_filename;
-        char dst_filename[MAXSQL];
-        if (modify_filename) {
-            filename = dst_filename;
-            modify_filename(&filename, sizeof(dst_filename),
-                            src_filename, strlen(src_filename),
-                            filename_args);
-        }
-
-        char *attachname = (char *) src_attachname;
-        size_t attachname_len = attachname?strlen(attachname):0;
-        char dst_attachname[MAXSQL];
-        if (modify_attachname) {
-            attachname = dst_attachname;
-            attachname_len = modify_attachname(&attachname, sizeof(dst_attachname),
-                                               src_attachname, attachname_len,
-                                               attachname_args);
-        }
-
-        /* if attach fails, you don't have access to the database - just continue */
-        if (attachdb(filename, db, attachname, SQLITE_OPEN_READONLY, 0)) {
-            /* SELECT * FROM <attach name>.<table name> UNION */
-            unioncmdp += SNFORMAT_S(unioncmdp, sizeof(unioncmd) - (unioncmdp - unioncmd), 6,
-                                    select->data, select->len,
-                                    "'", (size_t) 1,
-                                    attachname, attachname_len,
-                                    "'.", (size_t) 2,
-                                    tablename->data, tablename->len,
-                                    " UNION", (size_t) 6);
-            rec_count++;
-        }
-    }
-    sqlite3_finalize(res);
 
     /*
      * close SQL statement using the table in db.db
@@ -267,7 +261,7 @@ int external_concatenate(sqlite3 *db,
 
     /* create view */
     char *err = NULL;
-    rc = sqlite3_exec(db, unioncmd, NULL, NULL, &err);
+    const int rc = sqlite3_exec(db, unioncmd, NULL, NULL, &err);
     #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
     (*query_count)++;
     #endif
@@ -283,24 +277,19 @@ int external_concatenate(sqlite3 *db,
 
 typedef struct external_detach_args {
     sqlite3 *db;
-    size_t (*func)(char **dst, const size_t dst_size,
-                   const char *src, const size_t src_len,
+    size_t (*func)(char *dst, const size_t dst_size,
                    void *args);
     void *args;
 } eda_t;
 
 static int external_detach(void *args, int count, char **data, char **columns) {
-    (void) count; (void) (columns);
+    (void) count; (void) data; (void) (columns);
 
     eda_t *eda = (eda_t *) args;
-    char *attachname = data[0];
-    char dst_attachname[MAXSQL];
-    if (eda->func) {
-        attachname = dst_attachname;
-        eda->func(&attachname, sizeof(dst_attachname),
-                  data[0], strlen(data[0]),
-                  eda->args);
-    }
+    char attachname[MAXSQL];
+
+    eda->func(attachname, sizeof(attachname),
+              eda->args);
 
     detachdb(NULL, eda->db, attachname, 0); /* don't check for errors */
     return 0;
@@ -309,9 +298,8 @@ static int external_detach(void *args, int count, char **data, char **columns) {
 void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
                                   const refstr_t *type,
                                   const refstr_t *extra,
-                                  size_t (*modify_attachname)(char **dst, const size_t dst_size,
-                                                              const char *src, const size_t src_len,
-                                                              void *args),
+                                  size_t (*set_attachname)(char *dst, const size_t dst_size,
+                                                           void *args),
                                   void *attachname_args
                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                   , size_t *query_count
@@ -330,32 +318,40 @@ void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
         }
     }
 
-    char get_attachnames[MAXSQL];
-    external_create_query(get_attachnames, sizeof(get_attachnames),
-                          "attachname", 10,
-                          EXTERNAL_DBS, EXTERNAL_DBS_LEN,
-                          type,
-                          extra);
+    if (type) {
+        char get_extdbs[MAXSQL];
+        external_create_query(get_extdbs, sizeof(get_extdbs),
+                              "0", 1,
+                              EXTERNAL_DBS, EXTERNAL_DBS_LEN,
+                              type,
+                              extra);
 
-    eda_t args = {
-        .db = db,
-        .func = modify_attachname,
-        .args = attachname_args,
-    };
+        eda_t args = {
+            .db = db,
+            .func = set_attachname,
+            .args = attachname_args,
+        };
 
-    sqlite3_exec(db, get_attachnames, external_detach, &args, NULL);
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    (*query_count)++;
-    #endif
+        char *err = NULL;
+        const int rc = sqlite3_exec(db, get_extdbs, external_detach, &args, &err);
+        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+        (*query_count)++;
+        #endif
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Warning: Could not detach external database: %s\n", err);
+            sqlite3_free(err);
+        }
+    }
 }
 
-size_t external_enumerate_attachname(char **dst, const size_t dst_size,
-                                     const char *src, const size_t src_len,
+size_t external_increment_attachname(char *dst, const size_t dst_size,
                                      void *args) {
-    (void) src;
-    (void) src_len;
-
     size_t *rec_count = (size_t *) args;
+    return SNPRINTF(dst, dst_size, EXTERNAL_ATTACH_PREFIX "%zu", (*rec_count)++);
+}
 
-    return SNPRINTF(*dst, dst_size, EXTERNAL_ATTACH_PREFIX "%zu", (*rec_count)++);
+size_t external_decrement_attachname(char *dst, const size_t dst_size,
+                                     void *args) {
+    size_t *rec_count = (size_t *) args;
+    return SNPRINTF(dst, dst_size, EXTERNAL_ATTACH_PREFIX "%zu", --(*rec_count));
 }

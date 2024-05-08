@@ -161,7 +161,7 @@ run_sort "${SQLITE3} \"${INDEXROOT}/directory/subdirectory/db.db\" \"${SELECT_EX
 run_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\"         \"${SELECT_EXTERNAL_DBS}\""
 
 echo "# insert an external db that should not show up in queries"
-run_no_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\" \"INSERT INTO external_dbs_pwd (type, filename, attachname) VALUES ('user_db', 'no match', 'this should not show up when querying');\""
+run_no_sort "${SQLITE3} \"${INDEXROOT}/leaf_directory/db.db\" \"INSERT INTO external_dbs_pwd (type, filename) VALUES ('user_db', 'this should not show up when querying');\""
 
 echo "# create empty template for providing default data"
 run_no_sort "${SQLITE3} \"${FACTION1_TEMPLATE_DB}\" \"${FACTION1_CREATE_TABLE}\""

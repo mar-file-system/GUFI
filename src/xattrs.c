@@ -69,15 +69,17 @@ OF SUCH DAMAGE.
 #include "utils.h"
 #include "xattrs.h"
 
+#define XATTR_COLS_CREATE "(inode TEXT, name TEXT, value TEXT)"
+
 const char XATTRDELIM = '\x1F';     // ASCII Unit Separator
 
 const char XATTRS_PWD_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_PWD ";"
-                                 "CREATE TABLE " XATTRS_PWD "(inode TEXT, name TEXT, value TEXT);";
+                                 "CREATE TABLE " XATTRS_PWD XATTR_COLS_CREATE ";";
 
 const char XATTRS_PWD_INSERT[] = "INSERT INTO " XATTRS_PWD " VALUES (@inode, @name, @value);";
 
 const char XATTRS_ROLLUP_CREATE[] = "DROP TABLE IF EXISTS " XATTRS_ROLLUP ";"
-                                    "CREATE TABLE " XATTRS_ROLLUP "(inode TEXT, name TEXT, value TEXT);";
+                                    "CREATE TABLE " XATTRS_ROLLUP XATTR_COLS_CREATE ";";
 
 const char XATTRS_ROLLUP_INSERT[] = "INSERT INTO " XATTRS_ROLLUP " VALUES (@inode, @name, @value);";
 
@@ -85,11 +87,8 @@ const char XATTRS_AVAIL_CREATE[] = "DROP VIEW IF EXISTS " XATTRS_AVAIL ";"
                                    "CREATE VIEW " XATTRS_AVAIL " AS SELECT * FROM " XATTRS_PWD " UNION SELECT * FROM " XATTRS_ROLLUP ";";
 
 const char XATTR_UID_FILENAME_FORMAT[]         = "uid.%llu.db";
-const char XATTR_UID_ATTACH_FORMAT[]           = "uid%llu";
 const char XATTR_GID_W_READ_FILENAME_FORMAT[]  = "gid+r.%llu.db";
-const char XATTR_GID_W_READ_ATTACH_FORMAT[]    = "gidr%llu";
 const char XATTR_GID_WO_READ_FILENAME_FORMAT[] = "gid-r.%llu.db";
-const char XATTR_GID_WO_READ_ATTACH_FORMAT[]   = "gid%llu";
 
 int xattr_can_rollin(struct stat *parent, struct stat *entry) {
     /* Rule 1: File is 0+R (doesn’t matter what the parent dir perms or ownership is) */

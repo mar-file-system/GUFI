@@ -126,7 +126,8 @@ int external_insert(sqlite3 *db, const char *type, const long long int pinode, c
  * databases being attached, so the arguments come before viewname.
  *
  * @in db                 handle to the main db
- * @in type               external database type (xattrs, user_db, etc.)
+ * @in type               external database type (xattrs, user_db, etc.);
+ *                        if NULL, external_db table is not queried
  * @in extra              extra conditions to check to select external database rows
  * ----------------------------------------------------------------------------------
  * @in viewname           the name of the view to create
@@ -134,7 +135,7 @@ int external_insert(sqlite3 *db, const char *type, const long long int pinode, c
  * @in table_name         the table to extract from each external database
  * @in modify_filename    if provided, modify the filename to attach into db.db
  *                        returns the length of the new filename
- * @in modify_attachname  if provided, modify the attach name
+ * @in set_attachname     must be provided to determine the attach name
  *                        returns the length of the new filename
  * @return the number of external databases attached
  */
@@ -149,9 +150,8 @@ int external_concatenate(sqlite3 *db,
                                                    const char *src, const size_t src_len,
                                                    void *args),
                          void *filename_args,
-                         size_t (*modify_attachname)(char **dst, const size_t dst_size,
-                                                   const char *src, const size_t src_len,
-                                                   void *args),
+                         size_t (*set_attachname)(char *dst, const size_t dst_size,
+                                                  void *args),
                          void *attachname_args
                          #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                          , size_t *query_count
@@ -173,17 +173,17 @@ int external_concatenate(sqlite3 *db,
 void external_concatenate_cleanup(sqlite3 *db, const char *drop_view,
                                   const refstr_t *type,
                                   const refstr_t *extra,
-                                  size_t (*modify_attachname)(char **dst, const size_t dst_size,
-                                                              const char *src, const size_t src_len,
-                                                              void *args),
+                                  size_t (*set_attachname)(char *dst, const size_t dst_size,
+                                                           void *args),
                                   void *attachname_args
                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                                   , size_t *query_count
                                   #endif
     );
 
-size_t external_enumerate_attachname(char **dst, const size_t dst_size,
-                                     const char *src, const size_t src_len,
+size_t external_increment_attachname(char *dst, const size_t dst_size,
+                                     void *args);
+size_t external_decrement_attachname(char *dst, const size_t dst_size,
                                      void *args);
 
 typedef struct external_user_setup {

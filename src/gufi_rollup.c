@@ -586,7 +586,7 @@ static const char rollup_subdir[] =
     "INSERT INTO " TREESUMMARY " SELECT * FROM " SUBDIR_ATTACH_NAME "." TREESUMMARY ";"
     "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
     "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
-    "SELECT filename, attachname, uid, gid FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';";
+    "SELECT filename, uid, gid FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';";
 
 struct CallbackArgs {
     struct template_db *xattr;
@@ -594,6 +594,7 @@ struct CallbackArgs {
     size_t parent_len;
     char *child;
     size_t child_len;
+    size_t *count;
 };
 
 /* use this callback to create xattr db files and insert filenames */
@@ -604,9 +605,8 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     struct CallbackArgs *ca     = (struct CallbackArgs *) args;
     const char  *filename       = data[0];
     const size_t filename_len   = strlen(filename);
-    const char  *attachname     = data[1];
-    const char  *uid_str        = data[2];
-    const char  *gid_str        = data[3];
+    const char  *uid_str        = data[1];
+    const char  *gid_str        = data[2];
     uid_t uid;
     gid_t gid;
 
@@ -647,6 +647,10 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
                ca->child, ca->child_len,
                "/", (size_t) 1,
                filename, filename_len);
+
+    char attachname[MAXPATH];
+    SNPRINTF(attachname, sizeof(attachname),
+             EXTERNAL_ATTACH_PREFIX "%zu", (*ca->count)++);
 
     if (!attachdb(child_xattr_db_name, xattr_db, attachname, SQLITE_OPEN_READONLY, 1)) {
         closedb(xattr_db);
@@ -713,6 +717,7 @@ static int do_rollup(struct RollUp *rollup,
     /* process each child */
     timestamp_create_start(rollup_subdirs);
 
+    size_t xattr_count = 0;
     sll_loop(&rollup->data.subdirs, node) {
         timestamp_create_start(rollup_subdir);
 
@@ -736,6 +741,7 @@ static int do_rollup(struct RollUp *rollup,
                 .parent_len = rollup->data.name_len,
                 .child      = child->name,
                 .child_len  = child->name_len,
+                .count      = &xattr_count,
             };
 
             exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_xattr_dbs_callback, &ca, &err);

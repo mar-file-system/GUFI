@@ -145,6 +145,10 @@ extern const char SUMMARYLONG_CREATE[];
 extern const char VRSUMMARYLONG_CREATE[];
 
 /* views to join external databases to */
+#define ESUMMARY          "e" SUMMARY
+#define EPENTRIES         "e" PENTRIES
+#define EXSUMMARY         "e" XSUMMARY
+#define EXPENTRIES        "e" XPENTRIES
 #define EVRSUMMARY        "e" VRSUMMARY
 #define EVRPENTRIES       "e" VRPENTRIES
 #define EVRXSUMMARY       "e" VRXSUMMARY
@@ -201,9 +205,6 @@ struct xattr_db {
 
     char filename[MAXPATH];
     size_t filename_len;
-
-    char attach[MAXPATH];
-    size_t attach_len;
 
     /* db.db, per-user, or per-group db */
     sqlite3 *db;

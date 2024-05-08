@@ -72,26 +72,8 @@ OF SUCH DAMAGE.
 #include "gufi_query/processdir.h"
 #include "gufi_query/query.h"
 #include "gufi_query/timers.h"
-#include "gufi_query/xattrs.h"
 #include "print.h"
 #include "utils.h"
-
-/* prepend the current directory to the database filenamee */
-static size_t xattr_modify_filename(char **dst, const size_t dst_size,
-                                    const char *src, const size_t src_len,
-                                    void *args) {
-    struct work *work = (struct work *) args;
-
-    if (src[0] == '/') {
-        *dst = (char *) src;
-        return src_len;
-    }
-
-    return SNFORMAT_S(*dst, dst_size, 3,
-                      work->name, work->name_len,
-                      "/", (size_t) 1,
-                      src, src_len);
-}
 
 /* Push the subdirectories in the current directory onto the queue */
 static size_t descend2(QPTPool_t *ctx,
@@ -307,39 +289,6 @@ int process_queries(PoolArgs_t *pa,
         return 1;
     }
 
-    /* xattrs */
-    if (in->process_xattrs) {
-        static const refstr_t XATTRS_REF = {
-            .data = XATTRS,
-            .len  = sizeof(XATTRS) - 1,
-        };
-
-        #define XATTRS_COLS " SELECT inode, name, value FROM "
-        static const refstr_t XATTRS_COLS_REF = {
-            .data = XATTRS_COLS,
-            .len  = sizeof(XATTRS_COLS) - 1,
-        };
-
-        static const refstr_t XATTRS_AVAIL_REF = {
-            .data = XATTRS_AVAIL,
-            .len  = sizeof(XATTRS_AVAIL) - 1,
-        };
-
-        thread_timestamp_start(ts->tts, xattrprep_call);
-        external_concatenate(db,
-                             &EXTERNAL_TYPE_XATTR,
-                             NULL,
-                             &XATTRS_REF,
-                             &XATTRS_COLS_REF,
-                             &XATTRS_AVAIL_REF,
-                             &XATTRS_AVAIL_REF,
-                             xattr_modify_filename, &gqw->work,
-                             NULL, NULL
-                             query_count_arg);
-        xattr_create_views(db query_count_arg);
-        thread_timestamp_end(xattrprep_call);
-    }
-
     int recs = 1; /* set this to one record - if the sql succeeds it will set to 0 or 1 */
                   /* if it fails then this will be set to 1 and will go on */
 
@@ -382,17 +331,6 @@ int process_queries(PoolArgs_t *pa,
             }
         }
     }
-
-    /* detach xattr dbs */
-    thread_timestamp_start(ts->tts, xattrdone_call);
-    if (in->process_xattrs) {
-        external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
-                                     &EXTERNAL_TYPE_XATTR,
-                                     NULL,
-                                     NULL, NULL
-                                     query_count_arg);
-    }
-    thread_timestamp_end(xattrdone_call);
 
     return recs;
 }
