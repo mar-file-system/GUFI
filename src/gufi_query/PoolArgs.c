@@ -104,8 +104,17 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
         }
         #endif
 
-        /* run -I */
+        /* create empty xattr tables to UNION to */
         char *err = NULL;
+        if (sqlite3_exec(ta->outdb, XATTRS_TEMPLATE_CREATE,
+                         NULL, NULL, &err) != SQLITE_OK) {
+            fprintf(stderr, "Error: Could create xattr template \"%s\" on %s: %s\n",
+                    in->sql.init.data, ta->dbname, err);
+            sqlite3_free(err);
+            break;
+        }
+
+        /* run -I */
         if (in->sql.init.len) {
             if (sqlite3_exec(ta->outdb, in->sql.init.data, NULL, NULL, &err) != SQLITE_OK) {
                 fprintf(stderr, "Error: Could not run SQL Init \"%s\" on %s: %s\n",

@@ -122,6 +122,9 @@ extern const char XATTRS_AVAIL_CREATE[];
 /* the view of all xattrs available to the caller */
 #define XATTRS              "xattrs"
 
+#define XATTRS_TEMPLATE     "xattrs_template"
+extern const char XATTRS_TEMPLATE_CREATE[];
+
 /* format to pass into snprintf */
 extern const char XATTR_UID_FILENAME_FORMAT[];
 extern const char XATTR_GID_W_READ_FILENAME_FORMAT[];

@@ -86,6 +86,9 @@ const char XATTRS_ROLLUP_INSERT[] = "INSERT INTO " XATTRS_ROLLUP " VALUES (@inod
 const char XATTRS_AVAIL_CREATE[] = "DROP VIEW IF EXISTS " XATTRS_AVAIL ";"
                                    "CREATE VIEW " XATTRS_AVAIL " AS SELECT * FROM " XATTRS_PWD " UNION SELECT * FROM " XATTRS_ROLLUP ";";
 
+const char XATTRS_TEMPLATE_CREATE[] = "DROP VIEW IF EXISTS " XATTRS_TEMPLATE ";"
+                                      "CREATE TEMP TABLE " XATTRS_TEMPLATE XATTR_COLS_CREATE ";";
+
 const char XATTR_UID_FILENAME_FORMAT[]         = "uid.%llu.db";
 const char XATTR_GID_W_READ_FILENAME_FORMAT[]  = "gid+r.%llu.db";
 const char XATTR_GID_WO_READ_FILENAME_FORMAT[] = "gid-r.%llu.db";

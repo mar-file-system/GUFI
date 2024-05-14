@@ -147,7 +147,7 @@ static size_t xattr_modify_filename(char **dst, const size_t dst_size,
                       src, src_len);
 }
 
-static void setup_xattrs_view(gqw_t *gqw, sqlite3 *db,
+static void setup_xattrs_view(struct input *in, gqw_t *gqw, sqlite3 *db,
                               size_t *extdb_count
                               #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                               , timestamps_t *ts
@@ -173,14 +173,19 @@ static void setup_xattrs_view(gqw_t *gqw, sqlite3 *db,
         .len  = sizeof(XATTRS_AVAIL) - 1,
     };
 
+    static const refstr_t XATTRS_TEMPLATE_REF = {
+        .data = XATTRS_TEMPLATE,
+        .len  = sizeof(XATTRS_TEMPLATE) - 1,
+    };
+
     thread_timestamp_start(ts->tts, xattrprep_call);
     external_concatenate(db,
-                         &EXTERNAL_TYPE_XATTR,
+                         in->process_xattrs?&EXTERNAL_TYPE_XATTR:NULL,
                          NULL,
                          &XATTRS_REF,
                          &XATTRS_COLS_REF,
                          &XATTRS_AVAIL_REF,
-                         &XATTRS_AVAIL_REF,
+                         in->process_xattrs?&XATTRS_AVAIL_REF:&XATTRS_TEMPLATE_REF,
                          xattr_modify_filename, &gqw->work,
                          external_increment_attachname, extdb_count
                          query_count_arg);
@@ -266,34 +271,18 @@ static void attach_extdbs(struct input *in, sqlite3 *db,
 }
 
 /* create views without iterating through tables */
-static inline void create_extdb_views_noiter(struct input *in, sqlite3 *db) {
-    int rc = SQLITE_ERROR;
+static inline void create_extdb_views_noiter(sqlite3 *db) {
     char *err = NULL;
-
-    if (in->process_xattrs) {
-        rc = sqlite3_exec(db,
-                          "CREATE TEMP VIEW " ESUMMARY     " AS SELECT * FROM " SUMMARY     ";"
-                          "CREATE TEMP VIEW " EPENTRIES    " AS SELECT * FROM " PENTRIES    ";"
-                          "CREATE TEMP VIEW " EXSUMMARY    " AS SELECT * FROM " XSUMMARY    ";"
-                          "CREATE TEMP VIEW " EXPENTRIES   " AS SELECT * FROM " XPENTRIES   ";"
-                          "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   ";"
-                          "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  ";"
-                          "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  ";"
-                          "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES ";",
-                          NULL, NULL, &err);
-    }
-    else {
-        rc = sqlite3_exec(db,
-                          "CREATE TEMP VIEW " ESUMMARY     " AS SELECT * FROM " SUMMARY     ";"
-                          "CREATE TEMP VIEW " EPENTRIES    " AS SELECT * FROM " PENTRIES    ";"
-                          "CREATE TEMP VIEW " EXSUMMARY    " AS SELECT * FROM " XSUMMARY    ";"
-                          "CREATE TEMP VIEW " EXPENTRIES   " AS SELECT * FROM " XPENTRIES   ";"
-                          "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   ";"
-                          "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  ";",
-                          NULL, NULL, &err);
-    }
-
-    if (rc != SQLITE_OK) {
+    if (sqlite3_exec(db,
+                     "CREATE TEMP VIEW " ESUMMARY     " AS SELECT * FROM " SUMMARY     ";"
+                     "CREATE TEMP VIEW " EPENTRIES    " AS SELECT * FROM " PENTRIES    ";"
+                     "CREATE TEMP VIEW " EXSUMMARY    " AS SELECT * FROM " XSUMMARY    ";"
+                     "CREATE TEMP VIEW " EXPENTRIES   " AS SELECT * FROM " XPENTRIES   ";"
+                     "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   ";"
+                     "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  ";"
+                     "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  ";"
+                     "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES ";",
+                     NULL, NULL, &err) != SQLITE_OK) {
         fprintf(stderr, "Warning: Could not create partition views for attaching with external databases: %s\n",
                 err);
         sqlite3_free(err);
@@ -301,22 +290,18 @@ static inline void create_extdb_views_noiter(struct input *in, sqlite3 *db) {
 }
 
 /* create views for iterating through tables */
-static inline void create_extdb_views_iter(struct input *in, sqlite3 *db, const char *dir_inode) {
+static inline void create_extdb_views_iter(sqlite3 *db, const char *dir_inode) {
     char extdb_views[MAXSQL];
-    const size_t extdb_views_len = SNPRINTF(extdb_views, sizeof(extdb_views),
-                                            "CREATE TEMP VIEW " ESUMMARY     " AS SELECT * FROM " SUMMARY     " WHERE  inode == '%s';"
-                                            "CREATE TEMP VIEW " EPENTRIES    " AS SELECT * FROM " PENTRIES    " WHERE pinode == '%s';"
-                                            "CREATE TEMP VIEW " EXSUMMARY    " AS SELECT * FROM " XSUMMARY    " WHERE  inode == '%s';"
-                                            "CREATE TEMP VIEW " EXPENTRIES   " AS SELECT * FROM " XPENTRIES   " WHERE pinode == '%s';"
-                                            "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   " WHERE  inode == '%s';"
-                                            "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  " WHERE pinode == '%s';",
-                                            dir_inode, dir_inode, dir_inode, dir_inode, dir_inode, dir_inode);
-    if (in->process_xattrs) {
-        SNPRINTF(extdb_views + extdb_views_len, sizeof(extdb_views) - extdb_views_len,
-                 "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  " WHERE  inode == '%s';"
-                 "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES " WHERE pinode == '%s';",
-                 dir_inode, dir_inode);
-    }
+    SNPRINTF(extdb_views, sizeof(extdb_views),
+             "CREATE TEMP VIEW " ESUMMARY     " AS SELECT * FROM " SUMMARY     " WHERE  inode == '%s';"
+             "CREATE TEMP VIEW " EPENTRIES    " AS SELECT * FROM " PENTRIES    " WHERE pinode == '%s';"
+             "CREATE TEMP VIEW " EXSUMMARY    " AS SELECT * FROM " XSUMMARY    " WHERE  inode == '%s';"
+             "CREATE TEMP VIEW " EXPENTRIES   " AS SELECT * FROM " XPENTRIES   " WHERE pinode == '%s';"
+             "CREATE TEMP VIEW " EVRSUMMARY   " AS SELECT * FROM " VRSUMMARY   " WHERE  inode == '%s';"
+             "CREATE TEMP VIEW " EVRPENTRIES  " AS SELECT * FROM " VRPENTRIES  " WHERE pinode == '%s';"
+             "CREATE TEMP VIEW " EVRXSUMMARY  " AS SELECT * FROM " VRXSUMMARY  " WHERE  inode == '%s';"
+             "CREATE TEMP VIEW " EVRXPENTRIES " AS SELECT * FROM " VRXPENTRIES " WHERE pinode == '%s';",
+             dir_inode, dir_inode, dir_inode, dir_inode, dir_inode, dir_inode, dir_inode, dir_inode);
 
     char *err = NULL;
     if (sqlite3_exec(db, extdb_views, NULL, NULL, &err) != SQLITE_OK) {
@@ -327,34 +312,18 @@ static inline void create_extdb_views_iter(struct input *in, sqlite3 *db, const 
 }
 
 /* drop view for attaching external dbs to */
-static inline void drop_extdb_views(struct input *in, sqlite3 *db) {
-    int rc = SQLITE_ERROR;
+static inline void drop_extdb_views(sqlite3 *db) {
     char *err = NULL;
-
-    if (in->process_xattrs) {
-        rc = sqlite3_exec(db,
-                          "DROP VIEW " EVRXPENTRIES ";"
-                          "DROP VIEW " EVRXSUMMARY  ";"
-                          "DROP VIEW " EVRPENTRIES  ";"
-                          "DROP VIEW " EVRSUMMARY   ";"
-                          "DROP VIEW " EXPENTRIES   ";"
-                          "DROP VIEW " EXSUMMARY    ";"
-                          "DROP VIEW " EPENTRIES    ";"
-                          "DROP VIEW " ESUMMARY     ";",
-                          NULL, NULL, &err);
-    }
-    else {
-        rc = sqlite3_exec(db,
-                          "DROP VIEW " EVRPENTRIES ";"
-                          "DROP VIEW " EVRSUMMARY  ";"
-                          "DROP VIEW " EXPENTRIES  ";"
-                          "DROP VIEW " EXSUMMARY   ";"
-                          "DROP VIEW " EPENTRIES   ";"
-                          "DROP VIEW " ESUMMARY    ";",
-                          NULL, NULL, &err);
-    }
-
-    if (rc != SQLITE_OK) {
+    if (sqlite3_exec(db,
+                     "DROP VIEW " EVRXPENTRIES ";"
+                     "DROP VIEW " EVRXSUMMARY  ";"
+                     "DROP VIEW " EVRPENTRIES  ";"
+                     "DROP VIEW " EVRSUMMARY   ";"
+                     "DROP VIEW " EXPENTRIES   ";"
+                     "DROP VIEW " EXSUMMARY    ";"
+                     "DROP VIEW " EPENTRIES    ";"
+                     "DROP VIEW " ESUMMARY     ";",
+                     NULL, NULL, &err) != SQLITE_OK) {
         fprintf(stderr, "Warning: Could not drop views for attaching with external databases: %s\n",
                 err);
         sqlite3_free(err);
@@ -529,16 +498,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             size_t extdb_count = 0; /* shared between xattrs and external databases */
 
             /* always set up xattrs view */
-            if (in->process_xattrs) {
-                setup_xattrs_view(gqw, db, &extdb_count
-                                  #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                                  , &ts
-                                  #endif
-                                  #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                                  , ta
-                                  #endif
-                    );
-            }
+            setup_xattrs_view(in, gqw, db, &extdb_count
+                              #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                              , &ts
+                              #endif
+                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                              , ta
+                              #endif
+                );
 
             const size_t xattr_db_count = extdb_count;
 
@@ -567,7 +534,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         );
 
                     /* create view for attaching external dbs to */
-                    create_extdb_views_noiter(in, db);
+                    create_extdb_views_noiter(db);
 
                     /* run queries */
                     process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
@@ -577,7 +544,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                         );
 
                     /* drop views for attaching GUFI tables to */
-                    drop_extdb_views(in, db);
+                    drop_extdb_views(db);
 
                     /* detach each external db */
                     detach_extdbs(in, db, NULL, 0, &extdb_count
@@ -611,7 +578,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                             );
 
                         /* create views for attaching GUFI tables to */
-                        create_extdb_views_iter(in, db, dir_inode);
+                        create_extdb_views_iter(db, dir_inode);
 
                         /* run queries */
                         process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, desc, &subdirs_walked_count
@@ -621,7 +588,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                             );
 
                         /* drop views for attaching GUFI tables to */
-                        drop_extdb_views(in, db);
+                        drop_extdb_views(db);
 
                         /* detach each external db */
                         detach_extdbs(in, db, dir_inode, dir_inode_len, &extdb_count
@@ -639,7 +606,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
             else {
                 /* if no external databases were listed, still create views */
-                create_extdb_views_noiter(in, db);
+                create_extdb_views_noiter(db);
 
                 /* run queries */
                 process_queries(pa, ctx, id, dir, gqw, db, dbname, dbname_len, 1, &subdirs_walked_count
@@ -649,7 +616,7 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                     );
 
                 /* drop views for attaching GUFI tables to */
-                drop_extdb_views(in, db);
+                drop_extdb_views(db);
             }
 
             if (xattr_db_count != extdb_count) {
@@ -658,16 +625,14 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
 
             /* drop xattrs view */
-            if (in->process_xattrs) {
-                thread_timestamp_start(ts.tts, xattrdone_call);
-                external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
-                                             &EXTERNAL_TYPE_XATTR,
-                                             NULL,
-                                             external_decrement_attachname,
-                                             &extdb_count
-                                             query_count_arg);
-                thread_timestamp_end(xattrdone_call);
-            }
+            thread_timestamp_start(ts.tts, xattrdone_call);
+            external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
+                                         &EXTERNAL_TYPE_XATTR,
+                                         NULL,
+                                         external_decrement_attachname,
+                                         &extdb_count
+                                         query_count_arg);
+            thread_timestamp_end(xattrdone_call);
         }
     }
     else {
