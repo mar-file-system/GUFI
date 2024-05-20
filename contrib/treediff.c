@@ -77,6 +77,10 @@ OF SUCH DAMAGE.
 #include "trie.h"
 #include "utils.h"
 
+/*
+ * M. Sowjanya, V. Kiran, "Quick and efficient algorithm to compare trees," Journal of University of Shanghai for Science and Technology, vol. 23, issue 7, pp. 437-441, July 2021. Available: https://jusst.org/wp-content/uploads/2021/07/Quick-and-Efficient-Algorithm-to-Compare-Trees.pdf
+ */
+
 struct PoolArgs {
     struct input in;
     struct OutputBuffers obufs;

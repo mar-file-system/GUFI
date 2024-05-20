@@ -101,6 +101,7 @@ int xattr_create_views(sqlite3 *db
         create_view(XSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " XSUMMARY " AS SELECT " SUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " SUMMARY " LEFT JOIN " XATTRS " ON " SUMMARY ".inode == " XATTRS ".inode;", query_count) &&
 
         /* vrpentries and vrsummary */
+        /* vrentries is not available because rolled up entries tables are not correct */
         create_view(VRXPENTRIES, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXPENTRIES " AS SELECT " VRPENTRIES ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRPENTRIES " LEFT JOIN " XATTRS " ON " VRPENTRIES ".inode == " XATTRS ".inode;", query_count) &&
 
         create_view(VRXSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXSUMMARY " AS SELECT " VRSUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRSUMMARY " LEFT JOIN " XATTRS " ON " VRSUMMARY ".inode == " XATTRS ".inode;", query_count)

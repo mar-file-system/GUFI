@@ -117,6 +117,11 @@ and thus should be preferred over querying the \summary table. Using
 the \summary table directly with a rolled up index is possible, but
 will complicate queries.
 
+\subsection{\texttt{vrentries}}
+The \texttt{vrentries} view does not exist because it would be a
+misuse of the schema: the entries table itself is never rolled up, so
+querying a \texttt{vr} version of it would result in incorrect output.
+
 \subsection{\vrpentries}
 The \vrpentries view is the \pentries view with a few \summary table
 columns aliased. This allows for the \texttt{rpath} SQL function can
@@ -166,11 +171,11 @@ easily populatable via a query)).
 \subsection{\xattrs}
 With the addition of extended attributes support, several more tables
 and views were added into db.db. From the user's perspective, the
-\xattrs view has been created and joined with \pentries, \summary,
-\vrpentries, and \vrsummary to create the convenience views \xentries,
-\xpentries, \xsummary, \vrxpentries, and \vrxsummary. These views are
-always available whether or not extended attribute processing has been
-enabled. See Sections~\ref{sec:xattr_schema} and
+\xattrs view has been created and joined with \entries, \pentries,
+\summary, \vrpentries, and \vrsummary to create the convenience views
+\xentries, \xpentries, \xsummary, \vrxpentries, and \vrxsummary. These
+views are always available whether or not extended attribute
+processing has been enabled. See Sections~\ref{sec:xattr_schema} and
 \ref{sec:query_xattrs} for details. Using \vrxpentries and \vrxsummary
 should be preferred over all previously mentioned views when paths are
 required.

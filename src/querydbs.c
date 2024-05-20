@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
    /* length of a single " SELECT * FROM <attach prefix>%d.<tablename> UNION ALL" */
    const size_t single_db_len = SELECT_FROM_LEN +
                                 ATTACH_PREFIX_LEN +
-                                3 +                         /* max 125, so 3 chars */
+                                3 +                         /* max 254, so 3 chars */
                                 1 +                         /* .  */
                                 tablename_len +
                                 UNION_ALL_LEN;

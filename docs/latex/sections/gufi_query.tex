@@ -204,9 +204,10 @@ To turn off short circuiting and always run all queries for each
 directory, pass the \texttt{-a} flag to \gufiquery.
 
 \subsubsection{Extended Attributes}
+\label{sec:query_xattrs}
 When querying for xattrs, pass \texttt{-x} to \gufiquery to build the
 \xattrs view for querying. This view is a SQL \texttt{UNION} of rolled
-in xattrs and any external databases that successfully
+in xattrs and any external xattr databases that successfully
 attaches. Attaching the database files checks the permissions of the
 xattrs. \texttt{UNION} removes duplicate entries that showed up in
 multiple external databases, leaving a unique set of xattrs accessible
@@ -216,8 +217,7 @@ The \xentries, \xpentries, \xsummary, \vrxpentries, and \vrxsummary
 views are convenience views generated so that users do not have to
 perform joins themselves. They are \entries, \pentries, \summary,
 \vrpentries, and \vrsummary enhanced with the \texttt{xattr\_name} and
-\texttt{xattr\_value} columns. Like the \xattrs view, these views are
-also dropped at the end of directory processing.
+\texttt{xattr\_value} columns.
 
 Note that entries with multiple extended attributes will return
 multiple times in this view.
