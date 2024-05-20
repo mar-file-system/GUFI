@@ -62,20 +62,33 @@ OF SUCH DAMAGE.
 
 
 
-#ifndef GUFI_QUERY_XATTRS_H
-#define GUFI_QUERY_XATTRS_H
+#ifndef GUFI_QUERY_EXTERNAL_H
+#define GUFI_QUERY_EXTERNAL_H
 
 #include "bf.h"
 #include "dbutils.h"
-#include "gufi_query/gqw.h"
 
-void setup_xattrs_views(struct input *in, gqw_t *gqw, sqlite3 *db,
-                        size_t *extdb_count
-                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                        , timestamps_t *ts
-                        #endif
-                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                        , size_t *queries
-                        #endif
+void attach_extdbs(struct input *in, sqlite3 *db,
+                   const char *dir_inode, const size_t dir_inode_len,
+                   size_t *extdb_count
+                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                   , size_t *query_count
+                   #endif
+    );
+
+/* create views without iterating through tables */
+int create_extdb_views_noiter(sqlite3 *db);
+
+/* create views for iterating through tables */
+void create_extdb_views_iter(sqlite3 *db, const char *dir_inode);
+
+void drop_extdb_views(sqlite3 *db);
+
+void detach_extdbs(struct input *in, sqlite3 *db,
+                                 const char *dir_inode, const size_t dir_inode_len,
+                                 size_t *extdb_count
+                                 #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                 , size_t *query_count
+                                 #endif
     );
 #endif

@@ -69,6 +69,7 @@ OF SUCH DAMAGE.
 #include <stdint.h>
 #include <time.h>
 
+#include "OutputBuffers.h"
 #include "SinglyLinkedList.h"
 #include "debug.h"
 

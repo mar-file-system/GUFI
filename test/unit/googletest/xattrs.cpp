@@ -70,14 +70,6 @@ OF SUCH DAMAGE.
 
 #include "xattrs.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include "gufi_query/xattrs.h"
-#ifdef __cplusplus
-}
-#endif
-
 static const struct xattr EXPECTED_XATTR[] = {
     {
         "user.key1", 9,
@@ -179,21 +171,4 @@ TEST(xattrs, from_line) {
     check_contents(xattrs);
 
     xattrs_cleanup(&xattrs);
-}
-
-/* C Standard 6.10.3/C++ Standard 16.3 Macro replacement */
-static int bad_xattr_create_views() {
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    size_t query_count = 0;
-    #endif
-
-    return xattr_create_views(nullptr
-                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                              , &query_count
-                              #endif
-        );
-}
-
-TEST(gufi_query, bad_xattr_create_view) {
-    EXPECT_EQ(bad_xattr_create_views(), 1);
 }

@@ -62,7 +62,26 @@ OF SUCH DAMAGE.
 
 
 
+#include "external.h"
+#include "gufi_query/timers.h"
 #include "gufi_query/xattrs.h"
+#include "xattrs.h"
+
+static size_t xattr_modify_filename(char **dst, const size_t dst_size,
+                                    const char *src, const size_t src_len,
+                                    void *args) {
+    struct work *work = (struct work *) args;
+
+    if (src[0] == '/') {
+        *dst = (char *) src;
+        return src_len;
+    }
+
+    return SNFORMAT_S(*dst, dst_size, 3,
+                      work->name, work->name_len,
+                      "/", (size_t) 1,
+                      src, src_len);
+}
 
 static int create_view(const char *name, sqlite3 *db, const char *query, size_t *query_counter) {
     char *err = NULL;
@@ -79,10 +98,10 @@ static int create_view(const char *name, sqlite3 *db, const char *query, size_t 
     return 1;
 }
 
-int xattr_create_views(sqlite3 *db
-                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                       , size_t *query_count
-                       #endif
+static int xattr_create_views(sqlite3 *db
+                              #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                              , size_t *query_count
+                              #endif
     ) {
     #if !(defined(DEBUG) && defined(CUMULATIVE_TIMES))
     static size_t query_count_stack = 0;
@@ -106,4 +125,61 @@ int xattr_create_views(sqlite3 *db
 
         create_view(VRXSUMMARY, db, "CREATE TEMP VIEW IF NOT EXISTS " VRXSUMMARY " AS SELECT " VRSUMMARY ".*, " XATTRS ".name as xattr_name, " XATTRS ".value as xattr_value FROM " VRSUMMARY " LEFT JOIN " XATTRS " ON " VRSUMMARY ".inode == " XATTRS ".inode;", query_count)
         );
+}
+
+void setup_xattrs_views(struct input *in, gqw_t *gqw, sqlite3 *db,
+                        size_t *extdb_count
+                        #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                        , timestamps_t *ts
+                        #endif
+                        #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                        , size_t *queries
+                        #endif
+    ) {
+    static const refstr_t XATTRS_REF = {
+        .data = XATTRS,
+        .len  = sizeof(XATTRS) - 1,
+    };
+
+    #define XATTRS_COLS " SELECT inode, name, value FROM "
+    static const refstr_t XATTRS_COLS_REF = {
+        .data = XATTRS_COLS,
+        .len  = sizeof(XATTRS_COLS) - 1,
+    };
+
+    static const refstr_t XATTRS_AVAIL_REF = {
+        .data = XATTRS_AVAIL,
+        .len  = sizeof(XATTRS_AVAIL) - 1,
+    };
+
+    static const refstr_t XATTRS_TEMPLATE_REF = {
+        .data = XATTRS_TEMPLATE,
+        .len  = sizeof(XATTRS_TEMPLATE) - 1,
+    };
+
+    thread_timestamp_start(ts->tts, xattrprep_call);
+
+    /* always set up xattrs view */
+    external_concatenate(db,
+                         in->process_xattrs?&EXTERNAL_TYPE_XATTR:NULL,
+                         NULL,
+                         &XATTRS_REF,
+                         &XATTRS_COLS_REF,
+                         &XATTRS_AVAIL_REF,
+                         in->process_xattrs?&XATTRS_AVAIL_REF:&XATTRS_TEMPLATE_REF,
+                         xattr_modify_filename, &gqw->work,
+                         external_increment_attachname, extdb_count
+                         #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                         , queries
+                         #endif
+    );
+
+    /* set up xattr variant views */
+    xattr_create_views(db
+                       #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                       , queries
+                       #endif
+        );
+
+    thread_timestamp_end(xattrprep_call);
 }
