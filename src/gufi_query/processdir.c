@@ -262,14 +262,18 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             size_t extdb_count = 0; /* shared between xattrs and external databases */
 
             /* always set up xattrs view */
-            setup_xattrs_views(in, gqw, db, &extdb_count
-                               #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-                               , &ts
-                               #endif
-                               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-                               , &ta->queries
-                               #endif
-                );
+            if (in->process_xattrs) {
+                setup_xattrs_views(in, db,
+                                   &gqw->work,
+                                   &extdb_count
+                                   #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                                   , &ts
+                                   #endif
+                                   #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                                   , &ta->queries
+                                   #endif
+                    );
+            }
 
             const size_t xattr_db_count = extdb_count;
 
@@ -385,14 +389,16 @@ int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             }
 
             /* drop xattrs view */
-            thread_timestamp_start(ts.tts, xattrdone_call);
-            external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
-                                         &EXTERNAL_TYPE_XATTR,
-                                         NULL,
-                                         external_decrement_attachname,
-                                         &extdb_count
-                                         query_count_arg);
-            thread_timestamp_end(xattrdone_call);
+            if (in->process_xattrs) {
+                thread_timestamp_start(ts.tts, xattrdone_call);
+                external_concatenate_cleanup(db, "DROP VIEW " XATTRS ";",
+                                             &EXTERNAL_TYPE_XATTR,
+                                             NULL,
+                                             external_decrement_attachname,
+                                             &extdb_count
+                                             query_count_arg);
+                thread_timestamp_end(xattrdone_call);
+            }
         }
     }
     else {

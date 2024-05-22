@@ -67,10 +67,9 @@ OF SUCH DAMAGE.
 
 #include "bf.h"
 #include "dbutils.h"
-#include "gufi_query/gqw.h"
 
-void setup_xattrs_views(struct input *in, gqw_t *gqw, sqlite3 *db,
-                        size_t *extdb_count
+void setup_xattrs_views(struct input *in, sqlite3 *db,
+                        struct work *work, size_t *extdb_count
                         #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                         , timestamps_t *ts
                         #endif

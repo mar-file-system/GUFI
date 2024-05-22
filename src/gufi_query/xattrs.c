@@ -127,8 +127,8 @@ static int xattr_create_views(sqlite3 *db
         );
 }
 
-void setup_xattrs_views(struct input *in, gqw_t *gqw, sqlite3 *db,
-                        size_t *extdb_count
+void setup_xattrs_views(struct input *in, sqlite3 *db,
+                        struct work *work, size_t *extdb_count
                         #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
                         , timestamps_t *ts
                         #endif
@@ -167,7 +167,7 @@ void setup_xattrs_views(struct input *in, gqw_t *gqw, sqlite3 *db,
                          &XATTRS_COLS_REF,
                          &XATTRS_AVAIL_REF,
                          in->process_xattrs?&XATTRS_AVAIL_REF:&XATTRS_TEMPLATE_REF,
-                         xattr_modify_filename, &gqw->work,
+                         in->process_xattrs?xattr_modify_filename:NULL, work,
                          external_increment_attachname, extdb_count
                          #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
                          , queries

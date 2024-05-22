@@ -64,14 +64,24 @@ OF SUCH DAMAGE.
 
 #include <stdlib.h>
 
-#include "gufi_query/external.h"
 #include "gufi_query/PoolArgs.h"
+#include "gufi_query/external.h"
+#include "gufi_query/xattrs.h"
 
 int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mutex) {
     /* Not checking arguments */
 
     memset(pa, 0, sizeof(*pa));
     pa->in = in;
+
+    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+    clock_gettime(CLOCK_MONOTONIC, &pa->start_time);
+    epoch = since_epoch(&pa->start_time); /* debug.h */
+    #endif
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    total_time_init(&pa->tt);
+    #endif
 
     /* only STDOUT writes to the same destination */
     /* aggregate does not need mutex since aggregation is done serially */
@@ -113,6 +123,38 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
                     in->sql.init.data, ta->dbname, err);
             sqlite3_free(err);
             break;
+        }
+
+        /*
+         * if xattr processing is not enabled, still need to create
+         * xattrs view and variants, so create here to not repeat at
+         * every directory
+         */
+        if (!in->process_xattrs) {
+            size_t extdb_count = 0;
+
+            #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+            timestamps_t ts;
+            timestamps_init(&ts, &pa->start_time);
+            #endif
+
+            setup_xattrs_views(in, ta->outdb,
+                               NULL, &extdb_count
+                               #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+                               , &ts
+                               #endif
+                               #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+                               , &ta->queries
+                               #endif
+                );
+
+            #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+            timestamps_sum(&pa->tt, &ts);
+            #endif
+
+            #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
+            timestamps_destroy(&ts);
+            #endif
         }
 
         /*
@@ -168,23 +210,10 @@ int PoolArgs_init(PoolArgs_t *pa, struct input *in, pthread_mutex_t *global_mute
     /* cache this to not have to do repeated constructions of the same SQL statement */
     sqlite3_snprintf(sizeof(pa->detach), pa->detach, "DETACH %Q;", ATTACH_NAME);
 
-    #if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
-    clock_gettime(CLOCK_MONOTONIC, &pa->start_time);
-    epoch = since_epoch(&pa->start_time); /* debug.h */
-    #endif
-
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    total_time_init(&pa->tt);
-    #endif
-
     return 0;
 }
 
 void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
-    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
-    total_time_destroy(&pa->tt);
-    #endif
-
     for(size_t i = 0; i < allocated; i++) {
         ThreadArgs_t *ta = &pa->ta[i];
 
@@ -202,6 +231,10 @@ void PoolArgs_fin(PoolArgs_t *pa, const size_t allocated) {
 
     free(pa->ta);
     pa->ta = NULL;
+
+    #if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+    total_time_destroy(&pa->tt);
+    #endif
 
     input_fini(pa->in);
 }

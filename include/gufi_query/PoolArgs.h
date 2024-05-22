@@ -75,7 +75,7 @@ OF SUCH DAMAGE.
 #include "OutputBuffers.h"
 #include "bf.h"
 #include "dbutils.h"
-#if defined(DEBUG) && defined(CUMULATIVE_TIMES)
+#if defined(DEBUG) && (defined(CUMULATIVE_TIMES) || defined(PER_THREAD_STATS))
 #include "gufi_query/timers.h"
 #endif
 #include "trie.h"
