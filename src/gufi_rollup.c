@@ -574,20 +574,18 @@ end_can_rollup:
     return legal;
 }
 
-/* copy child pentries into pentries_rollup */
-/* copy child summary into summary */
-/* copy child treesummary into treesummary */
-/* copy child xattrs_avail to xattrs_rollup */
-/* copy child external_dbs to external_dbs_rollup */
-/* copy child external xattrs_avail to external xattrs_rollup */
 static const char rollup_subdir[] =
+    /* copy subdir/db.db tables into current db.db */
     "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
     "INSERT INTO " SUMMARY " SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totzero, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
     "INSERT INTO " TREESUMMARY " SELECT * FROM " SUBDIR_ATTACH_NAME "." TREESUMMARY ";"
     "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
     "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
+
+    /* select subdir external xattrs_avail for copying to current external xattrs_rollup via callback */
     "SELECT filename, uid, gid FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';";
 
+/* rollup_external_xattrs callback args */
 struct CallbackArgs {
     struct template_db *xattr;
     char *parent;
@@ -599,7 +597,7 @@ struct CallbackArgs {
 
 /* use this callback to create xattr db files and insert filenames */
 /* db.db doesn't need to be modified since the SQL statement already did it */
-static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **columns) {
+static int rollup_external_xattrs(void *args, int count, char **data, char **columns) {
     (void) count; (void) columns;
 
     struct CallbackArgs *ca     = (struct CallbackArgs *) args;
@@ -658,12 +656,14 @@ static int rollup_xattr_dbs_callback(void *args, int count, char **data, char **
     }
 
     char insert[MAXSQL];
-    SNPRINTF(insert, MAXSQL, "INSERT INTO %s SELECT * FROM %s.%s;",
-             XATTRS_ROLLUP, attachname, XATTRS_AVAIL);
+    SNPRINTF(insert, sizeof(insert),
+             /* copy child external xattrs_avail to external xattrs_rollup */
+             "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM %s." XATTRS_AVAIL ";",
+             attachname);
     char *err = NULL;
     int rc = sqlite3_exec(xattr_db, insert, NULL, NULL, &err);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to copy \"%s\" xattrs into xattrs_rollup of %s: %s\n",
+        fprintf(stderr, "Error: Failed to copy \"%s\" xattrs into " XATTRS_ROLLUP " of %s: %s\n",
                 child_xattr_db_name, xattr_db_name, err);
         sqlite3_free(err);
     }
@@ -699,16 +699,35 @@ static int do_rollup(struct RollUp *rollup,
     char *err = NULL;
     int exec_rc = SQLITE_OK;
 
-    /* set the rollup score in the SQL statement */
-    char rollup_current_dir[] = "UPDATE " SUMMARY " SET rollupscore = 0;";
-    rollup_current_dir[sizeof(rollup_current_dir) - sizeof("0;")] += ds->score;
+    char setup[] =
+        /* clear out old rollup data */
+        "DELETE FROM " PENTRIES_ROLLUP ";"
+        "DELETE FROM " SUMMARY " WHERE isroot != 1;"
+        "DELETE FROM " TREESUMMARY ";"
+        "DELETE FROM " XATTRS_ROLLUP ";"
 
-    timestamp_create_start(rollup_current_dir);
-    exec_rc = sqlite3_exec(dst, rollup_current_dir, NULL, NULL, &err);
-    timestamp_end_print(timestamp_buffers, id, "rollup_current_dir", rollup_current_dir);
+        /* select all external xattr db names for cleanup in callback */
+        "SELECT filename FROM " EXTERNAL_DBS " WHERE type == '" EXTERNAL_TYPE_XATTR_NAME "';"
+
+        "DELETE FROM " EXTERNAL_DBS_ROLLUP ";"
+
+        /* set the rollup score in the SQL statement */
+        "UPDATE " SUMMARY " SET rollupscore = 0;";
+
+    setup[sizeof(setup) - sizeof("0;")] += ds->score;
+
+    refstr_t name = {
+        .data = rollup->data.name,
+        .len  = rollup->data.name_len,
+    };
+
+    timestamp_create_start(setup);
+    exec_rc = sqlite3_exec(dst, setup, xattrs_rollup_cleanup, &name, &err);
+    timestamp_end_print(timestamp_buffers, id, "setup", setup);
 
     if (exec_rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to copy \"%s\" entries into pentries table: %s\n", rollup->data.name, err);
+        fprintf(stderr, "Error: Failed to set up database for rollup: \"%s\": %s\n",
+                rollup->data.name, err);
         sqlite3_free(err);
         rc = -1;
         goto end_rollup;
@@ -724,7 +743,7 @@ static int do_rollup(struct RollUp *rollup,
         struct BottomUp *child = (struct BottomUp *) sll_node_data(node);
 
         char child_dbname[MAXPATH];
-        SNFORMAT_S(child_dbname, MAXPATH, 3,
+        SNFORMAT_S(child_dbname, sizeof(child_dbname), 3,
                    child->alt_name, child->alt_name_len,
                    "/", (size_t) 1,
                    DBNAME, DBNAME_LEN);
@@ -744,7 +763,7 @@ static int do_rollup(struct RollUp *rollup,
                 .count      = &xattr_count,
             };
 
-            exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_xattr_dbs_callback, &ca, &err);
+            exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_external_xattrs, &ca, &err);
             timestamp_end_print(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
             if (exec_rc != SQLITE_OK) {
                 fprintf(stderr, "Error: Failed to copy \"%s\" subdir pentries into pentries table: %s\n", child->name, err);

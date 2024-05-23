@@ -137,7 +137,7 @@ static int ascend_to_top(QPTPool_t *ctx, const size_t id, void *data, void *args
         return 0;
     }
 
-    /* no subdirectories still need processing, so can attempt to roll up */
+    /* no subdirectories still need processing, so can process current directory */
 
     /* keep track of which thread was used to go back up */
     bu->tid.up = id;

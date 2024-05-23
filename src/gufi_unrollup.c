@@ -78,59 +78,9 @@ OF SUCH DAMAGE.
 
 struct Unrollup {
     char name[MAXPATH];
+    size_t name_len;
     int rolledup; /* set by parent, can be modified by self */
 };
-
-static int count_pwd(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    size_t *xattr_count = (size_t *) args;
-    sscanf(data[0], "%zu", xattr_count); /* skip check */
-    return 0;
-}
-
-/* Delete all entries in each file found in the XATTR_ROLLUP table */
-static int process_xattrs(void *args, int count, char **data, char **columns) {
-    (void) count; (void) columns;
-
-    char *dir = (char *) args;
-    char *relpath = data[0];
-    char fullpath[MAXPATH];
-    SNPRINTF(fullpath, MAXPATH, "%s/%s", dir, relpath);
-
-    int rc = 0;
-
-    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
-
-    if (db) {
-        char *err_msg = NULL;
-        size_t xattr_count = 0;
-        if (sqlite3_exec(db,
-                         "DELETE FROM " XATTRS_ROLLUP ";"
-                         "SELECT COUNT(*) FROM " XATTRS_PWD ";",
-                         count_pwd, &xattr_count, &err_msg) == SQLITE_OK) {
-             /* remove empty per-user/per-group xattr db files */
-             if (xattr_count == 0) {
-                 if (remove(fullpath) != 0) {
-                     const int err = errno;
-                     fprintf(stderr, "Warning: Failed to remove empty xattr ddb file %s: %s (%d)\n",
-                             fullpath, strerror(err), err);
-                     rc = 1;
-                 }
-             }
-        }
-        else {
-            fprintf(stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n",
-                    fullpath, err_msg);
-            sqlite3_free(err_msg);
-            rc = 1;
-        }
-    }
-
-    closedb(db);
-
-    return rc;
-}
 
 static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
     (void) args;
@@ -189,6 +139,7 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
             if (S_ISDIR(st.st_mode)) {
                 struct Unrollup *subdir = malloc(sizeof(struct Unrollup));
                 memcpy(subdir->name, name, name_len + 1);
+                subdir->name_len = name_len;
 
                 /* set child rolledup status so that if this dir */
                 /* was rolled up, child can skip roll up check */
@@ -201,6 +152,11 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
 
     /* now that work has been pushed onto the queue, clean up this db */
     if (db && rolledup) {
+        refstr_t name = {
+            .data = work->name,
+            .len  = work->name_len,
+        };
+
         char *err = NULL;
         if (sqlite3_exec(db,
                          "BEGIN TRANSACTION;"
@@ -218,8 +174,8 @@ static int processdir(QPTPool_t *ctx, const size_t id, void *data, void *args) {
                           * (maybe make removing the tree summary table optional?)
                           */
                          "VACUUM;",
-                         process_xattrs,
-                         work->name,
+                         xattrs_rollup_cleanup,
+                         &name,
                          &err) != SQLITE_OK) {
             fprintf(stderr, "Could not remove roll up data from \"%s\": %s\n", work->name, err);
             sqlite3_free(err);
@@ -279,7 +235,7 @@ int main(int argc, char *argv[]) {
         struct Unrollup *mywork = malloc(sizeof(struct Unrollup));
 
         /* copy argv[i] into the work item */
-        SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
+        mywork->name_len = SNFORMAT_S(mywork->name, MAXPATH, 1, argv[i], len);
 
         /* assume index root was not rolled up */
         mywork->rolledup = 0;

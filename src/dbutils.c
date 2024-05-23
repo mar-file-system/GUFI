@@ -514,6 +514,17 @@ int insertdbgo_xattrs(struct input *in, struct stat *dir,
                       sll_t *xattr_db_list, struct template_db *xattr_template,
                       const char *topath, const size_t topath_len,
                       sqlite3_stmt *xattrs_res, sqlite3_stmt *xattr_files_res) {
+    /*
+     * permissions that roll in - skip processing 0 xattrs
+     *
+     * permissions that can't roll in - don't create external
+     * xattrs db just because there's a file with different
+     * permissions
+     */
+    if (ed->xattrs.count == 0) {
+        return 0;
+    }
+
     /* insert into the xattrs_avail table inside db.db */
     const int rollin_score = xattr_can_rollin(dir, &ed->statuso);
     if (rollin_score) {
@@ -1400,6 +1411,67 @@ void destroy_xattr_db(void *ptr) {
     sqlite3_clear_bindings(xdb->file_list);
 
     free(xdb);
+}
+
+static int count_pwd(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
+    size_t *xattr_count = (size_t *) args;
+    sscanf(data[0], "%zu", xattr_count); /* skip check */
+    return 0;
+}
+
+/* Delete all entries in the XATTR_ROLLUP table */
+int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns) {
+    (void) count; (void) columns;
+
+    refstr_t *name = (refstr_t *) args;
+
+    char *relpath = data[0];
+    char fullpath[MAXPATH];
+    SNFORMAT_S(fullpath, sizeof(fullpath), 3,
+               name->data, name->len,
+               "/", (size_t) 1,
+               relpath, strlen(relpath));
+
+    /* if the file is missing, return ok */
+    struct stat st;
+    if (stat(fullpath, &st) != 0) {
+        return (errno != ENOENT);
+    }
+
+    int rc = 0;
+
+    sqlite3 *db = opendb(fullpath, SQLITE_OPEN_READWRITE, 0, 0, NULL, NULL);
+
+    if (db) {
+        char *err_msg = NULL;
+        size_t xattr_count = 0;
+        if (sqlite3_exec(db,
+                         "DELETE FROM " XATTRS_ROLLUP ";"
+                         "SELECT COUNT(*) FROM " XATTRS_PWD ";",
+                         count_pwd, &xattr_count, &err_msg) == SQLITE_OK) {
+             /* remove empty per-user/per-group xattr db files */
+             if (xattr_count == 0) {
+                 if (remove(fullpath) != 0) {
+                     const int err = errno;
+                     fprintf(stderr, "Warning: Failed to remove empty xattr db file %s: %s (%d)\n",
+                             fullpath, strerror(err), err);
+                     rc = 1;
+                 }
+             }
+        }
+        else {
+            fprintf(stderr, "Warning: Failed to clear out rolled up xattr data from %s: %s\n",
+                    fullpath, err_msg);
+            sqlite3_free(err_msg);
+            rc = 1;
+        }
+    }
+
+    closedb(db);
+
+    return rc;
 }
 
 /*

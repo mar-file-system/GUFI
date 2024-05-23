@@ -66,6 +66,7 @@ OF SUCH DAMAGE.
 #define DBUTILS_H
 
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include <sqlite3.h>
 
@@ -223,6 +224,8 @@ struct xattr_db *create_xattr_db(struct template_db *tdb,
                                  uid_t uid, gid_t gid, mode_t mode,
                                  sqlite3_stmt *file_list);
 void destroy_xattr_db(void *ptr);
+
+int xattrs_rollup_cleanup(void *args, int count, char **data, char **columns);
 
 /* convert characters in sqlite URI paths */
 size_t sqlite_uri_path(char *dst, size_t dst_size,
