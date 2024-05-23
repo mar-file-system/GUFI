@@ -1641,7 +1641,7 @@ int bottomup_collect_treesummary(sqlite3 *db, const char *dirname, sll_t *subdir
         }
         else {
             fprintf(stderr, "Warning: Failed to check for existance of treesummary table in child \"%s\": %s\n",
-            subdir->name, err);
+                    subdir->name, err);
             sqlite3_free(err);
         }
 

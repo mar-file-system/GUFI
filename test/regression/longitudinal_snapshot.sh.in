@@ -175,10 +175,7 @@ do_test() {
 do_test | tee "${OUTPUT}"
 @DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
 
-"${GUFI_ROLLUP}" "${INDEXROOT}"
-
-do_test | tee "${OUTPUT}"
-@DIFF@ @CMAKE_CURRENT_BINARY_DIR@/longitudinal_snapshot.expected "${OUTPUT}"
+# longitudinal snapshot does not work with rolled up indexes due to treesummaries not being copied
 )
 
 rm "${OUTPUT}"

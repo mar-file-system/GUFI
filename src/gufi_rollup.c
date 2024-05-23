@@ -578,7 +578,11 @@ static const char rollup_subdir[] =
     /* copy subdir/db.db tables into current db.db */
     "INSERT INTO " PENTRIES_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." PENTRIES ";"
     "INSERT INTO " SUMMARY " SELECT s.name || '/' || sub.name, sub.type, sub.inode, sub.mode, sub.nlink, sub.uid, sub.gid, sub.size, sub.blksize, sub.blocks, sub.atime, sub.mtime, sub.ctime, sub.linkname, sub.xattr_names, sub.totfiles, sub.totlinks, sub.minuid, sub.maxuid, sub.mingid, sub.maxgid, sub.minsize, sub.maxsize, sub.totzero, sub.totltk, sub.totmtk, sub.totltm, sub.totmtm, sub.totmtg, sub.totmtt, sub.totsize, sub.minctime, sub.maxctime, sub.minmtime, sub.maxmtime, sub.minatime, sub.maxatime, sub.minblocks, sub.maxblocks, sub.totxattr, sub.depth + 1, sub.mincrtime, sub.maxcrtime, sub.minossint1, sub.maxossint1, sub.totossint1, sub.minossint2, sub.maxossint2, sub.totossint2, sub.minossint3, sub.maxossint3, sub.totossint3, sub.minossint4, sub.maxossint4, sub.totossint4, sub.rectype, sub.pinode, 0, sub.rollupscore FROM " SUMMARY " AS s, " SUBDIR_ATTACH_NAME "." SUMMARY " AS sub WHERE s.isroot == 1;"
-    "INSERT INTO " TREESUMMARY " SELECT * FROM " SUBDIR_ATTACH_NAME "." TREESUMMARY ";"
+    /*
+     * do not copy treesummary upwards - just calculate current
+     * treesummary since the treesummary covers all subtree
+     * summaries
+     */
     "INSERT INTO " XATTRS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." XATTRS_AVAIL ";"
     "INSERT OR IGNORE INTO " EXTERNAL_DBS_ROLLUP " SELECT * FROM " SUBDIR_ATTACH_NAME "." EXTERNAL_DBS ";"
 
@@ -766,7 +770,8 @@ static int do_rollup(struct RollUp *rollup,
             exec_rc = sqlite3_exec(dst, rollup_subdir, rollup_external_xattrs, &ca, &err);
             timestamp_end_print(timestamp_buffers, id, "rollup_subdir", rollup_subdir);
             if (exec_rc != SQLITE_OK) {
-                fprintf(stderr, "Error: Failed to copy \"%s\" subdir pentries into pentries table: %s\n", child->name, err);
+                fprintf(stderr, "Error: Failed to copy subdir \"%s\" into current database: %s\n",
+                        child->name, err);
                 sqlite3_free(err);
             }
         }
