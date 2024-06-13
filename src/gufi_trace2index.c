@@ -87,6 +87,7 @@ struct OutputBuffers debug_output_buffers;
 
 struct ScoutArgs {
     struct input *in;  /* reference to PoolArgs */
+    char *tracename;
     int trace;         /* file descriptor */
 
     /* everything below is locked with print_mutex from debug.h */
@@ -561,7 +562,8 @@ static int scout_function(QPTPool_t *ctx, const size_t id, void *data, void *arg
             line = NULL;
             size = 0;
             len = 0;
-            fprintf(stderr, "Scout encountered bad line ending at offset %jd\n", (intmax_t) offset);
+            fprintf(stderr, "Scout encountered bad line ending at %s offset %jd\n",
+                    sa->tracename, (intmax_t) offset);
             return 1;
         }
 
@@ -747,6 +749,7 @@ int main(int argc, char *argv[]) {
         /* freed by scout_function */
         struct ScoutArgs *sa = malloc(sizeof(struct ScoutArgs));
         sa->in = &pa.in;
+        sa->tracename = argv[idx + i];
         sa->trace = traces[i];
         sa->remaining = &remaining;
         sa->time = &scout_time;

@@ -118,7 +118,7 @@ Total Files:         0
 
 # file delimiter not found
 $ gufi_trace2index -d "|" -n "2" "badtrace" "prefix"
-Scout encountered bad line ending at offset 24
+Scout encountered bad line ending at badtrace offset 24
 Creating GUFI Index prefix with 2 threads
 Total Dirs:          0
 Total Files:         0
